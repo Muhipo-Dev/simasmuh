@@ -1,0 +1,67 @@
+import { StudentsService } from './students.service';
+export declare class StudentsController {
+    private readonly studentsService;
+    constructor(studentsService: StudentsService);
+    findAll(): Promise<({
+        class: {
+            id: string;
+            name: string;
+            gradeLevel: number;
+            academicYear: string;
+            homeroomTeacherId: string | null;
+        };
+    } & {
+        id: string;
+        name: string;
+        nisn: string;
+        nis: string;
+        gender: string;
+        classId: string;
+    })[]>;
+    findOne(id: string): Promise<({
+        class: {
+            id: string;
+            name: string;
+            gradeLevel: number;
+            academicYear: string;
+            homeroomTeacherId: string | null;
+        };
+    } & {
+        id: string;
+        name: string;
+        nisn: string;
+        nis: string;
+        gender: string;
+        classId: string;
+    }) | null>;
+    create(data: {
+        nisn: string;
+        nis: string;
+        name: string;
+        gender: string;
+        classId: string;
+    }): Promise<{
+        id: string;
+        name: string;
+        nisn: string;
+        nis: string;
+        gender: string;
+        classId: string;
+    }>;
+    update(id: string, data: any): Promise<{
+        id: string;
+        name: string;
+        nisn: string;
+        nis: string;
+        gender: string;
+        classId: string;
+    }>;
+    remove(id: string): Promise<{
+        id: string;
+        name: string;
+        nisn: string;
+        nis: string;
+        gender: string;
+        classId: string;
+    }>;
+}

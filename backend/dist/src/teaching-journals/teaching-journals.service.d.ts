@@ -22,10 +22,11 @@ export declare class TeachingJournalsService {
         };
     } & {
         id: string;
+        notes: string | null;
         teacherId: string;
         date: Date;
         scheduleId: string;
-        notes: string | null;
+        photoUrl: string | null;
         material: string;
     })[]>;
     findOne(id: string): Promise<({
@@ -40,34 +41,38 @@ export declare class TeachingJournalsService {
         };
     } & {
         id: string;
+        notes: string | null;
         teacherId: string;
         date: Date;
         scheduleId: string;
-        notes: string | null;
+        photoUrl: string | null;
         material: string;
     }) | null>;
     create(data: any): Promise<{
         id: string;
+        notes: string | null;
         teacherId: string;
         date: Date;
         scheduleId: string;
-        notes: string | null;
+        photoUrl: string | null;
         material: string;
     }>;
     update(id: string, data: any): Promise<{
         id: string;
+        notes: string | null;
         teacherId: string;
         date: Date;
         scheduleId: string;
-        notes: string | null;
+        photoUrl: string | null;
         material: string;
     }>;
     remove(id: string): Promise<{
         id: string;
+        notes: string | null;
         teacherId: string;
         date: Date;
         scheduleId: string;
-        notes: string | null;
+        photoUrl: string | null;
         material: string;
     }>;
 }

@@ -7,12 +7,15 @@ export class GradesService {
 
   async findAll() {
     return this.prisma.grade.findMany({
-      include: { student: true, subject: true }
+      include: { student: true, subject: true },
     });
   }
 
   async findOne(id: string) {
-    return this.prisma.grade.findUnique({ where: { id }, include: { student: true, subject: true } });
+    return this.prisma.grade.findUnique({
+      where: { id },
+      include: { student: true, subject: true },
+    });
   }
 
   async create(data: any) {

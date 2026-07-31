@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  Delete,
+} from '@nestjs/common';
 import { AttendancesService } from './attendances.service';
 
 @Controller('attendances')
@@ -20,6 +28,11 @@ export class AttendancesController {
     return this.attendancesService.create(data);
   }
 
+  @Post('bulk')
+  createBulk(@Body() data: any[]) {
+    return this.attendancesService.createBulk(data);
+  }
+
   @Put(':id')
   update(@Param('id') id: string, @Body() data: any) {
     return this.attendancesService.update(id, data);
@@ -30,4 +43,3 @@ export class AttendancesController {
     return this.attendancesService.remove(id);
   }
 }
-

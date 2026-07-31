@@ -29,6 +29,9 @@ let AttendancesController = class AttendancesController {
     create(data) {
         return this.attendancesService.create(data);
     }
+    createBulk(data) {
+        return this.attendancesService.createBulk(data);
+    }
     update(id, data) {
         return this.attendancesService.update(id, data);
     }
@@ -57,6 +60,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], AttendancesController.prototype, "create", null);
+__decorate([
+    (0, common_1.Post)('bulk'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array]),
+    __metadata("design:returntype", void 0)
+], AttendancesController.prototype, "createBulk", null);
 __decorate([
     (0, common_1.Put)(':id'),
     __param(0, (0, common_1.Param)('id')),

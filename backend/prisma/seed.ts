@@ -1,10 +1,12 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { Pool } from 'pg'
+import { PrismaPg } from '@prisma/adapter-pg'
 import * as path from 'path'
 import * as bcrypt from 'bcryptjs'
 
-const dbPath = path.resolve(process.cwd(), 'dev.db')
-const adapter = new PrismaBetterSqlite3({ url: dbPath })
+const connectionString = process.env.DATABASE_URL
+const pool = new Pool({ connectionString })
+const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
 async function main() {
@@ -12,20 +14,22 @@ async function main() {
   const guruPassword = await bcrypt.hash('guru123', 10)
 
   const superAdmin = await prisma.user.upsert({
-    where: { email: 'superadmin@sekolah.com' },
+    where: { username: 'superadmin' },
     update: {},
     create: {
+      username: 'superadmin',
       email: 'superadmin@sekolah.com',
       name: 'Super Admin',
       password: hashedPassword,
-      role: 'SUPERADMIN',
+      role: 'ADMIN_IT',
     },
   })
 
   const guru = await prisma.user.upsert({
-    where: { email: 'guru@sekolah.com' },
+    where: { username: 'guru' },
     update: {},
     create: {
+      username: 'guru',
       email: 'guru@sekolah.com',
       name: 'Guru Wali',
       password: guruPassword,

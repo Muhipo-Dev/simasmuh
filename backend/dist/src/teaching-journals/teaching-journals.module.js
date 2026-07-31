@@ -16,7 +16,7 @@ exports.TeachingJournalsModule = TeachingJournalsModule;
 exports.TeachingJournalsModule = TeachingJournalsModule = __decorate([
     (0, common_1.Module)({
         controllers: [teaching_journals_controller_1.TeachingJournalsController],
-        providers: [teaching_journals_service_1.TeachingJournalsService]
+        providers: [teaching_journals_service_1.TeachingJournalsService],
     })
 ], TeachingJournalsModule);
 //# sourceMappingURL=teaching-journals.module.js.map

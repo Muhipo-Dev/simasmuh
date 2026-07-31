@@ -19,11 +19,14 @@ let GradesService = class GradesService {
     }
     async findAll() {
         return this.prisma.grade.findMany({
-            include: { student: true, subject: true }
+            include: { student: true, subject: true },
         });
     }
     async findOne(id) {
-        return this.prisma.grade.findUnique({ where: { id }, include: { student: true, subject: true } });
+        return this.prisma.grade.findUnique({
+            where: { id },
+            include: { student: true, subject: true },
+        });
     }
     async create(data) {
         return this.prisma.grade.create({ data });

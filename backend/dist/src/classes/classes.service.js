@@ -21,9 +21,9 @@ let ClassesService = class ClassesService {
         return this.prisma.class.findMany({
             include: {
                 _count: {
-                    select: { students: true }
-                }
-            }
+                    select: { students: true },
+                },
+            },
         });
     }
     async findOne(id) {
@@ -32,13 +32,16 @@ let ClassesService = class ClassesService {
             include: {
                 students: true,
                 schedules: {
-                    include: { subject: true }
-                }
-            }
+                    include: { subject: true },
+                },
+            },
         });
     }
     async create(data) {
         return this.prisma.class.create({ data });
+    }
+    async createBulk(dataArray) {
+        return this.prisma.$transaction(dataArray.map((data) => this.prisma.class.create({ data })));
     }
     async update(id, data) {
         return this.prisma.class.update({

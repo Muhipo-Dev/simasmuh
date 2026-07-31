@@ -19,11 +19,14 @@ let TeachingJournalsService = class TeachingJournalsService {
     }
     async findAll() {
         return this.prisma.teachingJournal.findMany({
-            include: { schedule: { include: { class: true } } }
+            include: { schedule: { include: { class: true } } },
         });
     }
     async findOne(id) {
-        return this.prisma.teachingJournal.findUnique({ where: { id }, include: { schedule: true } });
+        return this.prisma.teachingJournal.findUnique({
+            where: { id },
+            include: { schedule: true },
+        });
     }
     async create(data) {
         return this.prisma.teachingJournal.create({ data });

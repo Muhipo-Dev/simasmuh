@@ -4,6 +4,6 @@ import { HomeroomJournalsService } from './homeroom-journals.service';
 
 @Module({
   controllers: [HomeroomJournalsController],
-  providers: [HomeroomJournalsService]
+  providers: [HomeroomJournalsService],
 })
 export class HomeroomJournalsModule {}

@@ -7,12 +7,15 @@ export class HomeroomJournalsService {
 
   async findAll() {
     return this.prisma.homeroomJournal.findMany({
-      include: { teacher: { include: { user: true } } }
+      include: { teacher: { include: { user: true } } },
     });
   }
 
   async findOne(id: string) {
-    return this.prisma.homeroomJournal.findUnique({ where: { id }, include: { teacher: { include: { user: true } } } });
+    return this.prisma.homeroomJournal.findUnique({
+      where: { id },
+      include: { teacher: { include: { user: true } } },
+    });
   }
 
   async create(data: any) {

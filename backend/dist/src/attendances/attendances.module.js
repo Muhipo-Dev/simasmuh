@@ -17,7 +17,7 @@ exports.AttendancesModule = AttendancesModule;
 exports.AttendancesModule = AttendancesModule = __decorate([
     (0, common_1.Module)({
         controllers: [attendances_controller_1.AttendancesController],
-        providers: [attendances_service_1.AttendancesService, prisma_service_1.PrismaService]
+        providers: [attendances_service_1.AttendancesService, prisma_service_1.PrismaService],
     })
 ], AttendancesModule);
 //# sourceMappingURL=attendances.module.js.map

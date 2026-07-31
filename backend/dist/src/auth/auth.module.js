@@ -9,8 +9,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
+const passport_1 = require("@nestjs/passport");
 const auth_controller_1 = require("./auth.controller");
 const auth_service_1 = require("./auth.service");
+const jwt_strategy_1 = require("./jwt.strategy");
+const roles_guard_1 = require("./roles.guard");
+const permission_guard_1 = require("./permission.guard");
 const prisma_service_1 = require("../prisma/prisma.service");
 let AuthModule = class AuthModule {
 };
@@ -18,14 +22,30 @@ exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            passport_1.PassportModule,
             jwt_1.JwtModule.register({
                 secret: process.env.JWT_SECRET || 'secretKey',
                 signOptions: { expiresIn: '1d' },
             }),
         ],
         controllers: [auth_controller_1.AuthController],
-        providers: [auth_service_1.AuthService, prisma_service_1.PrismaService],
-        exports: [auth_service_1.AuthService]
+        providers: [
+            auth_service_1.AuthService,
+            jwt_strategy_1.JwtStrategy,
+            prisma_service_1.PrismaService,
+            roles_guard_1.RolesGuard,
+            permission_guard_1.StudentOwnershipGuard,
+            permission_guard_1.PaymentProofOwnershipGuard,
+            permission_guard_1.FinanceOperationGuard,
+        ],
+        exports: [
+            auth_service_1.AuthService,
+            jwt_strategy_1.JwtStrategy,
+            roles_guard_1.RolesGuard,
+            permission_guard_1.StudentOwnershipGuard,
+            permission_guard_1.PaymentProofOwnershipGuard,
+            permission_guard_1.FinanceOperationGuard,
+        ],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

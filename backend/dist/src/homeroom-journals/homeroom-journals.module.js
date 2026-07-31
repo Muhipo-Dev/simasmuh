@@ -16,7 +16,7 @@ exports.HomeroomJournalsModule = HomeroomJournalsModule;
 exports.HomeroomJournalsModule = HomeroomJournalsModule = __decorate([
     (0, common_1.Module)({
         controllers: [homeroom_journals_controller_1.HomeroomJournalsController],
-        providers: [homeroom_journals_service_1.HomeroomJournalsService]
+        providers: [homeroom_journals_service_1.HomeroomJournalsService],
     })
 ], HomeroomJournalsModule);
 //# sourceMappingURL=homeroom-journals.module.js.map

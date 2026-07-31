@@ -19,14 +19,22 @@ let AttendancesService = class AttendancesService {
     }
     async findAll() {
         return this.prisma.attendance.findMany({
-            include: { student: true, schedule: { include: { subject: true } } }
+            include: { student: true, schedule: { include: { subject: true } } },
         });
     }
     async findOne(id) {
-        return this.prisma.attendance.findUnique({ where: { id }, include: { student: true, schedule: true } });
+        return this.prisma.attendance.findUnique({
+            where: { id },
+            include: { student: true, schedule: true },
+        });
     }
     async create(data) {
         return this.prisma.attendance.create({ data });
+    }
+    async createBulk(dataArray) {
+        return this.prisma.$transaction(dataArray.map((data) => this.prisma.attendance.create({
+            data,
+        })));
     }
     async update(id, data) {
         return this.prisma.attendance.update({ where: { id }, data });

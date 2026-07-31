@@ -9,9 +9,9 @@ export class ClassesService {
     return this.prisma.class.findMany({
       include: {
         _count: {
-          select: { students: true }
-        }
-      }
+          select: { students: true },
+        },
+      },
     });
   }
 
@@ -21,17 +21,32 @@ export class ClassesService {
       include: {
         students: true,
         schedules: {
-          include: { subject: true }
-        }
-      }
+          include: { subject: true },
+        },
+      },
     });
   }
 
-  async create(data: { name: string; gradeLevel: number; academicYear: string }) {
+  async create(data: {
+    name: string;
+    gradeLevel: number;
+    academicYear: string;
+  }) {
     return this.prisma.class.create({ data });
   }
 
-  async update(id: string, data: { name?: string; gradeLevel?: number; academicYear?: string }) {
+  async createBulk(
+    dataArray: { name: string; gradeLevel: number; academicYear: string }[],
+  ) {
+    return this.prisma.$transaction(
+      dataArray.map((data) => this.prisma.class.create({ data })),
+    );
+  }
+
+  async update(
+    id: string,
+    data: { name?: string; gradeLevel?: number; academicYear?: string },
+  ) {
     return this.prisma.class.update({
       where: { id },
       data,

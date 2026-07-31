@@ -16,7 +16,7 @@ exports.ClassesModule = ClassesModule;
 exports.ClassesModule = ClassesModule = __decorate([
     (0, common_1.Module)({
         controllers: [classes_controller_1.ClassesController],
-        providers: [classes_service_1.ClassesService]
+        providers: [classes_service_1.ClassesService],
     })
 ], ClassesModule);
 //# sourceMappingURL=classes.module.js.map

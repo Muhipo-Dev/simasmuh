@@ -34,29 +34,32 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
-const adapter_better_sqlite3_1 = require("@prisma/adapter-better-sqlite3");
-const path = __importStar(require("path"));
+const pg_1 = require("pg");
+const adapter_pg_1 = require("@prisma/adapter-pg");
 const bcrypt = __importStar(require("bcryptjs"));
-const dbPath = path.resolve(process.cwd(), 'dev.db');
-const adapter = new adapter_better_sqlite3_1.PrismaBetterSqlite3({ url: dbPath });
+const connectionString = process.env.DATABASE_URL;
+const pool = new pg_1.Pool({ connectionString });
+const adapter = new adapter_pg_1.PrismaPg(pool);
 const prisma = new client_1.PrismaClient({ adapter });
 async function main() {
     const hashedPassword = await bcrypt.hash('admin123', 10);
     const guruPassword = await bcrypt.hash('guru123', 10);
     const superAdmin = await prisma.user.upsert({
-        where: { email: 'superadmin@sekolah.com' },
+        where: { username: 'superadmin' },
         update: {},
         create: {
+            username: 'superadmin',
             email: 'superadmin@sekolah.com',
             name: 'Super Admin',
             password: hashedPassword,
-            role: 'SUPERADMIN',
+            role: 'ADMIN_IT',
         },
     });
     const guru = await prisma.user.upsert({
-        where: { email: 'guru@sekolah.com' },
+        where: { username: 'guru' },
         update: {},
         create: {
+            username: 'guru',
             email: 'guru@sekolah.com',
             name: 'Guru Wali',
             password: guruPassword,

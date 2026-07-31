@@ -20,6 +20,24 @@ let SubjectsService = class SubjectsService {
     async findAll() {
         return this.prisma.subject.findMany();
     }
+    async findOne(id) {
+        return this.prisma.subject.findUnique({ where: { id } });
+    }
+    async create(data) {
+        return this.prisma.subject.create({ data });
+    }
+    async createBulk(dataArray) {
+        return this.prisma.$transaction(dataArray.map((data) => this.prisma.subject.create({ data })));
+    }
+    async update(id, data) {
+        return this.prisma.subject.update({
+            where: { id },
+            data,
+        });
+    }
+    async remove(id) {
+        return this.prisma.subject.delete({ where: { id } });
+    }
 };
 exports.SubjectsService = SubjectsService;
 exports.SubjectsService = SubjectsService = __decorate([

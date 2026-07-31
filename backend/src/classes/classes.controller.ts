@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  Delete,
+} from '@nestjs/common';
 import { ClassesService } from './classes.service';
 
 @Controller('classes')
@@ -16,8 +24,18 @@ export class ClassesController {
   }
 
   @Post()
-  create(@Body() data: { name: string; gradeLevel: number; academicYear: string }) {
+  create(
+    @Body() data: { name: string; gradeLevel: number; academicYear: string },
+  ) {
     return this.classesService.create(data);
+  }
+
+  @Post('bulk')
+  createBulk(
+    @Body()
+    dataArray: { name: string; gradeLevel: number; academicYear: string }[],
+  ) {
+    return this.classesService.createBulk(dataArray);
   }
 
   @Put(':id')

@@ -32,6 +32,7 @@ export declare class ClassesService {
         students: {
             id: string;
             name: string;
+            userId: string | null;
             nisn: string;
             nis: string;
             gender: string;
@@ -55,6 +56,17 @@ export declare class ClassesService {
         academicYear: string;
         homeroomTeacherId: string | null;
     }>;
+    createBulk(dataArray: {
+        name: string;
+        gradeLevel: number;
+        academicYear: string;
+    }[]): Promise<{
+        id: string;
+        name: string;
+        gradeLevel: number;
+        academicYear: string;
+        homeroomTeacherId: string | null;
+    }[]>;
     update(id: string, data: {
         name?: string;
         gradeLevel?: number;

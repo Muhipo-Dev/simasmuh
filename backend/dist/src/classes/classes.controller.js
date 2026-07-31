@@ -29,6 +29,9 @@ let ClassesController = class ClassesController {
     create(data) {
         return this.classesService.create(data);
     }
+    createBulk(dataArray) {
+        return this.classesService.createBulk(dataArray);
+    }
     update(id, data) {
         return this.classesService.update(id, data);
     }
@@ -57,6 +60,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], ClassesController.prototype, "create", null);
+__decorate([
+    (0, common_1.Post)('bulk'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array]),
+    __metadata("design:returntype", void 0)
+], ClassesController.prototype, "createBulk", null);
 __decorate([
     (0, common_1.Put)(':id'),
     __param(0, (0, common_1.Param)('id')),

@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { SchedulesService } from './schedules.service';
 
 @Controller('schedules')
@@ -6,8 +15,11 @@ export class SchedulesController {
   constructor(private readonly schedulesService: SchedulesService) {}
 
   @Get()
-  findAll() {
-    return this.schedulesService.findAll();
+  findAll(
+    @Query('userId') userId?: string,
+    @Query('teacherId') teacherId?: string,
+  ) {
+    return this.schedulesService.findAll({ userId, teacherId });
   }
 
   @Get(':id')
@@ -18,6 +30,11 @@ export class SchedulesController {
   @Post()
   create(@Body() data: any) {
     return this.schedulesService.create(data);
+  }
+
+  @Post('bulk')
+  createBulk(@Body() dataArray: any[]) {
+    return this.schedulesService.createBulk(dataArray);
   }
 
   @Put(':id')

@@ -16,7 +16,7 @@ exports.SchedulesModule = SchedulesModule;
 exports.SchedulesModule = SchedulesModule = __decorate([
     (0, common_1.Module)({
         controllers: [schedules_controller_1.SchedulesController],
-        providers: [schedules_service_1.SchedulesService]
+        providers: [schedules_service_1.SchedulesService],
     })
 ], SchedulesModule);
 //# sourceMappingURL=schedules.module.js.map

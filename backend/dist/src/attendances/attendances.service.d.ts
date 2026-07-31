@@ -6,6 +6,7 @@ export declare class AttendancesService {
         student: {
             id: string;
             name: string;
+            userId: string | null;
             nisn: string;
             nis: string;
             gender: string;
@@ -28,15 +29,20 @@ export declare class AttendancesService {
         };
     } & {
         id: string;
-        date: Date;
-        status: string;
+        createdAt: Date;
+        updatedAt: Date;
         studentId: string;
+        status: string;
+        date: Date;
         scheduleId: string;
+        location: string | null;
+        photoUrl: string | null;
     })[]>;
     findOne(id: string): Promise<({
         student: {
             id: string;
             name: string;
+            userId: string | null;
             nisn: string;
             nis: string;
             gender: string;
@@ -53,30 +59,57 @@ export declare class AttendancesService {
         };
     } & {
         id: string;
-        date: Date;
-        status: string;
+        createdAt: Date;
+        updatedAt: Date;
         studentId: string;
+        status: string;
+        date: Date;
         scheduleId: string;
+        location: string | null;
+        photoUrl: string | null;
     }) | null>;
     create(data: any): Promise<{
         id: string;
-        date: Date;
-        status: string;
+        createdAt: Date;
+        updatedAt: Date;
         studentId: string;
+        status: string;
+        date: Date;
         scheduleId: string;
+        location: string | null;
+        photoUrl: string | null;
     }>;
+    createBulk(dataArray: any[]): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        studentId: string;
+        status: string;
+        date: Date;
+        scheduleId: string;
+        location: string | null;
+        photoUrl: string | null;
+    }[]>;
     update(id: string, data: any): Promise<{
         id: string;
-        date: Date;
-        status: string;
+        createdAt: Date;
+        updatedAt: Date;
         studentId: string;
+        status: string;
+        date: Date;
         scheduleId: string;
+        location: string | null;
+        photoUrl: string | null;
     }>;
     remove(id: string): Promise<{
         id: string;
-        date: Date;
-        status: string;
+        createdAt: Date;
+        updatedAt: Date;
         studentId: string;
+        status: string;
+        date: Date;
         scheduleId: string;
+        location: string | null;
+        photoUrl: string | null;
     }>;
 }

@@ -23,11 +23,17 @@ let StudentsController = class StudentsController {
     findAll() {
         return this.studentsService.findAll();
     }
+    findByUser(userId) {
+        return this.studentsService.findByUserId(userId);
+    }
     findOne(id) {
         return this.studentsService.findOne(id);
     }
     create(data) {
         return this.studentsService.create(data);
+    }
+    createBulk(dataArray) {
+        return this.studentsService.createBulk(dataArray);
     }
     update(id, data) {
         return this.studentsService.update(id, data);
@@ -44,6 +50,13 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "findAll", null);
 __decorate([
+    (0, common_1.Get)('by-user/:userId'),
+    __param(0, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "findByUser", null);
+__decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -57,6 +70,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Post)('bulk'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "createBulk", null);
 __decorate([
     (0, common_1.Put)(':id'),
     __param(0, (0, common_1.Param)('id')),

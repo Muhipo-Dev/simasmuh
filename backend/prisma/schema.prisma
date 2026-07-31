@@ -3,138 +3,336 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("GURU") // SUPERADMIN or GURU
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id                String            @id @default(uuid())
+  username          String            @unique
+  email             String?           @unique
+  password          String
+  name              String
+  role              String            @default("GURU")
+  avatarUrl         String?
+  address           String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  subRole           String?
+  subRole2          String?
+  subRole3          String?
+  nipNbm            String?
+  announcements     Announcement[]
+  dailyAttendances  DailyAttendance[]
+  uploadedFiles     FileHash[]
+  izinKeluars       IzinKeluar[]
+  sentNotifications Notification[]    @relation("NotificationSender")
+  notifications     Notification[]
+  paymentProofs     PaymentProof[]
+  staffJournals     StaffJournal[]
+  student           Student?
   teacherProfile    TeacherProfile?
+  pengeluarans      Pengeluaran[]
 }
 
 model TeacherProfile {
-  id        String   @id @default(uuid())
-  nip       String?  @unique
-  phone     String?
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  schedules        Schedule[]
-  teachingJournals TeachingJournal[]
-  homeroomClasses  Class[]           @relation("HomeroomTeacher")
-  homeroomJournals HomeroomJournal[]
+  id                  String            @id @default(uuid())
+  nip                 String?           @unique
+  phone               String?
+  lastEducation       String?
+  certificationStatus String?
+  certificationYear   Int?
+  userId              String            @unique
+  homeroomClasses     Class[]           @relation("HomeroomTeacher")
+  homeroomJournals    HomeroomJournal[]
+  schedules           Schedule[]
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teachingJournals    TeachingJournal[]
 }
 
 model Class {
-  id          String   @id @default(uuid())
-  name        String   // e.g., "X IPA 1"
-  gradeLevel  Int      // e.g., 10, 11, 12
-  academicYear String  // e.g., "2023/2024"
-
+  id                String          @id @default(uuid())
+  name              String
+  gradeLevel        Int
+  academicYear      String
   homeroomTeacherId String?
   homeroomTeacher   TeacherProfile? @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
-
-  students    Student[]
-  schedules   Schedule[]
+  schedules         Schedule[]
+  students          Student[]
 }
 
 model Student {
-  id        String   @id @default(uuid())
-  nisn      String   @unique
-  nis       String   @unique
-  name      String
-  gender    String   // Laki-laki / Perempuan
-  classId   String
-  class     Class    @relation(fields: [classId], references: [id])
+  id            String         @id @default(uuid())
+  nisn          String         @unique
+  nis           String         @unique
+  name          String
+  gender        String
+  classId       String
+  userId        String?        @unique
+  attendances   Attendance[]
+  grades        Grade[]
+  payments      Payment[]
+  paymentProofs PaymentProof[]
+  class         Class          @relation(fields: [classId], references: [id])
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tagihans      Tagihan[]
 
-  attendances Attendance[]
-  grades      Grade[]
+  @@index([classId])
 }
 
 model Subject {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   name      String
-  code      String   @unique
-
-  schedules Schedule[]
+  code      String     @unique
   grades    Grade[]
+  schedules Schedule[]
 }
 
 model Schedule {
-  id          String   @id @default(uuid())
-  dayOfWeek   Int      // 1=Senin, 5=Jumat
-  startTime   String   // e.g. "07:00"
-  endTime     String
-  classId     String
-  subjectId   String
-  teacherId   String
-
-  class       Class    @relation(fields: [classId], references: [id])
-  subject     Subject  @relation(fields: [subjectId], references: [id])
-  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
-
-  attendances Attendance[]
+  id               String            @id @default(uuid())
+  dayOfWeek        Int
+  startTime        String
+  endTime          String
+  classId          String
+  subjectId        String
+  teacherId        String
+  attendances      Attendance[]
+  class            Class             @relation(fields: [classId], references: [id])
+  subject          Subject           @relation(fields: [subjectId], references: [id])
+  teacher          TeacherProfile    @relation(fields: [teacherId], references: [id])
   teachingJournals TeachingJournal[]
 }
 
 model Attendance {
-  id          String   @id @default(uuid())
-  date        DateTime
-  status      String   // HADIR, SAKIT, IZIN, ALPA
-  studentId   String
-  scheduleId  String
+  id         String   @id @default(uuid())
+  date       DateTime
+  status     String
+  studentId  String
+  scheduleId String
+  createdAt  DateTime @default(now())
+  location   String?
+  photoUrl   String?
+  updatedAt  DateTime @updatedAt
+  schedule   Schedule @relation(fields: [scheduleId], references: [id])
+  student    Student  @relation(fields: [studentId], references: [id])
+}
 
-  student     Student  @relation(fields: [studentId], references: [id])
-  schedule    Schedule @relation(fields: [scheduleId], references: [id])
+model DailyAttendance {
+  id           String   @id @default(uuid())
+  date         DateTime
+  checkInTime  String?
+  checkOutTime String?
+  time         String
+  status       String
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([date, userId])
+  @@index([date])
 }
 
 model Grade {
-  id          String   @id @default(uuid())
-  type        String   // TUGAS, UTS, UAS
-  score       Float
-  studentId   String
-  subjectId   String
-  semester    Int
-
-  student     Student  @relation(fields: [studentId], references: [id])
-  subject     Subject  @relation(fields: [subjectId], references: [id])
+  id        String  @id @default(uuid())
+  type      String
+  score     Float
+  studentId String
+  subjectId String
+  semester  Int
+  student   Student @relation(fields: [studentId], references: [id])
+  subject   Subject @relation(fields: [subjectId], references: [id])
 }
 
 model TeachingJournal {
-  id          String   @id @default(uuid())
-  date        DateTime
-  material    String
-  notes       String?
-  scheduleId  String
-  teacherId   String
-
-  schedule    Schedule @relation(fields: [scheduleId], references: [id])
-  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
+  id         String         @id @default(uuid())
+  date       DateTime
+  material   String
+  notes      String?
+  scheduleId String
+  teacherId  String
+  photoUrl   String?
+  schedule   Schedule       @relation(fields: [scheduleId], references: [id])
+  teacher    TeacherProfile @relation(fields: [teacherId], references: [id])
 }
 
 model HomeroomJournal {
-  id          String   @id @default(uuid())
+  id          String         @id @default(uuid())
   date        DateTime
   notes       String
   actionTaken String?
   teacherId   String
-
   teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
 }
 
 model Setting {
-  id          String   @id @default(uuid())
-  schoolName  String
-  address     String
-  phone       String?
-  email       String?
-  logoUrl     String?
+  id            String  @id @default(uuid())
+  schoolName    String
+  address       String
+  phone         String?
+  email         String?
+  logoUrl       String?
   principalName String?
   principalNip  String?
+  qrPublicToken String?
+  bankName      String?
+  bankNumber    String?
+  bankOwner     String?
+}
+
+model Announcement {
+  id        String    @id @default(uuid())
+  title     String
+  content   String
+  target    String
+  authorId  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  eventDate DateTime?
+  image     String?
+  type      String    @default("BERITA")
+  author    User      @relation(fields: [authorId], references: [id])
+}
+
+model StaffJournal {
+  id        String   @id @default(uuid())
+  date      DateTime
+  activity  String
+  notes     String?
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  evidence  String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model IzinKeluar {
+  id              String   @id @default(uuid())
+  date            DateTime
+  waktuKeluar     String
+  estimasiKembali String?
+  alasan          String
+  status          String   @default("MENUNGGU")
+  catatanAdmin    String?
+  userId          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id          String   @id @default(uuid())
+  studentId   String
+  type        String
+  amount      Float
+  paymentDate DateTime @default(now())
+  month       Int?
+  year        Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([year, month])
+}
+
+model Tagihan {
+  id            String         @id @default(uuid())
+  studentId     String
+  type          String
+  amount        Float
+  month         Int?
+  year          Int?
+  dueDate       DateTime?
+  status        String         @default("BELUM_LUNAS")
+  paidDate      DateTime?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  paymentProofs PaymentProof[]
+  student       Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, status])
+  @@index([year, month, status])
+  @@index([type])
+}
+
+model Pengeluaran {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  amount      Float
+  category    String   @default("UMUM")
+  date        DateTime @default(now())
+  recordedBy  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [recordedBy], references: [id])
+
+  @@index([date])
+  @@index([category])
+}
+
+model PaymentProof {
+  id             String    @id @default(uuid())
+  studentId      String
+  tagihanId      String?
+  amount         Float
+  proofUrl       String
+  fileHash       String?
+  status         String    @default("MENUNGGU_VERIFIKASI")
+  notes          String?
+  verifiedBy     String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  fileHashRecord FileHash? @relation(fields: [fileHash], references: [hash])
+  student        Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tagihan        Tagihan?  @relation(fields: [tagihanId], references: [id])
+  verifiedUser   User?     @relation(fields: [verifiedBy], references: [id])
+}
+
+model FileHash {
+  id            String         @id @default(uuid())
+  hash          String         @unique
+  filePath      String
+  fileSize      Int
+  uploadedBy    String
+  createdAt     DateTime       @default(now())
+  uploader      User           @relation(fields: [uploadedBy], references: [id])
+  paymentProofs PaymentProof[]
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  senderId  String?
+  type      String
+  title     String
+  message   String
+  data      Json?
+  priority  String    @default("NORMAL")
+  status    String    @default("UNREAD")
+  channel   String    @default("IN_APP")
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  sender    User?     @relation("NotificationSender", fields: [senderId], references: [id])
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, type])
+  @@index([createdAt])
+}
+
+model NotificationTemplate {
+  id           String   @id @default(uuid())
+  type         String   @unique
+  title        String
+  message      String
+  emailSubject String?
+  emailBody    String?
+  smsTemplate  String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

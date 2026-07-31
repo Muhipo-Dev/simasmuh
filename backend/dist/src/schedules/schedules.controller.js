@@ -20,14 +20,17 @@ let SchedulesController = class SchedulesController {
     constructor(schedulesService) {
         this.schedulesService = schedulesService;
     }
-    findAll() {
-        return this.schedulesService.findAll();
+    findAll(userId, teacherId) {
+        return this.schedulesService.findAll({ userId, teacherId });
     }
     findOne(id) {
         return this.schedulesService.findOne(id);
     }
     create(data) {
         return this.schedulesService.create(data);
+    }
+    createBulk(dataArray) {
+        return this.schedulesService.createBulk(dataArray);
     }
     update(id, data) {
         return this.schedulesService.update(id, data);
@@ -39,8 +42,10 @@ let SchedulesController = class SchedulesController {
 exports.SchedulesController = SchedulesController;
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Query)('userId')),
+    __param(1, (0, common_1.Query)('teacherId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], SchedulesController.prototype, "findAll", null);
 __decorate([
@@ -57,6 +62,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], SchedulesController.prototype, "create", null);
+__decorate([
+    (0, common_1.Post)('bulk'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array]),
+    __metadata("design:returntype", void 0)
+], SchedulesController.prototype, "createBulk", null);
 __decorate([
     (0, common_1.Put)(':id'),
     __param(0, (0, common_1.Param)('id')),

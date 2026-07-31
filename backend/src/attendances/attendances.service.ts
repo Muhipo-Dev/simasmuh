@@ -7,16 +7,29 @@ export class AttendancesService {
 
   async findAll() {
     return this.prisma.attendance.findMany({
-      include: { student: true, schedule: { include: { subject: true } } }
+      include: { student: true, schedule: { include: { subject: true } } },
     });
   }
 
   async findOne(id: string) {
-    return this.prisma.attendance.findUnique({ where: { id }, include: { student: true, schedule: true } });
+    return this.prisma.attendance.findUnique({
+      where: { id },
+      include: { student: true, schedule: true },
+    });
   }
 
   async create(data: any) {
     return this.prisma.attendance.create({ data });
+  }
+
+  async createBulk(dataArray: any[]) {
+    return this.prisma.$transaction(
+      dataArray.map((data) =>
+        this.prisma.attendance.create({
+          data,
+        }),
+      ),
+    );
   }
 
   async update(id: string, data: any) {

@@ -1,5 +1,7 @@
 <!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# SIMASMUH - Sistem Informasi Manajemen SMA Muhipo
+
+> **PERHATIAN MUTLAK**: Seluruh pengembangan aplikasi ini WAJIB berpedoman pada [SIMASMUH_GUIDELINES.md](file:///c:/Users/Raza%20Gopo/Downloads/siakad-coba/SIMASMUH_GUIDELINES.md).
 
 This is **Next.js 16** running on **Turbopack**, optimized for speed and performance.
 

@@ -3,29 +3,32 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
-import { ClassesModule } from './classes/classes.module';
-import { UsersModule } from './users/users.module';
-import { StudentsModule } from './students/students.module';
-import { SchedulesModule } from './schedules/schedules.module';
-import { AttendancesModule } from './attendances/attendances.module';
-import { HomeroomJournalsModule } from './homeroom-journals/homeroom-journals.module';
-import { GradesModule } from './grades/grades.module';
-import { SettingsModule } from './settings/settings.module';
-import { TeachingJournalsModule } from './teaching-journals/teaching-journals.module';
-import { SubjectsModule } from './subjects/subjects.module';
-import { TeachersModule } from './teachers/teachers.module';
-import { DailyAttendancesModule } from './daily-attendances/daily-attendances.module';
-import { AnnouncementsModule } from './announcements/announcements.module';
-import { StaffJournalsModule } from './staff-journals/staff-journals.module';
+import { PrismaModule } from './modules/core/prisma/prisma.module';
+import { AuthModule } from './modules/core/auth/auth.module';
+import { ClassesModule } from './modules/master-data/classes/classes.module';
+import { UsersModule } from './modules/master-data/users/users.module';
+import { StudentsModule } from './modules/master-data/students/students.module';
+import { SchedulesModule } from './modules/academic/schedules/schedules.module';
+import { AttendancesModule } from './modules/attendance/attendances/attendances.module';
+import { HomeroomJournalsModule } from './modules/academic/homeroom-journals/homeroom-journals.module';
+import { GradesModule } from './modules/academic/grades/grades.module';
+import { SettingsModule } from './modules/core/settings/settings.module';
+import { TeachingJournalsModule } from './modules/academic/teaching-journals/teaching-journals.module';
+import { SubjectsModule } from './modules/master-data/subjects/subjects.module';
+import { TeachersModule } from './modules/master-data/teachers/teachers.module';
+import { DailyAttendancesModule } from './modules/attendance/daily-attendances/daily-attendances.module';
+import { AnnouncementsModule } from './modules/communication/announcements/announcements.module';
+import { StaffJournalsModule } from './modules/attendance/staff-journals/staff-journals.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { UploadModule } from './upload/upload.module';
-import { IzinKeluarModule } from './izin-keluar/izin-keluar.module';
-import { FinanceModule } from './finance/finance.module';
-import { PaymentProofsModule } from './payment-proofs/payment-proofs.module';
-import { NotificationsModule } from './notifications/notifications.module';
+import { UploadModule } from './modules/core/upload/upload.module';
+import { IzinKeluarModule } from './modules/attendance/izin-keluar/izin-keluar.module';
+import { FinanceModule } from './modules/finance/finance/finance.module';
+import { PaymentProofsModule } from './modules/finance/payment-proofs/payment-proofs.module';
+import { NotificationsModule } from './modules/communication/notifications/notifications.module';
+import { APP_GUARD } from '@nestjs/core';
+import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
+
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -61,6 +64,12 @@ import { NotificationsModule } from './notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ApiKeyGuard,
+    },
+  ],
 })
 export class AppModule {}

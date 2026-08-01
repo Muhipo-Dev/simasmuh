@@ -12,29 +12,31 @@ const schedule_1 = require("@nestjs/schedule");
 const event_emitter_1 = require("@nestjs/event-emitter");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
-const prisma_module_1 = require("./prisma/prisma.module");
-const auth_module_1 = require("./auth/auth.module");
-const classes_module_1 = require("./classes/classes.module");
-const users_module_1 = require("./users/users.module");
-const students_module_1 = require("./students/students.module");
-const schedules_module_1 = require("./schedules/schedules.module");
-const attendances_module_1 = require("./attendances/attendances.module");
-const homeroom_journals_module_1 = require("./homeroom-journals/homeroom-journals.module");
-const grades_module_1 = require("./grades/grades.module");
-const settings_module_1 = require("./settings/settings.module");
-const teaching_journals_module_1 = require("./teaching-journals/teaching-journals.module");
-const subjects_module_1 = require("./subjects/subjects.module");
-const teachers_module_1 = require("./teachers/teachers.module");
-const daily_attendances_module_1 = require("./daily-attendances/daily-attendances.module");
-const announcements_module_1 = require("./announcements/announcements.module");
-const staff_journals_module_1 = require("./staff-journals/staff-journals.module");
+const prisma_module_1 = require("./modules/core/prisma/prisma.module");
+const auth_module_1 = require("./modules/core/auth/auth.module");
+const classes_module_1 = require("./modules/master-data/classes/classes.module");
+const users_module_1 = require("./modules/master-data/users/users.module");
+const students_module_1 = require("./modules/master-data/students/students.module");
+const schedules_module_1 = require("./modules/academic/schedules/schedules.module");
+const attendances_module_1 = require("./modules/attendance/attendances/attendances.module");
+const homeroom_journals_module_1 = require("./modules/academic/homeroom-journals/homeroom-journals.module");
+const grades_module_1 = require("./modules/academic/grades/grades.module");
+const settings_module_1 = require("./modules/core/settings/settings.module");
+const teaching_journals_module_1 = require("./modules/academic/teaching-journals/teaching-journals.module");
+const subjects_module_1 = require("./modules/master-data/subjects/subjects.module");
+const teachers_module_1 = require("./modules/master-data/teachers/teachers.module");
+const daily_attendances_module_1 = require("./modules/attendance/daily-attendances/daily-attendances.module");
+const announcements_module_1 = require("./modules/communication/announcements/announcements.module");
+const staff_journals_module_1 = require("./modules/attendance/staff-journals/staff-journals.module");
 const serve_static_1 = require("@nestjs/serve-static");
 const path_1 = require("path");
-const upload_module_1 = require("./upload/upload.module");
-const izin_keluar_module_1 = require("./izin-keluar/izin-keluar.module");
-const finance_module_1 = require("./finance/finance.module");
-const payment_proofs_module_1 = require("./payment-proofs/payment-proofs.module");
-const notifications_module_1 = require("./notifications/notifications.module");
+const upload_module_1 = require("./modules/core/upload/upload.module");
+const izin_keluar_module_1 = require("./modules/attendance/izin-keluar/izin-keluar.module");
+const finance_module_1 = require("./modules/finance/finance/finance.module");
+const payment_proofs_module_1 = require("./modules/finance/payment-proofs/payment-proofs.module");
+const notifications_module_1 = require("./modules/communication/notifications/notifications.module");
+const core_1 = require("@nestjs/core");
+const api_key_guard_1 = require("./modules/core/auth/api-key.guard");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -74,7 +76,13 @@ exports.AppModule = AppModule = __decorate([
             notifications_module_1.NotificationsModule,
         ],
         controllers: [app_controller_1.AppController],
-        providers: [app_service_1.AppService],
+        providers: [
+            app_service_1.AppService,
+            {
+                provide: core_1.APP_GUARD,
+                useClass: api_key_guard_1.ApiKeyGuard,
+            },
+        ],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

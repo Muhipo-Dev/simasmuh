@@ -1,5 +1,5 @@
-import { PrismaService } from '../prisma/prisma.service';
-import { seedNotificationTemplates } from '../notifications/notification-templates.seed';
+import { PrismaService } from '../modules/core/prisma/prisma.service';
+import { seedNotificationTemplates } from '../modules/communication/notifications/notification-templates.seed';
 
 async function main() {
   const prisma = new PrismaService();

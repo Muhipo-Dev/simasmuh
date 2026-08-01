@@ -42,6 +42,9 @@ Data yang wajib dimanajemen meliputi, namun tidak terbatas pada:
 ## 4. Manajemen Akun & Hak Akses (Role-Based Access Control)
 * **Otoritas Akun:** Semua pengguna dan role HANYA dapat diubah oleh **Superadmin** dan **Admin IT**.
 * **Satu Halaman Login:** SEMUA pengguna (termasuk Siswa, Orang Tua, Guru, dan Karyawan) mutlak menggunakan SATU halaman login yang sama. Perbedaan hak akses dan fitur hanya akan terlihat di halaman Dashboard sesuai dengan role masing-masing setelah berhasil login.
+* **Kredensial Default (Username & Password):** Secara *default*, password awal setiap pengguna adalah sama dengan *username*-nya.
+  * **Siswa:** *Username* menggunakan Nomor Induk Siswa (NIS).
+  * **Guru & Karyawan:** *Username* menggunakan Nomor Induk Pegawai (NIP) secara *default*, namun mereka diberikan kebebasan untuk menggunakan *username custom* atau nama pribadi mereka melalui fitur manajemen akun.
 * **Role Siswa & Orang Tua:** Hanya memiliki 1 role absolut (Siswa atau Orang Tua). Tidak bisa digabung atau ditambahkan subrole. Fitur di dashboard sangat spesifik untuk mereka.
 * **Role Guru & Karyawan:** 
   * Wajib memiliki **1 Role Utama**.

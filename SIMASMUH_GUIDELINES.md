@@ -12,6 +12,7 @@ Dokumen ini berisi aturan mutlak, ruang lingkup, dan pedoman utama dalam pengemb
 
 ## 2. Arsitektur, Infrastruktur & Database
 * **SaaS & Supabase:** Aplikasi berbasis SaaS. Semua basis data (termasuk penyimpanan data dan manajemen pengguna/login) menggunakan **Supabase**.
+* **Konsistensi Autentikasi (Mutlak):** Sistem autentikasi antara Backend, Frontend, dan Supabase harus **selalu sama, sinkron, dan konsisten**. Dilarang mengubah alur atau arsitektur autentikasi secara plin-plan kecuali ada keadaan sangat mendesak (urgent) dan WAJIB atas persetujuan developer.
 * **Koneksi & Sinkronisasi:** Sinkronisasi antara Frontend, Backend, dan Supabase adalah prioritas utama. Validasi data dan tipe data harus diperhatikan agar tidak terjadi error pada database atau kontroler saat ada penambahan fitur.
 * **Struktur File & Folder:** File dan folder aplikasi harus terus dirapikan dan ditata ulang secara berkala jika ada penambahan fitur besar. Jika ada pemindahan folder, pastikan route dan dependensi di dalam file fitur diperbarui secara otomatis.
 * **Controller yang Kokoh:** Arsitektur controller dan pengarahan sistem (routing) harus dirancang dengan sangat matang untuk mengantisipasi penambahan fitur yang rumit, terutama fitur logika perhitungan keuangan/penggajian.

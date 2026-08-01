@@ -53,15 +53,17 @@ export class UsersService {
     if (existing)
       throw new BadRequestException('Email atau username sudah terdaftar');
 
+    const resolvedUsername = data.username || data.email || nipNbmValue || 'user_' + Date.now();
+    const plainPassword = data.password || resolvedUsername;
+    
     const hashedPassword = await bcrypt.hash(
-      data.password || 'password123',
+      plainPassword,
       10,
     );
 
     return this.prisma.user.create({
       data: {
-        username:
-          data.username || data.email || nipNbmValue || 'user_' + Date.now(),
+        username: resolvedUsername,
         name: data.name,
         email: data.email || null,
         nipNbm: nipNbmValue,

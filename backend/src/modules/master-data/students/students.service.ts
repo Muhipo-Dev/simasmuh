@@ -28,8 +28,8 @@ export class StudentsService {
 
   async create(data: any) {
     // Create User and Student together
-    const username = data.username || data.nisn;
-    const plainPassword = data.password || username; // default to username (NISN/NIA)
+    const username = data.username || data.nis;
+    const plainPassword = data.password || username; // default to username (NIS)
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     return this.prisma.user.create({
@@ -59,7 +59,7 @@ export class StudentsService {
     // Pre-hash all passwords concurrently
     const hashedDataArray = await Promise.all(
       dataArray.map(async (data) => {
-        const username = data.username || data.nisn || String(Math.random());
+        const username = data.username || data.nis || String(Math.random());
         const plainPassword = data.password || username; // Default password is username
         const hashedPassword = await bcrypt.hash(plainPassword, 10);
         return { ...data, username, password: hashedPassword };

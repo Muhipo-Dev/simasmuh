@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class TeachersService {
@@ -47,12 +48,16 @@ export class TeachersService {
   }
 
   async create(data: any) {
+    const username = data.username || data.nip || data.email;
+    const plainPassword = data.password || username;
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
     // Create User and TeacherProfile together
     return this.prisma.user.create({
       data: {
-        username: data.username || data.nip || data.email,
+        username: username,
         email: data.email,
-        password: data.password || 'guru123', // Default password if not provided
+        password: hashedPassword,
         name: data.name,
         role: 'GURU',
         teacherProfile: {
@@ -69,14 +74,24 @@ export class TeachersService {
   }
 
   async createBulk(dataArray: any[]) {
+    // Pre-hash all passwords concurrently
+    const hashedDataArray = await Promise.all(
+      dataArray.map(async (data) => {
+        const username = data.username || data.nip || data.email || String(Math.random());
+        const plainPassword = data.password || username;
+        const hashedPassword = await bcrypt.hash(plainPassword, 10);
+        return { ...data, username, password: hashedPassword };
+      }),
+    );
+
     // Execute multiple creations in a transaction
     return this.prisma.$transaction(
-      dataArray.map((data) =>
+      hashedDataArray.map((data) =>
         this.prisma.user.create({
           data: {
-            username: data.username || data.nip || data.email,
+            username: data.username,
             email: data.email,
-            password: data.password || 'guru123',
+            password: data.password,
             name: data.name,
             role: 'GURU',
             teacherProfile: {

@@ -40,7 +40,7 @@ Data yang wajib dimanajemen meliputi, namun tidak terbatas pada:
 
 ## 4. Manajemen Akun & Hak Akses (Role-Based Access Control)
 * **Otoritas Akun:** Semua pengguna dan role HANYA dapat diubah oleh **Superadmin** dan **Admin IT**.
-* **Login Terpisah:** Area input login untuk **Siswa dan Orang Tua** BERBEDA dengan area login untuk **Guru dan Karyawan**.
+* **Satu Halaman Login:** SEMUA pengguna (termasuk Siswa, Orang Tua, Guru, dan Karyawan) mutlak menggunakan SATU halaman login yang sama. Perbedaan hak akses dan fitur hanya akan terlihat di halaman Dashboard sesuai dengan role masing-masing setelah berhasil login.
 * **Role Siswa & Orang Tua:** Hanya memiliki 1 role absolut (Siswa atau Orang Tua). Tidak bisa digabung atau ditambahkan subrole. Fitur di dashboard sangat spesifik untuk mereka.
 * **Role Guru & Karyawan:** 
   * Wajib memiliki **1 Role Utama**.
@@ -52,6 +52,7 @@ Data yang wajib dimanajemen meliputi, namun tidak terbatas pada:
 * **Aesthetics First:** Tampilan harus "WOW", premium, menarik, responsif, dan nyaman di berbagai perangkat.
 * **Anti-AI Styling Default:** Gunakan Custom CSS yang dikombinasikan dengan modifikasi framework (jangan hanya bergantung pada utility class Tailwind yang kaku/biasa). Pastikan ada interaktivitas (animasi ringan, hover effects, transisi) agar sistem terasa hidup.
 * Jangan gunakan template atau warna default yang terkesan murahan.
+* **Fitur Baru (Tahap UI):** Jika ada penambahan fitur baru yang baru selesai pada tahap pembuatan tampilan awal (layout/UI) dan belum berfungsi penuh, WAJIB menambahkan teks atau *placeholder* keterangan **"Coming Soon"** (Segera Hadir) pada halaman/fitur tersebut.
 
 ## 6. Alur Kerja Developer (Workflow Aturan Main)
 * **Bersih dan Efisien:** Dilarang menambahkan file/kode yang tidak berguna atau *dead code*. Jaga performa agar tetap ringan dan aman.

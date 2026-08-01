@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 
@@ -155,5 +155,38 @@ export class StudentsService {
       }
     }
     return null;
+  }
+
+  async promoteBulk(dto: {
+    fromClassId?: string;
+    studentIds?: string[];
+    toClassId: string;
+  }) {
+    const targetClass = await this.prisma.class.findUnique({
+      where: { id: dto.toClassId },
+    });
+    if (!targetClass) throw new NotFoundException('Kelas tujuan tidak ditemukan');
+
+    let whereClause: any = {};
+    if (dto.studentIds && dto.studentIds.length > 0) {
+      whereClause = { id: { in: dto.studentIds } };
+    } else if (dto.fromClassId) {
+      whereClause = { classId: dto.fromClassId };
+    } else {
+      throw new BadRequestException('Harus memilih kelas asal atau daftar siswa');
+    }
+
+    const updated = await this.prisma.student.updateMany({
+      where: whereClause,
+      data: {
+        classId: dto.toClassId,
+      },
+    });
+
+    return {
+      message: `Berhasil menaikkan/memindahkan ${updated.count} siswa ke kelas ${targetClass.name}`,
+      count: updated.count,
+      targetClass: targetClass.name,
+    };
   }
 }

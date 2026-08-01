@@ -47,6 +47,18 @@ export class StudentsController {
     return this.studentsService.createBulk(dataArray);
   }
 
+  @Post('promote-bulk')
+  promoteBulk(
+    @Body()
+    dto: {
+      fromClassId?: string;
+      studentIds?: string[];
+      toClassId: string;
+    },
+  ) {
+    return this.studentsService.promoteBulk(dto);
+  }
+
   @Put(':id')
   update(@Param('id') id: string, @Body() data: any) {
     return this.studentsService.update(id, data);

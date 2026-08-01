@@ -117,6 +117,24 @@ export class FinanceService {
     return student;
   }
 
+  private parseDueDate(dueDateStr?: string | null): Date | null {
+    if (!dueDateStr) return null;
+    if (typeof dueDateStr === 'string') {
+      const trimmed = dueDateStr.trim();
+      if (!trimmed) return null;
+      const ddmmyyyy = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+      if (ddmmyyyy) {
+        return new Date(parseInt(ddmmyyyy[3], 10), parseInt(ddmmyyyy[2], 10) - 1, parseInt(ddmmyyyy[1], 10));
+      }
+      const yyyymmdd = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+      if (yyyymmdd) {
+        return new Date(parseInt(yyyymmdd[1], 10), parseInt(yyyymmdd[2], 10) - 1, parseInt(yyyymmdd[3], 10));
+      }
+    }
+    const parsed = new Date(dueDateStr);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   /** Tambah tagihan baru */
   async addTagihan(
     studentId: string,
@@ -141,7 +159,7 @@ export class FinanceService {
         amount: dto.amount,
         month: dto.month ?? null,
         year: dto.year ?? null,
-        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        dueDate: this.parseDueDate(dto.dueDate),
         status: 'BELUM_LUNAS',
         notes: dto.notes ?? null,
       },
@@ -177,7 +195,7 @@ export class FinanceService {
         ...(dto.month !== undefined && { month: dto.month }),
         ...(dto.year !== undefined && { year: dto.year }),
         ...(dto.dueDate !== undefined && {
-          dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+          dueDate: this.parseDueDate(dto.dueDate),
         }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
       },
@@ -228,7 +246,7 @@ export class FinanceService {
       amount: dto.amount,
       month: dto.month ?? null,
       year: dto.year ?? null,
-      dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+      dueDate: this.parseDueDate(dto.dueDate),
       status: 'BELUM_LUNAS',
       notes: dto.notes ?? null,
     }));
@@ -339,7 +357,23 @@ export class FinanceService {
       },
     });
 
-    if (!user?.student) {
+    let student = user?.student;
+    if (!student) {
+      student = await this.prisma.student.findFirst({
+        where: {
+          OR: [
+            { userId: userId },
+            ...(user?.username ? [{ nisn: user.username }, { nis: user.username }] : []),
+            ...(user?.email ? [{ nisn: user.email }, { nis: user.email }] : [])
+          ]
+        },
+        include: {
+          class: { select: { name: true } }
+        }
+      });
+    }
+
+    if (!student) {
       return { 
         student: null,
         tagihans: [] 
@@ -349,7 +383,7 @@ export class FinanceService {
     // Get unpaid tagihans
     const tagihans = await this.prisma.tagihan.findMany({
       where: {
-        studentId: user.student.id,
+        studentId: student.id,
         status: 'BELUM_LUNAS',
       },
       orderBy: [
@@ -358,9 +392,6 @@ export class FinanceService {
       ],
       include: {
         paymentProofs: {
-          where: {
-            status: 'MENUNGGU_VERIFIKASI'
-          },
           orderBy: { createdAt: 'desc' },
           take: 1
         }
@@ -369,11 +400,11 @@ export class FinanceService {
 
     return { 
       student: {
-        id: user.student.id,
-        name: user.student.name,
-        nisn: user.student.nisn,
-        nis: user.student.nis,
-        className: user.student.class.name
+        id: student.id,
+        name: student.name,
+        nisn: student.nisn,
+        nis: student.nis,
+        className: student.class?.name || '-'
       },
       tagihans 
     };
@@ -393,8 +424,25 @@ export class FinanceService {
       }
     });
 
-    if (!user?.student) throw new NotFoundException('Siswa tidak ditemukan');
-    return user.student;
+    let student = user?.student;
+    if (!student) {
+      student = await this.prisma.student.findFirst({
+        where: {
+          OR: [
+            { userId: userId },
+            ...(user?.username ? [{ nisn: user.username }, { nis: user.username }] : []),
+            ...(user?.email ? [{ nisn: user.email }, { nis: user.email }] : [])
+          ]
+        },
+        include: {
+          class: { select: { name: true } },
+          tagihans: { orderBy: { createdAt: 'desc' } },
+        }
+      });
+    }
+
+    if (!student) throw new NotFoundException('Siswa tidak ditemukan');
+    return student;
   }
 
   // ============================================================

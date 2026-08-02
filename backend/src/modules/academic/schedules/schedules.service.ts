@@ -57,11 +57,13 @@ export class SchedulesService {
           where: { name: { equals: data.className, mode: 'insensitive' } },
         });
         if (!cls) {
+          const setting = await this.prisma.setting.findFirst({ select: { academicYear: true } });
+          const academicYear = setting?.academicYear || '2026/2027';
           cls = await this.prisma.class.create({
             data: {
               name: data.className,
               gradeLevel: 10,
-              academicYear: '2026/2027',
+              academicYear,
             },
           });
         }

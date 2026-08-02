@@ -13,6 +13,8 @@ export class SettingsService {
         data: {
           schoolName: 'Nama Sekolah',
           address: 'Alamat Sekolah',
+          academicYear: '2026/2027',
+          semester: 'Ganjil',
         },
       });
     }
@@ -26,6 +28,9 @@ export class SettingsService {
         address: true,
         phone: true,
         email: true,
+        academicYear: true,
+        semester: true,
+        logoUrl: true,
       },
     });
     if (!settings) {
@@ -34,6 +39,9 @@ export class SettingsService {
         address: 'Alamat Sekolah',
         phone: '',
         email: '',
+        academicYear: '2026/2027',
+        semester: 'Ganjil',
+        logoUrl: null,
       };
     }
     return settings;

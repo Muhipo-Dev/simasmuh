@@ -3,9 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 model User {
@@ -177,6 +175,8 @@ model Setting {
   bankName      String?
   bankNumber    String?
   bankOwner     String?
+  academicYear  String? @default("2026/2027")
+  semester      String? @default("Ganjil")
 }
 
 model Announcement {

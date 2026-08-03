@@ -92,8 +92,14 @@ export default function UsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUser)
       })
-      if (!res.ok) throw new Error('Gagal menambah pengguna')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.message || 'Gagal menambah pengguna')
+      }
       return res.json()
+    },
+    onError: (err: any) => {
+      alert(err.message || 'Gagal menambah pengguna')
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -108,8 +114,14 @@ export default function UsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedUser)
       })
-      if (!res.ok) throw new Error('Gagal memperbarui pengguna')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.message || 'Gagal memperbarui pengguna')
+      }
       return res.json()
+    },
+    onError: (err: any) => {
+      alert(err.message || 'Gagal memperbarui pengguna')
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -122,8 +134,14 @@ export default function UsersPage() {
       const res = await authenticatedFetch(`/api-backend/users/${id}`, {
         method: 'DELETE'
       })
-      if (!res.ok) throw new Error('Gagal menghapus pengguna')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.message || 'Gagal menghapus pengguna')
+      }
       return res.json()
+    },
+    onError: (err: any) => {
+      alert(err.message || 'Gagal menghapus pengguna')
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -166,8 +184,16 @@ export default function UsersPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData.username || formData.username.trim() === '') {
+      alert('Username wajib diisi')
+      return
+    }
+
     const dataToSubmit = {
       ...formData,
+      username: formData.username.trim(),
+      email: formData.email.trim() || null,
+      nipNbm: formData.nipNbm.trim() || null,
       subRole: formData.subRole === 'NONE' ? null : formData.subRole,
       subRole2: formData.subRole2 === 'NONE' ? null : formData.subRole2,
       subRole3: formData.subRole3 === 'NONE' ? null : formData.subRole3
@@ -218,13 +244,15 @@ export default function UsersPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username (Opsional)</Label>
+                  <Label htmlFor="username">Username *</Label>
                   <Input 
                     id="username" 
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    placeholder="Contoh: ahmaddahlan" 
+                    placeholder="Contoh: ahmaddahlan / admin_web" 
+                    required
                   />
+                  <p className="text-[11px] text-slate-500">Username bebas untuk login (bukan email).</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="nipNbm">NIP / NBM (Opsional)</Label>
@@ -238,26 +266,28 @@ export default function UsersPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="email">Email (Opsional)</Label>
                 <Input 
                   id="email" 
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="Contoh: ahmad@sekolah.sch.id"
-                  required 
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">{isEdit ? 'Password Baru (Kosongkan jika tidak diubah)' : 'Password *'}</Label>
+                <Label htmlFor="password">{isEdit ? 'Password Baru (Kosongkan jika tidak diubah)' : 'Password (Opsional)'}</Label>
                 <Input 
                   id="password" 
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required={!isEdit}
+                  placeholder={isEdit ? 'Biarkan kosong jika tidak diubah' : 'Default password sama dengan username'}
                 />
+                {!isEdit && (
+                  <p className="text-[11px] text-slate-500">Jika dikosongkan, password awal akan sama dengan username.</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -361,9 +391,10 @@ export default function UsersPage() {
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="w-[80px] pl-6">No</TableHead>
+                <TableHead className="w-[60px] pl-6">No</TableHead>
                 <TableHead>Nama Pengguna</TableHead>
                 <TableHead>Username</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>NIP / NBM</TableHead>
                 <TableHead>Password</TableHead>
                 <TableHead>Role</TableHead>
@@ -376,7 +407,7 @@ export default function UsersPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-10">
+                  <TableCell colSpan={11} className="text-center py-10">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600 mb-2" />
                       Memuat data...
@@ -385,7 +416,7 @@ export default function UsersPage() {
                 </TableRow>
               ) : filterDataBySearch(users, searchQuery)?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-10 text-slate-500">
+                  <TableCell colSpan={11} className="text-center py-10 text-slate-500">
                     {searchQuery ? 'Tidak ada akun pengguna yang sesuai dengan pencarian.' : 'Belum ada data pengguna.'}
                   </TableCell>
                 </TableRow>
@@ -394,7 +425,12 @@ export default function UsersPage() {
                   <TableRow key={item.id}>
                     <TableCell className="pl-6 font-medium text-slate-500">{index + 1}</TableCell>
                     <TableCell className="font-semibold text-slate-900 dark:text-white">{item.name}</TableCell>
-                    <TableCell className="font-mono text-slate-600 dark:text-slate-400">{item.username || '-'}</TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800">
+                        {item.username || '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-400 text-xs">{item.email || '-'}</TableCell>
                     <TableCell className="font-mono text-slate-600 dark:text-slate-400">{item.nipNbm || item.teacherProfile?.nip || '-'}</TableCell>
                     <TableCell className="text-slate-400 text-xs font-mono">••••••••</TableCell>
                     <TableCell>

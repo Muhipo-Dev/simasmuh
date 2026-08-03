@@ -30,6 +30,11 @@ export class UsersService {
   }
 
   async create(data: any) {
+    const usernameValue = data.username && data.username.trim() !== '' ? data.username.trim() : null;
+    if (!usernameValue) {
+      throw new BadRequestException('Username wajib diisi');
+    }
+
     const nipNbmValue =
       data.nipNbm && data.nipNbm.trim() !== '' ? data.nipNbm.trim() : null;
     if (nipNbmValue) {
@@ -42,19 +47,24 @@ export class UsersService {
         );
     }
 
-    const existing = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          ...(data.email ? [{ email: data.email }] : []),
-          { username: data.username || data.email || nipNbmValue },
-        ],
-      },
+    const existingUsername = await this.prisma.user.findFirst({
+      where: { username: usernameValue },
     });
-    if (existing)
-      throw new BadRequestException('Email atau username sudah terdaftar');
+    if (existingUsername) {
+      throw new BadRequestException('Username sudah terdaftar');
+    }
 
-    const resolvedUsername = data.username || data.email || nipNbmValue || 'user_' + Date.now();
-    const plainPassword = data.password || resolvedUsername;
+    const emailValue = data.email && data.email.trim() !== '' ? data.email.trim() : null;
+    if (emailValue) {
+      const existingEmail = await this.prisma.user.findFirst({
+        where: { email: emailValue },
+      });
+      if (existingEmail) {
+        throw new BadRequestException('Email sudah terdaftar');
+      }
+    }
+
+    const plainPassword = data.password && data.password.trim() !== '' ? data.password.trim() : usernameValue;
     
     const hashedPassword = await bcrypt.hash(
       plainPassword,
@@ -63,9 +73,9 @@ export class UsersService {
 
     return this.prisma.user.create({
       data: {
-        username: resolvedUsername,
+        username: usernameValue,
         name: data.name,
-        email: data.email || null,
+        email: emailValue,
         nipNbm: nipNbmValue,
         password: hashedPassword,
         role: data.role || 'GURU',
@@ -100,6 +110,43 @@ export class UsersService {
   }
 
   async update(id: string, data: any) {
+    const updateData: any = {
+      name: data.name,
+      role: data.role,
+      subRole: data.subRole || null,
+      subRole2: data.subRole2 || null,
+      subRole3: data.subRole3 || null,
+    };
+
+    if (data.username !== undefined) {
+      const usernameValue = data.username ? data.username.trim() : '';
+      if (!usernameValue) {
+        throw new BadRequestException('Username wajib diisi');
+      }
+      const existingUsername = await this.prisma.user.findFirst({
+        where: { username: usernameValue, NOT: { id } },
+      });
+      if (existingUsername) {
+        throw new BadRequestException('Username sudah terdaftar pada akun lain');
+      }
+      updateData.username = usernameValue;
+    }
+
+    if (data.email !== undefined) {
+      if (data.email && data.email.trim() !== '') {
+        const emailValue = data.email.trim();
+        const existingEmail = await this.prisma.user.findFirst({
+          where: { email: emailValue, NOT: { id } },
+        });
+        if (existingEmail) {
+          throw new BadRequestException('Email sudah terdaftar pada akun lain');
+        }
+        updateData.email = emailValue;
+      } else {
+        updateData.email = null;
+      }
+    }
+
     const nipNbmValue =
       data.nipNbm !== undefined
         ? data.nipNbm && data.nipNbm.trim() !== ''
@@ -116,22 +163,12 @@ export class UsersService {
         );
     }
 
-    const updateData: any = {
-      name: data.name,
-      email: data.email || null,
-      username: data.username || data.email || data.nipNbm,
-      role: data.role,
-      subRole: data.subRole || null,
-      subRole2: data.subRole2 || null,
-      subRole3: data.subRole3 || null,
-    };
-
     if (nipNbmValue !== undefined) {
       updateData.nipNbm = nipNbmValue;
     }
 
-    if (data.password) {
-      updateData.password = await bcrypt.hash(data.password, 10);
+    if (data.password && data.password.trim() !== '') {
+      updateData.password = await bcrypt.hash(data.password.trim(), 10);
     }
 
     if (

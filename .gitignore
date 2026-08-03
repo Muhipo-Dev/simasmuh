@@ -16,3 +16,4 @@ frontend/out/
 frontend/build/
 *.ps1
 *.bat
+*.pid

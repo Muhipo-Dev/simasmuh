@@ -17,10 +17,15 @@ export class SubjectsService {
     return this.prisma.subject.create({ data });
   }
 
-  async createBulk(dataArray: { name: string; code: string }[]) {
-    return this.prisma.$transaction(
-      dataArray.map((data) => this.prisma.subject.create({ data })),
-    );
+  async createBulk(dataArray: { name: string; code: string }[]): Promise<{ created: number; skipped: number }> {
+    const result = await this.prisma.subject.createMany({
+      data: dataArray,
+      skipDuplicates: true,
+    });
+    return {
+      created: result.count,
+      skipped: dataArray.length - result.count,
+    };
   }
 
   async update(id: string, data: { name?: string; code?: string }) {

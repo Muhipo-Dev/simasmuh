@@ -1,0 +1,299 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.15 0.025 255);
+  --foreground: oklch(0.94 0.01 255);
+  --card: oklch(0.19 0.03 255);
+  --card-foreground: oklch(0.94 0.01 255);
+  --popover: oklch(0.19 0.03 255);
+  --popover-foreground: oklch(0.94 0.01 255);
+  --primary: oklch(0.65 0.18 250);
+  --primary-foreground: oklch(0.15 0.025 255);
+  --secondary: oklch(0.25 0.04 255);
+  --secondary-foreground: oklch(0.94 0.01 255);
+  --muted: oklch(0.22 0.035 255);
+  --muted-foreground: oklch(0.72 0.02 255);
+  --accent: oklch(0.25 0.04 255);
+  --accent-foreground: oklch(0.94 0.01 255);
+  --destructive: oklch(0.65 0.22 25);
+  --border: oklch(0.28 0.05 255);
+  --input: oklch(0.22 0.04 255);
+  --ring: oklch(0.55 0.15 255);
+  --chart-1: oklch(0.70 0.15 250);
+  --chart-2: oklch(0.65 0.15 160);
+  --chart-3: oklch(0.65 0.15 40);
+  --chart-4: oklch(0.65 0.15 300);
+  --chart-5: oklch(0.65 0.15 200);
+  --sidebar: oklch(0.17 0.03 255);
+  --sidebar-foreground: oklch(0.94 0.01 255);
+  --sidebar-primary: oklch(0.65 0.18 250);
+  --sidebar-primary-foreground: oklch(0.94 0.01 255);
+  --sidebar-accent: oklch(0.24 0.04 255);
+  --sidebar-accent-foreground: oklch(0.94 0.01 255);
+  --sidebar-border: oklch(0.27 0.05 255);
+  --sidebar-ring: oklch(0.55 0.15 255);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+    overscroll-behavior-y: none;
+  }
+  html {
+    @apply font-sans;
+  }
+
+  /* ==========================================================================
+     HARMONISASI DARK MODE CEPAT & RAPI (EYE-COMFORT & MOBILE RENDERING OPTIMIZED)
+     ========================================================================== */
+  
+  /* Harmonisasi Tabel di seluruh Dasbor agar Elegan, Sangat Jelas & Mudah Dibaca */
+  .dark table {
+    @apply border-collapse w-full text-slate-100;
+  }
+  .dark thead, 
+  .dark [data-slot="table-header"], 
+  .dark [data-slot="table-head"] {
+    background-color: oklch(0.22 0.04 255) !important;
+    color: oklch(0.98 0.005 255) !important;
+    border-color: oklch(0.30 0.05 255) !important;
+    font-weight: 700 !important;
+  }
+  .dark tbody tr, 
+  .dark [data-slot="table-row"] {
+    border-color: oklch(0.25 0.04 255) !important;
+    background-color: oklch(0.18 0.03 255) !important;
+  }
+  .dark tbody tr:hover, 
+  .dark [data-slot="table-row"]:hover {
+    background-color: oklch(0.24 0.04 255) !important;
+  }
+  .dark td, 
+  .dark [data-slot="table-cell"] {
+    border-color: oklch(0.25 0.04 255) !important;
+    color: oklch(0.93 0.01 255) !important;
+  }
+
+  /* Harmonisasi Card & Header di Dark Mode (Kontras Tinggi & Super Jelas Dibaca) */
+  .dark [data-slot="card"] {
+    background-color: oklch(0.18 0.03 255) !important;
+    border-color: oklch(0.28 0.04 255) !important;
+    color: oklch(0.95 0.01 255) !important;
+  }
+  .dark [data-slot="card-header"],
+  .dark .bg-slate-50\/50,
+  .dark .bg-slate-50,
+  .dark .bg-slate-100 {
+    background-color: oklch(0.21 0.035 255) !important;
+    border-color: oklch(0.28 0.04 255) !important;
+  }
+  .dark [data-slot="card-title"] {
+    color: oklch(0.98 0.005 255) !important;
+    font-weight: 700 !important;
+  }
+  .dark [data-slot="card-description"],
+  .dark .text-slate-500,
+  .dark .text-slate-600,
+  .dark .text-slate-400 {
+    color: oklch(0.85 0.02 255) !important;
+  }
+
+  /* Harmonisasi Border */
+  .dark .border-slate-100, 
+  .dark .border-slate-200, 
+  .dark .border-slate-300 {
+    border-color: oklch(0.28 0.045 255) !important;
+  }
+
+  /* Teks Utama & Judul di Dark Mode */
+  .dark .text-slate-900, 
+  .dark .text-slate-800 {
+    color: oklch(0.98 0.005 255) !important;
+  }
+  .dark .text-slate-700 {
+    color: oklch(0.90 0.015 255) !important;
+  }
+
+  /* Harmonisasi Badge Status & Chip agar teduh namun jelas terbantahkan di Dark Mode */
+  .dark .bg-blue-100, .dark .bg-blue-50 { background-color: oklch(0.25 0.08 255 / 80%) !important; color: oklch(0.85 0.12 255) !important; border-color: oklch(0.35 0.10 255) !important; }
+  .dark .bg-emerald-100, .dark .bg-emerald-50, .dark .bg-green-100, .dark .bg-green-50 { background-color: oklch(0.24 0.08 150 / 80%) !important; color: oklch(0.86 0.12 150) !important; border-color: oklch(0.34 0.10 150) !important; }
+  .dark .bg-amber-100, .dark .bg-amber-50, .dark .bg-yellow-100, .dark .bg-yellow-50, .dark .bg-orange-100, .dark .bg-orange-50 { background-color: oklch(0.26 0.08 65 / 80%) !important; color: oklch(0.89 0.14 65) !important; border-color: oklch(0.36 0.11 65) !important; }
+  .dark .bg-purple-100, .dark .bg-purple-50, .dark .bg-indigo-100, .dark .bg-indigo-50 { background-color: oklch(0.25 0.09 285 / 80%) !important; color: oklch(0.86 0.13 285) !important; border-color: oklch(0.35 0.11 285) !important; }
+  .dark .bg-red-100, .dark .bg-red-50, .dark .bg-rose-100, .dark .bg-rose-50 { background-color: oklch(0.25 0.09 25 / 80%) !important; color: oklch(0.88 0.14 25) !important; border-color: oklch(0.36 0.12 25) !important; }
+
+  /* Mencegah auto-zoom di iOS dan merapikan input/textarea di Dark Mode untuk Layar Sentuh */
+  .dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="file"]), 
+  .dark select, 
+  .dark textarea {
+    background-color: oklch(0.16 0.03 255) !important;
+    border-color: oklch(0.30 0.05 255) !important;
+    color: oklch(0.95 0.01 255) !important;
+    font-size: 1rem !important;
+  }
+  .dark input::placeholder, 
+  .dark textarea::placeholder {
+    color: oklch(0.58 0.02 255) !important;
+  }
+
+  /* ==========================================================================
+     ULTRA-RESPONSIVITY & MOBILE ERGONOMIC DESIGN (ANDROID & IOS PHONES/TABLETS)
+     ========================================================================== */
+  @media (max-width: 1023px) {
+    /* 1. Pencegahan mutlak Auto-Zoom di Safari iOS & Chrome Android saat tap kolom form */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="file"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+      line-height: 1.5 !important;
+      padding-top: 0.65rem !important;
+      padding-bottom: 0.65rem !important;
+    }
+
+    /* 2. Target Sentuh Ergonomis: Tombol dan elemen interaktif di HP/Tablet minimal 44x44px (Apple & Google UI/UX standards) */
+    button:not(.carousel-dot), [role="button"]:not(.carousel-dot), a.btn, input[type="submit"], input[type="button"], .touch-target {
+      min-height: 44px;
+      touch-action: manipulation;
+    }
+
+    .carousel-dot {
+      min-height: 0 !important;
+    }
+
+    /* 3. Menghandle seluruh tabel data (Guru, Siswa, Keuangan, Presensi) agar scroll horizontal halus tanpa merusak layout layar kecil */
+    table {
+      display: block;
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      white-space: nowrap;
+      border-radius: var(--radius-lg);
+    }
+    
+    th, td {
+      padding: 0.75rem 1rem !important;
+    }
+
+    /* Kustomisasi scrollbar halus untuk sentuhan jari di HP/Tablet */
+    ::-webkit-scrollbar {
+      height: 4px;
+      width: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 9999px;
+    }
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+  
+  /* Kelas pembungkus tabel responsif tambahan untuk proteksi ekstra */
+  .table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

@@ -1,0 +1,373 @@
+import Image from 'next/image';
+import Link from 'next/link';
+import { ArrowRight, GraduationCap, Users, Building2, LogIn, Menu, Calendar, BookOpen, Trophy, MapPin, Phone, Mail, Globe, Cpu, Music, Briefcase, Microscope } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import HeroCarousel from '@/components/home/HeroCarousel';
+import ProgramUnggulanSection from '@/components/home/ProgramUnggulanSection';
+import { getPublicApiUrl } from '@/lib/api-config';
+
+export const metadata = {
+  title: "Web SMA MUHIPO - SIMASMUH",
+  description: "Portal Resmi SMA Muhammadiyah 1 Ponorogo - Cerdas, Mandiri, Berprestasi, Mendunia.",
+};
+
+async function getSettings() {
+  try {
+    const res = await fetch(getPublicApiUrl('/settings/public'), {
+      cache: 'no-store',
+      headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026' }
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  type: string;
+  target: string;
+  eventDate?: string | Date;
+  image?: string;
+  createdAt: string | Date;
+  author?: { name: string };
+}
+
+async function getAnnouncements(): Promise<Announcement[]> {
+  try {
+    const res = await fetch(getPublicApiUrl('/announcements/public'), {
+      cache: 'no-store',
+      headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026' }
+    })
+    if (!res.ok) return []
+    return res.json()
+  } catch {
+    return []
+  }
+}
+
+async function getStats() {
+  try {
+    const res = await fetch(getPublicApiUrl('/settings/public/stats'), {
+      cache: 'no-store',
+      headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026' }
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
+
+export default async function Home() {
+  const settings = await getSettings()
+  const announcements = await getAnnouncements()
+  const stats = await getStats()
+
+  const beritaList = announcements.filter((a) => a.type === 'BERITA')
+  const agendaList = announcements.filter((a) => a.type === 'AGENDA').sort((a, b) => new Date(a.eventDate || a.createdAt).getTime() - new Date(b.eventDate || b.createdAt).getTime())
+
+  const schoolName = settings?.schoolName || 'SMA Muhammadiyah 1 Ponorogo'
+  const address = settings?.address || 'Jl. Batoro Katong No. 123, Ponorogo, Jawa Timur'
+  const phone = settings?.phone || '(0352) 123456'
+  const email = settings?.email || 'info@smamuhipo.sch.id'
+
+  const teacherCount = stats?.teachers || 0
+  const studentCount = stats?.students || 0
+  const classCount = stats?.classes || 0
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors duration-300 text-slate-900 dark:text-slate-100 selection:bg-blue-600 selection:text-white">
+      {/* Navbar */}
+      <nav className="h-16 sm:h-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 lg:px-12 shadow-xs border-b border-slate-100 dark:border-slate-800/80 sticky top-0 z-30 transition-colors duration-300">
+        <div className="flex items-center gap-3">
+          <Image
+            src="/pic_logo.png"
+            alt="Logo SMA MUHIPO"
+            width={150}
+            height={50}
+            priority
+            className="object-contain h-9 sm:h-12 w-auto"
+          />
+        </div>
+
+        {/* Desktop Navigation Links */}
+        <div className="hidden lg:flex items-center gap-8">
+          <Link href="/" className="text-[#2B50A1] dark:text-blue-400 font-bold transition-colors">Beranda</Link>
+          <Link href="/profil" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Profil</Link>
+          <Link href="/tentang" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Tentang</Link>
+          <Link href="/berita" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Berita</Link>
+          <Link href="/spmb" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-bold transition-colors">SPMB Online</Link>
+
+          <div className="flex items-center gap-4 border-l border-slate-200 dark:border-slate-800 pl-8">
+            <ThemeToggle />
+            <Link href="/login" className="bg-[#2B50A1] hover:bg-[#1f3c7a] dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-5 py-2.5 rounded-full font-bold text-sm flex items-center transition-all shadow-sm hover:shadow-md active:scale-95">
+              <LogIn className="w-4 h-4 mr-2" />
+              Login SIMASMUH
+            </Link>
+          </div>
+        </div>
+
+        {/* Mobile Menu & Theme Toggle */}
+        <div className="lg:hidden flex items-center gap-2.5">
+          <ThemeToggle size="sm" />
+          <DropdownMenu>
+            <DropdownMenuTrigger className="bg-[#2B50A1] hover:bg-[#1f3c7a] text-white rounded-xl w-10 h-10 p-0 flex items-center justify-center shadow-xs transition-colors">
+              <Menu className="h-5 w-5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60 mt-2 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-2 text-slate-900 dark:text-slate-100 shadow-xl rounded-xl">
+              <DropdownMenuItem>
+                <Link href="/" className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-[#2B50A1] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 rounded-lg">Beranda</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link href="/profil" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">Profil</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link href="/tentang" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">Tentang</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link href="/berita" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">Berita</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link href="/spmb" className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg">SPMB Online</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="my-1.5" />
+              <DropdownMenuItem>
+                <Link href="/login" className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-white bg-[#2B50A1] hover:bg-[#1f3c7a] rounded-lg flex items-center justify-center shadow-xs">
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Login SIMASMUH
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <main className="flex-1 flex flex-col">
+        <HeroCarousel schoolName={schoolName} />
+
+        {/* Enhanced High-Contrast Royal Blue Stats (Data Count) Section */}
+        <div className="relative z-20 mt-4 sm:-mt-10 px-4 sm:px-8 max-w-6xl mx-auto w-full">
+          <div className="bg-[#1e3b7a] dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-10 shadow-2xl border border-blue-400/30 dark:border-blue-900/50">
+            <div className="grid grid-cols-3 divide-x divide-white/20 dark:divide-blue-800/40">
+              {/* GTK Count */}
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-6 justify-center text-center sm:text-left px-2 sm:px-4">
+                <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0 shadow-md">
+                  <Users className="w-5 h-5 sm:w-8 sm:h-8 text-white" />
+                </div>
+                <div className="text-white">
+                  <h3 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-none mb-1 text-white drop-shadow-sm">
+                    {teacherCount}
+                  </h3>
+                  <p className="text-[11px] sm:text-xs md:text-sm font-extrabold tracking-wider sm:tracking-widest text-blue-100 uppercase drop-shadow-xs">
+                    GTK
+                  </p>
+                  <p className="hidden md:block text-[11px] text-blue-200/90 mt-0.5 font-semibold">
+                    Guru &amp; Staf Kependidikan
+                  </p>
+                </div>
+              </div>
+
+              {/* Siswa Count */}
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-6 justify-center text-center sm:text-left px-2 sm:px-4">
+                <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0 shadow-md">
+                  <GraduationCap className="w-5 h-5 sm:w-8 sm:h-8 text-white" />
+                </div>
+                <div className="text-white">
+                  <h3 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-none mb-1 text-white drop-shadow-sm">
+                    {studentCount}
+                  </h3>
+                  <p className="text-[11px] sm:text-xs md:text-sm font-extrabold tracking-wider sm:tracking-widest text-blue-100 uppercase drop-shadow-xs">
+                    SISWA
+                  </p>
+                  <p className="hidden md:block text-[11px] text-blue-200/90 mt-0.5 font-semibold">
+                    Peserta Didik Aktif
+                  </p>
+                </div>
+              </div>
+
+              {/* Rombel / Kelas Count */}
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-6 justify-center text-center sm:text-left px-2 sm:px-4">
+                <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0 shadow-md">
+                  <Building2 className="w-5 h-5 sm:w-8 sm:h-8 text-white" />
+                </div>
+                <div className="text-white">
+                  <h3 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-none mb-1 text-white drop-shadow-sm">
+                    {classCount}
+                  </h3>
+                  <p className="text-[11px] sm:text-xs md:text-sm font-extrabold tracking-wider sm:tracking-widest text-blue-100 uppercase drop-shadow-xs">
+                    Kelas
+                  </p>
+                  <p className="hidden md:block text-[11px] text-blue-200/90 mt-0.5 font-semibold">
+                    Rombongan Belajar
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Program Unggulan Section */}
+        <ProgramUnggulanSection />
+
+        {/* Berita & Agenda Section */}
+        <section className="py-16 sm:py-20 px-4 sm:px-8 lg:px-20 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 transition-colors duration-300">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-12">
+
+            <div className="lg:col-span-2">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Berita Terbaru</h2>
+                <Link href="/berita" className="text-blue-600 dark:text-blue-400 font-bold text-sm hover:underline">Lihat Semua</Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                {beritaList.length === 0 ? (
+                  <div className="col-span-2 text-center py-10 text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                    Belum ada berita terbaru.
+                  </div>
+                ) : (
+                  beritaList.slice(0, 2).map((news) => (
+                    <div key={news.id} className="group cursor-pointer">
+                      {news.image && (
+                        <div className="relative h-48 rounded-2xl overflow-hidden mb-4 group-hover:scale-[1.02] transition-transform duration-300 shadow-xs">
+                          <Image
+                            src={news.image}
+                            alt={news.title}
+                            fill
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
+                        <span className="bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2.5 py-0.5 rounded-full font-bold">
+                          {news.target === 'ALL' ? 'Umum' : 'Publik'}
+                        </span>
+                        <span className="font-medium">{new Date(news.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+                        {news.title}
+                      </h3>
+                      <p className="text-slate-600 dark:text-slate-300 line-clamp-3 text-sm leading-relaxed whitespace-pre-wrap">
+                        {news.content}
+                      </p>
+                      <div className="mt-3 text-xs text-slate-400 font-medium">
+                        Oleh: {news.author?.name || 'Sistem'}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Agenda</h2>
+                <Link href="/agenda" className="text-blue-600 dark:text-blue-400 font-bold text-sm hover:underline">Semua</Link>
+              </div>
+
+              <div className="space-y-4 sm:space-y-5">
+                {agendaList.length === 0 ? (
+                  <div className="text-center py-6 text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                    Belum ada agenda terbaru.
+                  </div>
+                ) : (
+                  agendaList.slice(0, 3).map((agenda) => {
+                    const eventDate = new Date(agenda.eventDate || agenda.createdAt);
+                    const day = eventDate.getDate().toString().padStart(2, '0');
+                    const month = eventDate.toLocaleDateString('id-ID', { month: 'short' });
+
+                    return (
+                      <div key={agenda.id} className="flex gap-4 group cursor-pointer p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+                        <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-orange-50 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 shrink-0 border border-orange-100 dark:border-orange-800/50 group-hover:bg-orange-500 group-hover:text-white transition-colors shadow-xs">
+                          <span className="text-lg font-bold leading-none mb-0.5">{day}</span>
+                          <span className="text-[10px] font-bold uppercase">{month}</span>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-bold text-slate-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 text-sm sm:text-base">{agenda.title}</h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" /> {agenda.content.slice(0, 45)}{agenda.content.length > 45 ? '...' : ''}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+
+      {/* Footer Links Section */}
+      <footer className="bg-slate-900 text-slate-300 pt-12 sm:pt-16 pb-12 px-4 sm:px-8 lg:px-20 border-t-4 border-[#F58F2A]">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
+          <div>
+            <Image src="/pic_logo.png" alt="Logo" width={150} height={50} className="object-contain bg-white p-2 rounded-xl mb-5 shadow-xs" />
+            <p className="text-xs sm:text-sm leading-relaxed text-slate-400">
+              Mewujudkan generasi Islami yang cerdas, berkarakter, dan siap menghadapi tantangan global melalui pendidikan yang berkemajuan.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold text-base sm:text-lg mb-4 sm:mb-6">Tautan Cepat</h4>
+            <ul className="space-y-2.5 text-xs sm:text-sm">
+              <li><Link href="/profil" className="hover:text-white transition-colors">Profil Sekolah</Link></li>
+              <li><Link href="/akademik" className="hover:text-white transition-colors">Informasi Akademik</Link></li>
+              <li><Link href="/ppdb" className="hover:text-white transition-colors">Penerimaan Siswa Baru</Link></li>
+              <li><Link href="/kontak" className="hover:text-white transition-colors">Hubungi Kami</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold text-base sm:text-lg mb-4 sm:mb-6">Fasilitas</h4>
+            <ul className="space-y-2.5 text-xs sm:text-sm">
+              <li><span className="hover:text-white transition-colors">Masjid Sekolah</span></li>
+              <li><span className="hover:text-white transition-colors">Perpustakaan Digital</span></li>
+              <li><span className="hover:text-white transition-colors">Laboratorium Sains &amp; Komputer</span></li>
+              <li><span className="hover:text-white transition-colors">Asrama (Boarding)</span></li>
+            </ul>
+          </div>
+
+          {/* Kontak dari Pengaturan Superadmin */}
+          <div>
+            <h4 className="text-white font-bold text-base sm:text-lg mb-4 sm:mb-6">Kontak Kami</h4>
+            <ul className="space-y-3.5 text-xs sm:text-sm">
+              <li className="flex items-start gap-2.5">
+                <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                <span className="text-slate-300">{address}</span>
+              </li>
+              {phone && (
+                <li className="flex items-center gap-2.5">
+                  <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="text-slate-300">{phone}</span>
+                </li>
+              )}
+              {email && (
+                <li className="flex items-center gap-2.5">
+                  <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="text-slate-300">{email}</span>
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>
+      </footer>
+
+      {/* Copyright Bar */}
+      <footer className="bg-slate-950 text-slate-400 py-6 px-4 text-center text-xs font-semibold border-t border-slate-800">
+        <p className="flex items-center justify-center gap-2 text-slate-400">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0"></span>
+          Copyright &copy; 2026 - Muhipo Dev
+        </p>
+      </footer>
+    </div>
+  );
+}

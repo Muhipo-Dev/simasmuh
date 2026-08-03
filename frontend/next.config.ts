@@ -1,0 +1,44 @@
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  allowedDevOrigins: ['192.168.137.1', '192.168.37.1', '192.168.3.253', 'simasmuh.razagopo.my.id'],
+  async rewrites() {
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+    return [
+      {
+        source: '/api-backend/:path*',
+        destination: `${backendUrl}/:path*`, // Proxy to Backend
+      },
+      {
+        source: '/uploads/:path*',
+        destination: `${backendUrl}/uploads/:path*`, // Proxy uploads to backend
+      }
+    ]
+  },
+  images: {
+    qualities: [25, 50, 75, 100],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3001',
+      },
+      {
+        protocol: 'https',
+        hostname: 'simasmuh.razagopo.my.id',
+      }
+    ],
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+      allowedOrigins: ['simasmuh.razagopo.my.id']
+    }
+  }
+};
+
+export default nextConfig;

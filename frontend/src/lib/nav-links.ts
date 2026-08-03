@@ -2,7 +2,9 @@ import {
   LayoutDashboard, Users, UserSquare2, CalendarDays, ClipboardCheck, 
   GraduationCap, BookOpen, Settings, LogOut, Menu, UserCog, QrCode, 
   DoorOpen, UserCircle2, Megaphone, Wallet, Receipt, X, MoreHorizontal, 
-  Banknote, FileText, Image as ImageIcon, Award, FileCheck 
+  Banknote, FileText, Image as ImageIcon, Award, FileCheck,
+  ShieldAlert, Sparkles, ShieldCheck, UserCheck, HeartHandshake,
+  Library, BookMarked, Mail
 } from 'lucide-react'
 
 export const superadminLinks = [
@@ -112,6 +114,42 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
       addLinks([
         { name: 'Berita & Informasi', href: '/informasi/pengumuman', icon: Megaphone },
         { name: 'Banner Utama', href: '/informasi/banner', icon: ImageIcon }
+      ])
+    } else if (roleName === 'PEMBINA_EKSTRA' || roleName === 'PEMBINA_EXTRA') {
+      addLinks([
+        { name: 'Ekstrakulikuler', href: '/fitur/ekstrakulikuler', icon: Award }
+      ])
+    } else if (roleName === 'KETERTIBAN') {
+      addLinks([
+        { name: 'Ketertiban', href: '/fitur/ketertiban', icon: ShieldAlert }
+      ])
+    } else if (roleName === 'KEBERSIHAN') {
+      addLinks([
+        { name: 'Kebersihan', href: '/fitur/kebersihan', icon: Sparkles }
+      ])
+    } else if (roleName === 'KEAMANAN') {
+      addLinks([
+        { name: 'Keamanan', href: '/fitur/keamanan', icon: ShieldCheck }
+      ])
+    } else if (roleName === 'KEPEGAWAIAN') {
+      addLinks([
+        { name: 'Kepegawaian', href: '/fitur/kepegawaian', icon: UserCheck }
+      ])
+    } else if (roleName === 'BK_BP') {
+      addLinks([
+        { name: 'BK / BP', href: '/fitur/bk-bp', icon: HeartHandshake }
+      ])
+    } else if (roleName === 'PUSTAKAWAN') {
+      addLinks([
+        { name: 'Perpustakaan', href: '/fitur/perpustakaan', icon: Library }
+      ])
+    } else if (roleName === 'GURU_TAHFIDZ') {
+      addLinks([
+        { name: 'Guru Tahfidz', href: '/fitur/tahfidz', icon: BookMarked }
+      ])
+    } else if (roleName === 'PERSURATAN') {
+      addLinks([
+        { name: 'Persuratan', href: '/fitur/persuratan', icon: Mail }
       ])
     } else if (roleName === 'ADMIN_IT' || roleName === 'SUPERADMIN') {
       addLinks(superadminLinks)

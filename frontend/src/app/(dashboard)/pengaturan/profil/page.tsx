@@ -155,9 +155,11 @@ export default function ProfilePage() {
 
   const roleLabels: Record<string, string> = {
     GURU: 'Guru', PEGAWAI: 'Karyawan', SISWA: 'Siswa', ADMIN_IT: 'Admin IT', KEUANGAN: 'Keuangan',
-    BK_BP: 'BK/BP', PEMBINA_EXTRA: 'Pembina Extra', KURIKULUM: 'Kurikulum', KESISWAAN: 'Kesiswaan',
-    KEAMANAN: 'Keamanan', KEPEGAWAIAN: 'Kepegawaian', KEBERSIHAN: 'Kebersihan', KEPALA_SEKOLAH: 'Kepala Sekolah',
-    ADMIN_WEB: 'Admin Web'
+    BK_BP: 'BK/BP', PEMBINA_EXTRA: 'Pembina Ekstrakulikuler', PEMBINA_EKSTRA: 'Pembina Ekstrakulikuler',
+    KURIKULUM: 'Kurikulum', KESISWAAN: 'Kesiswaan', KEAMANAN: 'Keamanan', KEPEGAWAIAN: 'Kepegawaian',
+    KEBERSIHAN: 'Kebersihan', KEPALA_SEKOLAH: 'Kepala Sekolah', ADMIN_WEB: 'Admin Web',
+    KETERTIBAN: 'Ketertiban', PUSTAKAWAN: 'Pustakawan', GURU_TAHFIDZ: 'Guru Tahfidz', PERSURATAN: 'Persuratan',
+    WALI_KELAS: 'Wali Kelas', GURU_PIKET: 'Guru Piket', PETUGAS_SPMB: 'Petugas SPMB'
   }
 
   if (isLoading) {

@@ -27,6 +27,47 @@ type User = {
   createdAt: string
 }
 
+export const SUB_ROLE_OPTIONS = [
+  { value: 'NONE', label: 'Tanpa Sub Role' },
+  { value: 'GURU', label: 'Guru' },
+  { value: 'PEGAWAI', label: 'Pegawai / Karyawan' },
+  { value: 'ADMIN_WEB', label: 'Admin Web' },
+  { value: 'PEMBINA_EKSTRA', label: 'Pembina Ekstrakulikuler' },
+  { value: 'KETERTIBAN', label: 'Ketertiban' },
+  { value: 'KEBERSIHAN', label: 'Kebersihan' },
+  { value: 'KEAMANAN', label: 'Keamanan' },
+  { value: 'KEPEGAWAIAN', label: 'Kepegawaian' },
+  { value: 'BK_BP', label: 'BK/BP' },
+  { value: 'PUSTAKAWAN', label: 'Pustakawan' },
+  { value: 'GURU_TAHFIDZ', label: 'Guru Tahfidz' },
+  { value: 'PERSURATAN', label: 'Persuratan' },
+  { value: 'WALI_KELAS', label: 'Wali Kelas' },
+  { value: 'GURU_PIKET', label: 'Guru Piket' },
+  { value: 'PETUGAS_SPMB', label: 'Petugas SPMB' },
+  { value: 'KEUANGAN', label: 'Keuangan' },
+  { value: 'KURIKULUM', label: 'Kurikulum' },
+]
+
+export const SUB_ROLE_LABELS: Record<string, string> = {
+  GURU: 'Guru',
+  PEGAWAI: 'Pegawai / Karyawan',
+  ADMIN_WEB: 'Admin Web',
+  PEMBINA_EKSTRA: 'Pembina Ekstrakulikuler',
+  KETERTIBAN: 'Ketertiban',
+  KEBERSIHAN: 'Kebersihan',
+  KEAMANAN: 'Keamanan',
+  KEPEGAWAIAN: 'Kepegawaian',
+  BK_BP: 'BK/BP',
+  PUSTAKAWAN: 'Pustakawan',
+  GURU_TAHFIDZ: 'Guru Tahfidz',
+  PERSURATAN: 'Persuratan',
+  WALI_KELAS: 'Wali Kelas',
+  GURU_PIKET: 'Guru Piket',
+  PETUGAS_SPMB: 'Petugas SPMB',
+  KEUANGAN: 'Keuangan',
+  KURIKULUM: 'Kurikulum',
+}
+
 export default function UsersPage() {
   const authenticatedFetch = useAuthenticatedFetch();
   const queryClient = useQueryClient()
@@ -229,14 +270,12 @@ export default function UsersPage() {
                     <SelectValue placeholder="Pilih Role" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="GURU">GURU (Guru)</SelectItem>
+                    <SelectItem value="PEGAWAI">PEGAWAI (Karyawan / Staf)</SelectItem>
                     <SelectItem value="SUPERADMIN">SUPERADMIN</SelectItem>
                     <SelectItem value="ADMIN_IT">ADMIN IT</SelectItem>
-                    <SelectItem value="ADMIN">ADMIN</SelectItem>
                     <SelectItem value="KEPALA_SEKOLAH">KEPALA SEKOLAH</SelectItem>
-                    <SelectItem value="KURIKULUM">KURIKULUM</SelectItem>
-                    <SelectItem value="BENDAHARA">BENDAHARA</SelectItem>
-                    <SelectItem value="GURU">GURU</SelectItem>
-                    <SelectItem value="STAF">STAF</SelectItem>
+                    <SelectItem value="KEUANGAN">KEUANGAN (Bendahara)</SelectItem>
                     <SelectItem value="SISWA">SISWA</SelectItem>
                   </SelectContent>
                 </Select>
@@ -253,10 +292,9 @@ export default function UsersPage() {
                       <SelectValue placeholder="Pilih Sub Role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="NONE">Tanpa Sub Role</SelectItem>
-                      <SelectItem value="WALI_KELAS">WALI KELAS</SelectItem>
-                      <SelectItem value="GURU_PIKET">GURU PIKET</SelectItem>
-                      <SelectItem value="PETUGAS_SPMB">PETUGAS SPMB</SelectItem>
+                      {SUB_ROLE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -271,10 +309,9 @@ export default function UsersPage() {
                       <SelectValue placeholder="Pilih Sub Role 2" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="NONE">Tanpa Sub Role</SelectItem>
-                      <SelectItem value="WALI_KELAS">WALI KELAS</SelectItem>
-                      <SelectItem value="GURU_PIKET">GURU PIKET</SelectItem>
-                      <SelectItem value="PETUGAS_SPMB">PETUGAS SPMB</SelectItem>
+                      {SUB_ROLE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -289,10 +326,9 @@ export default function UsersPage() {
                       <SelectValue placeholder="Pilih Sub Role 3" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="NONE">Tanpa Sub Role</SelectItem>
-                      <SelectItem value="WALI_KELAS">WALI KELAS</SelectItem>
-                      <SelectItem value="GURU_PIKET">GURU PIKET</SelectItem>
-                      <SelectItem value="PETUGAS_SPMB">PETUGAS SPMB</SelectItem>
+                      {SUB_ROLE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -365,9 +401,9 @@ export default function UsersPage() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
                         item.role === 'SUPERADMIN' ? 'bg-purple-100 text-purple-800' :
                         item.role === 'ADMIN_IT' ? 'bg-indigo-100 text-indigo-800' :
-                        item.role === 'ADMIN' ? 'bg-blue-100 text-blue-800' :
                         item.role === 'KEPALA_SEKOLAH' ? 'bg-amber-100 text-amber-800' :
                         item.role === 'GURU' ? 'bg-emerald-100 text-emerald-800' :
+                        item.role === 'PEGAWAI' ? 'bg-cyan-100 text-cyan-800' :
                         'bg-slate-100 text-slate-800'
                       }`}>
                         {item.role}
@@ -376,7 +412,7 @@ export default function UsersPage() {
                     <TableCell>
                       {item.subRole ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                          {item.subRole}
+                          {SUB_ROLE_LABELS[item.subRole] || item.subRole}
                         </span>
                       ) : (
                         <span className="text-slate-400 text-xs">-</span>
@@ -385,7 +421,7 @@ export default function UsersPage() {
                     <TableCell>
                       {item.subRole2 ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                          {item.subRole2}
+                          {SUB_ROLE_LABELS[item.subRole2] || item.subRole2}
                         </span>
                       ) : (
                         <span className="text-slate-400 text-xs">-</span>
@@ -394,7 +430,7 @@ export default function UsersPage() {
                     <TableCell>
                       {item.subRole3 ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">
-                          {item.subRole3}
+                          {SUB_ROLE_LABELS[item.subRole3] || item.subRole3}
                         </span>
                       ) : (
                         <span className="text-slate-400 text-xs">-</span>

@@ -218,6 +218,12 @@ export class UsersService {
     });
   }
 
+  async removeMany(ids: string[]) {
+    return this.prisma.user.deleteMany({
+      where: { id: { in: ids } },
+    });
+  }
+
   async getProfile(id: string) {
     return this.prisma.user.findUnique({
       where: { id },

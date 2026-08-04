@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Loader2, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -76,6 +76,14 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [formData, setFormData] = useState({ id: '', name: '', username: '', nipNbm: '', email: '', password: '', role: 'GURU', subRole: 'NONE', subRole2: 'NONE', subRole3: 'NONE' })
 
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [isBulkDeleteMode, setIsBulkDeleteMode] = useState(false)
+
+  // Select state
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
+
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ['users'],
     queryFn: async () => {
@@ -145,6 +153,32 @@ export default function UsersPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      setDeleteDialogOpen(false)
+      setUserToDelete(null)
+    }
+  })
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await authenticatedFetch('/api-backend/users/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.message || 'Gagal menghapus pengguna terpilih')
+      }
+      return res.json()
+    },
+    onError: (err: any) => {
+      alert(err.message || 'Gagal menghapus pengguna terpilih')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setDeleteDialogOpen(false)
+      setSelectedUserIds([])
+      setIsBulkDeleteMode(false)
     }
   })
 
@@ -176,10 +210,41 @@ export default function UsersPage() {
     setFormData({ id: '', name: '', username: '', nipNbm: '', email: '', password: '', role: 'GURU', subRole: 'NONE', subRole2: 'NONE', subRole3: 'NONE' })
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus akun ini?')) {
-      deleteMutation.mutate(id)
+  const handleOpenDeleteDialog = (user: User) => {
+    setIsBulkDeleteMode(false)
+    setUserToDelete(user)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleOpenBulkDeleteDialog = () => {
+    setIsBulkDeleteMode(true)
+    setUserToDelete(null)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = () => {
+    if (isBulkDeleteMode) {
+      if (selectedUserIds.length > 0) {
+        bulkDeleteMutation.mutate(selectedUserIds)
+      }
+    } else if (userToDelete) {
+      deleteMutation.mutate(userToDelete.id)
     }
+  }
+
+  const handleSelectAll = (checked: boolean, filteredList: User[] = []) => {
+    if (checked) {
+      const allIds = filteredList.map(u => u.id)
+      setSelectedUserIds(allIds)
+    } else {
+      setSelectedUserIds([])
+    }
+  }
+
+  const handleToggleSelectOne = (id: string) => {
+    setSelectedUserIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -207,6 +272,8 @@ export default function UsersPage() {
   }
 
   const isPending = createMutation.isPending || updateMutation.isPending
+  const filteredUsers = filterDataBySearch(users, searchQuery) || []
+  const isAllSelected = filteredUsers.length > 0 && filteredUsers.every(u => selectedUserIds.includes(u.id))
 
   return (
     <div className="space-y-6">
@@ -215,10 +282,22 @@ export default function UsersPage() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Manajemen Akun Pengguna</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Kelola data login dan hak akses pengguna sistem.</p>
         </div>
-        <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Tambah Akun
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedUserIds.length > 0 && (
+            <Button
+              variant="destructive"
+              onClick={handleOpenBulkDeleteDialog}
+              className="bg-red-600 hover:bg-red-700 text-white gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Hapus ({selectedUserIds.length}) Terpilih
+            </Button>
+          )}
+          <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Tambah Akun
+          </Button>
+        </div>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -391,7 +470,15 @@ export default function UsersPage() {
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="w-[60px] pl-6">No</TableHead>
+                <TableHead className="w-[45px] pl-4">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    checked={isAllSelected}
+                    onChange={(e) => handleSelectAll(e.target.checked, filteredUsers)}
+                  />
+                </TableHead>
+                <TableHead className="w-[50px]">No</TableHead>
                 <TableHead>Nama Pengguna</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead>Email</TableHead>
@@ -407,86 +494,162 @@ export default function UsersPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-10">
+                  <TableCell colSpan={12} className="text-center py-10">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600 mb-2" />
                       Memuat data...
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : filterDataBySearch(users, searchQuery)?.length === 0 ? (
+              ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-10 text-slate-500">
+                  <TableCell colSpan={12} className="text-center py-10 text-slate-500">
                     {searchQuery ? 'Tidak ada akun pengguna yang sesuai dengan pencarian.' : 'Belum ada data pengguna.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                filterDataBySearch(users, searchQuery)?.map((item, index) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="pl-6 font-medium text-slate-500">{index + 1}</TableCell>
-                    <TableCell className="font-semibold text-slate-900 dark:text-white">{item.name}</TableCell>
-                    <TableCell>
-                      <span className="font-mono text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800">
-                        {item.username || '-'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400 text-xs">{item.email || '-'}</TableCell>
-                    <TableCell className="font-mono text-slate-600 dark:text-slate-400">{item.nipNbm || item.teacherProfile?.nip || '-'}</TableCell>
-                    <TableCell className="text-slate-400 text-xs font-mono">••••••••</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                        item.role === 'SUPERADMIN' ? 'bg-purple-100 text-purple-800' :
-                        item.role === 'ADMIN_IT' ? 'bg-indigo-100 text-indigo-800' :
-                        item.role === 'KEPALA_SEKOLAH' ? 'bg-amber-100 text-amber-800' :
-                        item.role === 'GURU' ? 'bg-emerald-100 text-emerald-800' :
-                        item.role === 'PEGAWAI' ? 'bg-cyan-100 text-cyan-800' :
-                        'bg-slate-100 text-slate-800'
-                      }`}>
-                        {item.role}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {item.subRole ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                          {SUB_ROLE_LABELS[item.subRole] || item.subRole}
+                filteredUsers.map((item, index) => {
+                  const isSelected = selectedUserIds.includes(item.id)
+                  return (
+                    <TableRow key={item.id} className={isSelected ? 'bg-blue-50/50 dark:bg-blue-950/30' : ''}>
+                      <TableCell className="pl-4">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelectOne(item.id)}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium text-slate-500">{index + 1}</TableCell>
+                      <TableCell className="font-semibold text-slate-900 dark:text-white">{item.name}</TableCell>
+                      <TableCell>
+                        <span className="font-mono text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800">
+                          {item.username || '-'}
                         </span>
-                      ) : (
-                        <span className="text-slate-400 text-xs">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {item.subRole2 ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                          {SUB_ROLE_LABELS[item.subRole2] || item.subRole2}
+                      </TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400 text-xs">{item.email || '-'}</TableCell>
+                      <TableCell className="font-mono text-slate-600 dark:text-slate-400">{item.nipNbm || item.teacherProfile?.nip || '-'}</TableCell>
+                      <TableCell className="text-slate-400 text-xs font-mono">••••••••</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          item.role === 'SUPERADMIN' ? 'bg-purple-100 text-purple-800' :
+                          item.role === 'ADMIN_IT' ? 'bg-indigo-100 text-indigo-800' :
+                          item.role === 'KEPALA_SEKOLAH' ? 'bg-amber-100 text-amber-800' :
+                          item.role === 'GURU' ? 'bg-emerald-100 text-emerald-800' :
+                          item.role === 'PEGAWAI' ? 'bg-cyan-100 text-cyan-800' :
+                          'bg-slate-100 text-slate-800'
+                        }`}>
+                          {item.role}
                         </span>
-                      ) : (
-                        <span className="text-slate-400 text-xs">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {item.subRole3 ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">
-                          {SUB_ROLE_LABELS[item.subRole3] || item.subRole3}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 text-xs">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right pr-6 space-x-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(item)}>
-                        <Pencil className="w-4 h-4 text-slate-500 hover:text-blue-600" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                        <Trash2 className="w-4 h-4 text-slate-500 hover:text-red-600" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell>
+                        {item.subRole ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                            {SUB_ROLE_LABELS[item.subRole] || item.subRole}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {item.subRole2 ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            {SUB_ROLE_LABELS[item.subRole2] || item.subRole2}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {item.subRole3 ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">
+                            {SUB_ROLE_LABELS[item.subRole3] || item.subRole3}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right pr-6 space-x-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(item)}>
+                          <Pencil className="w-4 h-4 text-slate-500 hover:text-blue-600" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenDeleteDialog(item)}>
+                          <Trash2 className="w-4 h-4 text-slate-500 hover:text-red-600" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Popup Dialog Hapus Akun */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              {isBulkDeleteMode ? `Hapus ${selectedUserIds.length} Akun Terpilih` : 'Hapus Akun Pengguna'}
+            </DialogTitle>
+            <DialogDescription>
+              {isBulkDeleteMode
+                ? `Apakah Anda yakin ingin menghapus ${selectedUserIds.length} akun pengguna yang dipilih secara permanen?`
+                : 'Apakah Anda yakin ingin menghapus akun pengguna berikut? Tindakan ini tidak dapat dibatalkan.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!isBulkDeleteMode && userToDelete && (
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Nama Lengkap:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{userToDelete.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Username:</span>
+                <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">{userToDelete.username || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Role:</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">{userToDelete.role}</span>
+              </div>
+            </div>
+          )}
+
+          {isBulkDeleteMode && (
+            <div className="bg-red-50 dark:bg-red-950/40 p-4 rounded-xl border border-red-200 dark:border-red-900 space-y-1 text-sm text-red-800 dark:text-red-300">
+              <p className="font-semibold">Perhatian:</p>
+              <p className="text-xs">
+                Sebanyak {selectedUserIds.length} akun akan dihapus dari sistem. Semua profil dan akses terkait akan dihilangkan.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleteMutation.isPending || bulkDeleteMutation.isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleConfirmDelete}
+              disabled={deleteMutation.isPending || bulkDeleteMutation.isPending}
+            >
+              {deleteMutation.isPending || bulkDeleteMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              {isBulkDeleteMode ? `Hapus ${selectedUserIds.length} Akun` : 'Hapus Akun'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -143,7 +143,7 @@ export class FinanceService {
     return isNaN(parsed.getTime()) ? null : parsed;
   }
 
-  /** Tambah tagihan baru */
+  /** Tambah tagihan baru dengan server-side discount calculation */
   async addTagihan(
     studentId: string,
     dto: {
@@ -153,6 +153,8 @@ export class FinanceService {
       year?: number;
       dueDate?: string;
       notes?: string;
+      discountPercentage?: number;
+      discountReason?: string;
     },
   ) {
     const student = await this.prisma.student.findUnique({
@@ -160,16 +162,37 @@ export class FinanceService {
     });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
+    let originalAmount = dto.amount;
+    let finalAmount = dto.amount;
+    let notes = dto.notes ?? null;
+
+    if (dto.discountPercentage && dto.discountPercentage > 0) {
+      const validPct = [25, 50, 75, 100].includes(dto.discountPercentage) ? dto.discountPercentage : 0;
+      if (validPct > 0) {
+        const discountAmount = Math.round(originalAmount * (validPct / 100));
+        finalAmount = originalAmount - discountAmount;
+        const discountInfo = {
+          originalAmount,
+          discountPercentage: validPct,
+          discountAmount,
+          finalAmount,
+          reason: dto.discountReason || '-',
+        };
+        notes = `${notes ? notes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
+      }
+    }
+
     const tagihan = await this.prisma.tagihan.create({
       data: {
         studentId,
         type: dto.type,
-        amount: dto.amount,
+        amount: finalAmount,
         month: dto.month ?? null,
         year: dto.year ?? null,
         dueDate: this.parseDueDate(dto.dueDate),
-        status: 'BELUM_LUNAS',
-        notes: dto.notes ?? null,
+        status: finalAmount === 0 ? 'LUNAS' : 'BELUM_LUNAS',
+        paidDate: finalAmount === 0 ? new Date() : null,
+        notes,
       },
     });
 
@@ -183,7 +206,7 @@ export class FinanceService {
     return tagihan;
   }
 
-  /** Edit tagihan */
+  /** Edit tagihan dengan diskon */
   async updateTagihan(
     tagihanId: string,
     dto: {
@@ -193,19 +216,73 @@ export class FinanceService {
       year?: number;
       dueDate?: string;
       notes?: string;
+      discountPercentage?: number;
+      discountReason?: string;
     },
   ) {
+    const existing = await this.prisma.tagihan.findUnique({ where: { id: tagihanId } });
+    if (!existing) throw new NotFoundException('Tagihan tidak ditemukan');
+
+    let baseAmount = dto.amount !== undefined ? dto.amount : existing.amount;
+    // Extract original amount if exists in notes
+    const discountMatch = existing.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
+    if (discountMatch && dto.amount === undefined) {
+      try {
+        const discountInfo = JSON.parse(discountMatch[1]);
+        baseAmount = discountInfo.originalAmount || existing.amount;
+      } catch {}
+    }
+
+    let cleanNotes = (dto.notes !== undefined ? dto.notes : existing.notes) || '';
+    cleanNotes = cleanNotes.replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '').replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '').trim();
+
+    let finalAmount = baseAmount;
+    if (dto.discountPercentage !== undefined) {
+      if (dto.discountPercentage > 0) {
+        const validPct = [25, 50, 75, 100].includes(dto.discountPercentage) ? dto.discountPercentage : 0;
+        if (validPct > 0) {
+          const discountAmount = Math.round(baseAmount * (validPct / 100));
+          finalAmount = baseAmount - discountAmount;
+          const discountInfo = {
+            originalAmount: baseAmount,
+            discountPercentage: validPct,
+            discountAmount,
+            finalAmount,
+            reason: dto.discountReason || '-',
+          };
+          cleanNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
+        }
+      }
+    } else if (discountMatch && dto.amount !== undefined) {
+      // If amount updated but discount not specified, re-apply old discount percentage if available
+      try {
+        const oldInfo = JSON.parse(discountMatch[1]);
+        const validPct = oldInfo.discountPercentage;
+        const discountAmount = Math.round(baseAmount * (validPct / 100));
+        finalAmount = baseAmount - discountAmount;
+        const discountInfo = {
+          originalAmount: baseAmount,
+          discountPercentage: validPct,
+          discountAmount,
+          finalAmount,
+          reason: dto.discountReason || oldInfo.reason || '-',
+        };
+        cleanNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
+      } catch {}
+    }
+
     return this.prisma.tagihan.update({
       where: { id: tagihanId },
       data: {
         ...(dto.type && { type: dto.type }),
-        ...(dto.amount !== undefined && { amount: dto.amount }),
+        amount: finalAmount,
         ...(dto.month !== undefined && { month: dto.month }),
         ...(dto.year !== undefined && { year: dto.year }),
         ...(dto.dueDate !== undefined && {
           dueDate: this.parseDueDate(dto.dueDate),
         }),
-        ...(dto.notes !== undefined && { notes: dto.notes }),
+        notes: cleanNotes || null,
+        ...(finalAmount === 0 ? { status: 'LUNAS', paidDate: new Date() } : {}),
       },
     });
   }
@@ -231,7 +308,7 @@ export class FinanceService {
     return this.prisma.tagihan.delete({ where: { id: tagihanId } });
   }
 
-  /** Tambah tagihan massal (untuk satu kelas sekaligus) */
+  /** Tambah tagihan massal (untuk satu kelas sekaligus) dengan opsi diskon */
   async addTagihanMassal(dto: {
     classId: string;
     type: string;
@@ -240,6 +317,8 @@ export class FinanceService {
     year?: number;
     dueDate?: string;
     notes?: string;
+    discountPercentage?: number;
+    discountReason?: string;
   }) {
     const students = await this.prisma.student.findMany({
       where: { classId: dto.classId },
@@ -248,15 +327,36 @@ export class FinanceService {
     if (!students.length)
       throw new NotFoundException('Tidak ada siswa di kelas ini');
 
+    let originalAmount = dto.amount;
+    let finalAmount = dto.amount;
+    let baseNotes = dto.notes ?? null;
+
+    if (dto.discountPercentage && dto.discountPercentage > 0) {
+      const validPct = [25, 50, 75, 100].includes(dto.discountPercentage) ? dto.discountPercentage : 0;
+      if (validPct > 0) {
+        const discountAmount = Math.round(originalAmount * (validPct / 100));
+        finalAmount = originalAmount - discountAmount;
+        const discountInfo = {
+          originalAmount,
+          discountPercentage: validPct,
+          discountAmount,
+          finalAmount,
+          reason: dto.discountReason || '-',
+        };
+        baseNotes = `${baseNotes ? baseNotes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
+      }
+    }
+
     const records = students.map((s) => ({
       studentId: s.id,
       type: dto.type,
-      amount: dto.amount,
+      amount: finalAmount,
       month: dto.month ?? null,
       year: dto.year ?? null,
       dueDate: this.parseDueDate(dto.dueDate),
-      status: 'BELUM_LUNAS',
-      notes: dto.notes ?? null,
+      status: finalAmount === 0 ? 'LUNAS' : 'BELUM_LUNAS',
+      paidDate: finalAmount === 0 ? new Date() : null,
+      notes: baseNotes,
     }));
 
     const result = await this.prisma.tagihan.createMany({ data: records });
@@ -269,7 +369,7 @@ export class FinanceService {
       bulkData: {
         classId: dto.classId,
         tagihanType: dto.type,
-        amount: dto.amount,
+        amount: finalAmount,
         count: students.length,
       },
     });
@@ -431,10 +531,10 @@ export class FinanceService {
       let discountAmount = 0;
 
       if (student.program === 'kader') {
-        // Kader gets automatic 50% discount on DPP
-        discountPercentage = 50;
-        discountAmount = Math.round(dto.baseAmount * 0.5);
-        finalAmount = dto.baseAmount - discountAmount;
+        // Kader program automatically gets 100% discount (RP 0 final payable amount)
+        discountPercentage = 100;
+        discountAmount = dto.baseAmount;
+        finalAmount = 0;
       }
 
       // Create tagihan with SERVER-CALCULATED amount
@@ -445,7 +545,8 @@ export class FinanceService {
           amount: finalAmount,
           year: new Date().getFullYear(),
           dueDate,
-          status: 'BELUM_LUNAS',
+          status: finalAmount === 0 ? 'LUNAS' : 'BELUM_LUNAS',
+          paidDate: finalAmount === 0 ? new Date() : null,
           notes:
             dto.notes ||
             `DPP Angkatan ${dto.gradeLevel} - Program: ${student.program || 'reguler'}`,

@@ -38,6 +38,11 @@ export class UsersController {
     return this.usersService.update(id, data);
   }
 
+  @Post('bulk-delete')
+  bulkDelete(@Body('ids') ids: string[]) {
+    return this.usersService.removeMany(ids);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);

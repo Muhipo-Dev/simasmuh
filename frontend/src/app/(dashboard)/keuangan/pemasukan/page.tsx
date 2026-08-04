@@ -121,11 +121,13 @@ function ConfirmDialog({ open, onClose, onConfirm, loading, title, description }
 type FormState = {
   type: string; amount: string; month: string; year: string
   dueDate: string; notes: string
+  discountPercentage: number; discountReason: string
 }
 
 const defaultForm = (): FormState => ({
   type: 'SPP', amount: '', month: (new Date().getMonth() + 1).toString(),
   year: currentYear.toString(), dueDate: '', notes: '',
+  discountPercentage: 0, discountReason: '',
 })
 
 // ============================================================
@@ -154,6 +156,8 @@ function TagihanModal({
     month: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.month) : null,
     year: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.year) : null,
     dueDate: form.dueDate || null, notes: form.notes || null,
+    discountPercentage: form.discountPercentage,
+    discountReason: form.discountReason || null,
   })
 
   const addMut = useMutation({
@@ -254,12 +258,16 @@ function TagihanModal({
   }
 
   const startEdit = (t: Tagihan) => {
+    const dInfo = parseDiscountInfo(t.notes)
     setForm({
-      type: t.type, amount: t.amount.toString(),
+      type: t.type,
+      amount: dInfo?.originalAmount ? dInfo.originalAmount.toString() : t.amount.toString(),
       month: (t.month ?? new Date().getMonth() + 1).toString(),
       year: (t.year ?? currentYear).toString(),
       dueDate: t.dueDate ? t.dueDate.split('T')[0] : '',
-      notes: t.notes ?? '',
+      notes: t.notes ? t.notes.replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '').replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '').trim() : '',
+      discountPercentage: dInfo?.discountPercentage || 0,
+      discountReason: dInfo?.reason || '',
     })
     setEditId(t.id); setShowForm(true)
   }
@@ -358,6 +366,37 @@ function TagihanModal({
                     </div>
                   </div>
                 )}
+
+                {/* Diskon */}
+                <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800">
+                    <TrendingUp className="w-4 h-4 text-amber-600" /> Diskon Tagihan (Server Calculated)
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[0, 25, 50, 75, 100].map((pct) => (
+                      <button
+                        key={pct}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, discountPercentage: pct }))}
+                        className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                          form.discountPercentage === pct
+                            ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-amber-300'
+                        }`}
+                      >
+                        {pct === 0 ? 'Tanpa Diskon' : `${pct}%`}
+                      </button>
+                    ))}
+                  </div>
+                  {form.discountPercentage > 0 && (
+                    <Input
+                      placeholder="Alasan Diskon (Misal: Beasiswa Kader / Prestasi)"
+                      value={form.discountReason}
+                      onChange={(e) => setForm(f => ({ ...f, discountReason: e.target.value }))}
+                      className="bg-white text-xs"
+                    />
+                  )}
+                </div>
 
                 <div>
                   <Label className="text-sm font-semibold text-slate-700 mb-1 block">Catatan (opsional)</Label>
@@ -539,14 +578,29 @@ function TagihanMassalModal({
 
   const mut = useMutation({
     mutationFn: async () => {
-      const res = await authenticatedFetch('/api-backend/finance/tagihan/massal', {
+      const endpoint = form.type === 'SPP' 
+        ? '/api-backend/finance/spp/mass-input' 
+        : '/api-backend/finance/tagihan/massal';
+      
+      const payload = form.type === 'SPP' ? {
+        classId: form.classId,
+        amount: parseFloat(form.amount),
+        month: parseInt(form.month),
+        year: parseInt(form.year),
+        dueDate: form.dueDate || undefined,
+        notes: form.notes || undefined,
+      } : {
+        classId: form.classId, type: form.type, amount: parseFloat(form.amount),
+        month: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.month) : null,
+        year: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.year) : null,
+        dueDate: form.dueDate || null, notes: form.notes || null,
+        discountPercentage: form.discountPercentage,
+        discountReason: form.discountReason || null,
+      };
+
+      const res = await authenticatedFetch(endpoint, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          classId: form.classId, type: form.type, amount: parseFloat(form.amount),
-          month: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.month) : null,
-          year: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.year) : null,
-          dueDate: form.dueDate || null, notes: form.notes || null,
-        }),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('Gagal membuat tagihan massal')
       return res.json()
@@ -619,6 +673,37 @@ function TagihanMassalModal({
               </div>
             </div>
           )}
+
+          {/* Diskon Massal */}
+          <div className="bg-purple-50/60 border border-purple-200/80 rounded-xl p-3 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-purple-900">
+              <TrendingUp className="w-4 h-4 text-purple-600" /> Diskon Massal (Server Calculated)
+            </div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {[0, 25, 50, 75, 100].map((pct) => (
+                <button
+                  key={pct}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, discountPercentage: pct }))}
+                  className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                    form.discountPercentage === pct
+                      ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-purple-300'
+                  }`}
+                >
+                  {pct === 0 ? 'Tanpa Diskon' : `${pct}%`}
+                </button>
+              ))}
+            </div>
+            {form.discountPercentage > 0 && (
+              <Input
+                placeholder="Alasan Diskon Massal (Misal: Program Khusus / Beasiswa)"
+                value={form.discountReason}
+                onChange={(e) => setForm(f => ({ ...f, discountReason: e.target.value }))}
+                className="bg-white text-xs"
+              />
+            )}
+          </div>
 
           <div>
             <Label className="text-sm font-semibold text-slate-700 mb-1 block">Catatan (opsional)</Label>

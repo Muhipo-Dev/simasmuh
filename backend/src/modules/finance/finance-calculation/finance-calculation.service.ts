@@ -572,12 +572,12 @@ export class FinanceCalculationService {
     studentId: string,
     totalAmount: number,
     months: number = 12,
-  ): Promise<{
+  ): {
     monthlyInstallment: number;
     totalWithInterest: number;
     interestRate: number;
     schedule: Array<{ month: number; amount: number; dueDate: Date }>;
-  }> {
+  } {
     const interestRate = 0.05; // 5% interest rate
     const totalWithInterest = totalAmount * (1 + interestRate);
     const monthlyInstallment = Math.round(totalWithInterest / months);

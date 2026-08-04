@@ -28,10 +28,10 @@ model User {
   sentNotifications Notification[]    @relation("NotificationSender")
   notifications     Notification[]
   paymentProofs     PaymentProof[]
+  pengeluarans      Pengeluaran[]
   staffJournals     StaffJournal[]
   student           Student?
   teacherProfile    TeacherProfile?
-  pengeluarans      Pengeluaran[]
 }
 
 model TeacherProfile {
@@ -68,7 +68,7 @@ model Student {
   gender        String
   classId       String
   userId        String?        @unique
-  program       String?        // Label program unggulan: kader, reguler, tahfidz, olahraga, MIC, enterpreneur, seni budaya, soshum saintek, inklusi
+  program       String?
   attendances   Attendance[]
   grades        Grade[]
   payments      Payment[]
@@ -238,24 +238,20 @@ model Payment {
 }
 
 model Tagihan {
-  id                String         @id @default(uuid())
-  studentId         String
-  type              String
-  amount            Float
-  month             Int?
-  year              Int?
-  dueDate           DateTime?
-  status            String         @default("BELUM_LUNAS")
-  paidDate          DateTime?
-  notes             String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  paymentProofs     PaymentProof[]
-  student           Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  // Discount tracking fields (server-side only)
-  originalAmount    Float?
-  discountPercentage Int?
-  discountAmount    Float?
+  id            String         @id @default(uuid())
+  studentId     String
+  type          String
+  amount        Float
+  month         Int?
+  year          Int?
+  dueDate       DateTime?
+  status        String         @default("BELUM_LUNAS")
+  paidDate      DateTime?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  paymentProofs PaymentProof[]
+  student       Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([studentId, status])
   @@index([year, month, status])

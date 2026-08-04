@@ -39,7 +39,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   async onModuleInit() {
     try {
       await this.$connect();
-      this.logger.log('✅ Database connected successfully (PostgreSQL / Supabase)');
+      this.logger.log(
+        '✅ Database connected successfully (PostgreSQL / Supabase)',
+      );
     } catch (error) {
       this.logger.error('❌ Failed to connect to Database:', error);
     }

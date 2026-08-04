@@ -4,7 +4,8 @@ export const defaultNotificationTemplates = [
   {
     type: 'TAGIHAN_CREATED',
     title: 'Tagihan Baru Dibuat',
-    message: 'Tagihan {{tagihanType}} sebesar {{amount}} telah dibuat. Jatuh tempo: {{dueDate}}',
+    message:
+      'Tagihan {{tagihanType}} sebesar {{amount}} telah dibuat. Jatuh tempo: {{dueDate}}',
     emailSubject: 'Tagihan Baru - {{tagihanType}}',
     emailBody: `
       <h2>Tagihan Baru Telah Dibuat</h2>
@@ -20,13 +21,15 @@ export const defaultNotificationTemplates = [
       <p>Mohon segera lakukan pembayaran sebelum jatuh tempo untuk menghindari denda.</p>
       <p>Terima kasih.</p>
     `,
-    smsTemplate: 'Tagihan {{tagihanType}} {{amount}} jatuh tempo {{dueDate}}. Mohon segera bayar.',
+    smsTemplate:
+      'Tagihan {{tagihanType}} {{amount}} jatuh tempo {{dueDate}}. Mohon segera bayar.',
     isActive: true,
   },
   {
     type: 'PAYMENT_UPLOADED',
     title: 'Bukti Pembayaran Diupload',
-    message: 'Bukti pembayaran sebesar {{amount}} telah berhasil diupload dan sedang menunggu verifikasi.',
+    message:
+      'Bukti pembayaran sebesar {{amount}} telah berhasil diupload dan sedang menunggu verifikasi.',
     emailSubject: 'Bukti Pembayaran Berhasil Diupload',
     emailBody: `
       <h2>Bukti Pembayaran Berhasil Diupload</h2>
@@ -36,13 +39,15 @@ export const defaultNotificationTemplates = [
       <p>Tim keuangan akan segera memverifikasi pembayaran Anda dalam 1-2 hari kerja.</p>
       <p>Terima kasih.</p>
     `,
-    smsTemplate: 'Bukti pembayaran {{amount}} berhasil diupload. Status: Menunggu verifikasi.',
+    smsTemplate:
+      'Bukti pembayaran {{amount}} berhasil diupload. Status: Menunggu verifikasi.',
     isActive: true,
   },
   {
     type: 'PAYMENT_VERIFIED',
     title: 'Pembayaran Diverifikasi',
-    message: 'Bukti pembayaran sebesar {{amount}} telah diverifikasi dan diterima. Tagihan telah lunas.',
+    message:
+      'Bukti pembayaran sebesar {{amount}} telah diverifikasi dan diterima. Tagihan telah lunas.',
     emailSubject: 'Pembayaran Berhasil Diverifikasi',
     emailBody: `
       <h2>Pembayaran Berhasil Diverifikasi</h2>
@@ -52,7 +57,8 @@ export const defaultNotificationTemplates = [
       <p>Terverifikasi oleh: {{verifiedBy}}</p>
       <p>Terima kasih atas pembayaran tepat waktu Anda.</p>
     `,
-    smsTemplate: 'Pembayaran {{amount}} telah diverifikasi. Status: LUNAS. Terima kasih.',
+    smsTemplate:
+      'Pembayaran {{amount}} telah diverifikasi. Status: LUNAS. Terima kasih.',
     isActive: true,
   },
   {
@@ -68,13 +74,15 @@ export const defaultNotificationTemplates = [
       <p>Mohon upload ulang bukti pembayaran yang benar dan jelas.</p>
       <p>Jika ada pertanyaan, silakan hubungi bagian keuangan.</p>
     `,
-    smsTemplate: 'Bukti pembayaran {{amount}} ditolak. Alasan: {{notes}}. Mohon upload ulang.',
+    smsTemplate:
+      'Bukti pembayaran {{amount}} ditolak. Alasan: {{notes}}. Mohon upload ulang.',
     isActive: true,
   },
   {
     type: 'PAYMENT_DUE',
     title: 'Pengingat Pembayaran',
-    message: 'Tagihan {{tagihanType}} sebesar {{amount}} akan jatuh tempo dalam {{daysUntilDue}} hari.',
+    message:
+      'Tagihan {{tagihanType}} sebesar {{amount}} akan jatuh tempo dalam {{daysUntilDue}} hari.',
     emailSubject: 'Pengingat Jatuh Tempo Pembayaran',
     emailBody: `
       <h2>Pengingat Jatuh Tempo Pembayaran</h2>
@@ -84,13 +92,15 @@ export const defaultNotificationTemplates = [
       <p>Mohon segera lakukan pembayaran untuk menghindari denda keterlambatan.</p>
       <p>Terima kasih.</p>
     `,
-    smsTemplate: 'Pengingat: Tagihan {{tagihanType}} {{amount}} jatuh tempo {{daysUntilDue}} hari lagi.',
+    smsTemplate:
+      'Pengingat: Tagihan {{tagihanType}} {{amount}} jatuh tempo {{daysUntilDue}} hari lagi.',
     isActive: true,
   },
   {
     type: 'PAYMENT_OVERDUE',
     title: 'Pembayaran Terlambat',
-    message: 'Tagihan {{tagihanType}} sebesar {{amount}} sudah terlambat {{daysOverdue}} hari.',
+    message:
+      'Tagihan {{tagihanType}} sebesar {{amount}} sudah terlambat {{daysOverdue}} hari.',
     emailSubject: 'URGENT: Pembayaran Terlambat',
     emailBody: `
       <h2>URGENT: Pembayaran Terlambat</h2>
@@ -104,13 +114,15 @@ export const defaultNotificationTemplates = [
       </ul>
       <p>Segera hubungi bagian keuangan jika ada kendala pembayaran.</p>
     `,
-    smsTemplate: 'URGENT: Tagihan {{tagihanType}} {{amount}} terlambat {{daysOverdue}} hari. Segera bayar!',
+    smsTemplate:
+      'URGENT: Tagihan {{tagihanType}} {{amount}} terlambat {{daysOverdue}} hari. Segera bayar!',
     isActive: true,
   },
   {
     type: 'BULK_TAGIHAN_CREATED',
     title: 'Tagihan Massal Dibuat',
-    message: 'Tagihan {{tagihanType}} sebesar {{amount}} telah dibuat untuk seluruh siswa kelas {{className}}.',
+    message:
+      'Tagihan {{tagihanType}} sebesar {{amount}} telah dibuat untuk seluruh siswa kelas {{className}}.',
     emailSubject: 'Tagihan Massal - {{tagihanType}}',
     emailBody: `
       <h2>Tagihan Massal Telah Dibuat</h2>
@@ -120,13 +132,15 @@ export const defaultNotificationTemplates = [
       <p>Mohon segera cek tagihan Anda dan lakukan pembayaran sesuai jadwal yang ditentukan.</p>
       <p>Terima kasih.</p>
     `,
-    smsTemplate: 'Tagihan massal {{tagihanType}} {{amount}} dibuat untuk kelas {{className}}.',
+    smsTemplate:
+      'Tagihan massal {{tagihanType}} {{amount}} dibuat untuk kelas {{className}}.',
     isActive: true,
   },
   {
     type: 'SUSPICIOUS_ACTIVITY',
     title: 'Aktivitas Mencurigakan Terdeteksi',
-    message: 'Aktivitas yang mencurigakan terdeteksi pada akun Anda: {{incidentType}}.',
+    message:
+      'Aktivitas yang mencurigakan terdeteksi pada akun Anda: {{incidentType}}.',
     emailSubject: 'SECURITY ALERT: Aktivitas Mencurigakan',
     emailBody: `
       <h2>PERINGATAN KEAMANAN</h2>
@@ -142,13 +156,15 @@ export const defaultNotificationTemplates = [
       </ul>
       <p>Jika ini adalah aktivitas Anda, abaikan pesan ini.</p>
     `,
-    smsTemplate: 'ALERT: Aktivitas mencurigakan terdeteksi. {{incidentType}}. Hubungi admin jika bukan Anda.',
+    smsTemplate:
+      'ALERT: Aktivitas mencurigakan terdeteksi. {{incidentType}}. Hubungi admin jika bukan Anda.',
     isActive: true,
   },
   {
     type: 'FILE_QUARANTINED',
     title: 'File Dikarantina',
-    message: 'File yang Anda upload telah dikarantina karena terdeteksi sebagai file berbahaya.',
+    message:
+      'File yang Anda upload telah dikarantina karena terdeteksi sebagai file berbahaya.',
     emailSubject: 'File Upload Dikarantina',
     emailBody: `
       <h2>File Upload Dikarantina</h2>
@@ -159,14 +175,15 @@ export const defaultNotificationTemplates = [
       <p>Mohon upload ulang dengan file yang aman dan sesuai ketentuan.</p>
       <p>Jika Anda yakin file tersebut aman, hubungi administrator untuk review manual.</p>
     `,
-    smsTemplate: 'File {{fileName}} dikarantina. Alasan: {{reason}}. Upload ulang file yang aman.',
+    smsTemplate:
+      'File {{fileName}} dikarantina. Alasan: {{reason}}. Upload ulang file yang aman.',
     isActive: true,
   },
 ];
 
 export async function seedNotificationTemplates(prisma: PrismaService) {
   console.log('Seeding notification templates...');
-  
+
   for (const template of defaultNotificationTemplates) {
     await prisma.notificationTemplate.upsert({
       where: { type: template.type },
@@ -174,6 +191,8 @@ export async function seedNotificationTemplates(prisma: PrismaService) {
       create: template,
     });
   }
-  
-  console.log(`Seeded ${defaultNotificationTemplates.length} notification templates`);
+
+  console.log(
+    `Seeded ${defaultNotificationTemplates.length} notification templates`,
+  );
 }

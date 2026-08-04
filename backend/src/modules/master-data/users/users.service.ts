@@ -30,7 +30,10 @@ export class UsersService {
   }
 
   async create(data: any) {
-    const usernameValue = data.username && data.username.trim() !== '' ? data.username.trim() : null;
+    const usernameValue =
+      data.username && data.username.trim() !== ''
+        ? data.username.trim()
+        : null;
     if (!usernameValue) {
       throw new BadRequestException('Username wajib diisi');
     }
@@ -54,7 +57,8 @@ export class UsersService {
       throw new BadRequestException('Username sudah terdaftar');
     }
 
-    const emailValue = data.email && data.email.trim() !== '' ? data.email.trim() : null;
+    const emailValue =
+      data.email && data.email.trim() !== '' ? data.email.trim() : null;
     if (emailValue) {
       const existingEmail = await this.prisma.user.findFirst({
         where: { email: emailValue },
@@ -64,12 +68,12 @@ export class UsersService {
       }
     }
 
-    const plainPassword = data.password && data.password.trim() !== '' ? data.password.trim() : usernameValue;
-    
-    const hashedPassword = await bcrypt.hash(
-      plainPassword,
-      10,
-    );
+    const plainPassword =
+      data.password && data.password.trim() !== ''
+        ? data.password.trim()
+        : usernameValue;
+
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     return this.prisma.user.create({
       data: {
@@ -127,7 +131,9 @@ export class UsersService {
         where: { username: usernameValue, NOT: { id } },
       });
       if (existingUsername) {
-        throw new BadRequestException('Username sudah terdaftar pada akun lain');
+        throw new BadRequestException(
+          'Username sudah terdaftar pada akun lain',
+        );
       }
       updateData.username = usernameValue;
     }

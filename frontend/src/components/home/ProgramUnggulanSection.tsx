@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, BookOpen, Globe, Cpu, Briefcase, Music, Microscope, Sparkles, CheckCircle2, X, PhoneCall } from 'lucide-react'
+import {
+  ArrowRight, BookOpen, Globe, Cpu, Briefcase, Music, Microscope,
+  Sparkles, CheckCircle2, Dumbbell, Heart, Moon, GraduationCap
+} from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 
@@ -28,12 +31,10 @@ export default function ProgramUnggulanSection() {
       title: 'Kelas Tahfidz',
       subtitle: 'Mencetak Generasi Penghafal Al-Qur\'an Berakhlak Mulia',
       description: 'Program intensif menghafal Al-Qur\'an yang terintegrasi dengan pembelajaran, didukung pembinaan khusus dan peluang beasiswa di perguruan tinggi Muhammadiyah.',
-      fullContent: 'Program Kelas Tahfidz SMA MUHIPO dirancang khusus bagi siswa yang ingin mendalami dan menghafal Al-Qur\'an tanpa mengesampingkan prestasi akademik sekolah. Pembinaan dilakukan secara terstruktur dengan metode talaqqi dan murojaah harian.',
+      fullContent: 'Program Kelas Tahfidz SMA MUHIPO Bekerja Sama dengan Pondok Aisyah Quranic Boarding Shool dan PPTQ Ahmad Dahlan, dirancang khusus bagi siswa yang mendalami dan menghafal Al-Qur\'an tanpa mengesampingkan prestasi akademik sekolah. Pembinaan dilakukan secara terstruktur dengan metode talaqqi dan murojaah harian.',
       features: [
-        'Target hafalan 5 hingga 30 Juz Al-Qur\'an',
-        'Bimbingan Ustadz & Ustadzah tersertifikasi Sanad',
-        'Karantina Tahfidz & Tasmi\' publik berkala',
-        'Jalur Beasiswa khusus ke PTN & Perguruan Tinggi Muhammadiyah'
+        'Dibimbing oleh Bimbingan Ustadz & Ustadzah tersertifikasi',
+        'Siswa Siswi diluar Kerjasama PTQ Aisyiyah dan PPTQ Ahmad Dahlan, bermukim di Mahad Al-Kahfi',
       ],
       icon: BookOpen,
       badgeColor: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
@@ -49,9 +50,11 @@ export default function ProgramUnggulanSection() {
       fullContent: 'MIC menyiapkan siswa memiliki daya saing internasional. Siswa dibiasakan berkomunikasi dalam Bahasa Inggris aktif, mengikuti simulasi internasional, serta dibimbing untuk meraih skor TOEFL/IELTS tinggi.',
       features: [
         'Mentoring intensif bersama Native Speaker',
+        'Kurikulum Internasilan ACT Global Solution',
         'Pembiasaan Bilingual Class (English & Bahasa Indonesia)',
         'Program Student Exchange & Sister School Partnership',
-        'Pendampingan khusus persiapan beasiswa kuliah ke luar negeri'
+        'Pendampingan khusus persiapan beasiswa kuliah ke luar negeri',
+        'Program khusus Englishcamp dan bimbingan Toefl'
       ],
       icon: Globe,
       badgeColor: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300',
@@ -67,8 +70,7 @@ export default function ProgramUnggulanSection() {
       fullContent: 'Program AI SMA MUHIPO mengenalkan siswa pada dunia logika komputasi, dasar algoritma, bahasa pemrograman Python, serta penerapan praktis machine learning untuk menyelesaikan masalah kehidupan nyata.',
       features: [
         'Praktik Coding & Pengembangan Aplikasi berbasis AI',
-        'Fasilitas Laboratorium Komputer spesifikasi tinggi',
-        'Pembinaan khusus Olimpiade Sains Nasional (OSN) bidang Informatika',
+        'Fasilitas Laboratorium Komputer',
         'Pelatihan Etika & Penggunaan Generative AI secara bijak'
       ],
       icon: Cpu,
@@ -97,7 +99,7 @@ export default function ProgramUnggulanSection() {
     },
     {
       id: 'tari',
-      title: 'Seni Tari & Budaya',
+      title: 'Seni Budaya',
       subtitle: 'Melestarikan Budaya Bangsa Melalui Karya Seni Pertunjukan',
       description: 'Wadah pengembangan bakat seni tari tradisional hingga modern, melestarikan budaya dan berprestasi di kancah nasional maupun internasional.',
       fullContent: 'Ponorogo terkenal dengan kaya akan seni budaya. Program Seni Tari SMA MUHIPO memfasilitasi ekspresi bakat siswa dalam bidang tari tradisional (termasuk Reog Ponorogo), tari kreasi baru, dan seni pertunjukan.',
@@ -130,13 +132,93 @@ export default function ProgramUnggulanSection() {
       iconBg: 'bg-cyan-50 dark:bg-cyan-950/60 text-cyan-500 dark:text-cyan-400 group-hover:bg-cyan-500 group-hover:text-white',
       iconText: 'text-cyan-500 dark:text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-300',
       buttonText: 'text-cyan-500 dark:text-cyan-400'
-    }
+    },
+    {
+      id: 'olahraga',
+      title: 'Kelas Olahraga',
+      subtitle: 'Meraih Prestasi Olahraga Tingkat Nasional & Internasional',
+      description: 'Program pembinaan atlet muda berprestasi yang mengintegrasikan latihan fisik terstruktur dengan pendidikan akademik berkualitas secara seimbang.',
+      fullContent: 'Kelas Olahraga SMA MUHIPO hadir sebagai wadah bagi siswa berbakat di bidang olahraga untuk mengembangkan potensi atletis mereka secara maksimal. Program ini menggabungkan pelatihan fisik intensif di bawah bimbingan pelatih profesional bersertifikat dengan kegiatan akademik yang tetap terstruktur, sehingga siswa dapat berprestasi di keduanya.',
+      features: [
+        'Pelatih profesional bersertifikat nasional di berbagai cabang olahraga',
+        'Fasilitas lapangan & sarana olahraga yang lengkap dan modern',
+        'Program pembinaan fisik & mental atlet berprestasi',
+        'Pendampingan menuju kejuaraan daerah, nasional, dan internasional',
+        'Kerjasama dengan KONI & Induk Organisasi Olahraga',
+        'Dukungan nutrisi & pemulihan atletik siswa'
+      ],
+      icon: Dumbbell,
+      badgeColor: 'bg-lime-100 text-lime-700 dark:bg-lime-950 dark:text-lime-300',
+      iconBg: 'bg-lime-50 dark:bg-lime-950/60 text-lime-600 dark:text-lime-400 group-hover:bg-lime-600 group-hover:text-white',
+      iconText: 'text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300',
+      buttonText: 'text-lime-600 dark:text-lime-400'
+    },
+    {
+      id: 'inklusi',
+      title: 'Layanan Inklusi',
+      subtitle: 'Pendidikan Berkeadilan untuk Semua – Tanpa Terkecuali',
+      description: 'Layanan pendidikan inklusif yang memastikan setiap siswa, termasuk mereka yang berkebutuhan khusus, mendapat hak belajar yang setara dan bermartabat.',
+      fullContent: 'Layanan Inklusi SMA MUHIPO mewujudkan komitmen sekolah dalam menghadirkan pendidikan yang berkeadilan dan humanis. Program ini dirancang untuk mendampingi siswa berkebutuhan khusus agar dapat belajar, berkembang, dan berprestasi bersama teman-teman sebayanya dalam lingkungan yang supportif dan bebas diskriminasi.',
+      features: [
+        'Guru Pendamping Khusus (GPK) tersertifikasi',
+        'Asesmen awal & program belajar individual (PPI) yang dipersonalisasi',
+        'Lingkungan belajar yang ramah dan aksesibel (barrier-free)',
+        'Kerjasama dengan psikolog & tenaga ahli pendidikan luar biasa',
+        'Sosialisasi nilai toleransi & keberagaman kepada seluruh warga sekolah',
+        'Laporan perkembangan berkala kepada orang tua/wali'
+      ],
+      icon: Heart,
+      badgeColor: 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300',
+      iconBg: 'bg-rose-50 dark:bg-rose-950/60 text-rose-500 dark:text-rose-400 group-hover:bg-rose-500 group-hover:text-white',
+      iconText: 'text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300',
+      buttonText: 'text-rose-500 dark:text-rose-400'
+    },
+    {
+      id: 'mahad',
+      title: 'Mahad Al-Kahfi',
+      subtitle: 'Pembinaan Karakter Islami dalam Lingkungan Pesantren Modern',
+      description: 'Asrama boarding school berbasis pesantren modern yang membentuk karakter siswa melalui pembiasaan nilai-nilai Islam dalam keseharian yang terprogram.',
+      fullContent: 'Mahad Al-Kahfi adalah fasilitas asrama (boarding) SMA MUHIPO yang dirancang sebagai pesantren modern di dalam lingkungan sekolah. Siswa yang bermukim di Mahad mendapatkan pembinaan karakter Islami secara menyeluruh melalui program harian yang terstruktur, mulai dari shalat berjamaah, kajian kitab, tahsin Al-Qur\'an, hingga kegiatan pengembangan diri.',
+      features: [
+        'Pembinaan karakter Islami 24 jam oleh Musyrif/Musyrifah',
+        'Program tahsin, tahfidz, dan kajian kitab harian',
+        'Fasilitas asrama bersih, nyaman, dan terpisah putra-putri',
+        'Kegiatan ekstra kepesantrenan (Muhadharah, Mufradat, dsb.)',
+        'Pembiasaan disiplin, kemandirian, dan hidup bersih',
+        'Bimbingan akademik malam hari (halaqah belajar)'
+      ],
+      icon: Moon,
+      badgeColor: 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
+      iconBg: 'bg-violet-50 dark:bg-violet-950/60 text-violet-600 dark:text-violet-400 group-hover:bg-violet-600 group-hover:text-white',
+      iconText: 'text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300',
+      buttonText: 'text-violet-600 dark:text-violet-400'
+    },
+    {
+      id: 'pascasma',
+      title: 'Program Persiapan Pasca SMA',
+      subtitle: 'Mempersiapkan Siswa Menuju Dunia Perguruan Tinggi & Karier',
+      description: 'Program komprehensif yang membekali siswa dengan strategi, keterampilan, dan mental untuk sukses memasuki jenjang pendidikan tinggi maupun dunia kerja.',
+      fullContent: 'Program Persiapan Pasca SMA SMA MUHIPO hadir untuk memastikan setiap lulusan siap menghadapi tahap kehidupan berikutnya dengan percaya diri. Program ini mencakup bimbingan intensif seleksi perguruan tinggi (SNBP, SNBT, jalur mandiri), konseling karier, pembekalan soft skill profesional, serta pendampingan pengajuan beasiswa dalam dan luar negeri.',
+      features: [
+        'Bimbingan intensif SNBP, SNBT, dan jalur mandiri PTN/PTS',
+        'Konseling karier & pemetaan minat-bakat berbasis asesmen',
+        'Pelatihan wawancara, public speaking, & etika profesional',
+        'Pendampingan penulisan esai & portofolio beasiswa',
+        'Kerjasama dengan BKK (Bursa Kerja Khusus) untuk lulusan',
+        'Sesi temu alumni & inspirasi dari tokoh profesional'
+      ],
+      icon: GraduationCap,
+      badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+      iconBg: 'bg-amber-50 dark:bg-amber-950/60 text-amber-500 dark:text-amber-400 group-hover:bg-amber-500 group-hover:text-white',
+      iconText: 'text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300',
+      buttonText: 'text-amber-500 dark:text-amber-400'
+    },
   ]
 
   return (
-    <section className="pt-16 sm:pt-20 pb-16 md:pb-24 px-4 sm:px-8 lg:px-20 bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12 space-y-3">
+    <section className="pt-16 sm:pt-20 pb-16 md:pb-24 px-4 sm:px-8 lg:px-12 bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+      <div className="max-w-screen-xl mx-auto">
+        <div className="text-center mb-10 sm:mb-14 space-y-3">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-100 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-extrabold shadow-xs">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             Keunggulan Pendidikan SMA MUHIPO
@@ -144,27 +226,28 @@ export default function ProgramUnggulanSection() {
           <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Program Unggulan
           </h2>
-          <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto text-base sm:text-lg">
+          <p className="text-slate-600 dark:text-slate-300 max-w-xl mx-auto text-base sm:text-lg text-center">
             Berbagai program pendidikan terbaik untuk mencetak generasi yang cerdas, mandiri, berprestasi, dan mendunia.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        {/* Grid: 2 col mobile → 3 col md → 5 col lg (2 rows × 5) */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
           {programs.map((prog) => {
             const IconComp = prog.icon
             return (
-              <div 
+              <div
                 key={prog.id}
-                className="bg-white dark:bg-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-100 dark:border-slate-700/60 hover:shadow-md transition-all group flex flex-col justify-between"
+                className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-100 dark:border-slate-700/60 hover:shadow-lg transition-all duration-200 group flex flex-col justify-between min-h-[220px]"
               >
                 <div>
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-colors shadow-xs ${prog.iconBg}`}>
-                    <IconComp className="w-7 h-7" />
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-3 sm:mb-4 transition-colors ${prog.iconBg}`}>
+                    <IconComp className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-1.5 leading-snug">
                     {prog.title}
                   </h3>
-                  <p className="text-slate-600 dark:text-slate-300 mb-6 text-sm sm:text-base leading-relaxed">
+                  <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-relaxed line-clamp-4">
                     {prog.description}
                   </p>
                 </div>
@@ -172,9 +255,9 @@ export default function ProgramUnggulanSection() {
                 <button
                   type="button"
                   onClick={() => setSelectedProgram(prog)}
-                  className={`font-bold text-sm flex items-center transition-colors cursor-pointer group-hover:translate-x-0.5 ${prog.buttonText}`}
+                  className={`mt-3 font-bold text-xs sm:text-sm flex items-center gap-1 transition-colors cursor-pointer ${prog.buttonText}`}
                 >
-                  Pelajari Lebih Lanjut <ArrowRight className="w-4 h-4 ml-1.5 transition-transform group-hover:translate-x-1" />
+                  Selengkapnya <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                 </button>
               </div>
             )
@@ -185,36 +268,45 @@ export default function ProgramUnggulanSection() {
       {/* Program Detail Modal */}
       {selectedProgram && (
         <Dialog open={!!selectedProgram} onOpenChange={(open) => !open && setSelectedProgram(null)}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl p-6 sm:p-8">
-            <DialogHeader className="space-y-3 border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selectedProgram.iconBg}`}>
+          <DialogContent className="w-[96vw] sm:w-[90vw] max-w-xl sm:max-w-2xl md:max-w-4xl lg:max-w-5xl max-h-[92vh] overflow-y-auto rounded-2xl sm:rounded-3xl p-5 sm:p-8 lg:p-10">
+
+            {/* Header */}
+            <DialogHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-start gap-3 sm:gap-5">
+                <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0 ${selectedProgram.iconBg}`}>
                   {(() => {
                     const IconComponent = selectedProgram.icon
-                    return <IconComponent className="w-6 h-6" />
+                    return <IconComponent className="w-6 h-6 sm:w-8 sm:h-8" />
                   })()}
                 </div>
-                <div>
-                  <span className={`text-[11px] font-extrabold px-3 py-0.5 rounded-full uppercase ${selectedProgram.badgeColor}`}>
+                <div className="flex-1 min-w-0">
+                  <span className={`inline-block text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase mb-1.5 ${selectedProgram.badgeColor}`}>
                     Program Unggulan
                   </span>
-                  <DialogTitle className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
+                  <DialogTitle className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white leading-tight">
                     {selectedProgram.title}
                   </DialogTitle>
                 </div>
               </div>
-              <DialogDescription className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+              <DialogDescription className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
                 {selectedProgram.subtitle}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6 pt-4">
-              <p className="text-slate-700 dark:text-slate-200 text-sm sm:text-base leading-relaxed">
-                {selectedProgram.fullContent}
-              </p>
+            {/* Body: single col mobile, 2-col desktop */}
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_340px] lg:grid-cols-[1fr_380px] gap-5 lg:gap-8 pt-4 items-start">
 
-              <div className="bg-slate-50 dark:bg-slate-900/60 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 space-y-3">
-                <h4 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">
+              {/* Left: Deskripsi */}
+              <div>
+                <h4 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400 mb-2.5">Deskripsi Program</h4>
+                <p className="text-slate-700 dark:text-slate-200 text-sm sm:text-base leading-relaxed text-justify">
+                  {selectedProgram.fullContent}
+                </p>
+              </div>
+
+              {/* Right: Features */}
+              <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800">
+                <h4 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400 mb-3">
                   Fasilitas &amp; Keunggulan Utama
                 </h4>
                 <ul className="space-y-2.5">
@@ -226,13 +318,15 @@ export default function ProgramUnggulanSection() {
                   ))}
                 </ul>
               </div>
-
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3">
-                <Button variant="outline" onClick={() => setSelectedProgram(null)} className="w-full sm:w-auto font-bold rounded-xl">
-                  Tutup
-                </Button>
-              </div>
             </div>
+
+            {/* Footer */}
+            <div className="pt-4 mt-1 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+              <Button variant="outline" onClick={() => setSelectedProgram(null)} className="font-bold rounded-xl px-7">
+                Tutup
+              </Button>
+            </div>
+
           </DialogContent>
         </Dialog>
       )}

@@ -5,7 +5,11 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { RolesGuard } from './roles.guard';
-import { StudentOwnershipGuard, PaymentProofOwnershipGuard, FinanceOperationGuard } from './permission.guard';
+import {
+  StudentOwnershipGuard,
+  PaymentProofOwnershipGuard,
+  FinanceOperationGuard,
+} from './permission.guard';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Module({
@@ -18,8 +22,8 @@ import { PrismaService } from '../prisma/prisma.service';
   ],
   controllers: [AuthController],
   providers: [
-    AuthService, 
-    JwtStrategy, 
+    AuthService,
+    JwtStrategy,
     PrismaService,
     RolesGuard,
     StudentOwnershipGuard,
@@ -27,8 +31,8 @@ import { PrismaService } from '../prisma/prisma.service';
     FinanceOperationGuard,
   ],
   exports: [
-    AuthService, 
-    JwtStrategy, 
+    AuthService,
+    JwtStrategy,
     RolesGuard,
     StudentOwnershipGuard,
     PaymentProofOwnershipGuard,

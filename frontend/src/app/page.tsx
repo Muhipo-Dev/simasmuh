@@ -321,16 +321,16 @@ export default async function Home() {
             <ul className="space-y-2.5 text-xs sm:text-sm">
               <li><Link href="/profil" className="hover:text-white transition-colors">Profil Sekolah</Link></li>
               <li><Link href="/akademik" className="hover:text-white transition-colors">Informasi Akademik</Link></li>
-              <li><Link href="/ppdb" className="hover:text-white transition-colors">Penerimaan Siswa Baru</Link></li>
-              <li><Link href="/kontak" className="hover:text-white transition-colors">Hubungi Kami</Link></li>
+              <li><Link href="/spmb" className="hover:text-white transition-colors">Penerimaan Siswa Baru</Link></li>
+              <li><Link href="/tentang" className="hover:text-white transition-colors">Tentang</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-white font-bold text-base sm:text-lg mb-4 sm:mb-6">Fasilitas</h4>
             <ul className="space-y-2.5 text-xs sm:text-sm">
-              <li><span className="hover:text-white transition-colors">Masjid Sekolah</span></li>
-              <li><span className="hover:text-white transition-colors">Perpustakaan Digital</span></li>
+              <li><span className="hover:text-white transition-colors">Dua Masjid Sekolah</span></li>
+              <li><span className="hover:text-white transition-colors">Kantin &amp; Koperasi Sekolah</span></li>
               <li><span className="hover:text-white transition-colors">Laboratorium Sains &amp; Komputer</span></li>
               <li><span className="hover:text-white transition-colors">Asrama (Boarding)</span></li>
             </ul>

@@ -22,17 +22,17 @@ export enum NotificationType {
   PAYMENT_UPLOADED = 'PAYMENT_UPLOADED',
   PAYMENT_VERIFIED = 'PAYMENT_VERIFIED',
   PAYMENT_REJECTED = 'PAYMENT_REJECTED',
-  
+
   // Tagihan related
   TAGIHAN_CREATED = 'TAGIHAN_CREATED',
   TAGIHAN_UPDATED = 'TAGIHAN_UPDATED',
   TAGIHAN_DELETED = 'TAGIHAN_DELETED',
   BULK_TAGIHAN_CREATED = 'BULK_TAGIHAN_CREATED',
-  
+
   // System notifications
   SYSTEM_MAINTENANCE = 'SYSTEM_MAINTENANCE',
   SYSTEM_UPDATE = 'SYSTEM_UPDATE',
-  
+
   // Security notifications
   SUSPICIOUS_ACTIVITY = 'SUSPICIOUS_ACTIVITY',
   FILE_QUARANTINED = 'FILE_QUARANTINED',
@@ -104,9 +104,10 @@ export class NotificationsService {
         await this.processAdditionalChannels(notification, data.channel);
       }
 
-      this.logger.log(`Notification created for user ${data.userId}: ${data.type}`);
+      this.logger.log(
+        `Notification created for user ${data.userId}: ${data.type}`,
+      );
       return notification;
-
     } catch (error) {
       this.logger.error(`Failed to create notification: ${error.message}`);
       throw error;
@@ -123,7 +124,7 @@ export class NotificationsService {
       offset?: number;
       status?: string;
       type?: string;
-    } = {}
+    } = {},
   ): Promise<{
     notifications: any[];
     total: number;
@@ -133,10 +134,7 @@ export class NotificationsService {
 
     const where: any = {
       userId,
-      OR: [
-        { expiresAt: null },
-        { expiresAt: { gt: new Date() } }
-      ]
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     };
 
     if (status) {
@@ -150,10 +148,7 @@ export class NotificationsService {
     const [notifications, total, unreadCount] = await Promise.all([
       this.prisma.notification.findMany({
         where,
-        orderBy: [
-          { priority: 'desc' },
-          { createdAt: 'desc' }
-        ],
+        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
         skip: offset,
         take: limit,
         include: {
@@ -170,12 +165,9 @@ export class NotificationsService {
         where: {
           userId,
           status: 'UNREAD',
-          OR: [
-            { expiresAt: null },
-            { expiresAt: { gt: new Date() } }
-          ]
-        }
-      })
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
+      }),
     ]);
 
     return {
@@ -224,7 +216,10 @@ export class NotificationsService {
   /**
    * Delete notification
    */
-  async deleteNotification(notificationId: string, userId: string): Promise<void> {
+  async deleteNotification(
+    notificationId: string,
+    userId: string,
+  ): Promise<void> {
     await this.prisma.notification.delete({
       where: {
         id: notificationId,
@@ -236,7 +231,10 @@ export class NotificationsService {
   /**
    * Bulk delete notifications
    */
-  async bulkDeleteNotifications(notificationIds: string[], userId: string): Promise<number> {
+  async bulkDeleteNotifications(
+    notificationIds: string[],
+    userId: string,
+  ): Promise<number> {
     const result = await this.prisma.notification.deleteMany({
       where: {
         id: { in: notificationIds },
@@ -259,57 +257,64 @@ export class NotificationsService {
   }> {
     const where = userId ? { userId } : {};
 
-    const [total, unread, byType, byPriority, recentActivity] = await Promise.all([
-      // Total notifications
-      this.prisma.notification.count({ where }),
-      
-      // Unread notifications
-      this.prisma.notification.count({
-        where: { ...where, status: 'UNREAD' }
-      }),
-      
-      // Group by type
-      this.prisma.notification.groupBy({
-        by: ['type'],
-        where,
-        _count: { _all: true },
-      }),
-      
-      // Group by priority
-      this.prisma.notification.groupBy({
-        by: ['priority'],
-        where,
-        _count: { _all: true },
-      }),
-      
-      // Recent activity (last 7 days)
-      this.prisma.notification.findMany({
-        where: {
-          ...where,
-          createdAt: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    const [total, unread, byType, byPriority, recentActivity] =
+      await Promise.all([
+        // Total notifications
+        this.prisma.notification.count({ where }),
+
+        // Unread notifications
+        this.prisma.notification.count({
+          where: { ...where, status: 'UNREAD' },
+        }),
+
+        // Group by type
+        this.prisma.notification.groupBy({
+          by: ['type'],
+          where,
+          _count: { _all: true },
+        }),
+
+        // Group by priority
+        this.prisma.notification.groupBy({
+          by: ['priority'],
+          where,
+          _count: { _all: true },
+        }),
+
+        // Recent activity (last 7 days)
+        this.prisma.notification.findMany({
+          where: {
+            ...where,
+            createdAt: {
+              gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            },
           },
-        },
-        select: {
-          type: true,
-          priority: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-      }),
-    ]);
+          select: {
+            type: true,
+            priority: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        }),
+      ]);
 
     // Format results
-    const typeStats = byType.reduce((acc, item) => {
-      acc[item.type] = item._count._all;
-      return acc;
-    }, {} as Record<string, number>);
+    const typeStats = byType.reduce(
+      (acc, item) => {
+        acc[item.type] = item._count._all;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
-    const priorityStats = byPriority.reduce((acc, item) => {
-      acc[item.priority] = item._count._all;
-      return acc;
-    }, {} as Record<string, number>);
+    const priorityStats = byPriority.reduce(
+      (acc, item) => {
+        acc[item.priority] = item._count._all;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       total,
@@ -332,7 +337,7 @@ export class NotificationsService {
       priority?: NotificationPriority;
       channel?: NotificationChannel[];
       expiresAt?: Date;
-    } = {}
+    } = {},
   ): Promise<any> {
     // Get template
     const template = await this.prisma.notificationTemplate.findUnique({
@@ -340,11 +345,16 @@ export class NotificationsService {
     });
 
     if (!template) {
-      throw new Error(`Notification template '${templateType}' not found or inactive`);
+      throw new Error(
+        `Notification template '${templateType}' not found or inactive`,
+      );
     }
 
     // Replace placeholders in template
-    const replacePlaceholders = (text: string, data: Record<string, any>): string => {
+    const replacePlaceholders = (
+      text: string,
+      data: Record<string, any>,
+    ): string => {
       return text.replace(/\{\{(\w+)\}\}/g, (match, key) => {
         return data[key]?.toString() || match;
       });
@@ -388,7 +398,7 @@ export class NotificationsService {
    */
   private async processAdditionalChannels(
     notification: any,
-    channels: NotificationChannel[]
+    channels: NotificationChannel[],
   ): Promise<void> {
     for (const channel of channels) {
       if (channel === NotificationChannel.IN_APP) continue;
@@ -406,7 +416,9 @@ export class NotificationsService {
             break;
         }
       } catch (error) {
-        this.logger.error(`Failed to send ${channel} notification: ${error.message}`);
+        this.logger.error(
+          `Failed to send ${channel} notification: ${error.message}`,
+        );
       }
     }
   }
@@ -417,7 +429,7 @@ export class NotificationsService {
   private async sendEmailNotification(notification: any): Promise<void> {
     // This would integrate with email service (SendGrid, AWS SES, etc.)
     this.logger.log(`Email notification sent to ${notification.user.email}`);
-    
+
     // Emit event for email service to handle
     this.eventEmitter.emit('notification.email.send', {
       to: notification.user.email,
@@ -434,7 +446,7 @@ export class NotificationsService {
   private async sendSMSNotification(notification: any): Promise<void> {
     // This would integrate with SMS service (Twilio, AWS SNS, etc.)
     this.logger.log(`SMS notification sent for user ${notification.userId}`);
-    
+
     this.eventEmitter.emit('notification.sms.send', {
       userId: notification.userId,
       message: notification.message,
@@ -448,7 +460,7 @@ export class NotificationsService {
   private async sendPushNotification(notification: any): Promise<void> {
     // This would integrate with push notification service (FCM, APNS, etc.)
     this.logger.log(`Push notification sent for user ${notification.userId}`);
-    
+
     this.eventEmitter.emit('notification.push.send', {
       userId: notification.userId,
       title: notification.title,

@@ -3,7 +3,7 @@ import { seedNotificationTemplates } from '../modules/communication/notification
 
 async function main() {
   const prisma = new PrismaService();
-  
+
   try {
     await seedNotificationTemplates(prisma);
     console.log('Notification templates seeded successfully');

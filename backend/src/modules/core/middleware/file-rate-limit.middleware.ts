@@ -1,4 +1,9 @@
-import { Injectable, NestMiddleware, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  NestMiddleware,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 
 interface RateLimitEntry {
@@ -36,7 +41,9 @@ export class FileRateLimitMiddleware implements NestMiddleware {
     }
 
     if (userRateLimit.count >= this.maxUploadsPerHour) {
-      const resetTimeStr = new Date(userRateLimit.resetTime).toLocaleTimeString();
+      const resetTimeStr = new Date(
+        userRateLimit.resetTime,
+      ).toLocaleTimeString();
       throw new HttpException(
         {
           statusCode: HttpStatus.TOO_MANY_REQUESTS,
@@ -53,7 +60,10 @@ export class FileRateLimitMiddleware implements NestMiddleware {
 
     // Add rate limit headers
     res.setHeader('X-RateLimit-Limit', this.maxUploadsPerHour.toString());
-    res.setHeader('X-RateLimit-Remaining', (this.maxUploadsPerHour - userRateLimit.count).toString());
+    res.setHeader(
+      'X-RateLimit-Remaining',
+      (this.maxUploadsPerHour - userRateLimit.count).toString(),
+    );
     res.setHeader('X-RateLimit-Reset', userRateLimit.resetTime.toString());
 
     next();

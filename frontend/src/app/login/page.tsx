@@ -61,7 +61,7 @@ export default function LoginPage() {
           </span>
         </Link>
         <div className="flex items-center gap-2">
-          <Link 
+          <Link
             href="/presensi-pegawai"
             className="h-9 px-3 text-xs font-bold border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 rounded-xl transition-all flex items-center gap-1.5"
           >
@@ -112,11 +112,11 @@ export default function LoginPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email" className="font-bold text-slate-700 dark:text-slate-200 text-xs sm:text-sm">Username / NIP / NIS / Email</Label>
+              <Label htmlFor="email" className="font-bold text-slate-700 dark:text-slate-200 text-xs sm:text-sm">Username atau Nomer Induk Siswa</Label>
               <Input
                 id="email"
                 type="text"
-                placeholder="Masukkan NIS / NIP / Username"
+                placeholder="Masukkan username atau nomer induk siswa"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -152,8 +152,8 @@ export default function LoginPage() {
               )}
             </Button>
             <div className="pt-1">
-              <Link 
-                href="/" 
+              <Link
+                href="/"
                 className="w-full flex items-center justify-center py-2.5 sm:py-3 px-4 border border-slate-300 dark:border-slate-700 font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-200 bg-white/60 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all shadow-xs touch-target text-center"
               >
                 🏠 Kembali ke Beranda

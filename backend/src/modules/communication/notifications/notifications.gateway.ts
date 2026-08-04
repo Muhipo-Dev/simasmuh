@@ -28,7 +28,9 @@ interface AuthenticatedSocket extends Socket {
   },
   namespace: '/notifications',
 })
-export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationsGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -40,8 +42,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   async handleConnection(client: AuthenticatedSocket) {
     try {
       // Authenticate client using JWT token
-      const token = client.handshake.auth.token || client.handshake.headers.authorization?.replace('Bearer ', '');
-      
+      const token =
+        client.handshake.auth.token ||
+        client.handshake.headers.authorization?.replace('Bearer ', '');
+
       if (!token) {
         this.logger.warn('Client connection rejected: No token provided');
         client.disconnect();
@@ -78,9 +82,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         message: 'Connected to notification service',
         userId: client.userId,
       });
-
     } catch (error) {
-      this.logger.warn(`Client connection rejected: Invalid token - ${error.message}`);
+      this.logger.warn(
+        `Client connection rejected: Invalid token - ${error.message}`,
+      );
       client.disconnect();
     }
   }
@@ -94,7 +99,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         if (index > -1) {
           userConnections.splice(index, 1);
         }
-        
+
         // If no more connections, remove user from map
         if (userConnections.length === 0) {
           this.connectedUsers.delete(client.userId);
@@ -122,7 +127,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   @SubscribeMessage('notifications:mark-read')
   handleMarkRead(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { notificationId: string }
+    @MessageBody() data: { notificationId: string },
   ) {
     // Broadcast to all user's connected devices
     this.server.to(`user:${client.userId}`).emit('notifications:marked-read', {
@@ -149,7 +154,9 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     });
 
     // Log notification sent
-    this.logger.log(`Real-time notification sent to user ${notification.userId}: ${notification.type}`);
+    this.logger.log(
+      `Real-time notification sent to user ${notification.userId}: ${notification.type}`,
+    );
   }
 
   /**
@@ -165,7 +172,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   }) {
     if (data.targetRoles && data.targetRoles.length > 0) {
       // Send to specific roles
-      data.targetRoles.forEach(role => {
+      data.targetRoles.forEach((role) => {
         this.server.to(`role:${role}`).emit('notifications:broadcast', {
           type: data.type,
           title: data.title,

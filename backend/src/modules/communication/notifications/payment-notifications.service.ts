@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
-import { NotificationsService, NotificationType, NotificationPriority, NotificationChannel } from './notifications.service';
+import {
+  NotificationsService,
+  NotificationType,
+  NotificationPriority,
+  NotificationChannel,
+} from './notifications.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { VirusScannerUtil } from '../../core/utils/virus-scanner.util';
 
@@ -16,7 +21,11 @@ export class PaymentNotificationsService {
   /**
    * Send notification when new tagihan is created
    */
-  async notifyTagihanCreated(tagihanId: string, studentId: string, createdBy?: string): Promise<void> {
+  async notifyTagihanCreated(
+    tagihanId: string,
+    studentId: string,
+    createdBy?: string,
+  ): Promise<void> {
     try {
       const tagihan = await this.prisma.tagihan.findUnique({
         where: { id: tagihanId },
@@ -31,11 +40,15 @@ export class PaymentNotificationsService {
       });
 
       if (!tagihan || !tagihan.student.user) {
-        this.logger.warn(`Cannot send notification - tagihan or student user not found: ${tagihanId}`);
+        this.logger.warn(
+          `Cannot send notification - tagihan or student user not found: ${tagihanId}`,
+        );
         return;
       }
 
-      const dueDate = tagihan.dueDate ? new Date(tagihan.dueDate).toLocaleDateString('id-ID') : 'Tidak ditentukan';
+      const dueDate = tagihan.dueDate
+        ? new Date(tagihan.dueDate).toLocaleDateString('id-ID')
+        : 'Tidak ditentukan';
       const amount = new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
@@ -60,9 +73,10 @@ export class PaymentNotificationsService {
         priority: NotificationPriority.NORMAL,
         channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
       });
-
     } catch (error) {
-      this.logger.error(`Failed to send tagihan created notification: ${error.message}`);
+      this.logger.error(
+        `Failed to send tagihan created notification: ${error.message}`,
+      );
     }
   }
 
@@ -133,16 +147,22 @@ export class PaymentNotificationsService {
           channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
         });
       }
-
     } catch (error) {
-      this.logger.error(`Failed to send payment proof uploaded notification: ${error.message}`);
+      this.logger.error(
+        `Failed to send payment proof uploaded notification: ${error.message}`,
+      );
     }
   }
 
   /**
    * Send notification when payment proof is verified
    */
-  async notifyPaymentProofVerified(proofId: string, status: 'DIVERIFIKASI' | 'DITOLAK', verifiedBy: string, notes?: string): Promise<void> {
+  async notifyPaymentProofVerified(
+    proofId: string,
+    status: 'DIVERIFIKASI' | 'DITOLAK',
+    verifiedBy: string,
+    notes?: string,
+  ): Promise<void> {
     try {
       const proof = await this.prisma.paymentProof.findUnique({
         where: { id: proofId },
@@ -159,7 +179,9 @@ export class PaymentNotificationsService {
       });
 
       if (!proof || !proof.student.user) {
-        this.logger.warn(`Cannot send notification - proof or student user not found: ${proofId}`);
+        this.logger.warn(
+          `Cannot send notification - proof or student user not found: ${proofId}`,
+        );
         return;
       }
 
@@ -170,15 +192,19 @@ export class PaymentNotificationsService {
       }).format(proof.amount);
 
       const isApproved = status === 'DIVERIFIKASI';
-      const title = isApproved ? 'Pembayaran Diverifikasi' : 'Pembayaran Ditolak';
-      const message = isApproved 
+      const title = isApproved
+        ? 'Pembayaran Diverifikasi'
+        : 'Pembayaran Ditolak';
+      const message = isApproved
         ? `Bukti pembayaran sebesar ${amount} telah diverifikasi dan diterima. Tagihan telah lunas.`
         : `Bukti pembayaran sebesar ${amount} ditolak. ${notes ? `Alasan: ${notes}` : 'Silakan upload ulang bukti pembayaran yang benar.'}`;
 
       await this.notificationsService.createNotification({
         userId: proof.student.user.id,
         senderId: verifiedBy,
-        type: isApproved ? NotificationType.PAYMENT_VERIFIED : NotificationType.PAYMENT_REJECTED,
+        type: isApproved
+          ? NotificationType.PAYMENT_VERIFIED
+          : NotificationType.PAYMENT_REJECTED,
         title,
         message,
         data: {
@@ -190,12 +216,15 @@ export class PaymentNotificationsService {
           notes,
           verifiedBy: proof.verifiedUser?.name,
         },
-        priority: isApproved ? NotificationPriority.HIGH : NotificationPriority.URGENT,
+        priority: isApproved
+          ? NotificationPriority.HIGH
+          : NotificationPriority.URGENT,
         channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
       });
-
     } catch (error) {
-      this.logger.error(`Failed to send payment proof verification notification: ${error.message}`);
+      this.logger.error(
+        `Failed to send payment proof verification notification: ${error.message}`,
+      );
     }
   }
 
@@ -207,7 +236,7 @@ export class PaymentNotificationsService {
     tagihanType: string,
     amount: number,
     count: number,
-    createdBy?: string
+    createdBy?: string,
   ): Promise<void> {
     try {
       // Get class information
@@ -223,7 +252,9 @@ export class PaymentNotificationsService {
       });
 
       if (!classInfo) {
-        this.logger.warn(`Cannot send bulk notification - class not found: ${classId}`);
+        this.logger.warn(
+          `Cannot send bulk notification - class not found: ${classId}`,
+        );
         return;
       }
 
@@ -235,8 +266,8 @@ export class PaymentNotificationsService {
 
       // Send notification to each student
       const notificationPromises = classInfo.students
-        .filter(student => student.user)
-        .map(student =>
+        .filter((student) => student.user)
+        .map((student) =>
           this.notificationsService.createNotification({
             userId: student.user!.id,
             senderId: createdBy,
@@ -253,16 +284,18 @@ export class PaymentNotificationsService {
             },
             priority: NotificationPriority.NORMAL,
             channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
-          })
+          }),
         );
 
       await Promise.all(notificationPromises);
 
-      this.logger.log(`Sent bulk tagihan notifications to ${notificationPromises.length} students in class ${classInfo.name}`);
+      this.logger.log(
+        `Sent bulk tagihan notifications to ${notificationPromises.length} students in class ${classInfo.name}`,
+      );
 
       // Notify finance staff about the bulk creation
       const financeStaff = await this.getFinanceStaff();
-      const staffNotificationPromises = financeStaff.map(staff =>
+      const staffNotificationPromises = financeStaff.map((staff) =>
         this.notificationsService.createNotification({
           userId: staff.id,
           senderId: createdBy,
@@ -279,16 +312,16 @@ export class PaymentNotificationsService {
           },
           priority: NotificationPriority.LOW,
           channel: [NotificationChannel.IN_APP],
-        })
+        }),
       );
 
       await Promise.all(staffNotificationPromises);
-
     } catch (error) {
-      this.logger.error(`Failed to send bulk tagihan notifications: ${error.message}`);
+      this.logger.error(
+        `Failed to send bulk tagihan notifications: ${error.message}`,
+      );
     }
   }
-
 
   /**
    * Cron job to send payment due reminders
@@ -300,7 +333,9 @@ export class PaymentNotificationsService {
 
     try {
       const now = new Date();
-      const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      const threeDaysFromNow = new Date(
+        now.getTime() + 3 * 24 * 60 * 60 * 1000,
+      );
       const oneDayFromNow = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000);
 
       // Find tagihans due in 3 days (warning)
@@ -344,28 +379,40 @@ export class PaymentNotificationsService {
       // Send warning notifications
       for (const tagihan of tagihansWarning) {
         if (tagihan.student.user) {
-          await this.sendPaymentReminderNotification(tagihan, NotificationPriority.NORMAL);
+          await this.sendPaymentReminderNotification(
+            tagihan,
+            NotificationPriority.NORMAL,
+          );
         }
       }
 
       // Send urgent notifications
       for (const tagihan of tagihansUrgent) {
         if (tagihan.student.user) {
-          await this.sendPaymentReminderNotification(tagihan, NotificationPriority.URGENT);
+          await this.sendPaymentReminderNotification(
+            tagihan,
+            NotificationPriority.URGENT,
+          );
         }
       }
 
-      this.logger.log(`Sent ${tagihansWarning.length} warning and ${tagihansUrgent.length} urgent payment reminders`);
-
+      this.logger.log(
+        `Sent ${tagihansWarning.length} warning and ${tagihansUrgent.length} urgent payment reminders`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to send payment due reminders: ${error.message}`);
+      this.logger.error(
+        `Failed to send payment due reminders: ${error.message}`,
+      );
     }
   }
 
   /**
    * Send payment reminder notification
    */
-  private async sendPaymentReminderNotification(tagihan: any, priority: NotificationPriority): Promise<void> {
+  private async sendPaymentReminderNotification(
+    tagihan: any,
+    priority: NotificationPriority,
+  ): Promise<void> {
     const dueDate = new Date(tagihan.dueDate).toLocaleDateString('id-ID');
     const amount = new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -373,8 +420,11 @@ export class PaymentNotificationsService {
       maximumFractionDigits: 0,
     }).format(tagihan.amount);
 
-    const daysUntilDue = Math.ceil((new Date(tagihan.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-    
+    const daysUntilDue = Math.ceil(
+      (new Date(tagihan.dueDate).getTime() - new Date().getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
+
     let title: string;
     let message: string;
 
@@ -414,7 +464,7 @@ export class PaymentNotificationsService {
 
     try {
       const now = new Date();
-      
+
       const overdueTagihans = await this.prisma.tagihan.findMany({
         where: {
           status: 'BELUM_LUNAS',
@@ -434,8 +484,11 @@ export class PaymentNotificationsService {
 
       for (const tagihan of overdueTagihans) {
         if (tagihan.student.user && tagihan.dueDate) {
-          const daysOverdue = Math.ceil((now.getTime() - new Date(tagihan.dueDate).getTime()) / (1000 * 60 * 60 * 24));
-          
+          const daysOverdue = Math.ceil(
+            (now.getTime() - new Date(tagihan.dueDate).getTime()) /
+              (1000 * 60 * 60 * 24),
+          );
+
           const amount = new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
@@ -461,10 +514,13 @@ export class PaymentNotificationsService {
         }
       }
 
-      this.logger.log(`Sent ${overdueTagihans.length} overdue payment notifications`);
-
+      this.logger.log(
+        `Sent ${overdueTagihans.length} overdue payment notifications`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to send overdue payment notifications: ${error.message}`);
+      this.logger.error(
+        `Failed to send overdue payment notifications: ${error.message}`,
+      );
     }
   }
 
@@ -477,10 +533,13 @@ export class PaymentNotificationsService {
     this.logger.log('Running expired notifications cleanup job...');
 
     try {
-      const count = await this.notificationsService.cleanupExpiredNotifications();
+      const count =
+        await this.notificationsService.cleanupExpiredNotifications();
       this.logger.log(`Cleaned up ${count} expired notifications`);
     } catch (error) {
-      this.logger.error(`Failed to cleanup expired notifications: ${error.message}`);
+      this.logger.error(
+        `Failed to cleanup expired notifications: ${error.message}`,
+      );
     }
   }
 
@@ -519,7 +578,11 @@ export class PaymentNotificationsService {
   /**
    * Send security notification for suspicious file activity
    */
-  async notifySecurityIncident(userId: string, incidentType: string, details: any): Promise<void> {
+  async notifySecurityIncident(
+    userId: string,
+    incidentType: string,
+    details: any,
+  ): Promise<void> {
     try {
       // Notify the user
       await this.notificationsService.createNotification({
@@ -557,9 +620,10 @@ export class PaymentNotificationsService {
           channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
         });
       }
-
     } catch (error) {
-      this.logger.error(`Failed to send security notification: ${error.message}`);
+      this.logger.error(
+        `Failed to send security notification: ${error.message}`,
+      );
     }
   }
 }

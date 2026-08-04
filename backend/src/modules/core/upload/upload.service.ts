@@ -68,15 +68,26 @@ export class UploadService {
 
     const files = await fs.promises.readdir(uploadPath);
     // Filter only images
-    const images = files.filter(f => f.endsWith('.jpg') || f.endsWith('.png') || f.endsWith('.webp') || f.endsWith('.jpeg'));
-    return images.map(f => `/uploads/carousel/${f}`);
+    const images = files.filter(
+      (f) =>
+        f.endsWith('.jpg') ||
+        f.endsWith('.png') ||
+        f.endsWith('.webp') ||
+        f.endsWith('.jpeg'),
+    );
+    return images.map((f) => `/uploads/carousel/${f}`);
   }
 
   async deleteCarouselImage(filename: string): Promise<boolean> {
     // Only allow deleting files in carousel dir
     const safeFilename = path.basename(filename);
-    const filePath = path.join(process.cwd(), 'uploads', 'carousel', safeFilename);
-    
+    const filePath = path.join(
+      process.cwd(),
+      'uploads',
+      'carousel',
+      safeFilename,
+    );
+
     if (fs.existsSync(filePath)) {
       await fs.promises.unlink(filePath);
       return true;

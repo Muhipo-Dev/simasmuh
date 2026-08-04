@@ -10,7 +10,7 @@ const uploadDir = join(process.cwd(), 'uploads');
 const tempDir = join(process.cwd(), 'temp-uploads');
 
 // Ensure directories exist
-[uploadDir, tempDir].forEach(dir => {
+[uploadDir, tempDir].forEach((dir) => {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
@@ -27,7 +27,7 @@ export const multerConfig = {
       const sanitizedOriginalName = file.originalname
         .replace(/[^a-zA-Z0-9.-]/g, '_')
         .replace(/_+/g, '_');
-      
+
       const uniqueId = uuid();
       const timestamp = Date.now();
       const fileExtension = extname(sanitizedOriginalName);
@@ -47,27 +47,33 @@ export const multerConfig = {
       const allowedMimes = [
         'image/jpeg',
         'image/png',
-        'image/gif', 
+        'image/gif',
         'image/webp',
         'application/pdf',
       ];
 
       if (!allowedMimes.includes(file.mimetype)) {
         return cb(
-          new BadRequestException('Invalid file type. Only images (JPEG, PNG, GIF, WebP) and PDFs are allowed.'),
-          false
+          new BadRequestException(
+            'Invalid file type. Only images (JPEG, PNG, GIF, WebP) and PDFs are allowed.',
+          ),
+          false,
         );
       }
 
       // Check file extension
       const ext = extname(file.originalname).toLowerCase();
-      const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
-      
+      const allowedExtensions = [
+        '.jpg',
+        '.jpeg',
+        '.png',
+        '.gif',
+        '.webp',
+        '.pdf',
+      ];
+
       if (!allowedExtensions.includes(ext)) {
-        return cb(
-          new BadRequestException('Invalid file extension.'),
-          false
-        );
+        return cb(new BadRequestException('Invalid file extension.'), false);
       }
 
       // Check filename for suspicious patterns
@@ -82,15 +88,17 @@ export const multerConfig = {
         if (pattern.test(file.originalname)) {
           return cb(
             new BadRequestException('Invalid filename detected.'),
-            false
+            false,
           );
         }
       }
 
       cb(null, true);
-
     } catch (error) {
-      cb(new BadRequestException(`File validation error: ${error.message}`), false);
+      cb(
+        new BadRequestException(`File validation error: ${error.message}`),
+        false,
+      );
     }
   },
 };
@@ -104,25 +112,20 @@ export const paymentProofMulterConfig = {
   },
   fileFilter: (req: Request, file: Express.Multer.File, cb) => {
     // Payment proofs should be images or PDFs only
-    const allowedMimes = [
-      'image/jpeg',
-      'image/png',
-      'application/pdf',
-    ];
+    const allowedMimes = ['image/jpeg', 'image/png', 'application/pdf'];
 
     if (!allowedMimes.includes(file.mimetype)) {
       return cb(
-        new BadRequestException('Payment proofs must be JPEG, PNG images or PDF files only.'),
-        false
+        new BadRequestException(
+          'Payment proofs must be JPEG, PNG images or PDF files only.',
+        ),
+        false,
       );
     }
 
     // Additional filename validation for payment proofs
     if (file.originalname.length > 255) {
-      return cb(
-        new BadRequestException('Filename too long.'),
-        false
-      );
+      return cb(new BadRequestException('Filename too long.'), false);
     }
 
     cb(null, true);

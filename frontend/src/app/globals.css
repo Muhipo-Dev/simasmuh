@@ -296,4 +296,72 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Custom scrollbar styling for finance tables and modals */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: oklch(0.95 0.01 255);
+    border-radius: 3px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: oklch(0.65 0.02 255);
+    border-radius: 3px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.55 0.02 255);
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: oklch(0.22 0.04 255);
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: oklch(0.40 0.04 255);
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.50 0.04 255);
+  }
+
+  /* Finance-specific card styling for better visual hierarchy */
+  .finance-card {
+    @apply bg-white border border-slate-200 rounded-xl shadow-sm transition-all duration-200;
+  }
+  .dark .finance-card {
+    @apply bg-slate-800/50 border-slate-700;
+  }
+  .finance-card:hover {
+    @apply shadow-md border-slate-300;
+  }
+  .dark .finance-card:hover {
+    @apply border-slate-600 shadow-lg;
+  }
+
+  /* Discount badge styling */
+  .discount-badge {
+    @apply bg-amber-100 text-amber-800 border-amber-300 px-2 py-0.5 text-xs font-bold rounded;
+  }
+  .dark .discount-badge {
+    @apply bg-amber-900/30 text-amber-300 border-amber-700;
+  }
+
+  /* Price breakdown styling */
+  .price-original {
+    @apply text-sm text-slate-500 line-through;
+  }
+  .dark .price-original {
+    @apply text-slate-400;
+  }
+  .price-discount {
+    @apply text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded;
+  }
+  .dark .price-discount {
+    @apply text-red-400 bg-red-900/30;
+  }
+  .price-final {
+    @apply text-xl sm:text-2xl font-black text-emerald-700 tracking-tight;
+  }
+  .dark .price-final {
+    @apply text-emerald-400;
+  }
 }

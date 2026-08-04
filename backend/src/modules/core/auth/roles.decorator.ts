@@ -5,7 +5,7 @@ export const Roles = (...roles: string[]) => SetMetadata(ROLES_KEY, roles);
 
 // Permission types untuk granular access
 export const PERMISSIONS_KEY = 'permissions';
-export const RequirePermissions = (...permissions: string[]) => 
+export const RequirePermissions = (...permissions: string[]) =>
   SetMetadata(PERMISSIONS_KEY, permissions);
 
 // Payment specific permissions

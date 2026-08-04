@@ -15,8 +15,14 @@ import {
 import { FinanceService } from './finance.service';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
 import { RolesGuard } from '../../core/auth/roles.guard';
-import { StudentOwnershipGuard, FinanceOperationGuard } from '../../core/auth/permission.guard';
-import { Roles, RequirePermissions, PaymentPermission, UserRole, SubRole } from '../../core/auth/roles.decorator';
+import {
+  StudentOwnershipGuard,
+  FinanceOperationGuard,
+} from '../../core/auth/permission.guard';
+import {
+  RequirePermissions,
+  PaymentPermission,
+} from '../../core/auth/roles.decorator';
 
 @Controller('finance')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -58,6 +64,72 @@ export class FinanceController {
   @Post('tagihan/massal')
   addTagihanMassal(@Body() body: any) {
     return this.financeService.addTagihanMassal(body);
+  }
+
+  // ============================================================
+  // SPP MASS INPUT PER CLASS (Server-Side Calculation)
+  // ============================================================
+  @Post('spp/mass-input')
+  @RequirePermissions(PaymentPermission.GENERATE_MASS_BILLS)
+  @UseGuards(FinanceOperationGuard)
+  async massInputSPP(
+    @Body()
+    body: {
+      classId: string;
+      amount: number;
+      month: number;
+      year: number;
+      dueDate?: string;
+      notes?: string;
+    },
+  ) {
+    return this.financeService.massInputSPP(body);
+  }
+
+  // ============================================================
+  // DPP INPUT PER ANGKATAN (Server-Side Calculation with Kader Discount)
+  // ============================================================
+  @Post('dpp/input-angkatan')
+  @RequirePermissions(PaymentPermission.GENERATE_MASS_BILLS)
+  @UseGuards(FinanceOperationGuard)
+  async inputDPPByAngkatan(
+    @Body()
+    body: {
+      gradeLevel: number;
+      baseAmount: number;
+      dueDate?: string;
+      notes?: string;
+    },
+  ) {
+    return this.financeService.inputDPPByAngkatan(body);
+  }
+
+  // ============================================================
+  // DISCOUNT MANAGEMENT (Server-Side Only)
+  // ============================================================
+  @Post('discount/:tagihanId')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  async applyDiscount(
+    @Param('tagihanId') tagihanId: string,
+    @Body() body: { discountPercentage: 25 | 50 | 75 | 100; reason?: string },
+  ) {
+    return this.financeService.applyDiscount(
+      tagihanId,
+      body.discountPercentage,
+      body.reason,
+    );
+  }
+
+  @Delete('discount/:tagihanId')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  async removeDiscount(@Param('tagihanId') tagihanId: string) {
+    return this.financeService.removeDiscount(tagihanId);
+  }
+
+  @Get('discount/:studentId')
+  @RequirePermissions(PaymentPermission.VIEW_ALL_BILLS)
+  async getStudentDiscounts(@Param('studentId') studentId: string) {
+    return this.financeService.getStudentDiscounts(studentId);
   }
 
   // ----- Operasi per Tagihan -----
@@ -150,10 +222,7 @@ export class FinanceController {
   // ============================================================
   @Get('lpj')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
-  getLpj(
-    @Query('year') year: string,
-    @Query('month') month?: string,
-  ) {
+  getLpj(@Query('year') year: string, @Query('month') month?: string) {
     return this.financeService.getLpj(
       year ? parseInt(year, 10) : new Date().getFullYear(),
       month ? parseInt(month, 10) : undefined,

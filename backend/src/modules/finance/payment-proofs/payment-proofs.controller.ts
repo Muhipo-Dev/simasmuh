@@ -15,7 +15,10 @@ import { PaymentProofsService } from './payment-proofs.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
 import { RolesGuard } from '../../core/auth/roles.guard';
-import { RequirePermissions, PaymentPermission } from '../../core/auth/roles.decorator';
+import {
+  RequirePermissions,
+  PaymentPermission,
+} from '../../core/auth/roles.decorator';
 import { paymentProofMulterConfig } from '../../core/config/multer.config';
 import { FileProcessingInterceptor } from '../../core/interceptors/file-processing.interceptor';
 import { CreatePaymentProofDto } from './dto/create-payment-proof.dto';
@@ -29,7 +32,7 @@ export class PaymentProofsController {
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('file', paymentProofMulterConfig),
-    FileProcessingInterceptor
+    FileProcessingInterceptor,
   )
   @RequirePermissions(PaymentPermission.UPLOAD_PAYMENT_PROOF)
   async uploadProof(

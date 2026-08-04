@@ -10,7 +10,10 @@ export class FileHashService {
   /**
    * Check if file already exists and store its hash
    */
-  async processFileHash(filePath: string, userId: string): Promise<{
+  async processFileHash(
+    filePath: string,
+    userId: string,
+  ): Promise<{
     isDuplicate: boolean;
     existingFileId?: string;
     hash: string;
@@ -90,7 +93,7 @@ export class FileHashService {
       await this.prisma.fileHash.deleteMany({
         where: {
           id: {
-            in: orphanedHashes.map(h => h.id),
+            in: orphanedHashes.map((h) => h.id),
           },
         },
       });

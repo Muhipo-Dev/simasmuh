@@ -142,6 +142,10 @@ function TagihanModal({
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'BELUM_LUNAS' | 'LUNAS'>('ALL')
+  const [showDiscountModal, setShowDiscountModal] = useState(false)
+  const [discountTagihanId, setDiscountTagihanId] = useState<string | null>(null)
+  const [discountPercentage, setDiscountPercentage] = useState<25 | 50 | 75 | 100>(25)
+  const [discountReason, setDiscountReason] = useState('')
 
   const resetForm = () => { setForm(defaultForm()); setEditId(null); setShowForm(false) }
 
@@ -201,6 +205,53 @@ function TagihanModal({
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] }); qc.invalidateQueries({ queryKey: ['finance-students'] }) },
   })
+
+  const discountMut = useMutation({
+    mutationFn: async () => {
+      const res = await authenticatedFetch(`/api-backend/finance/discount/${discountTagihanId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discountPercentage, reason: discountReason }),
+      })
+      if (!res.ok) throw new Error('Gagal memberikan diskon')
+      return res.json()
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] })
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      setShowDiscountModal(false)
+      setDiscountTagihanId(null)
+      setDiscountReason('')
+    },
+  })
+
+  const removeDiscountMut = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await authenticatedFetch(`/api-backend/finance/discount/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Gagal menghapus diskon')
+      return res.json()
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] })
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+    },
+  })
+
+  const openDiscountModal = (tagihanId: string) => {
+    setDiscountTagihanId(tagihanId)
+    setShowDiscountModal(true)
+  }
+
+  const parseDiscountInfo = (notes: string | null) => {
+    if (!notes) return null
+    const match = notes.match(/DISCOUNT_INFO:\s*(\{.*?\})/)
+    if (!match) return null
+    try {
+      return JSON.parse(match[1])
+    } catch {
+      return null
+    }
+  }
 
   const startEdit = (t: Tagihan) => {
     setForm({
@@ -382,6 +433,21 @@ function TagihanModal({
                       </button>
                     )}
                     <div className="flex gap-1">
+                      {/* Set Diskon Button */}
+                      {t.status === 'BELUM_LUNAS' && (
+                        <button onClick={() => openDiscountModal(t.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                          title="Set Diskon">
+                          <TrendingUp className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {parseDiscountInfo(t.notes) && (
+                        <button onClick={() => removeDiscountMut.mutate(t.id)} disabled={removeDiscountMut.isPending}
+                          className="p-1.5 rounded-lg text-amber-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Hapus Diskon">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button onClick={() => startEdit(t)}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
                         <Pencil className="w-3.5 h-3.5" />
@@ -403,6 +469,59 @@ function TagihanModal({
         onConfirm={() => deleteId && deleteMut.mutate(deleteId)}
         loading={deleteMut.isPending}
         title="Hapus Tagihan?" description="Tagihan ini akan dihapus permanen." />
+
+      {/* Discount Modal */}
+      <Dialog open={showDiscountModal} onOpenChange={(v) => { if (!v) setShowDiscountModal(false) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-700">
+              <TrendingUp className="w-5 h-5" /> Set Diskon Tagihan
+            </DialogTitle>
+            <DialogDescription>Pilih persentase diskon untuk tagihan ini.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label className="text-sm font-semibold text-slate-700 mb-2 block">Persentase Diskon</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {[25, 50, 75, 100].map((pct) => (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => setDiscountPercentage(pct as 25 | 50 | 75 | 100)}
+                    className={`px-3 py-2 rounded-lg text-sm font-bold border transition-all ${
+                      discountPercentage === pct
+                        ? 'bg-amber-600 text-white border-amber-600'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-amber-300'
+                    }`}
+                  >
+                    {pct}%
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm font-semibold text-slate-700 mb-1 block">Alasan (Opsional)</Label>
+              <Input
+                placeholder="Misal: Beasiswa prestasi"
+                value={discountReason}
+                onChange={(e) => setDiscountReason(e.target.value)}
+                className="bg-white"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowDiscountModal(false)}>Batal</Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              disabled={discountMut.isPending}
+              onClick={() => discountMut.mutate()}
+            >
+              {discountMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Terapkan Diskon
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

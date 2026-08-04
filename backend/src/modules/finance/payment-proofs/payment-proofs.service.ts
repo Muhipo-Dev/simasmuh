@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { FileHashService } from '../../core/services/file-hash.service';
 import { FileSecurityUtil } from '../../core/utils/file-security.util';
@@ -27,9 +32,20 @@ export class PaymentProofsService {
     filePath: string;
     fileMetadata?: any;
   }) {
-    const { studentId, tagihanId, amount, proofUrl, notes, userId, filePath, fileMetadata } = data;
+    const {
+      studentId,
+      tagihanId,
+      amount,
+      proofUrl,
+      notes,
+      userId,
+      filePath,
+      fileMetadata,
+    } = data;
 
-    this.logger.log(`Creating payment proof for user: ${userId}, student: ${studentId}`);
+    this.logger.log(
+      `Creating payment proof for user: ${userId}, student: ${studentId}`,
+    );
 
     // If studentId not provided but userId is, find student record
     let finalStudentId = studentId;
@@ -39,13 +55,17 @@ export class PaymentProofsService {
           where: { id: userId },
           include: { student: true },
         });
-        
+
         if (user?.student) {
           finalStudentId = user.student.id;
-          this.logger.log(`Found student ID: ${finalStudentId} for user: ${userId}`);
+          this.logger.log(
+            `Found student ID: ${finalStudentId} for user: ${userId}`,
+          );
         }
       } catch (error) {
-        this.logger.error(`Failed to find student for user ${userId}: ${error.message}`);
+        this.logger.error(
+          `Failed to find student for user ${userId}: ${error.message}`,
+        );
         throw new BadRequestException('Gagal menemukan data siswa');
       }
     }
@@ -76,29 +96,36 @@ export class PaymentProofsService {
         if (error instanceof BadRequestException) {
           throw error;
         }
-        this.logger.error(`Failed to validate tagihan ${tagihanId}: ${error.message}`);
+        this.logger.error(
+          `Failed to validate tagihan ${tagihanId}: ${error.message}`,
+        );
         throw new BadRequestException('Gagal memvalidasi tagihan');
       }
     }
 
     try {
       // Process file hash and check for duplicates
-      const hashResult = await this.fileHashService.processFileHash(filePath, userId || 'system');
-      
+      const hashResult = await this.fileHashService.processFileHash(
+        filePath,
+        userId || 'system',
+      );
+
       if (hashResult.isDuplicate) {
         // Clean up the newly uploaded file since it's a duplicate
         await this.safeCleanupFile(filePath);
-        
+
         // Check if duplicate is from same student
         const existingProof = await this.prisma.paymentProof.findFirst({
-          where: { 
+          where: {
             fileHash: hashResult.hash,
-            studentId: finalStudentId 
+            studentId: finalStudentId,
           },
         });
 
         if (existingProof) {
-          throw new BadRequestException('File ini sudah pernah diupload sebelumnya oleh Anda');
+          throw new BadRequestException(
+            'File ini sudah pernah diupload sebelumnya oleh Anda',
+          );
         } else {
           throw new BadRequestException('File ini sudah ada di sistem');
         }
@@ -118,8 +145,8 @@ export class PaymentProofsService {
           student: {
             include: {
               class: { select: { name: true } },
-              user: { select: { id: true, name: true } }
-            }
+              user: { select: { id: true, name: true } },
+            },
           },
           tagihan: true,
         },
@@ -135,7 +162,9 @@ export class PaymentProofsService {
           uploadedBy: userId,
         });
       } catch (eventError) {
-        this.logger.warn(`Failed to emit payment-proof.uploaded event: ${eventError.message}`);
+        this.logger.warn(
+          `Failed to emit payment-proof.uploaded event: ${eventError.message}`,
+        );
         // Don't fail the whole operation for event emission failure
       }
 
@@ -143,17 +172,16 @@ export class PaymentProofsService {
       await this.logFileActivity(userId, 'UPLOAD', proof.id, fileMetadata);
 
       return proof;
-
     } catch (error) {
       this.logger.error(`Failed to create payment proof: ${error.message}`);
-      
+
       // Clean up file on error
       await this.safeCleanupFile(filePath);
-      
+
       if (error instanceof BadRequestException) {
         throw error;
       }
-      
+
       throw new BadRequestException('Gagal membuat bukti pembayaran');
     }
   }
@@ -161,17 +189,25 @@ export class PaymentProofsService {
   /**
    * Log file activity for audit purposes
    */
-  private async logFileActivity(userId: string | undefined, action: string, proofId: string, metadata?: any) {
+  private async logFileActivity(
+    userId: string | undefined,
+    action: string,
+    proofId: string,
+    metadata?: any,
+  ) {
     try {
       // This would be expanded in the audit trail implementation
-      this.logger.log(`File activity: ${action} by user ${userId || 'system'} for proof ${proofId}`, {
-        userId,
-        action,
-        proofId,
-        metadata,
-        timestamp: new Date().toISOString(),
-      });
-      
+      this.logger.log(
+        `File activity: ${action} by user ${userId || 'system'} for proof ${proofId}`,
+        {
+          userId,
+          action,
+          proofId,
+          metadata,
+          timestamp: new Date().toISOString(),
+        },
+      );
+
       // You could also store this in database for audit trail
       // await this.prisma.auditLog.create({ ... })
     } catch (error) {
@@ -229,24 +265,27 @@ export class PaymentProofsService {
           student: {
             include: {
               class: { select: { name: true } },
-              user: { select: { id: true, name: true } }
-            }
+              user: { select: { id: true, name: true } },
+            },
           },
           tagihan: true,
           verifiedUser: {
             select: {
               id: true,
-              name: true
-            }
+              name: true,
+            },
           },
         },
       });
 
-      this.logger.log(`Retrieved ${proofs.length} payment proofs for user ${userId}`);
+      this.logger.log(
+        `Retrieved ${proofs.length} payment proofs for user ${userId}`,
+      );
       return proofs;
-
     } catch (error) {
-      this.logger.error(`Failed to get payment proofs for user ${userId}: ${error.message}`);
+      this.logger.error(
+        `Failed to get payment proofs for user ${userId}: ${error.message}`,
+      );
       throw new BadRequestException('Gagal mengambil data bukti pembayaran');
     }
   }
@@ -272,22 +311,24 @@ export class PaymentProofsService {
             student: {
               include: {
                 class: { select: { name: true } },
-                user: { select: { id: true, name: true } }
-              }
+                user: { select: { id: true, name: true } },
+              },
             },
             tagihan: true,
             verifiedUser: {
               select: {
                 id: true,
-                name: true
-              }
+                name: true,
+              },
             },
           },
         }),
         this.prisma.paymentProof.count({ where }),
       ]);
 
-      this.logger.log(`Retrieved ${proofs.length} payment proofs (page ${pageNumber}, total: ${total})`);
+      this.logger.log(
+        `Retrieved ${proofs.length} payment proofs (page ${pageNumber}, total: ${total})`,
+      );
 
       return {
         data: proofs,
@@ -298,7 +339,6 @@ export class PaymentProofsService {
           totalPages: Math.ceil(total / pageSize),
         },
       };
-
     } catch (error) {
       this.logger.error(`Failed to get all payment proofs: ${error.message}`);
       throw new BadRequestException('Gagal mengambil data bukti pembayaran');
@@ -313,7 +353,9 @@ export class PaymentProofsService {
   }) {
     const { paymentProofId, status, notes, verifiedBy } = data;
 
-    this.logger.log(`Verifying payment proof ${paymentProofId} with status ${status} by user ${verifiedBy}`);
+    this.logger.log(
+      `Verifying payment proof ${paymentProofId} with status ${status} by user ${verifiedBy}`,
+    );
 
     try {
       // First, check if payment proof exists and is in correct state
@@ -323,8 +365,8 @@ export class PaymentProofsService {
           student: {
             include: {
               class: { select: { name: true } },
-              user: { select: { id: true, name: true } }
-            }
+              user: { select: { id: true, name: true } },
+            },
           },
           tagihan: true,
         },
@@ -335,7 +377,9 @@ export class PaymentProofsService {
       }
 
       if (existingProof.status !== 'MENUNGGU_VERIFIKASI') {
-        throw new BadRequestException(`Bukti pembayaran sudah ${existingProof.status.toLowerCase()}`);
+        throw new BadRequestException(
+          `Bukti pembayaran sudah ${existingProof.status.toLowerCase()}`,
+        );
       }
 
       // Verify the verifier exists and has permission
@@ -362,15 +406,15 @@ export class PaymentProofsService {
             student: {
               include: {
                 class: { select: { name: true } },
-                user: { select: { id: true, name: true } }
-              }
+                user: { select: { id: true, name: true } },
+              },
             },
             tagihan: true,
             verifiedUser: {
               select: {
                 id: true,
-                name: true
-              }
+                name: true,
+              },
             },
           },
         });
@@ -395,13 +439,17 @@ export class PaymentProofsService {
             },
           });
 
-          this.logger.log(`Tagihan ${proof.tagihanId} marked as BELUM_LUNAS (payment rejected)`);
+          this.logger.log(
+            `Tagihan ${proof.tagihanId} marked as BELUM_LUNAS (payment rejected)`,
+          );
         }
 
         return proof;
       });
 
-      this.logger.log(`Payment proof ${paymentProofId} verified successfully with status ${status}`);
+      this.logger.log(
+        `Payment proof ${paymentProofId} verified successfully with status ${status}`,
+      );
 
       // Emit event for notification
       try {
@@ -412,19 +460,25 @@ export class PaymentProofsService {
           notes,
         });
       } catch (eventError) {
-        this.logger.warn(`Failed to emit payment-proof.verified event: ${eventError.message}`);
+        this.logger.warn(
+          `Failed to emit payment-proof.verified event: ${eventError.message}`,
+        );
         // Don't fail the whole operation for event emission failure
       }
 
       return updatedProof;
-
     } catch (error) {
-      this.logger.error(`Failed to verify payment proof ${paymentProofId}: ${error.message}`);
-      
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      this.logger.error(
+        `Failed to verify payment proof ${paymentProofId}: ${error.message}`,
+      );
+
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
-      
+
       throw new BadRequestException('Gagal memverifikasi bukti pembayaran');
     }
   }

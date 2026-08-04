@@ -77,7 +77,8 @@ export class TeachersService {
     // Pre-hash all passwords concurrently
     const hashedDataArray = await Promise.all(
       dataArray.map(async (data) => {
-        const username = data.username || data.nip || data.email || String(Math.random());
+        const username =
+          data.username || data.nip || data.email || String(Math.random());
         const plainPassword = data.password || username;
         const hashedPassword = await bcrypt.hash(plainPassword, 10);
         return { ...data, username, password: hashedPassword };

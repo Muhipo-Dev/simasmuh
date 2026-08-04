@@ -13,7 +13,10 @@ import {
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
 import { RolesGuard } from '../../core/auth/roles.guard';
-import { RequirePermissions, PaymentPermission } from '../../core/auth/roles.decorator';
+import {
+  RequirePermissions,
+  PaymentPermission,
+} from '../../core/auth/roles.decorator';
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -115,7 +118,8 @@ export class NotificationsController {
   @Post('from-template')
   @RequirePermissions(PaymentPermission.SYSTEM_CONFIGURATION)
   async createFromTemplate(
-    @Body() data: {
+    @Body()
+    data: {
       templateType: string;
       userId: string;
       templateData: any;

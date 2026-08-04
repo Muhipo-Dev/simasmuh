@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -15,7 +20,13 @@ export class StudentOwnershipGuard implements CanActivate {
     }
 
     // Admin IT, SUPERADMIN, and Finance can access all student data
-    if (user.role === 'ADMIN_IT' || user.role === 'SUPERADMIN' || user.subRole === 'KEUANGAN' || user.subRole2 === 'KEUANGAN' || user.subRole3 === 'KEUANGAN') {
+    if (
+      user.role === 'ADMIN_IT' ||
+      user.role === 'SUPERADMIN' ||
+      user.subRole === 'KEUANGAN' ||
+      user.subRole2 === 'KEUANGAN' ||
+      user.subRole3 === 'KEUANGAN'
+    ) {
       return true;
     }
 
@@ -27,7 +38,9 @@ export class StudentOwnershipGuard implements CanActivate {
       });
 
       if (!student || student.userId !== user.id) {
-        throw new ForbiddenException('You can only access your own payment data');
+        throw new ForbiddenException(
+          'You can only access your own payment data',
+        );
       }
     }
 
@@ -49,7 +62,13 @@ export class PaymentProofOwnershipGuard implements CanActivate {
     }
 
     // Admin IT, SUPERADMIN, and Finance can access all payment proofs
-    if (user.role === 'ADMIN_IT' || user.role === 'SUPERADMIN' || user.subRole === 'KEUANGAN' || user.subRole2 === 'KEUANGAN' || user.subRole3 === 'KEUANGAN') {
+    if (
+      user.role === 'ADMIN_IT' ||
+      user.role === 'SUPERADMIN' ||
+      user.subRole === 'KEUANGAN' ||
+      user.subRole2 === 'KEUANGAN' ||
+      user.subRole3 === 'KEUANGAN'
+    ) {
       return true;
     }
 
@@ -61,7 +80,9 @@ export class PaymentProofOwnershipGuard implements CanActivate {
       });
 
       if (!proof || proof.student.userId !== user.id) {
-        throw new ForbiddenException('You can only access your own payment proofs');
+        throw new ForbiddenException(
+          'You can only access your own payment proofs',
+        );
       }
     }
 
@@ -73,19 +94,44 @@ export class PaymentProofOwnershipGuard implements CanActivate {
 export class FinanceOperationGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const { user } = context.switchToHttp().getRequest();
-    
+
     if (!user) {
       return false;
     }
 
     // Only Admin IT, SUPERADMIN, and Finance staff can perform financial operations
-    const hasFinanceAccess = user.role === 'ADMIN_IT' || user.role === 'SUPERADMIN' || 
-                           user.subRole === 'KEUANGAN' || 
-                           user.subRole2 === 'KEUANGAN' || 
-                           user.subRole3 === 'KEUANGAN';
+    const hasFinanceAccess =
+      user.role === 'ADMIN_IT' ||
+      user.role === 'SUPERADMIN' ||
+      user.subRole === 'KEUANGAN' ||
+      user.subRole2 === 'KEUANGAN' ||
+      user.subRole3 === 'KEUANGAN';
 
     if (!hasFinanceAccess) {
-      throw new ForbiddenException('Access denied. Finance permissions required');
+      throw new ForbiddenException(
+        'Access denied. Finance permissions required',
+      );
+    }
+
+    return true;
+  }
+}
+
+@Injectable()
+export class SuperadminGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const { user } = context.switchToHttp().getRequest();
+
+    if (!user) {
+      throw new ForbiddenException(
+        'Akses ditolak. Anda harus login terlebih dahulu.',
+      );
+    }
+
+    if (user.role !== 'SUPERADMIN') {
+      throw new ForbiddenException(
+        'Akses ditolak. Hanya SUPERADMIN yang dapat melakukan operasi modifikasi label program siswa.',
+      );
     }
 
     return true;

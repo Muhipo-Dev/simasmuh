@@ -40,6 +40,9 @@ type Tagihan = {
   paidDate: string | null
   notes: string | null
   createdAt: string
+  originalAmount?: number
+  discountPercentage?: number
+  discountAmount?: number
 }
 
 type BankAccount = {
@@ -82,6 +85,17 @@ const getMonthName = (month: number) => {
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
   ]
   return months[month - 1] || ''
+}
+
+const parseDiscountInfo = (notes: string | null) => {
+  if (!notes) return null
+  const match = notes.match(/DISCOUNT_INFO:\s*(\{.*?\})/)
+  if (!match) return null
+  try {
+    return JSON.parse(match[1])
+  } catch {
+    return null
+  }
 }
 
 export default function PaymentBillingPopup({ open, onClose, initialTagihanId }: PaymentBillingPopupProps) {
@@ -298,21 +312,21 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
                   </h3>
                   <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
                     {tagihans.map((tagihan) => (
-                      <Card 
+                      <Card
                         key={tagihan.id}
                         className={`cursor-pointer transition-all border-2 ${
-                          selectedTagihan?.id === tagihan.id 
-                            ? 'border-blue-500 bg-blue-50/50 shadow-md transform scale-[1.01]' 
+                          selectedTagihan?.id === tagihan.id
+                            ? 'border-blue-500 bg-blue-50/50 shadow-md transform scale-[1.01]'
                             : 'border-slate-100 hover:border-blue-300 hover:bg-slate-50 hover:shadow-sm'
                         }`}
                         onClick={() => setSelectedTagihan(tagihan)}
                       >
                         <CardContent className="p-4 sm:p-5">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="space-y-2 min-w-0">
+                            <div className="space-y-2 min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <Badge 
-                                  variant="outline" 
+                                <Badge
+                                  variant="outline"
                                   className={`${PAYMENT_TYPE_LABELS[tagihan.type]?.color || 'bg-gray-100'} px-2.5 py-0.5 text-xs font-bold border`}
                                 >
                                   {PAYMENT_TYPE_LABELS[tagihan.type]?.label || tagihan.type}
@@ -322,21 +336,47 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
                                     {getMonthName(tagihan.month)} {tagihan.year}
                                   </span>
                                 )}
+                                {parseDiscountInfo(tagihan.notes) && (
+                                  <Badge className="bg-amber-100 text-amber-800 border-amber-300 px-2 py-0.5 text-xs font-bold">
+                                    Diskon {parseDiscountInfo(tagihan.notes)?.discountPercentage}%
+                                  </Badge>
+                                )}
                               </div>
-                              <div className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight break-words">
-                                {formatCurrency(tagihan.amount)}
+
+                              {/* Price Breakdown with Discount */}
+                              <div className="space-y-1">
+                                {parseDiscountInfo(tagihan.notes) ? (
+                                  <>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-slate-500 line-through">
+                                        {formatCurrency(parseDiscountInfo(tagihan.notes)?.originalAmount || tagihan.amount)}
+                                      </span>
+                                      <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                                        -{formatCurrency(parseDiscountInfo(tagihan.notes)?.discountAmount || 0)}
+                                      </span>
+                                    </div>
+                                    <div className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight break-words">
+                                      {formatCurrency(tagihan.amount)}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight break-words">
+                                    {formatCurrency(tagihan.amount)}
+                                  </div>
+                                )}
                               </div>
+
                               {tagihan.dueDate && (
                                 <div className="flex items-center gap-1.5 text-sm font-medium text-red-600 bg-red-50 w-fit px-2 py-0.5 rounded-md">
                                   <Calendar className="w-4 h-4" />
                                   Jatuh tempo: {formatDate(tagihan.dueDate)}
                                 </div>
                               )}
-                              {tagihan.notes && (
+                              {tagihan.notes && !parseDiscountInfo(tagihan.notes) && (
                                 <p className="text-sm text-slate-600 italic bg-slate-50 p-2 rounded-md border border-slate-100">{tagihan.notes}</p>
                               )}
                             </div>
-                            <div className="flex sm:flex-col items-center justify-between sm:justify-center gap-3">
+                            <div className="flex sm:flex-col items-center justify-between sm:justify-center gap-3 shrink-0">
                               {selectedTagihan?.id === tagihan.id ? (
                                 <div className="bg-blue-600 text-white p-2 rounded-full shadow-sm">
                                   <CheckCircle2 className="w-5 h-5" />

@@ -3,7 +3,7 @@ import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useSession } from 'next-auth/react'
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3 } from 'lucide-react'
+import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -16,6 +16,24 @@ import { ImportProgressDialog, ImportProgressState } from '@/components/ImportPr
 
 const CHUNK_SIZE = 20
 
+// Enum program unggulan siswa — hanya SUPERADMIN yang bisa mengubah
+const PROGRAM_OPTIONS = [
+  { value: 'kader', label: 'Kader', color: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' },
+  { value: 'reguler', label: 'Reguler', color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
+  { value: 'tahfidz', label: 'Tahfidz', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' },
+  { value: 'olahraga', label: 'Olahraga', color: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300' },
+  { value: 'MIC', label: 'Muhipo Internasional Class (MIC)', color: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' },
+  { value: 'enterpreneur', label: 'Entrepreneur', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300' },
+  { value: 'seni budaya', label: 'Seni Budaya', color: 'bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300' },
+  { value: 'soshum saintek', label: 'Soshum Saintek', color: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300' },
+  { value: 'inklusi', label: 'Inklusi', color: 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300' },
+]
+
+const getProgramBadge = (programValue: string | null | undefined) => {
+  if (!programValue) return null
+  return PROGRAM_OPTIONS.find(p => p.value === programValue) ?? null
+}
+
 type Student = {
   id: string
   nisn: string
@@ -23,6 +41,7 @@ type Student = {
   name: string
   gender: string
   classId: string
+  program?: string | null
   class: {
     id: string
     name: string
@@ -44,6 +63,7 @@ export default function StudentsPage() {
 
   const userRole = (session?.user as any)?.role || ''
   const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM'].includes(userRole)
+  const isSuperadmin = userRole === 'SUPERADMIN'
 
   const [open, setOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
@@ -51,6 +71,7 @@ export default function StudentsPage() {
   const [promoteMode, setPromoteMode] = useState<'CLASS' | 'SELECTED'>('CLASS')
 
   const [filterClassId, setFilterClassId] = useState<string>('ALL')
+  const [filterProgram, setFilterProgram] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [fromClassId, setFromClassId] = useState<string>('')
   const [toClassId, setToClassId] = useState<string>('')
@@ -82,7 +103,10 @@ export default function StudentsPage() {
   const abortRef = useRef(false)
 
   const [isEdit, setIsEdit] = useState(false)
-  const [formData, setFormData] = useState({ id: '', nisn: '', nis: '', name: '', gender: 'L', classId: '', username: '', password: '' })
+  const [formData, setFormData] = useState({ id: '', nisn: '', nis: '', name: '', gender: 'L', classId: '', username: '', password: '', program: '' })
+  const [isProgramDialogOpen, setIsProgramDialogOpen] = useState(false)
+  const [programTargetStudent, setProgramTargetStudent] = useState<Student | null>(null)
+  const [programValue, setProgramValue] = useState<string>('')
 
   const { data: students, isLoading } = useQuery<Student[]>({
     queryKey: ['students'],
@@ -144,6 +168,31 @@ export default function StudentsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] })
+    }
+  })
+
+  // Mutation khusus update program (SUPERADMIN only — memanggil PATCH /students/:id/program)
+  const updateProgramMutation = useMutation({
+    mutationFn: async ({ id, program }: { id: string; program: string | null }) => {
+      const res = await authenticatedFetch(`/api-backend/students/${id}/program`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ program })
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal mengubah program siswa')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+      setIsProgramDialogOpen(false)
+      setProgramTargetStudent(null)
+      setProgramValue('')
+    },
+    onError: (err: any) => {
+      alert(err.message || 'Gagal mengubah program siswa. Pastikan Anda login sebagai SUPERADMIN.')
     }
   })
 
@@ -248,7 +297,7 @@ export default function StudentsPage() {
 
   const handleOpenAddDialog = () => {
     setIsEdit(false)
-    setFormData({ id: '', nisn: '', nis: '', name: '', gender: 'L', classId: '', username: '', password: '' })
+    setFormData({ id: '', nisn: '', nis: '', name: '', gender: 'L', classId: '', username: '', password: '', program: '' })
     setOpen(true)
   }
 
@@ -262,14 +311,15 @@ export default function StudentsPage() {
       gender: student.gender, 
       classId: student.classId || student.class?.id || '', 
       username: student.user?.username || '', 
-      password: '' 
+      password: '',
+      program: student.program || ''
     })
     setOpen(true)
   }
 
   const handleCloseDialog = () => {
     setOpen(false)
-    setFormData({ id: '', nisn: '', nis: '', name: '', gender: 'L', classId: '', username: '', password: '' })
+    setFormData({ id: '', nisn: '', nis: '', name: '', gender: 'L', classId: '', username: '', password: '', program: '' })
   }
 
   const handleDelete = (id: string) => {
@@ -290,10 +340,13 @@ export default function StudentsPage() {
   const isPending = createMutation.isPending || updateMutation.isPending
 
   const rawFiltered = (students || []).filter(s => {
-    if (filterClassId && filterClassId !== 'ALL') {
-      return s.classId === filterClassId || s.class?.id === filterClassId
-    }
-    return true
+    const classOk = !filterClassId || filterClassId === 'ALL'
+      ? true
+      : s.classId === filterClassId || s.class?.id === filterClassId
+    const programOk = !filterProgram || filterProgram === 'ALL'
+      ? true
+      : s.program === filterProgram
+    return classOk && programOk
   })
 
   const filteredStudents = filterDataBySearch(rawFiltered, searchQuery)
@@ -377,9 +430,25 @@ export default function StudentsPage() {
     <ImportProgressDialog
       open={importDialogOpen}
       state={importProgress}
-      templateFileName="template_siswa.xlsx"
-      templateExample={{ 'NISN': '0012345678', 'NIS': '1001', 'Nama Siswa': 'Ahmad Dahlan', 'L/P': 'L', 'Kelas': 'X IPA 1', 'Username': 'ahmad123', 'Password': 'password123' }}
       destination="Tabel Siswa (students)"
+      onDownloadTemplate={async () => {
+        try {
+          const res = await fetch('/api/template/siswa')
+          if (!res.ok) throw new Error('Gagal mengunduh template')
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = 'template_import_siswa.xlsx'
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          URL.revokeObjectURL(url)
+        } catch (err: any) {
+          alert(err.message || 'Gagal mengunduh template Excel.')
+        }
+      }}
+      templateExample={{ 'NISN': '0012345678', 'NIS': '2401001', 'Nama Siswa': 'Ahmad Dahlan', 'L/P': 'L', 'Kelas': 'X IPA 1', 'Username': 'ahmad123', 'Password': 'password123', 'Program': 'tahfidz' }}
       customParser={(rawData) =>
         rawData
           .map((row: any) => {
@@ -393,6 +462,7 @@ export default function StudentsPage() {
               classId: foundClass ? foundClass.id : String(row['ID Kelas'] || '').trim(),
               username: String(row['Username'] || '').trim(),
               password: String(row['Password'] || '').trim(),
+              program: String(row['Program'] || '').trim() || null,
             }
           })
           .filter((r: any) => r.name)
@@ -403,6 +473,59 @@ export default function StudentsPage() {
         setImportProgress(prev => ({ ...prev, status: 'idle', totalRows: 0, totalBatches: 0, currentBatch: 0, successCount: 0, errorCount: 0, errorMessages: [] }))
       }}
     />
+
+    {/* Dialog Set Program Siswa (SUPERADMIN Only) */}
+    <Dialog open={isProgramDialogOpen} onOpenChange={(val) => { if (!val) { setIsProgramDialogOpen(false); setProgramTargetStudent(null); setProgramValue('') } }}>
+      <DialogContent className="sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
+            <Tag className="w-5 h-5" />
+            Set Label Program Siswa
+          </DialogTitle>
+          <DialogDescription>
+            {programTargetStudent ? (
+              <span>Mengubah label program untuk <strong>{programTargetStudent.name}</strong>. Fitur ini hanya bisa diakses oleh <strong>SUPERADMIN</strong>.</span>
+            ) : 'Pilih program untuk siswa ini.'}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-3">
+          <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900 rounded-xl p-3 text-xs text-purple-700 dark:text-purple-300 font-medium">
+            ℹ️ Label program adalah kategorisasi program unggulan siswa. Label ini dapat digunakan oleh fitur keuangan, laporan, dan fitur lain di masa depan.
+          </div>
+          <Select value={programValue || '__none__'} onValueChange={(v) => setProgramValue(v === '__none__' ? '' : (v ?? ''))}>
+            <SelectTrigger id="program-select">
+              <SelectValue placeholder="Pilih Program..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— Hapus / Tidak ada program —</SelectItem>
+              {PROGRAM_OPTIONS.map(p => (
+                <SelectItem key={p.value} value={p.value}>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${p.color}`}>{p.label}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => { setIsProgramDialogOpen(false); setProgramTargetStudent(null); setProgramValue('') }}>
+            Batal
+          </Button>
+          <Button
+            disabled={updateProgramMutation.isPending}
+            onClick={() => {
+              if (programTargetStudent) {
+                updateProgramMutation.mutate({ id: programTargetStudent.id, program: programValue || null })
+              }
+            }}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
+          >
+            {updateProgramMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            Simpan Program
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -631,6 +754,34 @@ export default function StudentsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label>Program Unggulan</Label>
+                  {!isSuperadmin && (
+                    <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 px-2 py-0.5 rounded-full font-medium">
+                      Hanya SUPERADMIN
+                    </span>
+                  )}
+                </div>
+                <Select
+                  value={formData.program || '__none__'}
+                  onValueChange={(v) => setFormData({...formData, program: v === '__none__' ? '' : (v ?? '')})}
+                  disabled={!isSuperadmin}
+                >
+                  <SelectTrigger className={!isSuperadmin ? 'opacity-60 cursor-not-allowed' : ''}>
+                    <SelectValue placeholder="Pilih Program (Opsional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Tidak ada program —</SelectItem>
+                    {PROGRAM_OPTIONS.map(p => (
+                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!isSuperadmin && (
+                  <p className="text-xs text-slate-400 mt-1">Label program hanya bisa diubah oleh SUPERADMIN.</p>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseDialog}>Batal</Button>
@@ -849,6 +1000,22 @@ export default function StudentsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-purple-200 dark:border-purple-900 rounded-lg px-2.5 py-1">
+                <Tag className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-xs font-semibold text-purple-500">Program:</span>
+                <Select value={filterProgram} onValueChange={(v) => setFilterProgram(v || 'ALL')}>
+                  <SelectTrigger className="w-[150px] h-7 text-xs border-0 shadow-none focus:ring-0 p-0">
+                    <SelectValue placeholder="Semua Program" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Semua Program</SelectItem>
+                    {PROGRAM_OPTIONS.map(p => (
+                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -872,6 +1039,7 @@ export default function StudentsPage() {
                 <TableHead>Nama Siswa</TableHead>
                 <TableHead>L/P</TableHead>
                 <TableHead>Kelas</TableHead>
+                <TableHead>Program</TableHead>
                 <TableHead>Akun Login</TableHead>
                 <TableHead className="text-right pr-6">Aksi</TableHead>
               </TableRow>
@@ -879,7 +1047,7 @@ export default function StudentsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10">
+                  <TableCell colSpan={9} className="text-center py-10">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
                       Memuat data...
@@ -888,7 +1056,7 @@ export default function StudentsPage() {
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-slate-500">
+                  <TableCell colSpan={9} className="text-center py-10 text-slate-500">
                     Belum ada data siswa untuk kriteria ini.
                   </TableCell>
                 </TableRow>
@@ -923,6 +1091,18 @@ export default function StudentsPage() {
                         </span>
                       </TableCell>
                       <TableCell>
+                        {(() => {
+                          const badge = getProgramBadge(item.program)
+                          return badge ? (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${badge.color}`}>
+                              {badge.label}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">—</span>
+                          )
+                        })()}
+                      </TableCell>
+                      <TableCell>
                         {item.user ? (
                           <div className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded inline-block">
                             {item.user.username}
@@ -933,6 +1113,21 @@ export default function StudentsPage() {
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex justify-end gap-1.5">
+                          {isSuperadmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Set Program (SUPERADMIN)"
+                              onClick={() => {
+                                setProgramTargetStudent(item)
+                                setProgramValue(item.program || '')
+                                setIsProgramDialogOpen(true)
+                              }}
+                              className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                            >
+                              <Tag className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(item)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                             <Pencil className="w-4 h-4" />
                           </Button>

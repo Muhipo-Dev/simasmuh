@@ -10,8 +10,8 @@ export class FileSecurityUtil {
   // Maximum file sizes per type
   private static readonly MAX_SIZES = {
     'image/jpeg': 5 * 1024 * 1024, // 5MB for JPEG
-    'image/png': 5 * 1024 * 1024,  // 5MB for PNG
-    'image/gif': 2 * 1024 * 1024,  // 2MB for GIF
+    'image/png': 5 * 1024 * 1024, // 5MB for PNG
+    'image/gif': 2 * 1024 * 1024, // 2MB for GIF
     'image/webp': 3 * 1024 * 1024, // 3MB for WebP
     'application/pdf': 10 * 1024 * 1024, // 10MB for PDF
   };
@@ -19,7 +19,7 @@ export class FileSecurityUtil {
   // Allowed MIME types
   private static readonly ALLOWED_MIMES = [
     'image/jpeg',
-    'image/png', 
+    'image/png',
     'image/gif',
     'image/webp',
     'application/pdf',
@@ -27,8 +27,24 @@ export class FileSecurityUtil {
 
   // Dangerous file extensions to reject
   private static readonly DANGEROUS_EXTENSIONS = [
-    '.exe', '.bat', '.cmd', '.scr', '.pif', '.com', '.jar', '.js', '.vbs',
-    '.ps1', '.sh', '.php', '.asp', '.aspx', '.jsp', '.py', '.rb', '.pl'
+    '.exe',
+    '.bat',
+    '.cmd',
+    '.scr',
+    '.pif',
+    '.com',
+    '.jar',
+    '.js',
+    '.vbs',
+    '.ps1',
+    '.sh',
+    '.php',
+    '.asp',
+    '.aspx',
+    '.jsp',
+    '.py',
+    '.rb',
+    '.pl',
   ];
 
   /**
@@ -48,44 +64,44 @@ export class FileSecurityUtil {
       // Check file size
       const maxSize = this.MAX_SIZES[file.mimetype];
       if (!maxSize || file.size > maxSize) {
-        return { 
-          isValid: false, 
-          error: `File too large. Maximum size: ${maxSize ? Math.round(maxSize / 1024 / 1024) : 5}MB` 
+        return {
+          isValid: false,
+          error: `File too large. Maximum size: ${maxSize ? Math.round(maxSize / 1024 / 1024) : 5}MB`,
         };
       }
 
       // Check MIME type
       if (!this.ALLOWED_MIMES.includes(file.mimetype)) {
-        return { 
-          isValid: false, 
-          error: `Invalid file type. Allowed types: ${this.ALLOWED_MIMES.join(', ')}` 
+        return {
+          isValid: false,
+          error: `Invalid file type. Allowed types: ${this.ALLOWED_MIMES.join(', ')}`,
         };
       }
 
       // Check dangerous extensions
       const ext = path.extname(file.originalname).toLowerCase();
       if (this.DANGEROUS_EXTENSIONS.includes(ext)) {
-        return { 
-          isValid: false, 
-          error: 'Dangerous file extension detected' 
+        return {
+          isValid: false,
+          error: 'Dangerous file extension detected',
         };
       }
 
       // Read file buffer for deeper validation
       const buffer = await fs.readFile(file.path);
-      
+
       // Verify actual file type matches MIME type
       const detectedType = await fileTypeFromBuffer(buffer);
       if (detectedType && detectedType.mime !== file.mimetype) {
-        return { 
-          isValid: false, 
-          error: 'File type mismatch detected (possible file spoofing)' 
+        return {
+          isValid: false,
+          error: 'File type mismatch detected (possible file spoofing)',
         };
       }
 
       // Additional validation based on file type
       let metadata = {};
-      
+
       if (file.mimetype.startsWith('image/')) {
         metadata = await this.validateImage(buffer);
       } else if (file.mimetype === 'application/pdf') {
@@ -96,10 +112,13 @@ export class FileSecurityUtil {
       const scanResult = await VirusScannerUtil.scanFile(file.path);
       if (!scanResult.isClean) {
         // Quarantine the suspicious file
-        await VirusScannerUtil.quarantineFile(file.path, scanResult.threats?.join(', ') || 'Suspicious content');
-        return { 
-          isValid: false, 
-          error: `Security scan failed: ${scanResult.threats?.join(', ')}` 
+        await VirusScannerUtil.quarantineFile(
+          file.path,
+          scanResult.threats?.join(', ') || 'Suspicious content',
+        );
+        return {
+          isValid: false,
+          error: `Security scan failed: ${scanResult.threats?.join(', ')}`,
         };
       }
 
@@ -107,11 +126,10 @@ export class FileSecurityUtil {
       (metadata as any).scanResult = scanResult;
 
       return { isValid: true, metadata };
-
     } catch (error) {
-      return { 
-        isValid: false, 
-        error: `File validation failed: ${error.message}` 
+      return {
+        isValid: false,
+        error: `File validation failed: ${error.message}`,
       };
     }
   }
@@ -122,7 +140,7 @@ export class FileSecurityUtil {
   private static async validateImage(buffer: Buffer): Promise<any> {
     try {
       const metadata = await sharp(buffer).metadata();
-      
+
       // Check image dimensions (reasonable limits)
       const maxWidth = 5000;
       const maxHeight = 5000;
@@ -131,15 +149,22 @@ export class FileSecurityUtil {
 
       if (metadata.width && metadata.height) {
         if (metadata.width > maxWidth || metadata.height > maxHeight) {
-          throw new Error(`Image too large. Maximum dimensions: ${maxWidth}x${maxHeight}`);
+          throw new Error(
+            `Image too large. Maximum dimensions: ${maxWidth}x${maxHeight}`,
+          );
         }
         if (metadata.width < minWidth || metadata.height < minHeight) {
-          throw new Error(`Image too small. Minimum dimensions: ${minWidth}x${minHeight}`);
+          throw new Error(
+            `Image too small. Minimum dimensions: ${minWidth}x${minHeight}`,
+          );
         }
       }
 
       // Check for suspicious metadata that might indicate malicious content
-      if (metadata.exif && Buffer.byteLength(JSON.stringify(metadata.exif)) > 10000) {
+      if (
+        metadata.exif &&
+        Buffer.byteLength(JSON.stringify(metadata.exif)) > 10000
+      ) {
         throw new Error('Suspicious EXIF data detected');
       }
 
@@ -151,7 +176,6 @@ export class FileSecurityUtil {
         channels: metadata.channels,
         size: buffer.length,
       };
-
     } catch (error) {
       throw new Error(`Image validation failed: ${error.message}`);
     }
@@ -175,12 +199,14 @@ export class FileSecurityUtil {
       '/OpenAction',
       '/Launch',
       '/EmbeddedFile',
-      '/XFA'
+      '/XFA',
     ];
 
     for (const pattern of suspiciousPatterns) {
       if (content.includes(pattern)) {
-        throw new Error(`Potentially dangerous PDF content detected: ${pattern}`);
+        throw new Error(
+          `Potentially dangerous PDF content detected: ${pattern}`,
+        );
       }
     }
 
@@ -194,14 +220,14 @@ export class FileSecurityUtil {
    * Sanitize and optimize image files
    */
   static async processAndOptimizeImage(
-    inputPath: string, 
+    inputPath: string,
     outputPath: string,
     options: {
       quality?: number;
       maxWidth?: number;
       maxHeight?: number;
       removeMetadata?: boolean;
-    } = {}
+    } = {},
   ): Promise<void> {
     const {
       quality = 85,
@@ -226,7 +252,7 @@ export class FileSecurityUtil {
 
       // Optimize based on format
       const metadata = await sharp(inputPath).metadata();
-      
+
       if (metadata.format === 'jpeg') {
         processor = processor.jpeg({ quality, mozjpeg: true });
       } else if (metadata.format === 'png') {
@@ -236,7 +262,6 @@ export class FileSecurityUtil {
       }
 
       await processor.toFile(outputPath);
-
     } catch (error) {
       throw new Error(`Image processing failed: ${error.message}`);
     }
@@ -252,7 +277,10 @@ export class FileSecurityUtil {
   /**
    * Check if file is a duplicate
    */
-  static async isDuplicateFile(filePath: string, existingHashes: string[]): Promise<boolean> {
+  static async isDuplicateFile(
+    filePath: string,
+    existingHashes: string[],
+  ): Promise<boolean> {
     try {
       const buffer = await fs.readFile(filePath);
       const hash = this.generateFileHash(buffer);

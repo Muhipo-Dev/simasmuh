@@ -55,7 +55,9 @@ export class NotificationListenersService {
     uploadedBy: string;
   }) {
     this.logger.log(`Handling payment proof uploaded event: ${event.proofId}`);
-    await this.paymentNotificationsService.notifyPaymentProofUploaded(event.proofId);
+    await this.paymentNotificationsService.notifyPaymentProofUploaded(
+      event.proofId,
+    );
   }
 
   /**
@@ -68,7 +70,9 @@ export class NotificationListenersService {
     verifiedBy: string;
     notes?: string;
   }) {
-    this.logger.log(`Handling payment proof verified event: ${event.proofId} - ${event.status}`);
+    this.logger.log(
+      `Handling payment proof verified event: ${event.proofId} - ${event.status}`,
+    );
     await this.paymentNotificationsService.notifyPaymentProofVerified(
       event.proofId,
       event.status,
@@ -86,7 +90,9 @@ export class NotificationListenersService {
     incidentType: string;
     details: any;
   }) {
-    this.logger.log(`Handling security incident: ${event.incidentType} for user ${event.userId}`);
+    this.logger.log(
+      `Handling security incident: ${event.incidentType} for user ${event.userId}`,
+    );
     await this.paymentNotificationsService.notifySecurityIncident(
       event.userId,
       event.incidentType,

@@ -17,7 +17,9 @@ export class SubjectsService {
     return this.prisma.subject.create({ data });
   }
 
-  async createBulk(dataArray: { name: string; code: string }[]): Promise<{ created: number; skipped: number }> {
+  async createBulk(
+    dataArray: { name: string; code: string }[],
+  ): Promise<{ created: number; skipped: number }> {
     const result = await this.prisma.subject.createMany({
       data: dataArray,
       skipDuplicates: true,

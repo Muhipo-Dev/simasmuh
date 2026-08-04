@@ -72,7 +72,7 @@ export default function HeroCarousel({ schoolName }: HeroCarouselProps) {
               alt={`Slide ${index + 1}`}
               fill
               unoptimized={true}
-              className="object-cover brightness-[0.45]"
+              className="object-cover brightness-[0.62]"
               quality={100}
               sizes="100vw"
               priority={index === 0}
@@ -82,7 +82,7 @@ export default function HeroCarousel({ schoolName }: HeroCarouselProps) {
       })}
 
       {/* Subtle Overlay Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/40 pointer-events-none z-[1]" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/20 to-transparent pointer-events-none z-[1]" />
 
       {/* Hero Content */}
       <div className="relative z-10 px-5 sm:px-10 lg:px-20 max-w-4xl space-y-3 sm:space-y-4">

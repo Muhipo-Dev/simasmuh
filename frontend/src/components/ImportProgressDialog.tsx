@@ -31,6 +31,8 @@ interface ImportProgressDialogProps {
   templateExample?: Record<string, string | number>
   accept?: string
   destination?: string
+  /** Override fungsi download template bawaan. Jika disediakan, tombol Download akan memanggil ini. */
+  onDownloadTemplate?: () => void
 }
 
 function getProgressPercent(state: ImportProgressState): number {
@@ -65,6 +67,7 @@ export function ImportProgressDialog({
   templateExample,
   accept = '.xlsx,.xls',
   destination,
+  onDownloadTemplate,
 }: ImportProgressDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const percent = getProgressPercent(state)
@@ -98,6 +101,12 @@ export function ImportProgressDialog({
   }
 
   const downloadTemplate = () => {
+    // Jika prop kustom disediakan, gunakan itu (contoh: template dengan data validation)
+    if (onDownloadTemplate) {
+      onDownloadTemplate()
+      return
+    }
+    // Fallback: generate template sederhana dari templateExample
     const example = templateExample ?? {
       [columnMap.code]: 'CONTOH-01',
       [columnMap.name]: 'Contoh Nama',

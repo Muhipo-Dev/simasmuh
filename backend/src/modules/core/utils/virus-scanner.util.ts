@@ -29,7 +29,7 @@ export class VirusScannerUtil {
    */
   static async scanFile(filePath: string): Promise<ScanResult> {
     const startTime = Date.now();
-    
+
     try {
       // Get file stats
       const stats = await fs.stat(filePath);
@@ -59,7 +59,7 @@ export class VirusScannerUtil {
 
       // Fallback to pattern-based scanning
       const patternResult = await this.scanWithPatterns(filePath);
-      
+
       return {
         isClean: patternResult.isClean,
         threats: patternResult.threats,
@@ -67,10 +67,9 @@ export class VirusScannerUtil {
         fileSize,
         scanEngine: 'pattern-based',
       };
-
     } catch (error) {
       this.logger.error(`Virus scan failed for ${filePath}: ${error.message}`);
-      
+
       // In case of scan failure, be conservative and flag as suspicious
       return {
         isClean: false,
@@ -90,15 +89,27 @@ export class VirusScannerUtil {
     threats: string[];
   }> {
     const threats: string[] = [];
-    
+
     try {
       // Check file extension
       const ext = path.extname(filePath).toLowerCase();
       const dangerousExtensions = [
-        '.exe', '.bat', '.cmd', '.scr', '.pif', '.com', '.jar',
-        '.vbs', '.ps1', '.sh', '.php', '.asp', '.aspx', '.jsp'
+        '.exe',
+        '.bat',
+        '.cmd',
+        '.scr',
+        '.pif',
+        '.com',
+        '.jar',
+        '.vbs',
+        '.ps1',
+        '.sh',
+        '.php',
+        '.asp',
+        '.aspx',
+        '.jsp',
       ];
-      
+
       if (dangerousExtensions.includes(ext)) {
         threats.push(`DANGEROUS_EXTENSION_${ext.substring(1).toUpperCase()}`);
       }
@@ -112,13 +123,13 @@ export class VirusScannerUtil {
       // Read first few bytes to check for executable signatures
       const buffer = await fs.readFile(filePath, { encoding: null });
       const header = buffer.slice(0, 16);
-      
+
       // Check for executable signatures
       const executableSignatures = [
-        [0x4D, 0x5A], // PE executable (MZ)
-        [0x7F, 0x45, 0x4C, 0x46], // ELF executable
-        [0xCA, 0xFE, 0xBA, 0xBE], // Mach-O executable
-        [0xFE, 0xED, 0xFA, 0xCE], // Mach-O executable (reverse)
+        [0x4d, 0x5a], // PE executable (MZ)
+        [0x7f, 0x45, 0x4c, 0x46], // ELF executable
+        [0xca, 0xfe, 0xba, 0xbe], // Mach-O executable
+        [0xfe, 0xed, 0xfa, 0xce], // Mach-O executable (reverse)
       ];
 
       for (const signature of executableSignatures) {
@@ -158,7 +169,7 @@ export class VirusScannerUtil {
           '/EmbeddedFile',
           '/XFA',
           '/RichMedia',
-          '/Flash'
+          '/Flash',
         ];
 
         for (const pattern of suspiciousPatterns) {
@@ -172,7 +183,6 @@ export class VirusScannerUtil {
         isClean: threats.length === 0,
         threats,
       };
-
     } catch (error) {
       this.logger.error(`Basic security check failed: ${error.message}`);
       return {
@@ -185,15 +195,21 @@ export class VirusScannerUtil {
   /**
    * Scan with ClamAV if available
    */
-  private static async scanWithClamAV(filePath: string): Promise<ScanResult | null> {
+  private static async scanWithClamAV(
+    filePath: string,
+  ): Promise<ScanResult | null> {
     try {
       // Check if ClamAV is available
       await execFileAsync('which', ['clamscan'], { timeout: 5000 });
-      
+
       // Run ClamAV scan
-      const { stdout, stderr } = await execFileAsync('clamscan', ['--no-summary', filePath], {
-        timeout: 30000,
-      });
+      const { stdout, stderr } = await execFileAsync(
+        'clamscan',
+        ['--no-summary', filePath],
+        {
+          timeout: 30000,
+        },
+      );
 
       const isClean = !stdout.includes('FOUND') && !stderr.includes('FOUND');
       const threats: string[] = [];
@@ -218,7 +234,6 @@ export class VirusScannerUtil {
         fileSize: 0, // Will be set by caller
         scanEngine: 'clamav',
       };
-
     } catch (error) {
       // ClamAV not available or failed
       this.logger.warn(`ClamAV scan failed: ${error.message}`);
@@ -234,13 +249,20 @@ export class VirusScannerUtil {
     threats: string[];
   }> {
     const threats: string[] = [];
-    
+
     try {
       const buffer = await fs.readFile(filePath);
       const content = buffer.toString('binary');
-      
+
       const ext = path.extname(filePath).toLowerCase();
-      const isBinaryFormat = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'].includes(ext);
+      const isBinaryFormat = [
+        '.jpg',
+        '.jpeg',
+        '.png',
+        '.gif',
+        '.webp',
+        '.pdf',
+      ].includes(ext);
 
       // Common malware patterns
       const malwarePatterns = [
@@ -250,19 +272,34 @@ export class VirusScannerUtil {
         { pattern: /WriteProcessMemory/gi, threat: 'MEMORY_WRITE' },
         { pattern: /LoadLibraryA/gi, threat: 'LIBRARY_INJECTION' },
         { pattern: /GetProcAddress/gi, threat: 'API_RESOLUTION' },
-        
+
         // Network activity
-        { pattern: /InternetOpenA|InternetConnectA|HttpOpenRequestA/gi, threat: 'NETWORK_ACTIVITY' },
-        { pattern: /WSAStartup|socket|connect|send|recv/gi, threat: 'SOCKET_ACTIVITY' },
-        
+        {
+          pattern: /InternetOpenA|InternetConnectA|HttpOpenRequestA/gi,
+          threat: 'NETWORK_ACTIVITY',
+        },
+        {
+          pattern: /WSAStartup|socket|connect|send|recv/gi,
+          threat: 'SOCKET_ACTIVITY',
+        },
+
         // Registry manipulation
-        { pattern: /RegOpenKeyEx|RegSetValueEx|RegCreateKeyEx/gi, threat: 'REGISTRY_MODIFICATION' },
-        
+        {
+          pattern: /RegOpenKeyEx|RegSetValueEx|RegCreateKeyEx/gi,
+          threat: 'REGISTRY_MODIFICATION',
+        },
+
         // File system operations
-        { pattern: /CreateFileA|WriteFile|DeleteFileA/gi, threat: 'FILE_MANIPULATION' },
-        
+        {
+          pattern: /CreateFileA|WriteFile|DeleteFileA/gi,
+          threat: 'FILE_MANIPULATION',
+        },
+
         // Suspicious behaviors
-        { pattern: /keylogger|password|credential/gi, threat: 'CREDENTIAL_THEFT' },
+        {
+          pattern: /keylogger|password|credential/gi,
+          threat: 'CREDENTIAL_THEFT',
+        },
         { pattern: /crypto|bitcoin|wallet/gi, threat: 'CRYPTOCURRENCY_MINER' },
         { pattern: /ransomware|encrypt.*files/gi, threat: 'RANSOMWARE' },
       ];
@@ -273,11 +310,12 @@ export class VirusScannerUtil {
         }
       }
 
-      // Skip obfuscation and entropy checks for binary formats like images/PDFs 
+      // Skip obfuscation and entropy checks for binary formats like images/PDFs
       // because they naturally have high entropy and non-printable characters.
       if (!isBinaryFormat) {
         // Check for obfuscation
-        const suspiciousCharRatio = this.calculateSuspiciousCharacterRatio(content);
+        const suspiciousCharRatio =
+          this.calculateSuspiciousCharacterRatio(content);
         if (suspiciousCharRatio > 0.3) {
           threats.push('OBFUSCATED_CONTENT');
         }
@@ -293,7 +331,6 @@ export class VirusScannerUtil {
         isClean: threats.length === 0,
         threats,
       };
-
     } catch (error) {
       this.logger.error(`Pattern scan failed: ${error.message}`);
       return {
@@ -313,7 +350,10 @@ export class VirusScannerUtil {
 
       const fileName = path.basename(filePath);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const quarantinePath = path.join(quarantineDir, `${timestamp}_${fileName}`);
+      const quarantinePath = path.join(
+        quarantineDir,
+        `${timestamp}_${fileName}`,
+      );
 
       // Move file to quarantine
       await fs.rename(filePath, quarantinePath);
@@ -328,10 +368,12 @@ export class VirusScannerUtil {
 
       await fs.writeFile(
         `${quarantinePath}.meta`,
-        JSON.stringify(metadata, null, 2)
+        JSON.stringify(metadata, null, 2),
       );
 
-      this.logger.warn(`File quarantined: ${filePath} -> ${quarantinePath} (${reason})`);
+      this.logger.warn(
+        `File quarantined: ${filePath} -> ${quarantinePath} (${reason})`,
+      );
 
       // Emit security event
       if (this.eventEmitter) {
@@ -342,9 +384,10 @@ export class VirusScannerUtil {
           timestamp: new Date(),
         });
       }
-
     } catch (error) {
-      this.logger.error(`Failed to quarantine file ${filePath}: ${error.message}`);
+      this.logger.error(
+        `Failed to quarantine file ${filePath}: ${error.message}`,
+      );
       throw error;
     }
   }
@@ -352,13 +395,16 @@ export class VirusScannerUtil {
   /**
    * Helper method to check signature match
    */
-  private static matchesSignature(buffer: Buffer, signature: number[]): boolean {
+  private static matchesSignature(
+    buffer: Buffer,
+    signature: number[],
+  ): boolean {
     if (buffer.length < signature.length) return false;
-    
+
     for (let i = 0; i < signature.length; i++) {
       if (buffer[i] !== signature[i]) return false;
     }
-    
+
     return true;
   }
 
@@ -375,7 +421,7 @@ export class VirusScannerUtil {
    */
   private static calculateEntropy(buffer: Buffer): number {
     const frequency: { [key: number]: number } = {};
-    
+
     // Count byte frequencies
     for (const byte of buffer) {
       frequency[byte] = (frequency[byte] || 0) + 1;
@@ -402,7 +448,7 @@ export class VirusScannerUtil {
   }> {
     try {
       const quarantineDir = path.join(process.cwd(), 'quarantine');
-      
+
       try {
         await fs.access(quarantineDir);
       } catch {
@@ -411,7 +457,7 @@ export class VirusScannerUtil {
       }
 
       const files = await fs.readdir(quarantineDir);
-      const quarantineFiles = files.filter(f => !f.endsWith('.meta'));
+      const quarantineFiles = files.filter((f) => !f.endsWith('.meta'));
 
       if (quarantineFiles.length === 0) {
         return { fileCount: 0, totalSize: 0 };
@@ -424,7 +470,7 @@ export class VirusScannerUtil {
       for (const file of quarantineFiles) {
         const filePath = path.join(quarantineDir, file);
         const stats = await fs.stat(filePath);
-        
+
         totalSize += stats.size;
         oldestTime = Math.min(oldestTime, stats.ctimeMs);
         newestTime = Math.max(newestTime, stats.ctimeMs);
@@ -436,9 +482,10 @@ export class VirusScannerUtil {
         oldestFile: new Date(oldestTime),
         newestFile: new Date(newestTime),
       };
-
     } catch (error) {
-      VirusScannerUtil.logger.error(`Failed to get quarantine status: ${error.message}`);
+      VirusScannerUtil.logger.error(
+        `Failed to get quarantine status: ${error.message}`,
+      );
       return { fileCount: 0, totalSize: 0 };
     }
   }
@@ -446,10 +493,12 @@ export class VirusScannerUtil {
   /**
    * Clean old quarantine files (older than 30 days)
    */
-  static async cleanOldQuarantineFiles(maxAgeMs: number = 30 * 24 * 60 * 60 * 1000): Promise<number> {
+  static async cleanOldQuarantineFiles(
+    maxAgeMs: number = 30 * 24 * 60 * 60 * 1000,
+  ): Promise<number> {
     try {
       const quarantineDir = path.join(process.cwd(), 'quarantine');
-      
+
       try {
         await fs.access(quarantineDir);
       } catch {
@@ -464,7 +513,7 @@ export class VirusScannerUtil {
       for (const file of files) {
         const filePath = path.join(quarantineDir, file);
         const stats = await fs.stat(filePath);
-        
+
         if (now - stats.ctimeMs > maxAgeMs) {
           await fs.unlink(filePath);
           deletedCount++;
@@ -473,7 +522,6 @@ export class VirusScannerUtil {
 
       this.logger.log(`Cleaned ${deletedCount} old quarantine files`);
       return deletedCount;
-
     } catch (error) {
       this.logger.error(`Failed to clean quarantine files: ${error.message}`);
       return 0;

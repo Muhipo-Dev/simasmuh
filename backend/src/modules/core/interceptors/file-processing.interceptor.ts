@@ -19,7 +19,10 @@ export class FileProcessingInterceptor implements NestInterceptor {
 
   constructor(private eventEmitter: EventEmitter2) {}
 
-  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
+  async intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();
     const file = request.file as Express.Multer.File;
 
@@ -51,7 +54,9 @@ export class FileProcessingInterceptor implements NestInterceptor {
       }
 
       // Log file upload activity
-      this.logger.log(`File processed successfully: ${file.originalname} (${file.mimetype})`);
+      this.logger.log(
+        `File processed successfully: ${file.originalname} (${file.mimetype})`,
+      );
 
       // Emit file processing event for audit
       this.eventEmitter.emit('file.processed', {
@@ -62,13 +67,15 @@ export class FileProcessingInterceptor implements NestInterceptor {
         securityStatus: 'clean',
         timestamp: new Date(),
       });
-
     } catch (error) {
       // Clean up file on error
       await this.cleanupFile(file.path);
-      
+
       // Emit security event if needed
-      if (error.message.includes('Security scan failed') || error.message.includes('Suspicious')) {
+      if (
+        error.message.includes('Security scan failed') ||
+        error.message.includes('Suspicious')
+      ) {
         this.eventEmitter.emit('security.incident', {
           userId: request.user?.id,
           incidentType: 'MALICIOUS_FILE_UPLOAD',
@@ -97,18 +104,24 @@ export class FileProcessingInterceptor implements NestInterceptor {
       'application/zip',
       'application/x-rar-compressed',
     ];
-    
+
     return highRiskTypes.includes(mimetype);
   }
 
   /**
    * Process high-risk files with additional security measures
    */
-  private async processHighRiskFile(file: Express.Multer.File, request: any): Promise<void> {
+  private async processHighRiskFile(
+    file: Express.Multer.File,
+    request: any,
+  ): Promise<void> {
     if (file.mimetype.startsWith('image/')) {
       // For images, create sanitized version
-      const outputPath = file.path.replace(path.extname(file.path), '_sanitized' + path.extname(file.path));
-      
+      const outputPath = file.path.replace(
+        path.extname(file.path),
+        '_sanitized' + path.extname(file.path),
+      );
+
       try {
         await FileSecurityUtil.processAndOptimizeImage(file.path, outputPath, {
           removeMetadata: true,
@@ -119,10 +132,9 @@ export class FileProcessingInterceptor implements NestInterceptor {
 
         // Replace original with sanitized version
         await fs.rename(outputPath, file.path);
-        
+
         request.fileMetadata.sanitized = true;
         this.logger.log(`Image sanitized: ${file.originalname}`);
-        
       } catch (error) {
         this.logger.error(`Image sanitization failed: ${error.message}`);
         throw new BadRequestException('Image processing failed');
@@ -133,11 +145,11 @@ export class FileProcessingInterceptor implements NestInterceptor {
       // Additional PDF security checks
       const buffer = await fs.readFile(file.path);
       const content = buffer.toString('binary');
-      
+
       // Check for dangerous PDF features
       const dangerousFeatures = [
         '/JavaScript',
-        '/JS', 
+        '/JS',
         '/OpenAction',
         '/Launch',
         '/EmbeddedFile',
@@ -148,14 +160,18 @@ export class FileProcessingInterceptor implements NestInterceptor {
         '/Movie',
       ];
 
-      const foundFeatures = dangerousFeatures.filter(feature => content.includes(feature));
-      
+      const foundFeatures = dangerousFeatures.filter((feature) =>
+        content.includes(feature),
+      );
+
       if (foundFeatures.length > 0) {
-        this.logger.warn(`PDF contains dangerous features: ${foundFeatures.join(', ')}`);
-        
+        this.logger.warn(
+          `PDF contains dangerous features: ${foundFeatures.join(', ')}`,
+        );
+
         // For now, we'll allow but log. In production, you might want to block or sanitize
         request.fileMetadata.pdfWarnings = foundFeatures;
-        
+
         this.eventEmitter.emit('security.incident', {
           userId: request.user?.id,
           incidentType: 'SUSPICIOUS_PDF_CONTENT',

@@ -296,7 +296,7 @@ async function main() {
         content: 'Keluarga Besar SMA MUHIPO mengucapkan selamat atas pencapaian luar biasa tim siswa dalam Kompetisi Teknologi & Seni Muhammadiyah Tingkat Nasional 2026. Prestasi ini membuktikan keunggulan pembinaan minat dan bakat siswa di SMA MUHIPO.',
         target: 'SEMUA',
         type: 'BERITA',
-        image: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1200&auto=format&fit=crop',
+        image: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=1200&auto=format&fit=crop',
       },
       {
         title: 'Pengumuman Jadwal Ujian Tengah Semester (UTS) & Pertemuan Wali Murid',

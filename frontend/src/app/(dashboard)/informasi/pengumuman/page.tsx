@@ -37,7 +37,7 @@ export default function AnnouncementsPage() {
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({ title: '', content: '', target: 'ALL', type: 'BERITA', eventDate: '', image: '' })
+  const [formData, setFormData] = useState({ title: '', content: '', target: 'SEMUA', type: 'BERITA', eventDate: '', image: '' })
   const [isCompressing, setIsCompressing] = useState(false)
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -252,11 +252,12 @@ export default function AnnouncementsPage() {
                     onChange={e => setFormData({...formData, target: e.target.value})}
                     className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                   >
-                    <option value="ALL">Semua (Tampil di Publik & Internal)</option>
+                    <option value="SEMUA">Semua (Tampil di Publik & Internal)</option>
                     <option value="PUBLIC">Publik (Hanya Halaman Depan)</option>
                     <option value="INTERNAL">Internal (Semua Guru & Siswa)</option>
                     <option value="GURU">Khusus Guru & Karyawan</option>
                     <option value="SISWA">Khusus Siswa</option>
+                    <option value="WALI_MURID">Khusus Wali Murid</option>
                   </select>
                 </div>
                 

@@ -38,8 +38,8 @@ export class AnnouncementsController {
 
   @Get('public')
   findPublic() {
-    // For landing page
-    return this.announcementsService.findAll(['ALL', 'PUBLIC']);
+    // For landing page & public pages
+    return this.announcementsService.findAll(['ALL', 'PUBLIC', 'SEMUA']);
   }
 
   @Get('dashboard')
@@ -50,14 +50,14 @@ export class AnnouncementsController {
     @Query('subRole3') subRole3?: string,
   ) {
     const roles = [role, subRole, subRole2, subRole3].filter(Boolean);
-    if (roles.includes('ADMIN_IT') || roles.includes('ADMIN_WEB')) {
+    if (roles.includes('ADMIN_IT') || roles.includes('ADMIN_WEB') || roles.includes('SUPERADMIN')) {
       return this.announcementsService.findAll();
     } else if (roles.includes('SISWA')) {
-      return this.announcementsService.findAll(['ALL', 'INTERNAL', 'SISWA']);
+      return this.announcementsService.findAll(['ALL', 'SEMUA', 'INTERNAL', 'SISWA']);
     } else if (roles.length > 0) {
-      return this.announcementsService.findAll(['ALL', 'INTERNAL', 'GURU']);
+      return this.announcementsService.findAll(['ALL', 'SEMUA', 'INTERNAL', 'GURU', 'WALI_MURID']);
     }
-    return this.announcementsService.findAll(['ALL', 'PUBLIC']);
+    return this.announcementsService.findAll(['ALL', 'SEMUA', 'PUBLIC']);
   }
 
   @Get(':id')

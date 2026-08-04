@@ -278,7 +278,61 @@ async function main() {
   }
 
   console.log(`✅ Generated ${tagihanCount} financial bills.`);
-  console.log('🎉 COMPLETE 33 CLASSES, TEACHERS, STUDENTS & FINANCE SYNCHRONIZATION SUCCESSFUL!');
+
+  // 5. Generate Announcements / Berita & Informasi Sekolah
+  console.log('📢 Generating Announcements (Berita & Informasi)...');
+  const superadminUser = await prisma.user.findFirst({ where: { username: 'superadmin' } });
+  if (superadminUser) {
+    const announcements = [
+      {
+        title: 'Pendaftaran Peserta Didik Baru (PPDB) SMA MUHIPO TA 2026/2027 Resmi Dibuka',
+        content: 'SMA Muhammadiyah 1 Ponorogo (MUHIPO) resmi membuka Pendaftaran Peserta Didik Baru (PPDB) untuk Tahun Ajaran 2026/2027. Sekolah menawarkan berbagai program unggulan unggulan seperti Tahfidz Al-Qur\'an, Muhipo International Class (MIC), Kelas Olahraga, Seni Budaya, dan Entrepreneurship. Pendaftaran dapat dilakukan secara online melalui portal siakad resmi atau datang langsung ke sekretariat PPDB.',
+        target: 'SEMUA',
+        type: 'BERITA',
+        image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=1200&auto=format&fit=crop',
+      },
+      {
+        title: 'Prestasi Gemilang! Tim Seni & Robottik SMA MUHIPO Raih Juara Nasional 2026',
+        content: 'Keluarga Besar SMA MUHIPO mengucapkan selamat atas pencapaian luar biasa tim siswa dalam Kompetisi Teknologi & Seni Muhammadiyah Tingkat Nasional 2026. Prestasi ini membuktikan keunggulan pembinaan minat dan bakat siswa di SMA MUHIPO.',
+        target: 'SEMUA',
+        type: 'BERITA',
+        image: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1200&auto=format&fit=crop',
+      },
+      {
+        title: 'Pengumuman Jadwal Ujian Tengah Semester (UTS) & Pertemuan Wali Murid',
+        content: 'Diberitahukan kepada seluruh siswa dan bapak/ibu wali murid SMA MUHIPO bahwa Ujian Tengah Semester (UTS) Semester Ganjil TA 2026/2027 akan dilaksanakan mulai tanggal 15 September 2026. Pertemuan koordinasi wali murid akan dilaksanakan pada Sabtu pekan ini.',
+        target: 'WALI_MURID',
+        type: 'PENGUMUMAN',
+        image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200&auto=format&fit=crop',
+      },
+      {
+        title: 'Pelaksanaan Kegiatan Ekstrakurikuler & Pembinaan Kader Tahfidz',
+        content: 'Seluruh kegiatan ekstrakurikuler serta pembinaan rutin program kader Muhammadiyah dan Tahfidz Qur\'an kembali berjalan efektif sesuai jadwal. Siswa diharapkan hadir tepat waktu dengan seragam yang ditentukan.',
+        target: 'SISWA',
+        type: 'PENGUMUMAN',
+        image: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=1200&auto=format&fit=crop',
+      }
+    ];
+
+    for (const ann of announcements) {
+      const existing = await prisma.announcement.findFirst({ where: { title: ann.title } });
+      if (!existing) {
+        await prisma.announcement.create({
+          data: {
+            title: ann.title,
+            content: ann.content,
+            target: ann.target,
+            type: ann.type,
+            image: ann.image,
+            authorId: superadminUser.id,
+          }
+        });
+      }
+    }
+    console.log('✅ Announcements generated successfully.');
+  }
+
+  console.log('🎉 COMPLETE 33 CLASSES, TEACHERS, STUDENTS, FINANCE & ANNOUNCEMENTS SYNCHRONIZATION SUCCESSFUL!');
 }
 
 main()

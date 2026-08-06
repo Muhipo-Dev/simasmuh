@@ -556,7 +556,7 @@ export default function TeachersPage() {
             placeholder="Cari guru (NIP/nama/email)..."
           />
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 overflow-x-auto max-w-full">
           <Table>
             <TableHeader>
               <TableRow>

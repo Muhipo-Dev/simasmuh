@@ -1326,8 +1326,8 @@ function TabTagihan() {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
-        <div className="flex gap-2 flex-1">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-between">
+        <div className="flex gap-2 flex-1 min-w-[280px]">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input placeholder="Cari nama, NISN, NIS..." className="pl-9 bg-white" value={search}
@@ -1341,7 +1341,7 @@ function TabTagihan() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0">
           <Button onClick={() => setCashModalOpen(true)}
             className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm">
             <Wallet className="w-4 h-4" /> Pembayaran Tunai / Manual
@@ -1359,7 +1359,7 @@ function TabTagihan() {
 
       {/* Table */}
       <Card className="shadow-sm border-slate-200">
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto max-w-full">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-slate-50">

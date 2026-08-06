@@ -466,7 +466,7 @@ export default function UsersPage() {
             placeholder="Cari pengguna (nama/email/username)..."
           />
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto max-w-full">
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>

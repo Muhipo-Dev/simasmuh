@@ -167,7 +167,7 @@ export default function KeuanganKeluarPage() {
         <CardHeader className="border-b border-slate-100 pb-4">
           <CardTitle>Riwayat Pengeluaran</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto max-w-full">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-slate-50/50">

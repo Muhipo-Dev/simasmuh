@@ -547,7 +547,7 @@ export default function ClassesPage() {
             placeholder="Cari kelas..."
           />
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 overflow-x-auto max-w-full">
           <Table>
             <TableHeader>
               <TableRow>

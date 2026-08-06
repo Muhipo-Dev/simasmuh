@@ -556,11 +556,11 @@ export default function TeachersPage() {
             placeholder="Cari guru (NIP/nama/email)..."
           />
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto max-w-full">
-          <Table>
-            <TableHeader>
+        <CardContent className="p-0">
+          <Table className="w-full table-auto">
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/60">
               <TableRow>
-                <TableHead className="w-12 text-center">
+                <TableHead className="w-10 text-center pl-4">
                   <input 
                     type="checkbox"
                     checked={isAllSelected}
@@ -569,33 +569,32 @@ export default function TeachersPage() {
                     title="Pilih Semua"
                   />
                 </TableHead>
-                <TableHead>NIP / NBM</TableHead>
-                <TableHead>Nama Guru</TableHead>
-                <TableHead>Username / Email</TableHead>
-                <TableHead>Telepon</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                <TableHead>Guru & Identitas</TableHead>
+                <TableHead>Kontak & Akun Login</TableHead>
+                <TableHead className="text-right pr-4">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={4} className="text-center py-8 text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Memuat data...
                   </TableCell>
                 </TableRow>
               ) : filterDataBySearch(teachers, searchQuery)?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={4} className="text-center py-8 text-slate-500">
                     {searchQuery ? 'Tidak ada data guru yang sesuai dengan pencarian.' : 'Belum ada data guru.'}
                   </TableCell>
                 </TableRow>
               ) : (
                 filterDataBySearch(teachers, searchQuery)?.map((item) => {
                   const isSelected = selectedIds.includes(item.id)
+                  const nip = item.nip || item.user?.nipNbm
                   return (
                     <TableRow key={item.id} className={isSelected ? 'bg-blue-50/80 dark:bg-blue-950/40' : ''}>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center pl-4">
                         <input 
                           type="checkbox"
                           checked={isSelected}
@@ -603,21 +602,29 @@ export default function TeachersPage() {
                           className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 cursor-pointer accent-blue-600"
                         />
                       </TableCell>
-                      <TableCell className="font-semibold text-slate-900 dark:text-white">{item.nip || item.user?.nipNbm || '-'}</TableCell>
-                      <TableCell className="font-semibold text-slate-900 dark:text-white">{item.user?.name || '-'}</TableCell>
                       <TableCell>
-                        <div className="text-xs">
-                          <span className="font-semibold text-slate-700 dark:text-slate-300">{item.user?.username}</span>
-                          {item.user?.email && <span className="text-slate-500 block">{item.user.email}</span>}
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-bold text-slate-900 dark:text-white text-sm">{item.user?.name || '-'}</span>
+                          <span className="text-xs text-slate-500 font-mono">NIP/NBM: {nip || '-'}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{item.phone || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <TableCell>
+                        <div className="flex flex-col gap-0.5 text-xs">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-200/60 dark:border-blue-800/60">
+                              @{item.user?.username}
+                            </span>
+                            {item.phone && <span className="text-slate-600 dark:text-slate-400">HP: {item.phone}</span>}
+                          </div>
+                          {item.user?.email && <span className="text-slate-500 text-[11px]">{item.user.email}</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right pr-4">
+                        <div className="flex items-center justify-end gap-1">
                           <Button 
                             variant="ghost" 
-                            size="icon" 
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            size="sm" 
+                            className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50"
                             onClick={() => {
                               setIsEdit(true)
                               setEditId(item.id)
@@ -636,8 +643,8 @@ export default function TeachersPage() {
                           </Button>
                           <Button 
                             variant="ghost" 
-                            size="icon" 
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            size="sm" 
+                            className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
                             onClick={() => {
                               if(confirm('Yakin ingin menghapus guru ini?')) {
                                 deleteMutation.mutate(item.id)

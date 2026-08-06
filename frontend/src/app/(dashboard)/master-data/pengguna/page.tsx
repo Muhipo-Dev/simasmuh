@@ -466,11 +466,11 @@ export default function UsersPage() {
             placeholder="Cari pengguna (nama/email/username)..."
           />
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto max-w-full">
-          <Table>
-            <TableHeader className="bg-slate-50">
+        <CardContent className="p-0">
+          <Table className="w-full table-auto">
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/60">
               <TableRow>
-                <TableHead className="w-[45px] pl-4">
+                <TableHead className="w-10 pl-4 text-center">
                   <input
                     type="checkbox"
                     className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -478,41 +478,36 @@ export default function UsersPage() {
                     onChange={(e) => handleSelectAll(e.target.checked, filteredUsers)}
                   />
                 </TableHead>
-                <TableHead className="w-[50px]">No</TableHead>
-                <TableHead>Nama Pengguna</TableHead>
-                <TableHead>Username</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>NIP / NBM</TableHead>
-                <TableHead>Password</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Sub Role 1</TableHead>
-                <TableHead>Sub Role 2</TableHead>
-                <TableHead>Sub Role 3</TableHead>
-                <TableHead className="text-right pr-6">Aksi</TableHead>
+                <TableHead className="w-12 text-center">NO</TableHead>
+                <TableHead>Pengguna & Akun</TableHead>
+                <TableHead className="hidden md:table-cell">NIP / NBM</TableHead>
+                <TableHead>Role & Hak Akses</TableHead>
+                <TableHead className="text-right pr-4">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-10">
+                  <TableCell colSpan={6} className="text-center py-10">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600 mb-2" />
-                      Memuat data...
+                      Memuat data pengguna...
                     </div>
                   </TableCell>
                 </TableRow>
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-10 text-slate-500">
+                  <TableCell colSpan={6} className="text-center py-10 text-slate-500">
                     {searchQuery ? 'Tidak ada akun pengguna yang sesuai dengan pencarian.' : 'Belum ada data pengguna.'}
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredUsers.map((item, index) => {
                   const isSelected = selectedUserIds.includes(item.id)
+                  const nip = item.nipNbm || item.teacherProfile?.nip
                   return (
                     <TableRow key={item.id} className={isSelected ? 'bg-blue-50/50 dark:bg-blue-950/30' : ''}>
-                      <TableCell className="pl-4">
+                      <TableCell className="pl-4 text-center">
                         <input
                           type="checkbox"
                           className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -520,62 +515,62 @@ export default function UsersPage() {
                           onChange={() => handleToggleSelectOne(item.id)}
                         />
                       </TableCell>
-                      <TableCell className="font-medium text-slate-500">{index + 1}</TableCell>
-                      <TableCell className="font-semibold text-slate-900 dark:text-white">{item.name}</TableCell>
+                      <TableCell className="font-medium text-slate-500 text-center">{index + 1}</TableCell>
                       <TableCell>
-                        <span className="font-mono text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800">
-                          {item.username || '-'}
-                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-bold text-slate-900 dark:text-white text-sm">{item.name}</span>
+                          <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500 dark:text-slate-400 font-mono">
+                            {item.username && (
+                              <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 rounded font-semibold text-[11px] border border-blue-200/60 dark:border-blue-800/60">
+                                @{item.username}
+                              </span>
+                            )}
+                            {item.email && <span className="truncate">{item.email}</span>}
+                            {nip && <span className="md:hidden text-slate-400">NIP: {nip}</span>}
+                          </div>
+                        </div>
                       </TableCell>
-                      <TableCell className="text-slate-600 dark:text-slate-400 text-xs">{item.email || '-'}</TableCell>
-                      <TableCell className="font-mono text-slate-600 dark:text-slate-400">{item.nipNbm || item.teacherProfile?.nip || '-'}</TableCell>
-                      <TableCell className="text-slate-400 text-xs font-mono">••••••••</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          item.role === 'SUPERADMIN' ? 'bg-purple-100 text-purple-800' :
-                          item.role === 'ADMIN_IT' ? 'bg-indigo-100 text-indigo-800' :
-                          item.role === 'KEPALA_SEKOLAH' ? 'bg-amber-100 text-amber-800' :
-                          item.role === 'GURU' ? 'bg-emerald-100 text-emerald-800' :
-                          item.role === 'PEGAWAI' ? 'bg-cyan-100 text-cyan-800' :
-                          'bg-slate-100 text-slate-800'
-                        }`}>
-                          {item.role}
-                        </span>
+                      <TableCell className="hidden md:table-cell font-mono text-xs text-slate-600 dark:text-slate-400">
+                        {nip || '-'}
                       </TableCell>
                       <TableCell>
-                        {item.subRole ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                            {SUB_ROLE_LABELS[item.subRole] || item.subRole}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                            item.role === 'SUPERADMIN' ? 'bg-purple-100 text-purple-800' :
+                            item.role === 'ADMIN_IT' ? 'bg-indigo-100 text-indigo-800' :
+                            item.role === 'KEPALA_SEKOLAH' ? 'bg-amber-100 text-amber-800' :
+                            item.role === 'GURU' ? 'bg-emerald-100 text-emerald-800' :
+                            item.role === 'PEGAWAI' ? 'bg-cyan-100 text-cyan-800' :
+                            'bg-slate-100 text-slate-800'
+                          }`}>
+                            {item.role}
                           </span>
-                        ) : (
-                          <span className="text-slate-400 text-xs">-</span>
-                        )}
+                          {item.subRole && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                              {SUB_ROLE_LABELS[item.subRole] || item.subRole}
+                            </span>
+                          )}
+                          {item.subRole2 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-800 border border-indigo-200">
+                              {SUB_ROLE_LABELS[item.subRole2] || item.subRole2}
+                            </span>
+                          )}
+                          {item.subRole3 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-teal-50 text-teal-800 border border-teal-200">
+                              {SUB_ROLE_LABELS[item.subRole3] || item.subRole3}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell>
-                        {item.subRole2 ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                            {SUB_ROLE_LABELS[item.subRole2] || item.subRole2}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-xs">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {item.subRole3 ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">
-                            {SUB_ROLE_LABELS[item.subRole3] || item.subRole3}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-xs">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right pr-6 space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(item)}>
-                          <Pencil className="w-4 h-4 text-slate-500 hover:text-blue-600" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenDeleteDialog(item)}>
-                          <Trash2 className="w-4 h-4 text-slate-500 hover:text-red-600" />
-                        </Button>
+                      <TableCell className="text-right pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleOpenEditDialog(item)}>
+                            <Pencil className="w-4 h-4 text-slate-500 hover:text-blue-600" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:bg-red-50" onClick={() => handleOpenDeleteDialog(item)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )

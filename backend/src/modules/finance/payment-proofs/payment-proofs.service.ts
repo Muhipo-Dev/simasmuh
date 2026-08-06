@@ -421,17 +421,17 @@ export class PaymentProofsService {
 
         // If proof is verified and linked to a tagihan, update tagihan amountPaid and status
         if (status === 'DIVERIFIKASI' && proof.tagihanId) {
-          const currentTagihan = await tx.tagihan.findUnique({
+          const currentTagihan: any = await tx.tagihan.findUnique({
             where: { id: proof.tagihanId },
           });
 
           if (currentTagihan) {
-            const currentPaid = currentTagihan.amountPaid || (currentTagihan.status === 'LUNAS' ? currentTagihan.amount : 0);
+            const currentPaid = (currentTagihan.amountPaid ?? (currentTagihan.status === 'LUNAS' ? currentTagihan.amount : 0)) as number;
             const newAmountPaid = currentPaid + proof.amount;
             const isLunas = newAmountPaid >= currentTagihan.amount;
             const newStatus = isLunas ? 'LUNAS' : newAmountPaid > 0 ? 'ANGSURAN' : 'BELUM_LUNAS';
 
-            await tx.tagihan.update({
+            await (tx.tagihan as any).update({
               where: { id: proof.tagihanId },
               data: {
                 amountPaid: newAmountPaid,
@@ -440,7 +440,7 @@ export class PaymentProofsService {
               },
             });
 
-            await tx.payment.create({
+            await (tx.payment as any).create({
               data: {
                 studentId: proof.studentId,
                 tagihanId: proof.tagihanId,

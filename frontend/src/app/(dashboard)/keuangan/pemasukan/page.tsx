@@ -931,6 +931,7 @@ function ManualCashPaymentModal({
   const authenticatedQuery = useAuthenticatedQuery()
   const qc = useQueryClient()
 
+  const [studentSearch, setStudentSearch] = useState('')
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [selectedTagihanId, setSelectedTagihanId] = useState('')
   const [cashAmount, setCashAmount] = useState('')
@@ -941,6 +942,19 @@ function ManualCashPaymentModal({
     queryFn: () => authenticatedQuery(`/api-backend/finance/students/${selectedStudentId}/tagihan`),
     enabled: !!selectedStudentId,
   })
+
+  const selectedStudent = students.find(s => s.id === selectedStudentId)
+
+  const filteredStudents = useMemo(() => {
+    if (!studentSearch.trim()) return []
+    const q = studentSearch.toLowerCase().trim()
+    return students.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      s.nisn.includes(q) ||
+      s.nis.includes(q) ||
+      s.className.toLowerCase().includes(q)
+    )
+  }, [students, studentSearch])
 
   const activeTagihans = (studentDetail?.tagihans || []).filter(t => t.status !== 'LUNAS')
   const selectedTagihan = activeTagihans.find(t => t.id === selectedTagihanId)
@@ -986,6 +1000,7 @@ function ManualCashPaymentModal({
         showConfirmButton: false,
       })
       onClose()
+      setStudentSearch('')
       setSelectedStudentId('')
       setSelectedTagihanId('')
       setCashAmount('')
@@ -1008,19 +1023,64 @@ function ManualCashPaymentModal({
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
-          {/* Pilih Siswa */}
+          {/* Pencarian Siswa Berdasarkan Nama/Kelas */}
           <div>
-            <Label className="text-xs font-semibold text-slate-700 mb-1 block">Pilih Siswa</Label>
-            <Select value={selectedStudentId} onValueChange={(v) => { setSelectedStudentId(v || ''); setSelectedTagihanId(''); setCashAmount(''); }}>
-              <SelectTrigger className="bg-white"><SelectValue placeholder="Cari/Pilih siswa..." /></SelectTrigger>
-              <SelectContent className="max-h-60">
-                {students.map(s => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} ({s.className}) — Sisa: {currency(s.totalTagihan - s.totalLunas)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-xs font-semibold text-slate-700 mb-1 block">Cari Siswa (Nama / Kelas / NISN)</Label>
+            
+            {selectedStudent ? (
+              <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <div>
+                  <p className="font-bold text-slate-900 text-xs sm:text-sm">{selectedStudent.name}</p>
+                  <p className="text-[11px] text-slate-500 font-mono">NISN: {selectedStudent.nisn} | Kelas: <span className="font-bold text-emerald-700">{selectedStudent.className}</span></p>
+                  <p className="text-[11px] text-slate-600 mt-0.5">Sisa Tagihan: <strong className="text-red-600">{currency(selectedStudent.totalTagihan - selectedStudent.totalLunas)}</strong></p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => { setSelectedStudentId(''); setStudentSearch(''); setSelectedTagihanId(''); setCashAmount(''); }} className="text-xs h-7 border-emerald-400 text-emerald-700 hover:bg-emerald-100">
+                  Ganti
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    placeholder="Ketik nama siswa atau kelas (misal: Ahmad / XII-1)..."
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    className="pl-9 bg-white text-xs sm:text-sm"
+                  />
+                </div>
+
+                {/* Hasil Pencarian Siswa */}
+                {studentSearch.trim() !== '' && (
+                  <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-white shadow-xs">
+                    {filteredStudents.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-slate-400">Tidak ada siswa yang cocok dengan &quot;{studentSearch}&quot;</div>
+                    ) : (
+                      filteredStudents.map(s => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedStudentId(s.id)
+                            setSelectedTagihanId('')
+                            setCashAmount('')
+                          }}
+                          className="w-full text-left p-2.5 hover:bg-emerald-50/70 transition-colors flex items-center justify-between group"
+                        >
+                          <div>
+                            <p className="font-semibold text-slate-900 text-xs group-hover:text-emerald-700">{s.name}</p>
+                            <p className="text-[11px] text-slate-400">NISN: {s.nisn} • Kelas <span className="font-medium text-slate-600">{s.className}</span></p>
+                          </div>
+                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full shrink-0">
+                            Sisa: {currency(s.totalTagihan - s.totalLunas)}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Pilih Tagihan */}

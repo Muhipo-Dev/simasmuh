@@ -274,26 +274,35 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
 
   return (
     <Dialog open={open} onOpenChange={() => { resetForm(); onClose() }}>
-      <DialogContent className="w-[95vw] sm:max-w-[95vw] md:max-w-[90vw] lg:max-w-[85vw] xl:max-w-7xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Receipt className="w-6 h-6 text-blue-600" />
-            Tagihan Pembayaran
-          </DialogTitle>
-          <DialogDescription>
-            {studentInfo ? (
-              <>
-                <span>Siswa: <strong>{studentInfo.name}</strong></span>
-                <br />
-                <span className="text-sm">NIS: {studentInfo.nis} | Kelas: {studentInfo.className}</span>
-              </>
-            ) : (
-              'Pilih tagihan yang ingin dibayar dan upload bukti pembayaran'
-            )}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="w-[95vw] sm:max-w-[95vw] md:max-w-[90vw] lg:max-w-[85vw] xl:max-w-7xl max-h-[92vh] overflow-y-auto p-0 rounded-2xl border-0 shadow-2xl overflow-hidden bg-slate-50 dark:bg-slate-900">
+        {/* Header Banner Modern */}
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-emerald-700 p-5 sm:p-6 text-white relative shadow-md">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl">
+                  <Receipt className="w-6 h-6 text-emerald-300" />
+                </div>
+                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">Tagihan & Pembayaran Siswa</h2>
+              </div>
+              <p className="text-blue-100 text-xs sm:text-sm pl-10">
+                Pilih tagihan yang akan dibayar, sesuaikan angsuran, lalu unggah bukti transfer.
+              </p>
+            </div>
 
-        <div className="space-y-6">
+            {studentInfo && (
+              <div className="bg-white/15 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 text-xs sm:text-sm shrink-0">
+                <p className="font-bold text-white flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  {studentInfo.name}
+                </p>
+                <p className="text-blue-100 text-xs font-mono">NIS: {studentInfo.nis} • Kelas {studentInfo.className}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-6 space-y-6">
           {loadingTagihans ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600" />

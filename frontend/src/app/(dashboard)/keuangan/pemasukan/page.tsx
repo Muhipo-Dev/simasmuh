@@ -804,15 +804,19 @@ function TagihanMassalModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Layers className="w-5 h-5 text-purple-600" /> Tagihan Massal per Kelas
-          </DialogTitle>
-          <DialogDescription>Buat tagihan yang sama untuk semua siswa di satu kelas sekaligus.</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-md p-0 rounded-2xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-violet-600 p-5 text-white shadow-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-white text-lg font-extrabold">
+              <Layers className="w-5 h-5 text-purple-200" /> Tagihan Massal per Kelas
+            </DialogTitle>
+            <DialogDescription className="text-purple-100 text-xs">
+              Buat tagihan yang sama untuk semua siswa di satu kelas sekaligus dengan opsi diskon otomatis.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-3">
+        <div className="p-5 space-y-3.5 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
           <div>
             <Label className="text-sm font-semibold text-slate-700 mb-1 block">Pilih Kelas</Label>
             <Select value={form.classId} onValueChange={(v) => setForm(f => ({ ...f, classId: v ?? f.classId }))}>
@@ -1046,17 +1050,19 @@ function ManualCashPaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-emerald-800">
-            <Wallet className="w-5 h-5 text-emerald-600" /> Input Pembayaran Tunai / Manual (Kasir)
-          </DialogTitle>
-          <DialogDescription>
-            Pencatatan langsung pembayaran tunai siswa di kantor bagian keuangan dengan opsi angsuran & diskon.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-md p-0 rounded-2xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-green-600 p-5 text-white shadow-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-white text-lg font-extrabold">
+              <Wallet className="w-5 h-5 text-emerald-200" /> Input Pembayaran Tunai (Kasir)
+            </DialogTitle>
+            <DialogDescription className="text-emerald-100 text-xs">
+              Pencatatan langsung pembayaran tunai siswa di kantor bagian keuangan dengan opsi angsuran & diskon.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-4 pt-1 max-h-[80vh] overflow-y-auto pr-1">
+        <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
           {/* Pencarian Siswa Berdasarkan Nama/Kelas */}
           <div>
             <Label className="text-xs font-semibold text-slate-700 mb-1 block">Cari Siswa (Nama / Kelas / NISN)</Label>

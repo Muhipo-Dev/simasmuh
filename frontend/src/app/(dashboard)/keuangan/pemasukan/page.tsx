@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import {
   Wallet, Users, BarChart3, Building2, Search, Pencil, Trash2,
   Loader2, PlusCircle, CheckCircle2, TrendingUp, X, Download,
-  AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers
+  AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
@@ -937,6 +937,9 @@ function ManualCashPaymentModal({
   const [cashAmount, setCashAmount] = useState('')
   const [cashNotes, setCashNotes] = useState('Pembayaran Tunai Kasir Keuangan')
 
+  const [cashDiscountPct, setCashDiscountPct] = useState<number>(0)
+  const [cashDiscountReason, setCashDiscountReason] = useState<string>('')
+
   const { data: studentDetail } = useQuery<StudentDetail>({
     queryKey: ['student-tagihan-cash', selectedStudentId],
     queryFn: () => authenticatedQuery(`/api-backend/finance/students/${selectedStudentId}/tagihan`),
@@ -962,6 +965,8 @@ function ManualCashPaymentModal({
   const handleSelectTagihan = (tagihanId: string | null) => {
     if (!tagihanId) return
     setSelectedTagihanId(tagihanId)
+    setCashDiscountPct(0)
+    setCashDiscountReason('')
     const t = activeTagihans.find(item => item.id === tagihanId)
     if (t) {
       const paid = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)
@@ -970,13 +975,40 @@ function ManualCashPaymentModal({
     }
   }
 
+  const handleDiscountChange = (pct: number) => {
+    setCashDiscountPct(pct)
+    if (!selectedTagihan) return
+    const paid = selectedTagihan.amountPaid || 0
+    let orig = selectedTagihan.amount
+    const discountMatch = selectedTagihan.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/)
+    if (discountMatch) {
+      try {
+        const info = JSON.parse(discountMatch[1])
+        orig = info.originalAmount || selectedTagihan.amount
+      } catch {}
+    }
+    const discountAmount = Math.round(orig * (pct / 100))
+    const finalAmount = orig - discountAmount
+    const newRemaining = Math.max(0, finalAmount - paid)
+    setCashAmount(newRemaining.toString())
+  }
+
   const payMut = useMutation({
     mutationFn: async () => {
       const amount = parseFloat(cashAmount)
+      const payload: any = {
+        paymentAmount: amount,
+        notes: cashNotes,
+      }
+      if (cashDiscountPct > 0) {
+        payload.discountPercentage = cashDiscountPct
+        payload.discountReason = cashDiscountReason || 'Diskon Kasir Keuangan'
+      }
+
       const res = await authenticatedFetch(`/api-backend/finance/tagihan/${selectedTagihanId}/lunasi`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentAmount: amount, notes: cashNotes }),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) {
         const errText = await res.text()
@@ -1004,6 +1036,8 @@ function ManualCashPaymentModal({
       setSelectedStudentId('')
       setSelectedTagihanId('')
       setCashAmount('')
+      setCashDiscountPct(0)
+      setCashDiscountReason('')
     },
     onError: (err: any) => {
       Swal.fire('Error', err.message || 'Gagal menyimpan pembayaran', 'error')
@@ -1018,11 +1052,11 @@ function ManualCashPaymentModal({
             <Wallet className="w-5 h-5 text-emerald-600" /> Input Pembayaran Tunai / Manual (Kasir)
           </DialogTitle>
           <DialogDescription>
-            Pencatatan langsung pembayaran tunai siswa di kantor bagian keuangan.
+            Pencatatan langsung pembayaran tunai siswa di kantor bagian keuangan dengan opsi angsuran & diskon.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 pt-1">
+        <div className="space-y-4 pt-1 max-h-[80vh] overflow-y-auto pr-1">
           {/* Pencarian Siswa Berdasarkan Nama/Kelas */}
           <div>
             <Label className="text-xs font-semibold text-slate-700 mb-1 block">Cari Siswa (Nama / Kelas / NISN)</Label>
@@ -1034,7 +1068,7 @@ function ManualCashPaymentModal({
                   <p className="text-[11px] text-slate-500 font-mono">NISN: {selectedStudent.nisn} | Kelas: <span className="font-bold text-emerald-700">{selectedStudent.className}</span></p>
                   <p className="text-[11px] text-slate-600 mt-0.5">Sisa Tagihan: <strong className="text-red-600">{currency(selectedStudent.totalTagihan - selectedStudent.totalLunas)}</strong></p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => { setSelectedStudentId(''); setStudentSearch(''); setSelectedTagihanId(''); setCashAmount(''); }} className="text-xs h-7 border-emerald-400 text-emerald-700 hover:bg-emerald-100">
+                <Button variant="outline" size="sm" onClick={() => { setSelectedStudentId(''); setStudentSearch(''); setSelectedTagihanId(''); setCashAmount(''); setCashDiscountPct(0); }} className="text-xs h-7 border-emerald-400 text-emerald-700 hover:bg-emerald-100">
                   Ganti
                 </Button>
               </div>
@@ -1064,6 +1098,7 @@ function ManualCashPaymentModal({
                             setSelectedStudentId(s.id)
                             setSelectedTagihanId('')
                             setCashAmount('')
+                            setCashDiscountPct(0)
                           }}
                           className="w-full text-left p-2.5 hover:bg-emerald-50/70 transition-colors flex items-center justify-between group"
                         >
@@ -1108,32 +1143,92 @@ function ManualCashPaymentModal({
             </div>
           )}
 
-          {/* Form Nominal Cash */}
+          {/* Form Pembayaran Tunai, Angsuran & Diskon */}
           {selectedTagihan && (() => {
             const paid = selectedTagihan.amountPaid || 0
-            const remaining = Math.max(0, selectedTagihan.amount - paid)
+            let origAmount = selectedTagihan.amount
+            const discountMatch = selectedTagihan.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/)
+            if (discountMatch) {
+              try {
+                const info = JSON.parse(discountMatch[1])
+                origAmount = info.originalAmount || selectedTagihan.amount
+              } catch {}
+            }
+
+            const currentDiscountAmt = cashDiscountPct > 0 ? Math.round(origAmount * (cashDiscountPct / 100)) : 0
+            const currentFinalAmt = cashDiscountPct > 0 ? origAmount - currentDiscountAmt : selectedTagihan.amount
+            const remaining = Math.max(0, currentFinalAmt - paid)
             const isInfaq = selectedTagihan.type.toLowerCase() === 'infaq'
 
             return (
-              <div className="space-y-3 bg-emerald-50/50 border border-emerald-200 p-3.5 rounded-xl">
-                <div className="flex justify-between text-xs text-slate-600">
-                  <span>Total Tagihan: <strong>{currency(selectedTagihan.amount)}</strong></span>
-                  <span>Sisa: <strong className="text-red-600">{currency(remaining)}</strong></span>
+              <div className="space-y-3.5 bg-emerald-50/60 border border-emerald-200 p-4 rounded-xl">
+                <div className="flex flex-col gap-1 text-xs text-slate-700 border-b border-emerald-200/80 pb-2.5">
+                  <div className="flex justify-between">
+                    <span>Total Tagihan Awal:</span>
+                    <span className="font-semibold">{currency(origAmount)}</span>
+                  </div>
+                  {paid > 0 && (
+                    <div className="flex justify-between text-blue-700">
+                      <span>Sudah Diangsur:</span>
+                      <span className="font-bold">{currency(paid)}</span>
+                    </div>
+                  )}
+                  {cashDiscountPct > 0 && (
+                    <div className="flex justify-between text-amber-700 font-medium">
+                      <span>Potongan Diskon ({cashDiscountPct}%):</span>
+                      <span>- {currency(currentDiscountAmt)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm pt-1 border-t border-emerald-200/50">
+                    <span className="font-bold text-slate-800">Sisa Yang Harus Dibayar:</span>
+                    <strong className="text-red-600 text-sm">{currency(remaining)}</strong>
+                  </div>
                 </div>
 
+                {/* Fitur Diskon Kasir */}
                 <div>
-                  <Label className="text-xs font-semibold text-slate-700 mb-1 block">Nominal Pembayaran Tunai (Rp)</Label>
+                  <Label className="text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                    <Percent className="w-3.5 h-3.5 text-amber-600" /> Terapkan Diskon Pembayaran Tunai (Opsional)
+                  </Label>
+                  <Select value={cashDiscountPct.toString()} onValueChange={(v) => handleDiscountChange(parseInt(v || '0', 10))}>
+                    <SelectTrigger className="bg-white text-xs h-8"><SelectValue placeholder="Pilih persentase diskon..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0% (Tanpa Diskon Tambahan)</SelectItem>
+                      <SelectItem value="25">25% Diskon Tunai</SelectItem>
+                      <SelectItem value="50">50% Diskon Tunai</SelectItem>
+                      <SelectItem value="75">75% Diskon Tunai</SelectItem>
+                      <SelectItem value="100">100% Bebas Biaya / Pelunasan Beasiswa</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {cashDiscountPct > 0 && (
+                    <Input
+                      placeholder="Alasan Diskon (misal: Diskon Kasir / Pelunasan Langsung)"
+                      value={cashDiscountReason}
+                      onChange={(e) => setCashDiscountReason(e.target.value)}
+                      className="bg-white text-xs mt-1.5 h-8"
+                    />
+                  )}
+                </div>
+
+                {/* Fitur Angsuran Tunai */}
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 mb-1 block">Nominal Pembayaran Tunai / Angsuran (Rp)</Label>
                   <Input
                     type="number"
                     disabled={isInfaq}
-                    placeholder="Masukkan nominal..."
+                    placeholder="Masukkan nominal bayar/angsuran..."
                     value={cashAmount}
                     onChange={(e) => setCashAmount(e.target.value)}
-                    className="bg-white font-semibold"
+                    className="bg-white font-bold text-slate-900"
                   />
-                  {isInfaq && (
+                  {isInfaq ? (
                     <p className="text-[11px] text-amber-700 mt-1 flex items-center gap-1 font-medium">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Tagihan Infaq tidak dapat diangsur. Nominal di-set lunas ({currency(remaining)}).
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      * Anda dapat memasukkan nominal pembayaran sebagian (angsuran) atau pelunasan sekaligus ({currency(remaining)}).
                     </p>
                   )}
                 </div>
@@ -1144,7 +1239,7 @@ function ManualCashPaymentModal({
                     placeholder="Misal: Kuitansi No #1024 - Tunai Kasir"
                     value={cashNotes}
                     onChange={(e) => setCashNotes(e.target.value)}
-                    className="bg-white text-xs"
+                    className="bg-white text-xs h-8"
                   />
                 </div>
               </div>
@@ -1155,7 +1250,7 @@ function ManualCashPaymentModal({
         <DialogFooter className="gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>Batal</Button>
           <Button
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
             disabled={!selectedTagihanId || !cashAmount || parseFloat(cashAmount) <= 0 || payMut.isPending}
             onClick={() => payMut.mutate()}
           >

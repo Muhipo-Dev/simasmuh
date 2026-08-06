@@ -294,18 +294,52 @@ export class FinanceService {
     });
   }
 
-  /** Tandai tagihan sebagai LUNAS atau bayar angsuran */
+  /** Tandai tagihan sebagai LUNAS atau bayar angsuran tunai dengan opsi diskon */
   async lunasiTagihan(
     tagihanId: string,
-    dto?: { amountPaid?: number; paymentAmount?: number; notes?: string },
+    dto?: {
+      amountPaid?: number;
+      paymentAmount?: number;
+      notes?: string;
+      discountPercentage?: number;
+      discountReason?: string;
+    },
   ) {
     const tagihan: any = await this.prisma.tagihan.findUnique({
       where: { id: tagihanId },
     });
     if (!tagihan) throw new NotFoundException('Tagihan tidak ditemukan');
 
-    const currentPaid = (tagihan.amountPaid ?? (tagihan.status === 'LUNAS' ? tagihan.amount : 0)) as number;
-    const remainingAmount = tagihan.amount - currentPaid;
+    let baseAmount = tagihan.amount;
+    let cleanNotes = (dto?.notes || tagihan.notes || '').replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '').replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '').trim();
+
+    // Check if discount is applied during cash payment
+    if (dto?.discountPercentage && dto.discountPercentage > 0) {
+      const validPct = [25, 50, 75, 100].includes(dto.discountPercentage) ? dto.discountPercentage : 0;
+      if (validPct > 0) {
+        const discountMatch = tagihan.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
+        let orig = baseAmount;
+        if (discountMatch) {
+          try {
+            const parsedInfo = JSON.parse(discountMatch[1]);
+            orig = parsedInfo.originalAmount || baseAmount;
+          } catch {}
+        }
+        const discountAmount = Math.round(orig * (validPct / 100));
+        baseAmount = orig - discountAmount;
+        const discountInfo = {
+          originalAmount: orig,
+          discountPercentage: validPct,
+          discountAmount,
+          finalAmount: baseAmount,
+          reason: dto.discountReason || 'Diskon Kasir Keuangan',
+        };
+        cleanNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
+      }
+    }
+
+    const currentPaid = (tagihan.amountPaid ?? (tagihan.status === 'LUNAS' ? baseAmount : 0)) as number;
+    const remainingAmount = Math.max(0, baseAmount - currentPaid);
 
     if (remainingAmount <= 0) {
       throw new BadRequestException('Tagihan ini sudah lunas');
@@ -331,16 +365,18 @@ export class FinanceService {
     }
 
     const newAmountPaid = currentPaid + payAmount;
-    const isLunas = newAmountPaid >= tagihan.amount;
+    const isLunas = newAmountPaid >= baseAmount;
     const newStatus = isLunas ? 'LUNAS' : newAmountPaid > 0 ? 'ANGSURAN' : 'BELUM_LUNAS';
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await (tx.tagihan as any).update({
         where: { id: tagihanId },
         data: {
+          amount: baseAmount,
           amountPaid: newAmountPaid,
           status: newStatus,
           paidDate: isLunas ? new Date() : tagihan.paidDate,
+          notes: cleanNotes || null,
         },
       });
 
@@ -352,7 +388,7 @@ export class FinanceService {
           amount: payAmount,
           month: tagihan.month,
           year: tagihan.year,
-          notes: dto?.notes || (isLunas ? 'Pembayaran Lunas' : 'Pembayaran Angsuran'),
+          notes: dto?.notes || (isLunas ? 'Pembayaran Lunas Kasir' : 'Pembayaran Angsuran Kasir'),
         },
       });
 

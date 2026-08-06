@@ -921,6 +921,194 @@ function TagihanMassalModal({
 }
 
 // ============================================================
+// MANUAL CASH PAYMENT MODAL (Pembayaran Tunai Kasir Keuangan)
+// ============================================================
+function ManualCashPaymentModal({
+  open, onClose, students }: {
+  open: boolean; onClose: () => void; students: StudentSummary[]
+}) {
+  const authenticatedFetch = useAuthenticatedFetch()
+  const authenticatedQuery = useAuthenticatedQuery()
+  const qc = useQueryClient()
+
+  const [selectedStudentId, setSelectedStudentId] = useState('')
+  const [selectedTagihanId, setSelectedTagihanId] = useState('')
+  const [cashAmount, setCashAmount] = useState('')
+  const [cashNotes, setCashNotes] = useState('Pembayaran Tunai Kasir Keuangan')
+
+  const { data: studentDetail } = useQuery<StudentDetail>({
+    queryKey: ['student-tagihan-cash', selectedStudentId],
+    queryFn: () => authenticatedQuery(`/api-backend/finance/students/${selectedStudentId}/tagihan`),
+    enabled: !!selectedStudentId,
+  })
+
+  const activeTagihans = (studentDetail?.tagihans || []).filter(t => t.status !== 'LUNAS')
+  const selectedTagihan = activeTagihans.find(t => t.id === selectedTagihanId)
+
+  const handleSelectTagihan = (tagihanId: string | null) => {
+    if (!tagihanId) return
+    setSelectedTagihanId(tagihanId)
+    const t = activeTagihans.find(item => item.id === tagihanId)
+    if (t) {
+      const paid = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)
+      const remaining = Math.max(0, t.amount - paid)
+      setCashAmount(remaining.toString())
+    }
+  }
+
+  const payMut = useMutation({
+    mutationFn: async () => {
+      const amount = parseFloat(cashAmount)
+      const res = await authenticatedFetch(`/api-backend/finance/tagihan/${selectedTagihanId}/lunasi`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentAmount: amount, notes: cashNotes }),
+      })
+      if (!res.ok) {
+        const errText = await res.text()
+        let errMsg = 'Gagal menyimpan pembayaran tunai'
+        try {
+          const json = JSON.parse(errText)
+          errMsg = json.message || errMsg
+        } catch {}
+        throw new Error(errMsg)
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['student-tagihan', selectedStudentId] })
+      Swal.fire({
+        title: 'Berhasil!',
+        text: 'Pembayaran tunai berhasil dicatat.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+      onClose()
+      setSelectedStudentId('')
+      setSelectedTagihanId('')
+      setCashAmount('')
+    },
+    onError: (err: any) => {
+      Swal.fire('Error', err.message || 'Gagal menyimpan pembayaran', 'error')
+    }
+  })
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-emerald-800">
+            <Wallet className="w-5 h-5 text-emerald-600" /> Input Pembayaran Tunai / Manual (Kasir)
+          </DialogTitle>
+          <DialogDescription>
+            Pencatatan langsung pembayaran tunai siswa di kantor bagian keuangan.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 pt-1">
+          {/* Pilih Siswa */}
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 mb-1 block">Pilih Siswa</Label>
+            <Select value={selectedStudentId} onValueChange={(v) => { setSelectedStudentId(v || ''); setSelectedTagihanId(''); setCashAmount(''); }}>
+              <SelectTrigger className="bg-white"><SelectValue placeholder="Cari/Pilih siswa..." /></SelectTrigger>
+              <SelectContent className="max-h-60">
+                {students.map(s => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name} ({s.className}) — Sisa: {currency(s.totalTagihan - s.totalLunas)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Pilih Tagihan */}
+          {selectedStudentId && (
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 mb-1 block">Pilih Tagihan Siswa</Label>
+              {activeTagihans.length === 0 ? (
+                <p className="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-dashed">Siswa ini tidak memiliki tagihan aktif/belum lunas.</p>
+              ) : (
+                <Select value={selectedTagihanId} onValueChange={handleSelectTagihan}>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder="Pilih tagihan..." /></SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {activeTagihans.map(t => {
+                      const paid = t.amountPaid || 0
+                      const remaining = Math.max(0, t.amount - paid)
+                      return (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.type} — Sisa: {currency(remaining)} (Total: {currency(t.amount)})
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
+          {/* Form Nominal Cash */}
+          {selectedTagihan && (() => {
+            const paid = selectedTagihan.amountPaid || 0
+            const remaining = Math.max(0, selectedTagihan.amount - paid)
+            const isInfaq = selectedTagihan.type.toLowerCase() === 'infaq'
+
+            return (
+              <div className="space-y-3 bg-emerald-50/50 border border-emerald-200 p-3.5 rounded-xl">
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>Total Tagihan: <strong>{currency(selectedTagihan.amount)}</strong></span>
+                  <span>Sisa: <strong className="text-red-600">{currency(remaining)}</strong></span>
+                </div>
+
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 mb-1 block">Nominal Pembayaran Tunai (Rp)</Label>
+                  <Input
+                    type="number"
+                    disabled={isInfaq}
+                    placeholder="Masukkan nominal..."
+                    value={cashAmount}
+                    onChange={(e) => setCashAmount(e.target.value)}
+                    className="bg-white font-semibold"
+                  />
+                  {isInfaq && (
+                    <p className="text-[11px] text-amber-700 mt-1 flex items-center gap-1 font-medium">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Tagihan Infaq tidak dapat diangsur. Nominal di-set lunas ({currency(remaining)}).
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 mb-1 block">Catatan / Kuitansi (Opsional)</Label>
+                  <Input
+                    placeholder="Misal: Kuitansi No #1024 - Tunai Kasir"
+                    value={cashNotes}
+                    onChange={(e) => setCashNotes(e.target.value)}
+                    className="bg-white text-xs"
+                  />
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+
+        <DialogFooter className="gap-2 pt-2">
+          <Button variant="outline" onClick={onClose}>Batal</Button>
+          <Button
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            disabled={!selectedTagihanId || !cashAmount || parseFloat(cashAmount) <= 0 || payMut.isPending}
+            onClick={() => payMut.mutate()}
+          >
+            {payMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wallet className="w-4 h-4 mr-2" />}
+            Simpan Pembayaran Tunai
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ============================================================
 // TAB: TAGIHAN SISWA
 // ============================================================
 function TabTagihan() {
@@ -930,6 +1118,7 @@ function TabTagihan() {
   const [selectedStudent, setSelectedStudent] = useState<StudentSummary | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [massalOpen, setMassalOpen] = useState(false)
+  const [cashModalOpen, setCashModalOpen] = useState(false)
   const authenticatedQuery = useAuthenticatedQuery()
 
   const { data: students = [], isLoading } = useQuery<StudentSummary[]>({
@@ -992,6 +1181,10 @@ function TabTagihan() {
           </Select>
         </div>
         <div className="flex gap-2 shrink-0">
+          <Button onClick={() => setCashModalOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm">
+            <Wallet className="w-4 h-4" /> Pembayaran Tunai / Manual
+          </Button>
           <Button variant="outline" onClick={() => setMassalOpen(true)}
             className="border-purple-400 text-purple-700 hover:bg-purple-50 gap-2">
             <Layers className="w-4 h-4" /> Tagihan Massal
@@ -1086,6 +1279,7 @@ function TabTagihan() {
       <TagihanModal student={detailData ?? null} open={modalOpen}
         onClose={() => { setModalOpen(false); setSelectedStudent(null) }} />
       <TagihanMassalModal open={massalOpen} onClose={() => setMassalOpen(false)} classes={classes} />
+      <ManualCashPaymentModal open={cashModalOpen} onClose={() => setCashModalOpen(false)} students={students} />
     </div>
   )
 }

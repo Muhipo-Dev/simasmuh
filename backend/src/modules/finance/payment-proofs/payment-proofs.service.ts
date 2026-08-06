@@ -419,28 +419,44 @@ export class PaymentProofsService {
           },
         });
 
-        // If proof is verified and linked to a tagihan, mark tagihan as paid
+        // If proof is verified and linked to a tagihan, update tagihan amountPaid and status
         if (status === 'DIVERIFIKASI' && proof.tagihanId) {
-          await tx.tagihan.update({
+          const currentTagihan = await tx.tagihan.findUnique({
             where: { id: proof.tagihanId },
-            data: {
-              status: 'LUNAS',
-              paidDate: new Date(),
-            },
           });
 
-          this.logger.log(`Tagihan ${proof.tagihanId} marked as LUNAS`);
+          if (currentTagihan) {
+            const currentPaid = currentTagihan.amountPaid || (currentTagihan.status === 'LUNAS' ? currentTagihan.amount : 0);
+            const newAmountPaid = currentPaid + proof.amount;
+            const isLunas = newAmountPaid >= currentTagihan.amount;
+            const newStatus = isLunas ? 'LUNAS' : newAmountPaid > 0 ? 'ANGSURAN' : 'BELUM_LUNAS';
+
+            await tx.tagihan.update({
+              where: { id: proof.tagihanId },
+              data: {
+                amountPaid: newAmountPaid,
+                status: newStatus,
+                paidDate: isLunas ? new Date() : currentTagihan.paidDate,
+              },
+            });
+
+            await tx.payment.create({
+              data: {
+                studentId: proof.studentId,
+                tagihanId: proof.tagihanId,
+                type: currentTagihan.type,
+                amount: proof.amount,
+                month: currentTagihan.month,
+                year: currentTagihan.year,
+                notes: proof.notes || `Bukti Pembayaran Verifikasi (${proof.status})`,
+              },
+            });
+
+            this.logger.log(`Tagihan ${proof.tagihanId} updated with amountPaid: ${newAmountPaid}, status: ${newStatus}`);
+          }
         } else if (status === 'DITOLAK' && proof.tagihanId) {
-          await tx.tagihan.update({
-            where: { id: proof.tagihanId },
-            data: {
-              status: 'BELUM_LUNAS',
-              paidDate: null,
-            },
-          });
-
           this.logger.log(
-            `Tagihan ${proof.tagihanId} marked as BELUM_LUNAS (payment rejected)`,
+            `Payment proof for tagihan ${proof.tagihanId} rejected`,
           );
         }
 

@@ -103,6 +103,7 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
   const [selectedTagihan, setSelectedTagihan] = useState<Tagihan | null>(null)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [paymentNotes, setPaymentNotes] = useState('')
+  const [customAmountInput, setCustomAmountInput] = useState('')
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
@@ -130,12 +131,19 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
     enabled: open,
   })
 
+  const handleSelectTagihan = (t: Tagihan) => {
+    setSelectedTagihan(t)
+    const paid = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)
+    const remaining = Math.max(0, t.amount - paid)
+    setCustomAmountInput(remaining.toString())
+  }
+
   // Set initial selected tagihan
   useEffect(() => {
     if (open && initialTagihanId && tagihans.length > 0) {
       const tagihan = tagihans.find(t => t.id === initialTagihanId)
       if (tagihan) {
-        setSelectedTagihan(tagihan)
+        handleSelectTagihan(tagihan)
         setShowPaymentForm(true)
       }
     }
@@ -227,11 +235,25 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
       return
     }
 
+    const paid = selectedTagihan.amountPaid || (selectedTagihan.status === 'LUNAS' ? selectedTagihan.amount : 0)
+    const remaining = Math.max(0, selectedTagihan.amount - paid)
+    const payAmount = parseFloat(customAmountInput)
+
+    if (selectedTagihan.type.toLowerCase() === 'infaq' && payAmount < remaining) {
+      Swal.fire('Error', 'Tagihan Infaq tidak dapat diangsur. Pembayaran harus lunas sekaligus.', 'error')
+      return
+    }
+
+    if (isNaN(payAmount) || payAmount <= 0 || payAmount > remaining) {
+      Swal.fire('Error', `Nominal angsuran tidak valid. Maksimal ${formatCurrency(remaining)}`, 'error')
+      return
+    }
+
     uploadPaymentMutation.mutate({
       tagihanId: selectedTagihan.id,
       file: uploadFile,
       notes: paymentNotes,
-      amount: selectedTagihan.amount
+      amount: payAmount
     })
   }
 
@@ -320,7 +342,7 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
                             ? 'border-blue-500 bg-blue-50/50 shadow-md transform scale-[1.01]'
                             : 'border-slate-100 hover:border-blue-300 hover:bg-slate-50 hover:shadow-sm'
                         }`}
-                        onClick={() => setSelectedTagihan(tagihan)}
+                        onClick={() => handleSelectTagihan(tagihan)}
                       >
                         <CardContent className="p-4 sm:p-5">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -486,6 +508,42 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-5 pt-5">
+                      {/* Nominal Pembayaran / Angsuran */}
+                      {selectedTagihan && (() => {
+                        const paid = selectedTagihan.amountPaid || (selectedTagihan.status === 'LUNAS' ? selectedTagihan.amount : 0)
+                        const remaining = Math.max(0, selectedTagihan.amount - paid)
+                        const isInfaq = selectedTagihan.type.toLowerCase() === 'infaq'
+
+                        return (
+                          <div className="space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                            <div className="flex justify-between items-center text-xs text-slate-600">
+                              <span>Nominal Tagihan: <strong>{formatCurrency(selectedTagihan.amount)}</strong></span>
+                              <span>Sisa Tagihan: <strong className="text-red-600">{formatCurrency(remaining)}</strong></span>
+                            </div>
+                            <Label className="text-sm font-bold text-slate-700 block mt-1">
+                              Nominal Yang Ditransfer / Diangsur (Rp) *
+                            </Label>
+                            <Input
+                              type="number"
+                              disabled={isInfaq}
+                              placeholder="Masukkan nominal..."
+                              value={customAmountInput}
+                              onChange={(e) => setCustomAmountInput(e.target.value)}
+                              className="bg-white font-semibold text-slate-800"
+                            />
+                            {isInfaq ? (
+                              <p className="text-xs text-amber-700 font-medium flex items-center gap-1">
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Tagihan Infaq tidak dapat diangsur. Nominal di-set lunas ({formatCurrency(remaining)}).
+                              </p>
+                            ) : (
+                              <p className="text-xs text-slate-500">
+                                Anda dapat mengangsur sebagian (misal Rp 50.000) atau melunasi sisa tagihan.
+                              </p>
+                            )}
+                          </div>
+                        )
+                      })()}
+
                       {/* File Upload */}
                       <div className="space-y-2">
                         <Label className="text-sm font-bold text-slate-700">Foto Bukti Transfer *</Label>

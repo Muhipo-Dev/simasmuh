@@ -84,6 +84,23 @@ export class StudentsController {
     return this.studentsService.updateProgram(id, body.program ?? null);
   }
 
+  /**
+   * PATCH /students/:id/discount
+   * Pengaturan Diskon Default Siswa oleh Bagian Keuangan / Admin
+   */
+  @Patch(':id/discount')
+  @UseGuards(JwtAuthGuard)
+  updateDiscount(
+    @Param('id') id: string,
+    @Body() body: { discountPercentage: number; discountReason?: string },
+  ) {
+    return this.studentsService.updateDiscount(
+      id,
+      body.discountPercentage,
+      body.discountReason,
+    );
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.studentsService.remove(id);

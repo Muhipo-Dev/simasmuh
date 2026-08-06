@@ -3,7 +3,8 @@ import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useSession } from 'next-auth/react'
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag } from 'lucide-react'
+import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent } from 'lucide-react'
+import Swal from 'sweetalert2'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -42,6 +43,8 @@ type Student = {
   gender: string
   classId: string
   program?: string | null
+  discountPercentage?: number
+  discountReason?: string | null
   class: {
     id: string
     name: string
@@ -107,6 +110,12 @@ export default function StudentsPage() {
   const [isProgramDialogOpen, setIsProgramDialogOpen] = useState(false)
   const [programTargetStudent, setProgramTargetStudent] = useState<Student | null>(null)
   const [programValue, setProgramValue] = useState<string>('')
+
+  // Discount Dialog State
+  const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false)
+  const [discountTargetStudent, setDiscountTargetStudent] = useState<Student | null>(null)
+  const [discountPct, setDiscountPct] = useState<number>(0)
+  const [discountReason, setDiscountReason] = useState<string>('')
 
   const { data: students, isLoading } = useQuery<Student[]>({
     queryKey: ['students'],
@@ -193,6 +202,37 @@ export default function StudentsPage() {
     },
     onError: (err: any) => {
       alert(err.message || 'Gagal mengubah program siswa. Pastikan Anda login sebagai SUPERADMIN.')
+    }
+  })
+
+  // Mutation khusus update discount default siswa (Bagian Keuangan / Admin)
+  const updateDiscountMutation = useMutation({
+    mutationFn: async ({ id, discountPercentage, discountReason }: { id: string; discountPercentage: number; discountReason?: string }) => {
+      const res = await authenticatedFetch(`/api-backend/students/${id}/discount`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discountPercentage, discountReason }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal mengatur diskon siswa')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+      setIsDiscountDialogOpen(false)
+      setDiscountTargetStudent(null)
+      Swal.fire({
+        title: 'Berhasil!',
+        text: 'Diskon default siswa berhasil diperbarui',
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Error', err.message || 'Gagal menyimpan diskon', 'error')
     }
   })
 
@@ -1040,6 +1080,7 @@ export default function StudentsPage() {
                 <TableHead>L/P</TableHead>
                 <TableHead>Kelas</TableHead>
                 <TableHead>Program</TableHead>
+                <TableHead>Diskon Default</TableHead>
                 <TableHead>Akun Login</TableHead>
                 <TableHead className="text-right pr-6">Aksi</TableHead>
               </TableRow>
@@ -1103,6 +1144,15 @@ export default function StudentsPage() {
                         })()}
                       </TableCell>
                       <TableCell>
+                        {item.discountPercentage && item.discountPercentage > 0 ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300">
+                            Diskon {item.discountPercentage}% {item.discountReason ? `(${item.discountReason})` : ''}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         {item.user ? (
                           <div className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded inline-block">
                             {item.user.username}
@@ -1113,6 +1163,20 @@ export default function StudentsPage() {
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex justify-end gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Set Diskon (Keuangan)"
+                            onClick={() => {
+                              setDiscountTargetStudent(item)
+                              setDiscountPct(item.discountPercentage || 0)
+                              setDiscountReason(item.discountReason || '')
+                              setIsDiscountDialogOpen(true)
+                            }}
+                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                          >
+                            <Percent className="w-4 h-4" />
+                          </Button>
                           {isSuperadmin && (
                             <Button
                               variant="ghost"
@@ -1145,6 +1209,75 @@ export default function StudentsPage() {
         </CardContent>
       </Card>
     </div>
+
+      {/* Modal Pengaturan Diskon Default Siswa (Keuangan) */}
+      <Dialog open={isDiscountDialogOpen} onOpenChange={setIsDiscountDialogOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+              <Percent className="w-5 h-5 text-amber-600" /> Pengaturan Diskon Default Siswa
+            </DialogTitle>
+            <DialogDescription>
+              Atur persentase diskon yang akan memotong otomatis tagihan baru siswa ini.
+            </DialogDescription>
+          </DialogHeader>
+
+          {discountTargetStudent && (
+            <div className="space-y-4 py-2">
+              <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{discountTargetStudent.name}</p>
+                <p className="text-xs text-slate-500">NISN: {discountTargetStudent.nisn} | Kelas: {discountTargetStudent.class?.name}</p>
+                {discountTargetStudent.program && (
+                  <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mt-1">Program Siswa: {discountTargetStudent.program.toUpperCase()}</p>
+                )}
+              </div>
+
+              <div>
+                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 block">Pilihan Diskon Default</Label>
+                <Select value={discountPct.toString()} onValueChange={(v) => setDiscountPct(parseInt(v || '0', 10))}>
+                  <SelectTrigger className="bg-white dark:bg-slate-950"><SelectValue placeholder="Pilih persentase..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">0% (Tanpa Diskon)</SelectItem>
+                    <SelectItem value="25">25% Diskon</SelectItem>
+                    <SelectItem value="50">50% Diskon</SelectItem>
+                    <SelectItem value="75">75% Diskon</SelectItem>
+                    <SelectItem value="100">100% Diskon (Beasiswa Penuh / Kader)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 block">Alasan / Catatan Diskon (Opsional)</Label>
+                <Input
+                  placeholder="Misal: Beasiswa Kader / Anak Yatim / Prestasi"
+                  value={discountReason}
+                  onChange={(e) => setDiscountReason(e.target.value)}
+                  className="bg-white dark:bg-slate-950 text-xs"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsDiscountDialogOpen(false)}>Batal</Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={() => {
+                if (!discountTargetStudent) return
+                updateDiscountMutation.mutate({
+                  id: discountTargetStudent.id,
+                  discountPercentage: discountPct,
+                  discountReason: discountReason
+                })
+              }}
+              disabled={updateDiscountMutation.isPending}
+            >
+              {updateDiscountMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
+              Simpan Diskon Siswa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

@@ -61,21 +61,23 @@ model Class {
 }
 
 model Student {
-  id            String         @id @default(uuid())
-  nisn          String         @unique
-  nis           String         @unique
-  name          String
-  gender        String
-  classId       String
-  userId        String?        @unique
-  program       String?
-  attendances   Attendance[]
-  grades        Grade[]
-  payments      Payment[]
-  paymentProofs PaymentProof[]
-  class         Class          @relation(fields: [classId], references: [id])
-  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tagihans      Tagihan[]
+  id                 String         @id @default(uuid())
+  nisn               String         @unique
+  nis                String         @unique
+  name               String
+  gender             String
+  classId            String
+  userId             String?        @unique
+  program            String?
+  discountPercentage Int            @default(0)
+  discountReason     String?
+  attendances        Attendance[]
+  grades             Grade[]
+  payments           Payment[]
+  paymentProofs      PaymentProof[]
+  class              Class          @relation(fields: [classId], references: [id])
+  user               User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tagihans           Tagihan[]
 
   @@index([classId])
 }

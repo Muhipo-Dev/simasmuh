@@ -134,13 +134,19 @@ export class StudentsService {
       finalPassword = await bcrypt.hash(finalPassword, 10);
     }
 
-    return this.prisma.student.update({
+    return (this.prisma.student as any).update({
       where: { id },
       data: {
         nisn: data.nisn,
         nis: data.nis,
         name: data.name,
         gender: data.gender,
+        ...(data.discountPercentage !== undefined && {
+          discountPercentage: data.discountPercentage,
+        }),
+        ...(data.discountReason !== undefined && {
+          discountReason: data.discountReason,
+        }),
         ...(data.classId && { class: { connect: { id: data.classId } } }),
         ...(student.userId && {
           user: {
@@ -152,7 +158,7 @@ export class StudentsService {
           },
         }),
       },
-      include: { user: true },
+      include: { user: true, class: true },
     });
   }
 
@@ -193,12 +199,49 @@ export class StudentsService {
       );
     }
 
+    const student: any = await this.prisma.student.findUnique({ where: { id } });
+    if (!student) throw new NotFoundException('Siswa tidak ditemukan');
+
+    // Auto set discount for kader program if not custom-set
+    let autoDiscountPct = student.discountPercentage;
+    let autoDiscountReason = student.discountReason;
+    if (program === 'kader') {
+      autoDiscountPct = 100;
+      autoDiscountReason = 'Program Beasiswa Kader';
+    }
+
+    return (this.prisma.student as any).update({
+      where: { id },
+      data: {
+        program,
+        discountPercentage: autoDiscountPct,
+        discountReason: autoDiscountReason,
+      },
+      include: { class: true, user: true },
+    });
+  }
+
+  /**
+   * Update discount default siswa oleh bagian keuangan
+   */
+  async updateDiscount(
+    id: string,
+    discountPercentage: number,
+    discountReason?: string,
+  ) {
+    const validPct = [0, 25, 50, 75, 100].includes(discountPercentage)
+      ? discountPercentage
+      : 0;
+
     const student = await this.prisma.student.findUnique({ where: { id } });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
-    return this.prisma.student.update({
+    return (this.prisma.student as any).update({
       where: { id },
-      data: { program },
+      data: {
+        discountPercentage: validPct,
+        discountReason: discountReason || null,
+      },
       include: { class: true, user: true },
     });
   }

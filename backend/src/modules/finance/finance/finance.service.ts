@@ -68,7 +68,7 @@ export class FinanceService {
 
   /** Daftar semua siswa beserta ringkasan tagihan mereka */
   async getStudentsWithTagihan(classId?: string) {
-    const students = await this.prisma.student.findMany({
+    const students: any[] = await this.prisma.student.findMany({
       where: classId ? { classId } : undefined,
       include: {
         class: { select: { name: true } },
@@ -76,19 +76,20 @@ export class FinanceService {
           orderBy: { createdAt: 'desc' },
           include: { payments: { orderBy: { paymentDate: 'desc' } } },
         },
-      },
+      } as any,
       orderBy: [{ class: { name: 'asc' } }, { name: 'asc' }],
     });
 
     return students.map((s) => {
-      const totalTagihan = s.tagihans.reduce((sum, t) => sum + t.amount, 0);
-      const totalLunas = s.tagihans.reduce((sum, t) => sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)), 0);
+      const tagihansList = s.tagihans || [];
+      const totalTagihan = tagihansList.reduce((sum: number, t: any) => sum + t.amount, 0);
+      const totalLunas = tagihansList.reduce((sum: number, t: any) => sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)), 0);
       const sisaTagihan = Math.max(0, totalTagihan - totalLunas);
-      const belumLunasCount = s.tagihans.filter(
-        (t) => t.status !== 'LUNAS',
+      const belumLunasCount = tagihansList.filter(
+        (t: any) => t.status !== 'LUNAS',
       ).length;
-      const sppTagihan = s.tagihans.filter(
-        (t) => t.type === 'SPP' && t.status === 'LUNAS',
+      const sppTagihan = tagihansList.filter(
+        (t: any) => t.type === 'SPP' && t.status === 'LUNAS',
       );
       return {
         id: s.id,
@@ -96,13 +97,13 @@ export class FinanceService {
         nis: s.nis,
         name: s.name,
         gender: s.gender,
-        className: s.class.name,
+        className: s.class?.name || '-',
         totalTagihan,
         totalLunas,
         sisaTagihan,
         belumLunasCount,
         sppLunasCount: sppTagihan.length,
-        tagihanCount: s.tagihans.length,
+        tagihanCount: tagihansList.length,
       };
     });
   }
@@ -117,7 +118,7 @@ export class FinanceService {
           orderBy: { createdAt: 'desc' },
           include: { payments: { orderBy: { paymentDate: 'desc' } } },
         },
-      },
+      } as any,
     });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
     return student;
@@ -298,12 +299,12 @@ export class FinanceService {
     tagihanId: string,
     dto?: { amountPaid?: number; paymentAmount?: number; notes?: string },
   ) {
-    const tagihan = await this.prisma.tagihan.findUnique({
+    const tagihan: any = await this.prisma.tagihan.findUnique({
       where: { id: tagihanId },
     });
     if (!tagihan) throw new NotFoundException('Tagihan tidak ditemukan');
 
-    const currentPaid = tagihan.amountPaid || (tagihan.status === 'LUNAS' ? tagihan.amount : 0);
+    const currentPaid = (tagihan.amountPaid ?? (tagihan.status === 'LUNAS' ? tagihan.amount : 0)) as number;
     const remainingAmount = tagihan.amount - currentPaid;
 
     if (remainingAmount <= 0) {
@@ -334,7 +335,7 @@ export class FinanceService {
     const newStatus = isLunas ? 'LUNAS' : newAmountPaid > 0 ? 'ANGSURAN' : 'BELUM_LUNAS';
 
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.tagihan.update({
+      const updated = await (tx.tagihan as any).update({
         where: { id: tagihanId },
         data: {
           amountPaid: newAmountPaid,
@@ -343,7 +344,7 @@ export class FinanceService {
         },
       });
 
-      await tx.payment.create({
+      await (tx.payment as any).create({
         data: {
           studentId: tagihan.studentId,
           tagihanId: tagihan.id,
@@ -362,10 +363,10 @@ export class FinanceService {
   /** Batalkan status LUNAS / reset angsuran */
   async batalLunasiTagihan(tagihanId: string) {
     return this.prisma.$transaction(async (tx) => {
-      await tx.payment.deleteMany({
+      await (tx.payment as any).deleteMany({
         where: { tagihanId },
       });
-      return tx.tagihan.update({
+      return (tx.tagihan as any).update({
         where: { id: tagihanId },
         data: { amountPaid: 0, status: 'BELUM_LUNAS', paidDate: null },
       });
@@ -937,7 +938,7 @@ export class FinanceService {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
-      },
+      } as any,
     });
 
     return {
@@ -954,7 +955,7 @@ export class FinanceService {
 
   /** Get ALL tagihans (paid and unpaid) for student based on userId (for Laporan Keuangan Siswa) */
   async getMyAllTagihan(userId: string) {
-    const user = await this.prisma.user.findUnique({
+    const user: any = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
         student: {
@@ -966,12 +967,12 @@ export class FinanceService {
             },
           },
         },
-      },
+      } as any,
     });
 
     let student = user?.student;
     if (!student) {
-      student = await this.prisma.student.findFirst({
+      student = await (this.prisma.student as any).findFirst({
         where: {
           OR: [
             { userId: userId },

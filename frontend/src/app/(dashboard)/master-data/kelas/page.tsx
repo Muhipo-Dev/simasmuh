@@ -495,14 +495,14 @@ export default function ClassesPage() {
 
       {/* Floating Bar Aksi Serentak / Bulk Selection Toolbar */}
       {selectedIds.length > 0 && (
-        <div className="bg-blue-900 text-white p-4 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 border border-blue-700">
+        <div className="bg-blue-900 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 border border-blue-700 mb-4">
           <div className="flex items-center gap-3">
             <CheckSquare className="w-5 h-5 text-blue-300" />
             <span className="font-bold text-sm">
               Terpilih <span className="text-amber-300 font-extrabold text-base">{selectedIds.length}</span> kelas
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button 
               size="sm" 
               onClick={() => setBulkEditOpen(true)}

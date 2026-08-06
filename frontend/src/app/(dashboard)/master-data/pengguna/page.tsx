@@ -600,7 +600,6 @@ export default function UsersPage() {
                 : 'Apakah Anda yakin ingin menghapus akun pengguna berikut? Tindakan ini tidak dapat dibatalkan.'}
             </DialogDescription>
           </DialogHeader>
-
           {!isBulkDeleteMode && userToDelete && (
             <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-sm">
               <div className="flex justify-between">

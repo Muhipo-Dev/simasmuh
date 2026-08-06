@@ -924,14 +924,15 @@ export class FinanceService {
       };
     }
 
-    // Get unpaid tagihans
+    // Get unpaid/installment tagihans
     const tagihans = await this.prisma.tagihan.findMany({
       where: {
         studentId: student.id,
-        status: 'BELUM_LUNAS',
+        status: { in: ['BELUM_LUNAS', 'ANGSURAN'] },
       },
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
       include: {
+        payments: { orderBy: { paymentDate: 'desc' } },
         paymentProofs: {
           orderBy: { createdAt: 'desc' },
           take: 1,
@@ -959,7 +960,10 @@ export class FinanceService {
         student: {
           include: {
             class: { select: { name: true } },
-            tagihans: { orderBy: { createdAt: 'desc' } },
+            tagihans: {
+              orderBy: { createdAt: 'desc' },
+              include: { payments: { orderBy: { paymentDate: 'desc' } } },
+            },
           },
         },
       },
@@ -979,7 +983,10 @@ export class FinanceService {
         },
         include: {
           class: { select: { name: true } },
-          tagihans: { orderBy: { createdAt: 'desc' } },
+          tagihans: {
+            orderBy: { createdAt: 'desc' },
+            include: { payments: { orderBy: { paymentDate: 'desc' } } },
+          },
         },
       });
     }

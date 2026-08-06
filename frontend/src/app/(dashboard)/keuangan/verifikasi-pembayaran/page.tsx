@@ -53,6 +53,8 @@ export default function PaymentProofVerificationPage() {
       queryClient.invalidateQueries({ queryKey: ['finance-students'] })
       queryClient.invalidateQueries({ queryKey: ['student-tagihan'] })
       queryClient.invalidateQueries({ queryKey: ['finance-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['my-tagihans'] })
+      queryClient.invalidateQueries({ queryKey: ['my-all-tagihan'] })
       const isApproved = variables.status === 'DIVERIFIKASI'
       Swal.fire({
         title: 'Berhasil!',

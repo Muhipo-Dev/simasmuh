@@ -16,6 +16,7 @@ import {
   AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import Swal from 'sweetalert2'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import PaymentProofVerificationPage from '../verifikasi-pembayaran/page'
 
@@ -24,15 +25,16 @@ import PaymentProofVerificationPage from '../verifikasi-pembayaran/page'
 // ============================================================
 type Tagihan = {
   id: string; studentId: string; type: string; amount: number
-  month: number | null; year: number | null; dueDate: string | null
-  status: 'BELUM_LUNAS' | 'LUNAS'; paidDate: string | null
+  amountPaid?: number; month: number | null; year: number | null; dueDate: string | null
+  status: 'BELUM_LUNAS' | 'ANGSURAN' | 'LUNAS'; paidDate: string | null
   notes: string | null; createdAt: string
+  payments?: { id: string; amount: number; paymentDate: string; notes?: string }[]
 }
 
 type StudentSummary = {
   id: string; nisn: string; nis: string; name: string
   gender: string; className: string; totalTagihan: number
-  totalLunas: number; belumLunasCount: number
+  totalLunas: number; sisaTagihan?: number; belumLunasCount: number
   sppLunasCount: number; tagihanCount: number
 }
 
@@ -143,11 +145,33 @@ function TagihanModal({
   const [editId, setEditId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
-  const [filterStatus, setFilterStatus] = useState<'ALL' | 'BELUM_LUNAS' | 'LUNAS'>('ALL')
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'BELUM_LUNAS' | 'ANGSURAN' | 'LUNAS'>('ALL')
   const [showDiscountModal, setShowDiscountModal] = useState(false)
   const [discountTagihanId, setDiscountTagihanId] = useState<string | null>(null)
   const [discountPercentage, setDiscountPercentage] = useState<25 | 50 | 75 | 100>(25)
   const [discountReason, setDiscountReason] = useState('')
+
+  // State for Angsuran Modal
+  const [payTargetTagihan, setPayTargetTagihan] = useState<Tagihan | null>(null)
+  const [payAmountInput, setPayAmountInput] = useState('')
+  const [payNotesInput, setPayNotesInput] = useState('')
+  const [payMode, setPayMode] = useState<'LUNAS' | 'ANGSURAN'>('LUNAS')
+
+  const openPayDialog = (t: Tagihan) => {
+    const paid = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)
+    const remaining = Math.max(0, t.amount - paid)
+    const isInfaq = t.type.toLowerCase() === 'infaq'
+    setPayTargetTagihan(t)
+    setPayMode('LUNAS')
+    setPayAmountInput(remaining.toString())
+    setPayNotesInput('')
+  }
+
+  const closePayDialog = () => {
+    setPayTargetTagihan(null)
+    setPayAmountInput('')
+    setPayNotesInput('')
+  }
 
   const resetForm = () => { setForm(defaultForm()); setEditId(null); setShowForm(false) }
 
@@ -193,12 +217,28 @@ function TagihanModal({
   })
 
   const lunasiMut = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await authenticatedFetch(`/api-backend/finance/tagihan/${id}/lunasi`, { method: 'PATCH' })
-      if (!res.ok) throw new Error('Gagal')
+    mutationFn: async ({ id, paymentAmount, notes }: { id: string; paymentAmount?: number; notes?: string }) => {
+      const res = await authenticatedFetch(`/api-backend/finance/tagihan/${id}/lunasi`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentAmount, notes }),
+      })
+      if (!res.ok) {
+        const errText = await res.text()
+        let errMsg = 'Gagal memproses pembayaran'
+        try {
+          const json = JSON.parse(errText)
+          errMsg = json.message || errMsg
+        } catch {}
+        throw new Error(errMsg)
+      }
       return res.json()
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] }); qc.invalidateQueries({ queryKey: ['finance-students'] }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] })
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      closePayDialog()
+    },
   })
 
   const batalLunasiMut = useMutation({
@@ -419,10 +459,10 @@ function TagihanModal({
 
           {/* Filter */}
           <div className="flex gap-2">
-            {(['ALL', 'BELUM_LUNAS', 'LUNAS'] as const).map(s => (
+            {(['ALL', 'BELUM_LUNAS', 'ANGSURAN', 'LUNAS'] as const).map(s => (
               <button key={s} onClick={() => setFilterStatus(s)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${filterStatus === s ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
-                {s === 'ALL' ? 'Semua' : s === 'BELUM_LUNAS' ? 'Belum Lunas' : 'Lunas'}
+                {s === 'ALL' ? 'Semua' : s === 'BELUM_LUNAS' ? 'Belum Lunas' : s === 'ANGSURAN' ? 'Angsuran' : 'Lunas'}
                 {s !== 'ALL' && <span className="ml-1">({tagihans.filter(t => t.status === s).length})</span>}
               </button>
             ))}
@@ -434,73 +474,227 @@ function TagihanModal({
               <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 rounded-xl border border-dashed border-slate-200">
                 Belum ada tagihan.
               </div>
-            ) : filtered.map(t => (
-              <div key={t.id} className={`rounded-xl border p-3 transition-colors ${t.status === 'LUNAS' ? 'bg-emerald-50/50 border-emerald-100' : 'bg-white border-slate-100 hover:bg-slate-50'}`}>
-                <div className="flex items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-600'}`}>{t.type}</span>
-                      {t.status === 'LUNAS'
-                        ? <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Lunas</span>
-                        : <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200 flex items-center gap-1"><Clock className="w-3 h-3" /> Belum Lunas</span>
-                      }
-                      {t.month && t.year && (
-                        <span className="text-xs text-slate-500">{MONTHS.find(m => m.value === t.month!.toString())?.label} {t.year}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <span className="font-bold text-slate-900 text-base">{currency(t.amount)}</span>
-                      {t.dueDate && <span className="text-xs text-slate-400">Tempo: {formatDate(t.dueDate)}</span>}
-                    </div>
-                    {t.status === 'LUNAS' && t.paidDate && (
-                      <p className="text-xs text-emerald-500 mt-0.5">Dibayar: {formatDate(t.paidDate)}</p>
-                    )}
-                    {t.notes && <p className="text-xs text-slate-400 mt-0.5 truncate">{t.notes}</p>}
-                  </div>
+            ) : filtered.map(t => {
+              const paid = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)
+              const remaining = Math.max(0, t.amount - paid)
+              const pct = Math.min(100, Math.round((paid / t.amount) * 100))
 
-                  <div className="flex flex-col gap-1 shrink-0">
-                    {/* Lunasi / Batal Lunasi */}
-                    {t.status === 'BELUM_LUNAS' ? (
-                      <button onClick={() => lunasiMut.mutate(t.id)} disabled={lunasiMut.isPending}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors">
-                        {lunasiMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />} Lunasi
-                      </button>
-                    ) : (
-                      <button onClick={() => batalLunasiMut.mutate(t.id)} disabled={batalLunasiMut.isPending}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors">
-                        {batalLunasiMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />} Batal
-                      </button>
-                    )}
-                    <div className="flex gap-1">
-                      {/* Set Diskon Button */}
-                      {t.status === 'BELUM_LUNAS' && (
-                        <button onClick={() => openDiscountModal(t.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                          title="Set Diskon">
-                          <TrendingUp className="w-3.5 h-3.5" />
+              return (
+                <div key={t.id} className={`rounded-xl border p-3 transition-colors ${t.status === 'LUNAS' ? 'bg-emerald-50/50 border-emerald-100' : t.status === 'ANGSURAN' ? 'bg-amber-50/40 border-amber-200' : 'bg-white border-slate-100 hover:bg-slate-50'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-600'}`}>{t.type}</span>
+                        {t.status === 'LUNAS' ? (
+                          <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Lunas</span>
+                        ) : t.status === 'ANGSURAN' ? (
+                          <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 flex items-center gap-1"><Clock className="w-3 h-3" /> Angsuran ({pct}%)</span>
+                        ) : (
+                          <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200 flex items-center gap-1"><Clock className="w-3 h-3" /> Belum Lunas</span>
+                        )}
+                        {t.month && t.year && (
+                          <span className="text-xs text-slate-500">{MONTHS.find(m => m.value === t.month!.toString())?.label} {t.year}</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <span className="font-bold text-slate-900 text-base">{currency(t.amount)}</span>
+                        {t.dueDate && <span className="text-xs text-slate-400">Tempo: {formatDate(t.dueDate)}</span>}
+                      </div>
+
+                      {/* Progress Angsuran */}
+                      {t.status !== 'LUNAS' && paid > 0 && (
+                        <div className="mt-2 space-y-1">
+                          <div className="flex justify-between text-xs text-slate-600">
+                            <span>Terbayar: <strong className="text-emerald-600">{currency(paid)}</strong></span>
+                            <span>Sisa: <strong className="text-red-600">{currency(remaining)}</strong></span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      )}
+
+                      {t.status === 'LUNAS' && t.paidDate && (
+                        <p className="text-xs text-emerald-500 mt-0.5">Dibayar: {formatDate(t.paidDate)}</p>
+                      )}
+                      {t.notes && <p className="text-xs text-slate-400 mt-0.5 truncate">{t.notes}</p>}
+                    </div>
+
+                    <div className="flex flex-col gap-1 shrink-0">
+                      {/* Lunasi / Angsur / Batal */}
+                      {t.status !== 'LUNAS' ? (
+                        <button onClick={() => openPayDialog(t)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors">
+                          <CheckCircle2 className="w-3 h-3" /> {t.status === 'ANGSURAN' ? 'Angsur / Lunasi' : 'Bayar / Angsur'}
+                        </button>
+                      ) : (
+                        <button onClick={() => batalLunasiMut.mutate(t.id)} disabled={batalLunasiMut.isPending}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors">
+                          {batalLunasiMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />} Batal
                         </button>
                       )}
-                      {parseDiscountInfo(t.notes) && (
-                        <button onClick={() => removeDiscountMut.mutate(t.id)} disabled={removeDiscountMut.isPending}
-                          className="p-1.5 rounded-lg text-amber-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title="Hapus Diskon">
-                          <X className="w-3.5 h-3.5" />
+                      <div className="flex gap-1 justify-end">
+                        {/* Set Diskon Button */}
+                        {t.status === 'BELUM_LUNAS' && (
+                          <button onClick={() => openDiscountModal(t.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                            title="Set Diskon">
+                            <TrendingUp className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {parseDiscountInfo(t.notes) && (
+                          <button onClick={() => removeDiscountMut.mutate(t.id)} disabled={removeDiscountMut.isPending}
+                            className="p-1.5 rounded-lg text-amber-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Hapus Diskon">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button onClick={() => startEdit(t)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                          <Pencil className="w-3.5 h-3.5" />
                         </button>
-                      )}
-                      <button onClick={() => startEdit(t)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => setDeleteId(t.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                        <button onClick={() => setDeleteId(t.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL BAYAR / ANGSURAN TAGIHAN */}
+      <Dialog open={!!payTargetTagihan} onOpenChange={(v) => { if (!v) closePayDialog() }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-700">
+              <Receipt className="w-5 h-5 text-emerald-600" /> Pembayaran / Angsuran Tagihan
+            </DialogTitle>
+            <DialogDescription>
+              {payTargetTagihan?.type} — {student?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          {payTargetTagihan && (() => {
+            const paid = payTargetTagihan.amountPaid || (payTargetTagihan.status === 'LUNAS' ? payTargetTagihan.amount : 0)
+            const remaining = Math.max(0, payTargetTagihan.amount - paid)
+            const isInfaq = payTargetTagihan.type.toLowerCase() === 'infaq'
+
+            return (
+              <div className="space-y-4 pt-2">
+                <div className="bg-slate-50 border rounded-xl p-3 space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Total Tagihan:</span>
+                    <span className="font-bold text-slate-800">{currency(payTargetTagihan.amount)}</span>
+                  </div>
+                  {paid > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Sudah Terbayar:</span>
+                      <span className="font-semibold text-emerald-600">{currency(paid)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm pt-1 border-t">
+                    <span className="font-semibold text-slate-700">Sisa Tagihan:</span>
+                    <span className="font-bold text-red-600">{currency(remaining)}</span>
+                  </div>
+                </div>
+
+                {/* Warning if Infaq */}
+                {isInfaq && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 text-xs text-amber-800">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong>Aturan Infaq:</strong> Tagihan Infaq <u>TIDAK BISA</u> diangsur. Pembayaran harus dilakukan lunas sekaligus ({currency(remaining)}).
+                    </div>
+                  </div>
+                )}
+
+                {/* Option Mode */}
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Opsi Pembayaran</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setPayMode('LUNAS'); setPayAmountInput(remaining.toString()); }}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
+                        payMode === 'LUNAS'
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      Lunas Sekaligus ({currency(remaining)})
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isInfaq}
+                      onClick={() => { setPayMode('ANGSURAN'); setPayAmountInput(''); }}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
+                        isInfaq
+                          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                          : payMode === 'ANGSURAN'
+                          ? 'bg-amber-600 text-white border-amber-600'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      Cicil / Angsur
+                    </button>
+                  </div>
+                </div>
+
+                {/* Input Nominal */}
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 mb-1 block">Nominal Pembayaran (Rp)</Label>
+                  <Input
+                    type="number"
+                    placeholder="Masukkan nominal..."
+                    value={payAmountInput}
+                    disabled={payMode === 'LUNAS' || isInfaq}
+                    onChange={(e) => setPayAmountInput(e.target.value)}
+                    className="bg-white"
+                  />
+                  {payMode === 'ANGSURAN' && !isInfaq && payAmountInput && (
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Sisa setelah angsuran ini: <strong>{currency(Math.max(0, remaining - (parseFloat(payAmountInput) || 0)))}</strong>
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 mb-1 block">Catatan Pembayaran (Opsional)</Label>
+                  <Input
+                    placeholder="Misal: Angsuran ke-1 / Titipan tunai"
+                    value={payNotesInput}
+                    onChange={(e) => setPayNotesInput(e.target.value)}
+                    className="bg-white"
+                  />
+                </div>
+
+                <DialogFooter className="gap-2 pt-2">
+                  <Button variant="outline" onClick={closePayDialog}>Batal</Button>
+                  <Button
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={!payAmountInput || parseFloat(payAmountInput) <= 0 || lunasiMut.isPending}
+                    onClick={() => {
+                      const amount = parseFloat(payAmountInput)
+                      if (isInfaq && amount < remaining) {
+                        Swal.fire('Error', 'Tagihan Infaq tidak dapat diangsur.', 'error')
+                        return
+                      }
+                      lunasiMut.mutate({ id: payTargetTagihan.id, paymentAmount: amount, notes: payNotesInput })
+                    }}
+                  >
+                    {lunasiMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Proses Pembayaran
+                  </Button>
+                </DialogFooter>
+              </div>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 

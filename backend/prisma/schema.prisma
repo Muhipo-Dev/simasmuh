@@ -223,6 +223,7 @@ model IzinKeluar {
 model Payment {
   id          String   @id @default(uuid())
   studentId   String
+  tagihanId   String?
   type        String
   amount      Float
   paymentDate DateTime @default(now())
@@ -232,8 +233,10 @@ model Payment {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tagihan     Tagihan? @relation(fields: [tagihanId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
+  @@index([tagihanId])
   @@index([year, month])
 }
 
@@ -242,6 +245,7 @@ model Tagihan {
   studentId     String
   type          String
   amount        Float
+  amountPaid    Float          @default(0)
   month         Int?
   year          Int?
   dueDate       DateTime?
@@ -250,6 +254,7 @@ model Tagihan {
   notes         String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  payments      Payment[]
   paymentProofs PaymentProof[]
   student       Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
 

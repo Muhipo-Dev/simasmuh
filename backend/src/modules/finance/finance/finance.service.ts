@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -72,18 +72,20 @@ export class FinanceService {
       where: classId ? { classId } : undefined,
       include: {
         class: { select: { name: true } },
-        tagihans: { orderBy: { createdAt: 'desc' } },
+        tagihans: {
+          orderBy: { createdAt: 'desc' },
+          include: { payments: { orderBy: { paymentDate: 'desc' } } },
+        },
       },
       orderBy: [{ class: { name: 'asc' } }, { name: 'asc' }],
     });
 
     return students.map((s) => {
       const totalTagihan = s.tagihans.reduce((sum, t) => sum + t.amount, 0);
-      const totalLunas = s.tagihans
-        .filter((t) => t.status === 'LUNAS')
-        .reduce((sum, t) => sum + t.amount, 0);
+      const totalLunas = s.tagihans.reduce((sum, t) => sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)), 0);
+      const sisaTagihan = Math.max(0, totalTagihan - totalLunas);
       const belumLunasCount = s.tagihans.filter(
-        (t) => t.status === 'BELUM_LUNAS',
+        (t) => t.status !== 'LUNAS',
       ).length;
       const sppTagihan = s.tagihans.filter(
         (t) => t.type === 'SPP' && t.status === 'LUNAS',
@@ -97,6 +99,7 @@ export class FinanceService {
         className: s.class.name,
         totalTagihan,
         totalLunas,
+        sisaTagihan,
         belumLunasCount,
         sppLunasCount: sppTagihan.length,
         tagihanCount: s.tagihans.length,
@@ -110,7 +113,10 @@ export class FinanceService {
       where: { id: studentId },
       include: {
         class: { select: { name: true } },
-        tagihans: { orderBy: { createdAt: 'desc' } },
+        tagihans: {
+          orderBy: { createdAt: 'desc' },
+          include: { payments: { orderBy: { paymentDate: 'desc' } } },
+        },
       },
     });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
@@ -287,19 +293,82 @@ export class FinanceService {
     });
   }
 
-  /** Tandai tagihan sebagai LUNAS */
-  async lunasiTagihan(tagihanId: string) {
-    return this.prisma.tagihan.update({
+  /** Tandai tagihan sebagai LUNAS atau bayar angsuran */
+  async lunasiTagihan(
+    tagihanId: string,
+    dto?: { amountPaid?: number; paymentAmount?: number; notes?: string },
+  ) {
+    const tagihan = await this.prisma.tagihan.findUnique({
       where: { id: tagihanId },
-      data: { status: 'LUNAS', paidDate: new Date() },
+    });
+    if (!tagihan) throw new NotFoundException('Tagihan tidak ditemukan');
+
+    const currentPaid = tagihan.amountPaid || (tagihan.status === 'LUNAS' ? tagihan.amount : 0);
+    const remainingAmount = tagihan.amount - currentPaid;
+
+    if (remainingAmount <= 0) {
+      throw new BadRequestException('Tagihan ini sudah lunas');
+    }
+
+    const payAmount = dto?.paymentAmount ?? dto?.amountPaid ?? remainingAmount;
+
+    // Check Infaq business rule
+    if (tagihan.type.toLowerCase() === 'infaq' && payAmount < remainingAmount) {
+      throw new BadRequestException(
+        'Tagihan Infaq tidak dapat diangsur. Pembayaran harus lunas sekaligus.',
+      );
+    }
+
+    if (payAmount <= 0) {
+      throw new BadRequestException('Nominal pembayaran harus lebih besar dari 0');
+    }
+
+    if (payAmount > remainingAmount) {
+      throw new BadRequestException(
+        `Nominal pembayaran (Rp ${payAmount.toLocaleString('id-ID')}) melebihi sisa tagihan (Rp ${remainingAmount.toLocaleString('id-ID')})`,
+      );
+    }
+
+    const newAmountPaid = currentPaid + payAmount;
+    const isLunas = newAmountPaid >= tagihan.amount;
+    const newStatus = isLunas ? 'LUNAS' : newAmountPaid > 0 ? 'ANGSURAN' : 'BELUM_LUNAS';
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.tagihan.update({
+        where: { id: tagihanId },
+        data: {
+          amountPaid: newAmountPaid,
+          status: newStatus,
+          paidDate: isLunas ? new Date() : tagihan.paidDate,
+        },
+      });
+
+      await tx.payment.create({
+        data: {
+          studentId: tagihan.studentId,
+          tagihanId: tagihan.id,
+          type: tagihan.type,
+          amount: payAmount,
+          month: tagihan.month,
+          year: tagihan.year,
+          notes: dto?.notes || (isLunas ? 'Pembayaran Lunas' : 'Pembayaran Angsuran'),
+        },
+      });
+
+      return updated;
     });
   }
 
-  /** Batalkan status LUNAS (ubah kembali ke BELUM_LUNAS) */
+  /** Batalkan status LUNAS / reset angsuran */
   async batalLunasiTagihan(tagihanId: string) {
-    return this.prisma.tagihan.update({
-      where: { id: tagihanId },
-      data: { status: 'BELUM_LUNAS', paidDate: null },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.payment.deleteMany({
+        where: { tagihanId },
+      });
+      return tx.tagihan.update({
+        where: { id: tagihanId },
+        data: { amountPaid: 0, status: 'BELUM_LUNAS', paidDate: null },
+      });
     });
   }
 

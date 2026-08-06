@@ -139,8 +139,8 @@ export class FinanceController {
   }
 
   @Patch('tagihan/:tagihanId/lunasi')
-  lunasiTagihan(@Param('tagihanId') tagihanId: string) {
-    return this.financeService.lunasiTagihan(tagihanId);
+  lunasiTagihan(@Param('tagihanId') tagihanId: string, @Body() body?: any) {
+    return this.financeService.lunasiTagihan(tagihanId, body);
   }
 
   @Patch('tagihan/:tagihanId/batal-lunasi')

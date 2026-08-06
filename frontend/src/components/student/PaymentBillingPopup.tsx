@@ -33,10 +33,11 @@ type Tagihan = {
   id: string
   type: string
   amount: number
+  amountPaid?: number
   month: number | null
   year: number | null
   dueDate: string | null
-  status: 'BELUM_LUNAS' | 'LUNAS'
+  status: 'BELUM_LUNAS' | 'ANGSURAN' | 'LUNAS'
   paidDate: string | null
   notes: string | null
   createdAt: string
@@ -372,6 +373,24 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
                                   Jatuh tempo: {formatDate(tagihan.dueDate)}
                                 </div>
                               )}
+
+                              {/* Installment Progress */}
+                              {tagihan.amountPaid && tagihan.amountPaid > 0 && tagihan.status !== 'LUNAS' && (
+                                <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs space-y-1">
+                                  <div className="flex justify-between font-medium text-amber-900">
+                                    <span>Status: <strong className="text-amber-700">ANGSURAN</strong></span>
+                                    <span>Sisa: <strong className="text-red-700">{formatCurrency(tagihan.amount - tagihan.amountPaid)}</strong></span>
+                                  </div>
+                                  <div className="w-full h-1.5 bg-amber-200 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-amber-600 rounded-full"
+                                      style={{ width: `${Math.min(100, Math.round((tagihan.amountPaid / tagihan.amount) * 100))}%` }}
+                                    />
+                                  </div>
+                                  <p className="text-[11px] text-amber-700 text-right">Sudah terbayar {formatCurrency(tagihan.amountPaid)} dari {formatCurrency(tagihan.amount)}</p>
+                                </div>
+                              )}
+
                               {tagihan.notes && !parseDiscountInfo(tagihan.notes) && (
                                 <p className="text-sm text-slate-600 italic bg-slate-50 p-2 rounded-md border border-slate-100">{tagihan.notes}</p>
                               )}

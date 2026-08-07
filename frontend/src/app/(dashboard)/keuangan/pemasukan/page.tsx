@@ -415,18 +415,19 @@ function TagihanModal({
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); resetForm() } }}>
         <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-          <div className="shrink-0 p-6 sm:p-7 border-b border-slate-100 dark:border-slate-800">
-            <DialogHeader className="space-y-1.5 pb-0">
+          {/* Header Banner Modern */}
+          <div className="shrink-0 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-5 sm:p-6 text-white shadow-md">
+            <DialogHeader className="space-y-1 pb-0">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <DialogTitle className="flex items-center gap-2.5 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
-                    <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-xl text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900">
-                      <Receipt className="w-5 h-5" />
+                <div className="space-y-1">
+                  <DialogTitle className="flex items-center gap-3 text-white text-lg sm:text-xl font-black">
+                    <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
+                      <Receipt className="w-5 h-5 text-blue-200" />
                     </div>
-                    Tagihan — {student?.name}
+                    Tagihan Siswa — {student?.name}
                   </DialogTitle>
-                  <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium mt-1">
-                    Kelas {student?.class?.name} · NISN {student?.nisn} · NIS {student?.nis}
+                  <DialogDescription className="text-blue-100 text-xs sm:text-sm font-medium">
+                    Kelas <span className="font-extrabold text-white">{student?.class?.name}</span> · NISN: <span className="font-mono text-white">{student?.nisn}</span> · NIS: <span className="font-mono text-white">{student?.nis}</span>
                   </DialogDescription>
                 </div>
                 {student && onResetStudent && (
@@ -437,7 +438,7 @@ function TagihanModal({
                       onClose();
                       onResetStudent(student.id);
                     }}
-                    className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-xs font-bold gap-1.5 h-9 rounded-xl shrink-0"
+                    className="border-rose-400/40 bg-rose-500/10 text-rose-200 hover:bg-rose-600 hover:text-white text-xs font-extrabold gap-1.5 h-9 rounded-xl shrink-0 backdrop-blur-sm transition-all shadow-sm"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     Reset Tagihan Siswa

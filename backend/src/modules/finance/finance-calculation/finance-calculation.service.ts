@@ -80,7 +80,7 @@ export class FinanceCalculationService {
   }
 
   // ============================================================
-  // DPP (Dana Pengembangan Pendidikan) CALCULATIONS
+  // DPP (Dana Pengembangan Akademik) CALCULATIONS
   // ============================================================
 
   /**

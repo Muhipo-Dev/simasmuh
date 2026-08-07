@@ -265,7 +265,7 @@ export default function FinanceSettingsPage() {
                       DPP
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500">Dana Pengembangan Pendidikan</p>
+                  <p className="text-xs text-slate-500">Dana Pengembangan Akademik</p>
                   <div className="relative">
                     <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">Rp</span>
                     <Input 
@@ -292,7 +292,7 @@ export default function FinanceSettingsPage() {
                       UKA
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500">Uang Kegiatan / Akademik</p>
+                  <p className="text-xs text-slate-500">Uang Kegiatan Akademik</p>
                   <div className="relative">
                     <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">Rp</span>
                     <Input 
@@ -319,7 +319,7 @@ export default function FinanceSettingsPage() {
                       UKS
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500">Uang Kesehatan / Sarana</p>
+                  <p className="text-xs text-slate-500">Uang Kegiatan Siswa</p>
                   <div className="relative">
                     <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">Rp</span>
                     <Input 

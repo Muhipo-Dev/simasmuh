@@ -22,10 +22,10 @@ const MONTHS = [
 
 const PAYMENT_TYPES = [
   { value: 'SPP', label: 'SPP', icon: BookOpen, bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', badge: 'bg-blue-100 text-blue-700', desc: 'Sumbangan Pembinaan Pendidikan' },
-  { value: 'DPP', label: 'DPP', icon: Building2, bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', badge: 'bg-purple-100 text-purple-700', desc: 'Dana Pengembangan Pendidikan' },
-  { value: 'INFAQ', label: 'Infaq Sekolah', icon: Users2, bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', badge: 'bg-emerald-100 text-emerald-700', desc: 'Uang Infaq Sekolah' },
-  { value: 'AKADEMIK', label: 'Kegiatan Akademik', icon: GraduationCap, bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', badge: 'bg-amber-100 text-amber-700', desc: 'Uang Kegiatan Akademik' },
-  { value: 'SEKOLAH', label: 'Kegiatan Sekolah', icon: Calendar, bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', badge: 'bg-rose-100 text-rose-700', desc: 'Uang Kegiatan Sekolah' },
+  { value: 'DPP', label: 'DPP', icon: Building2, bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', badge: 'bg-purple-100 text-purple-700', desc: 'Dana Pengembangan Akademik' },
+  { value: 'UKA', label: 'UKA', icon: GraduationCap, bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', badge: 'bg-indigo-100 text-indigo-700', desc: 'Uang Kegiatan Akademik' },
+  { value: 'UKS', label: 'UKS', icon: Users2, bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', badge: 'bg-teal-100 text-teal-700', desc: 'Uang Kegiatan Siswa' },
+  { value: 'INFAQ', label: 'Infaq Sekolah', icon: Receipt, bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', badge: 'bg-emerald-100 text-emerald-700', desc: 'Uang Infaq Sekolah' },
 ]
 
 const currency = (n: number) =>

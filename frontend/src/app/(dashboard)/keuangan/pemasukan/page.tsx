@@ -71,9 +71,9 @@ const MONTHS = [
 
 const PAYMENT_TYPES = [
   { value: 'SPP', label: 'SPP', desc: 'Sumbangan Pembinaan Pendidikan' },
-  { value: 'DPP', label: 'DPP', desc: 'Dana Pengembangan Pendidikan' },
-  { value: 'UKA', label: 'UKA', desc: 'Uang Kegiatan / Akademik' },
-  { value: 'UKS', label: 'UKS', desc: 'Uang Kesehatan / Sarana' },
+  { value: 'DPP', label: 'DPP', desc: 'Dana Pengembangan Akademik' },
+  { value: 'UKA', label: 'UKA', desc: 'Uang Kegiatan Akademik' },
+  { value: 'UKS', label: 'UKS', desc: 'Uang Kegiatan Siswa' },
   { value: 'INFAQ', label: 'Infaq', desc: 'Uang Infaq Sekolah (Sukarela)' },
   { value: 'AKADEMIK', label: 'Akademik', desc: 'Kegiatan Akademik' },
   { value: 'SEKOLAH', label: 'Kegiatan', desc: 'Kegiatan Sekolah' },

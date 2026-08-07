@@ -270,7 +270,7 @@ async function main() {
           month: 7,
           year: 2026,
           status: isPaid ? 'LUNAS' : 'BELUM_LUNAS',
-          notes: `DPP (Dana Pengembangan Pendidikan) - Program ${prog.toUpperCase()}`,
+          notes: `DPP (Dana Pengembangan Akademik) - Program ${prog.toUpperCase()}`,
         },
       });
       tagihanCount++;

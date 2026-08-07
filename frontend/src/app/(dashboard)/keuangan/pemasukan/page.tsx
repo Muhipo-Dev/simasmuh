@@ -401,8 +401,14 @@ function TagihanModal({
 
   const tagihans = student?.tagihans ?? []
   const filtered = filterStatus === 'ALL' ? tagihans : tagihans.filter(t => t.status === filterStatus)
-  const totalBelumLunas = tagihans.filter(t => t.status === 'BELUM_LUNAS').reduce((s, t) => s + t.amount, 0)
-  const totalLunas = tagihans.filter(t => t.status === 'LUNAS').reduce((s, t) => s + t.amount, 0)
+  const belumLunasTagihans = tagihans.filter(t => t.status === 'BELUM_LUNAS')
+  const angsuranTagihans = tagihans.filter(t => t.status === 'ANGSURAN')
+  const lunasTagihans = tagihans.filter(t => t.status === 'LUNAS')
+
+  const totalBelumLunas = belumLunasTagihans.reduce((s, t) => s + Math.max(0, t.amount - (t.amountPaid || 0)), 0)
+  const totalAngsuranPaid = angsuranTagihans.reduce((s, t) => s + (t.amountPaid || 0), 0)
+  const totalAngsuranSisa = angsuranTagihans.reduce((s, t) => s + Math.max(0, t.amount - (t.amountPaid || 0)), 0)
+  const totalLunas = lunasTagihans.reduce((s, t) => s + t.amount, 0)
   const isLoading = addMut.isPending || editMut.isPending
 
   return (
@@ -443,28 +449,101 @@ function TagihanModal({
 
           <div className="flex-1 overflow-y-auto p-6 sm:p-7 space-y-5 custom-scrollbar">
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-1">
-            <div className="bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 rounded-2xl p-4 flex items-center justify-between shadow-xs">
-              <div>
-                <p className="text-xs text-rose-600 dark:text-rose-400 font-bold uppercase tracking-wider">Belum Lunas</p>
-                <p className="font-extrabold text-rose-700 dark:text-rose-300 text-xl sm:text-2xl mt-0.5">{currency(totalBelumLunas)}</p>
+          {/* Summary Cards (3 Kolom) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 my-1">
+            <div className="bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
+              <div className="flex justify-between items-start">
+                <p className="text-xs text-rose-600 dark:text-rose-400 font-bold uppercase tracking-wider">Belum Dibayar</p>
+                <span className="text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 border border-rose-200 dark:border-rose-800 px-2.5 py-0.5 rounded-full">
+                  {belumLunasTagihans.length} Tagihan
+                </span>
               </div>
-              <span className="text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 border border-rose-200 dark:border-rose-800 px-3 py-1 rounded-full">
-                {tagihans.filter(t => t.status === 'BELUM_LUNAS').length} Tagihan
-              </span>
+              <p className="font-extrabold text-rose-700 dark:text-rose-300 text-lg sm:text-xl mt-2">{currency(totalBelumLunas)}</p>
             </div>
 
-            <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-2xl p-4 flex items-center justify-between shadow-xs">
-              <div>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Sudah Lunas</p>
-                <p className="font-extrabold text-emerald-700 dark:text-emerald-300 text-xl sm:text-2xl mt-0.5">{currency(totalLunas)}</p>
+            <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300/80 dark:border-amber-900/60 rounded-2xl p-4 flex flex-col justify-between shadow-sm ring-1 ring-amber-400/20">
+              <div className="flex justify-between items-start">
+                <p className="text-xs text-amber-700 dark:text-amber-400 font-extrabold uppercase tracking-wider flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" /> Sedang Diangsur
+                </p>
+                <span className="text-xs font-extrabold text-amber-800 dark:text-amber-300 bg-amber-200/70 dark:bg-amber-900/70 border border-amber-300 dark:border-amber-800 px-2.5 py-0.5 rounded-full">
+                  {angsuranTagihans.length} Tagihan
+                </span>
               </div>
-              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-full">
-                {tagihans.filter(t => t.status === 'LUNAS').length} Tagihan
-              </span>
+              <div className="mt-2">
+                <p className="font-extrabold text-amber-900 dark:text-amber-200 text-lg sm:text-xl">{currency(totalAngsuranSisa)}</p>
+                <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-0.5">
+                  Sudah Dibayar: {currency(totalAngsuranPaid)}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
+              <div className="flex justify-between items-start">
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Sudah Lunas</p>
+                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 rounded-full">
+                  {lunasTagihans.length} Tagihan
+                </span>
+              </div>
+              <p className="font-extrabold text-emerald-700 dark:text-emerald-300 text-lg sm:text-xl mt-2">{currency(totalLunas)}</p>
             </div>
           </div>
+
+          {/* AREA TAGIHAN SEDANG DIANGSUR (Highlight Banner jika ada angsuran aktif) */}
+          {angsuranTagihans.length > 0 && (
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-amber-500/10 border-2 border-amber-400/50 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black text-amber-900 dark:text-amber-300 uppercase tracking-wider flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
+                  Area Tagihan Sedang Diangsur ({angsuranTagihans.length} Tagihan Aktif)
+                </h4>
+                <span className="text-xs font-extrabold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-3 py-1 rounded-full border border-amber-300">
+                  Total Sisa Kurang Bayar: {currency(totalAngsuranSisa)}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {angsuranTagihans.map(at => {
+                  const paid = at.amountPaid || 0
+                  const remaining = Math.max(0, at.amount - paid)
+                  const pct = Math.min(100, Math.round((paid / at.amount) * 100))
+                  return (
+                    <div key={at.id} className="bg-white dark:bg-slate-950 border border-amber-200 dark:border-amber-900/60 rounded-xl p-3.5 space-y-2 shadow-xs">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className={`text-xs font-extrabold px-2 py-0.5 rounded ${TYPE_COLORS[at.type] || 'bg-slate-100 text-slate-700'}`}>
+                            {at.type}
+                          </span>
+                          {at.month && at.year && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-1">
+                              {MONTHS.find(m => m.value === at.month!.toString())?.label} {at.year}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => openPayDialog(at)}
+                          className="h-8 text-xs font-extrabold bg-amber-600 hover:bg-amber-700 text-white rounded-lg gap-1 shadow-xs"
+                        >
+                          <Wallet className="w-3.5 h-3.5" /> Cicil Lagi
+                        </Button>
+                      </div>
+
+                      <div className="space-y-1 pt-1">
+                        <div className="flex justify-between text-xs font-semibold">
+                          <span className="text-slate-500">Terbayar: <strong className="text-emerald-600">{currency(paid)} ({pct}%)</strong></span>
+                          <span className="text-slate-500">Sisa: <strong className="text-rose-600">{currency(remaining)}</strong></span>
+                        </div>
+                        <div className="w-full h-2 bg-amber-100 dark:bg-amber-950 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Form Tagihan Baru / Edit */}
           {!showForm ? (

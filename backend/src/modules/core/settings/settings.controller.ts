@@ -3,21 +3,52 @@ import {
   Get,
   Put,
   Post,
+  Patch,
+  Delete,
+  Param,
   Body,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { SettingsService } from './settings.service';
+import { ProgramConfigService } from './program-config.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly programConfigService: ProgramConfigService,
+  ) {}
 
   @Get('public')
   getPublicSettings() {
     return this.settingsService.getPublicSettings();
+  }
+
+  @Get('program-configs')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  getAllProgramConfigs() {
+    return this.programConfigService.getAllPrograms();
+  }
+
+  @Post('program-configs')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  createProgramConfig(@Body() body: any) {
+    return this.programConfigService.createProgram(body);
+  }
+
+  @Put('program-configs/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  updateProgramConfig(@Param('id') id: string, @Body() body: any) {
+    return this.programConfigService.updateProgram(id, body);
+  }
+
+  @Delete('program-configs/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  deleteProgramConfig(@Param('id') id: string) {
+    return this.programConfigService.deleteProgram(id);
   }
 
   @Get('public/stats')
@@ -72,3 +103,4 @@ export class SettingsController {
     return this.settingsService.validateQrPublicToken(token);
   }
 }
+

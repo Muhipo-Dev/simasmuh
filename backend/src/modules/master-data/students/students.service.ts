@@ -191,39 +191,39 @@ export class StudentsService {
    * seni budaya, soshum saintek, inklusi
    */
   async updateProgram(id: string, program: string | null) {
-    const VALID_PROGRAMS = [
-      'kader',
-      'reguler',
-      'tahfidz',
-      'olahraga',
-      'MIC',
-      'enterpreneur',
-      'seni budaya',
-      'soshum saintek',
-      'inklusi',
-    ];
-
-    if (program !== null && !VALID_PROGRAMS.includes(program)) {
-      throw new Error(
-        `Program tidak valid. Pilihan yang tersedia: ${VALID_PROGRAMS.join(', ')}`,
-      );
+    let progConfig: any = null;
+    if (program !== null) {
+      progConfig = await this.prisma.programConfig.findUnique({
+        where: { code: program },
+      });
+      if (!progConfig) {
+        // Fallback check code case-insensitive or exact
+        progConfig = await this.prisma.programConfig.findFirst({
+          where: { code: { equals: program, mode: 'insensitive' } },
+        });
+      }
+      if (!progConfig) {
+        throw new Error(`Program '${program}' tidak ditemukan pada konfigurasi program.`);
+      }
     }
 
     const student: any = await this.prisma.student.findUnique({ where: { id } });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
-    // Auto set discount for kader program only if no custom discount was set
+    // Auto set discount from program default if no custom discount was set for student
     let autoDiscountPct = student.discountPercentage;
     let autoDiscountReason = student.discountReason;
-    if (program === 'kader' && (!student.discountPercentage || student.discountPercentage === 0)) {
-      autoDiscountPct = 100;
-      autoDiscountReason = 'Program Beasiswa Kader';
+    if (progConfig && (!student.discountPercentage || student.discountPercentage === 0)) {
+      if (progConfig.defaultDiscount > 0) {
+        autoDiscountPct = progConfig.defaultDiscount;
+        autoDiscountReason = `Default Diskon Program ${progConfig.name}`;
+      }
     }
 
     const updated = await (this.prisma.student as any).update({
       where: { id },
       data: {
-        program,
+        program: progConfig ? progConfig.code : null,
         discountPercentage: autoDiscountPct,
         discountReason: autoDiscountReason,
       },
@@ -238,6 +238,7 @@ export class StudentsService {
 
     return updated;
   }
+
 
   /**
    * Update discount default siswa oleh bagian keuangan/superadmin dan sinkronisasi ke tagihan

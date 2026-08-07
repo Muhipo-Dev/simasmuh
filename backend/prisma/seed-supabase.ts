@@ -141,7 +141,32 @@ async function main() {
       create: s,
     });
   }
-  console.log('✅ Subjects ready');
+  // 7. Seed ProgramConfigs
+  const DEFAULT_PROGRAMS = [
+    { code: 'kader', name: 'Kader', defaultSpp: 300000, defaultDiscount: 100, description: 'Program Beasiswa Kader' },
+    { code: 'reguler', name: 'Reguler', defaultSpp: 300000, defaultDiscount: 0, description: 'Program Siswa Reguler' },
+    { code: 'tahfidz', name: 'Tahfidz', defaultSpp: 360000, defaultDiscount: 0, description: 'Program Hifdzil Qur\'an' },
+    { code: 'olahraga', name: 'Olahraga', defaultSpp: 330000, defaultDiscount: 0, description: 'Program Bakat Olahraga' },
+    { code: 'MIC', name: 'Muhipo Internasional', defaultSpp: 600000, defaultDiscount: 0, description: 'Program Class Internasional' },
+    { code: 'enterpreneur', name: 'Entrepreneur', defaultSpp: 390000, defaultDiscount: 0, description: 'Program Kewirausahaan' },
+    { code: 'seni budaya', name: 'Seni Budaya', defaultSpp: 330000, defaultDiscount: 0, description: 'Program Seni & Kesenian' },
+    { code: 'soshum saintek', name: 'Soshum Saintek', defaultSpp: 450000, defaultDiscount: 0, description: 'Program Bimbingan Soshum & Saintek' },
+    { code: 'inklusi', name: 'Inklusi', defaultSpp: 240000, defaultDiscount: 0, description: 'Program Pendampingan Inklusi' },
+  ];
+
+  for (const prog of DEFAULT_PROGRAMS) {
+    await prisma.programConfig.upsert({
+      where: { code: prog.code },
+      update: {
+        name: prog.name,
+        defaultSpp: prog.defaultSpp,
+        defaultDiscount: prog.defaultDiscount,
+        description: prog.description,
+      },
+      create: prog,
+    });
+  }
+  console.log('✅ ProgramConfigs seeded');
 
   console.log('🎉 Seeding completed successfully!');
 }

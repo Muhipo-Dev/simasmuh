@@ -34,24 +34,18 @@ export class FinanceCalculationService {
       throw new Error('Siswa tidak ditemukan');
     }
 
-    // Base SPP amount (can be moved to settings table later)
-    const baseSPP = 150000;
+    let sppAmount = 300000;
+    if (student.program) {
+      const progConfig = await this.prisma.programConfig.findUnique({
+        where: { code: student.program },
+      }) || await this.prisma.programConfig.findFirst({
+        where: { code: { equals: student.program, mode: 'insensitive' } },
+      });
 
-    // Program-specific multipliers
-    const programRates: Record<string, number> = {
-      kader: baseSPP * 1.0,
-      reguler: baseSPP * 1.0,
-      tahfidz: baseSPP * 1.2,
-      olahraga: baseSPP * 1.1,
-      MIC: baseSPP * 2.0, // Muhipo Internasional Class
-      enterpreneur: baseSPP * 1.3,
-      'seni budaya': baseSPP * 1.1,
-      'soshum saintek': baseSPP * 1.5,
-      inklusi: baseSPP * 0.8,
-    };
-
-    const multiplier = programRates[student.program || 'reguler'] || 1.0;
-    const sppAmount = Math.round(baseSPP * multiplier);
+      if (progConfig && progConfig.defaultSpp > 0) {
+        sppAmount = progConfig.defaultSpp;
+      }
+    }
 
     this.logger.log(
       `SPP calculated for student ${studentId} (${student.program}): ${sppAmount}`,

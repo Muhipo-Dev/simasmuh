@@ -42,6 +42,9 @@ type StudentDetail = {
   id: string; name: string; nisn: string; nis: string
   className: string; gender: string; tagihans: Tagihan[]
   class: { name: string }
+  program?: string | null
+  discountPercentage?: number
+  discountReason?: string | null
 }
 
 type Rekap = {
@@ -69,7 +72,9 @@ const MONTHS = [
 const PAYMENT_TYPES = [
   { value: 'SPP', label: 'SPP', desc: 'Sumbangan Pembinaan Pendidikan' },
   { value: 'DPP', label: 'DPP', desc: 'Dana Pengembangan Pendidikan' },
-  { value: 'INFAQ', label: 'Infaq', desc: 'Uang Infaq Sekolah' },
+  { value: 'UKA', label: 'UKA', desc: 'Uang Kegiatan / Akademik' },
+  { value: 'UKS', label: 'UKS', desc: 'Uang Kesehatan / Sarana' },
+  { value: 'INFAQ', label: 'Infaq', desc: 'Uang Infaq Sekolah (Sukarela)' },
   { value: 'AKADEMIK', label: 'Akademik', desc: 'Kegiatan Akademik' },
   { value: 'SEKOLAH', label: 'Kegiatan', desc: 'Kegiatan Sekolah' },
 ]
@@ -77,6 +82,8 @@ const PAYMENT_TYPES = [
 const TYPE_COLORS: Record<string, string> = {
   SPP: 'bg-blue-50 text-blue-700 border border-blue-200',
   DPP: 'bg-purple-50 text-purple-700 border border-purple-200',
+  UKA: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+  UKS: 'bg-teal-50 text-teal-700 border border-teal-200',
   INFAQ: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
   AKADEMIK: 'bg-amber-50 text-amber-700 border border-amber-200',
   SEKOLAH: 'bg-rose-50 text-rose-700 border border-rose-200',
@@ -140,6 +147,7 @@ function TagihanModal({
   student: StudentDetail | null; open: boolean; onClose: () => void
 }) {
   const authenticatedFetch = useAuthenticatedFetch();
+  const authenticatedQuery = useAuthenticatedQuery();
   const qc = useQueryClient()
   const [form, setForm] = useState<FormState>(defaultForm())
   const [editId, setEditId] = useState<string | null>(null)
@@ -156,6 +164,68 @@ function TagihanModal({
   const [payAmountInput, setPayAmountInput] = useState('')
   const [payNotesInput, setPayNotesInput] = useState('')
   const [payMode, setPayMode] = useState<'LUNAS' | 'ANGSURAN'>('LUNAS')
+
+  // Queries for public settings and program configs to auto-fill fee amounts
+  const { data: publicSettings } = useQuery<{ defaultDpp?: number; defaultUka?: number; defaultUks?: number }>({
+    queryKey: ['public-settings'],
+    queryFn: () => authenticatedQuery('/api-backend/settings/public'),
+  })
+
+  const { data: programConfigs } = useQuery<Array<{ id: string; code: string; name: string; defaultSpp: number; defaultDiscount: number }>>({
+    queryKey: ['program-configs'],
+    queryFn: () => authenticatedQuery('/api-backend/settings/program-configs'),
+  })
+
+  const studentProgConfig = useMemo(() => {
+    if (!student?.program || !programConfigs) return null
+    return programConfigs.find(p => p.code.toLowerCase() === student.program?.toLowerCase()) || null
+  }, [student?.program, programConfigs])
+
+  const handleSelectType = (typeVal: string) => {
+    let autoAmount = form.amount
+    let autoDiscountPct = form.discountPercentage
+    let autoDiscountReason = form.discountReason
+
+    if (typeVal === 'SPP') {
+      if (studentProgConfig && studentProgConfig.defaultSpp > 0) {
+        autoAmount = studentProgConfig.defaultSpp.toString()
+      } else {
+        autoAmount = '300000'
+      }
+      if (studentProgConfig && studentProgConfig.defaultDiscount > 0 && (!student?.discountPercentage || student?.discountPercentage === 0)) {
+        autoDiscountPct = studentProgConfig.defaultDiscount
+        autoDiscountReason = `Default Diskon Program ${studentProgConfig.name}`
+      }
+    } else if (typeVal === 'DPP') {
+      if (publicSettings?.defaultDpp && publicSettings.defaultDpp > 0) {
+        autoAmount = publicSettings.defaultDpp.toString()
+      }
+    } else if (typeVal === 'UKA') {
+      if (publicSettings?.defaultUka && publicSettings.defaultUka > 0) {
+        autoAmount = publicSettings.defaultUka.toString()
+      }
+    } else if (typeVal === 'UKS') {
+      if (publicSettings?.defaultUks && publicSettings.defaultUks > 0) {
+        autoAmount = publicSettings.defaultUks.toString()
+      }
+    } else if (typeVal === 'INFAQ') {
+      autoAmount = '' // Nominal bebas diisi untuk INFAQ
+    }
+
+    // Preserve student's custom discount if set
+    if (student?.discountPercentage && student.discountPercentage > 0) {
+      autoDiscountPct = student.discountPercentage
+      autoDiscountReason = student.discountReason || `Diskon Siswa (${student.discountPercentage}%)`
+    }
+
+    setForm(f => ({
+      ...f,
+      type: typeVal,
+      amount: autoAmount,
+      discountPercentage: autoDiscountPct,
+      discountReason: autoDiscountReason,
+    }))
+  }
 
   const openPayDialog = (t: Tagihan) => {
     const paid = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)
@@ -366,7 +436,7 @@ function TagihanModal({
                   <div className="flex flex-wrap gap-2">
                     {PAYMENT_TYPES.map(t => (
                       <button key={t.value} type="button"
-                        onClick={() => setForm(f => ({ ...f, type: t.value }))}
+                        onClick={() => handleSelectType(t.value)}
                         className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${form.type === t.value ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
                         {t.label}
                       </button>
@@ -374,6 +444,27 @@ function TagihanModal({
                   </div>
                   <p className="text-xs text-slate-500 mt-1">{PAYMENT_TYPES.find(t => t.value === form.type)?.desc}</p>
                 </div>
+
+                {/* Banner Info Program & Diskon untuk Siswa */}
+                {student?.program && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-900 flex items-center justify-between">
+                    <div>
+                      <span className="font-bold uppercase tracking-wider text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md mr-1.5">
+                        Program {student.program}
+                      </span>
+                      {studentProgConfig?.defaultSpp ? (
+                        <span>Default SPP: <strong>Rp {studentProgConfig.defaultSpp.toLocaleString('id-ID')}</strong></span>
+                      ) : null}
+                    </div>
+                    {(student?.discountPercentage || studentProgConfig?.defaultDiscount) ? (
+                      <span className="font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                        Diskon: {student?.discountPercentage || studentProgConfig?.defaultDiscount}%
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 font-medium">Tanpa Diskon</span>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>

@@ -180,6 +180,9 @@ model Setting {
   bankOwner     String?
   academicYear  String? @default("2026/2027")
   semester      String? @default("Ganjil")
+  defaultDpp    Float?  @default(0)
+  defaultUka    Float?  @default(0)
+  defaultUks    Float?  @default(0)
 }
 
 model Announcement {
@@ -346,3 +349,15 @@ model NotificationTemplate {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+model ProgramConfig {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  defaultSpp      Float    @default(0)
+  defaultDiscount Float    @default(0)
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+

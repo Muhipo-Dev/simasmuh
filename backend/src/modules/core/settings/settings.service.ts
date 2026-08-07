@@ -31,6 +31,9 @@ export class SettingsService {
         academicYear: true,
         semester: true,
         logoUrl: true,
+        defaultDpp: true,
+        defaultUka: true,
+        defaultUks: true,
       },
     });
     if (!settings) {
@@ -42,6 +45,9 @@ export class SettingsService {
         academicYear: '2026/2027',
         semester: 'Ganjil',
         logoUrl: null,
+        defaultDpp: 0,
+        defaultUka: 0,
+        defaultUks: 0,
       };
     }
     return settings;

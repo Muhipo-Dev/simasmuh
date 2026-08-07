@@ -646,21 +646,20 @@ export class FinanceService {
         continue;
       }
 
-      // SERVER-SIDE CALCULATION: Apply program-based SPP rate
-      const programRates: Record<string, number> = {
-        kader: 1.0,
-        reguler: 1.0,
-        tahfidz: 1.2,
-        olahraga: 1.1,
-        MIC: 2.0,
-        enterpreneur: 1.3,
-        'seni budaya': 1.1,
-        'soshum saintek': 1.5,
-        inklusi: 0.8,
-      };
+      // SERVER-SIDE CALCULATION: Fetch default SPP from ProgramConfig table
+      let sppAmount = dto.amount;
+      if (student.program) {
+        const progConfig = await this.prisma.programConfig.findUnique({
+          where: { code: student.program },
+        }) || await this.prisma.programConfig.findFirst({
+          where: { code: { equals: student.program, mode: 'insensitive' } },
+        });
 
-      const multiplier = programRates[student.program || 'reguler'] || 1.0;
-      const calculatedAmount = Math.round(dto.amount * multiplier);
+        if (progConfig && progConfig.defaultSpp > 0) {
+          sppAmount = progConfig.defaultSpp;
+        }
+      }
+      const calculatedAmount = Math.round(sppAmount);
 
       // Create tagihan with SERVER-CALCULATED amount
       const tagihan = await this.prisma.tagihan.create({
@@ -683,7 +682,6 @@ export class FinanceService {
         studentName: student.name,
         program: student.program || 'reguler',
         baseAmount: dto.amount,
-        multiplier,
         finalAmount: calculatedAmount,
         status: 'CREATED',
         tagihanId: tagihan.id,

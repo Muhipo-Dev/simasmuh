@@ -117,6 +117,35 @@ export default function StudentsPage() {
   const [discountPct, setDiscountPct] = useState<number>(0)
   const [discountReason, setDiscountReason] = useState<string>('')
 
+  const { data: programConfigs } = useQuery<Array<{ id: string; code: string; name: string }>>({
+    queryKey: ['program-configs'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/settings/program-configs')
+      if (!res.ok) return []
+      return res.json()
+    }
+  })
+
+  const dynamicProgramOptions = programConfigs && programConfigs.length > 0
+    ? programConfigs.map((p) => {
+        const fallbackObj = PROGRAM_OPTIONS.find((opt) => opt.value.toLowerCase() === p.code.toLowerCase())
+        return {
+          value: p.code,
+          label: p.name,
+          color: fallbackObj ? fallbackObj.color : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+        }
+      })
+    : PROGRAM_OPTIONS
+
+  const getProgramBadge = (programValue: string | null | undefined) => {
+    if (!programValue) return null
+    return dynamicProgramOptions.find(p => p.value.toLowerCase() === programValue.toLowerCase()) ?? {
+      value: programValue,
+      label: programValue,
+      color: 'bg-purple-100 text-purple-800'
+    }
+  }
+
   const { data: students, isLoading } = useQuery<Student[]>({
     queryKey: ['students'],
     queryFn: async () => {
@@ -542,7 +571,7 @@ export default function StudentsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">— Hapus / Tidak ada program —</SelectItem>
-              {PROGRAM_OPTIONS.map(p => (
+              {dynamicProgramOptions.map(p => (
                 <SelectItem key={p.value} value={p.value}>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${p.color}`}>{p.label}</span>
                 </SelectItem>
@@ -816,8 +845,8 @@ export default function StudentsPage() {
                     <SelectValue placeholder="Pilih Program (Opsional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">— Tidak ada program —</SelectItem>
-                    {PROGRAM_OPTIONS.map(p => (
+                    <SelectItem value="__none__">— Hapus / Tidak ada program —</SelectItem>
+                    {dynamicProgramOptions.map(p => (
                       <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -1054,7 +1083,7 @@ export default function StudentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL">Semua Program</SelectItem>
-                    {PROGRAM_OPTIONS.map(p => (
+                    {dynamicProgramOptions.map(p => (
                       <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                     ))}
                   </SelectContent>

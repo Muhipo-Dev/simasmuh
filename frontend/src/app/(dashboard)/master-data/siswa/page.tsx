@@ -1178,8 +1178,8 @@ export default function StudentsPage() {
                       </TableCell>
                       <TableCell>
                         {item.discountPercentage && item.discountPercentage > 0 ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300">
-                            Diskon {item.discountPercentage}% {item.discountReason ? `(${item.discountReason})` : ''}
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300">
+                            Diskon {item.discountPercentage}%
                           </span>
                         ) : (
                           <span className="text-xs text-slate-400 italic">—</span>

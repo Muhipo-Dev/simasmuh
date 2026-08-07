@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class FinanceService {
@@ -515,6 +516,57 @@ export class FinanceService {
   /** Hapus tagihan */
   async deleteTagihan(tagihanId: string) {
     return this.prisma.tagihan.delete({ where: { id: tagihanId } });
+  }
+
+  /** Reset tagihan siswa (Restricted with Password Verification) */
+  async resetStudentTagihan(
+    userId: string,
+    dto: { studentIds: string[]; password: string },
+  ) {
+    if (!dto.studentIds || dto.studentIds.length === 0) {
+      throw new BadRequestException('Pilih setidaknya 1 siswa untuk di-reset');
+    }
+    if (!dto.password || !dto.password.trim()) {
+      throw new BadRequestException('Password otorisasi keamanan wajib diisi');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || !user.password) {
+      throw new UnauthorizedException('Pengguna tidak ditemukan atau tidak valid');
+    }
+
+    const isMatch = await bcrypt.compare(dto.password, user.password);
+    if (!isMatch) {
+      throw new UnauthorizedException('Password otorisasi tidak valid! Verifikasi gagal.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Delete all payments associated with tagihan of these students
+      await (tx.payment as any).deleteMany({
+        where: {
+          tagihan: {
+            studentId: { in: dto.studentIds },
+          },
+        },
+      });
+
+      // Delete all tagihan of these students
+      const deleteResult = await (tx.tagihan as any).deleteMany({
+        where: {
+          studentId: { in: dto.studentIds },
+        },
+      });
+
+      return {
+        success: true,
+        count: deleteResult.count,
+        studentCount: dto.studentIds.length,
+        message: `Berhasil mereset ${deleteResult.count} tagihan dari ${dto.studentIds.length} siswa.`,
+      };
+    });
   }
 
   /** Tambah tagihan massal (untuk satu kelas sekaligus) dengan opsi diskon */

@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import {
   Wallet, Users, BarChart3, Building2, Search, Pencil, Trash2,
   Loader2, PlusCircle, CheckCircle2, TrendingUp, X, Download,
-  AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, Sparkles
+  AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, Sparkles,
+  ShieldAlert, Lock, CheckSquare, Square
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
@@ -1498,6 +1499,14 @@ function TabTagihan() {
   const [massalOpen, setMassalOpen] = useState(false)
   const [cashModalOpen, setCashModalOpen] = useState(false)
   const authenticatedQuery = useAuthenticatedQuery()
+  const qc = useQueryClient()
+
+  // Selection & Restricted Reset States
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
+  const [resetAuthModalOpen, setResetAuthModalOpen] = useState(false)
+  const [resetTargetStudentIds, setResetTargetStudentIds] = useState<string[]>([])
+  const [authPassword, setAuthPassword] = useState('')
+  const [authError, setAuthError] = useState('')
 
   const { data: students = [], isLoading } = useQuery<StudentSummary[]>({
     queryKey: ['finance-students'],
@@ -1522,6 +1531,75 @@ function TabTagihan() {
         s.nisn.includes(search) || s.nis.includes(search) ||
         s.className.toLowerCase().includes(search.toLowerCase()))
     ), [students, search, filterKelas])
+
+  const isAllSelected = useMemo(() =>
+    filtered.length > 0 && filtered.every(s => selectedStudentIds.includes(s.id)),
+    [filtered, selectedStudentIds]
+  )
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedStudentIds([])
+    } else {
+      setSelectedStudentIds(filtered.map(s => s.id))
+    }
+  }
+
+  const toggleSelectStudent = (id: string) => {
+    setSelectedStudentIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
+
+  const openResetModal = (ids: string[]) => {
+    if (ids.length === 0) return
+    setResetTargetStudentIds(ids)
+    setAuthPassword('')
+    setAuthError('')
+    setResetAuthModalOpen(true)
+  }
+
+  const closeResetAuthModal = () => {
+    setResetAuthModalOpen(false)
+    setResetTargetStudentIds([])
+    setAuthPassword('')
+    setAuthError('')
+  }
+
+  const resetMut = useMutation({
+    mutationFn: async () => {
+      const res = await authenticatedFetch('/api-backend/finance/students/reset-tagihan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentIds: resetTargetStudentIds,
+          password: authPassword,
+        }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Password otorisasi salah atau gagal mereset tagihan')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      if (selectedStudent) {
+        qc.invalidateQueries({ queryKey: ['student-tagihan', selectedStudent.id] })
+      }
+      Swal.fire({
+        title: 'Reset Berhasil!',
+        text: data.message || 'Seluruh tagihan siswa berhasil di-reset.',
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+      closeResetAuthModal()
+      setSelectedStudentIds([])
+    },
+    onError: (err: any) => {
+      setAuthError(err.message || 'Password otorisasi tidak valid')
+    },
+  })
 
   const openModal = (s: StudentSummary) => { setSelectedStudent(s); setModalOpen(true) }
 
@@ -1551,7 +1629,7 @@ function TabTagihan() {
               onChange={e => setSearch(e.target.value)} />
           </div>
           <Select value={filterKelas || 'all'} onValueChange={(v) => setFilterKelas(!v || v === 'all' ? '' : v)}>
-            <SelectTrigger className="w-[130px] bg-white"><SelectValue placeholder="Semua Kelas" /></SelectTrigger>
+            <SelectTrigger className="w-[140px] bg-white font-semibold"><SelectValue placeholder="Semua Kelas" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Kelas</SelectItem>
               {uniqueKelas.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
@@ -1574,13 +1652,59 @@ function TabTagihan() {
         </div>
       </div>
 
+      {/* Floating / Top Action Bar When Students Are Selected */}
+      {selectedStudentIds.length > 0 && (
+        <div className="bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/40 dark:to-pink-950/40 border border-rose-200 dark:border-rose-900/60 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200">
+          <div className="flex items-center gap-3">
+            <span className="font-extrabold text-xs text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 border border-rose-200 dark:border-rose-800 px-3 py-1 rounded-full flex items-center gap-1.5">
+              <CheckSquare className="w-3.5 h-3.5 text-rose-600" />
+              {selectedStudentIds.length} Siswa Terpilih
+            </span>
+            {filterKelas && (
+              <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">
+                (Kelas: {filterKelas})
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              size="sm"
+              onClick={() => openResetModal(selectedStudentIds)}
+              className="flex-1 sm:flex-none bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs gap-1.5 h-9 rounded-xl shadow-md"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset Tagihan ({selectedStudentIds.length} Siswa)
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSelectedStudentIds([])}
+              className="text-xs h-9 rounded-xl border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-100/50"
+            >
+              Batal
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
-      <Card className="shadow-sm border-slate-200">
+      <Card className="shadow-sm border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
         <CardContent className="p-0 overflow-x-auto max-w-full">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-slate-50">
+              <TableHeader className="bg-slate-100/70 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 font-bold">
                 <TableRow>
+                  <TableHead className="w-10 text-center px-3 py-3">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
+                      title={isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua Siswa'}
+                    >
+                      {isAllSelected ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4" />}
+                    </button>
+                  </TableHead>
                   <TableHead className="w-12 text-center">No</TableHead>
                   <TableHead>Nama Siswa</TableHead>
                   <TableHead>Kelas</TableHead>
@@ -1594,65 +1718,148 @@ function TabTagihan() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-16">
+                    <TableCell colSpan={9} className="text-center py-16">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
                       <p className="text-slate-500 text-sm">Memuat data...</p>
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-16 text-slate-400">
+                    <TableCell colSpan={9} className="text-center py-16 text-slate-400">
                       {search || filterKelas ? 'Tidak ditemukan.' : 'Belum ada data siswa.'}
                     </TableCell>
                   </TableRow>
-                ) : filtered.map((s, i) => (
-                  <TableRow key={s.id} className="hover:bg-slate-50/60 transition-colors">
-                    <TableCell className="text-center text-slate-400 font-medium text-sm">{i + 1}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
-                          {s.name.charAt(0).toUpperCase()}
+                ) : filtered.map((s, i) => {
+                  const isChecked = selectedStudentIds.includes(s.id);
+                  return (
+                    <TableRow key={s.id} className={`transition-colors ${isChecked ? 'bg-blue-50/50 dark:bg-blue-950/20' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/50'}`}>
+                      <TableCell className="text-center px-3 py-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelectStudent(s.id)}
+                          className="p-1 rounded-md text-slate-400 hover:text-blue-600 transition-colors"
+                        >
+                          {isChecked ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4" />}
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-center text-slate-400 font-medium text-sm">{i + 1}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                            {s.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900 dark:text-white leading-tight">{s.name}</p>
+                            <p className="text-xs text-slate-400 font-mono">{s.nisn}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold text-slate-900 leading-tight">{s.name}</p>
-                          <p className="text-xs text-slate-400 font-mono">{s.nisn}</p>
+                      </TableCell>
+                      <TableCell>
+                        <span className="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-xs font-semibold border border-indigo-100 dark:border-indigo-800">{s.className}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {s.belumLunasCount > 0
+                          ? <span className="font-bold px-2.5 py-1 rounded-lg text-sm bg-red-50 text-red-600 border border-red-100">{s.belumLunasCount} tagihan</span>
+                          : <span className="text-emerald-600 font-semibold text-sm flex items-center justify-center gap-1"><CheckCircle2 className="w-4 h-4" /> Lunas</span>
+                        }
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className={`font-bold px-2.5 py-1 rounded-lg text-sm ${s.sppLunasCount >= 12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : s.sppLunasCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
+                          {s.sppLunasCount}/12
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-slate-700 dark:text-slate-200">
+                        {s.totalTagihan > 0 ? currency(s.totalTagihan) : <span className="text-slate-300">—</span>}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-emerald-700 dark:text-emerald-400">
+                        {s.totalLunas > 0 ? currency(s.totalLunas) : <span className="text-slate-300 font-normal">—</span>}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center items-center gap-1.5">
+                          <Button size="sm" variant="outline"
+                            className="border-blue-300 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-xs gap-1.5 h-8 rounded-xl"
+                            onClick={() => openModal(s)}>
+                            <Receipt className="w-3.5 h-3.5" /> Kelola
+                          </Button>
+                          <Button size="sm" variant="outline"
+                            title="Reset Tagihan Siswa (Otorisasi Password)"
+                            className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 text-xs gap-1 h-8 rounded-xl"
+                            onClick={() => openResetModal([s.id])}>
+                            <RotateCcw className="w-3.5 h-3.5" /> Reset
+                          </Button>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-semibold border border-indigo-100">{s.className}</span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {s.belumLunasCount > 0
-                        ? <span className="font-bold px-2.5 py-1 rounded-lg text-sm bg-red-50 text-red-600 border border-red-100">{s.belumLunasCount} tagihan</span>
-                        : <span className="text-emerald-600 font-semibold text-sm flex items-center justify-center gap-1"><CheckCircle2 className="w-4 h-4" /> Lunas</span>
-                      }
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className={`font-bold px-2.5 py-1 rounded-lg text-sm ${s.sppLunasCount >= 12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : s.sppLunasCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
-                        {s.sppLunasCount}/12
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold text-slate-700">
-                      {s.totalTagihan > 0 ? currency(s.totalTagihan) : <span className="text-slate-300">—</span>}
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-emerald-700">
-                      {s.totalLunas > 0 ? currency(s.totalLunas) : <span className="text-slate-300 font-normal">—</span>}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button size="sm" variant="outline"
-                        className="border-blue-300 text-blue-700 hover:bg-blue-50 text-xs gap-1.5"
-                        onClick={() => openModal(s)}>
-                        <Receipt className="w-3.5 h-3.5" /> Kelola
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
+
+      {/* RESTRICTED RESET PASSWORD AUTHORIZATION MODAL */}
+      <Dialog open={resetAuthModalOpen} onOpenChange={(v) => { if (!v) closeResetAuthModal() }}>
+        <DialogContent className="max-w-md p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="bg-gradient-to-r from-rose-700 via-red-700 to-rose-900 p-6 text-white shadow-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2.5 text-white text-lg font-extrabold">
+                <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
+                  <ShieldAlert className="w-5 h-5 text-rose-200" />
+                </div>
+                Otorisasi Reset Tagihan Siswa
+              </DialogTitle>
+              <DialogDescription className="text-rose-100 text-xs mt-1">
+                Akses Terbatas. Diperlukan verifikasi password akun keuangan Anda.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); resetMut.mutate(); }}>
+            <div className="p-6 space-y-4">
+              <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl text-xs text-rose-900 dark:text-rose-200 space-y-1">
+                <p className="font-extrabold flex items-center gap-1.5 text-sm text-rose-800 dark:text-rose-300">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  Peringatan Keamanan
+                </p>
+                <p className="leading-relaxed">
+                  Tindakan ini akan mereset/menghapus <strong>seluruh tagihan dan riwayat pembayaran</strong> untuk <strong>{resetTargetStudentIds.length} siswa</strong> terpilih secara permanen.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                  Password Akun Keuangan <span className="text-rose-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    type="password"
+                    placeholder="Masukkan password akun Anda..."
+                    value={authPassword}
+                    onChange={(e) => { setAuthPassword(e.target.value); setAuthError(''); }}
+                    className="pl-9 h-11 bg-white dark:bg-slate-950 font-bold rounded-xl border-slate-200 dark:border-slate-800"
+                    required
+                  />
+                </div>
+                {authError && (
+                  <p className="text-xs font-bold text-rose-600 dark:text-rose-400 mt-1">{authError}</p>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="p-6 pt-0 flex flex-col-reverse sm:flex-row gap-2.5">
+              <Button type="button" variant="outline" onClick={closeResetAuthModal} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+                Batal
+              </Button>
+              <Button type="submit" disabled={resetMut.isPending || !authPassword} className="h-11 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl shadow-md">
+                {resetMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+                Konfirmasi & Reset Tagihan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <TagihanModal student={detailData ?? null} open={modalOpen}
         onClose={() => { setModalOpen(false); setSelectedStudent(null) }} />

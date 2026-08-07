@@ -60,6 +60,17 @@ export class FinanceController {
     return this.financeService.addTagihan(studentId, body);
   }
 
+  // ----- Reset Tagihan Siswa (Restricted Password Verification) -----
+  @Post('students/reset-tagihan')
+  @RequirePermissions(PaymentPermission.DELETE_BILLS)
+  @UseGuards(FinanceOperationGuard)
+  async resetStudentTagihan(
+    @Req() req: any,
+    @Body() body: { studentIds: string[]; password: string },
+  ) {
+    return this.financeService.resetStudentTagihan(req.user?.id, body);
+  }
+
   // ----- Tagihan Massal -----
   @Post('tagihan/massal')
   addTagihanMassal(@Body() body: any) {

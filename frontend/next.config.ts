@@ -1,15 +1,69 @@
 import type { NextConfig } from "next";
+import os from "os";
+
+// Dynamically fetch all server local & public IP addresses and hostnames
+function getDynamicServerOrigins() {
+  const hostnames = new Set<string>([
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    'simasmuh.razagopo.my.id',
+  ]);
+
+  // Include environment variable overrides if configured
+  if (process.env.ALLOWED_ORIGINS) {
+    process.env.ALLOWED_ORIGINS.split(',').forEach((o) => {
+      const trimmed = o.trim();
+      if (trimmed) hostnames.add(trimmed);
+    });
+  }
+
+  if (process.env.SERVER_IP) {
+    hostnames.add(process.env.SERVER_IP.trim());
+  }
+
+  // Scan all network interfaces dynamically (Wi-Fi, Ethernet, VPN, Hotspot, Public IP)
+  try {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+      const netList = interfaces[name];
+      if (netList) {
+        for (const net of netList) {
+          if (net.address) {
+            hostnames.add(net.address);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Unable to fetch network interfaces:", err);
+  }
+
+  const hostnameList = Array.from(hostnames);
+
+  // Common ports used in dev & production environments
+  const ports = ['', ':3000', ':3001', ':80', ':443', ':8080', ':5000'];
+  const originsWithPortsSet = new Set<string>();
+
+  hostnameList.forEach((host) => {
+    ports.forEach((port) => {
+      originsWithPortsSet.add(`${host}${port}`);
+    });
+  });
+
+  return {
+    origins: hostnameList,
+    originsWithPorts: Array.from(originsWithPortsSet),
+  };
+}
+
+const dynamicServerData = getDynamicServerOrigins();
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: [
-    '172.168.2.12',
-    '182.253.144.111',
-    'simasmuh.razagopo.my.id',
-    '192.168.137.1',
-    '192.168.37.1',
-    '192.168.3.253',
-    'localhost',
-    '127.0.0.1',
+    '*',
+    ...dynamicServerData.origins,
+    ...dynamicServerData.originsWithPorts,
   ],
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:3001';
@@ -29,38 +83,21 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'images.unsplash.com',
+        hostname: '**',
       },
       {
         protocol: 'http',
-        hostname: 'localhost',
-        port: '3001',
+        hostname: '**',
       },
-      {
-        protocol: 'http',
-        hostname: '172.168.2.12',
-      },
-      {
-        protocol: 'http',
-        hostname: '182.253.144.111',
-      },
-      {
-        protocol: 'https',
-        hostname: 'simasmuh.razagopo.my.id',
-      }
     ],
   },
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb',
       allowedOrigins: [
-        'simasmuh.razagopo.my.id',
-        '182.253.144.111',
-        '182.253.144.111:3000',
-        '172.168.2.12',
-        '172.168.2.12:3000',
-        'localhost:3000',
-        '127.0.0.1:3000',
+        '*',
+        ...dynamicServerData.origins,
+        ...dynamicServerData.originsWithPorts,
       ]
     }
   }

@@ -1286,51 +1286,82 @@ function ManualCashPaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md p-0 rounded-2xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-        <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-green-600 p-5 text-white shadow-sm">
+      <DialogContent className="max-w-xl sm:max-w-3xl lg:max-w-4xl p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+        {/* Modern Header Banner */}
+        <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-green-700 p-6 sm:p-7 text-white shadow-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-white text-lg font-extrabold">
-              <Wallet className="w-5 h-5 text-emerald-200" /> Input Pembayaran Tunai (Kasir)
+            <DialogTitle className="flex items-center gap-3 text-white text-lg sm:text-xl font-extrabold">
+              <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
+                <Wallet className="w-5 h-5 text-emerald-200" />
+              </div>
+              Input Pembayaran Tunai (Kasir Keuangan)
             </DialogTitle>
-            <DialogDescription className="text-emerald-100 text-xs">
-              Pencatatan langsung pembayaran tunai siswa di kantor bagian keuangan dengan opsi angsuran & diskon.
+            <DialogDescription className="text-emerald-100 text-xs sm:text-sm mt-1">
+              Pencatatan langsung pembayaran tunai siswa di loket kasir keuangan dengan kalkulasi diskon otomatis dan pratinjau kuitansi.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
-          {/* Pencarian Siswa Berdasarkan Nama/Kelas */}
-          <div>
-            <Label className="text-xs font-semibold text-slate-700 mb-1 block">Cari Siswa (Nama / Kelas / NISN)</Label>
+        <div className="p-6 sm:p-7 space-y-6 max-h-[82vh] overflow-y-auto pr-3 custom-scrollbar">
+          {/* STEP 1: PENCARIAN & PROFIL SISWA */}
+          <div className="space-y-3">
+            <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+              1. Pilih Siswa Pembayar
+            </Label>
             
             {selectedStudent ? (
-              <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                <div>
-                  <p className="font-bold text-slate-900 text-xs sm:text-sm">{selectedStudent.name}</p>
-                  <p className="text-[11px] text-slate-500 font-mono">NISN: {selectedStudent.nisn} | Kelas: <span className="font-bold text-emerald-700">{selectedStudent.className}</span></p>
-                  <p className="text-[11px] text-slate-600 mt-0.5">Sisa Tagihan: <strong className="text-red-600">{currency(selectedStudent.totalTagihan - selectedStudent.totalLunas)}</strong></p>
+              <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-center gap-3.5">
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-extrabold shrink-0 ${selectedStudent.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                    {selectedStudent.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-extrabold text-slate-900 dark:text-white text-base">{selectedStudent.name}</p>
+                      <span className="px-2.5 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold border border-emerald-200 dark:border-emerald-800">
+                        {selectedStudent.className}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                      NISN: {selectedStudent.nisn} · NIS: {selectedStudent.nis}
+                    </p>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => { setSelectedStudentId(''); setStudentSearch(''); setSelectedTagihanId(''); setCashAmount(''); setCashDiscountPct(0); }} className="text-xs h-7 border-emerald-400 text-emerald-700 hover:bg-emerald-100">
-                  Ganti
-                </Button>
+
+                <div className="flex items-center gap-3 justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-emerald-200/60">
+                  <div className="text-right">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">Total Sisa Tunggakan</p>
+                    <p className="font-extrabold text-red-600 dark:text-red-400 text-base sm:text-lg">
+                      {currency(selectedStudent.totalTagihan - selectedStudent.totalLunas)}
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => { setSelectedStudentId(''); setStudentSearch(''); setSelectedTagihanId(''); setCashAmount(''); setCashDiscountPct(0); }} 
+                    className="text-xs font-extrabold h-9 rounded-xl border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 shrink-0"
+                  >
+                    Ganti Siswa
+                  </Button>
+                </div>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
-                    placeholder="Ketik nama siswa atau kelas (misal: Ahmad / XII-1)..."
+                    placeholder="Ketik nama siswa, NISN, NIS, atau nama kelas (misal: Ahmad / XII-1)..."
                     value={studentSearch}
                     onChange={(e) => setStudentSearch(e.target.value)}
-                    className="pl-9 bg-white text-xs sm:text-sm"
+                    className="pl-10 h-11 bg-white dark:bg-slate-950 font-medium text-xs sm:text-sm rounded-xl border-slate-200 dark:border-slate-800"
                   />
                 </div>
 
                 {/* Hasil Pencarian Siswa */}
                 {studentSearch.trim() !== '' && (
-                  <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-white shadow-xs">
+                  <div className="max-h-60 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-950 shadow-md">
                     {filteredStudents.length === 0 ? (
-                      <div className="p-3 text-center text-xs text-slate-400">Tidak ada siswa yang cocok dengan &quot;{studentSearch}&quot;</div>
+                      <div className="p-4 text-center text-xs text-slate-400 font-medium">Tidak ada siswa yang cocok dengan &quot;{studentSearch}&quot;</div>
                     ) : (
                       filteredStudents.map(s => (
                         <button
@@ -1342,13 +1373,18 @@ function ManualCashPaymentModal({
                             setCashAmount('')
                             setCashDiscountPct(0)
                           }}
-                          className="w-full text-left p-2.5 hover:bg-emerald-50/70 transition-colors flex items-center justify-between group"
+                          className="w-full text-left p-3 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 transition-colors flex items-center justify-between group"
                         >
-                          <div>
-                            <p className="font-semibold text-slate-900 text-xs group-hover:text-emerald-700">{s.name}</p>
-                            <p className="text-[11px] text-slate-400">NISN: {s.nisn} • Kelas <span className="font-medium text-slate-600">{s.className}</span></p>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                              {s.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm group-hover:text-emerald-700 dark:group-hover:text-emerald-400">{s.name}</p>
+                              <p className="text-[11px] text-slate-400 font-mono">NISN: {s.nisn} • Kelas <span className="font-bold text-slate-600 dark:text-slate-300">{s.className}</span></p>
+                            </div>
                           </div>
-                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full shrink-0">
+                          <span className="text-xs font-extrabold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-3 py-1 rounded-full border border-rose-200 dark:border-rose-900/60 shrink-0">
                             Sisa: {currency(s.totalTagihan - s.totalLunas)}
                           </span>
                         </button>
@@ -1360,32 +1396,67 @@ function ManualCashPaymentModal({
             )}
           </div>
 
-          {/* Pilih Tagihan */}
+          {/* STEP 2: PILIH TAGIHAN SISWA */}
           {selectedStudentId && (
-            <div>
-              <Label className="text-xs font-semibold text-slate-700 mb-1 block">Pilih Tagihan Siswa</Label>
+            <div className="space-y-3">
+              <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                2. Pilih Tagihan Yang Ingin Dibayar
+              </Label>
               {activeTagihans.length === 0 ? (
-                <p className="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-dashed">Siswa ini tidak memiliki tagihan aktif/belum lunas.</p>
+                <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl text-xs text-emerald-800 dark:text-emerald-300 font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  Siswa ini tidak memiliki tagihan aktif / seluruh tagihan telah lunas.
+                </div>
               ) : (
-                <Select value={selectedTagihanId} onValueChange={handleSelectTagihan}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Pilih tagihan..." /></SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {activeTagihans.map(t => {
-                      const paid = t.amountPaid || 0
-                      const remaining = Math.max(0, t.amount - paid)
-                      return (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.type} — Sisa: {currency(remaining)} (Total: {currency(t.amount)})
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {activeTagihans.map(t => {
+                    const paid = t.amountPaid || 0
+                    const remaining = Math.max(0, t.amount - paid)
+                    const isSelected = t.id === selectedTagihanId
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => handleSelectTagihan(t.id)}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                          isSelected 
+                            ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-500 shadow-md ring-2 ring-emerald-500/20' 
+                            : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-lg ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-700'}`}>
+                              {t.type}
+                            </span>
+                            {t.month && t.year && (
+                              <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-1.5">
+                                {MONTHS.find(m => m.value === t.month!.toString())?.label} {t.year}
+                              </p>
+                            )}
+                          </div>
+                          <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${t.status === 'ANGSURAN' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                            {t.status === 'ANGSURAN' ? 'Angsuran' : 'Belum Lunas'}
+                          </span>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                          <div>
+                            <p className="text-[11px] text-slate-400 font-medium">Sisa Tagihan</p>
+                            <p className="font-extrabold text-slate-900 dark:text-white text-base">{currency(remaining)}</p>
+                          </div>
+                          <span className="text-xs text-slate-400 font-medium">
+                            Total: {currency(t.amount)}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
           )}
 
-          {/* Form Pembayaran Tunai, Angsuran & Diskon */}
+          {/* STEP 3: FORM PEMBAYARAN & PRATINJAU KUITANSI */}
           {selectedTagihan && (() => {
             const paid = selectedTagihan.amountPaid || 0
             let origAmount = selectedTagihan.amount
@@ -1399,89 +1470,150 @@ function ManualCashPaymentModal({
 
             const currentDiscountAmt = cashDiscountPct > 0 ? Math.round(origAmount * (cashDiscountPct / 100)) : 0
             const currentFinalAmt = cashDiscountPct > 0 ? origAmount - currentDiscountAmt : selectedTagihan.amount
-            const remaining = Math.max(0, currentFinalAmt - paid)
+            const remainingBeforePay = Math.max(0, currentFinalAmt - paid)
+            const payInputVal = parseFloat(cashAmount) || 0
+            const remainingAfterPay = Math.max(0, remainingBeforePay - payInputVal)
             const isInfaq = selectedTagihan.type.toLowerCase() === 'infaq'
 
             return (
-              <div className="space-y-3.5 bg-emerald-50/60 border border-emerald-200 p-4 rounded-xl">
-                <div className="flex flex-col gap-1 text-xs text-slate-700 border-b border-emerald-200/80 pb-2.5">
-                  <div className="flex justify-between">
-                    <span>Total Tagihan Awal:</span>
-                    <span className="font-semibold">{currency(origAmount)}</span>
-                  </div>
-                  {paid > 0 && (
-                    <div className="flex justify-between text-blue-700">
-                      <span>Sudah Diangsur:</span>
-                      <span className="font-bold">{currency(paid)}</span>
-                    </div>
-                  )}
-                  {cashDiscountPct > 0 && (
-                    <div className="flex justify-between text-amber-700 font-medium">
-                      <span>Potongan Diskon ({cashDiscountPct}%):</span>
-                      <span>- {currency(currentDiscountAmt)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm pt-1 border-t border-emerald-200/50">
-                    <span className="font-bold text-slate-800">Sisa Yang Harus Dibayar:</span>
-                    <strong className="text-red-600 text-sm">{currency(remaining)}</strong>
-                  </div>
-                </div>
-
-                {/* Fitur Diskon Kasir */}
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
-                    <Percent className="w-3.5 h-3.5 text-amber-600" /> Terapkan Diskon Pembayaran Tunai (Opsional)
+              <div className="space-y-5 bg-gradient-to-br from-slate-50 to-emerald-50/30 dark:from-slate-950 dark:to-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 rounded-3xl space-y-5">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                  <Label className="text-xs font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider block flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    3. Rincian & Opsi Pembayaran Kasir
                   </Label>
-                  <Select value={cashDiscountPct.toString()} onValueChange={(v) => handleDiscountChange(parseInt(v || '0', 10))}>
-                    <SelectTrigger className="bg-white text-xs h-8"><SelectValue placeholder="Pilih persentase diskon..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">0% (Tanpa Diskon Tambahan)</SelectItem>
-                      <SelectItem value="25">25% Diskon Tunai</SelectItem>
-                      <SelectItem value="50">50% Diskon Tunai</SelectItem>
-                      <SelectItem value="75">75% Diskon Tunai</SelectItem>
-                      <SelectItem value="100">100% Bebas Biaya / Pelunasan Beasiswa</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {cashDiscountPct > 0 && (
-                    <Input
-                      placeholder="Alasan Diskon (misal: Diskon Kasir / Pelunasan Langsung)"
-                      value={cashDiscountReason}
-                      onChange={(e) => setCashDiscountReason(e.target.value)}
-                      className="bg-white text-xs mt-1.5 h-8"
-                    />
-                  )}
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                    {selectedTagihan.type}
+                  </span>
                 </div>
 
-                {/* Fitur Angsuran Tunai */}
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700 mb-1 block">Nominal Pembayaran Tunai / Angsuran (Rp)</Label>
-                  <Input
-                    type="number"
-                    disabled={isInfaq}
-                    placeholder="Masukkan nominal bayar/angsuran..."
-                    value={cashAmount}
-                    onChange={(e) => setCashAmount(e.target.value)}
-                    className="bg-white font-bold text-slate-900"
-                  />
-                  {isInfaq ? (
-                    <p className="text-[11px] text-amber-700 mt-1 flex items-center gap-1 font-medium">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Tagihan Infaq tidak dapat diangsur. Nominal di-set lunas ({currency(remaining)}).
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      * Anda dapat memasukkan nominal pembayaran sebagian (angsuran) atau pelunasan sekaligus ({currency(remaining)}).
-                    </p>
-                  )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Terapkan Diskon Kasir */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block flex items-center gap-1.5">
+                      <Percent className="w-3.5 h-3.5 text-amber-600" /> Diskon Tunai Kasir
+                    </Label>
+                    <Select value={cashDiscountPct.toString()} onValueChange={(v) => handleDiscountChange(parseInt(v || '0', 10))}>
+                      <SelectTrigger className="bg-white dark:bg-slate-950 h-11 font-semibold text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                        <SelectValue placeholder="Pilih persentase diskon..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">0% (Tanpa Diskon Tambahan)</SelectItem>
+                        <SelectItem value="25">25% Diskon Tunai</SelectItem>
+                        <SelectItem value="50">50% Diskon Tunai</SelectItem>
+                        <SelectItem value="75">75% Diskon Tunai</SelectItem>
+                        <SelectItem value="100">100% Bebas Biaya / Beasiswa</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {cashDiscountPct > 0 && (
+                      <Input
+                        placeholder="Alasan Diskon (misal: Diskon Kasir / Beasiswa)"
+                        value={cashDiscountReason}
+                        onChange={(e) => setCashDiscountReason(e.target.value)}
+                        className="bg-white dark:bg-slate-950 text-xs h-10 mt-1.5 rounded-xl border-slate-200 dark:border-slate-800"
+                      />
+                    )}
+                  </div>
+
+                  {/* Nominal Bayar Input & Shortcut */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                      Nominal Dibayar (Rp)
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">Rp</span>
+                      <Input
+                        type="number"
+                        disabled={isInfaq}
+                        placeholder="Masukkan nominal bayar..."
+                        value={cashAmount}
+                        onChange={(e) => setCashAmount(e.target.value)}
+                        className="pl-9 h-11 bg-white dark:bg-slate-950 font-extrabold text-slate-900 dark:text-white rounded-xl border-slate-200 dark:border-slate-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                    {/* Shortcut Buttons */}
+                    {!isInfaq && (
+                      <div className="flex gap-1.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setCashAmount(remainingBeforePay.toString())}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200"
+                        >
+                          Lunas ({currency(remainingBeforePay)})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCashAmount(Math.round(remainingBeforePay / 2).toString())}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-200"
+                        >
+                          50% ({currency(Math.round(remainingBeforePay / 2))})
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700 mb-1 block">Catatan / Kuitansi (Opsional)</Label>
+                {/* PRATINJAU KUITANSI / TRANSACTION BREAKDOWN CARD */}
+                <div className="bg-white dark:bg-slate-950 border border-emerald-200 dark:border-emerald-900/60 p-4 sm:p-5 rounded-2xl space-y-2.5 text-xs text-slate-700 dark:text-slate-300 shadow-sm">
+                  <p className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] text-emerald-700 dark:text-emerald-400">
+                    Pratinjau Kalkulasi Kuitansi
+                  </p>
+
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Total Tagihan Awal:</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">{currency(origAmount)}</span>
+                    </div>
+
+                    {paid > 0 && (
+                      <div className="flex justify-between text-blue-700 dark:text-blue-400">
+                        <span>Sudah Diangsur Sebelumnya:</span>
+                        <span className="font-bold">{currency(paid)}</span>
+                      </div>
+                    )}
+
+                    {cashDiscountPct > 0 && (
+                      <div className="flex justify-between text-amber-700 dark:text-amber-400 font-semibold">
+                        <span>Potongan Diskon ({cashDiscountPct}%):</span>
+                        <span>- {currency(currentDiscountAmt)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between font-bold text-slate-900 dark:text-white pt-1 border-t border-slate-100 dark:border-slate-800">
+                      <span>Sisa Sebelum Bayar:</span>
+                      <span>{currency(remainingBeforePay)}</span>
+                    </div>
+
+                    <div className="flex justify-between font-extrabold text-emerald-700 dark:text-emerald-400 text-sm">
+                      <span>Nominal Dibayar Tunai:</span>
+                      <span>{currency(payInputVal)}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center font-extrabold text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
+                      <span className="text-slate-800 dark:text-slate-200">Status Setelah Pembayaran:</span>
+                      {remainingAfterPay === 0 ? (
+                        <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-xs font-black flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> LUNAS SEKALIGUS
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-xs font-black flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" /> ANGSURAN (Sisa: {currency(remainingAfterPay)})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Catatan / Kuitansi */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                    Catatan / Nomor Kuitansi (Opsional)
+                  </Label>
                   <Input
-                    placeholder="Misal: Kuitansi No #1024 - Tunai Kasir"
+                    placeholder="Misal: KWT-KASIR/#1024 - Tunai Kasir Keuangan"
                     value={cashNotes}
                     onChange={(e) => setCashNotes(e.target.value)}
-                    className="bg-white text-xs h-8"
+                    className="bg-white dark:bg-slate-950 text-xs h-11 rounded-xl border-slate-200 dark:border-slate-800"
                   />
                 </div>
               </div>
@@ -1489,14 +1621,16 @@ function ManualCashPaymentModal({
           })()}
         </div>
 
-        <DialogFooter className="gap-2 pt-2">
-          <Button variant="outline" onClick={onClose}>Batal</Button>
+        <DialogFooter className="p-6 sm:p-7 pt-0 flex flex-col-reverse sm:flex-row gap-2.5">
+          <Button type="button" variant="outline" onClick={onClose} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+            Batal
+          </Button>
           <Button
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+            className="h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow-md gap-2"
             disabled={!selectedTagihanId || !cashAmount || parseFloat(cashAmount) <= 0 || payMut.isPending}
             onClick={() => payMut.mutate()}
           >
-            {payMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wallet className="w-4 h-4 mr-2" />}
+            {payMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
             Simpan Pembayaran Tunai
           </Button>
         </DialogFooter>

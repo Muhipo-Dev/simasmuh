@@ -13,11 +13,11 @@ async function main() {
   console.log('🌱 Starting Supabase database seeding...');
 
   // 1. Password Hashes
-  const superadminPassword = await bcrypt.hash('admin123', 10);
-  const nailarPassword = await bcrypt.hash('password123', 10);
-  const guruPassword = await bcrypt.hash('guru123', 10);
-  const agungPassword = await bcrypt.hash('agung', 10);
+  const nailarPassword = await bcrypt.hash('nailar', 10);
+  const ervinaPassword = await bcrypt.hash('ervina', 10);
   const siswaPassword = await bcrypt.hash('123', 10);
+  const safriPassword = await bcrypt.hash('safri', 10);
+  const manchuPassword = await bcrypt.hash('manchu', 10);
 
   // 2. Class
   let defaultClass = await prisma.class.findFirst({ where: { name: 'X-1' } });
@@ -32,74 +32,88 @@ async function main() {
     console.log('✅ Created Class X-1');
   }
 
-  // 3. Super Admin Users
-  const superAdmin = await prisma.user.upsert({
-    where: { username: 'superadmin' },
-    update: { password: superadminPassword },
-    create: {
-      username: 'superadmin',
-      email: 'superadmin@sekolah.com',
-      name: 'Super Admin',
-      password: superadminPassword,
-      role: 'ADMIN_IT',
-    },
-  });
-  console.log('✅ Superadmin user ready:', superAdmin.username);
-
+  // 3. Superadmin User: nailar / nailar
   const nailarUser = await prisma.user.upsert({
     where: { username: 'nailar' },
-    update: { password: nailarPassword },
+    update: { password: nailarPassword, role: 'SUPERADMIN' },
     create: {
       username: 'nailar',
       email: 'nailar@sekolah.com',
-      name: 'Nailar',
+      name: 'Nailar (Superadmin)',
       password: nailarPassword,
       role: 'SUPERADMIN',
     },
   });
   console.log('✅ User nailar ready:', nailarUser.username);
 
-  // 4. Guru Users & Profiles
-  const guruUser = await prisma.user.upsert({
-    where: { username: 'guru' },
-    update: { password: guruPassword },
-    create: {
-      username: 'guru',
-      email: 'guru@sekolah.com',
-      name: 'Guru Wali',
-      password: guruPassword,
-      role: 'GURU',
-      teacherProfile: {
-        create: {
-          nip: '198001012005011001',
-          phone: '081234567890',
+  // 4. Keuangan User: ervina / ervina
+  let ervinaUser = await prisma.user.findUnique({ where: { username: 'ervina' } });
+  if (!ervinaUser) {
+    ervinaUser = await prisma.user.create({
+      data: {
+        username: 'ervina',
+        email: 'ervina@sekolah.com',
+        name: 'Ervina (Keuangan)',
+        password: ervinaPassword,
+        role: 'GURU',
+        subRole: 'KEUANGAN',
+        teacherProfile: {
+          create: {
+            nip: '198505052010019991',
+            phone: '081987654321',
+          },
         },
       },
-    },
-  });
-  console.log('✅ Guru user ready:', guruUser.username);
+    });
+  } else {
+    await prisma.user.update({
+      where: { username: 'ervina' },
+      data: { password: ervinaPassword, role: 'GURU', subRole: 'KEUANGAN' },
+    });
+  }
+  console.log('✅ User ervina ready:', ervinaUser.username);
 
-  const agungUser = await prisma.user.upsert({
-    where: { username: 'agung' },
-    update: { password: agungPassword, role: 'GURU', subRole: 'KEUANGAN' },
-    create: {
-      username: 'agung',
-      email: 'agung@sekolah.com',
-      name: 'Agung (Keuangan)',
-      password: agungPassword,
-      role: 'GURU',
-      subRole: 'KEUANGAN',
-      teacherProfile: {
-        create: {
-          nip: '198505052010011002',
-          phone: '081987654321',
+  // 5. Guru & Admin Web User: safri / safri
+  let safriUser = await prisma.user.findUnique({ where: { username: 'safri' } });
+  if (!safriUser) {
+    safriUser = await prisma.user.create({
+      data: {
+        username: 'safri',
+        email: 'safri@sekolah.com',
+        name: 'Safri (Guru & Admin Web)',
+        password: safriPassword,
+        role: 'ADMIN_WEB',
+        teacherProfile: {
+          create: {
+            nip: '198001012005019992',
+            phone: '081234567890',
+          },
         },
       },
+    });
+  } else {
+    await prisma.user.update({
+      where: { username: 'safri' },
+      data: { password: safriPassword, role: 'ADMIN_WEB' },
+    });
+  }
+  console.log('✅ User safri ready:', safriUser.username);
+
+  // 6. Karyawan & Admin IT User: manchu / manchu
+  const manchuUser = await prisma.user.upsert({
+    where: { username: 'manchu' },
+    update: { password: manchuPassword, role: 'ADMIN_IT' },
+    create: {
+      username: 'manchu',
+      email: 'manchu@sekolah.com',
+      name: 'Manchu (Karyawan & Admin IT)',
+      password: manchuPassword,
+      role: 'ADMIN_IT',
     },
   });
-  console.log('✅ Agung (Keuangan) user ready:', agungUser.username);
+  console.log('✅ User manchu ready:', manchuUser.username);
 
-  // 5. Siswa User & Student Record
+  // 7. Siswa User: 123 / 123 (Muhipo Dev)
   let siswaUser = await prisma.user.findUnique({ where: { username: '123' } });
   if (!siswaUser) {
     siswaUser = await prisma.user.create({
@@ -123,6 +137,12 @@ async function main() {
       },
     });
     console.log('✅ Siswa user 123 ready');
+  } else {
+    await prisma.user.update({
+      where: { username: '123' },
+      data: { password: siswaPassword, name: 'Muhipo Dev' },
+    });
+    console.log('✅ Siswa user 123 updated');
   }
 
   // 6. Subjects

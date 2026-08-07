@@ -479,14 +479,22 @@ function TagihanModal({
               const remaining = Math.max(0, t.amount - paid)
               const pct = Math.min(100, Math.round((paid / t.amount) * 100))
 
+              const dInfo = parseDiscountInfo(t.notes)
+              const cleanNotesText = t.notes
+                ? t.notes
+                    .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
+                    .replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '')
+                    .trim()
+                : ''
+
               return (
-                <div key={t.id} className={`rounded-xl border p-3 transition-colors ${t.status === 'LUNAS' ? 'bg-emerald-50/50 border-emerald-100' : t.status === 'ANGSURAN' ? 'bg-amber-50/40 border-amber-200' : 'bg-white border-slate-100 hover:bg-slate-50'}`}>
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
+                <div key={t.id} className="p-3.5 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200/80 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-600'}`}>{t.type}</span>
                         {t.status === 'LUNAS' ? (
-                          <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Lunas</span>
+                          <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Lunas</span>
                         ) : t.status === 'ANGSURAN' ? (
                           <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 flex items-center gap-1"><Clock className="w-3 h-3" /> Angsuran ({pct}%)</span>
                         ) : (
@@ -497,10 +505,24 @@ function TagihanModal({
                         )}
                       </div>
 
-                      <div className="flex items-center gap-3 mt-1.5">
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         <span className="font-bold text-slate-900 text-base">{currency(t.amount)}</span>
+                        {dInfo?.originalAmount && dInfo.originalAmount > t.amount && (
+                          <span className="text-xs text-slate-400 line-through">
+                            {currency(dInfo.originalAmount)}
+                          </span>
+                        )}
                         {t.dueDate && <span className="text-xs text-slate-400">Tempo: {formatDate(t.dueDate)}</span>}
                       </div>
+
+                      {/* Diskon Badge */}
+                      {dInfo && (
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            Diskon {dInfo.discountPercentage}% ({dInfo.reason || 'Diskon Default Siswa'})
+                          </span>
+                        </div>
+                      )}
 
                       {/* Progress Angsuran */}
                       {t.status !== 'LUNAS' && paid > 0 && (
@@ -518,7 +540,7 @@ function TagihanModal({
                       {t.status === 'LUNAS' && t.paidDate && (
                         <p className="text-xs text-emerald-500 mt-0.5">Dibayar: {formatDate(t.paidDate)}</p>
                       )}
-                      {t.notes && <p className="text-xs text-slate-400 mt-0.5 truncate">{t.notes}</p>}
+                      {cleanNotesText && <p className="text-xs text-slate-500 mt-0.5 truncate">{cleanNotesText}</p>}
                     </div>
 
                     <div className="flex flex-col gap-1 shrink-0">

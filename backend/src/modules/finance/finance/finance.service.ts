@@ -104,12 +104,104 @@ export class FinanceService {
         belumLunasCount,
         sppLunasCount: sppTagihan.length,
         tagihanCount: tagihansList.length,
+        discountPercentage: s.discountPercentage || 0,
+        discountReason: s.discountReason || (s.program === 'kader' ? 'Program Beasiswa Kader' : null),
       };
     });
   }
 
+  /** Mensingkronkan diskon default siswa ke seluruh tagihan siswa */
+  async syncStudentDiscountsToBills(
+    studentId: string,
+    discountPercentage: number,
+    discountReason?: string | null,
+  ) {
+    const tagihans = await this.prisma.tagihan.findMany({
+      where: { studentId },
+    });
+
+    const validPct = [0, 25, 50, 75, 100].includes(discountPercentage)
+      ? discountPercentage
+      : 0;
+
+    for (const t of tagihans) {
+      if (t.amountPaid > 0 && t.status === 'LUNAS') {
+        continue;
+      }
+
+      let originalAmount = t.amount;
+      const discountMatch = t.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
+      if (discountMatch) {
+        try {
+          const discountInfo = JSON.parse(discountMatch[1]);
+          originalAmount = discountInfo.originalAmount || t.amount;
+        } catch {}
+      }
+
+      let cleanNotes = (t.notes || '')
+        .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
+        .replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '')
+        .trim();
+
+      if (validPct > 0) {
+        const discountAmount = Math.round(originalAmount * (validPct / 100));
+        const finalAmount = originalAmount - discountAmount;
+        const discountInfo = {
+          originalAmount,
+          discountPercentage: validPct,
+          discountAmount,
+          finalAmount,
+          reason: discountReason || 'Diskon Default Siswa',
+        };
+        const updatedNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
+
+        await this.prisma.tagihan.update({
+          where: { id: t.id },
+          data: {
+            amount: finalAmount,
+            notes: updatedNotes,
+            status:
+              finalAmount === 0
+                ? 'LUNAS'
+                : t.amountPaid >= finalAmount
+                  ? 'LUNAS'
+                  : 'BELUM_LUNAS',
+            paidDate:
+              finalAmount === 0
+                ? t.paidDate || new Date()
+                : t.amountPaid >= finalAmount
+                  ? t.paidDate
+                  : null,
+          },
+        });
+      } else {
+        await this.prisma.tagihan.update({
+          where: { id: t.id },
+          data: {
+            amount: originalAmount,
+            notes: cleanNotes || null,
+            status: t.amountPaid >= originalAmount ? 'LUNAS' : 'BELUM_LUNAS',
+            paidDate: t.amountPaid >= originalAmount ? t.paidDate : null,
+          },
+        });
+      }
+    }
+  }
+
   /** Detail tagihan untuk satu siswa */
   async getStudentTagihan(studentId: string) {
+    const s = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      select: { program: true, discountPercentage: true, discountReason: true },
+    });
+    if (s) {
+      const effectivePct = s.program === 'kader' ? 100 : (s.discountPercentage || 0);
+      const effectiveReason =
+        s.discountReason ||
+        (s.program === 'kader' ? 'Program Beasiswa Kader' : 'Diskon Default Siswa');
+      await this.syncStudentDiscountsToBills(studentId, effectivePct, effectiveReason);
+    }
+
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
       include: {

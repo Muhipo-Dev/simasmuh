@@ -158,6 +158,7 @@ function TagihanModal({
   const [discountTagihanId, setDiscountTagihanId] = useState<string | null>(null)
   const [discountPercentage, setDiscountPercentage] = useState<25 | 50 | 75 | 100>(25)
   const [discountReason, setDiscountReason] = useState('')
+  const [showCustomDiscount, setShowCustomDiscount] = useState(false)
 
   // State for Angsuran Modal
   const [payTargetTagihan, setPayTargetTagihan] = useState<Tagihan | null>(null)
@@ -181,41 +182,46 @@ function TagihanModal({
     return programConfigs.find(p => p.code.toLowerCase() === student.program?.toLowerCase()) || null
   }, [student?.program, programConfigs])
 
+  // Get default fee for type
+  const getDefaultAmountForType = (typeVal: string): number => {
+    if (typeVal === 'SPP') {
+      return studentProgConfig?.defaultSpp && studentProgConfig.defaultSpp > 0 ? studentProgConfig.defaultSpp : 300000
+    }
+    if (typeVal === 'DPP') return publicSettings?.defaultDpp || 0
+    if (typeVal === 'UKA') return publicSettings?.defaultUka || 0
+    if (typeVal === 'UKS') return publicSettings?.defaultUks || 0
+    return 0
+  }
+
+  // Get effective default discount percentage for student
+  const effectiveDefaultDiscount = useMemo(() => {
+    return student?.discountPercentage || studentProgConfig?.defaultDiscount || 0
+  }, [student?.discountPercentage, studentProgConfig?.defaultDiscount])
+
   const handleSelectType = (typeVal: string) => {
+    setShowCustomDiscount(false)
     let autoAmount = form.amount
-    let autoDiscountPct = form.discountPercentage
-    let autoDiscountReason = form.discountReason
+    let autoDiscountPct = 0
+    let autoDiscountReason = ''
 
     if (typeVal === 'SPP') {
-      if (studentProgConfig && studentProgConfig.defaultSpp > 0) {
-        autoAmount = studentProgConfig.defaultSpp.toString()
-      } else {
-        autoAmount = '300000'
-      }
-      if (studentProgConfig && studentProgConfig.defaultDiscount > 0 && (!student?.discountPercentage || student?.discountPercentage === 0)) {
-        autoDiscountPct = studentProgConfig.defaultDiscount
-        autoDiscountReason = `Default Diskon Program ${studentProgConfig.name}`
-      }
+      autoAmount = getDefaultAmountForType('SPP').toString()
     } else if (typeVal === 'DPP') {
-      if (publicSettings?.defaultDpp && publicSettings.defaultDpp > 0) {
-        autoAmount = publicSettings.defaultDpp.toString()
-      }
+      const def = getDefaultAmountForType('DPP')
+      if (def > 0) autoAmount = def.toString()
     } else if (typeVal === 'UKA') {
-      if (publicSettings?.defaultUka && publicSettings.defaultUka > 0) {
-        autoAmount = publicSettings.defaultUka.toString()
-      }
+      const def = getDefaultAmountForType('UKA')
+      if (def > 0) autoAmount = def.toString()
     } else if (typeVal === 'UKS') {
-      if (publicSettings?.defaultUks && publicSettings.defaultUks > 0) {
-        autoAmount = publicSettings.defaultUks.toString()
-      }
+      const def = getDefaultAmountForType('UKS')
+      if (def > 0) autoAmount = def.toString()
     } else if (typeVal === 'INFAQ') {
-      autoAmount = '' // Nominal bebas diisi untuk INFAQ
+      autoAmount = ''
     }
 
-    // Preserve student's custom discount if set
-    if (student?.discountPercentage && student.discountPercentage > 0) {
-      autoDiscountPct = student.discountPercentage
-      autoDiscountReason = student.discountReason || `Diskon Siswa (${student.discountPercentage}%)`
+    if (effectiveDefaultDiscount > 0) {
+      autoDiscountPct = effectiveDefaultDiscount
+      autoDiscountReason = student?.discountReason || `Diskon Default Program/Siswa (${effectiveDefaultDiscount}%)`
     }
 
     setForm(f => ({
@@ -243,16 +249,28 @@ function TagihanModal({
     setPayNotesInput('')
   }
 
-  const resetForm = () => { setForm(defaultForm()); setEditId(null); setShowForm(false) }
+  const resetForm = () => { setForm(defaultForm()); setEditId(null); setShowForm(false); setShowCustomDiscount(false) }
 
-  const buildPayload = () => ({
-    type: form.type, amount: parseFloat(form.amount),
-    month: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.month) : null,
-    year: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.year) : null,
-    dueDate: form.dueDate || null, notes: form.notes || null,
-    discountPercentage: form.discountPercentage,
-    discountReason: form.discountReason || null,
-  })
+  const buildPayload = () => {
+    const finalAmount = form.amount && parseFloat(form.amount) > 0 
+      ? parseFloat(form.amount) 
+      : getDefaultAmountForType(form.type)
+
+    const finalDiscountPct = showCustomDiscount 
+      ? form.discountPercentage 
+      : (effectiveDefaultDiscount > 0 ? effectiveDefaultDiscount : form.discountPercentage)
+
+    return {
+      type: form.type,
+      amount: finalAmount,
+      month: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.month) : null,
+      year: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.year) : null,
+      dueDate: null,
+      notes: form.notes || null,
+      discountPercentage: finalDiscountPct,
+      discountReason: form.discountReason || null,
+    }
+  }
 
   const addMut = useMutation({
     mutationFn: async () => {
@@ -469,65 +487,98 @@ function TagihanModal({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-sm font-semibold text-slate-700 mb-1 block">Nominal (Rp)</Label>
-                    <Input type="number" placeholder="Contoh: 150000" value={form.amount}
-                      onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="bg-white" />
+                    <Input
+                      type="number"
+                      placeholder={
+                        getDefaultAmountForType(form.type) > 0
+                          ? `Default (Otomatis: Rp ${getDefaultAmountForType(form.type).toLocaleString('id-ID')})`
+                          : "Contoh: 150000"
+                      }
+                      value={form.amount}
+                      onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                      className="bg-white text-xs"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1 italic">
+                      Opsional. Kosongkan untuk mengikuti harga default sistem.
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-semibold text-slate-700 mb-1 block">Jatuh Tempo</Label>
-                    <Input type="date" value={form.dueDate}
-                      onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} className="bg-white" />
-                  </div>
-                </div>
-
-                {['SPP', 'DPP'].includes(form.type) && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-sm font-semibold text-slate-700 mb-1 block">Bulan</Label>
+                    <Label className="text-sm font-semibold text-slate-700 mb-1 block">Tagihan Untuk Periode</Label>
+                    <div className="grid grid-cols-2 gap-1.5">
                       <Select value={form.month} onValueChange={(v) => setForm(f => ({ ...f, month: v ?? f.month }))}>
-                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Bulan" /></SelectTrigger>
                         <SelectContent>{MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
                       </Select>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-slate-700 mb-1 block">Tahun</Label>
                       <Select value={form.year} onValueChange={(v) => setForm(f => ({ ...f, year: v ?? f.year }))}>
-                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Tahun" /></SelectTrigger>
                         <SelectContent>{YEARS.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                   </div>
-                )}
-
-                {/* Diskon */}
-                <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3 space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800">
-                    <TrendingUp className="w-4 h-4 text-amber-600" /> Diskon Tagihan (Server Calculated)
-                  </div>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {[0, 25, 50, 75, 100].map((pct) => (
-                      <button
-                        key={pct}
-                        type="button"
-                        onClick={() => setForm(f => ({ ...f, discountPercentage: pct }))}
-                        className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                          form.discountPercentage === pct
-                            ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-amber-300'
-                        }`}
-                      >
-                        {pct === 0 ? 'Tanpa Diskon' : `${pct}%`}
-                      </button>
-                    ))}
-                  </div>
-                  {form.discountPercentage > 0 && (
-                    <Input
-                      placeholder="Alasan Diskon (Misal: Beasiswa Kader / Prestasi)"
-                      value={form.discountReason}
-                      onChange={(e) => setForm(f => ({ ...f, discountReason: e.target.value }))}
-                      className="bg-white text-xs"
-                    />
-                  )}
                 </div>
+
+                {/* Section Diskon */}
+                {effectiveDefaultDiscount > 0 && !showCustomDiscount ? (
+                  <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                        Diskon Otomatis: {effectiveDefaultDiscount}%
+                      </span>
+                      <span className="text-emerald-700 font-medium">Tagihan otomatis mendapatkan diskon default siswa/program.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomDiscount(true)}
+                      className="text-xs font-bold text-purple-700 hover:text-purple-900 underline shrink-0 ml-2"
+                    >
+                      + Diskon Tambahan / Kustom
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-amber-800">
+                      <span className="flex items-center gap-1.5">
+                        <TrendingUp className="w-4 h-4 text-amber-600" /> Diskon Tagihan (Server Calculated)
+                      </span>
+                      {effectiveDefaultDiscount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCustomDiscount(false)
+                            setForm(f => ({ ...f, discountPercentage: effectiveDefaultDiscount }))
+                          }}
+                          className="text-[11px] font-semibold text-amber-700 hover:underline"
+                        >
+                          Gunakan Default ({effectiveDefaultDiscount}%)
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[0, 25, 50, 75, 100].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => setForm(f => ({ ...f, discountPercentage: pct }))}
+                          className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                            form.discountPercentage === pct
+                              ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                              : 'bg-white text-slate-600 border-slate-200 hover:border-amber-300'
+                          }`}
+                        >
+                          {pct === 0 ? 'Tanpa Diskon' : `${pct}%`}
+                        </button>
+                      ))}
+                    </div>
+                    {form.discountPercentage > 0 && (
+                      <Input
+                        placeholder="Alasan Diskon (Misal: Beasiswa Kader / Prestasi / Khusus)"
+                        value={form.discountReason}
+                        onChange={(e) => setForm(f => ({ ...f, discountReason: e.target.value }))}
+                        className="bg-white text-xs"
+                      />
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <Label className="text-sm font-semibold text-slate-700 mb-1 block">Catatan (opsional)</Label>
@@ -537,7 +588,7 @@ function TagihanModal({
 
                 <div className="flex gap-2 pt-1">
                   <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                    disabled={!form.amount || isLoading}
+                    disabled={isLoading}
                     onClick={() => editId ? editMut.mutate() : addMut.mutate()}>
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     {editId ? 'Simpan Perubahan' : 'Buat Tagihan'}
@@ -592,7 +643,7 @@ function TagihanModal({
                           <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200 flex items-center gap-1"><Clock className="w-3 h-3" /> Belum Lunas</span>
                         )}
                         {t.month && t.year && (
-                          <span className="text-xs text-slate-500">{MONTHS.find(m => m.value === t.month!.toString())?.label} {t.year}</span>
+                          <span className="text-xs text-slate-500 font-medium">{MONTHS.find(m => m.value === t.month!.toString())?.label} {t.year}</span>
                         )}
                       </div>
 
@@ -603,7 +654,6 @@ function TagihanModal({
                             {currency(dInfo.originalAmount)}
                           </span>
                         )}
-                        {t.dueDate && <span className="text-xs text-slate-400">Tempo: {formatDate(t.dueDate)}</span>}
                       </div>
 
                       {/* Diskon Badge */}
@@ -956,34 +1006,24 @@ function TagihanMassalModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-sm font-semibold text-slate-700 mb-1 block">Nominal (Rp)</Label>
-              <Input type="number" placeholder="150000" value={form.amount}
-                onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="bg-white" />
+              <Input type="number" placeholder="Bebas / Default sistem" value={form.amount}
+                onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="bg-white text-xs" />
+              <p className="text-[11px] text-slate-400 mt-1 italic">Kosongkan untuk harga default sistem.</p>
             </div>
             <div>
-              <Label className="text-sm font-semibold text-slate-700 mb-1 block">Jatuh Tempo</Label>
-              <Input type="date" value={form.dueDate}
-                onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} className="bg-white" />
-            </div>
-          </div>
-
-          {['SPP', 'DPP'].includes(form.type) && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-sm font-semibold text-slate-700 mb-1 block">Bulan</Label>
+              <Label className="text-sm font-semibold text-slate-700 mb-1 block">Tagihan Untuk Periode</Label>
+              <div className="grid grid-cols-2 gap-1.5">
                 <Select value={form.month} onValueChange={(v) => setForm(f => ({ ...f, month: v ?? f.month }))}>
-                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Bulan" /></SelectTrigger>
                   <SelectContent>{MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
                 </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-semibold text-slate-700 mb-1 block">Tahun</Label>
                 <Select value={form.year} onValueChange={(v) => setForm(f => ({ ...f, year: v ?? f.year }))}>
-                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Tahun" /></SelectTrigger>
                   <SelectContent>{YEARS.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Diskon Massal */}
           <div className="bg-purple-50/60 border border-purple-200/80 rounded-xl p-3 space-y-2">
@@ -1026,7 +1066,7 @@ function TagihanMassalModal({
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onClose}>Batal</Button>
           <Button className="bg-purple-600 hover:bg-purple-700 text-white"
-            disabled={!form.classId || !form.amount || mut.isPending}
+            disabled={!form.classId || mut.isPending}
             onClick={() => mut.mutate()}>
             {mut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Layers className="w-4 h-4 mr-2" />}
             Buat Tagihan Massal

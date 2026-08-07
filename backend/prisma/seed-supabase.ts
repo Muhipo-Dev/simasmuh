@@ -204,7 +204,7 @@ async function main() {
         defaultDpp: 1500000,
         defaultUka: 500000,
         defaultUks: 100000,
-      },
+      } as any,
     });
   } else {
     await prisma.setting.update({
@@ -214,10 +214,10 @@ async function main() {
         address: existingSetting.address === 'Alamat Sekolah' ? 'Jl. Sultan Agung No. 83, Ponorogo, Jawa Timur' : existingSetting.address,
         academicYear: existingSetting.academicYear || '2026/2027',
         semester: existingSetting.semester || 'Ganjil',
-        defaultDpp: existingSetting.defaultDpp || 1500000,
-        defaultUka: existingSetting.defaultUka || 500000,
-        defaultUks: existingSetting.defaultUks || 100000,
-      },
+        defaultDpp: (existingSetting as any).defaultDpp || 1500000,
+        defaultUka: (existingSetting as any).defaultUka || 500000,
+        defaultUks: (existingSetting as any).defaultUks || 100000,
+      } as any,
     });
   }
   console.log('✅ Settings synced');

@@ -134,7 +134,7 @@ export class StudentsService {
       finalPassword = await bcrypt.hash(finalPassword, 10);
     }
 
-    return (this.prisma.student as any).update({
+    const updated = await (this.prisma.student as any).update({
       where: { id },
       data: {
         nisn: data.nisn,
@@ -160,6 +160,16 @@ export class StudentsService {
       },
       include: { user: true, class: true },
     });
+
+    if (data.discountPercentage !== undefined || data.discountReason !== undefined) {
+      await this.syncStudentDiscountsToBills(
+        id,
+        updated.discountPercentage,
+        updated.discountReason,
+      );
+    }
+
+    return updated;
   }
 
   async remove(id: string) {
@@ -210,7 +220,7 @@ export class StudentsService {
       autoDiscountReason = 'Program Beasiswa Kader';
     }
 
-    return (this.prisma.student as any).update({
+    const updated = await (this.prisma.student as any).update({
       where: { id },
       data: {
         program,
@@ -219,10 +229,18 @@ export class StudentsService {
       },
       include: { class: true, user: true },
     });
+
+    await this.syncStudentDiscountsToBills(
+      id,
+      updated.discountPercentage,
+      updated.discountReason,
+    );
+
+    return updated;
   }
 
   /**
-   * Update discount default siswa oleh bagian keuangan
+   * Update discount default siswa oleh bagian keuangan/superadmin dan sinkronisasi ke tagihan
    */
   async updateDiscount(
     id: string,
@@ -236,7 +254,7 @@ export class StudentsService {
     const student = await this.prisma.student.findUnique({ where: { id } });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
-    return (this.prisma.student as any).update({
+    const updated = await (this.prisma.student as any).update({
       where: { id },
       data: {
         discountPercentage: validPct,
@@ -244,6 +262,98 @@ export class StudentsService {
       },
       include: { class: true, user: true },
     });
+
+    await this.syncStudentDiscountsToBills(
+      id,
+      updated.discountPercentage,
+      updated.discountReason,
+    );
+
+    return updated;
+  }
+
+  /**
+   * Mensingkronkan diskon default siswa ke seluruh tagihan siswa di role keuangan.
+   */
+  async syncStudentDiscountsToBills(
+    studentId: string,
+    discountPercentage: number,
+    discountReason?: string | null,
+  ) {
+    const tagihans = await this.prisma.tagihan.findMany({
+      where: { studentId },
+    });
+
+    const validPct = [0, 25, 50, 75, 100].includes(discountPercentage)
+      ? discountPercentage
+      : 0;
+
+    for (const t of tagihans) {
+      // Jika tagihan sudah lunas dengan pembayaran nyata (amountPaid > 0), jangan ubah
+      if (t.amountPaid > 0 && t.status === 'LUNAS') {
+        continue;
+      }
+
+      // Ambil originalAmount dari notes DISCOUNT_INFO jika ada, atau gunakan t.amount
+      let originalAmount = t.amount;
+      const discountMatch = t.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
+      if (discountMatch) {
+        try {
+          const discountInfo = JSON.parse(discountMatch[1]);
+          originalAmount = discountInfo.originalAmount || t.amount;
+        } catch {}
+      }
+
+      // Bersihkan string DISCOUNT_INFO dari notes
+      let cleanNotes = (t.notes || '')
+        .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
+        .replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '')
+        .trim();
+
+      if (validPct > 0) {
+        const discountAmount = Math.round(originalAmount * (validPct / 100));
+        const finalAmount = originalAmount - discountAmount;
+        const discountInfo = {
+          originalAmount,
+          discountPercentage: validPct,
+          discountAmount,
+          finalAmount,
+          reason: discountReason || 'Diskon Default Siswa',
+        };
+        const updatedNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
+
+        await this.prisma.tagihan.update({
+          where: { id: t.id },
+          data: {
+            amount: finalAmount,
+            notes: updatedNotes,
+            status:
+              finalAmount === 0
+                ? 'LUNAS'
+                : t.amountPaid >= finalAmount
+                  ? 'LUNAS'
+                  : 'BELUM_LUNAS',
+            paidDate:
+              finalAmount === 0
+                ? t.paidDate || new Date()
+                : t.amountPaid >= finalAmount
+                  ? t.paidDate
+                  : null,
+          },
+        });
+      } else {
+        // Diskon 0%: kembalikan jumlah tagihan asli dan hapus catatan diskon
+        await this.prisma.tagihan.update({
+          where: { id: t.id },
+          data: {
+            amount: originalAmount,
+            notes: cleanNotes || null,
+            status: t.amountPaid >= originalAmount ? 'LUNAS' : 'BELUM_LUNAS',
+            paidDate: t.amountPaid >= originalAmount ? t.paidDate : null,
+          },
+        });
+      }
+    }
   }
 
   async promoteBulk(dto: {

@@ -221,11 +221,15 @@ export default function StudentsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] })
+      queryClient.invalidateQueries({ queryKey: ['finance-students'] })
+      queryClient.invalidateQueries({ queryKey: ['student-tagihan'] })
+      queryClient.invalidateQueries({ queryKey: ['my-tagihans'] })
+      queryClient.invalidateQueries({ queryKey: ['my-all-tagihan'] })
       setIsDiscountDialogOpen(false)
       setDiscountTargetStudent(null)
       Swal.fire({
         title: 'Berhasil!',
-        text: 'Diskon default siswa berhasil diperbarui',
+        text: 'Diskon default siswa berhasil diperbarui dan disinkronkan ke tagihan',
         icon: 'success',
         timer: 1800,
         showConfirmButton: false,

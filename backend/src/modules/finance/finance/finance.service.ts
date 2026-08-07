@@ -173,8 +173,21 @@ export class FinanceService {
     let finalAmount = dto.amount;
     let notes = dto.notes ?? null;
 
-    if (dto.discountPercentage && dto.discountPercentage > 0) {
-      const validPct = [25, 50, 75, 100].includes(dto.discountPercentage) ? dto.discountPercentage : 0;
+    // Gunakan diskon eksplisit jika ada, atau fallback ke diskon default siswa / program kader
+    const effectivePct =
+      dto.discountPercentage !== undefined && dto.discountPercentage > 0
+        ? dto.discountPercentage
+        : student.program === 'kader'
+          ? 100
+          : (student.discountPercentage || 0);
+
+    const effectiveReason =
+      dto.discountPercentage !== undefined && dto.discountPercentage > 0
+        ? dto.discountReason
+        : (student.discountReason || (student.program === 'kader' ? 'Program Beasiswa Kader' : 'Diskon Default Siswa'));
+
+    if (effectivePct > 0) {
+      const validPct = [25, 50, 75, 100].includes(effectivePct) ? effectivePct : 0;
       if (validPct > 0) {
         const discountAmount = Math.round(originalAmount * (validPct / 100));
         finalAmount = originalAmount - discountAmount;
@@ -183,7 +196,7 @@ export class FinanceService {
           discountPercentage: validPct,
           discountAmount,
           finalAmount,
-          reason: dto.discountReason || '-',
+          reason: effectiveReason || '-',
         };
         notes = `${notes ? notes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
       }
@@ -428,42 +441,59 @@ export class FinanceService {
   }) {
     const students = await this.prisma.student.findMany({
       where: { classId: dto.classId },
-      select: { id: true },
+      select: { id: true, program: true, discountPercentage: true, discountReason: true },
     });
     if (!students.length)
       throw new NotFoundException('Tidak ada siswa di kelas ini');
 
-    let originalAmount = dto.amount;
-    let finalAmount = dto.amount;
-    let baseNotes = dto.notes ?? null;
+    const originalAmount = dto.amount;
+    const hasBulkDiscount = dto.discountPercentage !== undefined && dto.discountPercentage > 0;
+    const bulkValidPct = hasBulkDiscount
+      ? [25, 50, 75, 100].includes(dto.discountPercentage!) ? dto.discountPercentage! : 0
+      : 0;
 
-    if (dto.discountPercentage && dto.discountPercentage > 0) {
-      const validPct = [25, 50, 75, 100].includes(dto.discountPercentage) ? dto.discountPercentage : 0;
-      if (validPct > 0) {
-        const discountAmount = Math.round(originalAmount * (validPct / 100));
-        finalAmount = originalAmount - discountAmount;
-        const discountInfo = {
-          originalAmount,
-          discountPercentage: validPct,
-          discountAmount,
-          finalAmount,
-          reason: dto.discountReason || '-',
-        };
-        baseNotes = `${baseNotes ? baseNotes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
+    const records = students.map((s) => {
+      let finalAmount = originalAmount;
+      let notes = dto.notes ?? null;
+
+      const effectivePct = hasBulkDiscount
+        ? bulkValidPct
+        : s.program === 'kader'
+          ? 100
+          : (s.discountPercentage || 0);
+
+      const effectiveReason = hasBulkDiscount
+        ? dto.discountReason
+        : (s.discountReason || (s.program === 'kader' ? 'Program Beasiswa Kader' : 'Diskon Default Siswa'));
+
+      if (effectivePct > 0) {
+        const validPct = [25, 50, 75, 100].includes(effectivePct) ? effectivePct : 0;
+        if (validPct > 0) {
+          const discountAmount = Math.round(originalAmount * (validPct / 100));
+          finalAmount = originalAmount - discountAmount;
+          const discountInfo = {
+            originalAmount,
+            discountPercentage: validPct,
+            discountAmount,
+            finalAmount,
+            reason: effectiveReason || '-',
+          };
+          notes = `${notes ? notes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
+        }
       }
-    }
 
-    const records = students.map((s) => ({
-      studentId: s.id,
-      type: dto.type,
-      amount: finalAmount,
-      month: dto.month ?? null,
-      year: dto.year ?? null,
-      dueDate: this.parseDueDate(dto.dueDate),
-      status: finalAmount === 0 ? 'LUNAS' : 'BELUM_LUNAS',
-      paidDate: finalAmount === 0 ? new Date() : null,
-      notes: baseNotes,
-    }));
+      return {
+        studentId: s.id,
+        type: dto.type,
+        amount: finalAmount,
+        month: dto.month ?? null,
+        year: dto.year ?? null,
+        dueDate: this.parseDueDate(dto.dueDate),
+        status: finalAmount === 0 ? 'LUNAS' : 'BELUM_LUNAS',
+        paidDate: finalAmount === 0 ? new Date() : null,
+        notes,
+      };
+    });
 
     const result = await this.prisma.tagihan.createMany({ data: records });
 
@@ -475,7 +505,7 @@ export class FinanceService {
       bulkData: {
         classId: dto.classId,
         tagihanType: dto.type,
-        amount: finalAmount,
+        amount: originalAmount,
         count: students.length,
       },
     });

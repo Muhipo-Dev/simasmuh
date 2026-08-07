@@ -11,10 +11,19 @@ export class SettingsService {
     if (!settings) {
       return this.prisma.setting.create({
         data: {
-          schoolName: 'Nama Sekolah',
-          address: 'Alamat Sekolah',
+          schoolName: 'SMA Muhammadiyah 1 Ponorogo',
+          address: 'Jl. Sultan Agung No. 83, Ponorogo, Jawa Timur',
+          phone: '(0352) 481428',
+          email: 'info@smamuh1ponorogo.sch.id',
+          principalName: 'Drs. H. Sugeng, M.Pd.',
           academicYear: '2026/2027',
           semester: 'Ganjil',
+          bankName: 'Bank Syariah Indonesia (BSI)',
+          bankNumber: '7123456789',
+          bankOwner: 'SMA MUHAMMADIYAH 1 PONOROGO',
+          defaultDpp: 1500000,
+          defaultUka: 500000,
+          defaultUks: 100000,
         },
       });
     }
@@ -34,20 +43,20 @@ export class SettingsService {
         defaultDpp: true,
         defaultUka: true,
         defaultUks: true,
-      },
+      } as any,
     });
     if (!settings) {
       return {
-        schoolName: 'Nama Sekolah',
-        address: 'Alamat Sekolah',
-        phone: '',
-        email: '',
+        schoolName: 'SMA Muhammadiyah 1 Ponorogo',
+        address: 'Jl. Sultan Agung No. 83, Ponorogo, Jawa Timur',
+        phone: '(0352) 481428',
+        email: 'info@smamuh1ponorogo.sch.id',
         academicYear: '2026/2027',
         semester: 'Ganjil',
         logoUrl: null,
-        defaultDpp: 0,
-        defaultUka: 0,
-        defaultUks: 0,
+        defaultDpp: 1500000,
+        defaultUka: 500000,
+        defaultUks: 100000,
       };
     }
     return settings;

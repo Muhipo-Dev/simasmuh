@@ -166,7 +166,41 @@ async function main() {
       create: prog,
     });
   }
-  console.log('✅ ProgramConfigs seeded');
+  // 8. Seed Default Settings
+  const existingSetting = await prisma.setting.findFirst();
+  if (!existingSetting) {
+    await prisma.setting.create({
+      data: {
+        schoolName: 'SMA Muhammadiyah 1 Ponorogo',
+        address: 'Jl. Sultan Agung No. 83, Ponorogo, Jawa Timur',
+        phone: '(0352) 481428',
+        email: 'info@smamuh1ponorogo.sch.id',
+        principalName: 'Drs. H. Sugeng, M.Pd.',
+        academicYear: '2026/2027',
+        semester: 'Ganjil',
+        bankName: 'Bank Syariah Indonesia (BSI)',
+        bankNumber: '7123456789',
+        bankOwner: 'SMA MUHAMMADIYAH 1 PONOROGO',
+        defaultDpp: 1500000,
+        defaultUka: 500000,
+        defaultUks: 100000,
+      },
+    });
+  } else {
+    await prisma.setting.update({
+      where: { id: existingSetting.id },
+      data: {
+        schoolName: existingSetting.schoolName === 'Nama Sekolah' ? 'SMA Muhammadiyah 1 Ponorogo' : existingSetting.schoolName,
+        address: existingSetting.address === 'Alamat Sekolah' ? 'Jl. Sultan Agung No. 83, Ponorogo, Jawa Timur' : existingSetting.address,
+        academicYear: existingSetting.academicYear || '2026/2027',
+        semester: existingSetting.semester || 'Ganjil',
+        defaultDpp: existingSetting.defaultDpp || 1500000,
+        defaultUka: existingSetting.defaultUka || 500000,
+        defaultUks: existingSetting.defaultUks || 100000,
+      },
+    });
+  }
+  console.log('✅ Settings synced');
 
   console.log('🎉 Seeding completed successfully!');
 }

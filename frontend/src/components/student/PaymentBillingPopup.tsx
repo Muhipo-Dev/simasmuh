@@ -64,8 +64,6 @@ const PAYMENT_TYPE_LABELS: Record<string, { label: string; color: string }> = {
   UKA: { label: 'UKA', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
   UKS: { label: 'UKS', color: 'bg-teal-100 text-teal-800 border-teal-200' },
   INFAQ: { label: 'Infaq', color: 'bg-green-100 text-green-800 border-green-200' },
-  AKADEMIK: { label: 'Akademik', color: 'bg-orange-100 text-orange-800 border-orange-200' },
-  SEKOLAH: { label: 'Kegiatan', color: 'bg-red-100 text-red-800 border-red-200' },
 }
 
 const formatCurrency = (amount: number) => 

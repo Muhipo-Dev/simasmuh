@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import {
   Wallet, Users, BarChart3, Building2, Search, Pencil, Trash2,
   Loader2, PlusCircle, CheckCircle2, TrendingUp, X, Download,
-  AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent
+  AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, Sparkles
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
@@ -75,8 +75,6 @@ const PAYMENT_TYPES = [
   { value: 'UKA', label: 'UKA', desc: 'Uang Kegiatan Akademik' },
   { value: 'UKS', label: 'UKS', desc: 'Uang Kegiatan Siswa' },
   { value: 'INFAQ', label: 'Infaq', desc: 'Uang Infaq Sekolah (Sukarela)' },
-  { value: 'AKADEMIK', label: 'Akademik', desc: 'Kegiatan Akademik' },
-  { value: 'SEKOLAH', label: 'Kegiatan', desc: 'Kegiatan Sekolah' },
 ]
 
 const TYPE_COLORS: Record<string, string> = {
@@ -409,108 +407,148 @@ function TagihanModal({
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); resetForm() } }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <Receipt className="w-5 h-5 text-blue-600" />
+        <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <DialogHeader className="space-y-1.5 pb-2">
+            <DialogTitle className="flex items-center gap-2.5 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
+              <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-xl text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900">
+                <Receipt className="w-5 h-5" />
+              </div>
               Tagihan — {student?.name}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">
               Kelas {student?.class?.name} · NISN {student?.nisn} · NIS {student?.nis}
             </DialogDescription>
           </DialogHeader>
 
-          {/* Summary */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
-              <p className="text-xs text-red-500 font-medium">Belum Lunas</p>
-              <p className="font-bold text-red-700 text-lg">{currency(totalBelumLunas)}</p>
-              <p className="text-xs text-red-400">{tagihans.filter(t => t.status === 'BELUM_LUNAS').length} tagihan</p>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-1">
+            <div className="bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 rounded-2xl p-4 flex items-center justify-between shadow-xs">
+              <div>
+                <p className="text-xs text-rose-600 dark:text-rose-400 font-bold uppercase tracking-wider">Belum Lunas</p>
+                <p className="font-extrabold text-rose-700 dark:text-rose-300 text-xl sm:text-2xl mt-0.5">{currency(totalBelumLunas)}</p>
+              </div>
+              <span className="text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 border border-rose-200 dark:border-rose-800 px-3 py-1 rounded-full">
+                {tagihans.filter(t => t.status === 'BELUM_LUNAS').length} Tagihan
+              </span>
             </div>
-            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
-              <p className="text-xs text-emerald-500 font-medium">Sudah Lunas</p>
-              <p className="font-bold text-emerald-700 text-lg">{currency(totalLunas)}</p>
-              <p className="text-xs text-emerald-400">{tagihans.filter(t => t.status === 'LUNAS').length} tagihan</p>
+
+            <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-2xl p-4 flex items-center justify-between shadow-xs">
+              <div>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Sudah Lunas</p>
+                <p className="font-extrabold text-emerald-700 dark:text-emerald-300 text-xl sm:text-2xl mt-0.5">{currency(totalLunas)}</p>
+              </div>
+              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-full">
+                {tagihans.filter(t => t.status === 'LUNAS').length} Tagihan
+              </span>
             </div>
           </div>
 
-          {/* Tambah button */}
+          {/* Form Tagihan Baru / Edit */}
           {!showForm ? (
-            <Button onClick={() => setShowForm(true)} className="w-full bg-blue-600 hover:bg-blue-700 text-white gap-2">
+            <Button onClick={() => setShowForm(true)} className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-md gap-2 my-1">
               <PlusCircle className="w-4 h-4" /> Tambah Tagihan Baru
             </Button>
           ) : (
-            <Card className="border-blue-200 bg-blue-50/40">
-              <CardHeader className="pb-3 pt-4 px-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base text-blue-900">{editId ? 'Edit Tagihan' : 'Tagihan Baru'}</CardTitle>
-                  <button onClick={resetForm} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
-                </div>
+            <Card className="border border-blue-200/80 dark:border-slate-800 bg-blue-50/30 dark:bg-slate-900/90 rounded-2xl shadow-sm overflow-hidden my-2">
+              <CardHeader className="bg-white dark:bg-slate-800/80 border-b border-blue-100 dark:border-slate-800 py-3.5 px-5 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-base font-extrabold text-blue-900 dark:text-blue-300 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  {editId ? 'Edit Tagihan' : 'Tagihan Baru'}
+                </CardTitle>
+                <button onClick={resetForm} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
               </CardHeader>
-              <CardContent className="px-4 pb-4 space-y-3">
-                {/* Jenis */}
-                <div>
-                  <Label className="text-sm font-semibold text-slate-700 mb-1.5 block">Jenis Tagihan</Label>
-                  <div className="flex flex-wrap gap-2">
+
+              <CardContent className="p-5 sm:p-6 space-y-5">
+                {/* Jenis Tagihan */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                    Jenis Tagihan
+                  </Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-2.5">
                     {PAYMENT_TYPES.map(t => (
-                      <button key={t.value} type="button"
+                      <button 
+                        key={t.value} 
+                        type="button"
                         onClick={() => handleSelectType(t.value)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${form.type === t.value ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
+                        className={`h-11 px-3 rounded-xl text-xs sm:text-sm font-extrabold border transition-all flex items-center justify-center ${
+                          form.type === t.value 
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20' 
+                            : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700'
+                        }`}
+                      >
                         {t.label}
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">{PAYMENT_TYPES.find(t => t.value === form.type)?.desc}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    {PAYMENT_TYPES.find(t => t.value === form.type)?.desc}
+                  </p>
                 </div>
 
                 {/* Banner Info Program & Diskon untuk Siswa */}
                 {student?.program && (
-                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-900 flex items-center justify-between">
-                    <div>
-                      <span className="font-bold uppercase tracking-wider text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md mr-1.5">
+                  <div className="bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-purple-900 dark:text-purple-200">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 border border-purple-200 dark:border-purple-800 px-2.5 py-1 rounded-lg">
                         Program {student.program}
                       </span>
                       {studentProgConfig?.defaultSpp ? (
-                        <span>Default SPP: <strong>Rp {studentProgConfig.defaultSpp.toLocaleString('id-ID')}</strong></span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          Default SPP: <strong className="font-bold text-purple-950 dark:text-purple-100">Rp {studentProgConfig.defaultSpp.toLocaleString('id-ID')}</strong>
+                        </span>
                       ) : null}
                     </div>
                     {(student?.discountPercentage || studentProgConfig?.defaultDiscount) ? (
-                      <span className="font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                      <span className="font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-lg self-start sm:self-auto">
                         Diskon: {student?.discountPercentage || studentProgConfig?.defaultDiscount}%
                       </span>
                     ) : (
-                      <span className="text-slate-400 font-medium">Tanpa Diskon</span>
+                      <span className="text-slate-400 font-medium italic">Tanpa Diskon</span>
                     )}
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-sm font-semibold text-slate-700 mb-1 block">Nominal (Rp)</Label>
-                    <Input
-                      type="number"
-                      placeholder={
-                        getDefaultAmountForType(form.type) > 0
-                          ? `Default (Otomatis: Rp ${getDefaultAmountForType(form.type).toLocaleString('id-ID')})`
-                          : "Contoh: 150000"
-                      }
-                      value={form.amount}
-                      onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-                      className="bg-white text-xs"
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1 italic">
-                      Opsional. Kosongkan untuk mengikuti harga default sistem.
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                      Nominal (Rp)
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">Rp</span>
+                      <Input
+                        type="number"
+                        placeholder={
+                          getDefaultAmountForType(form.type) > 0
+                            ? `Default: Rp ${getDefaultAmountForType(form.type).toLocaleString('id-ID')}`
+                            : "Contoh: 150000"
+                        }
+                        value={form.amount}
+                        onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                        className="pl-9 h-11 bg-white dark:bg-slate-950 font-bold text-slate-900 dark:text-white rounded-xl border-slate-200 dark:border-slate-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      Kosongkan untuk nominal default sistem.
                     </p>
                   </div>
-                  <div>
-                    <Label className="text-sm font-semibold text-slate-700 mb-1 block">Tagihan Untuk Periode</Label>
-                    <div className="grid grid-cols-2 gap-1.5">
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                      Tagihan Untuk Periode
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
                       <Select value={form.month} onValueChange={(v) => setForm(f => ({ ...f, month: v ?? f.month }))}>
-                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Bulan" /></SelectTrigger>
+                        <SelectTrigger className="bg-white dark:bg-slate-950 h-11 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                          <SelectValue placeholder="Bulan" />
+                        </SelectTrigger>
                         <SelectContent>{MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
                       </Select>
                       <Select value={form.year} onValueChange={(v) => setForm(f => ({ ...f, year: v ?? f.year }))}>
-                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Tahun" /></SelectTrigger>
+                        <SelectTrigger className="bg-white dark:bg-slate-950 h-11 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                          <SelectValue placeholder="Tahun" />
+                        </SelectTrigger>
                         <SelectContent>{YEARS.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
@@ -519,26 +557,26 @@ function TagihanModal({
 
                 {/* Section Diskon */}
                 {effectiveDefaultDiscount > 0 && !showCustomDiscount ? (
-                  <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 flex items-center justify-between text-xs">
+                  <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3.5 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                      <span className="font-extrabold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2.5 py-1 rounded-lg">
                         Diskon Otomatis: {effectiveDefaultDiscount}%
                       </span>
-                      <span className="text-emerald-700 font-medium">Tagihan otomatis mendapatkan diskon default siswa/program.</span>
+                      <span className="text-emerald-700 dark:text-emerald-400 font-medium hidden sm:inline">Mendapatkan diskon default siswa/program.</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowCustomDiscount(true)}
-                      className="text-xs font-bold text-purple-700 hover:text-purple-900 underline shrink-0 ml-2"
+                      className="text-xs font-bold text-purple-700 dark:text-purple-400 hover:underline shrink-0 ml-2"
                     >
-                      + Diskon Tambahan / Kustom
+                      + Diskon Tambahan
                     </button>
                   </div>
                 ) : (
-                  <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3 space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold text-amber-800">
+                  <div className="bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-300">
                       <span className="flex items-center gap-1.5">
-                        <TrendingUp className="w-4 h-4 text-amber-600" /> Diskon Tagihan (Server Calculated)
+                        <TrendingUp className="w-4 h-4 text-amber-600" /> Diskon Tagihan
                       </span>
                       {effectiveDefaultDiscount > 0 && (
                         <button
@@ -547,22 +585,22 @@ function TagihanModal({
                             setShowCustomDiscount(false)
                             setForm(f => ({ ...f, discountPercentage: effectiveDefaultDiscount }))
                           }}
-                          className="text-[11px] font-semibold text-amber-700 hover:underline"
+                          className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 hover:underline"
                         >
                           Gunakan Default ({effectiveDefaultDiscount}%)
                         </button>
                       )}
                     </div>
-                    <div className="grid grid-cols-5 gap-1.5">
+                    <div className="grid grid-cols-5 gap-2">
                       {[0, 25, 50, 75, 100].map((pct) => (
                         <button
                           key={pct}
                           type="button"
                           onClick={() => setForm(f => ({ ...f, discountPercentage: pct }))}
-                          className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                          className={`h-9 rounded-xl text-xs font-extrabold border transition-all ${
                             form.discountPercentage === pct
                               ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                              : 'bg-white text-slate-600 border-slate-200 hover:border-amber-300'
+                              : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-amber-300'
                           }`}
                         >
                           {pct === 0 ? 'Tanpa Diskon' : `${pct}%`}
@@ -574,26 +612,30 @@ function TagihanModal({
                         placeholder="Alasan Diskon (Misal: Beasiswa Kader / Prestasi / Khusus)"
                         value={form.discountReason}
                         onChange={(e) => setForm(f => ({ ...f, discountReason: e.target.value }))}
-                        className="bg-white text-xs"
+                        className="bg-white dark:bg-slate-950 h-10 text-xs rounded-xl"
                       />
                     )}
                   </div>
                 )}
 
-                <div>
-                  <Label className="text-sm font-semibold text-slate-700 mb-1 block">Catatan (opsional)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                    Catatan (opsional)
+                  </Label>
                   <Textarea placeholder="Catatan tambahan..." rows={2} value={form.notes}
-                    onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="bg-white resize-none" />
+                    onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="bg-white dark:bg-slate-950 resize-none text-xs rounded-xl" />
                 </div>
 
-                <div className="flex gap-2 pt-1">
-                  <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+                  <Button className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
                     disabled={isLoading}
                     onClick={() => editId ? editMut.mutate() : addMut.mutate()}>
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     {editId ? 'Simpan Perubahan' : 'Buat Tagihan'}
                   </Button>
-                  <Button variant="outline" onClick={resetForm} disabled={isLoading}>Batal</Button>
+                  <Button variant="outline" onClick={resetForm} disabled={isLoading} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+                    Batal
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -967,58 +1009,80 @@ function TagihanMassalModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md p-0 rounded-2xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-        <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-violet-600 p-5 text-white shadow-sm">
+      <DialogContent className="max-w-xl sm:max-w-2xl lg:max-w-3xl p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-violet-600 p-6 sm:p-7 text-white shadow-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-white text-lg font-extrabold">
-              <Layers className="w-5 h-5 text-purple-200" /> Tagihan Massal per Kelas
+            <DialogTitle className="flex items-center gap-2.5 text-white text-lg sm:text-xl font-extrabold">
+              <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
+                <Layers className="w-5 h-5 text-purple-200" />
+              </div>
+              Tagihan Massal per Kelas
             </DialogTitle>
-            <DialogDescription className="text-purple-100 text-xs">
-              Buat tagihan yang sama untuk semua siswa di satu kelas sekaligus dengan opsi diskon otomatis.
+            <DialogDescription className="text-purple-100 text-xs sm:text-sm mt-1">
+              Buat tagihan sekaligus untuk semua siswa dalam satu kelas dengan opsi diskon otomatis.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="p-5 space-y-3.5 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
-          <div>
-            <Label className="text-sm font-semibold text-slate-700 mb-1 block">Pilih Kelas</Label>
+        <div className="p-6 sm:p-7 space-y-5 max-h-[82vh] overflow-y-auto pr-3 custom-scrollbar">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Pilih Kelas</Label>
             <Select value={form.classId} onValueChange={(v) => setForm(f => ({ ...f, classId: v ?? f.classId }))}>
-              <SelectTrigger className="bg-white"><SelectValue placeholder="Pilih kelas..." /></SelectTrigger>
+              <SelectTrigger className="bg-white dark:bg-slate-950 h-11 font-semibold rounded-xl border-slate-200 dark:border-slate-800"><SelectValue placeholder="Pilih kelas..." /></SelectTrigger>
               <SelectContent>
                 {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          <div>
-            <Label className="text-sm font-semibold text-slate-700 mb-1.5 block">Jenis Tagihan</Label>
-            <div className="flex flex-wrap gap-2">
+          <div className="space-y-2">
+            <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Jenis Tagihan</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
               {PAYMENT_TYPES.map(t => (
-                <button key={t.value} type="button"
+                <button 
+                  key={t.value} 
+                  type="button"
                   onClick={() => setForm(f => ({ ...f, type: t.value }))}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${form.type === t.value ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-purple-300'}`}>
+                  className={`h-11 px-3 rounded-xl text-xs sm:text-sm font-extrabold border transition-all flex items-center justify-center ${
+                    form.type === t.value 
+                      ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-500/20' 
+                      : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-700'
+                  }`}
+                >
                   {t.label}
                 </button>
               ))}
             </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              {PAYMENT_TYPES.find(t => t.value === form.type)?.desc}
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-sm font-semibold text-slate-700 mb-1 block">Nominal (Rp)</Label>
-              <Input type="number" placeholder="Bebas / Default sistem" value={form.amount}
-                onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="bg-white text-xs" />
-              <p className="text-[11px] text-slate-400 mt-1 italic">Kosongkan untuk harga default sistem.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Nominal (Rp)</Label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">Rp</span>
+                <Input 
+                  type="number" 
+                  placeholder="Bebas / Default sistem" 
+                  value={form.amount}
+                  onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} 
+                  className="pl-9 h-11 bg-white dark:bg-slate-950 font-bold rounded-xl border-slate-200 dark:border-slate-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                />
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium">Kosongkan untuk nominal default sistem.</p>
             </div>
-            <div>
-              <Label className="text-sm font-semibold text-slate-700 mb-1 block">Tagihan Untuk Periode</Label>
-              <div className="grid grid-cols-2 gap-1.5">
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Tagihan Untuk Periode</Label>
+              <div className="grid grid-cols-2 gap-2">
                 <Select value={form.month} onValueChange={(v) => setForm(f => ({ ...f, month: v ?? f.month }))}>
-                  <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Bulan" /></SelectTrigger>
+                  <SelectTrigger className="bg-white dark:bg-slate-950 h-11 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800"><SelectValue placeholder="Bulan" /></SelectTrigger>
                   <SelectContent>{MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
                 </Select>
                 <Select value={form.year} onValueChange={(v) => setForm(f => ({ ...f, year: v ?? f.year }))}>
-                  <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="Tahun" /></SelectTrigger>
+                  <SelectTrigger className="bg-white dark:bg-slate-950 h-11 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800"><SelectValue placeholder="Tahun" /></SelectTrigger>
                   <SelectContent>{YEARS.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
                 </Select>
               </div>

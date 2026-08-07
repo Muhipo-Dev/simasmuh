@@ -400,10 +400,17 @@ function TagihanModal({
   }
 
   const tagihans = student?.tagihans ?? []
-  const filtered = filterStatus === 'ALL' ? tagihans : tagihans.filter(t => t.status === filterStatus)
-  const belumLunasTagihans = tagihans.filter(t => t.status === 'BELUM_LUNAS')
-  const angsuranTagihans = tagihans.filter(t => t.status === 'ANGSURAN')
-  const lunasTagihans = tagihans.filter(t => t.status === 'LUNAS')
+  const lunasTagihans = tagihans.filter(t => t.status === 'LUNAS' || ((t.amountPaid || 0) >= t.amount && t.amount > 0))
+  const angsuranTagihans = tagihans.filter(t => !lunasTagihans.includes(t) && (t.status === 'ANGSURAN' || (t.amountPaid || 0) > 0))
+  const belumLunasTagihans = tagihans.filter(t => !lunasTagihans.includes(t) && !angsuranTagihans.includes(t))
+
+  const filtered = filterStatus === 'ALL' 
+    ? tagihans 
+    : filterStatus === 'LUNAS' 
+    ? lunasTagihans 
+    : filterStatus === 'ANGSURAN' 
+    ? angsuranTagihans 
+    : belumLunasTagihans
 
   const totalBelumLunas = belumLunasTagihans.reduce((s, t) => s + Math.max(0, t.amount - (t.amountPaid || 0)), 0)
   const totalAngsuranPaid = angsuranTagihans.reduce((s, t) => s + (t.amountPaid || 0), 0)
@@ -450,43 +457,47 @@ function TagihanModal({
 
           <div className="flex-1 overflow-y-auto p-6 sm:p-7 space-y-5 custom-scrollbar">
 
-          {/* Summary Cards (3 Kolom) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 my-1">
-            <div className="bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
-              <div className="flex justify-between items-start">
-                <p className="text-xs text-rose-600 dark:text-rose-400 font-bold uppercase tracking-wider">Belum Dibayar</p>
-                <span className="text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 border border-rose-200 dark:border-rose-800 px-2.5 py-0.5 rounded-full">
+          {/* Summary Cards (3 Kolom Simetris & Clean) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-1">
+            {/* Card 1: Belum Dibayar */}
+            <div className="bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 rounded-2xl p-4 flex flex-col justify-between shadow-xs min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-rose-600 dark:text-rose-400 font-bold uppercase tracking-wider truncate">Belum Dibayar</span>
+                <span className="text-[11px] font-extrabold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 border border-rose-200 dark:border-rose-800 px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
                   {belumLunasTagihans.length} Tagihan
                 </span>
               </div>
-              <p className="font-extrabold text-rose-700 dark:text-rose-300 text-lg sm:text-xl mt-2">{currency(totalBelumLunas)}</p>
+              <p className="font-extrabold text-rose-700 dark:text-rose-300 text-lg sm:text-xl mt-2 truncate">{currency(totalBelumLunas)}</p>
             </div>
 
-            <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300/80 dark:border-amber-900/60 rounded-2xl p-4 flex flex-col justify-between shadow-sm ring-1 ring-amber-400/20">
-              <div className="flex justify-between items-start">
-                <p className="text-xs text-amber-700 dark:text-amber-400 font-extrabold uppercase tracking-wider flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-amber-600" /> Sedang Diangsur
-                </p>
-                <span className="text-xs font-extrabold text-amber-800 dark:text-amber-300 bg-amber-200/70 dark:bg-amber-900/70 border border-amber-300 dark:border-amber-800 px-2.5 py-0.5 rounded-full">
+            {/* Card 2: Sedang Diangsur */}
+            <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300/80 dark:border-amber-900/60 rounded-2xl p-4 flex flex-col justify-between shadow-xs ring-1 ring-amber-400/20 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-amber-700 dark:text-amber-400 font-extrabold uppercase tracking-wider flex items-center gap-1.5 truncate">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span className="truncate">Sedang Diangsur</span>
+                </span>
+                <span className="text-[11px] font-extrabold text-amber-800 dark:text-amber-300 bg-amber-200/70 dark:bg-amber-900/70 border border-amber-300 dark:border-amber-800 px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
                   {angsuranTagihans.length} Tagihan
                 </span>
               </div>
               <div className="mt-2">
-                <p className="font-extrabold text-amber-900 dark:text-amber-200 text-lg sm:text-xl">{currency(totalAngsuranSisa)}</p>
-                <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-0.5">
+                <p className="font-extrabold text-amber-900 dark:text-amber-200 text-lg sm:text-xl truncate">{currency(totalAngsuranSisa)}</p>
+                <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-0.5 truncate">
                   Sudah Dibayar: {currency(totalAngsuranPaid)}
                 </p>
               </div>
             </div>
 
-            <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
-              <div className="flex justify-between items-start">
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Sudah Lunas</p>
-                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 rounded-full">
+            {/* Card 3: Sudah Lunas */}
+            <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-2xl p-4 flex flex-col justify-between shadow-xs min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider truncate">Sudah Lunas</span>
+                <span className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
                   {lunasTagihans.length} Tagihan
                 </span>
               </div>
-              <p className="font-extrabold text-emerald-700 dark:text-emerald-300 text-lg sm:text-xl mt-2">{currency(totalLunas)}</p>
+              <p className="font-extrabold text-emerald-700 dark:text-emerald-300 text-lg sm:text-xl mt-2 truncate">{currency(totalLunas)}</p>
             </div>
           </div>
 

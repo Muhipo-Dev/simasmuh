@@ -192,10 +192,10 @@ export default function UsersPage() {
     setIsEdit(true)
     setFormData({ 
       id: user.id, 
-      name: user.name, 
+      name: user.name || '', 
       username: user.username || '',
       nipNbm: user.nipNbm || user.teacherProfile?.nip || '',
-      email: user.email, 
+      email: user.email || '', 
       password: '', 
       role: user.role, 
       subRole: user.subRole || 'NONE',
@@ -249,16 +249,20 @@ export default function UsersPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.username || formData.username.trim() === '') {
+    const usernameVal = (formData.username || '').trim()
+    if (!usernameVal) {
       alert('Username wajib diisi')
       return
     }
 
+    const emailVal = (formData.email || '').trim()
+    const nipVal = (formData.nipNbm || '').trim()
+
     const dataToSubmit = {
       ...formData,
-      username: formData.username.trim(),
-      email: formData.email.trim() || null,
-      nipNbm: formData.nipNbm.trim() || null,
+      username: usernameVal,
+      email: emailVal || null,
+      nipNbm: nipVal || null,
       subRole: formData.subRole === 'NONE' ? null : formData.subRole,
       subRole2: formData.subRole2 === 'NONE' ? null : formData.subRole2,
       subRole3: formData.subRole3 === 'NONE' ? null : formData.subRole3

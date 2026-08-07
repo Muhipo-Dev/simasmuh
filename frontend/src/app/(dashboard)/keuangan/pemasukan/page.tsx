@@ -142,8 +142,8 @@ const defaultForm = (): FormState => ({
 // TAGIHAN MODAL - Detail & Kelola per siswa
 // ============================================================
 function TagihanModal({
-  student, open, onClose }: {
-  student: StudentDetail | null; open: boolean; onClose: () => void
+  student, open, onClose, onResetStudent }: {
+  student: StudentDetail | null; open: boolean; onClose: () => void; onResetStudent?: (studentId: string) => void
 }) {
   const authenticatedFetch = useAuthenticatedFetch();
   const authenticatedQuery = useAuthenticatedQuery();
@@ -410,15 +410,33 @@ function TagihanModal({
       <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); resetForm() } }}>
         <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
           <DialogHeader className="space-y-1.5 pb-2">
-            <DialogTitle className="flex items-center gap-2.5 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
-              <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-xl text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900">
-                <Receipt className="w-5 h-5" />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <DialogTitle className="flex items-center gap-2.5 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-xl text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900">
+                    <Receipt className="w-5 h-5" />
+                  </div>
+                  Tagihan — {student?.name}
+                </DialogTitle>
+                <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium mt-1">
+                  Kelas {student?.class?.name} · NISN {student?.nisn} · NIS {student?.nis}
+                </DialogDescription>
               </div>
-              Tagihan — {student?.name}
-            </DialogTitle>
-            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">
-              Kelas {student?.class?.name} · NISN {student?.nisn} · NIS {student?.nis}
-            </DialogDescription>
+              {student && onResetStudent && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    onClose();
+                    onResetStudent(student.id);
+                  }}
+                  className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-xs font-bold gap-1.5 h-9 rounded-xl shrink-0"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Reset Tagihan Siswa
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
           {/* Summary Cards */}
@@ -1862,7 +1880,8 @@ function TabTagihan() {
       </Dialog>
 
       <TagihanModal student={detailData ?? null} open={modalOpen}
-        onClose={() => { setModalOpen(false); setSelectedStudent(null) }} />
+        onClose={() => { setModalOpen(false); setSelectedStudent(null) }}
+        onResetStudent={(id) => openResetModal([id])} />
       <TagihanMassalModal open={massalOpen} onClose={() => setMassalOpen(false)} classes={classes} />
       <ManualCashPaymentModal open={cashModalOpen} onClose={() => setCashModalOpen(false)} students={students} />
     </div>

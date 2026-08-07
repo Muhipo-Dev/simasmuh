@@ -408,36 +408,40 @@ function TagihanModal({
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); resetForm() } }}>
-        <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <DialogHeader className="space-y-1.5 pb-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <DialogTitle className="flex items-center gap-2.5 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
-                  <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-xl text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900">
-                    <Receipt className="w-5 h-5" />
-                  </div>
-                  Tagihan — {student?.name}
-                </DialogTitle>
-                <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium mt-1">
-                  Kelas {student?.class?.name} · NISN {student?.nisn} · NIS {student?.nis}
-                </DialogDescription>
+        <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="shrink-0 p-6 sm:p-7 border-b border-slate-100 dark:border-slate-800">
+            <DialogHeader className="space-y-1.5 pb-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <DialogTitle className="flex items-center gap-2.5 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-xl text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900">
+                      <Receipt className="w-5 h-5" />
+                    </div>
+                    Tagihan — {student?.name}
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium mt-1">
+                    Kelas {student?.class?.name} · NISN {student?.nisn} · NIS {student?.nis}
+                  </DialogDescription>
+                </div>
+                {student && onResetStudent && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      onClose();
+                      onResetStudent(student.id);
+                    }}
+                    className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-xs font-bold gap-1.5 h-9 rounded-xl shrink-0"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Reset Tagihan Siswa
+                  </Button>
+                )}
               </div>
-              {student && onResetStudent && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    onClose();
-                    onResetStudent(student.id);
-                  }}
-                  className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-xs font-bold gap-1.5 h-9 rounded-xl shrink-0"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Reset Tagihan Siswa
-                </Button>
-              )}
-            </div>
-          </DialogHeader>
+            </DialogHeader>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6 sm:p-7 space-y-5 custom-scrollbar">
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-1">
@@ -789,7 +793,8 @@ function TagihanModal({
               )
             })}
           </div>
-        </DialogContent>
+        </div>
+      </DialogContent>
       </Dialog>
 
       {/* MODAL BAYAR / ANGSURAN TAGIHAN */}
@@ -1028,8 +1033,8 @@ function TagihanMassalModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-xl sm:max-w-2xl lg:max-w-3xl p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-        <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-violet-600 p-6 sm:p-7 text-white shadow-sm">
+      <DialogContent className="max-w-xl sm:max-w-2xl lg:max-w-3xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="shrink-0 bg-gradient-to-r from-purple-700 via-indigo-700 to-violet-600 p-5 sm:p-6 text-white shadow-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2.5 text-white text-lg sm:text-xl font-extrabold">
               <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
@@ -1043,7 +1048,7 @@ function TagihanMassalModal({
           </DialogHeader>
         </div>
 
-        <div className="p-6 sm:p-7 space-y-5 max-h-[82vh] overflow-y-auto pr-3 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-5 custom-scrollbar">
           <div className="space-y-1.5">
             <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Pilih Kelas</Label>
             <Select value={form.classId} onValueChange={(v) => setForm(f => ({ ...f, classId: v ?? f.classId }))}>
@@ -1146,15 +1151,15 @@ function TagihanMassalModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button className="bg-purple-600 hover:bg-purple-700 text-white"
+        <div className="shrink-0 p-4 sm:p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+          <Button variant="outline" onClick={onClose} className="h-10 rounded-xl font-semibold border-slate-300 dark:border-slate-700">Batal</Button>
+          <Button className="h-10 bg-purple-600 hover:bg-purple-700 text-white font-extrabold rounded-xl shadow-md gap-2"
             disabled={!form.classId || mut.isPending}
             onClick={() => mut.mutate()}>
-            {mut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Layers className="w-4 h-4 mr-2" />}
+            {mut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
             Buat Tagihan Massal
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   )
@@ -1286,9 +1291,9 @@ function ManualCashPaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-xl sm:max-w-3xl lg:max-w-4xl p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-        {/* Modern Header Banner */}
-        <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-green-700 p-6 sm:p-7 text-white shadow-sm">
+      <DialogContent className="max-w-xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+        {/* Fixed Header Banner */}
+        <div className="shrink-0 bg-gradient-to-r from-emerald-700 via-teal-700 to-green-700 p-5 sm:p-6 text-white shadow-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-white text-lg sm:text-xl font-extrabold">
               <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
@@ -1302,7 +1307,8 @@ function ManualCashPaymentModal({
           </DialogHeader>
         </div>
 
-        <div className="p-6 sm:p-7 space-y-6 max-h-[82vh] overflow-y-auto pr-3 custom-scrollbar">
+        {/* Scrollable Body Content */}
+        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 custom-scrollbar">
           {/* STEP 1: PENCARIAN & PROFIL SISWA */}
           <div className="space-y-3">
             <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
@@ -1621,7 +1627,8 @@ function ManualCashPaymentModal({
           })()}
         </div>
 
-        <DialogFooter className="p-6 sm:p-7 pt-0 flex flex-col-reverse sm:flex-row gap-2.5">
+        {/* Fixed Sticky Footer */}
+        <div className="shrink-0 p-4 sm:p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
           <Button type="button" variant="outline" onClick={onClose} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
             Batal
           </Button>
@@ -1633,7 +1640,7 @@ function ManualCashPaymentModal({
             {payMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
             Simpan Pembayaran Tunai
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   )
@@ -1952,8 +1959,8 @@ function TabTagihan() {
 
       {/* RESTRICTED RESET PASSWORD AUTHORIZATION MODAL */}
       <Dialog open={resetAuthModalOpen} onOpenChange={(v) => { if (!v) closeResetAuthModal() }}>
-        <DialogContent className="max-w-md p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-          <div className="bg-gradient-to-r from-rose-700 via-red-700 to-rose-900 p-6 text-white shadow-sm">
+        <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="shrink-0 bg-gradient-to-r from-rose-700 via-red-700 to-rose-900 p-6 text-white shadow-sm">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2.5 text-white text-lg font-extrabold">
                 <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
@@ -1967,8 +1974,8 @@ function TabTagihan() {
             </DialogHeader>
           </div>
 
-          <form onSubmit={(e) => { e.preventDefault(); resetMut.mutate(); }}>
-            <div className="p-6 space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); resetMut.mutate(); }} className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
               <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl text-xs text-rose-900 dark:text-rose-200 space-y-1">
                 <p className="font-extrabold flex items-center gap-1.5 text-sm text-rose-800 dark:text-rose-300">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
@@ -2000,15 +2007,15 @@ function TabTagihan() {
               </div>
             </div>
 
-            <DialogFooter className="p-6 pt-0 flex flex-col-reverse sm:flex-row gap-2.5">
+            <div className="shrink-0 p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
               <Button type="button" variant="outline" onClick={closeResetAuthModal} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
                 Batal
               </Button>
-              <Button type="submit" disabled={resetMut.isPending || !authPassword} className="h-11 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl shadow-md">
-                {resetMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+              <Button type="submit" disabled={resetMut.isPending || !authPassword} className="h-11 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl shadow-md gap-2">
+                {resetMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                 Konfirmasi & Reset Tagihan
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

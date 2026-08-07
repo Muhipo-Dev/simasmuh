@@ -1098,6 +1098,9 @@ export class FinanceService {
         nisn: student.nisn,
         nis: student.nis,
         className: student.class?.name || '-',
+        program: student.program || null,
+        discountPercentage: student.discountPercentage || 0,
+        discountReason: student.discountReason || null,
       },
       tagihans,
     };

@@ -5,12 +5,26 @@ import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Users, UserSquare2, CalendarDays, ClipboardCheck, QrCode, Loader2, Briefcase, BookOpen, UserCheck, Receipt, CreditCard, AlertTriangle } from 'lucide-react'
+import { Users, UserSquare2, CalendarDays, ClipboardCheck, QrCode, Loader2, Briefcase, BookOpen, UserCheck, Receipt, CreditCard, AlertTriangle, GraduationCap, Award } from 'lucide-react'
 import { QrScanner } from '@/components/QrScanner'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import Link from 'next/link'
 import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { getRoleLinks } from '@/lib/nav-links'
+
+const formatProgramName = (code?: string | null) => {
+  if (!code) return 'Reguler'
+  const c = code.toLowerCase()
+  if (c === 'mic') return 'Muhipo Internasional'
+  if (c === 'tahfidz') return 'Tahfidz'
+  if (c === 'olahraga') return 'Olahraga'
+  if (c === 'kader') return 'Kader'
+  if (c === 'inklusi') return 'Inklusi'
+  if (c === 'enterpreneur' || c === 'entrepreneur') return 'Entrepreneur'
+  if (c === 'seni budaya') return 'Seni Budaya'
+  if (c === 'soshum saintek') return 'Soshum Saintek'
+  return code.charAt(0).toUpperCase() + code.slice(1)
+}
 export default function DashboardPage() {
   const { data: session } = useSession()
   const [showPaymentPopup, setShowPaymentPopup] = useState(false)
@@ -285,11 +299,14 @@ export default function DashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
               Dashboard Siswa
             </h1>
-            <p className="text-blue-100 mt-1 text-sm sm:text-base font-medium">
-              Selamat datang, {(session?.user as any)?.name || 'Siswa'}.
+            <p className="text-blue-100 mt-1 text-sm sm:text-base font-medium flex items-center gap-2 flex-wrap">
+              <span>Selamat datang, {(session?.user as any)?.name || 'Siswa'}.</span>
+              <span className="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-bold backdrop-blur-md">
+                Program {formatProgramName(activeStudent?.program)}
+              </span>
             </p>
           </div>
-          <div className="flex flex-wrap sm:flex-col items-start sm:items-end gap-2.5">
+          <div className="flex flex-wrap items-center sm:justify-end gap-2.5">
             {studentClass && (
               <div className="bg-white/10 dark:bg-slate-900/50 backdrop-blur-md px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl border border-white/20 flex items-center gap-3 shadow-inner">
                 <UserSquare2 className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-300 shrink-0" />
@@ -299,6 +316,15 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+            <div className="bg-white/10 dark:bg-slate-900/50 backdrop-blur-md px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl border border-white/20 flex items-center gap-3 shadow-inner">
+              <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300 shrink-0" />
+              <div className="text-xs sm:text-sm">
+                <span className="text-blue-100 font-medium block text-[11px] sm:text-xs">Program Siswa:</span>
+                <span className="font-extrabold text-white tracking-wide text-base sm:text-lg">
+                  {formatProgramName(activeStudent?.program)}
+                </span>
+              </div>
+            </div>
             {allUnpaid.length > 0 && (
               <Button
                 onClick={() => setShowPaymentPopup(true)}

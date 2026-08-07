@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Wallet, CheckCircle2, Clock, Loader2, TrendingUp, GraduationCap, BookOpen,
-  Building2, Users2, Calendar, AlertCircle, Receipt, Upload
+  Building2, Users2, Calendar, AlertCircle, Receipt, Upload, Percent, Sparkles, Tag, Award
 } from 'lucide-react'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,7 @@ import { useState } from 'react'
 import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 
 // ============================================================
-// CONSTANTS
+// CONSTANTS & HELPERS
 // ============================================================
 const MONTHS = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -37,6 +37,31 @@ const formatDate = (d: string) =>
 const formatDateShort = (d: string) =>
   new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 
+const formatProgramName = (code?: string | null) => {
+  if (!code) return 'Reguler'
+  const c = code.toLowerCase()
+  if (c === 'mic') return 'Muhipo Internasional'
+  if (c === 'tahfidz') return 'Tahfidz'
+  if (c === 'olahraga') return 'Olahraga'
+  if (c === 'kader') return 'Kader'
+  if (c === 'inklusi') return 'Inklusi'
+  if (c === 'enterpreneur' || c === 'entrepreneur') return 'Entrepreneur'
+  if (c === 'seni budaya') return 'Seni Budaya'
+  if (c === 'soshum saintek') return 'Soshum Saintek'
+  return code.charAt(0).toUpperCase() + code.slice(1)
+}
+
+const parseDiscountInfo = (notes: string | null) => {
+  if (!notes) return null
+  const match = notes.match(/DISCOUNT_INFO:\s*(\{.*?\})/)
+  if (!match) return null
+  try {
+    return JSON.parse(match[1])
+  } catch {
+    return null
+  }
+}
+
 type Tagihan = {
   id: string; type: string; amount: number
   month: number | null; year: number | null
@@ -46,7 +71,9 @@ type Tagihan = {
 
 type StudentDetail = {
   id: string; name: string; nisn: string; nis: string
-  gender: string; class: { name: string }; tagihans: Tagihan[]
+  gender: string; program?: string | null
+  discountPercentage?: number; discountReason?: string | null
+  class: { name: string }; tagihans: Tagihan[]
 }
 
 // ============================================================
@@ -187,7 +214,19 @@ export default function StudentFinancePage() {
           Tagihan Saya
         </h1>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
-          <p className="text-slate-500 ml-0.5">{student.name} · Kelas {student.class?.name}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-slate-600 font-medium">{student.name} · Kelas {student.class?.name}</span>
+            <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 text-xs px-2.5 py-0.5 rounded-full font-extrabold flex items-center gap-1 border border-indigo-200 dark:border-indigo-800">
+              <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
+              Program {formatProgramName(student.program)}
+            </span>
+            {student.discountPercentage && student.discountPercentage > 0 ? (
+              <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs px-2.5 py-0.5 rounded-full font-black flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                Diskon {student.discountPercentage}%
+              </span>
+            ) : null}
+          </div>
           <Button 
             onClick={() => setIsPaymentPopupOpen(true)}
             className="bg-green-600 hover:bg-green-700 text-white shadow-sm flex items-center gap-2"
@@ -197,6 +236,63 @@ export default function StudentFinancePage() {
           </Button>
         </div>
       </div>
+
+      {/* Card Informasi Program & Diskon Siswa */}
+      <Card className="border border-indigo-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs rounded-2xl overflow-hidden">
+        <CardContent className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Program Info */}
+          <div className="flex items-center gap-3.5 flex-1">
+            <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-2xs border border-indigo-100 dark:border-indigo-900">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                Program Siswa
+              </span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  {formatProgramName(student.program)}
+                </h3>
+                <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                  Aktif
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider on desktop */}
+          <div className="hidden md:block w-px h-10 bg-slate-100 dark:bg-slate-800"></div>
+
+          {/* Discount Info */}
+          <div className="flex items-center gap-3.5 flex-1">
+            <div className={`w-11 h-11 rounded-2xl ${student.discountPercentage && student.discountPercentage > 0 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'} flex items-center justify-center shrink-0 shadow-2xs`}>
+              <Percent className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                Informasi Diskon / Potongan
+              </span>
+              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                {student.discountPercentage && student.discountPercentage > 0 ? (
+                  <>
+                    <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-emerald-600" />
+                      Diskon {student.discountPercentage}%
+                    </span>
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                      {student.discountReason || 'Potongan Khusus Siswa'}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                    Tidak ada diskon khusus (0% - Tarif Normal)
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <PaymentBillingPopup 
         open={isPaymentPopupOpen}
@@ -250,6 +346,10 @@ export default function StudentFinancePage() {
             {belumLunas.map(t => {
               const typeInfo = PAYMENT_TYPES.find(p => p.value === t.type)
               const isOverdue = t.dueDate && new Date(t.dueDate) < new Date()
+              const discInfo = parseDiscountInfo(t.notes)
+              const hasDiscount = discInfo || (student.discountPercentage && student.discountPercentage > 0 && t.type === 'SPP')
+              const discPct = discInfo?.discountPercentage || student.discountPercentage || 0
+
               return (
                 <div key={t.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-xl border bg-white dark:bg-slate-900/80 gap-3 ${isOverdue ? 'border-red-300 dark:border-red-800' : 'border-red-100 dark:border-slate-800'}`}>
                   <div className="flex items-start sm:items-center gap-3 min-w-0">
@@ -261,6 +361,12 @@ export default function StudentFinancePage() {
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${typeInfo?.badge}`}>{t.type}</span>
                         {t.month && t.year && (
                           <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{MONTHS[t.month - 1]} {t.year}</span>
+                        )}
+                        {hasDiscount && (
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-md font-extrabold flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-emerald-600" />
+                            Diskon {discPct}% {discInfo?.discountAmount ? `(-${currency(discInfo.discountAmount)})` : ''}
+                          </span>
                         )}
                         {isOverdue && (
                           <span className="text-[10px] bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1.5 py-0.5 rounded font-bold">LEWAT JATUH TEMPO</span>

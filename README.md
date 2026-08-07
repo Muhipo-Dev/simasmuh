@@ -65,6 +65,9 @@ npm run dev
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
 * **2026-08-07:**
+  * Penambahan informasi Program Siswa (Tahfidz, Reguler, Kader, Inklusi, dll.) di halaman Dashboard Siswa (header banner & badge info program).
+  * Penambahan informasi Program Siswa dan detail Diskon / Beasiswa (persentase & alasan diskon) di halaman Keuangan Siswa (`/keuangan/laporan`).
+  * Pembaruan API backend `getMyUnpaidTagihan` untuk menyertakan field `program`, `discountPercentage`, dan `discountReason`.
   * Penambahan ketentuan mutlak akun pengembangan (`nailar`, `ervina`, `safri`, `manchu`, `123`) di [SIMASMUH_GUIDELINES.md](file:///c:/Users/Raza%20Gopo/Downloads/siakad-coba/SIMASMUH_GUIDELINES.md) dan `seed-supabase.ts`.
   * Integrasi alur kerja penyimpanan basis data non-destruktif (proteksi data yang sudah ada tanpa perlu generate / sinkronisasi ulang penuh).
   * Pengaturan nominal default (DPP, UKA, UKS) di Superadmin dan penyederhanaan modal pembayaran keuangan (nominal & diskon opsional, seleksi periode bulan/tahun, serta penghapusan tanggal jatuh tempo).

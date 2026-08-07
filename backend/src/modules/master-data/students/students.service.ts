@@ -212,10 +212,10 @@ export class StudentsService {
     const student: any = await this.prisma.student.findUnique({ where: { id } });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
-    // Auto set discount for kader program if not custom-set
+    // Auto set discount for kader program only if no custom discount was set
     let autoDiscountPct = student.discountPercentage;
     let autoDiscountReason = student.discountReason;
-    if (program === 'kader') {
+    if (program === 'kader' && (!student.discountPercentage || student.discountPercentage === 0)) {
       autoDiscountPct = 100;
       autoDiscountReason = 'Program Beasiswa Kader';
     }

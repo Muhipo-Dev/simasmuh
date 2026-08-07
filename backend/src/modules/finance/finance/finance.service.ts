@@ -105,7 +105,7 @@ export class FinanceService {
         sppLunasCount: sppTagihan.length,
         tagihanCount: tagihansList.length,
         discountPercentage: s.discountPercentage || 0,
-        discountReason: s.discountReason || (s.program === 'kader' ? 'Program Beasiswa Kader' : null),
+        discountReason: s.discountReason || (s.discountPercentage > 0 ? 'Diskon Default Siswa' : null),
       };
     });
   }
@@ -195,10 +195,10 @@ export class FinanceService {
       select: { program: true, discountPercentage: true, discountReason: true },
     });
     if (s) {
-      const effectivePct = s.program === 'kader' ? 100 : (s.discountPercentage || 0);
+      const effectivePct = s.discountPercentage || 0;
       const effectiveReason =
         s.discountReason ||
-        (s.program === 'kader' ? 'Program Beasiswa Kader' : 'Diskon Default Siswa');
+        (effectivePct > 0 ? 'Diskon Default Siswa' : null);
       await this.syncStudentDiscountsToBills(studentId, effectivePct, effectiveReason);
     }
 
@@ -265,18 +265,16 @@ export class FinanceService {
     let finalAmount = dto.amount;
     let notes = dto.notes ?? null;
 
-    // Gunakan diskon eksplisit jika ada, atau fallback ke diskon default siswa / program kader
+    // Gunakan diskon eksplisit jika ada, atau fallback ke diskon default siswa
     const effectivePct =
       dto.discountPercentage !== undefined && dto.discountPercentage > 0
         ? dto.discountPercentage
-        : student.program === 'kader'
-          ? 100
-          : (student.discountPercentage || 0);
+        : (student.discountPercentage || 0);
 
     const effectiveReason =
       dto.discountPercentage !== undefined && dto.discountPercentage > 0
         ? dto.discountReason
-        : (student.discountReason || (student.program === 'kader' ? 'Program Beasiswa Kader' : 'Diskon Default Siswa'));
+        : (student.discountReason || (effectivePct > 0 ? 'Diskon Default Siswa' : null));
 
     if (effectivePct > 0) {
       const validPct = [25, 50, 75, 100].includes(effectivePct) ? effectivePct : 0;
@@ -550,13 +548,11 @@ export class FinanceService {
 
       const effectivePct = hasBulkDiscount
         ? bulkValidPct
-        : s.program === 'kader'
-          ? 100
-          : (s.discountPercentage || 0);
+        : (s.discountPercentage || 0);
 
       const effectiveReason = hasBulkDiscount
         ? dto.discountReason
-        : (s.discountReason || (s.program === 'kader' ? 'Program Beasiswa Kader' : 'Diskon Default Siswa'));
+        : (s.discountReason || (effectivePct > 0 ? 'Diskon Default Siswa' : null));
 
       if (effectivePct > 0) {
         const validPct = [25, 50, 75, 100].includes(effectivePct) ? effectivePct : 0;
@@ -753,16 +749,14 @@ export class FinanceService {
         continue;
       }
 
-      // SERVER-SIDE CALCULATION: Apply automatic discount for kader program
+      // SERVER-SIDE CALCULATION: Apply student default discount if set
       let finalAmount = dto.baseAmount;
-      let discountPercentage = 0;
+      let discountPercentage = student.discountPercentage || 0;
       let discountAmount = 0;
 
-      if (student.program === 'kader') {
-        // Kader program automatically gets 100% discount (RP 0 final payable amount)
-        discountPercentage = 100;
-        discountAmount = dto.baseAmount;
-        finalAmount = 0;
+      if (discountPercentage > 0) {
+        discountAmount = Math.round(dto.baseAmount * (discountPercentage / 100));
+        finalAmount = dto.baseAmount - discountAmount;
       }
 
       // Create tagihan with SERVER-CALCULATED amount

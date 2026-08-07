@@ -1,7 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['192.168.137.1', '192.168.37.1', '192.168.3.253', '182.253.144.111', 'simasmuh.razagopo.my.id'],
+  allowedDevOrigins: [
+    '172.168.2.12',
+    '182.253.144.111',
+    'simasmuh.razagopo.my.id',
+    '192.168.137.1',
+    '192.168.37.1',
+    '192.168.3.253',
+    'localhost',
+    '127.0.0.1',
+  ],
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:3001';
     return [
@@ -29,6 +38,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'http',
+        hostname: '172.168.2.12',
+      },
+      {
+        protocol: 'http',
         hostname: '182.253.144.111',
       },
       {
@@ -40,7 +53,15 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb',
-      allowedOrigins: ['simasmuh.razagopo.my.id', '182.253.144.111', 'localhost:3000']
+      allowedOrigins: [
+        'simasmuh.razagopo.my.id',
+        '182.253.144.111',
+        '182.253.144.111:3000',
+        '172.168.2.12',
+        '172.168.2.12:3000',
+        'localhost:3000',
+        '127.0.0.1:3000',
+      ]
     }
   }
 };

@@ -469,8 +469,13 @@ export class FinanceService {
     }
 
     const newAmountPaid = currentPaid + payAmount;
+    const sisaKurangBayar = Math.max(0, baseAmount - newAmountPaid);
     const isLunas = newAmountPaid >= baseAmount;
     const newStatus = isLunas ? 'LUNAS' : newAmountPaid > 0 ? 'ANGSURAN' : 'BELUM_LUNAS';
+
+    const defaultPaymentNotes = isLunas
+      ? 'Pembayaran Lunas Kasir Keuangan'
+      : `Pembayaran Angsuran Kasir (Kurang Bayar Rp ${sisaKurangBayar.toLocaleString('id-ID')})`;
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await (tx.tagihan as any).update({
@@ -492,11 +497,19 @@ export class FinanceService {
           amount: payAmount,
           month: tagihan.month,
           year: tagihan.year,
-          notes: dto?.notes || (isLunas ? 'Pembayaran Lunas Kasir' : 'Pembayaran Angsuran Kasir'),
+          notes: dto?.notes || defaultPaymentNotes,
         },
       });
 
-      return updated;
+      return {
+        ...updated,
+        payAmount,
+        sisaKurangBayar,
+        isLunas,
+        message: isLunas
+          ? 'Pembayaran berhasil dan tagihan telah LUNAS.'
+          : `Pembayaran angsuran berhasil dicatat. Sisa kurang bayar: Rp ${sisaKurangBayar.toLocaleString('id-ID')}`,
+      };
     });
   }
 

@@ -1266,15 +1266,14 @@ function ManualCashPaymentModal({
       }
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['finance-students'] })
       qc.invalidateQueries({ queryKey: ['student-tagihan', selectedStudentId] })
       Swal.fire({
-        title: 'Berhasil!',
-        text: 'Pembayaran tunai berhasil dicatat.',
+        title: data?.isLunas ? 'Pelunasan Berhasil!' : 'Angsuran Berhasil Dicatat!',
+        text: data?.message || 'Pembayaran tunai berhasil dicatat.',
         icon: 'success',
-        timer: 2000,
-        showConfirmButton: false,
+        confirmButtonColor: '#059669',
       })
       onClose()
       setStudentSearch('')
@@ -1603,10 +1602,22 @@ function ManualCashPaymentModal({
                         </span>
                       ) : (
                         <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-xs font-black flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" /> ANGSURAN (Sisa: {currency(remainingAfterPay)})
+                          <Clock className="w-3.5 h-3.5" /> ANGSURAN (Kurang Bayar: {currency(remainingAfterPay)})
                         </span>
                       )}
                     </div>
+
+                    {remainingAfterPay > 0 && payInputVal > 0 && (
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl text-amber-900 dark:text-amber-200 text-xs font-medium flex items-start gap-2 mt-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-extrabold text-amber-800 dark:text-amber-300">Logika Angsuran Aktif</p>
+                          <p className="mt-0.5">
+                            Nominal pembayaran ({currency(payInputVal)}) kurang dari sisa tagihan ({currency(remainingBeforePay)}). Sistem otomatis menghitung & mencatat transaksi ini sebagai <strong>Angsuran (Sisa Kurang Bayar {currency(remainingAfterPay)})</strong>.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

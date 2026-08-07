@@ -24,7 +24,7 @@ export class SettingsService {
           defaultDpp: 1500000,
           defaultUka: 500000,
           defaultUks: 100000,
-        },
+        } as any,
       });
     }
     return settings;

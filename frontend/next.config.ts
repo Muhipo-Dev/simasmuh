@@ -8,6 +8,9 @@ function getDynamicServerOrigins() {
     '127.0.0.1',
     '0.0.0.0',
     'simasmuh.razagopo.my.id',
+    'sim.smamuhipo.sch.id',
+    '182.253.144.111',
+    '[IP_ADDRESS]'
   ]);
 
   // Include environment variable overrides if configured

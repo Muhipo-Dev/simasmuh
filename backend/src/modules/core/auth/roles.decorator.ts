@@ -34,6 +34,10 @@ export enum PaymentPermission {
 // User roles
 export enum UserRole {
   ADMIN_IT = 'ADMIN_IT',
+  SUPERADMIN = 'SUPERADMIN',
+  ADMIN_TU = 'ADMIN_TU',
+  BAU = 'BAU',
+  TATA_USAHA = 'TATA_USAHA',
   GURU = 'GURU',
   SISWA = 'SISWA',
   KARYAWAN = 'KARYAWAN',
@@ -43,6 +47,9 @@ export enum UserRole {
 
 // Sub roles
 export enum SubRole {
+  ADMIN_TU = 'ADMIN_TU',
+  TATA_USAHA = 'TATA_USAHA',
+  BAU = 'BAU',
   ADMIN_WEB = 'ADMIN_WEB',
   PEMBINA_EKSTRA = 'PEMBINA_EKSTRA',
   KETERTIBAN = 'KETERTIBAN',

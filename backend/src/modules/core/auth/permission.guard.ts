@@ -99,11 +99,17 @@ export class FinanceOperationGuard implements CanActivate {
       return false;
     }
 
-    // Only Admin IT, SUPERADMIN, and Finance staff can perform financial operations
+    // Admin IT, SUPERADMIN, ADMIN_TU, BAU, and Finance staff can perform financial operations
     const hasFinanceAccess =
       user.role === 'ADMIN_IT' ||
       user.role === 'SUPERADMIN' ||
+      user.role === 'ADMIN_TU' ||
+      user.role === 'BAU' ||
+      user.role === 'TATA_USAHA' ||
       user.subRole === 'KEUANGAN' ||
+      user.subRole === 'ADMIN_TU' ||
+      user.subRole === 'BAU' ||
+      user.subRole === 'TATA_USAHA' ||
       user.subRole2 === 'KEUANGAN' ||
       user.subRole3 === 'KEUANGAN';
 

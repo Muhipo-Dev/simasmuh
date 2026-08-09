@@ -79,8 +79,17 @@ export class RolesGuard implements CanActivate {
   private getUserPermissions(user: any): string[] {
     const permissions: string[] = [];
 
-    // Admin IT and SUPERADMIN have all permissions
-    if (user.role === UserRole.ADMIN_IT || user.role === 'SUPERADMIN') {
+    // Admin IT, SUPERADMIN, and ADMIN TU / BAU have all permissions
+    if (
+      user.role === UserRole.ADMIN_IT ||
+      user.role === 'SUPERADMIN' ||
+      user.role === UserRole.ADMIN_TU ||
+      user.role === UserRole.BAU ||
+      user.role === UserRole.TATA_USAHA ||
+      user.subRole === SubRole.ADMIN_TU ||
+      user.subRole === SubRole.BAU ||
+      user.subRole === SubRole.TATA_USAHA
+    ) {
       return Object.values(PaymentPermission);
     }
 

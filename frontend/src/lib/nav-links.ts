@@ -4,7 +4,7 @@ import {
   DoorOpen, UserCircle2, Megaphone, Wallet, Receipt, X, MoreHorizontal, 
   Banknote, FileText, Image as ImageIcon, Award, FileCheck,
   ShieldAlert, Sparkles, ShieldCheck, UserCheck, HeartHandshake,
-  Library, BookMarked, Mail
+  Library, BookMarked, Mail, Contact, Package, Boxes
 } from 'lucide-react'
 
 export const superadminLinks = [
@@ -16,6 +16,25 @@ export const superadminLinks = [
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'e-Rapor', href: '/akademik/e-rapor', icon: Award },
   { name: 'QR Layar (Publik)', href: '/presensi/manajemen-qr', icon: QrCode },
+  { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
+  { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
+]
+
+export const adminTuLinks = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Guru', href: '/master-data/guru', icon: Users },
+  { name: 'Siswa', href: '/master-data/siswa', icon: UserSquare2 },
+  { name: 'Kelas', href: '/master-data/kelas', icon: BookOpen },
+  { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap },
+  { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
+  { name: 'e-Rapor', href: '/akademik/e-rapor', icon: Award },
+  { name: 'Buku Tamu (BAU)', href: '/fitur/buku-tamu', icon: Contact },
+  { name: 'Arsip & Persuratan', href: '/fitur/persuratan', icon: Mail },
+  { name: 'Inventaris & Aset', href: '/fitur/inventaris', icon: Package },
+  { name: 'Kepegawaian & HRD', href: '/fitur/kepegawaian', icon: UserCheck },
+  { name: 'Keuangan Masuk', href: '/keuangan/pemasukan', icon: Wallet },
+  { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt },
+  { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
 ]
@@ -69,6 +88,8 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
   // Set base links by main role
   if (role === 'SUPERADMIN' || role === 'ADMIN_IT') {
     addLinks(superadminLinks)
+  } else if (role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA') {
+    addLinks(adminTuLinks)
   } else if (role === 'GURU') {
     addLinks(guruLinks)
   } else if (role === 'SISWA') {
@@ -86,7 +107,9 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
   // Apply SubRole links
   const applySubRoleLinks = (roleName?: string) => {
     if (!roleName) return
-    if (roleName === 'WALI_KELAS') {
+    if (roleName === 'ADMIN_TU' || roleName === 'BAU' || roleName === 'TATA_USAHA') {
+      addLinks(adminTuLinks)
+    } else if (roleName === 'WALI_KELAS') {
       addLinks([
         { name: 'Siswa', href: '/master-data/siswa', icon: UserSquare2 },
         { name: 'Jurnal Kelas', href: '/akademik/jurnal-wali-kelas', icon: BookOpen }
@@ -162,3 +185,4 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
 
   return currentLinks
 }
+

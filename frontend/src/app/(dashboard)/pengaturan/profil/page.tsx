@@ -159,7 +159,7 @@ export default function ProfilePage() {
     KURIKULUM: 'Kurikulum', KESISWAAN: 'Kesiswaan', KEAMANAN: 'Keamanan', KEPEGAWAIAN: 'Kepegawaian',
     KEBERSIHAN: 'Kebersihan', KEPALA_SEKOLAH: 'Kepala Sekolah', ADMIN_WEB: 'Admin Web',
     KETERTIBAN: 'Ketertiban', PUSTAKAWAN: 'Pustakawan', GURU_TAHFIDZ: 'Guru Tahfidz', PERSURATAN: 'Persuratan',
-    WALI_KELAS: 'Wali Kelas', GURU_PIKET: 'Guru Piket', PETUGAS_SPMB: 'Petugas SPMB'
+    WALI_KELAS: 'Wali Kelas', GURU_PIKET: 'Guru Piket'
   }
 
   if (isLoading) {

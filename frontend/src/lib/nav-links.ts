@@ -14,7 +14,6 @@ export const superadminLinks = [
   { name: 'Kelas', href: '/master-data/kelas', icon: BookOpen },
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
-  { name: 'Data SPMB', href: '/master-data/spmb', icon: FileCheck },
   { name: 'e-Rapor', href: '/akademik/e-rapor', icon: Award },
   { name: 'QR Layar (Publik)', href: '/presensi/manajemen-qr', icon: QrCode },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },

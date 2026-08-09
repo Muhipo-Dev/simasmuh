@@ -43,7 +43,6 @@ export const SUB_ROLE_OPTIONS = [
   { value: 'PERSURATAN', label: 'Persuratan' },
   { value: 'WALI_KELAS', label: 'Wali Kelas' },
   { value: 'GURU_PIKET', label: 'Guru Piket' },
-  { value: 'PETUGAS_SPMB', label: 'Petugas SPMB' },
   { value: 'KEUANGAN', label: 'Keuangan' },
   { value: 'KURIKULUM', label: 'Kurikulum' },
 ]
@@ -63,7 +62,6 @@ export const SUB_ROLE_LABELS: Record<string, string> = {
   PERSURATAN: 'Persuratan',
   WALI_KELAS: 'Wali Kelas',
   GURU_PIKET: 'Guru Piket',
-  PETUGAS_SPMB: 'Petugas SPMB',
   KEUANGAN: 'Keuangan',
   KURIKULUM: 'Kurikulum',
 }

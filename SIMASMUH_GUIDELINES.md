@@ -31,7 +31,8 @@ Data yang wajib dimanajemen meliputi, namun tidak terbatas pada:
 * **Dashboard Analitik/Statistika:** Hanya dapat diakses oleh Admin IT, Superadmin, Kepala Sekolah, dan Keuangan (khusus analitik keuangan).
 * Data analitik/statistika di frontend **wajib akurat** dan sesuai dengan fakta input di backend.
 
-### Out of Scope (Pengembangan Lanjutan Spesifik)
+### Out of Scope (Pengembangan Lanjutan / Sistem Terpisah)
+* **Penerimaan Murid Baru (SPMB & PPDB):** Sistem penerimaan murid baru (SPMB/PPDB) dibuat sebagai aplikasi/sistem terpisah di luar SIMASMUH. Seluruh fitur, halaman, navigasi, dan subrole `PETUGAS_SPMB` pada projek ini telah dihapus secara permanen.
 * Sistem pembayaran dan pencatatan riwayat keuangan antara Siswa dan Keuangan yang jelas.
 * Sistem Penilaian Terintegrasi: Jurnal Mengajar Guru -> Penilaian Harian -> Otomasi Raport Digital.
 * Integrasi jadwal pelajaran kompleks yang dapat diimpor dari file **aSc Timetables**.

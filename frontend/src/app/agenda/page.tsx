@@ -186,9 +186,8 @@ export default async function AgendaPage() {
             <h4 className="text-white font-bold text-lg mb-6">Tautan Cepat</h4>
             <ul className="space-y-3 text-sm">
               <li><Link href="/profil" className="hover:text-white transition-colors">Profil Sekolah</Link></li>
-              <li><Link href="/akademik" className="hover:text-white transition-colors">Informasi Akademik</Link></li>
-              <li><Link href="/ppdb" className="hover:text-white transition-colors">Penerimaan Siswa Baru</Link></li>
-              <li><Link href="/kontak" className="hover:text-white transition-colors">Hubungi Kami</Link></li>
+              <li><Link href="/berita" className="hover:text-white transition-colors">Informasi &amp; Berita</Link></li>
+              <li><Link href="/tentang" className="hover:text-white transition-colors">Tentang Kami</Link></li>
             </ul>
           </div>
 

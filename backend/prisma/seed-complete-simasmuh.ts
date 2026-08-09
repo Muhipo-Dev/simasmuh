@@ -285,8 +285,8 @@ async function main() {
   if (superadminUser) {
     const announcements = [
       {
-        title: 'Pendaftaran Peserta Didik Baru (PPDB) SMA MUHIPO TA 2026/2027 Resmi Dibuka',
-        content: 'SMA Muhammadiyah 1 Ponorogo (MUHIPO) resmi membuka Pendaftaran Peserta Didik Baru (PPDB) untuk Tahun Ajaran 2026/2027. Sekolah menawarkan berbagai program unggulan seperti Tahfidz Al-Qur\'an, Muhipo International Class (MIC), Kelas Olahraga, Seni Budaya, dan Entrepreneurship. Pendaftaran dapat dilakukan secara online melalui portal siakad resmi atau datang langsung ke sekretariat PPDB.',
+        title: 'Pembukaan Tahun Ajaran Baru 2026/2027 SMA MUHIPO',
+        content: 'SMA Muhammadiyah 1 Ponorogo (MUHIPO) menyambut Tahun Ajaran 2026/2027. Sekolah menawarkan berbagai program unggulan seperti Tahfidz Al-Qur\'an, Muhipo International Class (MIC), Kelas Olahraga, Seni Budaya, dan Entrepreneurship.',
         target: 'SEMUA',
         type: 'BERITA',
         image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=1200&auto=format&fit=crop',

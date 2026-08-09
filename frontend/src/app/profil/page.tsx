@@ -34,7 +34,6 @@ export default function ProfilPage() {
           <Link href="/profil" className="text-[#2B50A1] dark:text-blue-400 font-bold transition-colors">Profil</Link>
           <Link href="/tentang" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Tentang</Link>
           <Link href="/berita" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Berita</Link>
-          <Link href="/spmb" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-bold transition-colors">SPMB Online</Link>
 
           <div className="flex items-center gap-4 border-l border-slate-200 dark:border-slate-800 pl-8">
             <ThemeToggle />
@@ -64,9 +63,6 @@ export default function ProfilPage() {
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Link href="/berita" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg">Berita</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Link href="/spmb" className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg">SPMB Online</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="my-1.5" />
               <DropdownMenuItem>

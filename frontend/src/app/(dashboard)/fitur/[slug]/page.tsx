@@ -50,7 +50,7 @@ type FeatureConfig = {
 const FEATURE_MAP: Record<string, FeatureConfig> = {
   'buku-tamu': {
     title: 'Buku Tamu & Kunjungan (BAU)',
-    roleName: 'ADMIN TATA USAHA / BAU',
+    roleName: 'BAU (Badan Administrasi Umum)',
     category: 'Badan Administrasi Umum & Relasi Publik',
     icon: Contact,
     gradient: 'from-blue-600 via-indigo-600 to-purple-600',

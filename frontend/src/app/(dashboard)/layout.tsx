@@ -28,6 +28,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   })
 
   const isSuperAdminOnly = superAdminOnlyPaths.some(path => pathname.startsWith(path))
+  const isAccountManagement = pathname.startsWith('/master-data/pengguna')
+  const isFinancePage = pathname.startsWith('/keuangan/') && !pathname.startsWith('/keuangan/laporan')
   const isAnnouncementsOnly = pathname.startsWith('/informasi/pengumuman')
   const isBannerManagerOnly = pathname.startsWith('/informasi/banner')
 
@@ -40,11 +42,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const u = session.user as any
       const roles = [u?.role, u?.subRole, u?.subRole2, u?.subRole3].filter(Boolean)
       const hasSuperAdmin = roles.includes('ADMIN_IT') || roles.includes('SUPERADMIN')
+      const hasBauAccess = hasSuperAdmin || roles.includes('ADMIN_TU') || roles.includes('BAU') || roles.includes('TATA_USAHA')
+      const hasFinanceAccess = hasSuperAdmin || roles.includes('KEUANGAN')
       const hasAdminWeb = hasSuperAdmin || roles.includes('ADMIN_WEB')
-      if (isSuperAdminOnly && !hasSuperAdmin) router.push('/dashboard')
+
+      if (isAccountManagement && !hasSuperAdmin) router.push('/dashboard')
+      else if (isFinancePage && !hasFinanceAccess) router.push('/dashboard')
+      else if (isSuperAdminOnly && !hasBauAccess) router.push('/dashboard')
       else if ((isAnnouncementsOnly || isBannerManagerOnly) && !hasAdminWeb) router.push('/dashboard')
     }
-  }, [session, isSuperAdminOnly, isAnnouncementsOnly, isBannerManagerOnly, router])
+  }, [session, isSuperAdminOnly, isAccountManagement, isFinancePage, isAnnouncementsOnly, isBannerManagerOnly, router])
 
   if (status === 'loading') {
     return (

@@ -20,10 +20,10 @@ export const superadminLinks = [
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
 ]
 
-export const adminTuLinks = [
+export const bauLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Guru', href: '/master-data/guru', icon: Users },
   { name: 'Siswa', href: '/master-data/siswa', icon: UserSquare2 },
+  { name: 'Guru', href: '/master-data/guru', icon: Users },
   { name: 'Kelas', href: '/master-data/kelas', icon: BookOpen },
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
@@ -32,10 +32,6 @@ export const adminTuLinks = [
   { name: 'Arsip & Persuratan', href: '/fitur/persuratan', icon: Mail },
   { name: 'Inventaris & Aset', href: '/fitur/inventaris', icon: Package },
   { name: 'Kepegawaian & HRD', href: '/fitur/kepegawaian', icon: UserCheck },
-  { name: 'Keuangan Masuk', href: '/keuangan/pemasukan', icon: Wallet },
-  { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt },
-  { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote },
-  { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
 ]
 
@@ -89,7 +85,7 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
   if (role === 'SUPERADMIN' || role === 'ADMIN_IT') {
     addLinks(superadminLinks)
   } else if (role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA') {
-    addLinks(adminTuLinks)
+    addLinks(bauLinks)
   } else if (role === 'GURU') {
     addLinks(guruLinks)
   } else if (role === 'SISWA') {
@@ -108,7 +104,7 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
   const applySubRoleLinks = (roleName?: string) => {
     if (!roleName) return
     if (roleName === 'ADMIN_TU' || roleName === 'BAU' || roleName === 'TATA_USAHA') {
-      addLinks(adminTuLinks)
+      addLinks(bauLinks)
     } else if (roleName === 'WALI_KELAS') {
       addLinks([
         { name: 'Siswa', href: '/master-data/siswa', icon: UserSquare2 },

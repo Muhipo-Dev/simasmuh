@@ -502,12 +502,12 @@ export default function DashboardPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="px-3.5 py-1.5 rounded-xl bg-white/10 dark:bg-slate-900/50 backdrop-blur-md border border-white/20 text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-inner">
-            {role} {subRole ? `• ${subRole}` : ''} {subRole2 ? `• ${subRole2}` : ''}
+            {(role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') ? 'BAU (Badan Administrasi Umum)' : role} {subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' ? `• ${subRole}` : ''}
           </span>
         </div>
       </div>
 
-      {(role === 'ADMIN_IT' || role === 'SUPERADMIN') && (
+      {(role === 'ADMIN_IT' || role === 'SUPERADMIN' || role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') && (
         <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {adminStats.map((stat, i) => (
             <Card key={i} className="group relative border-white/40 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl shadow-md dark:shadow-indigo-950/20 hover:shadow-2xl dark:hover:shadow-indigo-900/30 transition-all duration-300 overflow-hidden hover:-translate-y-1 flex flex-col justify-between">

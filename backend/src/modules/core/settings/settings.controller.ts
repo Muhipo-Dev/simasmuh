@@ -102,7 +102,7 @@ export class SettingsController {
 
   @Post('qr-token/regenerate')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.ADMIN_TU, UserRole.BAU, UserRole.TATA_USAHA, SubRole.ADMIN_TU, SubRole.BAU)
   regenerateQrPublicToken() {
     return this.settingsService.regenerateQrPublicToken();
   }

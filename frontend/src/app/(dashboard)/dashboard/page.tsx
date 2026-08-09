@@ -300,7 +300,7 @@ export default function DashboardPage() {
               Dashboard Siswa
             </h1>
             <p className="text-blue-100 mt-1 text-sm sm:text-base font-medium flex items-center gap-2 flex-wrap">
-              <span>Selamat datang, {(session?.user as any)?.name || 'Siswa'}.</span>
+              <span>Selamat datang, {(session?.user as any)?.name || 'Siswa'}. Semoga Harimu Menyenangkan! 😊✨</span>
               <span className="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-bold backdrop-blur-md">
                 Program {formatProgramName(activeStudent?.program)}
               </span>
@@ -497,7 +497,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">Dashboard Utama</h1>
           <p className="text-blue-100 text-sm sm:text-base mt-1 font-medium">
-            Selamat datang, {(session?.user as any)?.name || 'Pengguna'} • Akses cepat semua menu:
+            Selamat datang, {(session?.user as any)?.name || 'Pengguna'}.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

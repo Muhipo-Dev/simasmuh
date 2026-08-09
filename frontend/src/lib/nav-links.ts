@@ -26,6 +26,7 @@ export const bauLinks = [
   { name: 'Kelas', href: '/master-data/kelas', icon: BookOpen },
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
+  { name: 'QR Layar (Publik)', href: '/presensi/manajemen-qr', icon: QrCode },
   { name: 'Buku Tamu (BAU)', href: '/fitur/buku-tamu', icon: Contact },
   { name: 'Arsip & Persuratan', href: '/fitur/persuratan', icon: Mail },
   { name: 'Inventaris & Aset', href: '/fitur/inventaris', icon: Package },
@@ -40,7 +41,6 @@ export const guruLinks = [
   { name: 'Jadwal', href: '/akademik/jadwal-mengajar', icon: CalendarDays },
   { name: 'Jurnal Mengajar', href: '/akademik/jurnal-mengajar', icon: BookOpen },
   { name: 'Izin', href: '/presensi/izin-keluar', icon: DoorOpen },
-  { name: 'Profil', href: '/pengaturan/profil', icon: UserCircle2 },
 ]
 
 export const siswaLinks = [
@@ -49,7 +49,6 @@ export const siswaLinks = [
   { name: 'Log Presensi', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
   { name: 'Jadwal', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Keuangan', href: '/keuangan/laporan', icon: Wallet },
-  { name: 'Profil', href: '/pengaturan/profil', icon: UserCircle2 },
 ]
 
 export const pegawaiLinks = [
@@ -58,7 +57,6 @@ export const pegawaiLinks = [
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Jurnal Pegawai', href: '/presensi/jurnal-karyawan', icon: BookOpen },
   { name: 'Izin', href: '/presensi/izin-keluar', icon: DoorOpen },
-  { name: 'Profil', href: '/pengaturan/profil', icon: UserCircle2 },
 ]
 
 export const superAdminOnlyPaths = [
@@ -175,6 +173,6 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
   applySubRoleLinks(subRole2)
   applySubRoleLinks(subRole3)
 
-  return currentLinks
+  // Pastikan tombol Profil selalu difilter untuk semua pengguna tanpa terkecuali
+  return currentLinks.filter(link => link.href !== '/pengaturan/profil' && link.name !== 'Profil')
 }
-

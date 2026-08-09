@@ -42,6 +42,10 @@ export class FinanceService {
       where: { date: { gte: startDate, lte: endDate }, status: 'DISETUJUI' },
     });
 
+    const danaBantuans = await this.prisma.danaBantuan.findMany({
+      where: { kategori: 'PEGAWAI', isSynced: true },
+    });
+
     return staffList.map((staff) => {
       const staffAttendances = attendances.filter((a) => a.userId === staff.id);
       const uniqueIzinDates = new Set(
@@ -52,13 +56,19 @@ export class FinanceService {
       const roles = [staff.role, staff.subRole, staff.subRole2, staff.subRole3]
         .filter(Boolean)
         .join(', ');
+
+      const matchedBantuan = danaBantuans
+        .filter((b) => !b.penerima || b.penerima.toLowerCase().includes(staff.name.toLowerCase()) || staff.name.toLowerCase().includes(b.penerima.toLowerCase()))
+        .reduce((sum, b) => sum + b.nominal, 0);
+
       return {
         id: staff.id,
         name: staff.name,
         roles,
         totalHadir: staffAttendances.length,
         totalIzin: uniqueIzinDates.size,
-        estimasiPenghasilan: 0,
+        estimasiPenghasilan: matchedBantuan,
+        bantuanNominal: matchedBantuan,
       };
     });
   }
@@ -1408,4 +1418,122 @@ export class FinanceService {
       ),
     };
   }
+
+  // ============================================================
+  // DANA BANTUAN (Grants / Aid Funds)
+  // ============================================================
+  async getDanaBantuan(year?: number, month?: number, kategori?: string, status?: string) {
+    const where: any = {};
+    if (year) {
+      if (month) {
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 0, 23, 59, 59, 999);
+        where.tanggal = { gte: start, lte: end };
+      } else {
+        const start = new Date(year, 0, 1);
+        const end = new Date(year, 11, 31, 23, 59, 59, 999);
+        where.tanggal = { gte: start, lte: end };
+      }
+    }
+    if (kategori && kategori !== 'ALL') {
+      where.kategori = kategori;
+    }
+    if (status && status !== 'ALL') {
+      where.status = status;
+    }
+
+    return this.prisma.danaBantuan.findMany({
+      where,
+      include: {
+        user: { select: { name: true } },
+      },
+      orderBy: { tanggal: 'desc' },
+    });
+  }
+
+  async createDanaBantuan(data: any, userId: string) {
+    if (!data.namaBantuan || !data.nominal) {
+      throw new BadRequestException('Nama Bantuan dan Nominal wajib diisi');
+    }
+
+    return this.prisma.danaBantuan.create({
+      data: {
+        namaBantuan: data.namaBantuan,
+        kategori: data.kategori || 'SISWA',
+        sumberDana: data.sumberDana || 'Yayasan',
+        nominal: parseFloat(data.nominal),
+        penerima: data.penerima || null,
+        tanggal: data.tanggal ? new Date(data.tanggal) : new Date(),
+        status: data.status || 'DISETUJUI',
+        keterangan: data.keterangan || null,
+        targetSync: data.targetSync || 'KEUANGAN_KELUAR',
+        recordedBy: userId,
+      },
+    });
+  }
+
+  async updateDanaBantuan(id: string, data: any) {
+    const existing = await this.prisma.danaBantuan.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Data bantuan tidak ditemukan');
+    }
+
+    return this.prisma.danaBantuan.update({
+      where: { id },
+      data: {
+        namaBantuan: data.namaBantuan !== undefined ? data.namaBantuan : existing.namaBantuan,
+        kategori: data.kategori !== undefined ? data.kategori : existing.kategori,
+        sumberDana: data.sumberDana !== undefined ? data.sumberDana : existing.sumberDana,
+        nominal: data.nominal !== undefined ? parseFloat(data.nominal) : existing.nominal,
+        penerima: data.penerima !== undefined ? data.penerima : existing.penerima,
+        tanggal: data.tanggal ? new Date(data.tanggal) : existing.tanggal,
+        status: data.status !== undefined ? data.status : existing.status,
+        keterangan: data.keterangan !== undefined ? data.keterangan : existing.keterangan,
+        targetSync: data.targetSync !== undefined ? data.targetSync : existing.targetSync,
+      },
+    });
+  }
+
+  async deleteDanaBantuan(id: string) {
+    return this.prisma.danaBantuan.delete({
+      where: { id },
+    });
+  }
+
+  async syncDanaBantuan(id: string, targetSync: string | undefined, userId: string) {
+    const dana = await this.prisma.danaBantuan.findUnique({ where: { id } });
+    if (!dana) {
+      throw new NotFoundException('Data bantuan tidak ditemukan');
+    }
+
+    const syncTarget = targetSync || dana.targetSync || 'KEUANGAN_KELUAR';
+    let syncedRefId: string | null = null;
+
+    if (syncTarget === 'KEUANGAN_KELUAR' || syncTarget === 'PENGGAJIAN') {
+      const expCategory = syncTarget === 'PENGGAJIAN' ? 'PENGGAJIAN' : (dana.kategori === 'OPERASIONAL' ? 'OPERASIONAL' : 'BANTUAN');
+      const titlePrefix = syncTarget === 'PENGGAJIAN' ? '[Insentif/Bantuan Gaji]' : '[Dana Bantuan]';
+      const createdExp = await this.prisma.pengeluaran.create({
+        data: {
+          title: `${titlePrefix} ${dana.namaBantuan}${dana.penerima ? ' - ' + dana.penerima : ''}`,
+          description: dana.keterangan || `Sinkronisasi Bantuan ${dana.sumberDana} (${dana.kategori})`,
+          amount: dana.nominal,
+          category: expCategory,
+          date: dana.tanggal,
+          recordedBy: userId,
+        },
+      });
+      syncedRefId = createdExp.id;
+    }
+
+    return this.prisma.danaBantuan.update({
+      where: { id },
+      data: {
+        isSynced: true,
+        syncedAt: new Date(),
+        targetSync: syncTarget,
+        syncedReferenceId: syncedRefId,
+      },
+    });
+  }
 }
+

@@ -239,4 +239,52 @@ export class FinanceController {
       month ? parseInt(month, 10) : undefined,
     );
   }
+
+  // ============================================================
+  // DANA BANTUAN (Grants / Aid Funds)
+  // ============================================================
+  @Get('dana-bantuan')
+  @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
+  getDanaBantuan(
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+    @Query('kategori') kategori?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.financeService.getDanaBantuan(
+      year ? parseInt(year, 10) : undefined,
+      month ? parseInt(month, 10) : undefined,
+      kategori,
+      status,
+    );
+  }
+
+  @Post('dana-bantuan')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  createDanaBantuan(@Body() body: any, @Req() req: any) {
+    return this.financeService.createDanaBantuan(body, req.user?.id);
+  }
+
+  @Patch('dana-bantuan/:id')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  updateDanaBantuan(@Param('id') id: string, @Body() body: any) {
+    return this.financeService.updateDanaBantuan(id, body);
+  }
+
+  @Delete('dana-bantuan/:id')
+  @RequirePermissions(PaymentPermission.DELETE_BILLS)
+  deleteDanaBantuan(@Param('id') id: string) {
+    return this.financeService.deleteDanaBantuan(id);
+  }
+
+  @Post('dana-bantuan/:id/sync')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  syncDanaBantuan(
+    @Param('id') id: string,
+    @Body('targetSync') targetSync: string,
+    @Req() req: any,
+  ) {
+    return this.financeService.syncDanaBantuan(id, targetSync, req.user?.id);
+  }
 }
+

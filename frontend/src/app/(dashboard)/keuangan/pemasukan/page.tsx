@@ -14,7 +14,7 @@ import {
   Wallet, Users, BarChart3, Building2, Search, Pencil, Trash2,
   Loader2, PlusCircle, CheckCircle2, TrendingUp, X, Download,
   AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, Sparkles,
-  ShieldAlert, Lock, CheckSquare, Square
+  ShieldAlert, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
@@ -2292,20 +2292,707 @@ function TabRekap() {
 }
 
 // ============================================================
-// TAB: YAYASAN (COMING SOON)
+// TAB: DANA BANTUAN
 // ============================================================
-function TabYayasan() {
-  const authenticatedFetch = useAuthenticatedFetch();
+type DanaBantuanItem = {
+  id: string
+  namaBantuan: string
+  kategori: 'SISWA' | 'PEGAWAI' | 'OPERASIONAL' | 'UMUM'
+  sumberDana: string
+  nominal: number
+  penerima: string | null
+  tanggal: string
+  status: 'DRAFT' | 'DISETUJUI' | 'TERSALURKAN'
+  keterangan: string | null
+  targetSync: 'KEUANGAN_KELUAR' | 'PENGGAJIAN' | 'NONE'
+  isSynced: boolean
+  syncedAt: string | null
+  syncedReferenceId: string | null
+  user?: { name: string }
+}
+
+function TabDanaBantuan() {
+  const authenticatedQuery = useAuthenticatedQuery()
+  const authenticatedFetch = useAuthenticatedFetch()
+  const queryClient = useQueryClient()
+
+  const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString())
+  const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString())
+  const [selectedKategori, setSelectedKategori] = useState<string>('ALL')
+  const [selectedStatus, setSelectedStatus] = useState<string>('ALL')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Modal State
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<DanaBantuanItem | null>(null)
+  const [formState, setFormState] = useState({
+    namaBantuan: '',
+    sumberDana: 'Yayasan',
+    kategori: 'SISWA',
+    nominal: '',
+    penerima: '',
+    tanggal: new Date().toISOString().split('T')[0],
+    status: 'DISETUJUI',
+    targetSync: 'KEUANGAN_KELUAR',
+    keterangan: ''
+  })
+
+  // Sync Confirmation State
+  const [syncItem, setSyncItem] = useState<DanaBantuanItem | null>(null)
+  const [syncTarget, setSyncTarget] = useState<'KEUANGAN_KELUAR' | 'PENGGAJIAN'>('KEUANGAN_KELUAR')
+
+  const { data: danaList = [], isLoading } = useQuery<DanaBantuanItem[]>({
+    queryKey: ['dana-bantuan', selectedYear, selectedMonth, selectedKategori, selectedStatus],
+    queryFn: () => authenticatedQuery(`/api-backend/finance/dana-bantuan?year=${selectedYear}&month=${selectedMonth}&kategori=${selectedKategori}&status=${selectedStatus}`)
+  })
+
+  // Create / Update Mutation
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        ...formState,
+        nominal: parseFloat(formState.nominal) || 0
+      }
+      if (editingItem) {
+        return authenticatedFetch(`/api-backend/finance/dana-bantuan/${editingItem.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+      } else {
+        return authenticatedFetch('/api-backend/finance/dana-bantuan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dana-bantuan'] })
+      setIsFormOpen(false)
+      setEditingItem(null)
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil',
+        text: editingItem ? 'Data bantuan berhasil diperbarui.' : 'Data bantuan baru berhasil ditambahkan.',
+        timer: 2000,
+        showConfirmButton: false
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Error', err.message || 'Gagal menyimpan data bantuan', 'error')
+    }
+  })
+
+  // Delete Mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return authenticatedFetch(`/api-backend/finance/dana-bantuan/${id}`, {
+        method: 'DELETE'
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dana-bantuan'] })
+      Swal.fire('Terhapus', 'Data bantuan berhasil dihapus.', 'success')
+    },
+    onError: (err: any) => {
+      Swal.fire('Error', err.message || 'Gagal menghapus data bantuan', 'error')
+    }
+  })
+
+  // Sync Mutation
+  const syncMutation = useMutation({
+    mutationFn: async ({ id, targetSync }: { id: string; targetSync: string }) => {
+      return authenticatedFetch(`/api-backend/finance/dana-bantuan/${id}/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetSync })
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dana-bantuan'] })
+      queryClient.invalidateQueries({ queryKey: ['payroll-summary'] })
+      setSyncItem(null)
+      Swal.fire({
+        icon: 'success',
+        title: 'Sinkronisasi Berhasil',
+        text: 'Data bantuan telah berhasil tersingkron ke modul keuangan yang dituju.',
+        timer: 2200,
+        showConfirmButton: false
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Error', err.message || 'Gagal melakukan sinkronisasi data bantuan', 'error')
+    }
+  })
+
+  const openForm = (item?: DanaBantuanItem) => {
+    if (item) {
+      setEditingItem(item)
+      setFormState({
+        namaBantuan: item.namaBantuan,
+        sumberDana: item.sumberDana,
+        kategori: item.kategori,
+        nominal: item.nominal.toString(),
+        penerima: item.penerima || '',
+        tanggal: item.tanggal ? item.tanggal.split('T')[0] : new Date().toISOString().split('T')[0],
+        status: item.status,
+        targetSync: item.targetSync,
+        keterangan: item.keterangan || ''
+      })
+    } else {
+      setEditingItem(null)
+      setFormState({
+        namaBantuan: '',
+        sumberDana: 'Yayasan',
+        kategori: 'SISWA',
+        nominal: '',
+        penerima: '',
+        tanggal: new Date().toISOString().split('T')[0],
+        status: 'DISETUJUI',
+        targetSync: 'KEUANGAN_KELUAR',
+        keterangan: ''
+      })
+    }
+    setIsFormOpen(true)
+  }
+
+  const handleDelete = (item: DanaBantuanItem) => {
+    Swal.fire({
+      title: 'Hapus Data Bantuan?',
+      text: `Apakah Anda yakin ingin menghapus "${item.namaBantuan}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Hapus',
+      cancelButtonText: 'Batal'
+    }).then((res) => {
+      if (res.isConfirmed) {
+        deleteMutation.mutate(item.id)
+      }
+    })
+  }
+
+  const filteredDana = useMemo(() => {
+    return danaList.filter((item) => {
+      const matchSearch =
+        item.namaBantuan.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.penerima && item.penerima.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        item.sumberDana.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.keterangan && item.keterangan.toLowerCase().includes(searchQuery.toLowerCase()))
+      return matchSearch
+    })
+  }, [danaList, searchQuery])
+
+  // Statistics
+  const totalNominal = useMemo(() => danaList.reduce((acc, item) => acc + item.nominal, 0), [danaList])
+  const totalSyncedKeuanganKeluar = useMemo(() => danaList.filter(d => d.isSynced && d.targetSync === 'KEUANGAN_KELUAR').reduce((acc, item) => acc + item.nominal, 0), [danaList])
+  const totalSyncedPenggajian = useMemo(() => danaList.filter(d => d.isSynced && d.targetSync === 'PENGGAJIAN').reduce((acc, item) => acc + item.nominal, 0), [danaList])
+
+  const handleExportExcel = () => {
+    if (filteredDana.length === 0) return
+    const dataToExport = filteredDana.map((item, idx) => ({
+      No: idx + 1,
+      'Nama Bantuan': item.namaBantuan,
+      'Sumber Dana': item.sumberDana,
+      Kategori: item.kategori,
+      Nominal: item.nominal,
+      Penerima: item.penerima || '-',
+      Tanggal: formatDate(item.tanggal),
+      Status: item.status,
+      'Status Sinkron': item.isSynced ? `Tersinkron (${item.targetSync})` : 'Belum Sinkron',
+      Keterangan: item.keterangan || '-'
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Dana Bantuan')
+    XLSX.writeFile(wb, `Dana_Bantuan_${selectedMonth}_${selectedYear}.xlsx`)
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-      <div className="w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center">
-        <Building2 className="w-10 h-10 text-slate-400" />
+    <div className="space-y-6">
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-100 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Total Dana Bantuan</p>
+              <h3 className="text-xl font-bold text-slate-900 mt-1">{currency(totalNominal)}</h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">{danaList.length} Program / Pendataan</p>
+            </div>
+            <div className="w-12 h-12 bg-indigo-500 text-white rounded-xl flex items-center justify-center shadow-md">
+              <HeartHandshake className="w-6 h-6" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Sinkron Keu. Keluar</p>
+              <h3 className="text-xl font-bold text-slate-900 mt-1">{currency(totalSyncedKeuanganKeluar)}</h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Disalurkan via Pengeluaran Kas</p>
+            </div>
+            <div className="w-12 h-12 bg-amber-500 text-white rounded-xl flex items-center justify-center shadow-md">
+              <Receipt className="w-6 h-6" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Sinkron Penggajian</p>
+              <h3 className="text-xl font-bold text-slate-900 mt-1">{currency(totalSyncedPenggajian)}</h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Insentif / Tunjangan Pegawai</p>
+            </div>
+            <div className="w-12 h-12 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md">
+              <Wallet className="w-6 h-6" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Status Sinkronisasi</p>
+              <h3 className="text-xl font-bold text-slate-800 mt-1">
+                {danaList.filter(d => d.isSynced).length} / {danaList.length}
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Program Telah Tersinkron</p>
+            </div>
+            <div className="w-12 h-12 bg-slate-700 text-white rounded-xl flex items-center justify-center shadow-md">
+              <RefreshCw className="w-6 h-6" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      <div>
-        <h3 className="text-lg font-bold text-slate-700">Uang Masuk dari Yayasan / Persyarikatan</h3>
-        <p className="text-sm text-slate-500 mt-1 max-w-sm">Fitur ini sedang dalam pengembangan dan akan segera tersedia.</p>
-      </div>
-      <span className="px-4 py-1.5 bg-slate-100 text-slate-500 text-sm font-semibold rounded-full border border-slate-200">Coming Soon</span>
+
+      {/* Main Table Card */}
+      <Card className="shadow-sm border-slate-200">
+        <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <HeartHandshake className="w-5 h-5 text-indigo-600" />
+                Tabel Pendataan Dana Bantuan
+              </CardTitle>
+              <CardDescription>
+                Kelola pendataan bantuan yayasan/donatur dan alokasi sinkronisasi ke data Keuangan Keluar dan Penggajian.
+              </CardDescription>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={() => openForm()} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <PlusCircle className="w-4 h-4 mr-2" /> Tambah Data Bantuan
+              </Button>
+              <Button variant="outline" onClick={handleExportExcel} disabled={filteredDana.length === 0} className="border-slate-300 text-slate-700">
+                <Download className="w-4 h-4 mr-2" /> Export Excel
+              </Button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-4 pt-3 border-t border-slate-200/60">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <Input
+                placeholder="Cari bantuan / penerima..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-white"
+              />
+            </div>
+
+            <Select value={selectedKategori} onValueChange={(val) => { if (val) setSelectedKategori(val) }}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Kategori Bantuan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Semua Kategori</SelectItem>
+                <SelectItem value="SISWA">Siswa (Beasiswa/Subsidi)</SelectItem>
+                <SelectItem value="PEGAWAI">Pegawai (Insentif/Gaji)</SelectItem>
+                <SelectItem value="OPERASIONAL">Operasional Sekolah</SelectItem>
+                <SelectItem value="UMUM">Bantuan Umum</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedStatus} onValueChange={(val) => { if (val) setSelectedStatus(val) }}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Semua Status</SelectItem>
+                <SelectItem value="DRAFT">Draft</SelectItem>
+                <SelectItem value="DISETUJUI">Disetujui</SelectItem>
+                <SelectItem value="TERSALURKAN">Tersalurkan</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedMonth} onValueChange={(val) => { if (val) setSelectedMonth(val) }}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Bulan" />
+              </SelectTrigger>
+              <SelectContent>
+                {MONTHS.map(m => (
+                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedYear} onValueChange={(val) => { if (val) setSelectedYear(val) }}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Tahun" />
+              </SelectTrigger>
+              <SelectContent>
+                {YEARS.map(y => (
+                  <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead className="w-[50px] text-center">No</TableHead>
+                  <TableHead>Program Bantuan & Keterangan</TableHead>
+                  <TableHead>Sumber Dana</TableHead>
+                  <TableHead className="text-center">Kategori</TableHead>
+                  <TableHead className="text-right">Nominal (Rp)</TableHead>
+                  <TableHead>Penerima / Target</TableHead>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-center">Sinkronisasi</TableHead>
+                  <TableHead className="text-right w-[140px]">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-12">
+                      <div className="flex flex-col items-center justify-center text-slate-500">
+                        <Loader2 className="w-6 h-6 animate-spin mb-2 text-indigo-600" />
+                        Memuat data dana bantuan...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredDana.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-12 text-slate-500">
+                      Tidak ada data dana bantuan yang ditemukan.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredDana.map((item, index) => (
+                    <TableRow key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                      <TableCell className="text-center font-medium text-slate-500">{index + 1}</TableCell>
+                      <TableCell>
+                        <div className="font-bold text-slate-900">{item.namaBantuan}</div>
+                        {item.keterangan && (
+                          <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">{item.keterangan}</div>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium text-slate-700">{item.sumberDana}</TableCell>
+                      <TableCell className="text-center">
+                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                          item.kategori === 'SISWA' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                          item.kategori === 'PEGAWAI' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          item.kategori === 'OPERASIONAL' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          'bg-purple-50 text-purple-700 border-purple-200'
+                        }`}>
+                          {item.kategori}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-indigo-700 text-base">
+                        {currency(item.nominal)}
+                      </TableCell>
+                      <TableCell className="text-slate-800 font-medium">{item.penerima || '-'}</TableCell>
+                      <TableCell className="text-xs text-slate-600 whitespace-nowrap">{formatDate(item.tanggal)}</TableCell>
+                      <TableCell className="text-center">
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                          item.status === 'TERSALURKAN' ? 'bg-emerald-100 text-emerald-800' :
+                          item.status === 'DISETUJUI' ? 'bg-blue-100 text-blue-800' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {item.isSynced ? (
+                          <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                            item.targetSync === 'PENGGAJIAN'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            <CheckCircle2 className="w-3 h-3" />
+                            {item.targetSync === 'PENGGAJIAN' ? 'Penggajian' : 'Keu. Keluar'}
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSyncItem(item)
+                              setSyncTarget(item.targetSync === 'PENGGAJIAN' ? 'PENGGAJIAN' : 'KEUANGAN_KELUAR')
+                            }}
+                            className="text-xs h-7 px-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                          >
+                            <RefreshCw className="w-3 h-3 mr-1" />
+                            Sinkronkan
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openForm(item)}
+                          className="h-8 w-8 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDelete(item)}
+                          className="h-8 w-8 text-slate-600 hover:text-rose-600 hover:bg-rose-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* MODAL: Form Tambah / Edit */}
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-indigo-700">
+              <HeartHandshake className="w-5 h-5" />
+              {editingItem ? 'Edit Data Dana Bantuan' : 'Input Pendataan Dana Bantuan'}
+            </DialogTitle>
+            <DialogDescription>
+              Isikan detail bantuan dari yayasan/donatur yang nantinya dapat disinkronkan ke Keuangan Keluar dan Penggajian.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label>Nama Program Bantuan <span className="text-rose-500">*</span></Label>
+              <Input
+                placeholder="Misal: Bantuan Operasional Yayasan / Subsidi SPP Siswa"
+                value={formState.namaBantuan}
+                onChange={(e) => setFormState({ ...formState, namaBantuan: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Sumber Dana</Label>
+              <Select value={formState.sumberDana} onValueChange={(val) => { if (val) setFormState({ ...formState, sumberDana: val }) }}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Pilih Sumber Dana" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Yayasan">Yayasan / Persyarikatan</SelectItem>
+                  <SelectItem value="BOS">Pemerintah / BOS</SelectItem>
+                  <SelectItem value="Donatur">Donatur / Perorangan</SelectItem>
+                  <SelectItem value="CSR">CSR Perusahaan</SelectItem>
+                  <SelectItem value="Lainnya">Lainnya</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Kategori Bantuan</Label>
+              <Select value={formState.kategori} onValueChange={(val) => { if (val) setFormState({ ...formState, kategori: val }) }}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Pilih Kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SISWA">Siswa (Beasiswa / Subsidi SPP)</SelectItem>
+                  <SelectItem value="PEGAWAI">Pegawai (Insentif / Tunjangan)</SelectItem>
+                  <SelectItem value="OPERASIONAL">Operasional Sekolah</SelectItem>
+                  <SelectItem value="UMUM">Bantuan Umum / Sosial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Nominal Bantuan (Rp) <span className="text-rose-500">*</span></Label>
+              <Input
+                type="number"
+                placeholder="Nominal rupiah..."
+                value={formState.nominal}
+                onChange={(e) => setFormState({ ...formState, nominal: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Penerima / Target Bantuan</Label>
+              <Input
+                placeholder="Misal: Ahmad Dani (Guru) / Kelas 10 / Sekolah"
+                value={formState.penerima}
+                onChange={(e) => setFormState({ ...formState, penerima: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Tanggal Bantuan</Label>
+              <Input
+                type="date"
+                value={formState.tanggal}
+                onChange={(e) => setFormState({ ...formState, tanggal: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Status Pendataan</Label>
+              <Select value={formState.status} onValueChange={(val) => { if (val) setFormState({ ...formState, status: val }) }}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DRAFT">Draft</SelectItem>
+                  <SelectItem value="DISETUJUI">Disetujui</SelectItem>
+                  <SelectItem value="TERSALURKAN">Tersalurkan</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label>Target Sinkronisasi Utama</Label>
+              <Select value={formState.targetSync} onValueChange={(val) => { if (val) setFormState({ ...formState, targetSync: val }) }}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Pilih Target Sinkronisasi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="KEUANGAN_KELUAR">Keuangan Keluar (Pengeluaran Kas Operasional)</SelectItem>
+                  <SelectItem value="PENGGAJIAN">Penggajian (Insentif / Tunjangan Bantuan Gaji)</SelectItem>
+                  <SelectItem value="NONE">Belum Diisi / Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label>Keterangan / Kebutuhan Pendataan</Label>
+              <Textarea
+                rows={3}
+                placeholder="Tuliskan catatan rincian kebutuhan pendataan bantuan di sini..."
+                value={formState.keterangan}
+                onChange={(e) => setFormState({ ...formState, keterangan: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-slate-100">
+            <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              type="button"
+              disabled={saveMutation.isPending || !formState.namaBantuan || !formState.nominal}
+              onClick={() => saveMutation.mutate()}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {editingItem ? 'Simpan Perubahan' : 'Tambah Data Bantuan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: Confirmation Sinkronisasi */}
+      <Dialog open={!!syncItem} onOpenChange={(open) => !open && setSyncItem(null)}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-indigo-700">
+              <RefreshCw className="w-5 h-5 text-indigo-600" />
+              Proses Sinkronisasi Bantuan
+            </DialogTitle>
+            <DialogDescription>
+              Pilih modul tujuan sinkronisasi untuk mendata alokasi dana bantuan ini secara sistematis.
+            </DialogDescription>
+          </DialogHeader>
+
+          {syncItem && (
+            <div className="space-y-4 py-2">
+              <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 text-sm space-y-1">
+                <div className="font-bold text-slate-900">{syncItem.namaBantuan}</div>
+                <div className="text-slate-600">Nominal: <strong className="text-indigo-700">{currency(syncItem.nominal)}</strong></div>
+                <div className="text-slate-500 text-xs">Penerima: {syncItem.penerima || '-'} | Sumber: {syncItem.sumberDana}</div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="font-semibold text-slate-800">Target Modul Sinkronisasi</Label>
+                <div className="grid grid-cols-1 gap-2">
+                  <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                    syncTarget === 'KEUANGAN_KELUAR' ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-200 hover:bg-slate-50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="syncTargetRadio"
+                      checked={syncTarget === 'KEUANGAN_KELUAR'}
+                      onChange={() => setSyncTarget('KEUANGAN_KELUAR')}
+                      className="mt-1 text-indigo-600"
+                    />
+                    <div>
+                      <div className="font-bold text-slate-900 text-sm">Keuangan Keluar (Outflow / Pengeluaran)</div>
+                      <div className="text-xs text-slate-500">
+                        Membuat entri pengeluaran kas otomatis di menu Keuangan Keluar untuk pelaporan pertanggungjawaban.
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                    syncTarget === 'PENGGAJIAN' ? 'border-emerald-600 bg-emerald-50/50' : 'border-slate-200 hover:bg-slate-50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="syncTargetRadio"
+                      checked={syncTarget === 'PENGGAJIAN'}
+                      onChange={() => setSyncTarget('PENGGAJIAN')}
+                      className="mt-1 text-emerald-600"
+                    />
+                    <div>
+                      <div className="font-bold text-slate-900 text-sm">Penggajian (Insentif / Tunjangan Gaji)</div>
+                      <div className="text-xs text-slate-500">
+                        Menghubungkan dana bantuan ke rekapitulasi estimasi penghasilan pegawai / guru penerima.
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-slate-100">
+            <Button type="button" variant="outline" onClick={() => setSyncItem(null)}>
+              Batal
+            </Button>
+            <Button
+              type="button"
+              disabled={syncMutation.isPending}
+              onClick={() => syncItem && syncMutation.mutate({ id: syncItem.id, targetSync: syncTarget })}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {syncMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Jalankan Sinkronisasi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -2317,7 +3004,7 @@ const TABS = [
   { id: 'tagihan', label: 'Tagihan Siswa', icon: Receipt },
   { id: 'verifikasi', label: 'Verifikasi Pembayaran', icon: CheckCircle2 },
   { id: 'rekap', label: 'Rekapitulasi', icon: BarChart3 },
-  { id: 'yayasan', label: 'Uang Masuk Yayasan', icon: Building2 },
+  { id: 'dana-bantuan', label: 'Dana Bantuan', icon: HeartHandshake },
 ]
 
 export default function KeuanganMasukPage() {
@@ -2333,7 +3020,7 @@ export default function KeuanganMasukPage() {
           </div>
           Keuangan Masuk
         </h1>
-        <p className="text-slate-500 mt-1 ml-0.5">Kelola tagihan dan rekapitulasi keuangan sekolah</p>
+        <p className="text-slate-500 mt-1 ml-0.5">Kelola tagihan, rekapitulasi, dan pendataan dana bantuan sekolah</p>
       </div>
 
       <div className="border-b border-slate-200">
@@ -2346,9 +3033,6 @@ export default function KeuanganMasukPage() {
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${isActive ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
                 <Icon className="w-4 h-4" />
                 {tab.label}
-                {tab.id === 'yayasan' && (
-                  <span className="text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded font-bold ml-1">SOON</span>
-                )}
               </button>
             )
           })}
@@ -2359,8 +3043,9 @@ export default function KeuanganMasukPage() {
         {activeTab === 'tagihan' && <TabTagihan />}
         {activeTab === 'verifikasi' && <PaymentProofVerificationPage />}
         {activeTab === 'rekap' && <TabRekap />}
-        {activeTab === 'yayasan' && <TabYayasan />}
+        {activeTab === 'dana-bantuan' && <TabDanaBantuan />}
       </div>
     </div>
   )
 }
+

@@ -19,6 +19,7 @@ type PayrollSummary = {
   totalHadir: number
   totalIzin: number
   estimasiPenghasilan: number
+  bantuanNominal?: number
 }
 
 export default function PenggajianPage() {
@@ -190,7 +191,14 @@ export default function PenggajianPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-bold text-slate-800 text-base">
-                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.estimasiPenghasilan || 0)}
+                        <div>
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.estimasiPenghasilan || 0)}
+                        </div>
+                        {item.bantuanNominal && item.bantuanNominal > 0 ? (
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5">
+                            + Insentif Bantuan: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.bantuanNominal)}
+                          </span>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))

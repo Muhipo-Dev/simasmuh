@@ -96,7 +96,6 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
         { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote },
         { name: 'Keuangan Masuk', href: '/keuangan/pemasukan', icon: Wallet },
         { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt },
-        { name: 'LPJ Keuangan', href: '/keuangan/lpj', icon: FileText },
         { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings }
       ])
     } else if (roleName === 'PEGAWAI' || roleName === 'KARYAWAN') {

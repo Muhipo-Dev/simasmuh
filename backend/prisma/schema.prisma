@@ -29,6 +29,7 @@ model User {
   notifications     Notification[]
   paymentProofs     PaymentProof[]
   pengeluarans      Pengeluaran[]
+  danaBantuans      DanaBantuan[]
   staffJournals     StaffJournal[]
   student           Student?
   teacherProfile    TeacherProfile?
@@ -360,4 +361,29 @@ model ProgramConfig {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model DanaBantuan {
+  id                 String    @id @default(uuid())
+  namaBantuan        String
+  kategori           String    @default("SISWA")
+  sumberDana         String    @default("Yayasan")
+  nominal            Float
+  penerima           String?
+  tanggal            DateTime  @default(now())
+  status             String    @default("DISETUJUI")
+  keterangan         String?
+  targetSync         String    @default("KEUANGAN_KELUAR")
+  isSynced           Boolean   @default(false)
+  syncedAt           DateTime?
+  syncedReferenceId String?
+  recordedBy         String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [recordedBy], references: [id])
+
+  @@index([tanggal])
+  @@index([kategori])
+  @@index([isSynced])
+}
+
 

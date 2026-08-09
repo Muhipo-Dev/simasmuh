@@ -14,7 +14,6 @@ export const superadminLinks = [
   { name: 'Kelas', href: '/master-data/kelas', icon: BookOpen },
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
-  { name: 'e-Rapor', href: '/akademik/e-rapor', icon: Award },
   { name: 'QR Layar (Publik)', href: '/presensi/manajemen-qr', icon: QrCode },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
@@ -27,7 +26,6 @@ export const bauLinks = [
   { name: 'Kelas', href: '/master-data/kelas', icon: BookOpen },
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
-  { name: 'e-Rapor', href: '/akademik/e-rapor', icon: Award },
   { name: 'Buku Tamu (BAU)', href: '/fitur/buku-tamu', icon: Contact },
   { name: 'Arsip & Persuratan', href: '/fitur/persuratan', icon: Mail },
   { name: 'Inventaris & Aset', href: '/fitur/inventaris', icon: Package },
@@ -41,7 +39,6 @@ export const guruLinks = [
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Jadwal', href: '/akademik/jadwal-mengajar', icon: CalendarDays },
   { name: 'Jurnal Mengajar', href: '/akademik/jurnal-mengajar', icon: BookOpen },
-  { name: 'e-Rapor', href: '/akademik/e-rapor', icon: Award },
   { name: 'Izin', href: '/presensi/izin-keluar', icon: DoorOpen },
   { name: 'Profil', href: '/pengaturan/profil', icon: UserCircle2 },
 ]
@@ -51,7 +48,6 @@ export const siswaLinks = [
   { name: 'Scan QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
   { name: 'Jadwal', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
-  { name: 'e-Rapor', href: '/akademik/e-rapor', icon: Award },
   { name: 'Keuangan', href: '/keuangan/laporan', icon: Wallet },
   { name: 'Profil', href: '/pengaturan/profil', icon: UserCircle2 },
 ]

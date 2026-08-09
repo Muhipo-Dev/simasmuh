@@ -65,8 +65,9 @@ export default function StudentsPage() {
   const queryClient = useQueryClient()
 
   const userRole = (session?.user as any)?.role || ''
-  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM'].includes(userRole)
-  const isSuperadmin = userRole === 'SUPERADMIN'
+  const subRole = (session?.user as any)?.subRole || ''
+  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
+  const isSuperadmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
 
   const [open, setOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)

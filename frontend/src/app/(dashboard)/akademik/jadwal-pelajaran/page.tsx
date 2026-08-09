@@ -42,7 +42,7 @@ export default function JadwalPelajaranPage() {
   const subRole2 = (session?.user as any)?.subRole2
   const subRole3 = (session?.user as any)?.subRole3
 
-  const isSuperAdmin = role === 'SUPERADMIN' || role === 'ADMIN_IT' || subRole === 'SUPERADMIN' || subRole2 === 'SUPERADMIN' || subRole3 === 'SUPERADMIN'
+  const isSuperAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(role) || ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole || '') || ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole2 || '') || ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole3 || '')
 
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()

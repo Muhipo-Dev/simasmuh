@@ -1184,7 +1184,11 @@ export default function StudentsPage() {
                 <span className="text-xs font-semibold text-slate-500">Kelas:</span>
                 <Select value={filterClassId} onValueChange={(v) => setFilterClassId(v || 'ALL')}>
                   <SelectTrigger className="w-[140px] h-7 text-xs border-0 shadow-none focus:ring-0 p-0">
-                    <SelectValue placeholder="Semua Kelas" />
+                    <SelectValue placeholder="Semua Kelas">
+                      {filterClassId === 'ALL' || !filterClassId
+                        ? 'Semua Kelas'
+                        : classes?.find(c => c.id === filterClassId)?.name || 'Semua Kelas'}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL">Semua Kelas</SelectItem>

@@ -399,7 +399,11 @@ export default function JadwalPelajaranPage() {
           ) : (
             <Select value={selectedClassId} onValueChange={(val) => val && setSelectedClassId(val)}>
               <SelectTrigger className="w-full sm:w-[240px] bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-medium">
-                <SelectValue placeholder="Pilih Kelas" />
+                <SelectValue placeholder="Pilih Kelas">
+                  {selectedClassId === 'ALL'
+                    ? 'Semua Kelas'
+                    : classes?.find((c: any) => c.id === selectedClassId)?.name || 'Pilih Kelas'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">Semua Kelas</SelectItem>

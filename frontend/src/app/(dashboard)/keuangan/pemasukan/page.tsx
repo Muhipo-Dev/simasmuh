@@ -174,7 +174,7 @@ function TagihanModal({
   const [payMode, setPayMode] = useState<'LUNAS' | 'ANGSURAN'>('LUNAS')
 
   // Queries for public settings and program configs to auto-fill fee amounts
-  const { data: publicSettings } = useQuery<{ defaultDpp?: number; defaultUka?: number; defaultUks?: number }>({
+  const { data: publicSettings } = useQuery<{ defaultDpp?: number; defaultUka?: number; defaultUks?: number; defaultInfaq?: number; defaultSeragam?: number }>({
     queryKey: ['public-settings'],
     queryFn: () => authenticatedQuery('/api-backend/settings/public'),
   })
@@ -197,6 +197,8 @@ function TagihanModal({
     if (typeVal === 'DPP') return publicSettings?.defaultDpp || 0
     if (typeVal === 'UKA') return publicSettings?.defaultUka || 0
     if (typeVal === 'UKS') return publicSettings?.defaultUks || 0
+    if (typeVal === 'INFAQ') return publicSettings?.defaultInfaq || 300000
+    if (typeVal === 'SERAGAM') return publicSettings?.defaultSeragam || 2000000
     return 0
   }
 
@@ -223,7 +225,11 @@ function TagihanModal({
       const def = getDefaultAmountForType('UKS')
       if (def > 0) autoAmount = def.toString()
     } else if (typeVal === 'INFAQ') {
-      autoAmount = ''
+      const def = getDefaultAmountForType('INFAQ')
+      if (def > 0) autoAmount = def.toString()
+    } else if (typeVal === 'SERAGAM') {
+      const def = getDefaultAmountForType('SERAGAM')
+      if (def > 0) autoAmount = def.toString()
     }
 
     if (effectiveDefaultDiscount > 0) {

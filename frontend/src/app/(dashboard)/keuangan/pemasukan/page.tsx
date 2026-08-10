@@ -2039,29 +2039,24 @@ function TabTagihan() {
                   </TableHead>
                   <TableHead className="w-12 text-center">No</TableHead>
                   <TableHead>Nama Siswa</TableHead>
-                  <TableHead>Gelombang</TableHead>
-                  <TableHead>Program</TableHead>
-                  <TableHead>Jalur Pendaftaran</TableHead>
-                  <TableHead>Kelas</TableHead>
-                  <TableHead>Beasiswa Keuangan</TableHead>
-                  <TableHead className="text-center">Belum Lunas</TableHead>
+                  <TableHead className="text-center">Status Tagihan</TableHead>
                   <TableHead className="text-center">SPP Lunas</TableHead>
                   <TableHead className="text-right">Total Tagihan</TableHead>
-                  <TableHead className="text-right">Sudah Lunas</TableHead>
+                  <TableHead className="text-right">Total Sudah Lunas</TableHead>
                   <TableHead className="text-center">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-16">
+                    <TableCell colSpan={8} className="text-center py-16">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
                       <p className="text-slate-500 text-sm">Memuat data...</p>
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-16 text-slate-400">
+                    <TableCell colSpan={8} className="text-center py-16 text-slate-400">
                       {search || filterKelas ? 'Tidak ditemukan.' : 'Belum ada data siswa.'}
                     </TableCell>
                   </TableRow>
@@ -2086,93 +2081,31 @@ function TabTagihan() {
                           </div>
                           <div>
                             <p className="font-semibold text-slate-900 dark:text-white leading-tight">{s.name}</p>
-                            <p className="text-xs text-slate-400 font-mono">{s.nisn}</p>
+                            <p className="text-xs text-slate-400 font-mono">NISN: {s.nisn} · Kelas {s.className}</p>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
-                          {s.gelombang || 'Gelombang 1'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300">
-                          {s.program ? s.program.toUpperCase() : 'REGULER'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          s.jalurPendaftaran === 'Kader' || s.jalurPendaftaran === 'Kader Persyarikatan'
-                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
-                            : s.jalurPendaftaran === 'Prestasi' || s.jalurPendaftaran === 'Bidikmisi'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                            : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                        }`}>
-                          {s.jalurPendaftaran || 'Mandiri'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-xs font-semibold border border-indigo-100 dark:border-indigo-800">{s.className}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1 text-xs">
-                          {(s.beasiswaSppPct || 0) > 0 || (s.beasiswaDppPct || 0) > 0 || (s.beasiswaSeragamPct || 0) > 0 || (s.discountPercentage || 0) > 0 ? (
-                            <div className="flex flex-col gap-1">
-                              {(s.beasiswaSeragamPct || 0) > 0 && s.jalurPendaftaran !== 'Mandiri' && (
-                                <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-md text-[11px]">
-                                  Seragam: {s.beasiswaSeragamPct}% ({currency(2000000 * ((s.beasiswaSeragamPct || 0) / 100))})
-                                </span>
-                              )}
-                              {(s.beasiswaSppPct || 0) > 0 && (
-                                <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md text-[11px]">
-                                  SPP: {s.beasiswaSppPct}%
-                                </span>
-                              )}
-                              {(s.beasiswaDppPct || 0) > 0 && (
-                                <span className="inline-flex items-center gap-1 font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-md text-[11px]">
-                                  DPP: {s.beasiswaDppPct}%
-                                </span>
-                              )}
-                              {s.discountReason && (
-                                <span className="text-[10px] text-slate-500 italic truncate max-w-[150px]">
-                                  {s.discountReason}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic">Tanpa Beasiswa</span>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
                         {s.belumLunasCount > 0
-                          ? <span className="font-bold px-2.5 py-1 rounded-lg text-sm bg-red-50 text-red-600 border border-red-100">{s.belumLunasCount} tagihan</span>
-                          : <span className="text-emerald-600 font-semibold text-sm flex items-center justify-center gap-1"><CheckCircle2 className="w-4 h-4" /> Lunas</span>
+                          ? <span className="font-bold px-2.5 py-1 rounded-lg text-xs bg-red-50 text-red-600 border border-red-100">{s.belumLunasCount} Tagihan Belum Lunas</span>
+                          : <span className="text-emerald-600 font-bold text-xs bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-lg inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> LUNAS</span>
                         }
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className={`font-bold px-2.5 py-1 rounded-lg text-sm ${s.sppLunasCount >= 12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : s.sppLunasCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
-                          {s.sppLunasCount}/12
+                        <span className={`font-bold px-2.5 py-1 rounded-lg text-xs ${s.sppLunasCount >= 12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : s.sppLunasCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
+                          {s.sppLunasCount}/12 Bulan
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-semibold text-slate-700 dark:text-slate-200">
+                      <TableCell className="text-right font-semibold text-slate-700 dark:text-slate-200 text-sm">
                         {s.totalTagihan > 0 ? currency(s.totalTagihan) : <span className="text-slate-300">—</span>}
                       </TableCell>
-                      <TableCell className="text-right font-bold text-emerald-700 dark:text-emerald-400">
+                      <TableCell className="text-right font-bold text-emerald-700 dark:text-emerald-400 text-sm">
                         {s.totalLunas > 0 ? currency(s.totalLunas) : <span className="text-slate-300 font-normal">—</span>}
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center items-center gap-1.5">
                           <Button size="sm" variant="outline"
-                            title="Set Alokasi Beasiswa Siswa (%)"
-                            className="border-amber-300 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-xs gap-1 h-8 rounded-xl"
-                            onClick={() => {
-                              window.dispatchEvent(new CustomEvent('open-beasiswa-dialog', { detail: s }));
-                            }}>
-                            <Percent className="w-3.5 h-3.5" /> Beasiswa
-                          </Button>
-                          <Button size="sm" variant="outline"
-                            className="border-blue-300 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-xs gap-1.5 h-8 rounded-xl"
+                            className="border-blue-300 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-xs gap-1.5 h-8 rounded-xl font-bold"
                             onClick={() => openModal(s)}>
                             <Receipt className="w-3.5 h-3.5" /> Kelola
                           </Button>

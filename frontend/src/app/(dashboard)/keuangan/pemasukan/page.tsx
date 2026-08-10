@@ -1791,12 +1791,61 @@ function TabTagihan() {
   const authenticatedQuery = useAuthenticatedQuery()
   const qc = useQueryClient()
 
-  // Selection & Restricted Reset States
-  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
-  const [resetAuthModalOpen, setResetAuthModalOpen] = useState(false)
-  const [resetTargetStudentIds, setResetTargetStudentIds] = useState<string[]>([])
-  const [authPassword, setAuthPassword] = useState('')
-  const [authError, setAuthError] = useState('')
+  // Beasiswa Dialog States in Keuangan
+  const [beasiswaTargetStudent, setBeasiswaTargetStudent] = useState<StudentSummary | null>(null)
+  const [isBeasiswaDialogOpen, setIsBeasiswaDialogOpen] = useState(false)
+  const [beasiswaSeragamVal, setBeasiswaSeragamVal] = useState<number>(0)
+  const [beasiswaSppVal, setBeasiswaSppVal] = useState<number>(0)
+  const [beasiswaDppVal, setBeasiswaDppVal] = useState<number>(0)
+  const [beasiswaReason, setBeasiswaReason] = useState<string>('')
+
+  useEffect(() => {
+    const handleOpenBeasiswa = (e: any) => {
+      const std = e.detail
+      if (std) {
+        setBeasiswaTargetStudent(std)
+        setBeasiswaReason(std.discountReason || '')
+        setBeasiswaSeragamVal(std.beasiswaSeragamPct || 0)
+        setBeasiswaSppVal(std.beasiswaSppPct || 0)
+        setBeasiswaDppVal(std.beasiswaDppPct || 0)
+        setIsBeasiswaDialogOpen(true)
+      }
+    }
+    window.addEventListener('open-beasiswa-dialog', handleOpenBeasiswa)
+    return () => window.removeEventListener('open-beasiswa-dialog', handleOpenBeasiswa)
+  }, [])
+
+  const updateBeasiswaMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const res = await authenticatedFetch(`/api-backend/students/${payload.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      if (!res.ok) throw new Error('Gagal memperbarui beasiswa keuangan siswa')
+      return res.json()
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      if (selectedStudent) {
+        qc.invalidateQueries({ queryKey: ['student-tagihan', selectedStudent.id] })
+      }
+      setIsBeasiswaDialogOpen(false)
+      Swal.fire({
+        title: 'Beasiswa Berhasil Diperbarui!',
+        text: 'Persentase beasiswa keuangan siswa berhasil disimpan.',
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        title: 'Gagal Menyimpan',
+        text: err.message || 'Terjadi kesalahan saat menyimpan beasiswa.',
+        icon: 'error',
+      })
+    }
+  })
 
   const { data: students = [], isLoading } = useQuery<StudentSummary[]>({
     queryKey: ['finance-students'],
@@ -2192,6 +2241,168 @@ function TabTagihan() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* BEASISWA DIALOG KEUANGAN */}
+      <Dialog open={isBeasiswaDialogOpen} onOpenChange={setIsBeasiswaDialogOpen}>
+        <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="shrink-0 bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 p-5 text-white shadow-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-white text-lg font-extrabold">
+                <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
+                  <Percent className="w-5 h-5 text-amber-200" />
+                </div>
+                Pengaturan Beasiswa Keuangan
+              </DialogTitle>
+              <DialogDescription className="text-amber-100 text-xs mt-1">
+                Atur alokasi beasiswa persentase untuk Seragam, SPP, & DPP.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          {beasiswaTargetStudent && (
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar">
+              <div className="bg-slate-50 dark:bg-slate-800/80 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-1">
+                <p className="font-extrabold text-sm text-slate-900 dark:text-slate-100">{beasiswaTargetStudent.name}</p>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-bold px-2 py-0.5 rounded-md">
+                    Kelas: {beasiswaTargetStudent.className}
+                  </span>
+                  <span className={`font-bold px-2 py-0.5 rounded-md ${
+                    beasiswaTargetStudent.jalurPendaftaran === 'Mandiri'
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                      : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                  }`}>
+                    Jalur: {beasiswaTargetStudent.jalurPendaftaran || 'Mandiri'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Rincian Beasiswa Per Item */}
+              <div className="space-y-4 bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200/80 dark:border-amber-900/40">
+                <div className="flex items-center justify-between border-b border-amber-200/60 pb-2">
+                  <p className="text-xs font-black text-amber-900 dark:text-amber-300 uppercase tracking-wider">
+                    Alokasi Beasiswa (%) Per Item:
+                  </p>
+                  <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-950 px-2 py-0.5 rounded">
+                    {beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? 'Seragam, SPP & DPP' : 'Hanya SPP & DPP'}
+                  </span>
+                </div>
+
+                {beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? (
+                  <div className="space-y-1.5 bg-white dark:bg-slate-950 p-3 rounded-lg border border-amber-200/60 dark:border-slate-800">
+                    <div className="flex justify-between items-center text-xs">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200">
+                        Beasiswa Seragam (%)
+                      </Label>
+                      <span className="font-bold text-amber-700 dark:text-amber-400">
+                        Potongan: {beasiswaSeragamVal}% ({currency(2000000 * ((beasiswaSeragamVal || 0) / 100))})
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="0 - 100%"
+                        value={beasiswaSeragamVal || ''}
+                        onChange={(e) => setBeasiswaSeragamVal(Math.min(100, Math.max(0, Number(e.target.value))))}
+                        className="bg-white dark:bg-slate-900 text-xs h-9 pr-8 font-bold"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">Bayar Netto: {currency(2000000 * (1 - (beasiswaSeragamVal || 0) / 100))} (Default Seragam Rp 2.000.000)</p>
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-500 italic bg-amber-100/40 dark:bg-slate-950 p-2.5 rounded-lg border border-amber-200/60 dark:border-slate-800 flex items-center gap-2">
+                    <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Jalur Mandiri tidak berhak mendapat Beasiswa Seragam. (Hanya SPP & DPP).</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5 bg-white dark:bg-slate-950 p-3 rounded-lg border border-amber-200/60 dark:border-slate-800">
+                    <div className="flex justify-between items-center text-xs">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200">
+                        Beasiswa SPP (%)
+                      </Label>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        {beasiswaSppVal}%
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="0 - 100%"
+                        value={beasiswaSppVal || ''}
+                        onChange={(e) => setBeasiswaSppVal(Math.min(100, Math.max(0, Number(e.target.value))))}
+                        className="bg-white dark:bg-slate-900 text-xs h-9 pr-8 font-bold"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 bg-white dark:bg-slate-950 p-3 rounded-lg border border-amber-200/60 dark:border-slate-800">
+                    <div className="flex justify-between items-center text-xs">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200">
+                        Beasiswa DPP (%)
+                      </Label>
+                      <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                        {beasiswaDppVal}%
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="0 - 100%"
+                        value={beasiswaDppVal || ''}
+                        onChange={(e) => setBeasiswaDppVal(Math.min(100, Math.max(0, Number(e.target.value))))}
+                        className="bg-white dark:bg-slate-900 text-xs h-9 pr-8 font-bold"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Alasan / Catatan Beasiswa</Label>
+                <Input
+                  placeholder="Misal: Beasiswa Kader Persyarikatan / Prestasi / Bidikmisi"
+                  value={beasiswaReason}
+                  onChange={(e) => setBeasiswaReason(e.target.value)}
+                  className="bg-white dark:bg-slate-950 text-xs h-9"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-row items-center justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsBeasiswaDialogOpen(false)}>Batal</Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+              onClick={() => {
+                if (!beasiswaTargetStudent) return
+                updateBeasiswaMutation.mutate({
+                  id: beasiswaTargetStudent.id,
+                  beasiswaSeragamPct: beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? beasiswaSeragamVal : 0,
+                  beasiswaSppPct: beasiswaSppVal,
+                  beasiswaDppPct: beasiswaDppVal,
+                  discountPercentage: beasiswaSppVal,
+                  discountReason: beasiswaReason,
+                })
+              }}
+              disabled={updateBeasiswaMutation.isPending}
+            >
+              {updateBeasiswaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
+              Simpan Beasiswa Keuangan
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

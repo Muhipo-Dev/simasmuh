@@ -10,8 +10,10 @@ import {
   HttpCode,
   HttpStatus,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FinanceService } from './finance.service';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
 import { RolesGuard } from '../../core/auth/roles.guard';
@@ -285,6 +287,23 @@ export class FinanceController {
     @Req() req: any,
   ) {
     return this.financeService.syncDanaBantuan(id, targetSync, req.user?.id);
+  }
+
+  @Get('export-rekap-kelas')
+  async exportRekapKelas(
+    @Query('classId') classId: string,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.financeService.exportRekapKeuanganKelas(classId);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=rekap_keuangan_kelas_${classId}.xlsx`,
+    );
+    res.send(buffer);
   }
 }
 

@@ -70,8 +70,13 @@ model Student {
   classId            String
   userId             String?        @unique
   program            String?
+  gelombang          String?        @default("Gelombang 1")
+  jalurPendaftaran   String?        @default("Mandiri")
   discountPercentage Int            @default(0)
   discountReason     String?
+  beasiswaSeragamPct Int            @default(0)
+  beasiswaSppPct     Int            @default(0)
+  beasiswaDppPct     Int            @default(0)
   attendances        Attendance[]
   grades             Grade[]
   payments           Payment[]
@@ -181,9 +186,11 @@ model Setting {
   bankOwner     String?
   academicYear  String? @default("2026/2027")
   semester      String? @default("Ganjil")
-  defaultDpp    Float?  @default(0)
-  defaultUka    Float?  @default(0)
-  defaultUks    Float?  @default(0)
+  defaultDpp     Float?  @default(0)
+  defaultUka     Float?  @default(0)
+  defaultUks     Float?  @default(0)
+  defaultInfaq   Float?  @default(0)
+  defaultSeragam Float?  @default(2000000)
 }
 
 model Announcement {

@@ -1,10 +1,14 @@
 'use client'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useSession } from 'next-auth/react'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent } from 'lucide-react'
+import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent, Info } from 'lucide-react'
 import Swal from 'sweetalert2'
+
+const currencyFormat = (num: number) => {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0)
+}
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -19,15 +23,14 @@ const CHUNK_SIZE = 20
 
 // Enum program unggulan siswa — hanya SUPERADMIN yang bisa mengubah
 const PROGRAM_OPTIONS = [
-  { value: 'kader', label: 'Kader', color: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' },
-  { value: 'reguler', label: 'Reguler', color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
   { value: 'tahfidz', label: 'Tahfidz', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' },
+  { value: 'saintek', label: 'SAINSOS', color: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300' },
   { value: 'olahraga', label: 'Olahraga', color: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300' },
-  { value: 'MIC', label: 'Muhipo Internasional Class (MIC)', color: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' },
-  { value: 'enterpreneur', label: 'Entrepreneur', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300' },
+  { value: 'MIC', label: 'MIC (Muhipo Internasional Class)', color: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' },
   { value: 'seni budaya', label: 'Seni Budaya', color: 'bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300' },
-  { value: 'soshum saintek', label: 'Soshum Saintek', color: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300' },
+  { value: 'ai', label: 'Artificial Intelligence', color: 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300' },
   { value: 'inklusi', label: 'Inklusi', color: 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300' },
+  { value: 'enterpreneur', label: 'Enterpreneur', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300' },
 ]
 
 const getProgramBadge = (programValue: string | null | undefined) => {
@@ -43,8 +46,13 @@ type Student = {
   gender: string
   classId: string
   program?: string | null
+  gelombang?: string | null
+  jalurPendaftaran?: string | null
   discountPercentage?: number
   discountReason?: string | null
+  beasiswaSeragamPct?: number
+  beasiswaSppPct?: number
+  beasiswaDppPct?: number
   class: {
     id: string
     name: string
@@ -105,9 +113,23 @@ export default function StudentsPage() {
     label: 'Siswa',
   })
   const abortRef = useRef(false)
-
   const [isEdit, setIsEdit] = useState(false)
-  const [formData, setFormData] = useState({ id: '', nisn: '', nis: '', name: '', gender: 'L', classId: '', username: '', password: '', program: '' })
+  const [formData, setFormData] = useState({ 
+    id: '', 
+    nisn: '', 
+    nis: '', 
+    name: '', 
+    gender: 'L', 
+    classId: '', 
+    username: '', 
+    password: '', 
+    program: '',
+    gelombang: 'Gelombang 1',
+    jalurPendaftaran: 'Mandiri',
+    beasiswaSeragamPct: 0,
+    beasiswaSppPct: 0,
+    beasiswaDppPct: 0,
+  })
   const [isProgramDialogOpen, setIsProgramDialogOpen] = useState(false)
   const [programTargetStudent, setProgramTargetStudent] = useState<Student | null>(null)
   const [programValue, setProgramValue] = useState<string>('')
@@ -117,6 +139,9 @@ export default function StudentsPage() {
   const [discountTargetStudent, setDiscountTargetStudent] = useState<Student | null>(null)
   const [discountPct, setDiscountPct] = useState<number>(0)
   const [discountReason, setDiscountReason] = useState<string>('')
+  const [beasiswaSeragamVal, setBeasiswaSeragamVal] = useState<number>(0)
+  const [beasiswaSppVal, setBeasiswaSppVal] = useState<number>(0)
+  const [beasiswaDppVal, setBeasiswaDppVal] = useState<number>(0)
 
   const { data: programConfigs } = useQuery<Array<{ id: string; code: string; name: string }>>({
     queryKey: ['program-configs'],
@@ -165,6 +190,23 @@ export default function StudentsPage() {
     }
   })
 
+  useEffect(() => {
+    const handleOpenBeasiswa = (e: any) => {
+      const std = e.detail
+      if (std) {
+        setDiscountTargetStudent(std)
+        setDiscountPct(std.discountPercentage || 0)
+        setDiscountReason(std.discountReason || '')
+        setBeasiswaSeragamVal(std.beasiswaSeragamPct || 0)
+        setBeasiswaSppVal(std.beasiswaSppPct || 0)
+        setBeasiswaDppVal(std.beasiswaDppPct || 0)
+        setIsDiscountDialogOpen(true)
+      }
+    }
+    window.addEventListener('open-beasiswa-dialog', handleOpenBeasiswa)
+    return () => window.removeEventListener('open-beasiswa-dialog', handleOpenBeasiswa)
+  }, [])
+
   const createMutation = useMutation({
     mutationFn: async (newStudent: any) => {
       const res = await authenticatedFetch('/api-backend/students', {
@@ -210,7 +252,7 @@ export default function StudentsPage() {
     }
   })
 
-  // Mutation khusus update program (SUPERADMIN only — memanggil PATCH /students/:id/program)
+  // Mutation khusus update program (SUPERADMIN / ADMIN TU)
   const updateProgramMutation = useMutation({
     mutationFn: async ({ id, program }: { id: string; program: string | null }) => {
       const res = await authenticatedFetch(`/api-backend/students/${id}/program`, {
@@ -231,21 +273,21 @@ export default function StudentsPage() {
       setProgramValue('')
     },
     onError: (err: any) => {
-      alert(err.message || 'Gagal mengubah program siswa. Pastikan Anda login sebagai SUPERADMIN.')
+      alert(err.message || 'Gagal mengubah program siswa.')
     }
   })
 
-  // Mutation khusus update discount default siswa (Bagian Keuangan / Admin)
+  // Mutation khusus update discount & beasiswa per item (Bagian Keuangan)
   const updateDiscountMutation = useMutation({
-    mutationFn: async ({ id, discountPercentage, discountReason }: { id: string; discountPercentage: number; discountReason?: string }) => {
+    mutationFn: async ({ id, discountPercentage, discountReason, beasiswaSeragamPct, beasiswaSppPct, beasiswaDppPct }: { id: string; discountPercentage: number; discountReason?: string; beasiswaSeragamPct?: number; beasiswaSppPct?: number; beasiswaDppPct?: number }) => {
       const res = await authenticatedFetch(`/api-backend/students/${id}/discount`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discountPercentage, discountReason }),
+        body: JSON.stringify({ discountPercentage, discountReason, beasiswaSeragamPct, beasiswaSppPct, beasiswaDppPct }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.message || 'Gagal mengatur diskon siswa')
+        throw new Error(err.message || 'Gagal mengatur diskon/beasiswa siswa')
       }
       return res.json()
     },
@@ -371,7 +413,22 @@ export default function StudentsPage() {
 
   const handleOpenAddDialog = () => {
     setIsEdit(false)
-    setFormData({ id: '', nisn: '', nis: '', name: '', gender: 'L', classId: '', username: '', password: '', program: '' })
+    setFormData({ 
+      id: '', 
+      nisn: '', 
+      nis: '', 
+      name: '', 
+      gender: 'L', 
+      classId: '', 
+      username: '', 
+      password: '', 
+      program: '',
+      gelombang: 'Gelombang 1',
+      jalurPendaftaran: 'Mandiri',
+      beasiswaSeragamPct: 0,
+      beasiswaSppPct: 0,
+      beasiswaDppPct: 0,
+    })
     setOpen(true)
   }
 
@@ -386,14 +443,34 @@ export default function StudentsPage() {
       classId: student.classId || student.class?.id || '', 
       username: student.user?.username || '', 
       password: '',
-      program: student.program || ''
+      program: student.program || '',
+      gelombang: student.gelombang || 'Gelombang 1',
+      jalurPendaftaran: student.jalurPendaftaran || 'Mandiri',
+      beasiswaSeragamPct: student.beasiswaSeragamPct || 0,
+      beasiswaSppPct: student.beasiswaSppPct || 0,
+      beasiswaDppPct: student.beasiswaDppPct || 0,
     })
     setOpen(true)
   }
 
   const handleCloseDialog = () => {
     setOpen(false)
-    setFormData({ id: '', nisn: '', nis: '', name: '', gender: 'L', classId: '', username: '', password: '', program: '' })
+    setFormData({ 
+      id: '', 
+      nisn: '', 
+      nis: '', 
+      name: '', 
+      gender: 'L', 
+      classId: '', 
+      username: '', 
+      password: '', 
+      program: '',
+      gelombang: 'Gelombang 1',
+      jalurPendaftaran: 'Mandiri',
+      beasiswaSeragamPct: 0,
+      beasiswaSppPct: 0,
+      beasiswaDppPct: 0,
+    })
   }
 
   const handleDelete = (id: string) => {
@@ -748,118 +825,158 @@ export default function StudentsPage() {
       </Dialog>
 
       <Dialog open={open} onOpenChange={(val) => !val && handleCloseDialog()}>
-        <DialogContent>
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle>{isEdit ? 'Ubah Data Siswa' : 'Tambah Siswa Baru'}</DialogTitle>
-              <DialogDescription>
-                {isEdit ? 'Ubah data induk siswa dan penempatan kelas.' : 'Masukkan data induk siswa untuk mendaftarkannya ke dalam sistem.'}
+        <DialogContent className="sm:max-w-[650px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+            <DialogHeader className="p-5 sm:p-6 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                {isEdit ? 'Ubah Data Siswa' : 'Tambah Siswa Baru'}
+              </DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm text-slate-500">
+                {isEdit ? 'Perbarui data induk, gelombang, jalur pendaftaran, dan kelas siswa.' : 'Isi form di bawah untuk mendaftarkan siswa baru ke dalam sistem.'}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="nisn">NISN</Label>
-                <Input 
-                  id="nisn" 
-                  value={formData.nisn}
-                  onChange={(e) => setFormData({...formData, nisn: e.target.value})}
-                  required 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nis">NIS</Label>
-                <Input 
-                  id="nis" 
-                  value={formData.nis}
-                  onChange={(e) => setFormData({...formData, nis: e.target.value})}
-                  required 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="name">Nama Lengkap</Label>
-                <Input 
-                  id="name" 
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  required 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Jenis Kelamin</Label>
-                <Select value={formData.gender} onValueChange={(v) => setFormData({...formData, gender: v || ''})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih Jenis Kelamin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="L">Laki-Laki</SelectItem>
-                    <SelectItem value="P">Perempuan</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="username">Username (Opsional)</Label>
-                <Input 
-                  id="username" 
-                  placeholder="Biarkan kosong untuk otomatis NISN"
-                  value={formData.username}
-                  onChange={(e) => setFormData({...formData, username: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password (Opsional)</Label>
-                <Input 
-                  id="password" 
-                  type="password"
-                  placeholder="Biarkan kosong untuk otomatis dari NIS"
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Kelas</Label>
-                <Select value={formData.classId} onValueChange={(v) => setFormData({...formData, classId: v || ''})} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih Kelas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {classes?.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label>Program Unggulan</Label>
-                  {!isSuperadmin && (
-                    <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 px-2 py-0.5 rounded-full font-medium">
-                      Hanya SUPERADMIN
-                    </span>
-                  )}
+
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar max-h-[calc(90vh-130px)]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="nisn" className="text-xs font-semibold">NISN</Label>
+                  <Input 
+                    id="nisn" 
+                    value={formData.nisn}
+                    onChange={(e) => setFormData({...formData, nisn: e.target.value})}
+                    placeholder="Masukkan NISN"
+                    required 
+                  />
                 </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="nis" className="text-xs font-semibold">NIS</Label>
+                  <Input 
+                    id="nis" 
+                    value={formData.nis}
+                    onChange={(e) => setFormData({...formData, nis: e.target.value})}
+                    placeholder="Masukkan NIS"
+                    required 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2 space-y-1.5">
+                  <Label htmlFor="name" className="text-xs font-semibold">Nama Lengkap</Label>
+                  <Input 
+                    id="name" 
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="Nama Lengkap Siswa"
+                    required 
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Jenis Kelamin</Label>
+                  <Select value={formData.gender} onValueChange={(v) => setFormData({...formData, gender: v || ''})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Jenis Kelamin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="L">Laki-Laki (L)</SelectItem>
+                      <SelectItem value="P">Perempuan (P)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="username" className="text-xs font-semibold">Username Login (Opsional)</Label>
+                  <Input 
+                    id="username" 
+                    placeholder="Otomatis dari NISN jika kosong"
+                    value={formData.username}
+                    onChange={(e) => setFormData({...formData, username: e.target.value})}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="password" className="text-xs font-semibold">Password (Opsional)</Label>
+                  <Input 
+                    id="password" 
+                    type="password"
+                    placeholder="Otomatis dari NIS jika kosong"
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Penempatan Kelas</Label>
+                  <Select value={formData.classId} onValueChange={(v) => setFormData({...formData, classId: v || ''})} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Kelas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {classes?.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Gelombang Masuk</Label>
+                  <Select value={formData.gelombang || 'Gelombang 1'} onValueChange={(v) => setFormData({...formData, gelombang: v || 'Gelombang 1'})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Gelombang" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Gelombang 1">Gelombang 1</SelectItem>
+                      <SelectItem value="Gelombang 2">Gelombang 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Jalur Pendaftaran</Label>
+                  <Select value={formData.jalurPendaftaran || 'Mandiri'} onValueChange={(v) => setFormData({...formData, jalurPendaftaran: v || 'Mandiri'})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Jalur" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Mandiri">Mandiri</SelectItem>
+                      <SelectItem value="Kader">Kader</SelectItem>
+                      <SelectItem value="Kader Persyarikatan">Kader Persyarikatan</SelectItem>
+                      <SelectItem value="Prestasi">Prestasi</SelectItem>
+                      <SelectItem value="Bidikmisi">Bidikmisi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <Label className="text-xs font-semibold">Program Unggulan Sekolah</Label>
                 <Select
                   value={formData.program || '__none__'}
                   onValueChange={(v) => setFormData({...formData, program: v === '__none__' ? '' : (v ?? '')})}
-                  disabled={!isSuperadmin}
                 >
-                  <SelectTrigger className={!isSuperadmin ? 'opacity-60 cursor-not-allowed' : ''}>
-                    <SelectValue placeholder="Pilih Program (Opsional)" />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Program Unggulan Sekolah (Opsional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">— Hapus / Tidak ada program —</SelectItem>
+                    <SelectItem value="__none__">— Tanpa Program Khusus (Reguler) —</SelectItem>
                     {dynamicProgramOptions.map(p => (
                       <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {!isSuperadmin && (
-                  <p className="text-xs text-slate-400 mt-1">Label program hanya bisa diubah oleh SUPERADMIN.</p>
-                )}
               </div>
             </div>
-            <DialogFooter>
+
+            <DialogFooter className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-row items-center justify-end gap-2">
               <Button type="button" variant="outline" onClick={handleCloseDialog}>Batal</Button>
-              <Button type="submit" disabled={isPending} className="bg-blue-600">
+              <Button type="submit" disabled={isPending} className="bg-blue-600 hover:bg-blue-700 font-bold text-white">
                 {isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 {isEdit ? 'Simpan Perubahan' : 'Simpan Siswa'}
               </Button>
@@ -1111,18 +1228,18 @@ export default function StudentsPage() {
                 <TableHead className="w-[60px] pl-4">No</TableHead>
                 <TableHead>NISN / NIS</TableHead>
                 <TableHead>Nama Siswa</TableHead>
-                <TableHead>L/P</TableHead>
+                <TableHead>Gelombang Masuk</TableHead>
+                <TableHead>Pilihan Program</TableHead>
+                <TableHead>Jalur Pendaftaran</TableHead>
                 <TableHead>Kelas</TableHead>
-                <TableHead>Program</TableHead>
-                <TableHead>Diskon Default</TableHead>
-                <TableHead>Akun Login</TableHead>
+                <TableHead>Beasiswa / Diskon Keuangan</TableHead>
                 <TableHead className="text-right pr-6">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-10">
+                  <TableCell colSpan={10} className="text-center py-10">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
                       Memuat data...
@@ -1131,7 +1248,7 @@ export default function StudentsPage() {
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-10 text-slate-500">
+                  <TableCell colSpan={10} className="text-center py-10 text-slate-500">
                     Belum ada data siswa untuk kriteria ini.
                   </TableCell>
                 </TableRow>
@@ -1159,63 +1276,93 @@ export default function StudentsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-semibold">{item.name}</TableCell>
-                      <TableCell>{item.gender}</TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                          {item.class?.name || 'Belum ada kelas'}
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+                          {item.gelombang || 'Gelombang 1'}
                         </span>
                       </TableCell>
                       <TableCell>
                         {(() => {
                           const badge = getProgramBadge(item.program)
                           return badge ? (
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${badge.color}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${badge.color}`}>
                               {badge.label}
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">—</span>
+                            <span className="text-xs text-slate-400 italic">Reguler</span>
                           )
                         })()}
                       </TableCell>
                       <TableCell>
-                        {item.discountPercentage && item.discountPercentage > 0 ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300">
-                            Diskon {item.discountPercentage}%
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">—</span>
-                        )}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          item.jalurPendaftaran === 'Kader' || item.jalurPendaftaran === 'Kader Persyarikatan'
+                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                            : item.jalurPendaftaran === 'Prestasi' || item.jalurPendaftaran === 'Bidikmisi'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                        }`}>
+                          {item.jalurPendaftaran || 'Mandiri'}
+                        </span>
                       </TableCell>
                       <TableCell>
-                        {item.user ? (
-                          <div className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded inline-block">
-                            {item.user.username}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400">Tidak ada</span>
-                        )}
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                          {item.class?.name || 'Belum ada kelas'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 text-xs font-medium">
+                          {(item.beasiswaSppPct || 0) > 0 || (item.beasiswaDppPct || 0) > 0 || (item.beasiswaSeragamPct || 0) > 0 || (item.discountPercentage || 0) > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {(item.beasiswaSppPct || 0) > 0 && (
+                                <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded">
+                                  SPP: {item.beasiswaSppPct}%
+                                </span>
+                              )}
+                              {(item.beasiswaDppPct || 0) > 0 && (
+                                <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 px-1.5 py-0.5 rounded">
+                                  DPP: {item.beasiswaDppPct}%
+                                </span>
+                              )}
+                              {(item.beasiswaSeragamPct || 0) > 0 && (
+                                <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800 px-1.5 py-0.5 rounded">
+                                  Seragam: {item.beasiswaSeragamPct}%
+                                </span>
+                              )}
+                              {(item.discountPercentage || 0) > 0 && !(item.beasiswaSppPct || 0) && (
+                                <span className="bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded">
+                                  Default: {item.discountPercentage}%
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">0% (Reguler)</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex justify-end gap-1.5">
                           <Button
                             variant="ghost"
                             size="icon"
-                            title="Set Diskon (Keuangan)"
+                            title="Set Beasiswa / Diskon (Keuangan)"
                             onClick={() => {
                               setDiscountTargetStudent(item)
                               setDiscountPct(item.discountPercentage || 0)
                               setDiscountReason(item.discountReason || '')
+                              setBeasiswaSeragamVal(item.beasiswaSeragamPct || 0)
+                              setBeasiswaSppVal(item.beasiswaSppPct || 0)
+                              setBeasiswaDppVal(item.beasiswaDppPct || 0)
                               setIsDiscountDialogOpen(true)
                             }}
                             className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                           >
                             <Percent className="w-4 h-4" />
                           </Button>
-                          {isSuperadmin && (
+                          {isSuperOrAdmin && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              title="Set Program (SUPERADMIN)"
+                              title="Set Program (CRUD Allowed)"
                               onClick={() => {
                                 setProgramTargetStudent(item)
                                 setProgramValue(item.program || '')
@@ -1244,70 +1391,166 @@ export default function StudentsPage() {
       </Card>
     </div>
 
-      {/* Modal Pengaturan Diskon Default Siswa (Keuangan) */}
+      {/* Modal Pengaturan Beasiswa Keuangan Siswa */}
       <Dialog open={isDiscountDialogOpen} onOpenChange={setIsDiscountDialogOpen}>
-        <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <Percent className="w-5 h-5 text-amber-600" /> Pengaturan Diskon Default Siswa
+        <DialogContent className="sm:max-w-[520px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-5 sm:p-6 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <DialogTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-lg font-bold">
+              <Percent className="w-5 h-5 text-amber-600" /> Pengaturan Beasiswa Keuangan Siswa
             </DialogTitle>
-            <DialogDescription>
-              Atur persentase diskon yang akan memotong otomatis tagihan baru siswa ini.
+            <DialogDescription className="text-xs sm:text-sm text-slate-500">
+              Atur persentase beasiswa per item biaya. Potongan otomatis dihitung dari biaya default (misal Seragam default Rp 2.000.000, diskon 50% = Rp 1.000.000).
             </DialogDescription>
           </DialogHeader>
 
           {discountTargetStudent && (
-            <div className="space-y-4 py-2">
-              <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{discountTargetStudent.name}</p>
-                <p className="text-xs text-slate-500">NISN: {discountTargetStudent.nisn} | Kelas: {discountTargetStudent.class?.name}</p>
-                {discountTargetStudent.program && (
-                  <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mt-1">Program Siswa: {discountTargetStudent.program.toUpperCase()}</p>
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar max-h-[calc(90vh-130px)]">
+              <div className="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                <p className="font-bold text-sm text-slate-900 dark:text-white">{discountTargetStudent.name}</p>
+                <p className="text-xs text-slate-500 font-mono">NISN: {discountTargetStudent.nisn} | Kelas: {discountTargetStudent.class?.name || 'Belum ada kelas'}</p>
+                <div className="flex flex-wrap gap-1.5 text-xs font-semibold pt-1">
+                  <span className={`px-2 py-0.5 rounded-md ${
+                    discountTargetStudent.jalurPendaftaran === 'Mandiri'
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                      : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                  }`}>
+                    Jalur: {discountTargetStudent.jalurPendaftaran || 'Mandiri'}
+                  </span>
+                  <span className="bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 rounded-md">
+                    Gelombang: {discountTargetStudent.gelombang || 'Gelombang 1'}
+                  </span>
+                  {discountTargetStudent.program && (
+                    <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-md">
+                      Program: {discountTargetStudent.program.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Rincian Beasiswa Per Item */}
+              <div className="space-y-4 bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200/80 dark:border-amber-900/40">
+                <div className="flex items-center justify-between border-b border-amber-200/60 pb-2">
+                  <p className="text-xs font-black text-amber-900 dark:text-amber-300 uppercase tracking-wider">
+                    Alokasi Beasiswa (%) Per Item Biaya:
+                  </p>
+                  <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-950 px-2 py-0.5 rounded">
+                    {discountTargetStudent.jalurPendaftaran !== 'Mandiri' ? 'Seragam, SPP & DPP' : 'Hanya SPP & DPP'}
+                  </span>
+                </div>
+
+                {/* Beasiswa Seragam (Hanya Non-Mandiri: Kader, Kader Persyarikatan, Prestasi, Bidikmisi) */}
+                {discountTargetStudent.jalurPendaftaran !== 'Mandiri' ? (
+                  <div className="space-y-1.5 bg-white dark:bg-slate-950 p-3 rounded-lg border border-amber-200/60 dark:border-slate-800">
+                    <div className="flex justify-between items-center text-xs">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200">
+                        Beasiswa Seragam (%)
+                      </Label>
+                      <span className="font-bold text-amber-700 dark:text-amber-400">
+                        Potongan: {beasiswaSeragamVal}% ({currencyFormat(2000000 * (beasiswaSeragamVal / 100))})
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="0 - 100%"
+                        value={beasiswaSeragamVal || ''}
+                        onChange={(e) => setBeasiswaSeragamVal(Math.min(100, Math.max(0, Number(e.target.value))))}
+                        className="bg-white dark:bg-slate-900 text-xs h-9 pr-8 font-bold"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">Bayar Netto: {currencyFormat(2000000 * (1 - beasiswaSeragamVal / 100))} (Default Seragam Rp 2.000.000)</p>
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-500 italic bg-amber-100/40 dark:bg-slate-950 p-2.5 rounded-lg border border-amber-200/60 dark:border-slate-800 flex items-center gap-2">
+                    <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Jalur Mandiri tidak berhak mendapat Beasiswa Seragam. (Hanya SPP & DPP).</span>
+                  </div>
                 )}
+
+                {/* Beasiswa SPP & DPP */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5 bg-white dark:bg-slate-950 p-3 rounded-lg border border-amber-200/60 dark:border-slate-800">
+                    <div className="flex justify-between items-center text-xs">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200">
+                        Beasiswa SPP (%)
+                      </Label>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        {beasiswaSppVal}%
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="0 - 100%"
+                        value={beasiswaSppVal || ''}
+                        onChange={(e) => setBeasiswaSppVal(Math.min(100, Math.max(0, Number(e.target.value))))}
+                        className="bg-white dark:bg-slate-900 text-xs h-9 pr-8 font-bold"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 bg-white dark:bg-slate-950 p-3 rounded-lg border border-amber-200/60 dark:border-slate-800">
+                    <div className="flex justify-between items-center text-xs">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200">
+                        Beasiswa DPP (%)
+                      </Label>
+                      <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                        {beasiswaDppVal}%
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="0 - 100%"
+                        value={beasiswaDppVal || ''}
+                        onChange={(e) => setBeasiswaDppVal(Math.min(100, Math.max(0, Number(e.target.value))))}
+                        className="bg-white dark:bg-slate-900 text-xs h-9 pr-8 font-bold"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 block">Pilihan Diskon Default</Label>
-                <Select value={discountPct.toString()} onValueChange={(v) => setDiscountPct(parseInt(v || '0', 10))}>
-                  <SelectTrigger className="bg-white dark:bg-slate-950"><SelectValue placeholder="Pilih persentase..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">0% (Tanpa Diskon)</SelectItem>
-                    <SelectItem value="25">25% Diskon</SelectItem>
-                    <SelectItem value="50">50% Diskon</SelectItem>
-                    <SelectItem value="75">75% Diskon</SelectItem>
-                    <SelectItem value="100">100% Diskon (Beasiswa Penuh / Kader)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 block">Alasan / Catatan Diskon (Opsional)</Label>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Alasan / Catatan Beasiswa</Label>
                 <Input
-                  placeholder="Misal: Beasiswa Kader / Anak Yatim / Prestasi"
+                  placeholder="Misal: Beasiswa Kader Persyarikatan / Prestasi / Bidikmisi"
                   value={discountReason}
                   onChange={(e) => setDiscountReason(e.target.value)}
-                  className="bg-white dark:bg-slate-950 text-xs"
+                  className="bg-white dark:bg-slate-950 text-xs h-9"
                 />
               </div>
             </div>
           )}
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-row items-center justify-end gap-2">
             <Button variant="outline" onClick={() => setIsDiscountDialogOpen(false)}>Batal</Button>
             <Button
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
               onClick={() => {
                 if (!discountTargetStudent) return
                 updateDiscountMutation.mutate({
                   id: discountTargetStudent.id,
-                  discountPercentage: discountPct,
-                  discountReason: discountReason
+                  discountPercentage: beasiswaSppVal || discountPct,
+                  discountReason: discountReason,
+                  beasiswaSeragamPct: discountTargetStudent.jalurPendaftaran !== 'Mandiri' ? beasiswaSeragamVal : 0,
+                  beasiswaSppPct: beasiswaSppVal,
+                  beasiswaDppPct: beasiswaDppVal,
                 })
               }}
               disabled={updateDiscountMutation.isPending}
             >
               {updateDiscountMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
-              Simpan Diskon Siswa
+              Simpan Beasiswa Keuangan
             </Button>
           </DialogFooter>
         </DialogContent>

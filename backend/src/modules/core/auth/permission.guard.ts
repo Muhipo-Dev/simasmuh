@@ -134,9 +134,16 @@ export class SuperadminGuard implements CanActivate {
       );
     }
 
-    if (user.role !== 'SUPERADMIN') {
+    const allowedRoles = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'KEUANGAN', 'BAU', 'TATA_USAHA'];
+    const hasAccess =
+      allowedRoles.includes(user.role) ||
+      allowedRoles.includes(user.subRole) ||
+      allowedRoles.includes(user.subRole2) ||
+      allowedRoles.includes(user.subRole3);
+
+    if (!hasAccess) {
       throw new ForbiddenException(
-        'Akses ditolak. Hanya SUPERADMIN yang dapat melakukan operasi modifikasi label program siswa.',
+        'Akses ditolak. Hanya Superadmin, Admin TU, Admin IT, atau Keuangan yang dapat melakukan operasi ini.',
       );
     }
 

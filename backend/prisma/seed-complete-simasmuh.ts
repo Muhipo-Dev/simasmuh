@@ -28,28 +28,26 @@ const lastNames = [
 ];
 
 const programList = [
-  'reguler',
-  'kader',
   'tahfidz',
+  'saintek',
   'olahraga',
   'MIC',
-  'enterpreneur',
   'seni budaya',
-  'soshum saintek',
+  'ai',
   'inklusi',
+  'enterpreneur',
 ];
 
 const sppBaseRate = 150000;
 const programMultipliers: Record<string, number> = {
-  kader: 1.0,
-  reguler: 1.0,
   tahfidz: 1.2,
+  saintek: 1.5,
   olahraga: 1.1,
   MIC: 2.0,
-  enterpreneur: 1.3,
   'seni budaya': 1.1,
-  'soshum saintek': 1.5,
+  ai: 1.6,
   inklusi: 0.8,
+  enterpreneur: 1.3,
 };
 
 function getRandomItem<T>(arr: T[]): T {
@@ -186,6 +184,9 @@ async function main() {
     const program = programList[(i - 1) % programList.length]; // Evenly distributed program labels
     const username = nis;
 
+    const jalurList = ['Kader', 'Kader Persyarikatan', 'Prestasi', 'Bidikmisi'];
+    const jalurPendaftaran = jalurList[(i - 1) % jalurList.length];
+
     let student = await prisma.student.findUnique({ where: { nis } });
     if (!student) {
       const user = await prisma.user.create({
@@ -204,6 +205,7 @@ async function main() {
               gender,
               classId: targetClass.id,
               program,
+              jalurPendaftaran,
             },
           },
         },
@@ -214,7 +216,7 @@ async function main() {
       // Ensure program is updated for existing students
       student = await prisma.student.update({
         where: { id: student.id },
-        data: { program, classId: targetClass.id },
+        data: { program, classId: targetClass.id, jalurPendaftaran },
       });
     }
     if (student) {

@@ -3,15 +3,14 @@ import ExcelJS from 'exceljs'
 
 // Daftar program unggulan yang valid (harus sinkron dengan backend dan frontend)
 const PROGRAM_OPTIONS = [
-  'kader',
-  'reguler',
   'tahfidz',
+  'saintek',
   'olahraga',
-  'Muhipo Internasional Class MIC',
-  'enterpreneur',
+  'MIC',
   'seni budaya',
-  'soshum saintek',
+  'ai',
   'inklusi',
+  'enterpreneur',
 ]
 
 // Warna per program untuk header kolom (opsional estetika)

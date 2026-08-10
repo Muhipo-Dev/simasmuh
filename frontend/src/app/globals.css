@@ -122,12 +122,25 @@
     @apply border-border outline-ring/50;
     -webkit-tap-highlight-color: transparent;
   }
-  body {
-    @apply bg-background text-foreground;
-    overscroll-behavior-y: none;
-  }
   html {
-    @apply font-sans;
+    font-size: 16px; /* Base 16px font size for maximum readability for parents */
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    overscroll-behavior-y: none;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Parent-Friendly Touch Target & High Contrast Form Elements */
+  button, input, select, textarea, [role="button"] {
+    min-height: 2.75rem; /* Min height 44px for parent touch accessibility */
+  }
+
+  /* Focus ring for high visibility & accessibility */
+  :focus-visible {
+    outline: 2px solid oklch(0.55 0.18 250);
+    outline-offset: 2px;
   }
 
   /* ==========================================================================

@@ -37,6 +37,14 @@ type StudentSummary = {
   gender: string; className: string; totalTagihan: number
   totalLunas: number; sisaTagihan?: number; belumLunasCount: number
   sppLunasCount: number; tagihanCount: number
+  program?: string | null
+  gelombang?: string | null
+  jalurPendaftaran?: string | null
+  discountPercentage?: number
+  discountReason?: string | null
+  beasiswaSeragamPct?: number
+  beasiswaSppPct?: number
+  beasiswaDppPct?: number
 }
 
 type StudentDetail = {
@@ -437,20 +445,35 @@ function TagihanModal({
                     Kelas <span className="font-extrabold text-white">{student?.class?.name}</span> · NISN: <span className="font-mono text-white">{student?.nisn}</span> · NIS: <span className="font-mono text-white">{student?.nis}</span>
                   </DialogDescription>
                 </div>
-                {student && onResetStudent && (
+                <div className="flex items-center gap-2 shrink-0">
                   <Button
                     size="sm"
-                    variant="outline"
                     onClick={() => {
-                      onClose();
-                      onResetStudent(student.id);
+                      if (student) {
+                        onClose();
+                        window.dispatchEvent(new CustomEvent('open-beasiswa-dialog', { detail: student }));
+                      }
                     }}
-                    className="border-rose-400/40 bg-rose-500/10 text-rose-200 hover:bg-rose-600 hover:text-white text-xs font-extrabold gap-1.5 h-9 rounded-xl shrink-0 backdrop-blur-sm transition-all shadow-sm"
+                    className="border-amber-400/50 bg-amber-500/20 text-amber-100 hover:bg-amber-500 hover:text-white text-xs font-extrabold gap-1.5 h-9 rounded-xl backdrop-blur-sm transition-all shadow-sm"
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Reset Tagihan Siswa
+                    <Percent className="w-3.5 h-3.5 text-amber-300" />
+                    Set Beasiswa (%)
                   </Button>
-                )}
+                  {student && onResetStudent && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        onClose();
+                        onResetStudent(student.id);
+                      }}
+                      className="border-rose-400/40 bg-rose-500/10 text-rose-200 hover:bg-rose-600 hover:text-white text-xs font-extrabold gap-1.5 h-9 rounded-xl backdrop-blur-sm transition-all shadow-sm"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Reset Tagihan Siswa
+                    </Button>
+                  )}
+                </div>
               </div>
             </DialogHeader>
           </div>
@@ -1879,6 +1902,49 @@ function TabTagihan() {
 
   const uniqueKelas = [...new Set(students.map(s => s.className))].sort()
 
+  const handleExportRekapKelas = async () => {
+    if (!filterKelas) {
+      Swal.fire({
+        title: 'Pilih Kelas Terlebih Dahulu',
+        text: 'Silakan pilih kelas pada filter untuk mengunduh Rekap Keuangan Eksport Excel per Kelas.',
+        icon: 'warning',
+        confirmButtonColor: '#2563eb',
+      })
+      return
+    }
+
+    const targetClass = classes.find(c => c.name === filterKelas)
+    if (!targetClass) {
+      Swal.fire({
+        title: 'Kelas Tidak Ditemukan',
+        text: 'Data ID kelas tidak ditemukan.',
+        icon: 'error',
+        confirmButtonColor: '#2563eb',
+      })
+      return
+    }
+
+    try {
+      const res = await authenticatedFetch(`/api-backend/finance/export-rekap-kelas?classId=${targetClass.id}`)
+      if (!res.ok) throw new Error('Gagal mengunduh rekap keuangan kelas')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `rekap_keuangan_kelas_${filterKelas.replace(/\s+/g, '_')}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Gagal Ekspor',
+        text: err.message || 'Terjadi kesalahan saat mengunduh rekap Excel.',
+        icon: 'error',
+      })
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -1906,9 +1972,14 @@ function TabTagihan() {
             className="border-purple-400 text-purple-700 hover:bg-purple-50 gap-2">
             <Layers className="w-4 h-4" /> Tagihan Massal
           </Button>
+          <Button variant="outline" onClick={handleExportRekapKelas}
+            className="border-indigo-600 text-indigo-700 hover:bg-indigo-50 gap-1.5 font-bold"
+            title="Eksport Excel Rekap Keuangan Per Kelas (No, Nama, Frekuensi/Bulan, SPP, Tag Kelas Non DPP, UKS, UIS/UAK, DPP)">
+            <FileSpreadsheet className="w-4 h-4 text-indigo-600" /> Rekap Excel Kelas
+          </Button>
           <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}
             className="border-emerald-500 text-emerald-700 hover:bg-emerald-50 gap-1.5">
-            <Download className="w-4 h-4" /> Export
+            <Download className="w-4 h-4" /> Export All
           </Button>
         </div>
       </div>
@@ -1968,6 +2039,9 @@ function TabTagihan() {
                   </TableHead>
                   <TableHead className="w-12 text-center">No</TableHead>
                   <TableHead>Nama Siswa</TableHead>
+                  <TableHead>Gelombang</TableHead>
+                  <TableHead>Program</TableHead>
+                  <TableHead>Jalur Pendaftaran</TableHead>
                   <TableHead>Kelas</TableHead>
                   <TableHead className="text-center">Belum Lunas</TableHead>
                   <TableHead className="text-center">SPP Lunas</TableHead>
@@ -1979,14 +2053,14 @@ function TabTagihan() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-16">
+                    <TableCell colSpan={12} className="text-center py-16">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
                       <p className="text-slate-500 text-sm">Memuat data...</p>
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-16 text-slate-400">
+                    <TableCell colSpan={12} className="text-center py-16 text-slate-400">
                       {search || filterKelas ? 'Tidak ditemukan.' : 'Belum ada data siswa.'}
                     </TableCell>
                   </TableRow>
@@ -2014,6 +2088,27 @@ function TabTagihan() {
                             <p className="text-xs text-slate-400 font-mono">{s.nisn}</p>
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+                          {s.gelombang || 'Gelombang 1'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300">
+                          {s.program ? s.program.toUpperCase() : 'REGULER'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          s.jalurPendaftaran === 'Kader' || s.jalurPendaftaran === 'Kader Persyarikatan'
+                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                            : s.jalurPendaftaran === 'Prestasi' || s.jalurPendaftaran === 'Bidikmisi'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                        }`}>
+                          {s.jalurPendaftaran || 'Mandiri'}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <span className="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-xs font-semibold border border-indigo-100 dark:border-indigo-800">{s.className}</span>

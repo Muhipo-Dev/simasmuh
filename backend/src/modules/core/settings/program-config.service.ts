@@ -18,15 +18,14 @@ export interface UpdateProgramConfigDto {
 }
 
 const DEFAULT_PROGRAMS = [
-  { code: 'kader', name: 'Kader', defaultSpp: 300000, defaultDiscount: 100, description: 'Program Beasiswa Kader' },
-  { code: 'reguler', name: 'Reguler', defaultSpp: 300000, defaultDiscount: 0, description: 'Program Siswa Reguler' },
   { code: 'tahfidz', name: 'Tahfidz', defaultSpp: 360000, defaultDiscount: 0, description: 'Program Hifdzil Qur\'an' },
+  { code: 'saintek', name: 'SAINSOS', defaultSpp: 450000, defaultDiscount: 0, description: 'Program Sains & Sosial (SAINSOS)' },
   { code: 'olahraga', name: 'Olahraga', defaultSpp: 330000, defaultDiscount: 0, description: 'Program Bakat Olahraga' },
-  { code: 'MIC', name: 'Muhipo Internasional', defaultSpp: 600000, defaultDiscount: 0, description: 'Program Class Internasional' },
-  { code: 'enterpreneur', name: 'Entrepreneur', defaultSpp: 390000, defaultDiscount: 0, description: 'Program Kewirausahaan' },
+  { code: 'MIC', name: 'Muhipo Internasional Class', defaultSpp: 600000, defaultDiscount: 0, description: 'Muhipo Internasional Class (MIC)' },
   { code: 'seni budaya', name: 'Seni Budaya', defaultSpp: 330000, defaultDiscount: 0, description: 'Program Seni & Kesenian' },
-  { code: 'soshum saintek', name: 'Soshum Saintek', defaultSpp: 450000, defaultDiscount: 0, description: 'Program Bimbingan Soshum & Saintek' },
+  { code: 'ai', name: 'Artificial Intelligence', defaultSpp: 500000, defaultDiscount: 0, description: 'Program Artificial Intelligence (AI)' },
   { code: 'inklusi', name: 'Inklusi', defaultSpp: 240000, defaultDiscount: 0, description: 'Program Pendampingan Inklusi' },
+  { code: 'enterpreneur', name: 'Enterpreneur', defaultSpp: 390000, defaultDiscount: 0, description: 'Program Kewirausahaan (Enterpreneur)' },
 ];
 
 @Injectable()

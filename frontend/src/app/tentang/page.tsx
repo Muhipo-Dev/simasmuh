@@ -32,6 +32,7 @@ export default function TentangPage() {
         <div className="hidden lg:flex items-center gap-8">
           <Link href="/" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Beranda</Link>
           <Link href="/profil" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Profil</Link>
+          <Link href="/guru-karyawan" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Guru & Karyawan</Link>
           <Link href="/tentang" className="text-[#2B50A1] dark:text-blue-400 font-bold transition-colors">Tentang</Link>
           <Link href="/berita" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Berita</Link>
 
@@ -57,6 +58,9 @@ export default function TentangPage() {
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Link href="/profil" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg">Profil</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link href="/guru-karyawan" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg">Guru & Karyawan</Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Link href="/tentang" className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-[#2B50A1] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 rounded-lg">Tentang</Link>

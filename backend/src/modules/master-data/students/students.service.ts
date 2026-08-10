@@ -51,7 +51,10 @@ export class StudentsService {
             name: data.name,
             gender: data.gender,
             classId: data.classId,
-          },
+            gelombang: data.gelombang || 'Gelombang 1',
+            jalurPendaftaran: data.jalurPendaftaran || 'Mandiri',
+            program: data.program || null,
+          } as any,
         },
       },
       include: {
@@ -141,12 +144,18 @@ export class StudentsService {
         nis: data.nis,
         name: data.name,
         gender: data.gender,
+        ...(data.gelombang !== undefined && { gelombang: data.gelombang }),
+        ...(data.jalurPendaftaran !== undefined && { jalurPendaftaran: data.jalurPendaftaran }),
+        ...(data.program !== undefined && { program: data.program }),
         ...(data.discountPercentage !== undefined && {
           discountPercentage: data.discountPercentage,
         }),
         ...(data.discountReason !== undefined && {
           discountReason: data.discountReason,
         }),
+        ...(data.beasiswaSeragamPct !== undefined && { beasiswaSeragamPct: Number(data.beasiswaSeragamPct) }),
+        ...(data.beasiswaSppPct !== undefined && { beasiswaSppPct: Number(data.beasiswaSppPct) }),
+        ...(data.beasiswaDppPct !== undefined && { beasiswaDppPct: Number(data.beasiswaDppPct) }),
         ...(data.classId && { class: { connect: { id: data.classId } } }),
         ...(student.userId && {
           user: {
@@ -168,6 +177,31 @@ export class StudentsService {
         updated.discountReason,
       );
     }
+
+    return updated;
+  }
+
+  async updateBeasiswaKeuangan(id: string, dto: { beasiswaSeragamPct?: number; beasiswaSppPct?: number; beasiswaDppPct?: number; discountPercentage?: number; discountReason?: string }) {
+    const student = await this.prisma.student.findUnique({ where: { id } });
+    if (!student) throw new NotFoundException('Siswa tidak ditemukan');
+
+    const updated = await (this.prisma.student as any).update({
+      where: { id },
+      data: {
+        ...(dto.beasiswaSeragamPct !== undefined && { beasiswaSeragamPct: Math.min(100, Math.max(0, Number(dto.beasiswaSeragamPct))) }),
+        ...(dto.beasiswaSppPct !== undefined && { beasiswaSppPct: Math.min(100, Math.max(0, Number(dto.beasiswaSppPct))) }),
+        ...(dto.beasiswaDppPct !== undefined && { beasiswaDppPct: Math.min(100, Math.max(0, Number(dto.beasiswaDppPct))) }),
+        ...(dto.discountPercentage !== undefined && { discountPercentage: Math.min(100, Math.max(0, Number(dto.discountPercentage))) }),
+        ...(dto.discountReason !== undefined && { discountReason: dto.discountReason }),
+      },
+      include: { class: true, user: true },
+    });
+
+    await this.syncStudentDiscountsToBills(
+      id,
+      updated.beasiswaSppPct || updated.discountPercentage || 0,
+      updated.discountReason,
+    );
 
     return updated;
   }
@@ -438,15 +472,14 @@ export class StudentsService {
 
     // Add data validation for Program column (column F)
     const programOptions = [
-      'kader',
-      'reguler',
       'tahfidz',
+      'saintek',
       'olahraga',
-      'Muhipo Internasional Class MIC',
-      'enterpreneur',
+      'MIC',
       'seni budaya',
-      'soshum saintek',
+      'ai',
       'inklusi',
+      'enterpreneur',
     ];
 
     // Apply data validation to Program column (F column, starting from row 2)

@@ -24,6 +24,8 @@ export class SettingsService {
           defaultDpp: 1500000,
           defaultUka: 500000,
           defaultUks: 100000,
+          defaultInfaq: 300000,
+          defaultSeragam: 2000000,
         } as any,
       });
     }
@@ -43,6 +45,8 @@ export class SettingsService {
         defaultDpp: true,
         defaultUka: true,
         defaultUks: true,
+        defaultInfaq: true,
+        defaultSeragam: true,
       } as any,
     });
     if (!settings) {
@@ -57,6 +61,8 @@ export class SettingsService {
         defaultDpp: 1500000,
         defaultUka: 500000,
         defaultUks: 100000,
+        defaultInfaq: 300000,
+        defaultSeragam: 2000000,
       };
     }
     return settings;

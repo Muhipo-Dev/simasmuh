@@ -1344,26 +1344,6 @@ export default function StudentsPage() {
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex justify-end gap-1.5">
-                          {/* Pengaturan Beasiswa Keuangan khusus peran KEUANGAN / SUPERADMIN */}
-                          {isFinance && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Kelola Beasiswa Siswa (Bagian Keuangan)"
-                              onClick={() => {
-                                setDiscountTargetStudent(item)
-                                setDiscountPct(item.discountPercentage || 0)
-                                setDiscountReason(item.discountReason || '')
-                                setBeasiswaSeragamVal(item.beasiswaSeragamPct || 0)
-                                setBeasiswaSppVal(item.beasiswaSppPct || 0)
-                                setBeasiswaDppVal(item.beasiswaDppPct || 0)
-                                setIsDiscountDialogOpen(true)
-                              }}
-                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                            >
-                              <Percent className="w-4 h-4" />
-                            </Button>
-                          )}
                           {isSuperOrAdmin && (
                             <Button
                               variant="ghost"

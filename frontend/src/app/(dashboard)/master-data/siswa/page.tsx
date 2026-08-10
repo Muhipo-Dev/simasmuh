@@ -1231,18 +1231,17 @@ export default function StudentsPage() {
                 <TableHead className="w-[60px] pl-4">No</TableHead>
                 <TableHead>NISN / NIS</TableHead>
                 <TableHead>Nama Siswa</TableHead>
-                <TableHead>Gelombang Masuk</TableHead>
-                <TableHead>Pilihan Program</TableHead>
+                <TableHead>Gelombang</TableHead>
+                <TableHead>Program</TableHead>
                 <TableHead>Jalur Pendaftaran</TableHead>
                 <TableHead>Kelas</TableHead>
-                <TableHead>Beasiswa / Diskon Keuangan</TableHead>
                 <TableHead className="text-right pr-6">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-10">
+                  <TableCell colSpan={9} className="text-center py-10">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
                       Memuat data...
@@ -1251,7 +1250,7 @@ export default function StudentsPage() {
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-10 text-slate-500">
+                  <TableCell colSpan={9} className="text-center py-10 text-slate-500">
                     Belum ada data siswa untuk kriteria ini.
                   </TableCell>
                 </TableRow>
@@ -1274,8 +1273,8 @@ export default function StudentsPage() {
                       <TableCell className="pl-4 font-medium text-slate-500">{index + 1}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-semibold text-slate-900 dark:text-white">{item.nisn}</span>
-                          <span className="text-xs text-slate-500">{item.nis}</span>
+                          <span className="font-semibold text-slate-900 dark:text-white font-mono text-xs">{item.nisn}</span>
+                          <span className="text-xs text-slate-400 font-mono">{item.nis}</span>
                         </div>
                       </TableCell>
                       <TableCell className="font-semibold">{item.name}</TableCell>
@@ -1308,39 +1307,9 @@ export default function StudentsPage() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-xs font-semibold border border-indigo-100 dark:border-indigo-800">
                           {item.class?.name || 'Belum ada kelas'}
                         </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1 text-xs">
-                          {(item.beasiswaSppPct || 0) > 0 || (item.beasiswaDppPct || 0) > 0 || (item.beasiswaSeragamPct || 0) > 0 || (item.discountPercentage || 0) > 0 ? (
-                            <div className="flex flex-col gap-1">
-                              {(item.beasiswaSeragamPct || 0) > 0 && item.jalurPendaftaran !== 'Mandiri' && (
-                                <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-md text-[11px]">
-                                  Seragam: {item.beasiswaSeragamPct}% ({currencyFormat(2000000 * ((item.beasiswaSeragamPct || 0) / 100))})
-                                </span>
-                              )}
-                              {(item.beasiswaSppPct || 0) > 0 && (
-                                <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md text-[11px]">
-                                  SPP: {item.beasiswaSppPct}%
-                                </span>
-                              )}
-                              {(item.beasiswaDppPct || 0) > 0 && (
-                                <span className="inline-flex items-center gap-1 font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-md text-[11px]">
-                                  DPP: {item.beasiswaDppPct}%
-                                </span>
-                              )}
-                              {item.discountReason && (
-                                <span className="text-[10px] text-slate-500 italic truncate max-w-[160px]">
-                                  Catatan: {item.discountReason}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic">Tanpa Beasiswa (0%)</span>
-                          )}
-                        </div>
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex justify-end gap-1.5">

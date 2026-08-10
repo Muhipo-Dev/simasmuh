@@ -2111,6 +2111,14 @@ function TabTagihan() {
                       <TableCell className="text-center">
                         <div className="flex justify-center items-center gap-1.5">
                           <Button size="sm" variant="outline"
+                            title="Set Alokasi Beasiswa Siswa (%)"
+                            className="border-amber-300 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-xs gap-1 h-8 rounded-xl font-bold"
+                            onClick={() => {
+                              window.dispatchEvent(new CustomEvent('open-beasiswa-dialog', { detail: s }));
+                            }}>
+                            <Percent className="w-3.5 h-3.5" /> Beasiswa
+                          </Button>
+                          <Button size="sm" variant="outline"
                             className="border-blue-300 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-xs gap-1.5 h-8 rounded-xl font-bold"
                             onClick={() => openModal(s)}>
                             <Receipt className="w-3.5 h-3.5" /> Kelola

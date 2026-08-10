@@ -736,7 +736,9 @@ export default function StudentsPage() {
               <Label className="font-bold text-slate-800 dark:text-slate-200">Kelas Tujuan Baru (Dinaikkan Ke)</Label>
               <Select value={toClassId} onValueChange={(v) => setToClassId(v || '')}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih Kelas Tujuan Baru" />
+                  <SelectValue placeholder="Pilih Kelas Tujuan Baru">
+                    {classes?.find(c => c.id === toClassId)?.name || 'Pilih Kelas Tujuan Baru'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {classes?.map(c => (
@@ -918,7 +920,9 @@ export default function StudentsPage() {
                   <Label className="text-xs font-semibold">Penempatan Kelas</Label>
                   <Select value={formData.classId} onValueChange={(v) => setFormData({...formData, classId: v || ''})} required>
                     <SelectTrigger>
-                      <SelectValue placeholder="Pilih Kelas" />
+                      <SelectValue placeholder="Pilih Kelas">
+                        {classes?.find(c => c.id === formData.classId)?.name || 'Pilih Kelas'}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {classes?.map(c => (

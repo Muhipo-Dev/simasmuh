@@ -1546,7 +1546,9 @@ export class FinanceService {
     const cls = await this.prisma.class.findUnique({
       where: { id: classId },
       include: {
-        homeroomTeacher: true,
+        homeroomTeacher: {
+          include: { user: true },
+        },
         students: {
           orderBy: { name: 'asc' },
           include: {
@@ -1582,7 +1584,7 @@ export class FinanceService {
     worksheet.addRow([]);
 
     // Information Box: Kelas & Wali Kelas
-    const waliKelasName = cls.homeroomTeacher?.name || 'Belum Ditentukan';
+    const waliKelasName = (cls.homeroomTeacher as any)?.user?.name || (cls.homeroomTeacher as any)?.name || 'Belum Ditentukan';
     
     const infoRow1 = worksheet.addRow(['  KELAS', '', `: ${cls.name}`, '', '', 'WALI KELAS', '', `: ${waliKelasName}`]);
     infoRow1.eachCell((cell) => {

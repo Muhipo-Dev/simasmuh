@@ -1117,7 +1117,13 @@ function TagihanMassalModal({
 }) {
   const authenticatedFetch = useAuthenticatedFetch();
   const qc = useQueryClient()
-  const [form, setForm] = useState<FormState & { classId: string }>({ ...defaultForm(), classId: '' })
+  const [form, setForm] = useState<FormState & { classId: string }>({ ...defaultForm(), classId: classes?.[0]?.id || '' })
+
+  useEffect(() => {
+    if (classes && classes.length > 0 && !form.classId) {
+      setForm(f => ({ ...f, classId: classes[0].id }))
+    }
+  }, [classes, form.classId])
 
   const mut = useMutation({
     mutationFn: async () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -14,7 +14,7 @@ import {
   Wallet, Users, BarChart3, Building2, Search, Pencil, Trash2,
   Loader2, PlusCircle, CheckCircle2, TrendingUp, X, Download,
   AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, Sparkles,
-  ShieldAlert, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check
+  ShieldAlert, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check, Info
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
@@ -1790,6 +1790,13 @@ function TabTagihan() {
   const [cashModalOpen, setCashModalOpen] = useState(false)
   const authenticatedQuery = useAuthenticatedQuery()
   const qc = useQueryClient()
+
+  // Selection & Restricted Reset States
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
+  const [resetAuthModalOpen, setResetAuthModalOpen] = useState(false)
+  const [resetTargetStudentIds, setResetTargetStudentIds] = useState<string[]>([])
+  const [authPassword, setAuthPassword] = useState('')
+  const [authError, setAuthError] = useState('')
 
   // Beasiswa Dialog States in Keuangan
   const [beasiswaTargetStudent, setBeasiswaTargetStudent] = useState<StudentSummary | null>(null)

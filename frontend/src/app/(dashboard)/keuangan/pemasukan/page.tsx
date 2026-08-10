@@ -2043,6 +2043,7 @@ function TabTagihan() {
                   <TableHead>Program</TableHead>
                   <TableHead>Jalur Pendaftaran</TableHead>
                   <TableHead>Kelas</TableHead>
+                  <TableHead>Beasiswa Keuangan</TableHead>
                   <TableHead className="text-center">Belum Lunas</TableHead>
                   <TableHead className="text-center">SPP Lunas</TableHead>
                   <TableHead className="text-right">Total Tagihan</TableHead>
@@ -2053,14 +2054,14 @@ function TabTagihan() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-16">
+                    <TableCell colSpan={13} className="text-center py-16">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
                       <p className="text-slate-500 text-sm">Memuat data...</p>
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-16 text-slate-400">
+                    <TableCell colSpan={13} className="text-center py-16 text-slate-400">
                       {search || filterKelas ? 'Tidak ditemukan.' : 'Belum ada data siswa.'}
                     </TableCell>
                   </TableRow>
@@ -2113,6 +2114,36 @@ function TabTagihan() {
                       <TableCell>
                         <span className="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-xs font-semibold border border-indigo-100 dark:border-indigo-800">{s.className}</span>
                       </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 text-xs">
+                          {(s.beasiswaSppPct || 0) > 0 || (s.beasiswaDppPct || 0) > 0 || (s.beasiswaSeragamPct || 0) > 0 || (s.discountPercentage || 0) > 0 ? (
+                            <div className="flex flex-col gap-1">
+                              {(s.beasiswaSeragamPct || 0) > 0 && s.jalurPendaftaran !== 'Mandiri' && (
+                                <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-md text-[11px]">
+                                  Seragam: {s.beasiswaSeragamPct}% ({currency(2000000 * (s.beasiswaSeragamPct / 100))})
+                                </span>
+                              )}
+                              {(s.beasiswaSppPct || 0) > 0 && (
+                                <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md text-[11px]">
+                                  SPP: {s.beasiswaSppPct}%
+                                </span>
+                              )}
+                              {(s.beasiswaDppPct || 0) > 0 && (
+                                <span className="inline-flex items-center gap-1 font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-md text-[11px]">
+                                  DPP: {s.beasiswaDppPct}%
+                                </span>
+                              )}
+                              {s.discountReason && (
+                                <span className="text-[10px] text-slate-500 italic truncate max-w-[150px]">
+                                  {s.discountReason}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Tanpa Beasiswa</span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-center">
                         {s.belumLunasCount > 0
                           ? <span className="font-bold px-2.5 py-1 rounded-lg text-sm bg-red-50 text-red-600 border border-red-100">{s.belumLunasCount} tagihan</span>
@@ -2132,6 +2163,14 @@ function TabTagihan() {
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center items-center gap-1.5">
+                          <Button size="sm" variant="outline"
+                            title="Set Alokasi Beasiswa Siswa (%)"
+                            className="border-amber-300 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-xs gap-1 h-8 rounded-xl"
+                            onClick={() => {
+                              window.dispatchEvent(new CustomEvent('open-beasiswa-dialog', { detail: s }));
+                            }}>
+                            <Percent className="w-3.5 h-3.5" /> Beasiswa
+                          </Button>
                           <Button size="sm" variant="outline"
                             className="border-blue-300 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-xs gap-1.5 h-8 rounded-xl"
                             onClick={() => openModal(s)}>

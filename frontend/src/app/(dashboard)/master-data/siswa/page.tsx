@@ -74,8 +74,11 @@ export default function StudentsPage() {
 
   const userRole = (session?.user as any)?.role || ''
   const subRole = (session?.user as any)?.subRole || ''
+  const subRole2 = (session?.user as any)?.subRole2 || ''
+  const subRole3 = (session?.user as any)?.subRole3 || ''
   const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
   const isSuperadmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
+  const isFinance = ['SUPERADMIN', 'ADMIN_IT', 'KEUANGAN'].includes(userRole) || [subRole, subRole2, subRole3].includes('KEUANGAN')
 
   const [open, setOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
@@ -1310,54 +1313,57 @@ export default function StudentsPage() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1 text-xs font-medium">
+                        <div className="flex flex-col gap-1 text-xs">
                           {(item.beasiswaSppPct || 0) > 0 || (item.beasiswaDppPct || 0) > 0 || (item.beasiswaSeragamPct || 0) > 0 || (item.discountPercentage || 0) > 0 ? (
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-col gap-1">
+                              {(item.beasiswaSeragamPct || 0) > 0 && item.jalurPendaftaran !== 'Mandiri' && (
+                                <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-md text-[11px]">
+                                  Seragam: {item.beasiswaSeragamPct}% ({currencyFormat(2000000 * (item.beasiswaSeragamPct / 100))})
+                                </span>
+                              )}
                               {(item.beasiswaSppPct || 0) > 0 && (
-                                <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded">
+                                <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md text-[11px]">
                                   SPP: {item.beasiswaSppPct}%
                                 </span>
                               )}
                               {(item.beasiswaDppPct || 0) > 0 && (
-                                <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 px-1.5 py-0.5 rounded">
+                                <span className="inline-flex items-center gap-1 font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-md text-[11px]">
                                   DPP: {item.beasiswaDppPct}%
                                 </span>
                               )}
-                              {(item.beasiswaSeragamPct || 0) > 0 && (
-                                <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800 px-1.5 py-0.5 rounded">
-                                  Seragam: {item.beasiswaSeragamPct}%
-                                </span>
-                              )}
-                              {(item.discountPercentage || 0) > 0 && !(item.beasiswaSppPct || 0) && (
-                                <span className="bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded">
-                                  Default: {item.discountPercentage}%
+                              {item.discountReason && (
+                                <span className="text-[10px] text-slate-500 italic truncate max-w-[160px]">
+                                  Catatan: {item.discountReason}
                                 </span>
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">0% (Reguler)</span>
+                            <span className="text-xs text-slate-400 italic">Tanpa Beasiswa (0%)</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex justify-end gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Set Beasiswa / Diskon (Keuangan)"
-                            onClick={() => {
-                              setDiscountTargetStudent(item)
-                              setDiscountPct(item.discountPercentage || 0)
-                              setDiscountReason(item.discountReason || '')
-                              setBeasiswaSeragamVal(item.beasiswaSeragamPct || 0)
-                              setBeasiswaSppVal(item.beasiswaSppPct || 0)
-                              setBeasiswaDppVal(item.beasiswaDppPct || 0)
-                              setIsDiscountDialogOpen(true)
-                            }}
-                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                          >
-                            <Percent className="w-4 h-4" />
-                          </Button>
+                          {/* Pengaturan Beasiswa Keuangan khusus peran KEUANGAN / SUPERADMIN */}
+                          {isFinance && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Kelola Beasiswa Siswa (Bagian Keuangan)"
+                              onClick={() => {
+                                setDiscountTargetStudent(item)
+                                setDiscountPct(item.discountPercentage || 0)
+                                setDiscountReason(item.discountReason || '')
+                                setBeasiswaSeragamVal(item.beasiswaSeragamPct || 0)
+                                setBeasiswaSppVal(item.beasiswaSppPct || 0)
+                                setBeasiswaDppVal(item.beasiswaDppPct || 0)
+                                setIsDiscountDialogOpen(true)
+                              }}
+                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                            >
+                              <Percent className="w-4 h-4" />
+                            </Button>
+                          )}
                           {isSuperOrAdmin && (
                             <Button
                               variant="ghost"

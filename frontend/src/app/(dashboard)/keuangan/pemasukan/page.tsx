@@ -2253,30 +2253,30 @@ function TabTagihan() {
 
       {/* BEASISWA DIALOG KEUANGAN */}
       <Dialog open={isBeasiswaDialogOpen} onOpenChange={setIsBeasiswaDialogOpen}>
-        <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-          <div className="shrink-0 bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 p-5 text-white shadow-sm">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-white text-lg font-extrabold">
-                <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
-                  <Percent className="w-5 h-5 text-amber-200" />
+        <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[92vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="shrink-0 bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 p-5 sm:p-6 text-white shadow-sm">
+            <DialogHeader className="space-y-1">
+              <DialogTitle className="flex items-center gap-3 text-white text-lg sm:text-xl font-extrabold">
+                <div className="p-2.5 bg-white/15 rounded-2xl backdrop-blur-md border border-white/20">
+                  <Percent className="w-5 h-5 text-amber-100" />
                 </div>
                 Pengaturan Beasiswa Keuangan
               </DialogTitle>
-              <DialogDescription className="text-amber-100 text-xs mt-1">
-                Atur alokasi beasiswa persentase untuk Seragam, SPP, & DPP.
+              <DialogDescription className="text-amber-100 text-xs sm:text-sm font-medium">
+                Atur alokasi persentase beasiswa untuk Seragam, SPP, & DPP.
               </DialogDescription>
             </DialogHeader>
           </div>
 
           {beasiswaTargetStudent && (
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar">
-              <div className="bg-slate-50 dark:bg-slate-800/80 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-1">
-                <p className="font-extrabold text-sm text-slate-900 dark:text-slate-100">{beasiswaTargetStudent.name}</p>
+            <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-5 custom-scrollbar">
+              <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-1.5 shadow-xs">
+                <p className="font-extrabold text-base text-slate-900 dark:text-slate-100">{beasiswaTargetStudent.name}</p>
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-bold px-2 py-0.5 rounded-md">
+                  <span className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-extrabold px-2.5 py-1 rounded-lg">
                     Kelas: {beasiswaTargetStudent.className}
                   </span>
-                  <span className={`font-bold px-2 py-0.5 rounded-md ${
+                  <span className={`font-extrabold px-2.5 py-1 rounded-lg ${
                     beasiswaTargetStudent.jalurPendaftaran === 'Mandiri'
                       ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
                       : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
@@ -2287,23 +2287,23 @@ function TabTagihan() {
               </div>
 
               {/* Rincian Beasiswa Per Item */}
-              <div className="space-y-4 bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200/80 dark:border-amber-900/40">
-                <div className="flex items-center justify-between border-b border-amber-200/60 pb-2">
+              <div className="space-y-4 bg-amber-50/60 dark:bg-amber-950/30 p-4 sm:p-5 rounded-2xl border border-amber-200/90 dark:border-amber-900/50">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-amber-200/70 pb-3">
                   <p className="text-xs font-black text-amber-900 dark:text-amber-300 uppercase tracking-wider">
                     Alokasi Beasiswa (%) Per Item:
                   </p>
-                  <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-950 px-2 py-0.5 rounded">
+                  <span className="text-xs font-extrabold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/80 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-700 self-start sm:self-auto">
                     {beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? 'Seragam, SPP & DPP' : 'Hanya SPP & DPP'}
                   </span>
                 </div>
 
                 {beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? (
-                  <div className="space-y-1.5 bg-white dark:bg-slate-950 p-3 rounded-lg border border-amber-200/60 dark:border-slate-800">
-                    <div className="flex justify-between items-center text-xs">
-                      <Label className="font-bold text-slate-800 dark:text-slate-200">
+                  <div className="space-y-2 bg-white dark:bg-slate-950 p-4 rounded-xl border border-amber-200/70 dark:border-slate-800 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                      <Label className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">
                         Beasiswa Seragam (%)
                       </Label>
-                      <span className="font-bold text-amber-700 dark:text-amber-400">
+                      <span className="font-extrabold text-amber-700 dark:text-amber-400">
                         Potongan: {beasiswaSeragamVal}% ({currency(2000000 * ((beasiswaSeragamVal || 0) / 100))})
                       </span>
                     </div>
@@ -2315,26 +2315,26 @@ function TabTagihan() {
                         placeholder="0 - 100%"
                         value={beasiswaSeragamVal || ''}
                         onChange={(e) => setBeasiswaSeragamVal(Math.min(100, Math.max(0, Number(e.target.value))))}
-                        className="bg-white dark:bg-slate-900 text-xs h-9 pr-8 font-bold"
+                        className="bg-white dark:bg-slate-900 text-sm h-11 pr-9 font-bold rounded-xl border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-amber-500"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 select-none">%</span>
                     </div>
-                    <p className="text-[11px] text-slate-500">Bayar Netto: {currency(2000000 * (1 - (beasiswaSeragamVal || 0) / 100))} (Default Seragam Rp 2.000.000)</p>
+                    <p className="text-xs text-slate-500 font-medium">Bayar Netto: <strong className="text-emerald-600 font-bold">{currency(2000000 * (1 - (beasiswaSeragamVal || 0) / 100))}</strong> (Default Rp 2.000.000)</p>
                   </div>
                 ) : (
-                  <div className="text-xs text-slate-500 italic bg-amber-100/40 dark:bg-slate-950 p-2.5 rounded-lg border border-amber-200/60 dark:border-slate-800 flex items-center gap-2">
-                    <Info className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Jalur Mandiri tidak berhak mendapat Beasiswa Seragam. (Hanya SPP & DPP).</span>
+                  <div className="text-xs text-slate-600 dark:text-slate-300 font-medium bg-amber-100/50 dark:bg-slate-950 p-3.5 rounded-xl border border-amber-200 dark:border-slate-800 flex items-center gap-2.5">
+                    <Info className="w-5 h-5 text-amber-600 shrink-0" />
+                    <span>Jalur Mandiri tidak berhak mendapat Beasiswa Seragam. (Berhak untuk SPP & DPP).</span>
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5 bg-white dark:bg-slate-950 p-3 rounded-lg border border-amber-200/60 dark:border-slate-800">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-2 bg-white dark:bg-slate-950 p-4 rounded-xl border border-amber-200/70 dark:border-slate-800 shadow-xs">
                     <div className="flex justify-between items-center text-xs">
-                      <Label className="font-bold text-slate-800 dark:text-slate-200">
+                      <Label className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">
                         Beasiswa SPP (%)
                       </Label>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">
                         {beasiswaSppVal}%
                       </span>
                     </div>
@@ -2346,18 +2346,18 @@ function TabTagihan() {
                         placeholder="0 - 100%"
                         value={beasiswaSppVal || ''}
                         onChange={(e) => setBeasiswaSppVal(Math.min(100, Math.max(0, Number(e.target.value))))}
-                        className="bg-white dark:bg-slate-900 text-xs h-9 pr-8 font-bold"
+                        className="bg-white dark:bg-slate-900 text-sm h-11 pr-9 font-bold rounded-xl border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-emerald-500"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 select-none">%</span>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 bg-white dark:bg-slate-950 p-3 rounded-lg border border-amber-200/60 dark:border-slate-800">
+                  <div className="space-y-2 bg-white dark:bg-slate-950 p-4 rounded-xl border border-amber-200/70 dark:border-slate-800 shadow-xs">
                     <div className="flex justify-between items-center text-xs">
-                      <Label className="font-bold text-slate-800 dark:text-slate-200">
+                      <Label className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">
                         Beasiswa DPP (%)
                       </Label>
-                      <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                      <span className="font-extrabold text-indigo-600 dark:text-indigo-400 text-sm">
                         {beasiswaDppVal}%
                       </span>
                     </div>
@@ -2369,30 +2369,33 @@ function TabTagihan() {
                         placeholder="0 - 100%"
                         value={beasiswaDppVal || ''}
                         onChange={(e) => setBeasiswaDppVal(Math.min(100, Math.max(0, Number(e.target.value))))}
-                        className="bg-white dark:bg-slate-900 text-xs h-9 pr-8 font-bold"
+                        className="bg-white dark:bg-slate-900 text-sm h-11 pr-9 font-bold rounded-xl border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-indigo-500"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 select-none">%</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Alasan / Catatan Beasiswa</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Alasan / Catatan Beasiswa</Label>
                 <Input
                   placeholder="Misal: Beasiswa Kader Persyarikatan / Prestasi / Bidikmisi"
                   value={beasiswaReason}
                   onChange={(e) => setBeasiswaReason(e.target.value)}
-                  className="bg-white dark:bg-slate-950 text-xs h-9"
+                  className="bg-white dark:bg-slate-950 text-sm h-11 rounded-xl font-medium border-slate-200 dark:border-slate-800"
                 />
               </div>
             </div>
           )}
 
-          <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-row items-center justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsBeasiswaDialogOpen(false)}>Batal</Button>
+          <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+            <Button type="button" variant="outline" onClick={() => setIsBeasiswaDialogOpen(false)} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+              Batal
+            </Button>
             <Button
-              className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+              type="button"
+              className="h-11 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl shadow-md gap-2"
               onClick={() => {
                 if (!beasiswaTargetStudent) return
                 updateBeasiswaMutation.mutate({
@@ -2406,7 +2409,7 @@ function TabTagihan() {
               }}
               disabled={updateBeasiswaMutation.isPending}
             >
-              {updateBeasiswaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
+              {updateBeasiswaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Percent className="w-4 h-4" />}
               Simpan Beasiswa Keuangan
             </Button>
           </div>

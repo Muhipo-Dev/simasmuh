@@ -2120,7 +2120,7 @@ function TabTagihan() {
                             <div className="flex flex-col gap-1">
                               {(s.beasiswaSeragamPct || 0) > 0 && s.jalurPendaftaran !== 'Mandiri' && (
                                 <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-md text-[11px]">
-                                  Seragam: {s.beasiswaSeragamPct}% ({currency(2000000 * (s.beasiswaSeragamPct / 100))})
+                                  Seragam: {s.beasiswaSeragamPct}% ({currency(2000000 * ((s.beasiswaSeragamPct || 0) / 100))})
                                 </span>
                               )}
                               {(s.beasiswaSppPct || 0) > 0 && (

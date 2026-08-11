@@ -329,6 +329,7 @@ export class StudentsService {
 
     const sppPct = student.beasiswaSppPct || 0;
     const dppPct = student.beasiswaDppPct || 0;
+    const seragamPct = student.beasiswaSeragamPct || 0;
     const reason = student.beasiswaReason || beasiswaReason || 'Beasiswa';
 
     for (const t of tagihans) {
@@ -337,18 +338,26 @@ export class StudentsService {
         continue;
       }
 
-      // Ambil originalAmount dari notes DISCOUNT_INFO jika ada, atau gunakan t.amount
+      // Ambil originalAmount dari notes DISCOUNT_INFO atau BEASISWA_INFO jika ada, atau gunakan t.amount
       let originalAmount = t.amount;
+      const beasiswaMatch = t.notes?.match(/BEASISWA_INFO:\s*(\{.*?\})/);
       const discountMatch = t.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
-      if (discountMatch) {
+      if (beasiswaMatch) {
+        try {
+          const beasiswaInfo = JSON.parse(beasiswaMatch[1]);
+          originalAmount = beasiswaInfo.originalAmount || t.amount;
+        } catch {}
+      } else if (discountMatch) {
         try {
           const discountInfo = JSON.parse(discountMatch[1]);
           originalAmount = discountInfo.originalAmount || t.amount;
         } catch {}
       }
 
-      // Bersihkan string DISCOUNT_INFO dari notes
+      // Bersihkan string DISCOUNT_INFO dan BEASISWA_INFO dari notes
       let cleanNotes = (t.notes || '')
+        .replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '')
+        .replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '')
         .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
         .replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '')
         .trim();
@@ -360,19 +369,21 @@ export class StudentsService {
         pct = sppPct;
       } else if (typeUpper === 'DPP') {
         pct = dppPct;
+      } else if (typeUpper === 'SERAGAM') {
+        pct = seragamPct;
       }
 
       if (pct > 0) {
-        const discountAmount = Math.round(originalAmount * (pct / 100));
-        const finalAmount = originalAmount - discountAmount;
-        const discountInfo = {
+        const beasiswaAmount = Math.round(originalAmount * (pct / 100));
+        const finalAmount = originalAmount - beasiswaAmount;
+        const beasiswaInfo = {
           originalAmount,
-          discountPercentage: pct,
-          discountAmount,
+          beasiswaPercentage: pct,
+          beasiswaAmount,
           finalAmount,
           reason,
         };
-        const updatedNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
+        const updatedNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}BEASISWA_INFO: ${JSON.stringify(beasiswaInfo)}`;
 
         await this.prisma.tagihan.update({
           where: { id: t.id },

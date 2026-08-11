@@ -51,7 +51,7 @@ export default function FinanceTestPage() {
                 <p><span className="font-medium">Siswa:</span> {student.name}</p>
                 <p><span className="font-medium">Program:</span> {student.program}</p>
                 <p><span className="font-medium">Tarif Dasar:</span> Rp {result.baseFee.toLocaleString('id-ID')}</p>
-                <p><span className="font-medium text-rose-600">Total Potongan:</span> -Rp {result.totalDiscount.toLocaleString('id-ID')}</p>
+                <p><span className="font-medium text-rose-600">Total Potongan:</span> -Rp {result.totalBeasiswa.toLocaleString('id-ID')}</p>
                 {result.breakdown.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-slate-100">
                     <p className="font-medium text-[11px] text-slate-500 mb-1">Rincian Potongan:</p>

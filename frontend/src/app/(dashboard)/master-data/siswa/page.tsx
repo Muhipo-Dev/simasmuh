@@ -3,7 +3,7 @@ import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useSession } from 'next-auth/react'
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent, Info } from 'lucide-react'
+import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent, Info, UserPlus } from 'lucide-react'
 import Swal from 'sweetalert2'
 import { confirmDelete } from '@/lib/swal-helper'
 
@@ -850,163 +850,199 @@ export default function StudentsPage() {
       </Dialog>
 
       <Dialog open={open} onOpenChange={(val) => !val && handleCloseDialog()}>
-        <DialogContent className="sm:max-w-[650px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-[700px] max-h-[92vh] flex flex-col p-0 overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 shadow-2xl bg-white dark:bg-slate-950">
           <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
-            <DialogHeader className="p-5 sm:p-6 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                {isEdit ? 'Ubah Data Siswa' : 'Tambah Siswa Baru'}
-              </DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm text-slate-500">
-                {isEdit ? 'Perbarui data induk, gelombang, jalur pendaftaran, dan kelas siswa.' : 'Isi form di bawah untuk mendaftarkan siswa baru ke dalam sistem.'}
-              </DialogDescription>
-            </DialogHeader>
+            {/* Custom Header (no negative margins) */}
+            <div className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 pr-12">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
+                  {isEdit ? <Edit3 className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    {isEdit ? 'Ubah Data Siswa' : 'Tambah Siswa Baru'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {isEdit ? 'Perbarui data induk, gelombang, jalur pendaftaran, dan kelas siswa.' : 'Isi form di bawah untuk mendaftarkan siswa baru ke dalam sistem.'}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar max-h-[calc(90vh-130px)]">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="nisn" className="text-xs font-semibold">NISN (Opsional)</Label>
-                  <Input 
-                    id="nisn" 
-                    value={formData.nisn}
-                    onChange={(e) => setFormData({...formData, nisn: e.target.value})}
-                    placeholder="Masukkan NISN (Opsional)"
-                  />
+            {/* Content area with generous padding */}
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar max-h-[calc(92vh-140px)]">
+              {/* Section 1: Identitas Utama */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100 dark:border-slate-800/80">
+                  <span className="text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Identitas Utama</span>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="nisn" className="text-xs font-semibold text-slate-700 dark:text-slate-300">NISN (Opsional)</Label>
+                    <Input 
+                      id="nisn" 
+                      value={formData.nisn}
+                      onChange={(e) => setFormData({...formData, nisn: e.target.value})}
+                      placeholder="Masukkan NISN (Opsional)"
+                      className="rounded-xl border-slate-200/80 dark:border-slate-700/80 focus-visible:ring-blue-500/20 focus-visible:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="nis" className="text-xs font-semibold text-slate-700 dark:text-slate-300">NIS</Label>
+                    <Input 
+                      id="nis" 
+                      value={formData.nis}
+                      onChange={(e) => setFormData({...formData, nis: e.target.value})}
+                      placeholder="Masukkan NIS"
+                      required 
+                      className="rounded-xl border-slate-200/80 dark:border-slate-700/80 focus-visible:ring-blue-500/20 focus-visible:border-blue-500"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="nis" className="text-xs font-semibold">NIS</Label>
-                  <Input 
-                    id="nis" 
-                    value={formData.nis}
-                    onChange={(e) => setFormData({...formData, nis: e.target.value})}
-                    placeholder="Masukkan NIS"
-                    required 
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <Label htmlFor="name" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Lengkap</Label>
+                    <Input 
+                      id="name" 
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      placeholder="Nama Lengkap Siswa"
+                      required 
+                      className="rounded-xl border-slate-200/80 dark:border-slate-700/80 focus-visible:ring-blue-500/20 focus-visible:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Jenis Kelamin</Label>
+                    <Select value={formData.gender} onValueChange={(v) => setFormData({...formData, gender: v || ''})}>
+                      <SelectTrigger className="rounded-xl border-slate-200/80 dark:border-slate-700/80 focus:ring-blue-500/20">
+                        <SelectValue placeholder="Pilih Gender" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="L">Laki-Laki (L)</SelectItem>
+                        <SelectItem value="P">Perempuan (P)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2 space-y-1.5">
-                  <Label htmlFor="name" className="text-xs font-semibold">Nama Lengkap</Label>
-                  <Input 
-                    id="name" 
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="Nama Lengkap Siswa"
-                    required 
-                  />
+              {/* Section 2: Kredensial Login */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100 dark:border-slate-800/80">
+                  <span className="text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Kredensial Akun (Opsional)</span>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Jenis Kelamin</Label>
-                  <Select value={formData.gender} onValueChange={(v) => setFormData({...formData, gender: v || ''})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Jenis Kelamin" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="username" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Username Login</Label>
+                    <Input 
+                      id="username" 
+                      placeholder="Otomatis dari NISN jika kosong"
+                      value={formData.username}
+                      onChange={(e) => setFormData({...formData, username: e.target.value})}
+                      className="rounded-xl border-slate-200/80 dark:border-slate-700/80 focus-visible:ring-blue-500/20 focus-visible:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="password" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Password</Label>
+                    <Input 
+                      id="password" 
+                      type="password"
+                      placeholder="Otomatis dari NIS jika kosong"
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className="rounded-xl border-slate-200/80 dark:border-slate-700/80 focus-visible:ring-blue-500/20 focus-visible:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Akademik & Jalur Pendaftaran */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100 dark:border-slate-800/80">
+                  <span className="text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Data Akademik & Pendaftaran</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Penempatan Kelas</Label>
+                    <Select value={formData.classId} onValueChange={(v) => setFormData({...formData, classId: v || ''})} required>
+                      <SelectTrigger className="rounded-xl border-slate-200/80 dark:border-slate-700/80 focus:ring-blue-500/20">
+                        <SelectValue placeholder="Pilih Kelas">
+                          {classes?.find(c => c.id === formData.classId)?.name || 'Pilih Kelas'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        {classes?.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Gelombang Masuk</Label>
+                    <Select value={formData.gelombang || 'Gelombang 1'} onValueChange={(v) => setFormData({...formData, gelombang: v || 'Gelombang 1'})}>
+                      <SelectTrigger className="rounded-xl border-slate-200/80 dark:border-slate-700/80 focus:ring-blue-500/20">
+                        <SelectValue placeholder="Gelombang" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="Gelombang 1">Gelombang 1</SelectItem>
+                        <SelectItem value="Gelombang 2">Gelombang 2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Jalur Pendaftaran</Label>
+                    <Select value={formData.jalurPendaftaran || 'Mandiri'} onValueChange={(v) => setFormData({...formData, jalurPendaftaran: v || 'Mandiri'})}>
+                      <SelectTrigger className="rounded-xl border-slate-200/80 dark:border-slate-700/80 focus:ring-blue-500/20">
+                        <SelectValue placeholder="Jalur" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="Mandiri">Mandiri</SelectItem>
+                        <SelectItem value="Kader">Kader</SelectItem>
+                        <SelectItem value="Kader Persyarikatan">Kader Persyarikatan</SelectItem>
+                        <SelectItem value="Prestasi">Prestasi</SelectItem>
+                        <SelectItem value="Bidikmisi">Bidikmisi</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 pt-2">
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Program Unggulan Sekolah</Label>
+                  <Select
+                    value={formData.program || '__none__'}
+                    onValueChange={(v) => setFormData({...formData, program: v === '__none__' ? '' : (v ?? '')})}
+                  >
+                    <SelectTrigger className="rounded-xl border-slate-200/80 dark:border-slate-700/80 focus:ring-blue-500/20">
+                      <SelectValue placeholder="Pilih Program Unggulan Sekolah (Opsional)" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="L">Laki-Laki (L)</SelectItem>
-                      <SelectItem value="P">Perempuan (P)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="username" className="text-xs font-semibold">Username Login (Opsional)</Label>
-                  <Input 
-                    id="username" 
-                    placeholder="Otomatis dari NISN jika kosong"
-                    value={formData.username}
-                    onChange={(e) => setFormData({...formData, username: e.target.value})}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="password" className="text-xs font-semibold">Password (Opsional)</Label>
-                  <Input 
-                    id="password" 
-                    type="password"
-                    placeholder="Otomatis dari NIS jika kosong"
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Penempatan Kelas</Label>
-                  <Select value={formData.classId} onValueChange={(v) => setFormData({...formData, classId: v || ''})} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih Kelas">
-                        {classes?.find(c => c.id === formData.classId)?.name || 'Pilih Kelas'}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {classes?.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="__none__">— Tanpa Program Khusus (Reguler) —</SelectItem>
+                      {dynamicProgramOptions.map(p => (
+                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Gelombang Masuk</Label>
-                  <Select value={formData.gelombang || 'Gelombang 1'} onValueChange={(v) => setFormData({...formData, gelombang: v || 'Gelombang 1'})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Gelombang" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Gelombang 1">Gelombang 1</SelectItem>
-                      <SelectItem value="Gelombang 2">Gelombang 2</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Jalur Pendaftaran</Label>
-                  <Select value={formData.jalurPendaftaran || 'Mandiri'} onValueChange={(v) => setFormData({...formData, jalurPendaftaran: v || 'Mandiri'})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Jalur" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Mandiri">Mandiri</SelectItem>
-                      <SelectItem value="Kader">Kader</SelectItem>
-                      <SelectItem value="Kader Persyarikatan">Kader Persyarikatan</SelectItem>
-                      <SelectItem value="Prestasi">Prestasi</SelectItem>
-                      <SelectItem value="Bidikmisi">Bidikmisi</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <Label className="text-xs font-semibold">Program Unggulan Sekolah</Label>
-                <Select
-                  value={formData.program || '__none__'}
-                  onValueChange={(v) => setFormData({...formData, program: v === '__none__' ? '' : (v ?? '')})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih Program Unggulan Sekolah (Opsional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— Tanpa Program Khusus (Reguler) —</SelectItem>
-                    {dynamicProgramOptions.map(p => (
-                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
 
-            <DialogFooter className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-row items-center justify-end gap-2">
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>Batal</Button>
-              <Button type="submit" disabled={isPending} className="bg-blue-600 hover:bg-blue-700 font-bold text-white">
+            {/* Custom Footer (no negative margins) */}
+            <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-row items-center justify-end gap-2 shrink-0">
+              <Button type="button" variant="outline" onClick={handleCloseDialog} className="rounded-xl">Batal</Button>
+              <Button type="submit" disabled={isPending} className="bg-blue-600 hover:bg-blue-700 font-semibold text-white rounded-xl shadow-md shadow-blue-500/10 transition-all duration-200">
                 {isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 {isEdit ? 'Simpan Perubahan' : 'Simpan Siswa'}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -1384,11 +1420,11 @@ export default function StudentsPage() {
                     Jalur: {beasiswaTargetStudent.jalurPendaftaran || 'Mandiri'}
                   </span>
                   <span className="bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 rounded-md">
-                    Gelombang: {discountTargetStudent.gelombang || 'Gelombang 1'}
+                    Gelombang: {beasiswaTargetStudent.gelombang || 'Gelombang 1'}
                   </span>
                   {beasiswaTargetStudent.program && (
                     <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-md">
-                      Program: {discountTargetStudent.program.toUpperCase()}
+                      Program: {beasiswaTargetStudent.program.toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -1401,12 +1437,12 @@ export default function StudentsPage() {
                     Alokasi Beasiswa (%) Per Item Biaya:
                   </p>
                   <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-950 px-2 py-0.5 rounded">
-                    {discountTargetStudent.jalurPendaftaran !== 'Mandiri' ? 'Seragam, SPP & DPP' : 'Hanya SPP & DPP'}
+                    {beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? 'Seragam, SPP & DPP' : 'Hanya SPP & DPP'}
                   </span>
                 </div>
 
                 {/* Beasiswa Seragam (Hanya Non-Mandiri: Kader, Kader Persyarikatan, Prestasi, Bidikmisi) */}
-                {discountTargetStudent.jalurPendaftaran !== 'Mandiri' ? (
+                {beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? (
                   <div className="space-y-1.5 bg-white dark:bg-slate-950 p-3 rounded-lg border border-amber-200/60 dark:border-slate-800">
                     <div className="flex justify-between items-center text-xs">
                       <Label className="font-bold text-slate-800 dark:text-slate-200">

@@ -28,5 +28,5 @@ export const calculateBilling = (student: Student): BillingResult => {
 
   const finalFee = Math.max(0, baseFee - totalDiscount);
 
-  return { baseFee, totalDiscount, finalFee, breakdown };
+  return { baseFee, totalBeasiswa: totalDiscount, finalFee, breakdown };
 };

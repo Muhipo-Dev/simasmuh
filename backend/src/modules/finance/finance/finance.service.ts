@@ -144,6 +144,7 @@ export class FinanceService {
 
     const sppPct = student.beasiswaSppPct || 0;
     const dppPct = student.beasiswaDppPct || 0;
+    const seragamPct = student.beasiswaSeragamPct || 0;
     const reason = student.beasiswaReason || beasiswaReason || 'Beasiswa';
 
     for (const t of tagihans) {
@@ -153,16 +154,24 @@ export class FinanceService {
 
       let originalAmount = t.amount;
       const beasiswaMatch = t.notes?.match(/BEASISWA_INFO:\s*(\{.*?\})/);
+      const discountMatch = t.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
       if (beasiswaMatch) {
         try {
           const beasiswaInfo = JSON.parse(beasiswaMatch[1]);
           originalAmount = beasiswaInfo.originalAmount || t.amount;
+        } catch {}
+      } else if (discountMatch) {
+        try {
+          const discountInfo = JSON.parse(discountMatch[1]);
+          originalAmount = discountInfo.originalAmount || t.amount;
         } catch {}
       }
 
       let cleanNotes = (t.notes || '')
         .replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '')
         .replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '')
+        .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
+        .replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '')
         .trim();
 
       // Tentukan persentase potongan berdasarkan jenis tagihan
@@ -172,6 +181,8 @@ export class FinanceService {
         pct = sppPct;
       } else if (typeUpper === 'DPP') {
         pct = dppPct;
+      } else if (typeUpper === 'SERAGAM') {
+        pct = seragamPct;
       }
 
       if (pct > 0) {
@@ -435,8 +446,8 @@ export class FinanceService {
       amountPaid?: number;
       paymentAmount?: number;
       notes?: string;
-      discountPercentage?: number;
-      discountReason?: string;
+      beasiswaPercentage?: number;
+      beasiswaReason?: string;
     },
   ) {
     const tagihan: any = await this.prisma.tagihan.findUnique({
@@ -445,30 +456,41 @@ export class FinanceService {
     if (!tagihan) throw new NotFoundException('Tagihan tidak ditemukan');
 
     let baseAmount = tagihan.amount;
-    let cleanNotes = (dto?.notes || tagihan.notes || '').replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '').replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '').trim();
+    let cleanNotes = (dto?.notes || tagihan.notes || '')
+      .replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '')
+      .replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '')
+      .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
+      .replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '')
+      .trim();
 
-    // Check if discount is applied during cash payment
-    if (dto?.discountPercentage && dto.discountPercentage > 0) {
-      const validPct = [25, 50, 75, 100].includes(dto.discountPercentage) ? dto.discountPercentage : 0;
+    // Check if discount/beasiswa is applied during cash payment
+    if (dto?.beasiswaPercentage && dto.beasiswaPercentage > 0) {
+      const validPct = [25, 50, 75, 100].includes(dto.beasiswaPercentage) ? dto.beasiswaPercentage : 0;
       if (validPct > 0) {
+        const beasiswaMatch = tagihan.notes?.match(/BEASISWA_INFO:\s*(\{.*?\})/);
         const discountMatch = tagihan.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
         let orig = baseAmount;
-        if (discountMatch) {
+        if (beasiswaMatch) {
+          try {
+            const parsedInfo = JSON.parse(beasiswaMatch[1]);
+            orig = parsedInfo.originalAmount || baseAmount;
+          } catch {}
+        } else if (discountMatch) {
           try {
             const parsedInfo = JSON.parse(discountMatch[1]);
             orig = parsedInfo.originalAmount || baseAmount;
           } catch {}
         }
-        const discountAmount = Math.round(orig * (validPct / 100));
-        baseAmount = orig - discountAmount;
-        const discountInfo = {
+        const beasiswaAmount = Math.round(orig * (validPct / 100));
+        baseAmount = orig - beasiswaAmount;
+        const beasiswaInfo = {
           originalAmount: orig,
-          discountPercentage: validPct,
-          discountAmount,
+          beasiswaPercentage: validPct,
+          beasiswaAmount,
           finalAmount: baseAmount,
-          reason: dto.discountReason || 'Diskon Kasir Keuangan',
+          reason: dto.beasiswaReason || 'Beasiswa Kasir Keuangan',
         };
-        cleanNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
+        cleanNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}BEASISWA_INFO: ${JSON.stringify(beasiswaInfo)}`;
       }
     }
 
@@ -910,11 +932,11 @@ export class FinanceService {
   }
 
   // ============================================================
-  // DISCOUNT MANAGEMENT (Server-Side Only)
+  // BEASISWA MANAGEMENT (Server-Side Only)
   // ============================================================
   async applyDiscount(
     tagihanId: string,
-    discountPercentage: 25 | 50 | 75 | 100,
+    beasiswaPercentage: 25 | 50 | 75 | 100,
     reason?: string,
   ) {
     const tagihan = await this.prisma.tagihan.findUnique({
@@ -928,54 +950,68 @@ export class FinanceService {
 
     if (tagihan.status === 'LUNAS') {
       throw new Error(
-        'Tidak dapat memberikan diskon pada tagihan yang sudah lunas',
+        'Tidak dapat memberikan beasiswa pada tagihan yang sudah lunas',
       );
     }
 
-    // Parse existing discount info from notes if present
+    // Parse existing discount/beasiswa info from notes if present
     let originalAmount = tagihan.amount;
+    const beasiswaMatch = tagihan.notes?.match(/BEASISWA_INFO:\s*(\{.*?\})/);
     const discountMatch = tagihan.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
-    if (discountMatch) {
+    if (beasiswaMatch) {
+      try {
+        const beasiswaInfo = JSON.parse(beasiswaMatch[1]);
+        originalAmount = beasiswaInfo.originalAmount || tagihan.amount;
+      } catch {}
+    } else if (discountMatch) {
       try {
         const discountInfo = JSON.parse(discountMatch[1]);
         originalAmount = discountInfo.originalAmount || tagihan.amount;
-      } catch {
-        // If parsing fails, use current amount as original
-      }
+      } catch {}
     }
 
-    // SERVER-SIDE CALCULATION: Calculate discounted amount
-    const discountAmount = Math.round(
-      originalAmount * (discountPercentage / 100),
+    // SERVER-SIDE CALCULATION: Calculate beasiswa amount
+    const beasiswaAmount = Math.round(
+      originalAmount * (beasiswaPercentage / 100),
     );
-    const finalAmount = originalAmount - discountAmount;
+    const finalAmount = originalAmount - beasiswaAmount;
+
+    // Clean existing beasiswa/discount info from notes
+    let cleanNotes = (tagihan.notes || '')
+      .replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '')
+      .replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '')
+      .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
+      .replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '')
+      .trim();
 
     // Update tagihan with SERVER-CALCULATED values stored in notes
-    const discountInfo = {
+    const beasiswaInfo = {
       originalAmount,
-      discountPercentage,
-      discountAmount,
+      beasiswaPercentage,
+      beasiswaAmount,
       finalAmount,
       reason: reason || '-',
     };
+
+    const updatedNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}BEASISWA_INFO: ${JSON.stringify(beasiswaInfo)}`;
 
     const updated = await this.prisma.tagihan.update({
       where: { id: tagihanId },
       data: {
         amount: finalAmount,
-        notes: `${tagihan.notes || ''} | DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`,
+        notes: updatedNotes,
       },
     });
 
     this.logger.log(
-      `Discount ${discountPercentage}% applied to tagihan ${tagihanId} for student ${tagihan.student.name}`,
+      `Beasiswa ${beasiswaPercentage}% applied to tagihan ${tagihanId} for student ${tagihan.student.name}`,
     );
 
     return {
       tagihanId: updated.id,
       originalAmount,
-      discountPercentage,
-      discountAmount,
+      beasiswaPercentage,
+      beasiswaAmount,
       finalAmount: updated.amount,
       reason,
     };
@@ -990,32 +1026,43 @@ export class FinanceService {
       throw new NotFoundException('Tagihan tidak ditemukan');
     }
 
-    // Parse discount info from notes
+    // Parse discount or beasiswa info from notes
+    const beasiswaMatch = tagihan.notes?.match(/BEASISWA_INFO:\s*(\{.*?\})/);
     const discountMatch = tagihan.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
-    if (!discountMatch) {
-      throw new Error('Tagihan ini tidak memiliki diskon yang dapat dihapus');
+    if (!beasiswaMatch && !discountMatch) {
+      throw new Error('Tagihan ini tidak memiliki diskon/beasiswa yang dapat dihapus');
     }
 
     let originalAmount = tagihan.amount;
     try {
-      const discountInfo = JSON.parse(discountMatch[1]);
-      originalAmount = discountInfo.originalAmount || tagihan.amount;
+      if (beasiswaMatch) {
+        const beasiswaInfo = JSON.parse(beasiswaMatch[1]);
+        originalAmount = beasiswaInfo.originalAmount || tagihan.amount;
+      } else if (discountMatch) {
+        const discountInfo = JSON.parse(discountMatch[1]);
+        originalAmount = discountInfo.originalAmount || tagihan.amount;
+      }
     } catch {
-      throw new Error('Gagal memparse informasi diskon');
+      throw new Error('Gagal memparse informasi diskon/beasiswa');
     }
 
-    // Restore original amount (SERVER-SIDE)
+    // Restore original amount (SERVER-SIDE) and clean notes
+    const updatedNotes = (tagihan.notes || '')
+      .replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '')
+      .replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '')
+      .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
+      .replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '')
+      .trim();
+
     const updated = await this.prisma.tagihan.update({
       where: { id: tagihanId },
       data: {
         amount: originalAmount,
-        notes: tagihan.notes
-          ?.replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
-          .trim(),
+        notes: updatedNotes || null,
       },
     });
 
-    this.logger.log(`Discount removed from tagihan ${tagihanId}`);
+    this.logger.log(`Discount/Beasiswa removed from tagihan ${tagihanId}`);
 
     return {
       tagihanId: updated.id,
@@ -1027,32 +1074,44 @@ export class FinanceService {
     const tagihans = await this.prisma.tagihan.findMany({
       where: {
         studentId,
-        notes: { contains: 'DISCOUNT_INFO' },
+        OR: [
+          { notes: { contains: 'BEASISWA_INFO' } },
+          { notes: { contains: 'DISCOUNT_INFO' } },
+        ],
       },
       orderBy: { createdAt: 'desc' },
     });
 
     return tagihans.map((t) => {
+      const beasiswaMatch = t.notes?.match(/BEASISWA_INFO:\s*(\{.*?\})/);
       const discountMatch = t.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
-      let discountInfo: any = null;
-      if (discountMatch) {
+      let info: any = null;
+      if (beasiswaMatch) {
         try {
-          discountInfo = JSON.parse(discountMatch[1]);
-        } catch {
-          // If parsing fails, return null
-        }
+          info = JSON.parse(beasiswaMatch[1]);
+        } catch {}
+      } else if (discountMatch) {
+        try {
+          const discountInfo = JSON.parse(discountMatch[1]);
+          info = {
+            originalAmount: discountInfo.originalAmount,
+            beasiswaPercentage: discountInfo.discountPercentage,
+            beasiswaAmount: discountInfo.discountAmount,
+            reason: discountInfo.reason,
+          };
+        } catch {}
       }
 
       return {
         id: t.id,
         type: t.type,
-        originalAmount: discountInfo?.originalAmount || t.amount,
-        discountPercentage: discountInfo?.discountPercentage || 0,
-        discountAmount: discountInfo?.discountAmount || 0,
+        originalAmount: info?.originalAmount || t.amount,
+        beasiswaPercentage: info?.beasiswaPercentage || 0,
+        beasiswaAmount: info?.beasiswaAmount || 0,
         finalAmount: t.amount,
         status: t.status,
         createdAt: t.createdAt,
-        reason: discountInfo?.reason || '-',
+        reason: info?.reason || '-',
       };
     });
   }

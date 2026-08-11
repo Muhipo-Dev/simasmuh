@@ -118,28 +118,28 @@ export class FinanceController {
   }
 
   // ============================================================
-  // DISCOUNT MANAGEMENT (Server-Side Only)
+  // BEASISWA MANAGEMENT (Server-Side Only)
   // ============================================================
-  @Post('discount/:tagihanId')
+  @Post('beasiswa/:tagihanId')
   @RequirePermissions(PaymentPermission.CREATE_BILLS)
   async applyDiscount(
     @Param('tagihanId') tagihanId: string,
-    @Body() body: { discountPercentage: 25 | 50 | 75 | 100; reason?: string },
+    @Body() body: { beasiswaPercentage: 25 | 50 | 75 | 100; reason?: string },
   ) {
     return this.financeService.applyDiscount(
       tagihanId,
-      body.discountPercentage,
+      body.beasiswaPercentage,
       body.reason,
     );
   }
 
-  @Delete('discount/:tagihanId')
+  @Delete('beasiswa/:tagihanId')
   @RequirePermissions(PaymentPermission.CREATE_BILLS)
   async removeDiscount(@Param('tagihanId') tagihanId: string) {
     return this.financeService.removeDiscount(tagihanId);
   }
 
-  @Get('discount/:studentId')
+  @Get('beasiswa/:studentId')
   @RequirePermissions(PaymentPermission.VIEW_ALL_BILLS)
   async getStudentDiscounts(@Param('studentId') studentId: string) {
     return this.financeService.getStudentDiscounts(studentId);

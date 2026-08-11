@@ -205,8 +205,8 @@ function TagihanModal({
 
   // Get effective default discount percentage for student
   const effectiveDefaultDiscount = useMemo(() => {
-    return student?.discountPercentage || studentProgConfig?.defaultDiscount || 0
-  }, [student?.discountPercentage, studentProgConfig?.defaultDiscount])
+    return student?.beasiswaPercentage || studentProgConfig?.defaultDiscount || 0
+  }, [student?.beasiswaPercentage, studentProgConfig?.defaultDiscount])
 
   const handleSelectType = (typeVal: string) => {
     setShowCustomDiscount(false)
@@ -235,7 +235,7 @@ function TagihanModal({
 
     if (effectiveDefaultDiscount > 0) {
       autoDiscountPct = effectiveDefaultDiscount
-      autoDiscountReason = student?.discountReason || `Diskon Default Program/Siswa (${effectiveDefaultDiscount}%)`
+      autoDiscountReason = student?.beasiswaReason || `Diskon Default Program/Siswa (${effectiveDefaultDiscount}%)`
     }
 
     setForm(f => ({
@@ -281,8 +281,8 @@ function TagihanModal({
       year: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.year) : null,
       dueDate: null,
       notes: form.notes || null,
-      discountPercentage: finalDiscountPct,
-      discountReason: form.discountReason || null,
+      beasiswaPercentage: finalDiscountPct,
+      beasiswaReason: form.discountReason || null,
     }
   }
 
@@ -354,12 +354,12 @@ function TagihanModal({
 
   const discountMut = useMutation({
     mutationFn: async () => {
-      const res = await authenticatedFetch(`/api-backend/finance/discount/${discountTagihanId}`, {
+      const res = await authenticatedFetch(`/api-backend/finance/beasiswa/${discountTagihanId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discountPercentage, reason: discountReason }),
+        body: JSON.stringify({ beasiswaPercentage: discountPercentage, reason: discountReason }),
       })
-      if (!res.ok) throw new Error('Gagal memberikan diskon')
+      if (!res.ok) throw new Error('Gagal memberikan beasiswa')
       return res.json()
     },
     onSuccess: () => {
@@ -373,8 +373,8 @@ function TagihanModal({
 
   const removeDiscountMut = useMutation({
     mutationFn: async (id: string) => {
-      const res = await authenticatedFetch(`/api-backend/finance/discount/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Gagal menghapus diskon')
+      const res = await authenticatedFetch(`/api-backend/finance/beasiswa/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Gagal menghapus beasiswa')
       return res.json()
     },
     onSuccess: () => {
@@ -390,10 +390,28 @@ function TagihanModal({
 
   const parseDiscountInfo = (notes: string | null) => {
     if (!notes) return null
+    const beasiswaMatch = notes.match(/BEASISWA_INFO:\s*(\{.*?\})/)
+    if (beasiswaMatch) {
+      try {
+        const parsed = JSON.parse(beasiswaMatch[1])
+        return {
+          beasiswaPercentage: parsed.beasiswaPercentage,
+          beasiswaAmount: parsed.beasiswaAmount,
+          originalAmount: parsed.originalAmount,
+          reason: parsed.reason
+        }
+      } catch {}
+    }
     const match = notes.match(/DISCOUNT_INFO:\s*(\{.*?\})/)
     if (!match) return null
     try {
-      return JSON.parse(match[1])
+      const parsed = JSON.parse(match[1])
+      return {
+        beasiswaPercentage: parsed.discountPercentage,
+        beasiswaAmount: parsed.discountAmount,
+        originalAmount: parsed.originalAmount,
+        reason: parsed.reason
+      }
     } catch {
       return null
     }
@@ -407,8 +425,15 @@ function TagihanModal({
       month: (t.month ?? new Date().getMonth() + 1).toString(),
       year: (t.year ?? currentYear).toString(),
       dueDate: t.dueDate ? t.dueDate.split('T')[0] : '',
-      notes: t.notes ? t.notes.replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '').replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '').trim() : '',
-      discountPercentage: dInfo?.discountPercentage || 0,
+      notes: t.notes 
+        ? t.notes
+            .replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '')
+            .replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '')
+            .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
+            .replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '')
+            .trim() 
+        : '',
+      discountPercentage: dInfo?.beasiswaPercentage || 0,
       discountReason: dInfo?.reason || '',
     })
     setEditId(t.id); setShowForm(true)
@@ -653,9 +678,9 @@ function TagihanModal({
                         </span>
                       ) : null}
                     </div>
-                    {(student?.discountPercentage || studentProgConfig?.defaultDiscount) ? (
+                    {(student?.beasiswaPercentage || studentProgConfig?.defaultDiscount) ? (
                       <span className="font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-lg self-start sm:self-auto">
-                        Diskon: {student?.discountPercentage || studentProgConfig?.defaultDiscount}%
+                        Diskon: {student?.beasiswaPercentage || studentProgConfig?.defaultDiscount}%
                       </span>
                     ) : (
                       <span className="text-slate-400 font-medium italic">Tanpa Diskon</span>
@@ -819,6 +844,8 @@ function TagihanModal({
               const dInfo = parseDiscountInfo(t.notes)
               const cleanNotesText = t.notes
                 ? t.notes
+                    .replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '')
+                    .replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '')
                     .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
                     .replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '')
                     .trim()
@@ -851,11 +878,11 @@ function TagihanModal({
                         )}
                       </div>
 
-                      {/* Diskon Badge */}
+                      {/* Beasiswa Badge */}
                       {dInfo && (
                         <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                            Diskon {dInfo.discountPercentage}% ({dInfo.reason || 'Diskon Default Siswa'})
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                            Beasiswa {dInfo.beasiswaPercentage}% ({dInfo.reason || 'Beasiswa Default Siswa'})
                           </span>
                         </div>
                       )}
@@ -1382,8 +1409,8 @@ function ManualCashPaymentModal({
         notes: cashNotes,
       }
       if (cashDiscountPct > 0) {
-        payload.discountPercentage = cashDiscountPct
-        payload.discountReason = cashDiscountReason || 'Diskon Kasir Keuangan'
+        payload.beasiswaPercentage = cashDiscountPct
+        payload.beasiswaReason = cashDiscountReason || 'Beasiswa Kasir Keuangan'
       }
 
       const res = await authenticatedFetch(`/api-backend/finance/tagihan/${selectedTagihanId}/lunasi`, {
@@ -1827,7 +1854,7 @@ function TabTagihan() {
       const std = e.detail
       if (std) {
         setBeasiswaTargetStudent(std)
-        setBeasiswaReason(std.discountReason || '')
+        setBeasiswaReason(std.beasiswaReason || '')
         setBeasiswaSeragamVal(std.beasiswaSeragamPct || 0)
         setBeasiswaSppVal(std.beasiswaSppPct || 0)
         setBeasiswaDppVal(std.beasiswaDppPct || 0)

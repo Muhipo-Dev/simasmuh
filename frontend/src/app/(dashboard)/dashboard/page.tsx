@@ -317,11 +317,11 @@ export default function DashboardPage() {
               </div>
             )}
             <div className="bg-white/10 dark:bg-slate-900/50 backdrop-blur-md px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl border border-white/20 flex items-center gap-3 shadow-inner">
-              <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300 shrink-0" />
+              <UserCheck className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300 shrink-0" />
               <div className="text-xs sm:text-sm">
-                <span className="text-blue-100 font-medium block text-[11px] sm:text-xs">Program Siswa:</span>
+                <span className="text-blue-100 font-medium block text-[11px] sm:text-xs">Wali Kelas:</span>
                 <span className="font-extrabold text-white tracking-wide text-base sm:text-lg">
-                  {formatProgramName(activeStudent?.program)}
+                  {studentClass?.homeroomTeacher?.user?.name || '-'}
                 </span>
               </div>
             </div>

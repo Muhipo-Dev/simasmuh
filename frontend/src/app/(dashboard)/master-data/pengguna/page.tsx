@@ -27,7 +27,7 @@ type User = {
   createdAt: string
 }
 
-export const SUB_ROLE_OPTIONS = [
+const SUB_ROLE_OPTIONS = [
   { value: 'NONE', label: 'Tanpa Sub Role' },
   { value: 'ADMIN_TU', label: 'BAU (Badan Administrasi Umum)' },
   { value: 'GURU', label: 'Guru' },
@@ -48,7 +48,7 @@ export const SUB_ROLE_OPTIONS = [
   { value: 'KURIKULUM', label: 'Kurikulum' },
 ]
 
-export const SUB_ROLE_LABELS: Record<string, string> = {
+const SUB_ROLE_LABELS: Record<string, string> = {
   ADMIN_TU: 'BAU (Badan Administrasi Umum)',
   TATA_USAHA: 'BAU (Badan Administrasi Umum)',
   GURU: 'Guru',

@@ -33,7 +33,8 @@ export class StudentsService {
 
   async create(data: any) {
     // Create User and Student together
-    const username = data.username || data.nis;
+    const username = data.nis;
+    const nisn = data.nisn || data.nis;
     const plainPassword = data.password || username; // default to username (NIS)
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
@@ -46,7 +47,7 @@ export class StudentsService {
         role: 'SISWA',
         student: {
           create: {
-            nisn: data.nisn,
+            nisn: nisn,
             nis: data.nis,
             name: data.name,
             gender: data.gender,
@@ -67,10 +68,11 @@ export class StudentsService {
     // Pre-hash all passwords concurrently
     const hashedDataArray = await Promise.all(
       dataArray.map(async (data) => {
-        const username = data.username || data.nis || String(Math.random());
+        const username = data.nis || data.username || String(Math.random());
+        const nisn = data.nisn || data.nis || username;
         const plainPassword = data.password || username; // Default password is username
         const hashedPassword = await bcrypt.hash(plainPassword, 10);
-        return { ...data, username, password: hashedPassword };
+        return { ...data, username, nisn, password: hashedPassword };
       }),
     );
 
@@ -84,6 +86,7 @@ export class StudentsService {
             password: data.password,
             student: {
               upsert: {
+                where: { nis: data.nis },
                 update: {
                   nisn: data.nisn,
                   nis: data.nis,
@@ -140,18 +143,18 @@ export class StudentsService {
     const updated = await (this.prisma.student as any).update({
       where: { id },
       data: {
-        nisn: data.nisn,
+        nisn: data.nisn || data.nis || student.nisn,
         nis: data.nis,
         name: data.name,
         gender: data.gender,
         ...(data.gelombang !== undefined && { gelombang: data.gelombang }),
         ...(data.jalurPendaftaran !== undefined && { jalurPendaftaran: data.jalurPendaftaran }),
         ...(data.program !== undefined && { program: data.program }),
-        ...(data.discountPercentage !== undefined && {
-          discountPercentage: data.discountPercentage,
+        ...(data.beasiswaPercentage !== undefined && {
+          beasiswaPercentage: data.beasiswaPercentage,
         }),
-        ...(data.discountReason !== undefined && {
-          discountReason: data.discountReason,
+        ...(data.beasiswaReason !== undefined && {
+          beasiswaReason: data.beasiswaReason,
         }),
         ...(data.beasiswaSeragamPct !== undefined && { beasiswaSeragamPct: Number(data.beasiswaSeragamPct) }),
         ...(data.beasiswaSppPct !== undefined && { beasiswaSppPct: Number(data.beasiswaSppPct) }),
@@ -161,7 +164,7 @@ export class StudentsService {
           user: {
             update: {
               name: data.name,
-              ...(data.username && { username: data.username }),
+              username: data.nis,
               ...(finalPassword && { password: finalPassword }),
             },
           },
@@ -170,18 +173,18 @@ export class StudentsService {
       include: { user: true, class: true },
     });
 
-    if (data.discountPercentage !== undefined || data.discountReason !== undefined) {
-      await this.syncStudentDiscountsToBills(
+    if (data.beasiswaPercentage !== undefined || data.beasiswaReason !== undefined) {
+      await this.syncStudentBeasiswaToBills(
         id,
-        updated.discountPercentage,
-        updated.discountReason,
+        updated.beasiswaPercentage,
+        updated.beasiswaReason,
       );
     }
 
     return updated;
   }
 
-  async updateBeasiswaKeuangan(id: string, dto: { beasiswaSeragamPct?: number; beasiswaSppPct?: number; beasiswaDppPct?: number; discountPercentage?: number; discountReason?: string }) {
+  async updateBeasiswaKeuangan(id: string, dto: { beasiswaSeragamPct?: number; beasiswaSppPct?: number; beasiswaDppPct?: number; beasiswaPercentage?: number; beasiswaReason?: string }) {
     const student = await this.prisma.student.findUnique({ where: { id } });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
@@ -191,16 +194,16 @@ export class StudentsService {
         ...(dto.beasiswaSeragamPct !== undefined && { beasiswaSeragamPct: Math.min(100, Math.max(0, Number(dto.beasiswaSeragamPct))) }),
         ...(dto.beasiswaSppPct !== undefined && { beasiswaSppPct: Math.min(100, Math.max(0, Number(dto.beasiswaSppPct))) }),
         ...(dto.beasiswaDppPct !== undefined && { beasiswaDppPct: Math.min(100, Math.max(0, Number(dto.beasiswaDppPct))) }),
-        ...(dto.discountPercentage !== undefined && { discountPercentage: Math.min(100, Math.max(0, Number(dto.discountPercentage))) }),
-        ...(dto.discountReason !== undefined && { discountReason: dto.discountReason }),
+        ...(dto.beasiswaPercentage !== undefined && { beasiswaPercentage: Math.min(100, Math.max(0, Number(dto.beasiswaPercentage))) }),
+        ...(dto.beasiswaReason !== undefined && { beasiswaReason: dto.beasiswaReason }),
       },
       include: { class: true, user: true },
     });
 
-    await this.syncStudentDiscountsToBills(
+    await this.syncStudentBeasiswaToBills(
       id,
-      updated.beasiswaSppPct || updated.discountPercentage || 0,
-      updated.discountReason,
+      updated.beasiswaPercentage,
+      updated.beasiswaReason,
     );
 
     return updated;
@@ -244,13 +247,13 @@ export class StudentsService {
     const student: any = await this.prisma.student.findUnique({ where: { id } });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
-    // Auto set discount from program default if no custom discount was set for student
-    let autoDiscountPct = student.discountPercentage;
-    let autoDiscountReason = student.discountReason;
-    if (progConfig && (!student.discountPercentage || student.discountPercentage === 0)) {
-      if (progConfig.defaultDiscount > 0) {
-        autoDiscountPct = progConfig.defaultDiscount;
-        autoDiscountReason = `Default Diskon Program ${progConfig.name}`;
+    // Auto set beasiswa from program default if no custom beasiswa was set for student
+    let autoBeasiswaPct = student.beasiswaPercentage;
+    let autoBeasiswaReason = student.beasiswaReason;
+    if (progConfig && (!student.beasiswaPercentage || student.beasiswaPercentage === 0)) {
+      if (progConfig.defaultBeasiswa > 0) {
+        autoBeasiswaPct = progConfig.defaultBeasiswa;
+        autoBeasiswaReason = `Default Beasiswa Program ${progConfig.name}`;
       }
     }
 
@@ -258,16 +261,16 @@ export class StudentsService {
       where: { id },
       data: {
         program: progConfig ? progConfig.code : null,
-        discountPercentage: autoDiscountPct,
-        discountReason: autoDiscountReason,
+        beasiswaPercentage: autoBeasiswaPct,
+        beasiswaReason: autoBeasiswaReason,
       },
       include: { class: true, user: true },
     });
 
-    await this.syncStudentDiscountsToBills(
+    await this.syncStudentBeasiswaToBills(
       id,
-      updated.discountPercentage,
-      updated.discountReason,
+      updated.beasiswaPercentage,
+      updated.beasiswaReason,
     );
 
     return updated;
@@ -275,15 +278,15 @@ export class StudentsService {
 
 
   /**
-   * Update discount default siswa oleh bagian keuangan/superadmin dan sinkronisasi ke tagihan
+   * Update beasiswa default siswa oleh bagian keuangan/superadmin dan sinkronisasi ke tagihan
    */
-  async updateDiscount(
+  async updateBeasiswa(
     id: string,
-    discountPercentage: number,
-    discountReason?: string,
+    beasiswaPercentage: number,
+    beasiswaReason?: string,
   ) {
-    const validPct = [0, 25, 50, 75, 100].includes(discountPercentage)
-      ? discountPercentage
+    const validPct = [0, 25, 50, 75, 100].includes(beasiswaPercentage)
+      ? beasiswaPercentage
       : 0;
 
     const student = await this.prisma.student.findUnique({ where: { id } });
@@ -292,36 +295,41 @@ export class StudentsService {
     const updated = await (this.prisma.student as any).update({
       where: { id },
       data: {
-        discountPercentage: validPct,
-        discountReason: discountReason || null,
+        beasiswaPercentage: validPct,
+        beasiswaReason: beasiswaReason || null,
       },
       include: { class: true, user: true },
     });
 
-    await this.syncStudentDiscountsToBills(
+    await this.syncStudentBeasiswaToBills(
       id,
-      updated.discountPercentage,
-      updated.discountReason,
+      updated.beasiswaPercentage,
+      updated.beasiswaReason,
     );
 
     return updated;
   }
 
   /**
-   * Mensingkronkan diskon default siswa ke seluruh tagihan siswa di role keuangan.
+   * Mensingkronkan beasiswa default siswa ke seluruh tagihan siswa di role keuangan.
    */
-  async syncStudentDiscountsToBills(
+  async syncStudentBeasiswaToBills(
     studentId: string,
-    discountPercentage: number,
-    discountReason?: string | null,
+    beasiswaPercentage?: number,
+    beasiswaReason?: string | null,
   ) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+    });
+    if (!student) return;
+
     const tagihans = await this.prisma.tagihan.findMany({
       where: { studentId },
     });
 
-    const validPct = [0, 25, 50, 75, 100].includes(discountPercentage)
-      ? discountPercentage
-      : 0;
+    const sppPct = student.beasiswaSppPct || 0;
+    const dppPct = student.beasiswaDppPct || 0;
+    const reason = student.beasiswaReason || beasiswaReason || 'Beasiswa';
 
     for (const t of tagihans) {
       // Jika tagihan sudah lunas dengan pembayaran nyata (amountPaid > 0), jangan ubah
@@ -345,15 +353,24 @@ export class StudentsService {
         .replace(/^DISCOUNT_INFO:\s*\{.*?\}/g, '')
         .trim();
 
-      if (validPct > 0) {
-        const discountAmount = Math.round(originalAmount * (validPct / 100));
+      // Tentukan persentase potongan berdasarkan jenis tagihan
+      let pct = 0;
+      const typeUpper = (t.type || '').toUpperCase();
+      if (typeUpper === 'SPP') {
+        pct = sppPct;
+      } else if (typeUpper === 'DPP') {
+        pct = dppPct;
+      }
+
+      if (pct > 0) {
+        const discountAmount = Math.round(originalAmount * (pct / 100));
         const finalAmount = originalAmount - discountAmount;
         const discountInfo = {
           originalAmount,
-          discountPercentage: validPct,
+          discountPercentage: pct,
           discountAmount,
           finalAmount,
-          reason: discountReason || 'Diskon Default Siswa',
+          reason,
         };
         const updatedNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}DISCOUNT_INFO: ${JSON.stringify(discountInfo)}`;
 
@@ -377,7 +394,7 @@ export class StudentsService {
           },
         });
       } else {
-        // Diskon 0%: kembalikan jumlah tagihan asli dan hapus catatan diskon
+        // Potongan 0%: kembalikan jumlah tagihan asli dan hapus catatan diskon
         await this.prisma.tagihan.update({
           where: { id: t.id },
           data: {
@@ -439,9 +456,11 @@ export class StudentsService {
     worksheet.columns = [
       { header: 'NISN', key: 'nisn', width: 20 },
       { header: 'NIS', key: 'nis', width: 15 },
-      { header: 'Nama Lengkap', key: 'name', width: 30 },
-      { header: 'Gender (L/P)', key: 'gender', width: 15 },
-      { header: 'Kelas ID', key: 'classId', width: 25 },
+      { header: 'Nama Siswa', key: 'name', width: 30 },
+      { header: 'L/P', key: 'gender', width: 15 },
+      { header: 'Kelas', key: 'className', width: 25 },
+      { header: 'Username', key: 'username', width: 20 },
+      { header: 'Password', key: 'password', width: 20 },
       { header: 'Program', key: 'program', width: 30 },
     ];
 
@@ -462,15 +481,17 @@ export class StudentsService {
       nis: '12345',
       name: 'Contoh: Ahmad Dahlan',
       gender: 'L',
-      classId: 'Masukkan ID Kelas dari sistem',
-      program: 'Pilih dari dropdown',
+      className: 'X IPA 1',
+      username: 'ahmad123',
+      password: 'password123',
+      program: 'tahfidz',
     });
 
     // Style sample row
     const sampleRow = worksheet.getRow(2);
     sampleRow.font = { italic: true, color: { argb: 'FF999999' } };
 
-    // Add data validation for Program column (column F)
+    // Add data validation for Program column (column H)
     const programOptions = [
       'tahfidz',
       'saintek',
@@ -482,9 +503,9 @@ export class StudentsService {
       'enterpreneur',
     ];
 
-    // Apply data validation to Program column (F column, starting from row 2)
+    // Apply data validation to Program column (H column, starting from row 2)
     for (let i = 2; i <= 1000; i++) {
-      const cell = worksheet.getCell(`F${i}`);
+      const cell = worksheet.getCell(`H${i}`);
       cell.dataValidation = {
         type: 'list',
         allowBlank: true,
@@ -513,24 +534,34 @@ export class StudentsService {
       {
         column: 'NIS',
         description:
-          'Nomor Induk Siswa (digunakan sebagai username & password default)',
+          'Nomor Induk Siswa (digunakan sebagai username & password default jika kosong)',
         example: '12345',
       },
       {
-        column: 'Nama Lengkap',
+        column: 'Nama Siswa',
         description: 'Nama lengkap siswa sesuai dokumen resmi',
         example: 'Ahmad Dahlan',
       },
       {
-        column: 'Gender',
+        column: 'L/P',
         description: 'Jenis kelamin (L untuk Laki-laki, P untuk Perempuan)',
         example: 'L atau P',
       },
       {
-        column: 'Kelas ID',
+        column: 'Kelas',
         description:
-          'ID kelas dari sistem (dapat dilihat di menu Master Data > Kelas)',
-        example: 'uuid-kelas-dari-sistem',
+          'Nama kelas sesuai dengan kelas yang ada di sistem',
+        example: 'X IPA 1',
+      },
+      {
+        column: 'Username',
+        description: 'Username untuk login siswa (opsional)',
+        example: 'ahmad123',
+      },
+      {
+        column: 'Password',
+        description: 'Password untuk login siswa (opsional)',
+        example: 'password123',
       },
       {
         column: 'Program',

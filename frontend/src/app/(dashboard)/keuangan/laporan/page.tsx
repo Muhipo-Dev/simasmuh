@@ -53,10 +53,28 @@ const formatProgramName = (code?: string | null) => {
 
 const parseDiscountInfo = (notes: string | null) => {
   if (!notes) return null
+  const beasiswaMatch = notes.match(/BEASISWA_INFO:\s*(\{.*?\})/)
+  if (beasiswaMatch) {
+    try {
+      const parsed = JSON.parse(beasiswaMatch[1])
+      return {
+        beasiswaPercentage: parsed.beasiswaPercentage,
+        beasiswaAmount: parsed.beasiswaAmount,
+        originalAmount: parsed.originalAmount,
+        reason: parsed.reason
+      }
+    } catch {}
+  }
   const match = notes.match(/DISCOUNT_INFO:\s*(\{.*?\})/)
   if (!match) return null
   try {
-    return JSON.parse(match[1])
+    const parsed = JSON.parse(match[1])
+    return {
+      beasiswaPercentage: parsed.discountPercentage,
+      beasiswaAmount: parsed.discountAmount,
+      originalAmount: parsed.originalAmount,
+      reason: parsed.reason
+    }
   } catch {
     return null
   }
@@ -72,7 +90,7 @@ type Tagihan = {
 type StudentDetail = {
   id: string; name: string; nisn: string; nis: string
   gender: string; program?: string | null
-  discountPercentage?: number; discountReason?: string | null
+  beasiswaPercentage?: number; beasiswaReason?: string | null
   class: { name: string }; tagihans: Tagihan[]
 }
 
@@ -220,10 +238,10 @@ export default function StudentFinancePage() {
               <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
               Program {formatProgramName(student.program)}
             </span>
-            {student.discountPercentage && student.discountPercentage > 0 ? (
+            {student.beasiswaPercentage && student.beasiswaPercentage > 0 ? (
               <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs px-2.5 py-0.5 rounded-full font-black flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                Diskon {student.discountPercentage}%
+                Beasiswa {student.beasiswaPercentage}%
               </span>
             ) : null}
           </div>
@@ -263,29 +281,29 @@ export default function StudentFinancePage() {
           {/* Divider on desktop */}
           <div className="hidden md:block w-px h-10 bg-slate-100 dark:bg-slate-800"></div>
 
-          {/* Discount Info */}
+          {/* Beasiswa Info */}
           <div className="flex items-center gap-3.5 flex-1">
-            <div className={`w-11 h-11 rounded-2xl ${student.discountPercentage && student.discountPercentage > 0 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'} flex items-center justify-center shrink-0 shadow-2xs`}>
+            <div className={`w-11 h-11 rounded-2xl ${student.beasiswaPercentage && student.beasiswaPercentage > 0 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'} flex items-center justify-center shrink-0 shadow-2xs`}>
               <Percent className="w-5 h-5" />
             </div>
             <div>
               <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                Informasi Diskon / Potongan
+                Informasi Beasiswa / Potongan
               </span>
               <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                {student.discountPercentage && student.discountPercentage > 0 ? (
+                {student.beasiswaPercentage && student.beasiswaPercentage > 0 ? (
                   <>
                     <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-emerald-600" />
-                      Diskon {student.discountPercentage}%
+                      Beasiswa {student.beasiswaPercentage}%
                     </span>
                     <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                      {student.discountReason || 'Potongan Khusus Siswa'}
+                      {student.beasiswaReason || 'Potongan Khusus Siswa'}
                     </span>
                   </>
                 ) : (
                   <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-                    Tidak ada diskon khusus (0% - Tarif Normal)
+                    Tidak ada beasiswa khusus (0% - Tarif Normal)
                   </span>
                 )}
               </div>
@@ -347,8 +365,8 @@ export default function StudentFinancePage() {
               const typeInfo = PAYMENT_TYPES.find(p => p.value === t.type)
               const isOverdue = t.dueDate && new Date(t.dueDate) < new Date()
               const discInfo = parseDiscountInfo(t.notes)
-              const hasDiscount = discInfo || (student.discountPercentage && student.discountPercentage > 0 && t.type === 'SPP')
-              const discPct = discInfo?.discountPercentage || student.discountPercentage || 0
+              const hasDiscount = discInfo || (student.beasiswaPercentage && student.beasiswaPercentage > 0 && t.type === 'SPP')
+              const discPct = discInfo?.beasiswaPercentage || student.beasiswaPercentage || 0
 
               return (
                 <div key={t.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-xl border bg-white dark:bg-slate-900/80 gap-3 ${isOverdue ? 'border-red-300 dark:border-red-800' : 'border-red-100 dark:border-slate-800'}`}>
@@ -365,7 +383,7 @@ export default function StudentFinancePage() {
                         {hasDiscount && (
                           <span className="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-md font-extrabold flex items-center gap-1">
                             <Sparkles className="w-3 h-3 text-emerald-600" />
-                            Diskon {discPct}% {discInfo?.discountAmount ? `(-${currency(discInfo.discountAmount)})` : ''}
+                            Beasiswa {discPct}% {discInfo?.beasiswaAmount ? `(-${currency(discInfo.beasiswaAmount)})` : ''}
                           </span>
                         )}
                         {isOverdue && (

@@ -5,7 +5,7 @@ export interface CreateProgramConfigDto {
   code: string;
   name: string;
   defaultSpp?: number;
-  defaultDiscount?: number;
+  defaultBeasiswa?: number;
   description?: string;
 }
 
@@ -13,19 +13,19 @@ export interface UpdateProgramConfigDto {
   code?: string;
   name?: string;
   defaultSpp?: number;
-  defaultDiscount?: number;
+  defaultBeasiswa?: number;
   description?: string;
 }
 
 const DEFAULT_PROGRAMS = [
-  { code: 'tahfidz', name: 'Tahfidz', defaultSpp: 360000, defaultDiscount: 0, description: 'Program Hifdzil Qur\'an' },
-  { code: 'saintek', name: 'SAINSOS', defaultSpp: 450000, defaultDiscount: 0, description: 'Program Sains & Sosial (SAINSOS)' },
-  { code: 'olahraga', name: 'Olahraga', defaultSpp: 330000, defaultDiscount: 0, description: 'Program Bakat Olahraga' },
-  { code: 'MIC', name: 'Muhipo Internasional Class', defaultSpp: 600000, defaultDiscount: 0, description: 'Muhipo Internasional Class (MIC)' },
-  { code: 'seni budaya', name: 'Seni Budaya', defaultSpp: 330000, defaultDiscount: 0, description: 'Program Seni & Kesenian' },
-  { code: 'ai', name: 'Artificial Intelligence', defaultSpp: 500000, defaultDiscount: 0, description: 'Program Artificial Intelligence (AI)' },
-  { code: 'inklusi', name: 'Inklusi', defaultSpp: 240000, defaultDiscount: 0, description: 'Program Pendampingan Inklusi' },
-  { code: 'enterpreneur', name: 'Enterpreneur', defaultSpp: 390000, defaultDiscount: 0, description: 'Program Kewirausahaan (Enterpreneur)' },
+  { code: 'tahfidz', name: 'Tahfidz', defaultSpp: 360000, defaultBeasiswa: 0, description: 'Program Hifdzil Qur\'an' },
+  { code: 'saintek', name: 'SAINSOS', defaultSpp: 450000, defaultBeasiswa: 0, description: 'Program Sains & Sosial (SAINSOS)' },
+  { code: 'olahraga', name: 'Olahraga', defaultSpp: 330000, defaultBeasiswa: 0, description: 'Program Bakat Olahraga' },
+  { code: 'MIC', name: 'Muhipo Internasional Class', defaultSpp: 600000, defaultBeasiswa: 0, description: 'Muhipo Internasional Class (MIC)' },
+  { code: 'seni budaya', name: 'Seni Budaya', defaultSpp: 330000, defaultBeasiswa: 0, description: 'Program Seni & Kesenian' },
+  { code: 'ai', name: 'Artificial Intelligence', defaultSpp: 500000, defaultBeasiswa: 0, description: 'Program Artificial Intelligence (AI)' },
+  { code: 'inklusi', name: 'Inklusi', defaultSpp: 240000, defaultBeasiswa: 0, description: 'Program Pendampingan Inklusi' },
+  { code: 'enterpreneur', name: 'Enterpreneur', defaultSpp: 390000, defaultBeasiswa: 0, description: 'Program Kewirausahaan (Enterpreneur)' },
 ];
 
 @Injectable()
@@ -73,7 +73,7 @@ export class ProgramConfigService implements OnModuleInit {
         code,
         name: dto.name,
         defaultSpp: Number(dto.defaultSpp || 0),
-        defaultDiscount: Number(dto.defaultDiscount || 0),
+        defaultBeasiswa: Number(dto.defaultBeasiswa || 0),
         description: dto.description || '',
       },
     });
@@ -91,7 +91,7 @@ export class ProgramConfigService implements OnModuleInit {
         ...(dto.code !== undefined && { code: dto.code.trim() }),
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.defaultSpp !== undefined && { defaultSpp: Number(dto.defaultSpp) }),
-        ...(dto.defaultDiscount !== undefined && { defaultDiscount: Number(dto.defaultDiscount) }),
+        ...(dto.defaultBeasiswa !== undefined && { defaultBeasiswa: Number(dto.defaultBeasiswa) }),
         ...(dto.description !== undefined && { description: dto.description }),
       },
     });

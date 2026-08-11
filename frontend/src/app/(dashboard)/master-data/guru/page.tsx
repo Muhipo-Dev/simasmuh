@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Plus, Loader2, Trash2, FileSpreadsheet, Pencil, CheckSquare, Edit3 } from 'lucide-react'
 import { ImportProgressDialog, ImportProgressState } from '@/components/ImportProgressDialog'
+import Swal from 'sweetalert2'
+import { confirmDelete } from '@/lib/swal-helper'
 
 const CHUNK_SIZE = 20
 
@@ -253,25 +255,33 @@ export default function TeachersPage() {
     }
   }
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.length === 0) return
-    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} guru terpilih?`)) return
-
-    setIsSubmittingBulk(true)
-    try {
-      await Promise.all(
-        selectedIds.map(id =>
-          authenticatedFetch(`/api-backend/teachers/${id}`, { method: 'DELETE' })
-        )
-      )
-      queryClient.invalidateQueries({ queryKey: ['teachers'] })
-      setSelectedIds([])
-      alert('Berhasil menghapus guru terpilih!')
-    } catch (err: any) {
-      alert('Gagal menghapus guru terpilih.')
-    } finally {
-      setIsSubmittingBulk(false)
-    }
+    confirmDelete({
+      title: 'Hapus Guru Terpilih?',
+      text: `Apakah Anda yakin ingin menghapus ${selectedIds.length} guru terpilih secara permanen?`,
+      onConfirm: async () => {
+        setIsSubmittingBulk(true)
+        try {
+          await Promise.all(
+            selectedIds.map(id =>
+              authenticatedFetch(`/api-backend/teachers/${id}`, { method: 'DELETE' })
+            )
+          )
+          queryClient.invalidateQueries({ queryKey: ['teachers'] })
+          setSelectedIds([])
+          Swal.fire({
+            title: 'Berhasil!',
+            text: 'Berhasil menghapus guru terpilih!',
+            icon: 'success',
+            timer: 1850,
+            showConfirmButton: false,
+          })
+        } finally {
+          setIsSubmittingBulk(false)
+        }
+      }
+    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -646,9 +656,20 @@ export default function TeachersPage() {
                             size="sm" 
                             className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
                             onClick={() => {
-                              if(confirm('Yakin ingin menghapus guru ini?')) {
-                                deleteMutation.mutate(item.id)
-                              }
+                              confirmDelete({
+                                title: 'Hapus Guru?',
+                                text: 'Apakah Anda yakin ingin menghapus guru ini?',
+                                onConfirm: async () => {
+                                  await deleteMutation.mutateAsync(item.id)
+                                  Swal.fire({
+                                    title: 'Berhasil!',
+                                    text: 'Guru berhasil dihapus!',
+                                    icon: 'success',
+                                    timer: 1500,
+                                    showConfirmButton: false,
+                                  })
+                                }
+                              })
                             }}
                           >
                             <Trash2 className="w-4 h-4" />

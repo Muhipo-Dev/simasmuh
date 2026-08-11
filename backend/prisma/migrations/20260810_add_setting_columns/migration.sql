@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Setting" ADD COLUMN     "defaultInfaq" DOUBLE PRECISION DEFAULT 0,
+ADD COLUMN     "defaultSeragam" DOUBLE PRECISION DEFAULT 2000000;

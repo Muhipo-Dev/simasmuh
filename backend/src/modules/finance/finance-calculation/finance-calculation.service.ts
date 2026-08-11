@@ -134,21 +134,21 @@ export class FinanceCalculationService {
   // ============================================================
 
   /**
-   * Calculate discount amount for a student
-   * Discounts can be based on:
+   * Calculate beasiswa amount for a student
+   * Beasiswa can be based on:
    * - Academic achievement
    * - Sibling discounts
    * - Special programs
    * - Financial aid
    */
-  async calculateStudentDiscount(
+  async calculateStudentBeasiswa(
     studentId: string,
     originalAmount: number,
-    discountType?: string,
+    beasiswaType?: string,
   ): Promise<{
-    discountAmount: number;
+    beasiswaAmount: number;
     finalAmount: number;
-    discountPercentage: number;
+    beasiswaPercentage: number;
   }> {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
@@ -159,45 +159,45 @@ export class FinanceCalculationService {
       throw new Error('Siswa tidak ditemukan');
     }
 
-    let discountPercentage = 0;
+    let beasiswaPercentage = 0;
 
     // Apply discount based on type
-    switch (discountType) {
+    switch (beasiswaType) {
       case 'AKADEMIK':
         // Academic achievement discount (e.g., top ranking students)
-        discountPercentage = 25;
+        beasiswaPercentage = 25;
         break;
       case 'SAUDARA':
         // Sibling discount
-        discountPercentage = 15;
+        beasiswaPercentage = 15;
         break;
       case 'BEASISWA':
         // Full/partial scholarship
-        discountPercentage = 50;
+        beasiswaPercentage = 50;
         break;
       case 'INKLUSI':
         // Inclusion program discount
         if (student.program === 'inklusi') {
-          discountPercentage = 30;
+          beasiswaPercentage = 30;
         }
         break;
       default:
-        discountPercentage = 0;
+        beasiswaPercentage = 0;
     }
 
-    const discountAmount = Math.round(
-      originalAmount * (discountPercentage / 100),
+    const beasiswaAmount = Math.round(
+      originalAmount * (beasiswaPercentage / 100),
     );
-    const finalAmount = originalAmount - discountAmount;
+    const finalAmount = originalAmount - beasiswaAmount;
 
     this.logger.log(
-      `Discount calculated for student ${studentId}: ${discountPercentage}% (${discountAmount})`,
+      `Beasiswa calculated for student ${studentId}: ${beasiswaPercentage}% (${beasiswaAmount})`,
     );
 
     return {
-      discountAmount,
+      beasiswaAmount,
       finalAmount,
-      discountPercentage,
+      beasiswaPercentage,
     };
   }
 
@@ -207,35 +207,35 @@ export class FinanceCalculationService {
   async calculateFinalBillAmount(
     studentId: string,
     baseAmount: number,
-    applicableDiscounts: string[] = [],
+    applicableBeasiswa: string[] = [],
   ): Promise<{
     finalAmount: number;
-    totalDiscount: number;
-    appliedDiscounts: any[];
+    totalBeasiswa: number;
+    appliedBeasiswa: any[];
   }> {
     let currentAmount = baseAmount;
-    const appliedDiscounts: any[] = [];
-    let totalDiscount = 0;
+    const appliedBeasiswa: any[] = [];
+    let totalBeasiswa = 0;
 
-    for (const discountType of applicableDiscounts) {
-      const result = await this.calculateStudentDiscount(
+    for (const beasiswaType of applicableBeasiswa) {
+      const result = await this.calculateStudentBeasiswa(
         studentId,
         currentAmount,
-        discountType,
+        beasiswaType,
       );
-      appliedDiscounts.push({
-        type: discountType,
-        percentage: result.discountPercentage,
-        amount: result.discountAmount,
+      appliedBeasiswa.push({
+        type: beasiswaType,
+        percentage: result.beasiswaPercentage,
+        amount: result.beasiswaAmount,
       });
-      totalDiscount += result.discountAmount;
+      totalBeasiswa += result.beasiswaAmount;
       currentAmount = result.finalAmount;
     }
 
     return {
       finalAmount: currentAmount,
-      totalDiscount,
-      appliedDiscounts,
+      totalBeasiswa,
+      appliedBeasiswa,
     };
   }
 

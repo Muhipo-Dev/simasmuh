@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent, Info } from 'lucide-react'
 import Swal from 'sweetalert2'
+import { confirmDelete } from '@/lib/swal-helper'
 
 const currencyFormat = (num: number) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0)
@@ -48,8 +49,8 @@ type Student = {
   program?: string | null
   gelombang?: string | null
   jalurPendaftaran?: string | null
-  discountPercentage?: number
-  discountReason?: string | null
+  beasiswaPercentage?: number
+  beasiswaReason?: string | null
   beasiswaSeragamPct?: number
   beasiswaSppPct?: number
   beasiswaDppPct?: number
@@ -137,11 +138,11 @@ export default function StudentsPage() {
   const [programTargetStudent, setProgramTargetStudent] = useState<Student | null>(null)
   const [programValue, setProgramValue] = useState<string>('')
 
-  // Discount Dialog State
-  const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false)
-  const [discountTargetStudent, setDiscountTargetStudent] = useState<Student | null>(null)
-  const [discountPct, setDiscountPct] = useState<number>(0)
-  const [discountReason, setDiscountReason] = useState<string>('')
+  // Beasiswa Dialog State
+  const [isBeasiswaDialogOpen, setIsBeasiswaDialogOpen] = useState(false)
+  const [beasiswaTargetStudent, setBeasiswaTargetStudent] = useState<Student | null>(null)
+  const [beasiswaPct, setBeasiswaPct] = useState<number>(0)
+  const [beasiswaReason, setBeasiswaReason] = useState<string>('')
   const [beasiswaSeragamVal, setBeasiswaSeragamVal] = useState<number>(0)
   const [beasiswaSppVal, setBeasiswaSppVal] = useState<number>(0)
   const [beasiswaDppVal, setBeasiswaDppVal] = useState<number>(0)
@@ -197,13 +198,13 @@ export default function StudentsPage() {
     const handleOpenBeasiswa = (e: any) => {
       const std = e.detail
       if (std) {
-        setDiscountTargetStudent(std)
-        setDiscountPct(std.discountPercentage || 0)
-        setDiscountReason(std.discountReason || '')
+        setBeasiswaTargetStudent(std)
+        setBeasiswaPct(std.beasiswaPercentage || 0)
+        setBeasiswaReason(std.beasiswaReason || '')
         setBeasiswaSeragamVal(std.beasiswaSeragamPct || 0)
         setBeasiswaSppVal(std.beasiswaSppPct || 0)
         setBeasiswaDppVal(std.beasiswaDppPct || 0)
-        setIsDiscountDialogOpen(true)
+        setIsBeasiswaDialogOpen(true)
       }
     }
     window.addEventListener('open-beasiswa-dialog', handleOpenBeasiswa)
@@ -280,17 +281,17 @@ export default function StudentsPage() {
     }
   })
 
-  // Mutation khusus update discount & beasiswa per item (Bagian Keuangan)
-  const updateDiscountMutation = useMutation({
-    mutationFn: async ({ id, discountPercentage, discountReason, beasiswaSeragamPct, beasiswaSppPct, beasiswaDppPct }: { id: string; discountPercentage: number; discountReason?: string; beasiswaSeragamPct?: number; beasiswaSppPct?: number; beasiswaDppPct?: number }) => {
-      const res = await authenticatedFetch(`/api-backend/students/${id}/discount`, {
+  // Mutation khusus update beasiswa per item (Bagian Keuangan)
+  const updateBeasiswaMutation = useMutation({
+    mutationFn: async ({ id, beasiswaPercentage, beasiswaReason, beasiswaSeragamPct, beasiswaSppPct, beasiswaDppPct }: { id: string; beasiswaPercentage: number; beasiswaReason?: string; beasiswaSeragamPct?: number; beasiswaSppPct?: number; beasiswaDppPct?: number }) => {
+      const res = await authenticatedFetch(`/api-backend/students/${id}/beasiswa`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discountPercentage, discountReason, beasiswaSeragamPct, beasiswaSppPct, beasiswaDppPct }),
+        body: JSON.stringify({ beasiswaPercentage, beasiswaReason, beasiswaSeragamPct, beasiswaSppPct, beasiswaDppPct }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.message || 'Gagal mengatur diskon/beasiswa siswa')
+        throw new Error(err.message || 'Gagal mengatur beasiswa siswa')
       }
       return res.json()
     },
@@ -300,18 +301,18 @@ export default function StudentsPage() {
       queryClient.invalidateQueries({ queryKey: ['student-tagihan'] })
       queryClient.invalidateQueries({ queryKey: ['my-tagihans'] })
       queryClient.invalidateQueries({ queryKey: ['my-all-tagihan'] })
-      setIsDiscountDialogOpen(false)
-      setDiscountTargetStudent(null)
+      setIsBeasiswaDialogOpen(false)
+      setBeasiswaTargetStudent(null)
       Swal.fire({
         title: 'Berhasil!',
-        text: 'Diskon default siswa berhasil diperbarui dan disinkronkan ke tagihan',
+        text: 'Beasiswa default siswa berhasil diperbarui dan disinkronkan ke tagihan',
         icon: 'success',
         timer: 1800,
         showConfirmButton: false,
       })
     },
     onError: (err: any) => {
-      Swal.fire('Error', err.message || 'Gagal menyimpan diskon', 'error')
+      Swal.fire('Error', err.message || 'Gagal menyimpan beasiswa', 'error')
     }
   })
 
@@ -477,9 +478,20 @@ export default function StudentsPage() {
   }
 
   const handleDelete = (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus siswa ini?')) {
-      deleteMutation.mutate(id)
-    }
+    confirmDelete({
+      title: 'Hapus Siswa?',
+      text: 'Apakah Anda yakin ingin menghapus siswa ini?',
+      onConfirm: async () => {
+        await deleteMutation.mutateAsync(id)
+        Swal.fire({
+          title: 'Berhasil!',
+          text: 'Siswa berhasil dihapus!',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false,
+        })
+      }
+    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -557,25 +569,33 @@ export default function StudentsPage() {
     }
   }
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedStudentIds.length === 0) return
-    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedStudentIds.length} siswa terpilih?`)) return
-
-    setIsSubmittingBulk(true)
-    try {
-      await Promise.all(
-        selectedStudentIds.map(id =>
-          authenticatedFetch(`/api-backend/students/${id}`, { method: 'DELETE' })
-        )
-      )
-      queryClient.invalidateQueries({ queryKey: ['students'] })
-      setSelectedStudentIds([])
-      alert('Berhasil menghapus siswa terpilih!')
-    } catch (err: any) {
-      alert('Gagal menghapus siswa terpilih.')
-    } finally {
-      setIsSubmittingBulk(false)
-    }
+    confirmDelete({
+      title: 'Hapus Siswa Terpilih?',
+      text: `Apakah Anda yakin ingin menghapus ${selectedStudentIds.length} siswa terpilih secara permanen?`,
+      onConfirm: async () => {
+        setIsSubmittingBulk(true)
+        try {
+          await Promise.all(
+            selectedStudentIds.map(id =>
+              authenticatedFetch(`/api-backend/students/${id}`, { method: 'DELETE' })
+            )
+          )
+          queryClient.invalidateQueries({ queryKey: ['students'] })
+          setSelectedStudentIds([])
+          Swal.fire({
+            title: 'Berhasil!',
+            text: 'Berhasil menghapus siswa terpilih!',
+            icon: 'success',
+            timer: 1800,
+            showConfirmButton: false,
+          })
+        } finally {
+          setIsSubmittingBulk(false)
+        }
+      }
+    })
   }
 
 
@@ -844,13 +864,12 @@ export default function StudentsPage() {
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar max-h-[calc(90vh-130px)]">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="nisn" className="text-xs font-semibold">NISN</Label>
+                  <Label htmlFor="nisn" className="text-xs font-semibold">NISN (Opsional)</Label>
                   <Input 
                     id="nisn" 
                     value={formData.nisn}
                     onChange={(e) => setFormData({...formData, nisn: e.target.value})}
-                    placeholder="Masukkan NISN"
-                    required 
+                    placeholder="Masukkan NISN (Opsional)"
                   />
                 </div>
 
@@ -1340,34 +1359,34 @@ export default function StudentsPage() {
     </div>
 
       {/* Modal Pengaturan Beasiswa Keuangan Siswa */}
-      <Dialog open={isDiscountDialogOpen} onOpenChange={setIsDiscountDialogOpen}>
+      <Dialog open={isBeasiswaDialogOpen} onOpenChange={setIsBeasiswaDialogOpen}>
         <DialogContent className="sm:max-w-[520px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="p-5 sm:p-6 pb-3 border-b border-slate-100 dark:border-slate-800">
             <DialogTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-lg font-bold">
               <Percent className="w-5 h-5 text-amber-600" /> Pengaturan Beasiswa Keuangan Siswa
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm text-slate-500">
-              Atur persentase beasiswa per item biaya. Potongan otomatis dihitung dari biaya default (misal Seragam default Rp 2.000.000, diskon 50% = Rp 1.000.000).
+              Atur persentase beasiswa per item biaya. Potongan otomatis dihitung dari biaya default (misal Seragam default Rp 2.000.000, beasiswa 50% = Rp 1.000.000).
             </DialogDescription>
           </DialogHeader>
 
-          {discountTargetStudent && (
+          {beasiswaTargetStudent && (
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar max-h-[calc(90vh-130px)]">
               <div className="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
-                <p className="font-bold text-sm text-slate-900 dark:text-white">{discountTargetStudent.name}</p>
-                <p className="text-xs text-slate-500 font-mono">NISN: {discountTargetStudent.nisn} | Kelas: {discountTargetStudent.class?.name || 'Belum ada kelas'}</p>
+                <p className="font-bold text-sm text-slate-900 dark:text-white">{beasiswaTargetStudent.name}</p>
+                <p className="text-xs text-slate-500 font-mono">NISN: {beasiswaTargetStudent.nisn} | Kelas: {beasiswaTargetStudent.class?.name || 'Belum ada kelas'}</p>
                 <div className="flex flex-wrap gap-1.5 text-xs font-semibold pt-1">
                   <span className={`px-2 py-0.5 rounded-md ${
-                    discountTargetStudent.jalurPendaftaran === 'Mandiri'
+                    beasiswaTargetStudent.jalurPendaftaran === 'Mandiri'
                       ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
                       : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
                   }`}>
-                    Jalur: {discountTargetStudent.jalurPendaftaran || 'Mandiri'}
+                    Jalur: {beasiswaTargetStudent.jalurPendaftaran || 'Mandiri'}
                   </span>
                   <span className="bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 rounded-md">
                     Gelombang: {discountTargetStudent.gelombang || 'Gelombang 1'}
                   </span>
-                  {discountTargetStudent.program && (
+                  {beasiswaTargetStudent.program && (
                     <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-md">
                       Program: {discountTargetStudent.program.toUpperCase()}
                     </span>
@@ -1472,8 +1491,8 @@ export default function StudentsPage() {
                 <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Alasan / Catatan Beasiswa</Label>
                 <Input
                   placeholder="Misal: Beasiswa Kader Persyarikatan / Prestasi / Bidikmisi"
-                  value={discountReason}
-                  onChange={(e) => setDiscountReason(e.target.value)}
+                  value={beasiswaReason}
+                  onChange={(e) => setBeasiswaReason(e.target.value)}
                   className="bg-white dark:bg-slate-950 text-xs h-9"
                 />
               </div>
@@ -1481,23 +1500,23 @@ export default function StudentsPage() {
           )}
 
           <DialogFooter className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-row items-center justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsDiscountDialogOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => setIsBeasiswaDialogOpen(false)}>Batal</Button>
             <Button
               className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
               onClick={() => {
-                if (!discountTargetStudent) return
-                updateDiscountMutation.mutate({
-                  id: discountTargetStudent.id,
-                  discountPercentage: beasiswaSppVal || discountPct,
-                  discountReason: discountReason,
-                  beasiswaSeragamPct: discountTargetStudent.jalurPendaftaran !== 'Mandiri' ? beasiswaSeragamVal : 0,
+                if (!beasiswaTargetStudent) return
+                updateBeasiswaMutation.mutate({
+                  id: beasiswaTargetStudent.id,
+                  beasiswaPercentage: beasiswaSppVal || beasiswaPct,
+                  beasiswaReason: beasiswaReason,
+                  beasiswaSeragamPct: beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? beasiswaSeragamVal : 0,
                   beasiswaSppPct: beasiswaSppVal,
                   beasiswaDppPct: beasiswaDppVal,
                 })
               }}
-              disabled={updateDiscountMutation.isPending}
+              disabled={updateBeasiswaMutation.isPending}
             >
-              {updateDiscountMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
+              {updateBeasiswaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
               Simpan Beasiswa Keuangan
             </Button>
           </DialogFooter>

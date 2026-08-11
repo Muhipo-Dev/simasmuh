@@ -85,19 +85,19 @@ export class StudentsController {
   }
 
   /**
-   * PATCH /students/:id/discount
-   * Pengaturan Diskon Default Siswa oleh Bagian Keuangan / Admin
+   * PATCH /students/:id/beasiswa
+   * Pengaturan Beasiswa Default Siswa oleh Bagian Keuangan / Admin
    */
-  @Patch(':id/discount')
+  @Patch(':id/beasiswa')
   @UseGuards(JwtAuthGuard)
-  updateDiscount(
+  updateBeasiswa(
     @Param('id') id: string,
-    @Body() body: { discountPercentage: number; discountReason?: string },
+    @Body() body: { beasiswaPercentage: number; beasiswaReason?: string },
   ) {
-    return this.studentsService.updateDiscount(
+    return this.studentsService.updateBeasiswa(
       id,
-      body.discountPercentage,
-      body.discountReason,
+      body.beasiswaPercentage,
+      body.beasiswaReason,
     );
   }
 

@@ -19,7 +19,7 @@ export interface Student {
 
 export interface BillingResult {
   baseFee: number;
-  totalDiscount: number;
+  totalBeasiswa: number;
   finalFee: number;
   breakdown: { name: string; amount: number }[];
 }

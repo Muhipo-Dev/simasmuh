@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import Swal from 'sweetalert2'
+import { confirmDelete } from '@/lib/swal-helper'
 
 const CATEGORIES = [
   'UMUM', 'OPERASIONAL', 'GAJI', 'FASILITAS', 'ACARA', 'LAINNYA'
@@ -88,18 +89,10 @@ export default function KeuanganKeluarPage() {
   })
 
   const handleDelete = (id: string) => {
-    Swal.fire({
+    confirmDelete({
       title: 'Hapus data?',
       text: "Data pengeluaran ini akan dihapus permanen!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Ya, Hapus!'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        deleteMutation.mutate(id)
-      }
+      onConfirm: () => deleteMutation.mutateAsync(id)
     })
   }
 

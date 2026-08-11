@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { ImportProgressDialog, ImportProgressState } from '@/components/ImportProgressDialog'
+import Swal from 'sweetalert2'
+import { confirmDelete } from '@/lib/swal-helper'
 
 const CHUNK_SIZE = 20
 
@@ -256,25 +258,33 @@ export default function ClassesPage() {
     }
   }
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.length === 0) return
-    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} kelas terpilih?`)) return
-
-    setIsSubmittingBulk(true)
-    try {
-      await Promise.all(
-        selectedIds.map(id =>
-          authenticatedFetch(`/api-backend/classes/${id}`, { method: 'DELETE' })
-        )
-      )
-      queryClient.invalidateQueries({ queryKey: ['classes'] })
-      setSelectedIds([])
-      alert('Berhasil menghapus kelas terpilih!')
-    } catch (err: any) {
-      alert('Gagal menghapus kelas terpilih.')
-    } finally {
-      setIsSubmittingBulk(false)
-    }
+    confirmDelete({
+      title: 'Hapus Kelas Terpilih?',
+      text: `Apakah Anda yakin ingin menghapus ${selectedIds.length} kelas terpilih secara permanen?`,
+      onConfirm: async () => {
+        setIsSubmittingBulk(true)
+        try {
+          await Promise.all(
+            selectedIds.map(id =>
+              authenticatedFetch(`/api-backend/classes/${id}`, { method: 'DELETE' })
+            )
+          )
+          queryClient.invalidateQueries({ queryKey: ['classes'] })
+          setSelectedIds([])
+          Swal.fire({
+            title: 'Berhasil!',
+            text: 'Berhasil menghapus kelas terpilih!',
+            icon: 'success',
+            timer: 1850,
+            showConfirmButton: false,
+          })
+        } finally {
+          setIsSubmittingBulk(false)
+        }
+      }
+    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -622,9 +632,20 @@ export default function ClassesPage() {
                             size="icon" 
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             onClick={() => {
-                              if(confirm('Yakin ingin menghapus kelas ini?')) {
-                                deleteMutation.mutate(item.id)
-                              }
+                              confirmDelete({
+                                title: 'Hapus Kelas?',
+                                text: 'Apakah Anda yakin ingin menghapus kelas ini?',
+                                onConfirm: async () => {
+                                  await deleteMutation.mutateAsync(item.id)
+                                  Swal.fire({
+                                    title: 'Berhasil!',
+                                    text: 'Kelas berhasil dihapus!',
+                                    icon: 'success',
+                                    timer: 1500,
+                                    showConfirmButton: false,
+                                  })
+                                }
+                              })
                             }}
                           >
                             <Trash2 className="w-4 h-4" />

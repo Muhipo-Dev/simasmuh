@@ -389,4 +389,71 @@
   .dark .price-final {
     @apply text-emerald-400;
   }
+
+  /* SweetAlert2 Premium Styling */
+  .swal2-popup {
+    border-radius: 24px !important;
+    font-family: var(--font-sans), sans-serif !important;
+    background-color: var(--card) !important;
+    color: var(--foreground) !important;
+    border: 1px solid var(--border) !important;
+    padding: 1.75rem !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  .swal2-title {
+    color: var(--foreground) !important;
+    font-weight: 850 !important;
+    font-size: 1.35rem !important;
+    letter-spacing: -0.025em !important;
+  }
+
+  .swal2-html-container {
+    color: var(--muted-foreground) !important;
+    font-size: 0.925rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .swal2-actions {
+    gap: 0.75rem !important;
+    margin-top: 1.5rem !important;
+  }
+
+  .swal2-styled.swal2-confirm {
+    background-color: #e11d48 !important; /* Rose 600 */
+    border-radius: 12px !important;
+    font-size: 0.875rem !important;
+    font-weight: 700 !important;
+    padding: 0.625rem 1.25rem !important;
+    box-shadow: none !important;
+    transition: all 0.2s !important;
+  }
+  .swal2-styled.swal2-confirm:hover {
+    background-color: #be123c !important; /* Rose 700 */
+  }
+
+  .swal2-styled.swal2-cancel {
+    background-color: transparent !important;
+    color: var(--foreground) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    padding: 0.625rem 1.25rem !important;
+    box-shadow: none !important;
+    transition: all 0.2s !important;
+  }
+  .swal2-styled.swal2-cancel:hover {
+    background-color: var(--secondary) !important;
+  }
+
+  .swal2-backdrop {
+    background: rgba(15, 23, 42, 0.4) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+
+  .swal2-icon {
+    border-width: 3px !important;
+    transform: scale(0.85) !important;
+  }
 }

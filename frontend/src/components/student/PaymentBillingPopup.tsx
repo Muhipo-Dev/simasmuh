@@ -42,8 +42,8 @@ type Tagihan = {
   notes: string | null
   createdAt: string
   originalAmount?: number
-  discountPercentage?: number
-  discountAmount?: number
+  beasiswaPercentage?: number
+  beasiswaAmount?: number
 }
 
 type BankAccount = {
@@ -90,10 +90,28 @@ const getMonthName = (month: number) => {
 
 const parseDiscountInfo = (notes: string | null) => {
   if (!notes) return null
+  const beasiswaMatch = notes.match(/BEASISWA_INFO:\s*(\{.*?\})/)
+  if (beasiswaMatch) {
+    try {
+      const parsed = JSON.parse(beasiswaMatch[1])
+      return {
+        beasiswaPercentage: parsed.beasiswaPercentage,
+        beasiswaAmount: parsed.beasiswaAmount,
+        originalAmount: parsed.originalAmount,
+        reason: parsed.reason
+      }
+    } catch {}
+  }
   const match = notes.match(/DISCOUNT_INFO:\s*(\{.*?\})/)
   if (!match) return null
   try {
-    return JSON.parse(match[1])
+    const parsed = JSON.parse(match[1])
+    return {
+      beasiswaPercentage: parsed.discountPercentage,
+      beasiswaAmount: parsed.discountAmount,
+      originalAmount: parsed.originalAmount,
+      reason: parsed.reason
+    }
   } catch {
     return null
   }
@@ -475,7 +493,7 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
                                 )}
                                 {parseDiscountInfo(tagihan.notes) && (
                                   <Badge className="bg-amber-100 text-amber-800 border-amber-300 px-2 py-0.5 text-xs font-bold">
-                                    Diskon {parseDiscountInfo(tagihan.notes)?.discountPercentage}%
+                                    Beasiswa {parseDiscountInfo(tagihan.notes)?.beasiswaPercentage}%
                                   </Badge>
                                 )}
                               </div>
@@ -489,7 +507,7 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
                                         {formatCurrency(parseDiscountInfo(tagihan.notes)?.originalAmount || tagihan.amount)}
                                       </span>
                                       <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">
-                                        -{formatCurrency(parseDiscountInfo(tagihan.notes)?.discountAmount || 0)}
+                                        -{formatCurrency(parseDiscountInfo(tagihan.notes)?.beasiswaAmount || 0)}
                                       </span>
                                     </div>
                                     <div className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight break-words">

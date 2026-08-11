@@ -72,8 +72,8 @@ model Student {
   program            String?
   gelombang          String?        @default("Gelombang 1")
   jalurPendaftaran   String?        @default("Mandiri")
-  discountPercentage Int            @default(0)
-  discountReason     String?
+  beasiswaPercentage Int            @default(0) @map("discountPercentage")
+  beasiswaReason     String?        @map("discountReason")
   beasiswaSeragamPct Int            @default(0)
   beasiswaSppPct     Int            @default(0)
   beasiswaDppPct     Int            @default(0)
@@ -84,6 +84,7 @@ model Student {
   class              Class          @relation(fields: [classId], references: [id])
   user               User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
   tagihans           Tagihan[]
+  virtualAccountTransactions VirtualAccountTransaction[]
 
   @@index([classId])
 }
@@ -270,6 +271,7 @@ model Tagihan {
   payments      Payment[]
   paymentProofs PaymentProof[]
   student       Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  virtualAccountTransactions VirtualAccountTransaction[]
 
   @@index([studentId, status])
   @@index([year, month, status])
@@ -363,7 +365,7 @@ model ProgramConfig {
   code            String   @unique
   name            String
   defaultSpp      Float    @default(0)
-  defaultDiscount Float    @default(0)
+  defaultBeasiswa Float    @default(0) @map("defaultDiscount")
   description     String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -391,6 +393,26 @@ model DanaBantuan {
   @@index([tanggal])
   @@index([kategori])
   @@index([isSynced])
+}
+
+model VirtualAccountTransaction {
+  id         String    @id @default(uuid())
+  studentId  String
+  tagihanId  String?
+  vaNumber   String
+  bankCode   String
+  amount     Float
+  status     String    @default("PENDING")
+  reference  String    @unique
+  paidAt     DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  student    Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tagihan    Tagihan?  @relation(fields: [tagihanId], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@index([tagihanId])
+  @@index([reference])
 }
 
 

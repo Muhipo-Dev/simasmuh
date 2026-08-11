@@ -19,6 +19,7 @@ import {
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { confirmDelete } from '@/lib/swal-helper'
 import PaymentProofVerificationPage from '../verifikasi-pembayaran/page'
 
 // ============================================================
@@ -40,8 +41,8 @@ type StudentSummary = {
   program?: string | null
   gelombang?: string | null
   jalurPendaftaran?: string | null
-  discountPercentage?: number
-  discountReason?: string | null
+  beasiswaPercentage?: number
+  beasiswaReason?: string | null
   beasiswaSeragamPct?: number
   beasiswaSppPct?: number
   beasiswaDppPct?: number
@@ -52,8 +53,8 @@ type StudentDetail = {
   className: string; gender: string; tagihans: Tagihan[]
   class: { name: string }
   program?: string | null
-  discountPercentage?: number
-  discountReason?: string | null
+  beasiswaPercentage?: number
+  beasiswaReason?: string | null
 }
 
 type Rekap = {
@@ -435,11 +436,20 @@ function TagihanModal({
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); resetForm() } }}>
-        <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+        <DialogContent showCloseButton={false} className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
           {/* Header Banner Modern */}
-          <div className="shrink-0 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-5 sm:p-6 text-white shadow-md">
-            <DialogHeader className="space-y-1 pb-0">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="shrink-0 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-5 sm:p-6 text-white shadow-md relative">
+            {/* Custom Close Button inside dark header */}
+            <button
+              onClick={() => { onClose(); resetForm() }}
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 rounded-xl w-8 h-8 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all focus:outline-none z-10"
+            >
+              <X className="w-4 h-4" />
+              <span className="sr-only">Tutup</span>
+            </button>
+
+            <DialogHeader className="space-y-1 pb-4 border-b border-white/10 dark:border-white/10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-8 sm:pr-12">
                 <div className="space-y-1">
                   <DialogTitle className="flex items-center gap-3 text-white text-lg sm:text-xl font-black">
                     <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
@@ -2409,8 +2419,8 @@ function TabTagihan() {
                   beasiswaSeragamPct: beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? beasiswaSeragamVal : 0,
                   beasiswaSppPct: beasiswaSppVal,
                   beasiswaDppPct: beasiswaDppVal,
-                  discountPercentage: beasiswaSppVal,
-                  discountReason: beasiswaReason,
+                  beasiswaPercentage: beasiswaSppVal,
+                  beasiswaReason: beasiswaReason,
                 })
               }}
               disabled={updateBeasiswaMutation.isPending}
@@ -2758,19 +2768,10 @@ function TabDanaBantuan() {
   }
 
   const handleDelete = (item: DanaBantuanItem) => {
-    Swal.fire({
+    confirmDelete({
       title: 'Hapus Data Bantuan?',
       text: `Apakah Anda yakin ingin menghapus "${item.namaBantuan}"?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Ya, Hapus',
-      cancelButtonText: 'Batal'
-    }).then((res) => {
-      if (res.isConfirmed) {
-        deleteMutation.mutate(item.id)
-      }
+      onConfirm: () => deleteMutation.mutateAsync(item.id)
     })
   }
 

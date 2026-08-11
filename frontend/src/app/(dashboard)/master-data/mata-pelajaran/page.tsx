@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImportProgressDialog, ImportProgressState } from '@/components/ImportProgressDialog'
+import Swal from 'sweetalert2'
+import { confirmDelete } from '@/lib/swal-helper'
 
 const CHUNK_SIZE = 20
 
@@ -235,25 +237,33 @@ export default function SubjectsPage() {
     }
   }
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.length === 0) return
-    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} mata pelajaran terpilih?`)) return
-
-    setIsSubmittingBulk(true)
-    try {
-      await Promise.all(
-        selectedIds.map(id =>
-          authenticatedFetch(`/api-backend/subjects/${id}`, { method: 'DELETE' })
-        )
-      )
-      queryClient.invalidateQueries({ queryKey: ['subjects'] })
-      setSelectedIds([])
-      alert('Berhasil menghapus mata pelajaran terpilih!')
-    } catch (err: any) {
-      alert('Gagal menghapus mata pelajaran terpilih.')
-    } finally {
-      setIsSubmittingBulk(false)
-    }
+    confirmDelete({
+      title: 'Hapus Mapel Terpilih?',
+      text: `Apakah Anda yakin ingin menghapus ${selectedIds.length} mata pelajaran terpilih secara permanen?`,
+      onConfirm: async () => {
+        setIsSubmittingBulk(true)
+        try {
+          await Promise.all(
+            selectedIds.map(id =>
+              authenticatedFetch(`/api-backend/subjects/${id}`, { method: 'DELETE' })
+            )
+          )
+          queryClient.invalidateQueries({ queryKey: ['subjects'] })
+          setSelectedIds([])
+          Swal.fire({
+            title: 'Berhasil!',
+            text: 'Berhasil menghapus mata pelajaran terpilih!',
+            icon: 'success',
+            timer: 1850,
+            showConfirmButton: false,
+          })
+        } finally {
+          setIsSubmittingBulk(false)
+        }
+      }
+    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -531,9 +541,20 @@ export default function SubjectsPage() {
                             size="icon" 
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             onClick={() => {
-                              if(confirm('Yakin ingin menghapus mata pelajaran ini?')) {
-                                deleteMutation.mutate(item.id)
-                              }
+                              confirmDelete({
+                                title: 'Hapus Mapel?',
+                                text: 'Apakah Anda yakin ingin menghapus mata pelajaran ini?',
+                                onConfirm: async () => {
+                                  await deleteMutation.mutateAsync(item.id)
+                                  Swal.fire({
+                                    title: 'Berhasil!',
+                                    text: 'Mata pelajaran berhasil dihapus!',
+                                    icon: 'success',
+                                    timer: 1500,
+                                    showConfirmButton: false,
+                                  })
+                                }
+                              })
                             }}
                           >
                             <Trash2 className="w-4 h-4" />

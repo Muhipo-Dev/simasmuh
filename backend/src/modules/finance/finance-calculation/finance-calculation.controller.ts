@@ -64,32 +64,32 @@ export class FinanceCalculationController {
   }
 
   // ============================================================
-  // DISCOUNT CALCULATIONS
+  // BEASISWA CALCULATIONS
   // ============================================================
 
-  @Post('discount/:studentId')
+  @Post('beasiswa/:studentId')
   @RequirePermissions(PaymentPermission.VIEW_ALL_BILLS)
-  async calculateDiscount(
+  async calculateBeasiswa(
     @Param('studentId') studentId: string,
-    @Body() body: { originalAmount: number; discountType?: string },
+    @Body() body: { originalAmount: number; beasiswaType?: string },
   ) {
-    return this.financeCalculationService.calculateStudentDiscount(
+    return this.financeCalculationService.calculateStudentBeasiswa(
       studentId,
       body.originalAmount,
-      body.discountType,
+      body.beasiswaType,
     );
   }
 
-  @Post('discount/:studentId/final')
+  @Post('beasiswa/:studentId/final')
   @RequirePermissions(PaymentPermission.VIEW_ALL_BILLS)
   async calculateFinalBill(
     @Param('studentId') studentId: string,
-    @Body() body: { baseAmount: number; applicableDiscounts?: string[] },
+    @Body() body: { baseAmount: number; applicableBeasiswa?: string[] },
   ) {
     return this.financeCalculationService.calculateFinalBillAmount(
       studentId,
       body.baseAmount,
-      body.applicableDiscounts,
+      body.applicableBeasiswa,
     );
   }
 

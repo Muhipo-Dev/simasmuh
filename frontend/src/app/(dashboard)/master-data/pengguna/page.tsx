@@ -29,7 +29,6 @@ type User = {
 
 export const SUB_ROLE_OPTIONS = [
   { value: 'NONE', label: 'Tanpa Sub Role' },
-  { value: 'BAU', label: 'BAU (Badan Administrasi Umum)' },
   { value: 'ADMIN_TU', label: 'BAU (Badan Administrasi Umum)' },
   { value: 'GURU', label: 'Guru' },
   { value: 'PEGAWAI', label: 'Pegawai / Karyawan' },
@@ -50,7 +49,6 @@ export const SUB_ROLE_OPTIONS = [
 ]
 
 export const SUB_ROLE_LABELS: Record<string, string> = {
-  BAU: 'BAU (Badan Administrasi Umum)',
   ADMIN_TU: 'BAU (Badan Administrasi Umum)',
   TATA_USAHA: 'BAU (Badan Administrasi Umum)',
   GURU: 'Guru',
@@ -388,7 +386,6 @@ export default function UsersPage() {
                   <SelectContent>
                     <SelectItem value="GURU">GURU (Guru)</SelectItem>
                     <SelectItem value="PEGAWAI">PEGAWAI (Karyawan / Staf)</SelectItem>
-                    <SelectItem value="BAU">BAU (Badan Administrasi Umum)</SelectItem>
                     <SelectItem value="ADMIN_TU">ADMIN TU (BAU)</SelectItem>
                     <SelectItem value="SUPERADMIN">SUPERADMIN</SelectItem>
                     <SelectItem value="ADMIN_IT">ADMIN IT</SelectItem>

@@ -23,6 +23,13 @@ type Class = {
   name: string
   gradeLevel: number
   academicYear: string
+  homeroomTeacherId?: string
+  homeroomTeacher?: {
+    id: string
+    user?: {
+      name: string
+    }
+  }
   _count: { students: number }
 }
 
@@ -69,7 +76,7 @@ export default function ClassesPage() {
   })
 
   const activeAcademicYear = systemSettings?.academicYear || '2026/2027'
-  const [formData, setFormData] = useState<{ name: string; gradeLevel: string; academicYear: string }>({ name: '', gradeLevel: '10', academicYear: activeAcademicYear })
+  const [formData, setFormData] = useState<{ name: string; gradeLevel: string; academicYear: string; homeroomTeacherId: string }>({ name: '', gradeLevel: '10', academicYear: activeAcademicYear, homeroomTeacherId: '' })
 
   useEffect(() => {
     if (systemSettings?.academicYear && !isEdit) {
@@ -87,6 +94,15 @@ export default function ClassesPage() {
     }
   })
 
+  const { data: teachers } = useQuery({
+    queryKey: ['teachers'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/teachers')
+      if (!res.ok) throw new Error('Gagal memuat data guru')
+      return res.json() as Promise<any[]>
+    }
+  })
+
   const createMutation = useMutation({
     mutationFn: async (newClass: any) => {
       const res = await authenticatedFetch('/api-backend/classes', {
@@ -100,7 +116,7 @@ export default function ClassesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] })
       setOpen(false)
-      setFormData({ name: '', gradeLevel: '10', academicYear: activeAcademicYear })
+      setFormData({ name: '', gradeLevel: '10', academicYear: activeAcademicYear, homeroomTeacherId: '' })
     }
   })
 
@@ -117,9 +133,14 @@ export default function ClassesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] })
       setOpen(false)
-      setFormData({ name: '', gradeLevel: '10', academicYear: activeAcademicYear })
+      setFormData({ name: '', gradeLevel: '10', academicYear: activeAcademicYear, homeroomTeacherId: '' })
     }
   })
+// ... sisa code untuk chunked upload dsb ... (mari sesuaikan dengan replace)
+// Tunggu, replace_file_content harus spesifik. Mari kita cari target content yang tepat untuk diganti.
+// Let's replace the whole file from type Class down to the end of state declaration, but we can do it chunks or the whole thing.
+// Kita akan ganti dari line 21 ke 122 dulu.
+
 
   // Chunked upload handler untuk kelas
   const runChunkedUpload = async (allRows: any[]) => {
@@ -292,7 +313,8 @@ export default function ClassesPage() {
     const payload = {
       name: formData.name,
       gradeLevel: parseInt(formData.gradeLevel),
-      academicYear: formData.academicYear
+      academicYear: formData.academicYear,
+      homeroomTeacherId: formData.homeroomTeacherId || null
     }
     if (isEdit) {
       updateMutation.mutate(payload)
@@ -352,7 +374,7 @@ export default function ClassesPage() {
             if (!val) {
               setIsEdit(false)
               setEditId('')
-              setFormData({ name: '', gradeLevel: '10', academicYear: activeAcademicYear })
+              setFormData({ name: '', gradeLevel: '10', academicYear: activeAcademicYear, homeroomTeacherId: '' })
             }
           }}>
             <DialogTrigger render={
@@ -405,6 +427,25 @@ export default function ClassesPage() {
                       onChange={(e) => setFormData(prev => ({ ...prev, academicYear: e.target.value }))}
                       required 
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="homeroomTeacher">Wali Kelas</Label>
+                    <Select 
+                      value={formData.homeroomTeacherId || "none"} 
+                      onValueChange={(val: string) => setFormData(prev => ({ ...prev, homeroomTeacherId: val === "none" ? "" : val }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Wali Kelas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Belum Ditentukan</SelectItem>
+                        {teachers?.map((t: any) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.user?.name || 'Tanpa Nama'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <DialogFooter>
@@ -573,6 +614,7 @@ export default function ClassesPage() {
                 <TableHead>Nama Kelas</TableHead>
                 <TableHead>Tingkat</TableHead>
                 <TableHead>Tahun Ajaran</TableHead>
+                <TableHead>Wali Kelas</TableHead>
                 <TableHead>Jumlah Siswa</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
@@ -580,14 +622,14 @@ export default function ClassesPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Memuat data...
                   </TableCell>
                 </TableRow>
               ) : filterDataBySearch(classes, searchQuery)?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                     {searchQuery ? 'Tidak ada data kelas yang sesuai dengan pencarian.' : 'Belum ada data kelas.'}
                   </TableCell>
                 </TableRow>
@@ -607,6 +649,11 @@ export default function ClassesPage() {
                       <TableCell className="font-semibold text-slate-900 dark:text-white">{item.name}</TableCell>
                       <TableCell>Kelas {item.gradeLevel}</TableCell>
                       <TableCell className="text-slate-600 dark:text-slate-300">{item.academicYear}</TableCell>
+                      <TableCell className="font-medium text-slate-700 dark:text-slate-350">
+                        {item.homeroomTeacher?.user?.name || (
+                          <span className="text-slate-400 italic text-xs">Belum Ditentukan</span>
+                        )}
+                      </TableCell>
                       <TableCell>{item._count?.students || 0} Siswa</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -620,7 +667,8 @@ export default function ClassesPage() {
                               setFormData({
                                 name: item.name,
                                 gradeLevel: item.gradeLevel.toString(),
-                                academicYear: item.academicYear || activeAcademicYear
+                                academicYear: item.academicYear || activeAcademicYear,
+                                homeroomTeacherId: item.homeroomTeacherId || ''
                               })
                               setOpen(true)
                             }}

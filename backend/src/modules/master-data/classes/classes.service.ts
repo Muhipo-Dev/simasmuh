@@ -11,6 +11,11 @@ export class ClassesService {
         _count: {
           select: { students: true },
         },
+        homeroomTeacher: {
+          include: {
+            user: true,
+          },
+        },
       },
     });
   }
@@ -23,6 +28,11 @@ export class ClassesService {
         schedules: {
           include: { subject: true },
         },
+        homeroomTeacher: {
+          include: {
+            user: true,
+          },
+        },
       },
     });
   }
@@ -31,12 +41,13 @@ export class ClassesService {
     name: string;
     gradeLevel: number;
     academicYear: string;
+    homeroomTeacherId?: string;
   }) {
     return this.prisma.class.create({ data });
   }
 
   async createBulk(
-    dataArray: { name: string; gradeLevel: number; academicYear: string }[],
+    dataArray: { name: string; gradeLevel: number; academicYear: string; homeroomTeacherId?: string }[],
   ) {
     return this.prisma.$transaction(
       dataArray.map((data) => this.prisma.class.create({ data })),
@@ -45,7 +56,7 @@ export class ClassesService {
 
   async update(
     id: string,
-    data: { name?: string; gradeLevel?: number; academicYear?: string },
+    data: { name?: string; gradeLevel?: number; academicYear?: string; homeroomTeacherId?: string },
   ) {
     return this.prisma.class.update({
       where: { id },

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { ClipboardCheck } from 'lucide-react'
+import { ClipboardCheck, CalendarDays } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -18,6 +18,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState<string | false>(false)
   const [error, setError] = useState('')
+  const [academicYear, setAcademicYear] = useState('2026/2027')
+  const [semester, setSemester] = useState('Ganjil')
+
+  useEffect(() => {
+    fetch('/api-backend/settings/public')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.academicYear) setAcademicYear(data.academicYear)
+        if (data?.semester) setSemester(data.semester)
+      })
+      .catch(() => {})
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -73,6 +85,11 @@ export default function LoginPage() {
           </div>
         </Link>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-[11px] sm:text-xs shadow-2xs">
+            <CalendarDays className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
+            <span>TA: {academicYear}</span>
+            {semester && <span className="hidden sm:inline font-medium text-[10px]">({semester})</span>}
+          </div>
           <Link
             href="/presensi-pegawai"
             className="h-9 px-3 text-xs font-bold border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 rounded-xl transition-all flex items-center gap-1.5"
@@ -111,8 +128,11 @@ export default function LoginPage() {
           <CardTitle className="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
             SIMASMUH
           </CardTitle>
-          <CardDescription className="text-slate-600 dark:text-slate-300 font-semibold text-xs sm:text-sm">
-            Portal Manajemen Informasi SMA MUHIPO
+          <CardDescription className="text-slate-600 dark:text-slate-300 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 flex-wrap">
+            <span>Portal Manajemen Informasi SMA MUHIPO</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-[10px] font-bold">
+              T.A. {academicYear} {semester ? `(${semester})` : ''}
+            </span>
           </CardDescription>
         </CardHeader>
 

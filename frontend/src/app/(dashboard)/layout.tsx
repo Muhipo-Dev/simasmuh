@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import NextImage from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { LogOut, Menu, X, MoreHorizontal, LayoutDashboard, QrCode } from 'lucide-react'
+import { LogOut, Menu, X, MoreHorizontal, LayoutDashboard, QrCode, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useQuery } from '@tanstack/react-query'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
@@ -24,6 +24,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     queryKey: ['profile', userId],
     queryFn: () => userId ? authenticatedQuery(`/api-backend/users/${userId}/profile`) : Promise.resolve(null),
     enabled: !!userId,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const { data: systemSettings } = useQuery<{ academicYear?: string; semester?: string }>({
+    queryKey: ['system-settings'],
+    queryFn: () => authenticatedQuery('/api-backend/settings'),
     staleTime: 1000 * 60 * 5,
   })
 
@@ -152,8 +158,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
           </div>
           
-          {/* KANAN: Theme Toggle, Profile, Logout */}
-          <div className="flex items-center gap-3 lg:gap-6">
+          {/* KANAN: Tahun Ajaran Badge, Theme Toggle, Profile, Logout */}
+          <div className="flex items-center gap-2 sm:gap-3 lg:gap-6">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs">
+              <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span>TA: {systemSettings?.academicYear || '2026/2027'}</span>
+              {systemSettings?.semester && (
+                <span className="hidden sm:inline text-[11px] opacity-85 font-medium">({systemSettings.semester})</span>
+              )}
+            </div>
+
             <div className="hidden lg:block border-r border-slate-200 dark:border-slate-700 pr-6">
               <ThemeToggle />
             </div>

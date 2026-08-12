@@ -146,25 +146,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       <main className={`flex-1 flex flex-col min-h-dvh w-full overflow-x-hidden ${hideSidebar ? '' : 'lg:ml-72'}`}>
-        <header className="h-16 lg:h-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-12 sticky top-0 z-40 shadow-sm transition-colors duration-300">
+        <header className="h-16 lg:h-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-3 sm:px-6 lg:px-12 sticky top-0 z-40 shadow-xs transition-colors duration-300">
           {/* KIRI: Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {hideSidebar ? (
-              <NextImage src="/pic_logo.png" alt="Logo SIMASMUH" width={150} height={50} className="object-contain h-10 lg:h-12 w-auto" />
+              <NextImage src="/pic_logo.png" alt="Logo SIMASMUH" width={150} height={50} className="object-contain h-8 sm:h-10 lg:h-12 w-auto" />
             ) : (
               <div className="flex items-center">
-                <NextImage src="/pic_logo.png" alt="Logo SIMASMUH" width={120} height={36} className="object-contain h-8 lg:h-10 w-auto" />
+                <NextImage src="/pic_logo.png" alt="Logo SIMASMUH" width={120} height={36} className="object-contain h-7 sm:h-8 lg:h-10 w-auto" />
               </div>
             )}
           </div>
           
           {/* KANAN: Tahun Ajaran Badge, Theme Toggle, Profile, Logout */}
-          <div className="flex items-center gap-2 sm:gap-3 lg:gap-6">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs">
-              <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+          <div className="flex items-center gap-1.5 sm:gap-3 lg:gap-6">
+            <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-[10px] sm:text-xs shadow-2xs shrink-0">
+              <CalendarDays className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
               <span>TA: {systemSettings?.academicYear || '2026/2027'}</span>
               {systemSettings?.semester && (
-                <span className="hidden sm:inline text-[11px] opacity-85 font-medium">({systemSettings.semester})</span>
+                <span className="hidden md:inline text-[11px] opacity-85 font-medium">({systemSettings.semester})</span>
               )}
             </div>
 

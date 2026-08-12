@@ -331,15 +331,15 @@ export default function ClassesPage() {
     <ImportProgressDialog
       open={importDialogOpen}
       state={importProgress}
-      templateFileName="template_kelas.xlsx"
-      templateExample={{ 'Nama Kelas': 'X IPA 1', 'Tingkat Kelas': 10, 'Tahun Ajaran': activeAcademicYear }}
+      templateFileName="template_import_kelas.xlsx"
+      templateExample={{ 'Nama Kelas *': 'XI 2', 'Tingkat Kelas (10/11/12) *': 11, 'Tahun Ajaran *': activeAcademicYear }}
       destination="Tabel Kelas (classes)"
       customParser={(rawData) =>
         rawData
           .map((row: any) => ({
-            name: String(row['Nama Kelas'] || '').trim(),
-            gradeLevel: parseInt(String(row['Tingkat Kelas'] || '10')) || 10,
-            academicYear: String(row['Tahun Ajaran'] || activeAcademicYear).trim(),
+            name: String(row['Nama Kelas *'] || row['Nama Kelas'] || '').trim(),
+            gradeLevel: parseInt(String(row['Tingkat Kelas (10/11/12) *'] || row['Tingkat Kelas'] || '10')) || 10,
+            academicYear: String(row['Tahun Ajaran *'] || row['Tahun Ajaran'] || activeAcademicYear).trim(),
           }))
           .filter((r: any) => r.name)
       }
@@ -419,14 +419,15 @@ export default function ClassesPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="academicYear">Tahun Pelajaran</Label>
+                    <Label htmlFor="academicYear">Tahun Pelajaran (Otomatis dari Sistem)</Label>
                     <Input 
                       id="academicYear" 
-                      placeholder="Contoh: 2026/2027" 
-                      value={formData.academicYear}
-                      onChange={(e) => setFormData(prev => ({ ...prev, academicYear: e.target.value }))}
-                      required 
+                      value={formData.academicYear || activeAcademicYear}
+                      disabled
+                      readOnly
+                      className="bg-slate-100 dark:bg-slate-800 text-slate-500 font-semibold cursor-not-allowed"
                     />
+                    <p className="text-[11px] text-slate-400">Diatur global di Pengaturan Sistem</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="homeroomTeacher">Wali Kelas</Label>
@@ -519,12 +520,15 @@ export default function ClassesPage() {
                       </Label>
                     </div>
                     {bulkEditData.updateAcademicYear && (
-                      <Input 
-                        placeholder="Contoh: 2026/2027" 
-                        value={bulkEditData.academicYear}
-                        onChange={(e) => setBulkEditData(prev => ({ ...prev, academicYear: e.target.value }))}
-                        className="bg-white dark:bg-slate-900 font-semibold"
-                      />
+                      <div className="space-y-1">
+                        <Input 
+                          value={activeAcademicYear}
+                          disabled
+                          readOnly
+                          className="bg-slate-100 dark:bg-slate-800 text-slate-500 font-semibold cursor-not-allowed"
+                        />
+                        <p className="text-[11px] text-slate-400">Tahun pelajaran akan otomatis diperbarui ke versi aktif sistem ({activeAcademicYear})</p>
+                      </div>
                     )}
                   </div>
                 </div>

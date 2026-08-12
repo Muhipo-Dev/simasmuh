@@ -20,11 +20,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const authenticatedQuery = useAuthenticatedQuery()
 
   const userId = (session?.user as { id?: string })?.id
-  const { data: profileData } = useQuery<{ avatarUrl?: string }>({
+  const { data: profileData } = useQuery<{ name?: string; avatarUrl?: string }>({
     queryKey: ['profile', userId],
     queryFn: () => userId ? authenticatedQuery(`/api-backend/users/${userId}/profile`) : Promise.resolve(null),
     enabled: !!userId,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 10,
+    refetchOnWindowFocus: true,
   })
 
   const { data: systemSettings } = useQuery<{ academicYear?: string; semester?: string }>({
@@ -182,11 +183,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {profileData?.avatarUrl ? (
                     <NextImage src={profileData.avatarUrl} alt="Avatar" fill className="object-cover" />
                   ) : (
-                    <span>{(session.user?.name || 'U').charAt(0).toUpperCase()}</span>
+                    <span>{(profileData?.name || session.user?.name || 'U').charAt(0).toUpperCase()}</span>
                   )}
                 </div>
                 <div className="hidden sm:block text-left">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight max-w-[150px] truncate">{session.user?.name}</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight max-w-[150px] truncate">{profileData?.name || session.user?.name}</p>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">{displayRole}</p>
                 </div>
               </Link>

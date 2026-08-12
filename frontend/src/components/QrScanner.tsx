@@ -133,6 +133,21 @@ export function QrScanner({ studentMode = false }: QrScannerProps) {
       setScanResult('success')
       setScanType(resData.scanType || 'MASUK')
       setMessage(resData.message || 'Berhasil mencatat kehadiran!')
+      
+      // Update local todayRecord state immediately so UI updates right away
+      if (resData.scanType === 'MASUK' || resData.checkInTime) {
+        setTodayRecord((prev: any) => ({
+          ...(prev || {}),
+          checkInTime: resData.checkInTime || resData.time || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+          date: resData.date || new Date().toISOString()
+        }))
+      } else if (resData.scanType === 'PULANG' || resData.checkOutTime) {
+        setTodayRecord((prev: any) => ({
+          ...(prev || {}),
+          checkOutTime: resData.checkOutTime || resData.time || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+        }))
+      }
+
       // Refresh history and today queries
       queryClient.invalidateQueries({ queryKey: ['attendance-history'] })
     } catch (error: any) {
@@ -147,11 +162,11 @@ export function QrScanner({ studentMode = false }: QrScannerProps) {
   // Determine current attendance state
   const hasCheckedIn = !!todayRecord?.checkInTime
   const hasCheckedOut = !!todayRecord?.checkOutTime
-  const allDone = hasCheckedIn && (studentMode || hasCheckedOut)
+  const allDone = hasCheckedIn && hasCheckedOut
 
   const scanButtonLabel = !hasCheckedIn
     ? 'Scan Absen Masuk'
-    : !studentMode && !hasCheckedOut
+    : !hasCheckedOut
     ? 'Scan Absen Pulang'
     : 'Absen Selesai Hari Ini'
 
@@ -167,7 +182,7 @@ export function QrScanner({ studentMode = false }: QrScannerProps) {
         <CardDescription>
           {!hasCheckedIn
             ? 'Scan QR untuk mencatat kehadiran masuk Anda'
-            : !studentMode && !hasCheckedOut
+            : !hasCheckedOut
             ? 'Scan QR untuk mencatat kepulangan Anda'
             : 'Kehadiran hari ini sudah lengkap'}
         </CardDescription>
@@ -180,12 +195,10 @@ export function QrScanner({ studentMode = false }: QrScannerProps) {
             <LogIn className="w-3.5 h-3.5" />
             {hasCheckedIn ? `Masuk: ${todayRecord.checkInTime}` : 'Belum Absen Masuk'}
           </div>
-          {!studentMode && (
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${hasCheckedOut ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
-              <LogOut className="w-3.5 h-3.5" />
-              {hasCheckedOut ? `Pulang: ${todayRecord.checkOutTime}` : 'Belum Absen Pulang'}
-            </div>
-          )}
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${hasCheckedOut ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+            <LogOut className="w-3.5 h-3.5" />
+            {hasCheckedOut ? `Pulang: ${todayRecord.checkOutTime}` : 'Belum Absen Pulang'}
+          </div>
         </div>
 
         {/* Camera view */}
@@ -264,7 +277,7 @@ export function QrScanner({ studentMode = false }: QrScannerProps) {
           ) : !isScanning ? (
             <Button
               size="lg"
-              className={`w-full text-white shadow-sm ${hasCheckedIn && !studentMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
+              className={`w-full text-white shadow-sm ${hasCheckedIn ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
               onClick={() => { setIsScanning(true); setScanResult(null) }}
             >
               {scanButtonIcon}

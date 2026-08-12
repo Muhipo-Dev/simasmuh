@@ -55,6 +55,7 @@ export class StudentsService {
             gelombang: data.gelombang || 'Gelombang 1',
             jalurPendaftaran: data.jalurPendaftaran || 'Mandiri',
             program: data.program || null,
+            bioData: data.bioData ? (typeof data.bioData === 'string' ? data.bioData : JSON.stringify(data.bioData)) : null,
           } as any,
         },
       },
@@ -93,6 +94,7 @@ export class StudentsService {
                   name: data.name,
                   gender: data.gender,
                   classId: data.classId,
+                  ...(data.bioData ? { bioData: typeof data.bioData === 'string' ? data.bioData : JSON.stringify(data.bioData) } : {}),
                   // CATATAN: program TIDAK diupdate pada upsert agar tidak override
                   // label program yang sudah diset manual oleh SUPERADMIN.
                   // Program dari Excel hanya berlaku saat CREATE pertama kali.
@@ -103,6 +105,7 @@ export class StudentsService {
                   name: data.name,
                   gender: data.gender,
                   classId: data.classId,
+                  ...(data.bioData ? { bioData: typeof data.bioData === 'string' ? data.bioData : JSON.stringify(data.bioData) } : {}),
                   // program dari Excel disimpan saat CREATE pertama kali saja
                   ...(data.program ? { program: data.program } : {}),
                 },
@@ -121,6 +124,7 @@ export class StudentsService {
                 name: data.name,
                 gender: data.gender,
                 classId: data.classId,
+                ...(data.bioData ? { bioData: typeof data.bioData === 'string' ? data.bioData : JSON.stringify(data.bioData) } : {}),
                 ...(data.program ? { program: data.program } : {}),
               },
             },
@@ -147,6 +151,7 @@ export class StudentsService {
         nis: data.nis,
         name: data.name,
         gender: data.gender,
+        ...(data.bioData !== undefined && { bioData: typeof data.bioData === 'string' ? data.bioData : JSON.stringify(data.bioData) }),
         ...(data.gelombang !== undefined && { gelombang: data.gelombang }),
         ...(data.jalurPendaftaran !== undefined && { jalurPendaftaran: data.jalurPendaftaran }),
         ...(data.program !== undefined && { program: data.program }),

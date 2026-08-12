@@ -140,7 +140,19 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
   })
 
   const allTagihans = tagihanData?.tagihans || []
-  const tagihans = allTagihans.filter((t: any) => !t.paymentProofs || t.paymentProofs.length === 0)
+  const tagihans = allTagihans.filter((t: any) => {
+    // Jika tidak ada bukti pembayaran sama sekali, wajib muncul
+    if (!t.paymentProofs || t.paymentProofs.length === 0) return true;
+    
+    // Jika ada bukti pembayaran yang "MENUNGGU_VERIFIKASI", sembunyikan (tidak boleh double upload sampai diverifikasi/ditolak)
+    const hasPending = t.paymentProofs.some((p: any) => p.status === 'MENUNGGU_VERIFIKASI');
+    if (hasPending) return false;
+
+    // Jika semua bukti pembayaran sudah diproses (DIVERIFIKASI / DITOLAK), cek sisa tagihannya
+    const paid = t.amountPaid || 0;
+    const remaining = Math.max(0, t.amount - paid);
+    return remaining > 0;
+  })
   const studentInfo = tagihanData?.student
 
   const activeAngsurans = tagihans.filter(t => (t.amountPaid || 0) > 0 || t.status === 'ANGSURAN')
@@ -296,7 +308,7 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
     })
   }
 
-  const totalTagihan = tagihans.reduce((sum, t) => sum + t.amount, 0)
+  const totalTagihan = tagihans.reduce((sum, t) => sum + Math.max(0, t.amount - (t.amountPaid || 0)), 0)
 
   if (!open) return null
 

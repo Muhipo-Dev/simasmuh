@@ -2132,7 +2132,7 @@ function TabTagihan() {
             <Table>
               <TableHeader className="bg-slate-100/70 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 font-bold">
                 <TableRow>
-                  <TableHead className="w-10 text-center px-3 py-3">
+                  <TableHead className="w-10 text-center px-3 py-3 whitespace-nowrap">
                     <button
                       type="button"
                       onClick={toggleSelectAll}
@@ -2142,26 +2142,25 @@ function TabTagihan() {
                       {isAllSelected ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4" />}
                     </button>
                   </TableHead>
-                  <TableHead className="w-12 text-center">No</TableHead>
-                  <TableHead>Nama Siswa</TableHead>
-                  <TableHead className="text-center">Status Tagihan</TableHead>
-                  <TableHead className="text-center">SPP Lunas</TableHead>
-                  <TableHead className="text-right">Total Tagihan</TableHead>
-                  <TableHead className="text-right">Total Sudah Lunas</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
+                  <TableHead className="w-12 text-center whitespace-nowrap">No</TableHead>
+                  <TableHead className="whitespace-nowrap">Nama Siswa</TableHead>
+                  <TableHead className="text-center whitespace-nowrap">Status Tagihan</TableHead>
+                  <TableHead className="text-center whitespace-nowrap">SPP Lunas</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Total Tagihan</TableHead>
+                  <TableHead className="text-center whitespace-nowrap">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-16">
+                    <TableCell colSpan={7} className="text-center py-16">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
                       <p className="text-slate-500 text-sm">Memuat data...</p>
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-16 text-slate-400">
+                    <TableCell colSpan={7} className="text-center py-16 text-slate-400">
                       {search || filterKelas ? 'Tidak ditemukan.' : 'Belum ada data siswa.'}
                     </TableCell>
                   </TableRow>
@@ -2169,7 +2168,7 @@ function TabTagihan() {
                   const isChecked = selectedStudentIds.includes(s.id);
                   return (
                     <TableRow key={s.id} className={`transition-colors ${isChecked ? 'bg-blue-50/50 dark:bg-blue-950/20' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/50'}`}>
-                      <TableCell className="text-center px-3 py-3">
+                      <TableCell className="text-center px-3 py-3 whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => toggleSelectStudent(s.id)}
@@ -2178,8 +2177,8 @@ function TabTagihan() {
                           {isChecked ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4" />}
                         </button>
                       </TableCell>
-                      <TableCell className="text-center text-slate-400 font-medium text-sm">{i + 1}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-center text-slate-400 font-medium text-sm whitespace-nowrap">{i + 1}</TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div className="flex items-center gap-2.5">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
                             {s.name.charAt(0).toUpperCase()}
@@ -2190,24 +2189,21 @@ function TabTagihan() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center whitespace-nowrap">
                         {s.belumLunasCount > 0
-                          ? <span className="font-bold px-2.5 py-1 rounded-lg text-xs bg-red-50 text-red-600 border border-red-100">{s.belumLunasCount} Tagihan Belum Lunas</span>
-                          : <span className="text-emerald-600 font-bold text-xs bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-lg inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> LUNAS</span>
+                          ? <span className="font-bold px-2.5 py-1 rounded-lg text-xs bg-red-50 text-red-600 border border-red-100 inline-block whitespace-nowrap">{s.belumLunasCount} Tagihan</span>
+                          : <span className="text-emerald-600 font-bold text-xs bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3.5 h-3.5" /> LUNAS</span>
                         }
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span className={`font-bold px-2.5 py-1 rounded-lg text-xs ${s.sppLunasCount >= 12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : s.sppLunasCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
+                      <TableCell className="text-center whitespace-nowrap">
+                        <span className={`font-bold px-2.5 py-1 rounded-lg text-xs inline-block whitespace-nowrap ${s.sppLunasCount >= 12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : s.sppLunasCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
                           {s.sppLunasCount}/12 Bulan
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-semibold text-slate-700 dark:text-slate-200 text-sm">
-                        {s.totalTagihan > 0 ? currency(s.totalTagihan) : <span className="text-slate-300">—</span>}
+                      <TableCell className="text-right font-semibold text-slate-700 dark:text-slate-200 text-sm whitespace-nowrap">
+                        {s.sisaTagihan !== undefined && s.sisaTagihan > 0 ? currency(s.sisaTagihan) : <span className="text-slate-300">—</span>}
                       </TableCell>
-                      <TableCell className="text-right font-bold text-emerald-700 dark:text-emerald-400 text-sm">
-                        {s.totalLunas > 0 ? currency(s.totalLunas) : <span className="text-slate-300 font-normal">—</span>}
-                      </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center whitespace-nowrap">
                         <div className="flex justify-center items-center gap-1.5">
                           <Button size="sm" variant="outline"
                             className="border-blue-300 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-xs gap-1.5 h-8 rounded-xl font-bold"

@@ -112,7 +112,7 @@ export const paymentProofMulterConfig = {
   },
   fileFilter: (req: Request, file: Express.Multer.File, cb) => {
     // Payment proofs should be images or PDFs only
-    const allowedMimes = ['image/jpeg', 'image/png', 'application/pdf'];
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
     if (!allowedMimes.includes(file.mimetype)) {
       return cb(

@@ -23,6 +23,8 @@ import { paymentProofMulterConfig } from '../../core/config/multer.config';
 import { FileProcessingInterceptor } from '../../core/interceptors/file-processing.interceptor';
 import { CreatePaymentProofDto } from './dto/create-payment-proof.dto';
 import { VerifyPaymentProofDto } from './dto/verify-payment-proof.dto';
+import { join } from 'path';
+import * as fs from 'fs';
 
 @Controller('payment-proofs')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -45,6 +47,16 @@ export class PaymentProofsController {
     }
 
     const proofUrl = `/uploads/${file.filename}`;
+    const finalPath = join(process.cwd(), 'uploads', file.filename);
+    try {
+      await fs.promises.rename(file.path, finalPath);
+      file.path = finalPath;
+    } catch (moveError) {
+      // Fallback in case rename fails across different filesystems
+      await fs.promises.copyFile(file.path, finalPath);
+      await fs.promises.unlink(file.path);
+      file.path = finalPath;
+    }
 
     return this.paymentProofsService.createProofSecure({
       ...data,

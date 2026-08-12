@@ -75,15 +75,18 @@ export default function PaymentProofVerificationPage() {
     }
   })
 
-  const handleVerification = (status: 'DIVERIFIKASI' | 'DITOLAK') => {
-    if (!verificationNotes.trim()) {
-      Swal.fire({
-        title: 'Error!',
-        text: 'Catatan verifikasi wajib diisi',
-        icon: 'error'
-      })
-      return
-    }
+  const handleVerification = (
+    proofOrStatus: any,
+    statusParam?: 'DIVERIFIKASI' | 'DITOLAK',
+    customNotes?: string
+  ) => {
+    // If first param is string, it's called from Dialog/Modal with (status)
+    const isModalCall = typeof proofOrStatus === 'string';
+    const status = isModalCall ? proofOrStatus as 'DIVERIFIKASI' | 'DITOLAK' : statusParam!;
+    const targetProof = isModalCall ? selectedProof : proofOrStatus;
+    const finalNotes = isModalCall 
+      ? verificationNotes 
+      : (customNotes || (status === 'DIVERIFIKASI' ? 'Bukti pembayaran diverifikasi dan diterima.' : 'Bukti pembayaran ditolak oleh admin keuangan.'));
 
     const actionText = status === 'DIVERIFIKASI' ? 'menyetujui' : 'menolak'
     
@@ -98,9 +101,9 @@ export default function PaymentProofVerificationPage() {
     }).then((result) => {
       if (result.isConfirmed) {
         verifyProofMutation.mutate({
-          paymentProofId: selectedProof?.id,
+          paymentProofId: targetProof?.id,
           status: status,
-          notes: verificationNotes,
+          notes: finalNotes || (status === 'DIVERIFIKASI' ? 'Bukti pembayaran diverifikasi dan diterima.' : 'Bukti pembayaran ditolak oleh admin keuangan.'),
         })
       }
     })
@@ -287,28 +290,39 @@ export default function PaymentProofVerificationPage() {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-col gap-2 shrink-0">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 shrink-0">
                       {proof.proofUrl && (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/70 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                          className="w-full sm:w-auto bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/70 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
                           onClick={() => window.open(proof.proofUrl, '_blank')}
                         >
-                          <Eye className="w-4 h-4 mr-1" /> Lihat File
+                          <Eye className="w-4 h-4 mr-1" /> Lihat Bukti
                         </Button>
                       )}
                       {proof.status === 'MENUNGGU_VERIFIKASI' && (
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setSelectedProof(proof)
-                            setVerificationNotes('')
-                          }}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <Check className="w-4 h-4 mr-1" /> Verifikasi
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              handleVerification(proof, 'DITOLAK', 'Bukti pembayaran ditolak oleh admin keuangan.')
+                            }}
+                            className="w-full sm:w-auto"
+                          >
+                            <X className="w-4 h-4 mr-1" /> Tolak
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              handleVerification(proof, 'DIVERIFIKASI', 'Bukti pembayaran diverifikasi dan diterima.')
+                            }}
+                            className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Check className="w-4 h-4 mr-1" /> Terima
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -434,7 +448,7 @@ export default function PaymentProofVerificationPage() {
             <Button
               variant="destructive"
               onClick={() => handleVerification('DITOLAK')}
-              disabled={verifyProofMutation.isPending || !verificationNotes.trim()}
+              disabled={verifyProofMutation.isPending}
             >
               {verifyProofMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -446,7 +460,7 @@ export default function PaymentProofVerificationPage() {
             <Button
               className="bg-green-600 hover:bg-green-700 text-white"
               onClick={() => handleVerification('DIVERIFIKASI')}
-              disabled={verifyProofMutation.isPending || !verificationNotes.trim()}
+              disabled={verifyProofMutation.isPending}
             >
               {verifyProofMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />

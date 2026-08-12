@@ -81,9 +81,9 @@ const parseDiscountInfo = (notes: string | null) => {
 }
 
 type Tagihan = {
-  id: string; type: string; amount: number
+  id: string; type: string; amount: number; amountPaid?: number
   month: number | null; year: number | null
-  dueDate: string | null; status: 'BELUM_LUNAS' | 'LUNAS'
+  dueDate: string | null; status: 'BELUM_LUNAS' | 'LUNAS' | 'ANGSURAN'
   paidDate: string | null; notes: string | null; createdAt: string
 }
 
@@ -202,17 +202,17 @@ export default function StudentFinancePage() {
   }
 
   const tagihans = student.tagihans ?? []
-  const belumLunas = tagihans.filter(t => t.status === 'BELUM_LUNAS')
+  const belumLunas = tagihans.filter(t => t.status === 'BELUM_LUNAS' || t.status === 'ANGSURAN')
   const sudahLunas = tagihans.filter(t => t.status === 'LUNAS')
   const totalTagihan = tagihans.reduce((s, t) => s + t.amount, 0)
   const totalLunas = sudahLunas.reduce((s, t) => s + t.amount, 0)
-  const totalBelumLunas = belumLunas.reduce((s, t) => s + t.amount, 0)
+  const totalBelumLunas = belumLunas.reduce((s, t) => s + Math.max(0, t.amount - (t.amountPaid || 0)), 0)
 
   // Group belum lunas by type
   const belumLunasPerType = PAYMENT_TYPES.map(t => ({
     ...t,
     items: belumLunas.filter(b => b.type === t.value),
-    total: belumLunas.filter(b => b.type === t.value).reduce((s, b) => s + b.amount, 0),
+    total: belumLunas.filter(b => b.type === t.value).reduce((s, b) => s + Math.max(0, b.amount - (b.amountPaid || 0)), 0),
   })).filter(t => t.items.length > 0)
 
   const sudahLunasPerType = PAYMENT_TYPES.map(t => ({
@@ -398,7 +398,17 @@ export default function StudentFinancePage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
-                    <span className="font-extrabold text-red-700 dark:text-red-300 text-base sm:text-lg">{currency(t.amount)}</span>
+                    <span className="font-extrabold text-red-700 dark:text-red-300 text-base sm:text-lg">
+                      {t.amountPaid && t.amountPaid > 0 ? (
+                        <div className="text-right">
+                          <span className="text-xs line-through text-slate-400 block font-normal">{currency(t.amount)}</span>
+                          <span className="text-xs text-slate-500 font-bold block">Sisa Bayar:</span>
+                          <span>{currency(t.amount - t.amountPaid)}</span>
+                        </div>
+                      ) : (
+                        currency(t.amount)
+                      )}
+                    </span>
                     <Button 
                       size="sm"
                       className="h-8 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-xs"

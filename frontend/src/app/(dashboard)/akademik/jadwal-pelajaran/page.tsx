@@ -639,7 +639,11 @@ export default function JadwalPelajaranPage() {
                   onValueChange={(val) => val && setFormData(prev => ({ ...prev, classId: val }))}
                 >
                   <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                    <SelectValue placeholder="Pilih Kelas" />
+                    <SelectValue placeholder="Pilih Kelas">
+                      {classes?.find((c: any) => c.id === formData.classId)
+                        ? `${classes.find((c: any) => c.id === formData.classId).name} (${classes.find((c: any) => c.id === formData.classId).academicYear || 'Aktif'})`
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {(classes || []).map((c: any) => (
@@ -659,7 +663,11 @@ export default function JadwalPelajaranPage() {
                   onValueChange={(val) => val && setFormData(prev => ({ ...prev, subjectId: val }))}
                 >
                   <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                    <SelectValue placeholder="Pilih Mata Pelajaran" />
+                    <SelectValue placeholder="Pilih Mata Pelajaran">
+                      {subjects?.find((s: any) => s.id === formData.subjectId)
+                        ? `${subjects.find((s: any) => s.id === formData.subjectId).name} (${subjects.find((s: any) => s.id === formData.subjectId).code})`
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {(subjects || []).map((s: any) => (
@@ -679,7 +687,11 @@ export default function JadwalPelajaranPage() {
                   onValueChange={(val) => val && setFormData(prev => ({ ...prev, teacherId: val }))}
                 >
                   <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                    <SelectValue placeholder="Pilih Guru Pengampu" />
+                    <SelectValue placeholder="Pilih Guru Pengampu">
+                      {teachers?.find((t: any) => t.id === formData.teacherId)
+                        ? (teachers.find((t: any) => t.id === formData.teacherId).user?.name || teachers.find((t: any) => t.id === formData.teacherId).nipNbm || 'Guru')
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {(teachers || []).map((t: any) => (

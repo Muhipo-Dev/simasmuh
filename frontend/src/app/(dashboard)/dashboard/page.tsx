@@ -277,11 +277,11 @@ export default function DashboardPage() {
     const daysMap = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
 
     // Hitung total tagihan belum lunas
-    const allUnpaid = studentTagihans?.tagihans || []
+    const allUnpaid = (studentTagihans?.tagihans || []).filter((t: any) => t.status === 'BELUM_LUNAS' || t.status === 'ANGSURAN')
     const unpaidTagihans = allUnpaid.filter((t: any) => !t.paymentProofs || t.paymentProofs.length === 0 || t.paymentProofs[0]?.status === 'DITOLAK')
     const verifyingTagihans = allUnpaid.filter((t: any) => t.paymentProofs && t.paymentProofs.length > 0 && t.paymentProofs[0]?.status === 'MENUNGGU_VERIFIKASI')
 
-    const totalUnpaidAmount = allUnpaid.reduce((sum: number, tagihan: any) => sum + tagihan.amount, 0)
+    const totalUnpaidAmount = allUnpaid.reduce((sum: number, tagihan: any) => sum + Math.max(0, tagihan.amount - (tagihan.amountPaid || 0)), 0)
     const formatCurrency = (amount: number) =>
       new Intl.NumberFormat('id-ID', {
         style: 'currency',

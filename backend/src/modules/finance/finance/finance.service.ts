@@ -778,19 +778,42 @@ export class FinanceService {
       }
       const calculatedAmount = Math.round(sppAmount);
 
-      // Create tagihan with SERVER-CALCULATED amount
+      // Calculate scholarship discount if student has beasiswaSppPct set
+      let finalAmount = calculatedAmount;
+      const pct = student.beasiswaSppPct || 0;
+      let notes = dto.notes || `SPP ${dto.month}/${dto.year} - Program: ${student.program || 'reguler'}`;
+      let status = 'BELUM_LUNAS';
+      let paidDate: Date | null = null;
+
+      if (pct > 0) {
+        const beasiswaAmount = Math.round(calculatedAmount * (pct / 100));
+        finalAmount = calculatedAmount - beasiswaAmount;
+        const beasiswaInfo = {
+          originalAmount: calculatedAmount,
+          beasiswaPercentage: pct,
+          beasiswaAmount,
+          finalAmount,
+          reason: student.beasiswaReason || 'Beasiswa',
+        };
+        notes = `${notes ? notes + ' | ' : ''}BEASISWA_INFO: ${JSON.stringify(beasiswaInfo)}`;
+        if (finalAmount === 0) {
+          status = 'LUNAS';
+          paidDate = new Date();
+        }
+      }
+
+      // Create tagihan with SERVER-CALCULATED amount and scholarship applied
       const tagihan = await this.prisma.tagihan.create({
         data: {
           studentId: student.id,
           type: 'SPP',
-          amount: calculatedAmount,
+          amount: finalAmount,
           month: dto.month,
           year: dto.year,
           dueDate,
-          status: 'BELUM_LUNAS',
-          notes:
-            dto.notes ||
-            `SPP ${dto.month}/${dto.year} - Program: ${student.program || 'reguler'}`,
+          status,
+          paidDate,
+          notes,
         },
       });
 
@@ -799,7 +822,7 @@ export class FinanceService {
         studentName: student.name,
         program: student.program || 'reguler',
         baseAmount: dto.amount,
-        finalAmount: calculatedAmount,
+        finalAmount: finalAmount,
         status: 'CREATED',
         tagihanId: tagihan.id,
       });

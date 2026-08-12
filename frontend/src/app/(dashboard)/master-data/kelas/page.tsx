@@ -432,7 +432,7 @@ export default function ClassesPage() {
                     <Label htmlFor="homeroomTeacher">Wali Kelas</Label>
                     <Select 
                       value={formData.homeroomTeacherId || "none"} 
-                      onValueChange={(val: string) => setFormData(prev => ({ ...prev, homeroomTeacherId: val === "none" ? "" : val }))}
+                      onValueChange={(val: string | null) => setFormData(prev => ({ ...prev, homeroomTeacherId: val === "none" || !val ? "" : val }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih Wali Kelas" />

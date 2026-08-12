@@ -191,7 +191,11 @@ export default function TambahJurnalPage() {
                 <Label>Pilih Jadwal Mengajar</Label>
                 <Select value={selectedScheduleId} onValueChange={(v) => setSelectedScheduleId(v || '')} required>
                   <SelectTrigger>
-                    <SelectValue placeholder={loadingSchedules ? "Memuat jadwal..." : "Pilih Jadwal"} />
+                    <SelectValue placeholder={loadingSchedules ? "Memuat jadwal..." : "Pilih Jadwal"}>
+                      {selectedSchedule
+                        ? `${selectedSchedule.class?.name || ''} - ${selectedSchedule.subject?.name || ''} (${selectedSchedule.startTime || ''}-${selectedSchedule.endTime || ''})`
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {(Array.isArray(schedules) ? schedules : []).map(s => (

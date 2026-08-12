@@ -162,7 +162,13 @@ export default function HomeroomJournalsPage() {
                   <div className="space-y-2">
                     <Label>Wali Kelas</Label>
                     <Select value={formData.teacherId} onValueChange={(v) => setFormData({...formData, teacherId: v || ''})} required>
-                      <SelectTrigger><SelectValue placeholder="Pilih Wali Kelas" /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Wali Kelas">
+                          {teachers?.find(t => t.id === formData.teacherId)
+                            ? (teachers.find(t => t.id === formData.teacherId).user?.name || teachers.find(t => t.id === formData.teacherId).nip || 'Wali Kelas')
+                            : undefined}
+                        </SelectValue>
+                      </SelectTrigger>
                       <SelectContent>
                         {teachers?.map(t => <SelectItem key={t.id} value={t.id}>{t.user?.name || t.nip}</SelectItem>)}
                       </SelectContent>

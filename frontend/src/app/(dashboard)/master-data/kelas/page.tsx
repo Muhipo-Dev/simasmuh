@@ -617,7 +617,6 @@ export default function ClassesPage() {
                 </TableHead>
                 <TableHead>Nama Kelas</TableHead>
                 <TableHead>Tingkat</TableHead>
-                <TableHead>Tahun Ajaran</TableHead>
                 <TableHead>Wali Kelas</TableHead>
                 <TableHead>Jumlah Siswa</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
@@ -626,14 +625,14 @@ export default function ClassesPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Memuat data...
                   </TableCell>
                 </TableRow>
               ) : filterDataBySearch(classes, searchQuery)?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                     {searchQuery ? 'Tidak ada data kelas yang sesuai dengan pencarian.' : 'Belum ada data kelas.'}
                   </TableCell>
                 </TableRow>
@@ -652,7 +651,6 @@ export default function ClassesPage() {
                       </TableCell>
                       <TableCell className="font-semibold text-slate-900 dark:text-white">{item.name}</TableCell>
                       <TableCell>Kelas {item.gradeLevel}</TableCell>
-                      <TableCell className="text-slate-600 dark:text-slate-300">{item.academicYear}</TableCell>
                       <TableCell className="font-medium text-slate-700 dark:text-slate-350">
                         {item.homeroomTeacher?.user?.name || (
                           <span className="text-slate-400 italic text-xs">Belum Ditentukan</span>

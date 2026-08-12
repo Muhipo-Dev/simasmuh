@@ -23,10 +23,13 @@ import {
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { getPublicApiUrl } from '@/lib/api-config'
 
 interface StaffAttendance {
   id: string
   name: string
+  role: string
+  nip?: string
   status: string
   checkIn: string
   checkOut: string
@@ -42,6 +45,18 @@ export default function PresensiPegawaiPage() {
   const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'SEMUA' | 'HADIR' | 'BELUM' | 'IZIN'>('SEMUA')
+  const [academicYear, setAcademicYear] = useState('')
+  const [semester, setSemester] = useState('')
+
+  useEffect(() => {
+    fetch(getPublicApiUrl('/settings/public'), { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.academicYear) setAcademicYear(data.academicYear)
+        if (data?.semester) setSemester(data.semester)
+      })
+      .catch(() => {})
+  }, [])
 
   // Default ke tanggal hari ini dalam format YYYY-MM-DD
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -154,6 +169,13 @@ export default function PresensiPegawaiPage() {
           </div>
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
+          {academicYear && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs">
+              <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span>TA: {academicYear}</span>
+              {semester && <span className="hidden sm:inline font-medium text-[11px]">({semester})</span>}
+            </div>
+          )}
           <Link href="/login">
             <Button variant="outline" className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm font-bold border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all shadow-xs flex items-center gap-1.5">
               <ArrowLeft className="w-4 h-4 text-slate-600 dark:text-slate-300 shrink-0" />

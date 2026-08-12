@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, GraduationCap, Users, Building2, LogIn, Menu, Calendar, BookOpen, Trophy, MapPin, Phone, Mail, Globe, Cpu, Music, Briefcase, Microscope } from 'lucide-react';
+import { ArrowRight, GraduationCap, Users, Building2, LogIn, Menu, Calendar, BookOpen, Trophy, MapPin, Phone, Mail, Globe, Cpu, Music, Briefcase, Microscope, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -105,6 +105,13 @@ export default async function Home() {
           <Link href="/berita" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Berita</Link>
 
           <div className="flex items-center gap-4 border-l border-slate-200 dark:border-slate-800 pl-8">
+            {settings?.academicYear && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs">
+                <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span>TA: {settings.academicYear}</span>
+                {settings?.semester && <span className="font-medium text-[11px]">({settings.semester})</span>}
+              </div>
+            )}
             <ThemeToggle />
             <Link href="/login" className="bg-[#2B50A1] hover:bg-[#1f3c7a] dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-5 py-2.5 rounded-full font-bold text-sm flex items-center transition-all shadow-sm hover:shadow-md active:scale-95">
               <LogIn className="w-4 h-4 mr-2" />

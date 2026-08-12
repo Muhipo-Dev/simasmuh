@@ -30,7 +30,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { data: systemSettings } = useQuery<{ academicYear?: string; semester?: string }>({
     queryKey: ['system-settings'],
     queryFn: () => authenticatedQuery('/api-backend/settings'),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 30, // 30 detik agar selalu sinkron dengan pengaturan superadmin
+    refetchOnWindowFocus: true,
   })
 
   const isSuperAdminOnly = superAdminOnlyPaths.some(path => pathname.startsWith(path))

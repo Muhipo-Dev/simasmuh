@@ -125,6 +125,7 @@ export default function SettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] })
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] })
       queryClient.invalidateQueries({ queryKey: ['public-settings'] })
       Swal.fire({
         title: 'Berhasil Disimpan!',

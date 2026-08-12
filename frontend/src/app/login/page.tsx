@@ -132,11 +132,12 @@ export default function LoginPage() {
           <CardTitle className="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
             SIMASMUH
           </CardTitle>
-          <CardDescription className="text-slate-600 dark:text-slate-300 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 flex-wrap">
+          <CardDescription className="text-slate-600 dark:text-slate-300 font-semibold text-xs sm:text-sm flex flex-col items-center justify-center gap-1.5">
             <span>Portal Manajemen Informasi SMA MUHIPO</span>
             {academicYear && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-[10px] font-bold">
-                T.A. {academicYear} {semester ? `(${semester})` : ''}
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100/90 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 text-xs font-extrabold shadow-2xs border border-blue-200 dark:border-blue-700/50 mt-0.5">
+                <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span>Tahun Ajaran: {academicYear} {semester ? `(${semester})` : ''}</span>
               </span>
             )}
           </CardDescription>

@@ -12,17 +12,19 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { ClipboardCheck, CalendarDays } from 'lucide-react'
 
+import { getPublicApiUrl } from '@/lib/api-config'
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState<string | false>(false)
   const [error, setError] = useState('')
-  const [academicYear, setAcademicYear] = useState('2026/2027')
-  const [semester, setSemester] = useState('Ganjil')
+  const [academicYear, setAcademicYear] = useState('')
+  const [semester, setSemester] = useState('')
 
   useEffect(() => {
-    fetch('/api-backend/settings/public')
+    fetch(getPublicApiUrl('/settings/public'), { cache: 'no-store' })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data?.academicYear) setAcademicYear(data.academicYear)
@@ -85,11 +87,13 @@ export default function LoginPage() {
           </div>
         </Link>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-[11px] sm:text-xs shadow-2xs">
-            <CalendarDays className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span>TA: {academicYear}</span>
-            {semester && <span className="hidden sm:inline font-medium text-[10px]">({semester})</span>}
-          </div>
+          {academicYear && (
+            <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-[11px] sm:text-xs shadow-2xs">
+              <CalendarDays className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span>TA: {academicYear}</span>
+              {semester && <span className="hidden sm:inline font-medium text-[10px]">({semester})</span>}
+            </div>
+          )}
           <Link
             href="/presensi-pegawai"
             className="h-9 px-3 text-xs font-bold border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 rounded-xl transition-all flex items-center gap-1.5"
@@ -130,9 +134,11 @@ export default function LoginPage() {
           </CardTitle>
           <CardDescription className="text-slate-600 dark:text-slate-300 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 flex-wrap">
             <span>Portal Manajemen Informasi SMA MUHIPO</span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-[10px] font-bold">
-              T.A. {academicYear} {semester ? `(${semester})` : ''}
-            </span>
+            {academicYear && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-[10px] font-bold">
+                T.A. {academicYear} {semester ? `(${semester})` : ''}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
 

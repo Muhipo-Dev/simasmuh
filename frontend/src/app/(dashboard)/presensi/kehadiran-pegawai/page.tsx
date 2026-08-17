@@ -8,10 +8,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Loader2, CalendarDays, Download, Briefcase } from 'lucide-react'
+import { 
+  Loader2, 
+  CalendarDays, 
+  Download, 
+  Briefcase, 
+  Video, 
+  Radio, 
+  Activity, 
+  CheckCircle2, 
+  Clock, 
+  RefreshCw, 
+  Maximize2, 
+  Power 
+} from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { Badge } from '@/components/ui/badge'
 
 type LogEntry = {
   date: string
@@ -23,6 +37,30 @@ type LogEntry = {
   estimasiPenghasilan: number
 }
 
+interface FaceDetectionLog {
+  id: string
+  timestamp: string
+  userId: string
+  userName: string
+  userRole: string
+  avatarUrl?: string | null
+  identifier: string
+  confidence: number
+  scanType: 'MASUK' | 'PULANG' | 'SUDAH_LENGKAP'
+  message: string
+  cameraName: string
+}
+
+interface FaceCameraConfig {
+  streamSourceType?: string
+  streamUrl: string
+  cameraName: string
+  location: string
+  threshold: number
+  cooldownMinutes: number
+  isActive: boolean
+}
+
 export default function LogKehadiranPegawaiPage() {
   const { data: session } = useSession()
   const userId = (session?.user as any)?.id
@@ -31,6 +69,40 @@ export default function LogKehadiranPegawaiPage() {
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString())
   const [searchQuery, setSearchQuery] = useState('')
+  const [streamKey, setStreamKey] = useState(Date.now())
+  const [streamError, setStreamError] = useState(false)
+
+  // 1. Fetch Config Presensi Camera
+  const { data: cameraConfig } = useQuery<FaceCameraConfig>({
+    queryKey: ['face-attendance-config'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/face-attendance/config')
+      if (!res.ok) return null
+      return res.json()
+    },
+  })
+
+  // 2. Fetch AI Service Status
+  const { data: serviceStatus } = useQuery({
+    queryKey: ['face-attendance-service-status'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/face-attendance/service-status')
+      if (!res.ok) return { isOnline: false, is_running: false }
+      return res.json()
+    },
+    refetchInterval: 3000,
+  })
+
+  // 3. Fetch Live Logs Realtime
+  const { data: liveLogs, refetch: refetchLiveLogs } = useQuery<FaceDetectionLog[]>({
+    queryKey: ['face-attendance-live-logs'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/face-attendance/logs')
+      if (!res.ok) return []
+      return res.json()
+    },
+    refetchInterval: 2500,
+  })
 
   const { data: logs, isLoading } = useQuery<LogEntry[]>({
     queryKey: ['monthly-log-pegawai', userId, selectedYear, selectedMonth],
@@ -125,6 +197,185 @@ export default function LogKehadiranPegawaiPage() {
           >
             <Download className="w-4 h-4 mr-1.5" /> Export Excel
           </Button>
+        </div>
+      </div>
+
+      {/* AREA PREVIEW LIVE REALTIME CAMERA & LOG SCANNER WAJAH */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
+        {/* LEFT: LIVE CAMERA FEED (7 COLS) */}
+        <div className="lg:col-span-7">
+          <Card className="shadow-lg border-slate-800 bg-slate-950 text-white overflow-hidden rounded-2xl">
+            <div className="p-3 sm:p-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="flex h-3 w-3 relative shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                </span>
+                <div className="min-w-0">
+                  <h2 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5 sm:gap-2 truncate">
+                    <span className="truncate">{cameraConfig?.cameraName || 'Camera Presensi AI'}</span>
+                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-slate-700 text-indigo-300 font-mono shrink-0">
+                      {cameraConfig?.streamSourceType || 'LIVE STREAM'}
+                    </Badge>
+                  </h2>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate">
+                    Lokasi: {cameraConfig?.location || 'Gerbang Depan Sekolah'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setStreamError(false)
+                    setStreamKey(Date.now())
+                  }}
+                  title="Refresh Stream"
+                  className="text-slate-400 hover:text-white hover:bg-slate-800 h-7 sm:h-8 px-2"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Video Feed Canvas */}
+            <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden">
+              {!streamError && serviceStatus?.is_running ? (
+                <img
+                  key={streamKey}
+                  src={`http://localhost:8005/video_feed?t=${streamKey}`}
+                  alt="Live Camera Presensi"
+                  className="w-full h-full object-contain"
+                  onError={() => setStreamError(true)}
+                />
+              ) : (
+                <div className="text-center p-6 space-y-3 max-w-sm">
+                  <div className="w-12 h-12 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
+                    <Video className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-bold text-xs sm:text-sm text-slate-200">
+                      {serviceStatus?.isOnline ? 'Camera Standby (Siap Memindai)' : 'AI Service Offline'}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {serviceStatus?.is_running 
+                        ? 'Memuat live feed kamera presensi...' 
+                        : 'Pastikan Microservice AI (Port 8005) sedang aktif di sistem untuk melihat live streaming.'}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setStreamError(false)
+                      setStreamKey(Date.now())
+                    }}
+                    className="h-7 text-xs border-slate-700 text-slate-300 hover:text-white"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                    Hubungkan Ulang
+                  </Button>
+                </div>
+              )}
+
+              <div className="absolute top-2 left-2 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>REALTIME FACE SCANNER</span>
+              </div>
+
+              <div className="absolute bottom-2 right-2 pointer-events-none px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-slate-300 border border-white/10">
+                Threshold: {Math.round((cameraConfig?.threshold || 0.7) * 100)}%
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* RIGHT: REALTIME DETECTION LOGS (5 COLS) */}
+        <div className="lg:col-span-5">
+          <Card className="shadow-lg border-slate-200 dark:border-slate-800 flex flex-col h-[320px] sm:h-[350px] md:h-[390px] rounded-2xl overflow-hidden">
+            <CardHeader className="p-3.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold">
+                    <Activity className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Log Presensi Wajah Realtime</CardTitle>
+                    <CardDescription className="text-[10px]">Aktivitas presensi guru & karyawan hari ini</CardDescription>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => refetchLiveLogs()}
+                  className="h-7 w-7 p-0 text-slate-500"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-2.5 flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 space-y-1.5">
+              {!liveLogs || liveLogs.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-400 space-y-1.5">
+                  <Radio className="w-8 h-8 text-slate-300 dark:text-slate-700 stroke-1 animate-pulse" />
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Menunggu Deteksi Wajah</p>
+                  <p className="text-[10px] text-slate-400 max-w-[200px]">
+                    Presensi otomatis tercatat saat Anda berada di depan kamera.
+                  </p>
+                </div>
+              ) : (
+                liveLogs.map((log, idx) => (
+                  <div
+                    key={log.id || idx}
+                    className={`p-2 rounded-xl transition-all ${
+                      idx === 0
+                        ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/50 shadow-xs'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-900/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="relative">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 flex items-center justify-center border border-white dark:border-slate-700">
+                            {log.avatarUrl ? (
+                              <img src={log.avatarUrl} alt={log.userName} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="font-bold text-slate-600 dark:text-slate-300 text-[10px]">{log.userName.charAt(0)}</span>
+                            )}
+                          </div>
+                          <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900 ${
+                            log.scanType === 'MASUK' ? 'bg-emerald-500' : 'bg-blue-500'
+                          }`} />
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{log.userName}</p>
+                          <p className="text-[10px] text-indigo-700 dark:text-indigo-400 font-medium truncate">{log.userRole}</p>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <Badge className={`text-[9px] font-bold py-0 px-1.5 ${
+                          log.scanType === 'MASUK'
+                            ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 border-none'
+                            : 'bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 border-none'
+                        }`}>
+                          {log.scanType}
+                        </Badge>
+                        <p className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-400 mt-0.5 flex items-center justify-end gap-1">
+                          <Clock className="w-2.5 h-2.5" />
+                          {log.timestamp}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 

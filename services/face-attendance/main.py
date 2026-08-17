@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import uvicorn
 
@@ -59,6 +60,16 @@ def get_status():
         "total_scans_today": worker.total_scans_today,
     }
 
+@app.get("/video_feed")
+def video_feed():
+    """Endpoint HTTP MJPEG streaming real-time live capture YOLOv11."""
+    if not worker.is_running:
+        worker.start()
+    return StreamingResponse(
+        worker.generate_mjpeg_stream(),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
+
 @app.post("/sync-profiles")
 def sync_profiles():
     total, active_vectors = engine.sync_database_from_backend()
@@ -72,12 +83,12 @@ def sync_profiles():
 @app.post("/stream/start")
 def start_stream():
     worker.start()
-    return {"success": True, "message": "Worker RTMP Stream telah dimulai", "status": worker.stream_status}
+    return {"success": True, "message": "Worker RTSP/RTMP Stream telah dimulai", "status": worker.stream_status}
 
 @app.post("/stream/stop")
 def stop_stream():
     worker.stop()
-    return {"success": True, "message": "Worker RTMP Stream telah dihentikan", "status": worker.stream_status}
+    return {"success": True, "message": "Worker RTSP/RTMP Stream telah dihentikan", "status": worker.stream_status}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=SERVICE_PORT)

@@ -95,7 +95,7 @@ export default function LoginPage() {
             </div>
           )}
           <Link
-            href="/presensi-pegawai"
+            href="/presensi-view"
             className="h-9 px-3 text-xs font-bold border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 rounded-xl transition-all flex items-center gap-1.5"
           >
             <ClipboardCheck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />

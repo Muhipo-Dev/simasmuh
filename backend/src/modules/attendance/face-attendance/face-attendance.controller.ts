@@ -42,4 +42,19 @@ export class FaceAttendanceController {
   clearLogs() {
     return this.faceAttendanceService.clearLogs();
   }
+
+  @Get('service-status')
+  getServiceStatus() {
+    return this.faceAttendanceService.getAiServiceStatus();
+  }
+
+  @Post('service/start')
+  startAiService() {
+    return this.faceAttendanceService.startAiWorker();
+  }
+
+  @Post('service/stop')
+  stopAiService() {
+    return this.faceAttendanceService.stopAiWorker();
+  }
 }

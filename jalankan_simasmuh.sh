@@ -10,14 +10,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$SCRIPT_DIR"
 BACKEND_DIR="$ROOT/backend"
 FRONTEND_DIR="$ROOT/frontend"
+FACE_AI_DIR="$ROOT/services/face-attendance"
 
 BACKEND_LOG="$ROOT/backend.log"
 FRONTEND_LOG="$ROOT/frontend.log"
 PRISMA_STUDIO_LOG="$ROOT/prisma-studio.log"
+FACE_AI_LOG="$ROOT/face-ai.log"
 
 BACKEND_PID_FILE="$ROOT/.backend.pid"
 FRONTEND_PID_FILE="$ROOT/.frontend.pid"
 PRISMA_STUDIO_PID_FILE="$ROOT/.prisma-studio.pid"
+FACE_AI_PID_FILE="$ROOT/.face-ai.pid"
 
 # Colors
 C_RESET="\033[0m"
@@ -136,11 +139,13 @@ get_app_status() {
 
     local b_running=false
     local f_running=false
+    local a_running=false
     local s_running=false
     local p_running=false
 
     test_port_listening 3001 && b_running=true
     test_port_listening 3000 && f_running=true
+    test_port_listening 8005 && a_running=true
     test_port_listening 54322 && s_running=true
     test_port_listening 51212 && p_running=true
 
@@ -159,6 +164,13 @@ get_app_status() {
         echo -e "${C_GREEN}AKTIF :3001${C_RESET}               |"
     else
         echo -e "${C_RED}MATI${C_RESET}                      |"
+    fi
+
+    echo -n "  | AI Face Attendance | "
+    if [ "$a_running" = true ]; then
+        echo -e "${C_GREEN}AKTIF (YOLOv11) :8005${C_RESET}     |"
+    else
+        echo -e "${C_GRAY}MATI${C_RESET}                      |"
     fi
 
     echo -n "  | Supabase (Docker)  | "
@@ -348,17 +360,54 @@ start_frontend() {
     return 1
 }
 
+start_face_ai() {
+    write_status "Menjalankan Face Attendance AI Service (Python YOLOv11 di port 8005)..."
+    if test_port_listening 8005; then
+        write_ok "Face AI Service sudah aktif -> http://localhost:8005"
+        return 0
+    fi
+
+    if ! command -v python3 >/dev/null 2>&1 && ! command -v python >/dev/null 2>&1; then
+        write_info "Python runtime tidak terdeteksi. Lewati startup otomatis Face AI."
+        return 1
+    fi
+
+    local py_cmd="python3"
+    command -v python3 >/dev/null 2>&1 || py_cmd="python"
+
+    local a_pid
+    a_pid=$(get_stored_pid "$FACE_AI_PID_FILE")
+    stop_process_by_pid "$a_pid"
+    stop_port_process 8005
+    rm -f "$FACE_AI_PID_FILE" "$FACE_AI_LOG"
+
+    cd "$FACE_AI_DIR"
+    nohup $py_cmd main.py > "$FACE_AI_LOG" 2>&1 &
+    local new_pid=$!
+    echo "$new_pid" > "$FACE_AI_PID_FILE"
+
+    sleep 2
+    if test_port_listening 8005; then
+        write_ok "Face AI Service aktif -> http://localhost:8005"
+        return 0
+    fi
+    write_info "Face AI Service berjalan di latar belakang (port 8005)."
+    return 0
+}
+
 start_apps() {
     local mode="${1:-Production}"
-    write_status "Memulai SIMASMUH + SUPABASE + PRISMA STUDIO ($mode)..."
+    write_status "Memulai SIMASMUH + SUPABASE + PRISMA STUDIO + AI FACE ($mode)..."
     start_supabase_docker || true
     echo ""
-    start_backend "$mode" && start_frontend "$mode" && start_prisma_studio
+    start_backend "$mode" && start_frontend "$mode" && start_face_ai || true
+    start_prisma_studio || true
     echo ""
     echo -e "${C_GREEN}  +==========================================================+"
-    echo -e "  | SIMASMUH + SUPABASE + PRISMA STUDIO AKTIF BERSAMAAN!     |"
+    echo -e "  | SIMASMUH + SUPABASE + PRISMA STUDIO + AI FACE AKTIF!     |"
     echo -e "  | - Aplikasi Web     : http://localhost:3000               |"
     echo -e "  | - Backend API      : http://localhost:3001               |"
+    echo -e "  | - Face AI Service  : http://localhost:8005               |"
     echo -e "  | - Prisma Studio    : http://localhost:51212              |"
     echo -e "  | - Supabase Studio  : http://localhost:54323              |"
     echo -e "  +==========================================================+${C_RESET}"
@@ -369,18 +418,22 @@ stop_apps() {
     local b_pid
     local f_pid
     local p_pid
+    local a_pid
     b_pid=$(get_stored_pid "$BACKEND_PID_FILE")
     f_pid=$(get_stored_pid "$FRONTEND_PID_FILE")
     p_pid=$(get_stored_pid "$PRISMA_STUDIO_PID_FILE")
+    a_pid=$(get_stored_pid "$FACE_AI_PID_FILE")
 
     stop_process_by_pid "$b_pid"
     stop_process_by_pid "$f_pid"
     stop_process_by_pid "$p_pid"
+    stop_process_by_pid "$a_pid"
     stop_port_process 3001
     stop_port_process 3000
+    stop_port_process 8005
     stop_port_process 51212
 
-    rm -f "$BACKEND_PID_FILE" "$FRONTEND_PID_FILE" "$PRISMA_STUDIO_PID_FILE"
+    rm -f "$BACKEND_PID_FILE" "$FRONTEND_PID_FILE" "$PRISMA_STUDIO_PID_FILE" "$FACE_AI_PID_FILE"
     write_ok "Semua layanan berhasil dihentikan."
 }
 
@@ -407,11 +460,18 @@ start_setup_env() {
 
 start_install_dependencies() {
     write_banner
-    write_status "Menginstall dependencies Backend..."
+    write_status "Menginstall dependencies Backend (npm)..."
     (cd "$BACKEND_DIR" && npm install)
 
-    write_status "Menginstall dependencies Frontend..."
+    write_status "Menginstall dependencies Frontend (npm)..."
     (cd "$FRONTEND_DIR" && npm install)
+
+    write_status "Menginstall dependencies Face Attendance AI YOLOv11 (pip)..."
+    if command -v pip3 >/dev/null 2>&1; then
+        (cd "$FACE_AI_DIR" && pip3 install -r requirements.txt) || true
+    elif command -v pip >/dev/null 2>&1; then
+        (cd "$FACE_AI_DIR" && pip install -r requirements.txt) || true
+    fi
 
     write_ok "Instalasi dependencies selesai!"
 }

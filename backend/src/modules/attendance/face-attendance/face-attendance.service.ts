@@ -5,6 +5,7 @@ import { join } from 'path';
 import { STORAGE_ROOT } from '../../core/config/storage.config';
 
 export interface FaceCameraConfig {
+  streamSourceType?: 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO';
   streamUrl: string;
   cameraName: string;
   location: string;
@@ -304,5 +305,36 @@ export class FaceAttendanceService {
   clearLogs() {
     this.recentLogs = [];
     return { success: true, message: 'Log berhasil dikosongkan' };
+  }
+
+  async getAiServiceStatus() {
+    try {
+      const res = await fetch('http://localhost:8005/status', { signal: AbortSignal.timeout(2000) });
+      if (res.ok) {
+        const data = await res.json();
+        return { isOnline: true, ...data };
+      }
+    } catch (err) {
+      // offline
+    }
+    return { isOnline: false, is_running: false, stream_status: 'OFFLINE' };
+  }
+
+  async startAiWorker() {
+    try {
+      const res = await fetch('http://localhost:8005/stream/start', { method: 'POST', signal: AbortSignal.timeout(4000) });
+      return await res.json();
+    } catch (err) {
+      throw new BadRequestException('Microservice AI Python di port 8005 tidak aktif atau tidak dapat dijangkau');
+    }
+  }
+
+  async stopAiWorker() {
+    try {
+      const res = await fetch('http://localhost:8005/stream/stop', { method: 'POST', signal: AbortSignal.timeout(4000) });
+      return await res.json();
+    } catch (err) {
+      throw new BadRequestException('Microservice AI Python di port 8005 tidak aktif atau tidak dapat dijangkau');
+    }
   }
 }

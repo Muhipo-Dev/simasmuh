@@ -35,10 +35,15 @@ import {
   Volume2,
   Clock,
   Radio,
-  Eye
+  Eye,
+  Power,
+  Tv,
+  Film,
+  Globe
 } from 'lucide-react'
 
 interface FaceCameraConfig {
+  streamSourceType?: 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO'
   streamUrl: string
   cameraName: string
   location: string
@@ -85,6 +90,62 @@ interface UsersDatasetResponse {
   }>
 }
 
+interface ServiceStatusResponse {
+  isOnline: boolean
+  is_running?: boolean
+  stream_status?: string
+  stream_url?: string
+  camera_name?: string
+  fps?: number
+  threshold?: number
+  cooldown_minutes?: number
+  users_cached?: number
+  total_scans_today?: number
+}
+
+const STREAM_PRESETS = [
+  {
+    id: 'RTSP',
+    title: 'IP Camera RTSP',
+    description: 'Kamera CCTV, DVR, NVR (Hikvision, Dahua, Tapo, dll)',
+    icon: Video,
+    example: 'rtsp://admin:password@192.168.1.64:554/Streaming/Channels/101',
+    badge: 'RTSP Stream',
+  },
+  {
+    id: 'RTMP',
+    title: 'RTMP Live Stream',
+    description: 'OBS Studio, NGINX RTMP, MediaMTX live broadcast',
+    icon: Radio,
+    example: 'rtmp://127.0.0.1:1935/live/siakad_camera',
+    badge: 'RTMP Ingest',
+  },
+  {
+    id: 'WEBCAM',
+    title: 'Webcam USB / Laptop',
+    description: 'Kamera bawaan komputer / USB webcam lokal (Index 0, 1)',
+    icon: Camera,
+    example: '0',
+    badge: 'Direct USB',
+  },
+  {
+    id: 'HTTP_STREAM',
+    title: 'HTTP / MJPEG Stream',
+    description: 'IP Webcam Android, ESP32-CAM, atau browser stream',
+    icon: Globe,
+    example: 'http://192.168.1.50:8080/video',
+    badge: 'HTTP MJPEG',
+  },
+  {
+    id: 'LOCAL_VIDEO',
+    title: 'File Video Lokal (Simulasi)',
+    description: 'File rekaman MP4 / MKV untuk pengujian & simulasi',
+    icon: Film,
+    example: 'D:/simasmuh_storage/test_presensi.mp4',
+    badge: 'MP4 / MKV',
+  },
+]
+
 export default function FaceAttendanceCameraPage() {
   const queryClient = useQueryClient()
   const authenticatedQuery = useAuthenticatedQuery()
@@ -124,11 +185,18 @@ export default function FaceAttendanceCameraPage() {
     queryFn: () => authenticatedQuery('/api-backend/face-attendance/users-dataset'),
   })
 
-  // 3. Fetch Live Logs (refetches every 2 seconds for real-time scanner feed)
+  // 3. Fetch Live Logs (refetches every 2 seconds)
   const { data: logsData, refetch: refetchLogs } = useQuery<FaceDetectionLog[]>({
     queryKey: ['face-attendance-logs'],
     queryFn: () => authenticatedQuery('/api-backend/face-attendance/logs'),
     refetchInterval: 2000,
+  })
+
+  // 4. Fetch Python AI Service Status (Port 8005)
+  const { data: serviceStatus, refetch: refetchServiceStatus } = useQuery<ServiceStatusResponse>({
+    queryKey: ['face-attendance-service-status'],
+    queryFn: () => authenticatedQuery('/api-backend/face-attendance/service-status'),
+    refetchInterval: 2500,
   })
 
   // Filtered dataset
@@ -183,6 +251,32 @@ export default function FaceAttendanceCameraPage() {
     },
   })
 
+  // Mutation to start AI service worker
+  const { mutate: startServiceWorker, isPending: isStartingWorker } = useMutation({
+    mutationFn: async () => {
+      const res = await authenticatedFetch('/api-backend/face-attendance/service/start', { method: 'POST' })
+      if (!res.ok) throw new Error('Gagal menyalakan AI worker')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+      setStreamError(false)
+      setStreamKey(Date.now())
+    },
+  })
+
+  // Mutation to stop AI service worker
+  const { mutate: stopServiceWorker, isPending: isStoppingWorker } = useMutation({
+    mutationFn: async () => {
+      const res = await authenticatedFetch('/api-backend/face-attendance/service/stop', { method: 'POST' })
+      if (!res.ok) throw new Error('Gagal menghentikan AI worker')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+    },
+  })
+
   // Mutation to clear logs
   const { mutate: clearLogs, isPending: isClearing } = useMutation({
     mutationFn: async () => {
@@ -200,6 +294,17 @@ export default function FaceAttendanceCameraPage() {
   const handleSave = () => {
     if (!currentConfig) return
     updateConfig(currentConfig)
+  }
+
+  const handleSelectPreset = (preset: typeof STREAM_PRESETS[0]) => {
+    setFormConfig((prev) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        streamSourceType: preset.id as any,
+        streamUrl: preset.example,
+      }
+    })
   }
 
   const handleSyncDatabase = async () => {
@@ -233,21 +338,43 @@ export default function FaceAttendanceCameraPage() {
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold uppercase tracking-wider border border-indigo-500/30">
             <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-            Live RTSP Camera Stream & YOLOv11 Face Matcher
+            Live Camera Stream & YOLOv11 Face Matcher (Port 8005)
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Presensi Camera AI</h1>
           <p className="text-slate-300 text-xs md:text-sm max-w-2xl">
-            Area monitoring realtime live capture kamera RTSP dengan pelacakan wajah YOLOv11 dan feed scanner log presensi otomatis.
+            Monitoring realtime live capture berbagai tipe camera (RTSP, RTMP, Webcam, HTTP Stream, Video) dengan deteksi wajah YOLOv11 dan pencatatan presensi otomatis.
           </p>
         </div>
-        <div className="flex flex-row md:flex-col gap-2.5 shrink-0">
-          <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs">
-            <div className={`w-2.5 h-2.5 rounded-full ${currentConfig?.isActive ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-            <span className="font-medium">Status: {currentConfig?.isActive ? 'Aktif' : 'Nonaktif'}</span>
+        
+        {/* Top Control Action Badges */}
+        <div className="flex flex-wrap md:flex-col gap-2.5 shrink-0">
+          {/* AI Microservice Port 8005 Status Pill */}
+          <div className="flex items-center justify-between gap-3 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs">
+            <div className="flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${
+                serviceStatus?.isOnline ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'
+              }`} />
+              <span className="font-semibold">
+                AI Service: {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'Streaming' : 'Siap') : 'Offline'}
+              </span>
+            </div>
+            {serviceStatus?.isOnline && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
+                disabled={isStartingWorker || isStoppingWorker}
+                className="h-6 px-2 text-[10px] bg-white/20 hover:bg-white/30 text-white font-bold rounded-md"
+              >
+                <Power className="w-3 h-3 mr-1" />
+                {serviceStatus?.is_running ? 'Stop' : 'Start'}
+              </Button>
+            )}
           </div>
+
           <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs">
             <Users className="w-3.5 h-3.5 text-indigo-300" />
-            <span className="font-medium">{datasetData?.usersWithPhoto || 0} Profil Wajah Siap</span>
+            <span className="font-medium">{datasetData?.usersWithPhoto || 0} Profil Wajah Terdaftar</span>
           </div>
         </div>
       </div>
@@ -307,7 +434,7 @@ export default function FaceAttendanceCameraPage() {
           }`}
         >
           <HelpCircle className="w-4 h-4" />
-          <span>Panduan RTSP</span>
+          <span>Panduan Stream</span>
         </button>
       </div>
 
@@ -315,7 +442,7 @@ export default function FaceAttendanceCameraPage() {
       {activeTab === 'monitor' && (
         <div className="space-y-6">
           {/* Quick Stats Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="bg-gradient-to-br from-emerald-500 to-teal-700 rounded-xl p-4 text-white shadow-md flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold text-emerald-100 uppercase tracking-wider">Presensi Masuk Hari Ini</p>
@@ -345,9 +472,32 @@ export default function FaceAttendanceCameraPage() {
                 <Activity className="w-6 h-6 text-indigo-400" />
               </div>
             </div>
+
+            <div className="bg-gradient-to-br from-purple-700 to-indigo-900 rounded-xl p-4 text-white shadow-md flex items-center justify-between border border-purple-600/30">
+              <div>
+                <p className="text-xs font-semibold text-purple-200 uppercase tracking-wider">Microservice AI (Port 8005)</p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className={`w-2.5 h-2.5 rounded-full ${serviceStatus?.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+                  <span className="font-bold text-sm">
+                    {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'STREAMING' : 'IDLE') : 'OFFLINE'}
+                  </span>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
+                disabled={isStartingWorker || isStoppingWorker || !serviceStatus?.isOnline}
+                className={`h-8 px-2.5 text-xs font-bold ${
+                  serviceStatus?.is_running ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                } text-white`}
+              >
+                <Power className="w-3.5 h-3.5 mr-1" />
+                {serviceStatus?.is_running ? 'Matikan' : 'Nyalakan'}
+              </Button>
+            </div>
           </div>
 
-          {/* SPLIT SCREEN LAYOUT: LEFT = LIVE RTSP CAPTURE | RIGHT = SCANNER LOGS */}
+          {/* SPLIT SCREEN LAYOUT: LEFT = LIVE CAPTURE STREAM | RIGHT = SCANNER LOGS */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* LEFT BOX (7 COLS): REALTIME LIVE CAPTURE STREAM */}
             <div className="lg:col-span-7 space-y-3">
@@ -403,7 +553,7 @@ export default function FaceAttendanceCameraPage() {
                     <img
                       key={streamKey}
                       src={`http://localhost:8005/video_feed?t=${streamKey}`}
-                      alt="Live Capture RTSP Camera Stream"
+                      alt="Live Capture Camera Stream"
                       className="w-full h-full object-contain"
                       onError={() => setStreamError(true)}
                     />
@@ -414,9 +564,9 @@ export default function FaceAttendanceCameraPage() {
                         <Video className="w-8 h-8 animate-pulse" />
                       </div>
                       <div className="space-y-1">
-                        <p className="font-bold text-sm text-slate-200">Menghubungkan ke Stream RTSP Camera...</p>
+                        <p className="font-bold text-sm text-slate-200">Menghubungkan ke Stream Camera...</p>
                         <p className="text-xs text-slate-400 leading-relaxed">
-                          Pastikan microservice AI Python aktif pada port <code className="text-indigo-300 font-mono">8005</code> dan link RTSP kamera dapat diakses di jaringan lokal.
+                          Pastikan microservice AI Python aktif pada port <code className="text-indigo-300 font-mono">8005</code> dan link stream kamera (RTSP / RTMP / Webcam) dapat diakses.
                         </p>
                       </div>
                       <div className="pt-2 flex justify-center gap-2">
@@ -435,7 +585,7 @@ export default function FaceAttendanceCameraPage() {
                   {/* Corner Visual HUD Targets */}
                   <div className="absolute top-3 left-3 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>RTSP DIRECT</span>
+                    <span>DIRECT STREAM</span>
                   </div>
 
                   <div className="absolute bottom-3 right-3 pointer-events-none flex items-center gap-2 px-2.5 py-1 rounded bg-black/60 backdrop-blur-xs text-[11px] font-mono text-slate-300 border border-white/10">
@@ -451,8 +601,19 @@ export default function FaceAttendanceCameraPage() {
                     <Zap className="w-3.5 h-3.5 text-amber-400" />
                     <span>Lokasi: <strong className="text-slate-200">{currentConfig?.location || 'Gerbang Depan Sekolah'}</strong></span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-emerald-400 font-medium">● AI Face Matching Active</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
+                      disabled={isStartingWorker || isStoppingWorker || !serviceStatus?.isOnline}
+                      className={`h-7 text-xs border-slate-700 font-semibold ${
+                        serviceStatus?.is_running ? 'text-rose-400 hover:text-rose-300' : 'text-emerald-400 hover:text-emerald-300'
+                      }`}
+                    >
+                      <Power className="w-3.5 h-3.5 mr-1" />
+                      {serviceStatus?.is_running ? 'Hentikan AI Stream' : 'Mulai AI Stream'}
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -563,20 +724,62 @@ export default function FaceAttendanceCameraPage() {
         </div>
       )}
 
-      {/* TAB 2: KONFIGURASI CAMERA & AI */}
+      {/* TAB 2: KONFIGURASI CAMERA & PILIHAN STREAM */}
       {activeTab === 'config' && (
         <div className="space-y-6">
+          {/* Stream Type Selection Presets */}
+          <div className="space-y-3">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Tv className="w-4 h-4 text-indigo-600" />
+              Pilih Tipe Sumber Kamera / Stream (*Input Preset*)
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {STREAM_PRESETS.map((preset) => {
+                const IconComponent = preset.icon
+                const isSelected = formConfig?.streamSourceType === preset.id || 
+                  (!formConfig?.streamSourceType && preset.id === 'RTSP')
+
+                return (
+                  <div
+                    key={preset.id}
+                    onClick={() => handleSelectPreset(preset)}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                      isSelected 
+                        ? 'border-indigo-600 bg-indigo-50/70 shadow-sm ring-1 ring-indigo-500' 
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <Badge variant="outline" className={`text-[10px] ${
+                        isSelected ? 'border-indigo-300 text-indigo-700 font-bold' : 'text-slate-500'
+                      }`}>
+                        {preset.badge}
+                      </Badge>
+                    </div>
+                    <p className="text-xs font-bold text-slate-900">{preset.title}</p>
+                    <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">{preset.description}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Form Settings */}
             <Card className="md:col-span-2 shadow-sm border-slate-200">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                    <Video className="w-5 h-5" />
+                    <Sliders className="w-5 h-5" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">Parameter Camera & Stream RTSP</CardTitle>
-                    <CardDescription>Tentukan URL RTSP/RTMP serta batas sensitivitas pengenalan wajah</CardDescription>
+                    <CardTitle className="text-lg">Parameter Kamera & Stream AI</CardTitle>
+                    <CardDescription>Tentukan URL stream serta batas sensitivitas pengenalan wajah</CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -585,17 +788,17 @@ export default function FaceAttendanceCameraPage() {
                 <div className="space-y-2">
                   <Label htmlFor="streamUrl" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                     <Zap className="w-4 h-4 text-amber-500" />
-                    URL Stream RTSP / RTMP Camera
+                    Target Link / Path Stream Camera
                   </Label>
                   <Input
                     id="streamUrl"
-                    placeholder="rtsp://admin:pass@192.168.1.100:554/Streaming/Channels/101 atau 0 untuk webcam"
+                    placeholder="Contoh: rtsp://admin:pass@192.168.1.100:554/Streaming/Channels/101 atau 0 untuk webcam"
                     value={currentConfig?.streamUrl || ''}
                     onChange={(e) => setFormConfig((prev) => prev ? { ...prev, streamUrl: e.target.value } : null)}
                     className="font-mono text-sm"
                   />
                   <p className="text-xs text-slate-500">
-                    Masukkan URL RTSP/RTMP dari IP Camera / NVR, OBS virtual camera, atau ketik <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">0</code> untuk webcam USB komputer.
+                    Masukkan URL RTSP/RTMP, URL HTTP MJPEG (IP Webcam), index webcam <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">0</code>, atau path file video lokal.
                   </p>
                 </div>
 
@@ -715,19 +918,26 @@ export default function FaceAttendanceCameraPage() {
               </CardFooter>
             </Card>
 
-            {/* Service & Security Info Card */}
+            {/* Service & Worker Controls Card */}
             <div className="space-y-6">
               <Card className="shadow-sm border-slate-200">
                 <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Server className="w-4 h-4 text-indigo-600" />
-                    Microservice Worker AI
+                  <CardTitle className="text-base flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Server className="w-4 h-4 text-indigo-600" />
+                      Microservice AI (Port 8005)
+                    </span>
+                    <Badge className={serviceStatus?.isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}>
+                      {serviceStatus?.isOnline ? 'ONLINE' : 'OFFLINE'}
+                    </Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
-                    <span className="text-slate-500">Port Service:</span>
-                    <span className="font-mono font-semibold text-slate-800">8005</span>
+                    <span className="text-slate-500">Status Worker:</span>
+                    <span className="font-semibold text-slate-800">
+                      {serviceStatus?.is_running ? 'STREAMING' : 'BERHENTI'}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
                     <span className="text-slate-500">Detektor AI:</span>
@@ -738,8 +948,22 @@ export default function FaceAttendanceCameraPage() {
                     <span className="font-semibold text-slate-800">Foto Profil User</span>
                   </div>
                   <div className="flex justify-between py-1.5">
-                    <span className="text-slate-500">Target Database:</span>
-                    <span className="font-semibold text-slate-800">PostgreSQL (Prisma)</span>
+                    <span className="text-slate-500">Total Scan Hari Ini:</span>
+                    <span className="font-bold text-indigo-600">{serviceStatus?.total_scans_today || 0}</span>
+                  </div>
+
+                  {/* Microservice AI Start/Stop Button */}
+                  <div className="pt-3 border-t border-slate-100">
+                    <Button
+                      onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
+                      disabled={isStartingWorker || isStoppingWorker || !serviceStatus?.isOnline}
+                      className={`w-full font-bold gap-2 ${
+                        serviceStatus?.is_running ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                      } text-white`}
+                    >
+                      <Power className="w-4 h-4" />
+                      {serviceStatus?.is_running ? 'Matikan AI Microservice Stream' : 'Nyalakan AI Microservice Stream'}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -1081,47 +1305,47 @@ export default function FaceAttendanceCameraPage() {
         </Card>
       )}
 
-      {/* TAB 5: PANDUAN RTSP */}
+      {/* TAB 5: PANDUAN INTEGRASI STREAM */}
       {activeTab === 'guide' && (
         <Card className="shadow-sm border-slate-200">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <HelpCircle className="w-5 h-5 text-indigo-600" />
-              Panduan Integrasi RTSP / RTMP Camera
+              Panduan Integrasi Sumber Kamera & Stream
             </CardTitle>
             <CardDescription>
-              Format URL stream standar untuk menghubungkan berbagai merk IP Camera ke SIMASMUH
+              Format URL stream standar untuk menghubungkan berbagai jenis sumber kamera ke SIMASMUH
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 text-sm text-slate-700">
             <div className="space-y-3">
               <h3 className="font-bold text-slate-900 flex items-center gap-2">
                 <Video className="w-4 h-4 text-indigo-600" />
-                Format RTSP Camera Populer
+                Format Sumber Kamera Populer
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                  <p className="font-bold text-xs text-slate-800">Hikvision / Hilook</p>
+                  <p className="font-bold text-xs text-slate-800">1. IP Camera RTSP (Hikvision / Hilook / Dahua / Tapo)</p>
                   <code className="block text-xs bg-slate-200/70 p-2 rounded text-slate-800 font-mono">
                     rtsp://admin:password@192.168.1.64:554/Streaming/Channels/101
                   </code>
                 </div>
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                  <p className="font-bold text-xs text-slate-800">Dahua / IMOU</p>
+                  <p className="font-bold text-xs text-slate-800">2. Webcam USB / Laptop Terintegrasi</p>
                   <code className="block text-xs bg-slate-200/70 p-2 rounded text-slate-800 font-mono">
-                    rtsp://admin:password@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0
+                    0 (atau 1, 2 untuk webcam eksternal kedua)
                   </code>
                 </div>
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                  <p className="font-bold text-xs text-slate-800">TP-Link Tapo</p>
+                  <p className="font-bold text-xs text-slate-800">3. HTTP / MJPEG Stream (IP Webcam Android)</p>
                   <code className="block text-xs bg-slate-200/70 p-2 rounded text-slate-800 font-mono">
-                    rtsp://admin:password@192.168.1.50:554/stream1
+                    http://192.168.1.50:8080/video
                   </code>
                 </div>
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                  <p className="font-bold text-xs text-slate-800">OBS Studio / Media Server RTMP</p>
+                  <p className="font-bold text-xs text-slate-800">4. RTMP Server / OBS Studio Broadcast</p>
                   <code className="block text-xs bg-slate-200/70 p-2 rounded text-slate-800 font-mono">
-                    rtmp://127.0.0.1:1935/live/stream_key
+                    rtmp://127.0.0.1:1935/live/siakad_camera
                   </code>
                 </div>
               </div>
@@ -1130,9 +1354,10 @@ export default function FaceAttendanceCameraPage() {
             <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2 text-indigo-950">
               <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-800 flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-indigo-600" />
-                Tips Posisi Camera Presensi yang Optimal:
+                Tips Pengaturan Kamera Presensi:
               </h4>
               <ul className="list-disc list-inside text-xs space-y-1 text-indigo-900/90 leading-relaxed">
+                <li>Untuk pengujian di laptop/PC tanpa CCTV, Anda dapat memilih preset <strong>Webcam USB (0)</strong> atau <strong>File Video Lokal</strong>.</li>
                 <li>Posisikan camera setinggi 1.6 - 1.8 meter menghadap ke lorong / gerbang masuk siswa.</li>
                 <li>Hindari posisi *backlight* (menghadap langsung ke arah sinar matahari terik).</li>
                 <li>Gunakan resolusi stream 720p / 1080p dengan frame rate 15–25 FPS untuk efisiensi komputasi server.</li>

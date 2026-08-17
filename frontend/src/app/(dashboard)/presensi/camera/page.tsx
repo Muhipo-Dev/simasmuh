@@ -354,22 +354,17 @@ export default function FaceAttendanceCameraPage() {
               <span className={`w-2.5 h-2.5 rounded-full ${
                 serviceStatus?.isOnline ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'
               }`} />
-              <span className="font-semibold">
-                AI Service: {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'Streaming' : 'Siap') : 'Offline'}
-              </span>
             </div>
-            {serviceStatus?.isOnline && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
-                disabled={isStartingWorker || isStoppingWorker}
-                className="h-6 px-2 text-[10px] bg-white/20 hover:bg-white/30 text-white font-bold rounded-md"
-              >
-                <Power className="w-3 h-3 mr-1" />
-                {serviceStatus?.is_running ? 'Stop' : 'Start'}
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
+              disabled={isStartingWorker || isStoppingWorker}
+              className="h-6 px-2 text-[10px] bg-white/20 hover:bg-white/30 text-white font-bold rounded-md"
+            >
+              <Power className="w-3 h-3 mr-1" />
+              {isStartingWorker ? 'Starting...' : isStoppingWorker ? 'Stopping...' : serviceStatus?.is_running ? 'Stop' : 'Start'}
+            </Button>
           </div>
 
           <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs">
@@ -486,13 +481,13 @@ export default function FaceAttendanceCameraPage() {
               <Button
                 size="sm"
                 onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
-                disabled={isStartingWorker || isStoppingWorker || !serviceStatus?.isOnline}
+                disabled={isStartingWorker || isStoppingWorker}
                 className={`h-8 px-2.5 text-xs font-bold ${
                   serviceStatus?.is_running ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
                 } text-white`}
               >
                 <Power className="w-3.5 h-3.5 mr-1" />
-                {serviceStatus?.is_running ? 'Matikan' : 'Nyalakan'}
+                {isStartingWorker ? 'Menyalakan...' : isStoppingWorker ? 'Mematikan...' : serviceStatus?.is_running ? 'Matikan' : 'Nyalakan'}
               </Button>
             </div>
           </div>
@@ -549,7 +544,7 @@ export default function FaceAttendanceCameraPage() {
                   ref={videoContainerRef}
                   className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group"
                 >
-                  {!streamError ? (
+                  {!streamError && serviceStatus?.is_running ? (
                     <img
                       key={streamKey}
                       src={`http://localhost:8005/video_feed?t=${streamKey}`}
@@ -564,19 +559,31 @@ export default function FaceAttendanceCameraPage() {
                         <Video className="w-8 h-8 animate-pulse" />
                       </div>
                       <div className="space-y-1">
-                        <p className="font-bold text-sm text-slate-200">Menghubungkan ke Stream Camera...</p>
+                        <p className="font-bold text-sm text-slate-200">
+                          {serviceStatus?.isOnline ? 'AI Service Siap (Stream Belum Dimulai)' : 'Microservice AI Belum Aktif'}
+                        </p>
                         <p className="text-xs text-slate-400 leading-relaxed">
-                          Pastikan microservice AI Python aktif pada port <code className="text-indigo-300 font-mono">8005</code> dan link stream kamera (RTSP / RTMP / Webcam) dapat diakses.
+                          Klik tombol di bawah untuk menyalakan AI Microservice dan memulai video feed kamera.
                         </p>
                       </div>
                       <div className="pt-2 flex justify-center gap-2">
                         <Button 
+                          onClick={() => startServiceWorker()} 
+                          disabled={isStartingWorker}
+                          size="sm" 
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs font-semibold"
+                        >
+                          <Power className="w-3.5 h-3.5" />
+                          {isStartingWorker ? 'Menyalakan...' : 'Nyalakan AI Microservice Stream'}
+                        </Button>
+                        <Button 
                           onClick={handleReconnectStream} 
                           size="sm" 
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs font-semibold"
+                          variant="outline"
+                          className="border-slate-700 text-slate-300 hover:text-white gap-1.5 text-xs font-semibold"
                         >
                           <RefreshCw className="w-3.5 h-3.5" />
-                          Coba Sambungkan Ulang
+                          Refresh
                         </Button>
                       </div>
                     </div>
@@ -606,13 +613,13 @@ export default function FaceAttendanceCameraPage() {
                       size="sm"
                       variant="outline"
                       onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
-                      disabled={isStartingWorker || isStoppingWorker || !serviceStatus?.isOnline}
+                      disabled={isStartingWorker || isStoppingWorker}
                       className={`h-7 text-xs border-slate-700 font-semibold ${
                         serviceStatus?.is_running ? 'text-rose-400 hover:text-rose-300' : 'text-emerald-400 hover:text-emerald-300'
                       }`}
                     >
                       <Power className="w-3.5 h-3.5 mr-1" />
-                      {serviceStatus?.is_running ? 'Hentikan AI Stream' : 'Mulai AI Stream'}
+                      {isStartingWorker ? 'Menyalakan...' : isStoppingWorker ? 'Mematikan...' : serviceStatus?.is_running ? 'Hentikan AI Stream' : 'Mulai AI Stream'}
                     </Button>
                   </div>
                 </div>
@@ -956,13 +963,13 @@ export default function FaceAttendanceCameraPage() {
                   <div className="pt-3 border-t border-slate-100">
                     <Button
                       onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
-                      disabled={isStartingWorker || isStoppingWorker || !serviceStatus?.isOnline}
+                      disabled={isStartingWorker || isStoppingWorker}
                       className={`w-full font-bold gap-2 ${
                         serviceStatus?.is_running ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
                       } text-white`}
                     >
                       <Power className="w-4 h-4" />
-                      {serviceStatus?.is_running ? 'Matikan AI Microservice Stream' : 'Nyalakan AI Microservice Stream'}
+                      {isStartingWorker ? 'Menyalakan Microservice...' : isStoppingWorker ? 'Menghentikan...' : serviceStatus?.is_running ? 'Matikan AI Microservice Stream' : 'Nyalakan AI Microservice Stream'}
                     </Button>
                   </div>
                 </CardContent>

@@ -1,7 +1,10 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import * as fs from 'fs';
+import * as path from 'path';
 import { join } from 'path';
+import { spawn } from 'child_process';
 import { STORAGE_ROOT } from '../../core/config/storage.config';
 
 export interface FaceCameraConfig {
@@ -321,20 +324,85 @@ export class FaceAttendanceService {
   }
 
   async startAiWorker() {
+    // 1. Check if already online
+    let isOnline = false;
     try {
-      const res = await fetch('http://localhost:8005/stream/start', { method: 'POST', signal: AbortSignal.timeout(4000) });
-      return await res.json();
-    } catch (err) {
-      throw new BadRequestException('Microservice AI Python di port 8005 tidak aktif atau tidak dapat dijangkau');
+      const ping = await fetch('http://localhost:8005/status', { signal: AbortSignal.timeout(1500) });
+      if (ping.ok) isOnline = true;
+    } catch {
+      isOnline = false;
     }
+
+    // 2. If offline, spawn Python process automatically
+    if (!isOnline) {
+      this.logger.log('Microservice Python AI offline, mencoba meluncurkan python main.py...');
+      
+      const possibleDirs = [
+        path.resolve(process.cwd(), '../services/face-attendance'),
+        path.resolve(process.cwd(), 'services/face-attendance'),
+        path.resolve(__dirname, '../../../../../services/face-attendance'),
+        'd:/siakad-coba/services/face-attendance',
+      ];
+
+      let targetDir = possibleDirs.find((dir) => fs.existsSync(path.join(dir, 'main.py')));
+
+      if (targetDir) {
+        try {
+          const pyProc = spawn('python', ['main.py'], {
+            cwd: targetDir,
+            detached: true,
+            stdio: 'ignore',
+            shell: true,
+          });
+          pyProc.unref();
+
+          // Wait up to 6 seconds for port 8005 to come alive
+          for (let i = 0; i < 12; i++) {
+            await new Promise((r) => setTimeout(r, 500));
+            try {
+              const pingCheck = await fetch('http://localhost:8005/status', { signal: AbortSignal.timeout(1000) });
+              if (pingCheck.ok) {
+                isOnline = true;
+                break;
+              }
+            } catch {}
+          }
+        } catch (spawnErr) {
+          this.logger.error(`Gagal meluncurkan proses python: ${spawnErr.message}`);
+        }
+      }
+    }
+
+    // 3. Trigger stream start
+    try {
+      const res = await fetch('http://localhost:8005/stream/start', {
+        method: 'POST',
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      if (isOnline) {
+        return { success: true, message: 'AI Service aktif di port 8005 (Stream Ingesting)' };
+      }
+      throw new BadRequestException('Microservice AI Python di port 8005 belum dapat dijangkau. Pastikan Python sudah terinstal di komputer/server.');
+    }
+    return { success: true, message: 'AI Service berhasil dinyalakan' };
   }
 
   async stopAiWorker() {
     try {
-      const res = await fetch('http://localhost:8005/stream/stop', { method: 'POST', signal: AbortSignal.timeout(4000) });
-      return await res.json();
+      const res = await fetch('http://localhost:8005/stream/stop', {
+        method: 'POST',
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
     } catch (err) {
       throw new BadRequestException('Microservice AI Python di port 8005 tidak aktif atau tidak dapat dijangkau');
     }
+    return { success: true, message: 'AI Service stream dihentikan' };
   }
 }

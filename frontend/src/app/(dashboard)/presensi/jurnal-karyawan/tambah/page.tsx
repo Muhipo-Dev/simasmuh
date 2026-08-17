@@ -49,7 +49,7 @@ export default function TambahJurnalKaryawanPage() {
         const uploadRes = await authenticatedFetch('/api-backend/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: evidenceUrl })
+          body: JSON.stringify({ image: evidenceUrl, folder: 'journals' })
         })
         if (!uploadRes.ok) throw new Error('Gagal mengunggah foto')
         const uploadData = await uploadRes.json()

@@ -4,7 +4,7 @@ import {
   DoorOpen, UserCircle2, Megaphone, Wallet, Receipt, X, MoreHorizontal, 
   Banknote, FileText, Image as ImageIcon, Award, FileCheck,
   ShieldAlert, Sparkles, ShieldCheck, UserCheck, HeartHandshake,
-  Library, BookMarked, Mail, Contact, Package, Boxes
+  Library, BookMarked, Mail, Contact, Package, Boxes, Camera
 } from 'lucide-react'
 
 export const superadminLinks = [
@@ -15,6 +15,7 @@ export const superadminLinks = [
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'QR Layar (Publik)', href: '/presensi/manajemen-qr', icon: QrCode },
+  { name: 'Presensi Camera AI', href: '/presensi/camera', icon: Camera },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
 ]
@@ -61,7 +62,7 @@ export const pegawaiLinks = [
 
 export const superAdminOnlyPaths = [
   '/master-data/pengguna', '/master-data/mata-pelajaran',
-  '/master-data/siswa', '/master-data/kelas', '/master-data/guru', '/pengaturan/sistem', '/presensi/manajemen-qr'
+  '/master-data/siswa', '/master-data/kelas', '/master-data/guru', '/pengaturan/sistem', '/presensi/manajemen-qr', '/presensi/camera'
 ]
 
 export function getRoleLinks(role: string, subRole?: string, subRole2?: string, subRole3?: string) {

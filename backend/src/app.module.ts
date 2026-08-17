@@ -20,12 +20,13 @@ import { DailyAttendancesModule } from './modules/attendance/daily-attendances/d
 import { AnnouncementsModule } from './modules/communication/announcements/announcements.module';
 import { StaffJournalsModule } from './modules/attendance/staff-journals/staff-journals.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
+import { STORAGE_ROOT } from './modules/core/config/storage.config';
 import { UploadModule } from './modules/core/upload/upload.module';
 import { IzinKeluarModule } from './modules/attendance/izin-keluar/izin-keluar.module';
 import { FinanceModule } from './modules/finance/finance/finance.module';
 import { PaymentProofsModule } from './modules/finance/payment-proofs/payment-proofs.module';
 import { NotificationsModule } from './modules/communication/notifications/notifications.module';
+import { FaceAttendanceModule } from './modules/attendance/face-attendance/face-attendance.module';
 import { APP_GUARD } from '@nestjs/core';
 import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
 
@@ -38,7 +39,7 @@ import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
       maxListeners: 20,
     }),
     ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'uploads'),
+      rootPath: STORAGE_ROOT,
       serveRoot: '/uploads',
     }),
     PrismaModule,
@@ -62,6 +63,7 @@ import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
     FinanceModule,
     PaymentProofsModule,
     NotificationsModule,
+    FaceAttendanceModule,
   ],
   controllers: [AppController],
   providers: [

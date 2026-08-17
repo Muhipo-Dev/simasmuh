@@ -1,0 +1,11 @@
+{
+  "streamUrl": "rtmp://localhost/live/siakad_camera",
+  "cameraName": "Camera Gerbang Utama",
+  "location": "Gerbang Depan Sekolah",
+  "threshold": 0.7,
+  "cooldownMinutes": 10,
+  "isActive": true,
+  "welcomeVoice": true,
+  "apiKeySecret": "simasmuh_face_token_secret_2026",
+  "updatedAt": "2026-08-17T06:41:00.000Z"
+}

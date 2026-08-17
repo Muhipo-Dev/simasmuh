@@ -10,3 +10,10 @@
    - `npx prisma db push` atau `npx prisma generate` **TIDAK BOLEH** dijalankan jika hanya menambah/mengubah data. Perintah tersebut **HANYA** diperbolehkan berjalan ketika terdapat perubahan struktur skema baru (model/kolom baru).
    - **TIDAK BOLEH** menjalankan perintah database, script seed, atau penambahan data yang mereset, menggantikan, menghapus, atau menimpa data eksisting di database (`--accept-data-loss` dan `seed reset` dilarang keras). Data eksisting wajib dilindungi utuh.
    - **KETENTUAN MUTLAK**: Ketika ada perubahan dari AI, jangan mengganggu isi data tabel, kolom, atau barisnya. Cukup pengguna di dashboard yang dapat melakukan CRUD. Tugas AI hanya mengubah struktur tanpa mengganggu isi dan dilarang melakukan regenerasi basis data yang menghapus data lama (seperti akun superadmin nailar, siswa, atau guru) karena hal tersebut membuang waktu.
+6. **Ketentuan Mutlak Startup Layanan & Standar Port Tetap**:
+   - Setiap kali SIMASMUH dijalankan di lingkungan manapun, launcher wajib memastikan dan menjalankan 4 layanan secara bersamaan dengan port tetap:
+     - **Frontend Web Next.js**: `http://localhost:3000`
+     - **Backend API NestJS**: `http://localhost:3001`
+     - **Prisma Studio**: `http://localhost:51212`
+     - **Supabase Studio (Docker)**: `http://localhost:54323` (Database: `54322`, API: `54321`)
+

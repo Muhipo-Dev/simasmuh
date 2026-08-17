@@ -1,20 +1,13 @@
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
 import { v4 as uuid } from 'uuid';
 import { Request } from 'express';
 import { BadRequestException } from '@nestjs/common';
 import { FileSecurityUtil } from '../utils/file-security.util';
+import { STORAGE_DIRS } from './storage.config';
 
-const uploadDir = join(process.cwd(), 'uploads');
-const tempDir = join(process.cwd(), 'temp-uploads');
+const tempDir = STORAGE_DIRS.temp;
 
-// Ensure directories exist
-[uploadDir, tempDir].forEach((dir) => {
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-});
 
 export const multerConfig = {
   storage: diskStorage({

@@ -75,7 +75,7 @@ export default function AnnouncementsPage() {
         const uploadRes = await authenticatedFetch('/api-backend/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imageUrl })
+          body: JSON.stringify({ image: imageUrl, folder: 'thumbnails' })
         });
         if (!uploadRes.ok) throw new Error('Gagal mengunggah gambar');
         const uploadData = await uploadRes.json();
@@ -107,7 +107,7 @@ export default function AnnouncementsPage() {
         const uploadRes = await authenticatedFetch('/api-backend/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imageUrl })
+          body: JSON.stringify({ image: imageUrl, folder: 'thumbnails' })
         });
         if (!uploadRes.ok) throw new Error('Gagal mengunggah gambar');
         const uploadData = await uploadRes.json();

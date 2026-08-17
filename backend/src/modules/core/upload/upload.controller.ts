@@ -17,11 +17,11 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post()
-  async uploadFile(@Body() data: { image: string }) {
+  async uploadFile(@Body() data: { image: string; folder?: string }) {
     if (!data.image) {
       return { error: 'No image provided' };
     }
-    const url = await this.uploadService.saveBase64Image(data.image);
+    const url = await this.uploadService.saveBase64Image(data.image, data.folder);
     return { url };
   }
 

@@ -26,6 +26,8 @@ import { VerifyPaymentProofDto } from './dto/verify-payment-proof.dto';
 import { join } from 'path';
 import * as fs from 'fs';
 
+import { STORAGE_DIRS } from '../../core/config/storage.config';
+
 @Controller('payment-proofs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PaymentProofsController {
@@ -46,8 +48,8 @@ export class PaymentProofsController {
       throw new BadRequestException('File is required');
     }
 
-    const proofUrl = `/uploads/${file.filename}`;
-    const finalPath = join(process.cwd(), 'uploads', file.filename);
+    const proofUrl = `/uploads/payment-proofs/${file.filename}`;
+    const finalPath = join(STORAGE_DIRS.paymentProofs, file.filename);
     try {
       await fs.promises.rename(file.path, finalPath);
       file.path = finalPath;

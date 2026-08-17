@@ -115,7 +115,7 @@ export default function ProfilePage() {
         const uploadRes = await authenticatedFetch('/api-backend/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: avatarUrl })
+          body: JSON.stringify({ image: avatarUrl, folder: 'profiles' })
         });
         if (!uploadRes.ok) throw new Error('Gagal mengunggah foto profil');
         const uploadData = await uploadRes.json();

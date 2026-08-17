@@ -38,7 +38,7 @@
     "better-sqlite3": "^13.0.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
-    "exceljs": "^4.4.0",
+    "exceljs": "^3.4.0",
     "file-type": "^22.0.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -99,7 +99,10 @@
   },
   "allowScripts": {
     "better-sqlite3@12.11.1": true,
-    "better-sqlite3@13.0.1": true
+    "better-sqlite3@13.0.1": true,
+    "@prisma/engines@7.9.1": true,
+    "prisma@7.9.1": true,
+    "unrs-resolver@1.12.2": true
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

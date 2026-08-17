@@ -4,6 +4,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { STORAGE_DIRS } from '../config/storage.config';
 
 const execFileAsync = promisify(execFile);
 
@@ -345,7 +346,7 @@ export class VirusScannerUtil {
    */
   static async quarantineFile(filePath: string, reason: string): Promise<void> {
     try {
-      const quarantineDir = path.join(process.cwd(), 'quarantine');
+      const quarantineDir = STORAGE_DIRS.quarantine;
       await fs.mkdir(quarantineDir, { recursive: true });
 
       const fileName = path.basename(filePath);
@@ -447,7 +448,7 @@ export class VirusScannerUtil {
     newestFile?: Date;
   }> {
     try {
-      const quarantineDir = path.join(process.cwd(), 'quarantine');
+      const quarantineDir = STORAGE_DIRS.quarantine;
 
       try {
         await fs.access(quarantineDir);
@@ -497,7 +498,7 @@ export class VirusScannerUtil {
     maxAgeMs: number = 30 * 24 * 60 * 60 * 1000,
   ): Promise<number> {
     try {
-      const quarantineDir = path.join(process.cwd(), 'quarantine');
+      const quarantineDir = STORAGE_DIRS.quarantine;
 
       try {
         await fs.access(quarantineDir);

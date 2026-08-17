@@ -349,7 +349,7 @@ export class FaceAttendanceService {
         path.resolve(process.cwd(), '../services/face-attendance'),
         path.resolve(process.cwd(), 'services/face-attendance'),
         path.resolve(__dirname, '../../../../../services/face-attendance'),
-        'd:/siakad-coba/services/face-attendance',
+        'd:/simasmuh/services/face-attendance',
       ];
 
       let targetDir = possibleDirs.find((dir) => fs.existsSync(path.join(dir, 'main.py')));

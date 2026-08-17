@@ -31,10 +31,17 @@ class AttendanceWorker:
 
     def stop(self):
         self.is_running = False
-        if self.thread:
+        if self.thread and self.thread.is_alive():
             self.thread.join(timeout=3)
+        self.thread = None
         self.stream_status = "STOPPED"
         print("[INFO] Worker RTSP/RTMP Live Camera dihentikan.")
+
+    def restart(self):
+        print("[INFO] Merestart worker capture untuk pergantian mode/sumber stream...")
+        self.stop()
+        time.sleep(0.5)
+        self.start()
 
     def _run_loop(self):
         stream_src = self.config.stream_url

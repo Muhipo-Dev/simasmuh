@@ -27,20 +27,26 @@ class FaceRecognitionEngine:
         self._init_yolo()
 
     def _init_yolo(self):
-        """Inisialisasi Model YOLOv11 / Cascade Detector fallback."""
+        """Inisialisasi Model YOLO Ultra-Lightweight (YOLOv8n / YOLOv11n) dan OpenCV Face Detector."""
         try:
             from ultralytics import YOLO
-            print("[INFO] Memuat model YOLO...")
-            try:
-                self.yolo_model = YOLO("yolo11n.pt")
-                print("[INFO] Model YOLOv11 berhasil dimuat.")
-            except Exception:
+            print("[INFO] Memuat model YOLO Ultra-Lightweight (Nano)...")
+            
+            # Prioritas 1: YOLOv8n (terbukti paling stabil, ringan, dan hemat VRAM/CPU ~3.2M params)
+            # Prioritas 2: YOLO11n (~2.6M params)
+            model_loaded = False
+            for model_name in ["yolov8n.pt", "yolo11n.pt"]:
                 try:
-                    self.yolo_model = YOLO("yolov8n.pt")
-                    print("[INFO] Model YOLOv8 berhasil dimuat.")
-                except Exception as ex:
-                    print(f"[WARN] Gagal memuat YOLO, menggunakan OpenCV Haar Cascade fallback: {ex}")
-                    self.yolo_model = None
+                    self.yolo_model = YOLO(model_name)
+                    print(f"[INFO] Model {model_name} Ultra-Lightweight berhasil dimuat.")
+                    model_loaded = True
+                    break
+                except Exception as e:
+                    print(f"[DEBUG] Coba model {model_name} berikutnya: {e}")
+
+            if not model_loaded:
+                print("[WARN] Menggunakan OpenCV Haar Cascade Detector.")
+                self.yolo_model = None
         except ImportError:
             print("[WARN] Paket ultralytics belum terpasang. Menggunakan OpenCV Haar Cascade.")
             self.yolo_model = None
@@ -175,30 +181,33 @@ class FaceRecognitionEngine:
         return feature_vector
 
     def detect_faces(self, frame: np.ndarray) -> List[Tuple[int, int, int, int]]:
-        """Mendeteksi kotak wajah (x, y, w, h) dari frame video atau foto profil."""
+        """Mendeteksi kotak wajah (x, y, w, h) dari frame video atau foto profil dengan inferensi ringan & cepat."""
         boxes = []
         if self.yolo_model is not None:
             try:
-                results = self.yolo_model(frame, verbose=False, conf=0.4)
+                # Inferensi ultra-cepat: batasi resolusi inferensi ke 320px dan conf 0.45 untuk latensi minimal (<15ms di CPU)
+                results = self.yolo_model(frame, verbose=False, imgsz=320, conf=0.45, max_det=10, classes=[0])
                 for r in results:
-                    for box in r.boxes:
-                        cls_id = int(box.cls[0].item())
-                        if cls_id == 0:  # person
+                    if r.boxes is not None and len(r.boxes) > 0:
+                        for box in r.boxes:
                             x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
                             h = y2 - y1
                             w = x2 - x1
-                            face_y2 = min(y1 + int(h * 0.45), y2)
-                            boxes.append((x1, y1, w, face_y2 - y1))
+                            if w >= 30 and h >= 30:
+                                face_y2 = min(y1 + int(h * 0.45), y2)
+                                boxes.append((x1, y1, w, max(20, face_y2 - y1)))
             except Exception:
                 pass
 
-        # Fallback Haar Cascade
+        # Fallback Haar Cascade jika YOLO kosong
         if not boxes and self.face_cascade is not None:
             try:
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                detected = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
-                for (x, y, w, h) in detected:
-                    boxes.append((x, y, w, h))
+                # Resize thumbnail untuk haar cascade cepat
+                small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+                gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
+                detected = self.face_cascade.detectMultiScale(gray, scaleFactor=1.15, minNeighbors=4, minSize=(25, 25))
+                for (sx, sy, sw, sh) in detected:
+                    boxes.append((int(sx * 2), int(sy * 2), int(sw * 2), int(sh * 2)))
             except Exception:
                 pass
 

@@ -92,7 +92,7 @@ export class FaceAttendanceService {
     };
   }
 
-  updateConfig(data: Partial<FaceCameraConfig>): FaceCameraConfig {
+  async updateConfig(data: Partial<FaceCameraConfig>): Promise<FaceCameraConfig> {
     const current = this.getConfig();
     const updated: FaceCameraConfig = {
       ...current,
@@ -101,6 +101,14 @@ export class FaceAttendanceService {
     };
     try {
       writeFileSync(this.configPath, JSON.stringify(updated, null, 2), 'utf8');
+      
+      // Auto trigger reload/restart on python AI worker if active
+      try {
+        fetch('http://localhost:8005/stream/restart', {
+          method: 'POST',
+          signal: AbortSignal.timeout(3000),
+        }).catch(() => {});
+      } catch {}
     } catch (err) {
       this.logger.error('Failed to save face attendance config', err);
       throw new BadRequestException('Gagal menyimpan konfigurasi');

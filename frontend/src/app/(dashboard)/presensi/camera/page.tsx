@@ -332,28 +332,31 @@ export default function FaceAttendanceCameraPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-4 md:space-y-6 max-w-7xl mx-auto pb-12 px-2 sm:px-4 md:px-0">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 p-6 md:p-7 rounded-2xl text-white shadow-xl border border-indigo-900/30">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 p-4 sm:p-6 md:p-7 rounded-2xl text-white shadow-xl border border-indigo-900/30">
         <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold uppercase tracking-wider border border-indigo-500/30">
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-[11px] sm:text-xs font-semibold uppercase tracking-wider border border-indigo-500/30">
             <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
             Live Camera Stream & YOLOv11 Face Matcher (Port 8005)
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Presensi Camera AI</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">Presensi Camera AI</h1>
           <p className="text-slate-300 text-xs md:text-sm max-w-2xl">
             Monitoring realtime live capture berbagai tipe camera (RTSP, RTMP, Webcam, HTTP Stream, Video) dengan deteksi wajah YOLOv11 dan pencatatan presensi otomatis.
           </p>
         </div>
         
         {/* Top Control Action Badges */}
-        <div className="flex flex-wrap md:flex-col gap-2.5 shrink-0">
+        <div className="flex flex-wrap sm:flex-nowrap lg:flex-col gap-2 shrink-0">
           {/* AI Microservice Port 8005 Status Pill */}
-          <div className="flex items-center justify-between gap-3 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs">
+          <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${
                 serviceStatus?.isOnline ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'
               }`} />
+              <span className="font-semibold text-[11px] sm:text-xs">
+                {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'STREAM ACTIVE' : 'AI STANDBY') : 'AI OFFLINE'}
+              </span>
             </div>
             <Button
               size="sm"
@@ -367,53 +370,53 @@ export default function FaceAttendanceCameraPage() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs">
-            <Users className="w-3.5 h-3.5 text-indigo-300" />
-            <span className="font-medium">{datasetData?.usersWithPhoto || 0} Profil Wajah Terdaftar</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
+            <Users className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
+            <span className="font-medium truncate text-[11px] sm:text-xs">{datasetData?.usersWithPhoto || 0} Profil Wajah Terdaftar</span>
           </div>
         </div>
       </div>
 
       {/* Main Navigation Tabs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl">
+      <div className="flex overflow-x-auto no-scrollbar gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl">
         <button
           type="button"
           onClick={() => setActiveTab('monitor')}
-          className={`flex items-center justify-center gap-2 py-2.5 px-3 text-sm font-medium rounded-lg transition-all ${
+          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
             activeTab === 'monitor' ? 'bg-white shadow text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Video className="w-4 h-4" />
+          <Video className="w-4 h-4 shrink-0" />
           <span>Live Monitor & Scanner</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('config')}
-          className={`flex items-center justify-center gap-2 py-2.5 px-3 text-sm font-medium rounded-lg transition-all ${
+          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
             activeTab === 'config' ? 'bg-white shadow text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Sliders className="w-4 h-4" />
+          <Sliders className="w-4 h-4 shrink-0" />
           <span>Konfigurasi Stream</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('dataset')}
-          className={`flex items-center justify-center gap-2 py-2.5 px-3 text-sm font-medium rounded-lg transition-all ${
+          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
             activeTab === 'dataset' ? 'bg-white shadow text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Users className="w-4 h-4" />
+          <Users className="w-4 h-4 shrink-0" />
           <span>Dataset Profil Wajah</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('logs')}
-          className={`flex items-center justify-center gap-2 py-2.5 px-3 text-sm font-medium rounded-lg transition-all ${
+          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
             activeTab === 'logs' ? 'bg-white shadow text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Activity className="w-4 h-4" />
+          <Activity className="w-4 h-4 shrink-0" />
           <span>Riwayat Log</span>
           {logsData && logsData.length > 0 && (
             <Badge variant="secondary" className="ml-1 px-1.5 py-0.2 text-[10px] bg-indigo-100 text-indigo-700">
@@ -424,56 +427,56 @@ export default function FaceAttendanceCameraPage() {
         <button
           type="button"
           onClick={() => setActiveTab('guide')}
-          className={`flex items-center justify-center gap-2 py-2.5 px-3 text-sm font-medium rounded-lg transition-all col-span-2 md:col-span-1 ${
+          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
             activeTab === 'guide' ? 'bg-white shadow text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <HelpCircle className="w-4 h-4" />
+          <HelpCircle className="w-4 h-4 shrink-0" />
           <span>Panduan Stream</span>
         </button>
       </div>
 
       {/* TAB 1: LIVE MONITOR & SCANNER LOG (SPLIT SCREEN) */}
       {activeTab === 'monitor' && (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Quick Stats Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-700 rounded-xl p-4 text-white shadow-md flex items-center justify-between">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="bg-gradient-to-br from-emerald-500 to-teal-700 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-emerald-100 uppercase tracking-wider">Presensi Masuk Hari Ini</p>
-                <p className="text-2xl md:text-3xl font-extrabold mt-1">{logStats.masuk}</p>
+                <p className="text-[11px] sm:text-xs font-semibold text-emerald-100 uppercase tracking-wider">Masuk Hari Ini</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-extrabold mt-0.5 sm:mt-1">{logStats.masuk}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs">
-                <CheckCircle2 className="w-6 h-6 text-white" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-4 text-white shadow-md flex items-center justify-between">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-blue-100 uppercase tracking-wider">Presensi Pulang Hari Ini</p>
-                <p className="text-2xl md:text-3xl font-extrabold mt-1">{logStats.pulang}</p>
+                <p className="text-[11px] sm:text-xs font-semibold text-blue-100 uppercase tracking-wider">Pulang Hari Ini</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-extrabold mt-0.5 sm:mt-1">{logStats.pulang}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs">
-                <Clock className="w-6 h-6 text-white" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-xl p-4 text-white shadow-md flex items-center justify-between border border-slate-700">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-slate-700">
               <div>
-                <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Total Deteksi Terverifikasi</p>
-                <p className="text-2xl md:text-3xl font-extrabold mt-1">{logStats.total}</p>
+                <p className="text-[11px] sm:text-xs font-semibold text-slate-300 uppercase tracking-wider">Total Deteksi</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-extrabold mt-0.5 sm:mt-1">{logStats.total}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-xs">
-                <Activity className="w-6 h-6 text-indigo-400" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400" />
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-700 to-indigo-900 rounded-xl p-4 text-white shadow-md flex items-center justify-between border border-purple-600/30">
-              <div>
-                <p className="text-xs font-semibold text-purple-200 uppercase tracking-wider">Microservice AI (Port 8005)</p>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className={`w-2.5 h-2.5 rounded-full ${serviceStatus?.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-                  <span className="font-bold text-sm">
+            <div className="bg-gradient-to-br from-purple-700 to-indigo-900 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-purple-600/30">
+              <div className="min-w-0">
+                <p className="text-[11px] sm:text-xs font-semibold text-purple-200 uppercase tracking-wider truncate">Microservice AI</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${serviceStatus?.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+                  <span className="font-bold text-xs sm:text-sm truncate">
                     {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'STREAMING' : 'IDLE') : 'OFFLINE'}
                   </span>
                 </div>
@@ -482,48 +485,90 @@ export default function FaceAttendanceCameraPage() {
                 size="sm"
                 onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
                 disabled={isStartingWorker || isStoppingWorker}
-                className={`h-8 px-2.5 text-xs font-bold ${
+                className={`h-7 sm:h-8 px-2 sm:px-2.5 text-[11px] sm:text-xs font-bold shrink-0 ${
                   serviceStatus?.is_running ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
                 } text-white`}
               >
-                <Power className="w-3.5 h-3.5 mr-1" />
-                {isStartingWorker ? 'Menyalakan...' : isStoppingWorker ? 'Mematikan...' : serviceStatus?.is_running ? 'Matikan' : 'Nyalakan'}
+                <Power className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
+                {isStartingWorker ? '...' : isStoppingWorker ? '...' : serviceStatus?.is_running ? 'Matikan' : 'Nyalakan'}
               </Button>
             </div>
           </div>
 
+          {/* Quick Stream Preset Selector Bar */}
+          <div className="p-3 sm:p-4 bg-slate-900/95 border border-indigo-950/60 rounded-2xl text-white shadow-md space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Tv className="w-4 h-4 text-indigo-400 shrink-0" />
+                <span className="text-xs font-bold text-slate-200">Ganti Sumber Kamera Langsung:</span>
+              </div>
+              <span className="text-[11px] text-slate-400 font-mono truncate">
+                Aktif: <span className="text-emerald-400 font-semibold">{currentConfig?.streamSourceType || 'RTSP'}</span> ({currentConfig?.streamUrl})
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-1">
+              {STREAM_PRESETS.map((preset) => {
+                const IconComponent = preset.icon
+                const isSelected = formConfig?.streamSourceType === preset.id || (!formConfig?.streamSourceType && preset.id === 'RTSP')
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => {
+                      const updated = {
+                        ...(currentConfig || {}),
+                        streamSourceType: preset.id as any,
+                        streamUrl: preset.example,
+                      }
+                      setFormConfig(updated as any)
+                      updateConfig(updated as any)
+                    }}
+                    className={`flex items-center gap-2 p-2 rounded-xl text-left border transition-all text-xs ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white border-indigo-400 shadow-md font-bold'
+                        : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-800 hover:border-slate-600'
+                    }`}
+                  >
+                    <IconComponent className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{preset.title}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {/* SPLIT SCREEN LAYOUT: LEFT = LIVE CAPTURE STREAM | RIGHT = SCANNER LOGS */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
             {/* LEFT BOX (7 COLS): REALTIME LIVE CAPTURE STREAM */}
             <div className="lg:col-span-7 space-y-3">
               <Card className="shadow-lg border-slate-800 bg-slate-950 text-white overflow-hidden rounded-2xl">
                 {/* Header Stream Bar */}
-                <div className="p-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="flex h-3 w-3 relative">
+                <div className="p-3 sm:p-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex h-3 w-3 relative shrink-0">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
                     </span>
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                        {currentConfig?.cameraName || 'Camera Gerbang Utama'}
-                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-slate-700 text-indigo-300 font-mono">
-                          YOLOv11 LIVE
+                    <div className="min-w-0">
+                      <h2 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5 sm:gap-2 truncate">
+                        <span className="truncate">{currentConfig?.cameraName || 'Camera Gerbang Utama'}</span>
+                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-slate-700 text-indigo-300 font-mono shrink-0">
+                          {currentConfig?.streamSourceType || 'RTSP'}
                         </Badge>
                       </h2>
-                      <p className="text-[11px] text-slate-400 font-mono truncate max-w-xs md:max-w-md">
+                      <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate max-w-[200px] sm:max-w-xs md:max-w-md">
                         {currentConfig?.streamUrl || 'rtsp://...'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={handleReconnectStream}
                       title="Hubungkan Ulang Stream"
-                      className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 px-2"
+                      className="text-slate-400 hover:text-white hover:bg-slate-800 h-7 sm:h-8 px-2"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                     </Button>
@@ -532,7 +577,7 @@ export default function FaceAttendanceCameraPage() {
                       size="sm"
                       onClick={toggleFullscreen}
                       title="Layar Penuh"
-                      className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 px-2"
+                      className="text-slate-400 hover:text-white hover:bg-slate-800 h-7 sm:h-8 px-2"
                     >
                       <Maximize2 className="w-3.5 h-3.5" />
                     </Button>
@@ -554,19 +599,19 @@ export default function FaceAttendanceCameraPage() {
                     />
                   ) : (
                     /* Fallback when stream is offline / connecting */
-                    <div className="text-center p-6 space-y-4 max-w-md">
-                      <div className="w-16 h-16 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
-                        <Video className="w-8 h-8 animate-pulse" />
+                    <div className="text-center p-4 sm:p-6 space-y-3 sm:space-y-4 max-w-md">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
+                        <Video className="w-6 h-6 sm:w-8 sm:h-8 animate-pulse" />
                       </div>
                       <div className="space-y-1">
-                        <p className="font-bold text-sm text-slate-200">
+                        <p className="font-bold text-xs sm:text-sm text-slate-200">
                           {serviceStatus?.isOnline ? 'AI Service Siap (Stream Belum Dimulai)' : 'Microservice AI Belum Aktif'}
                         </p>
-                        <p className="text-xs text-slate-400 leading-relaxed">
+                        <p className="text-[11px] sm:text-xs text-slate-400 leading-relaxed">
                           Klik tombol di bawah untuk menyalakan AI Microservice dan memulai video feed kamera.
                         </p>
                       </div>
-                      <div className="pt-2 flex justify-center gap-2">
+                      <div className="pt-2 flex flex-wrap justify-center gap-2">
                         <Button 
                           onClick={() => startServiceWorker()} 
                           disabled={isStartingWorker}
@@ -574,7 +619,7 @@ export default function FaceAttendanceCameraPage() {
                           className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs font-semibold"
                         >
                           <Power className="w-3.5 h-3.5" />
-                          {isStartingWorker ? 'Menyalakan...' : 'Nyalakan AI Microservice Stream'}
+                          {isStartingWorker ? 'Menyalakan...' : 'Nyalakan AI Microservice'}
                         </Button>
                         <Button 
                           onClick={handleReconnectStream} 
@@ -590,12 +635,12 @@ export default function FaceAttendanceCameraPage() {
                   )}
 
                   {/* Corner Visual HUD Targets */}
-                  <div className="absolute top-3 left-3 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30">
+                  <div className="absolute top-2 sm:top-3 left-2 sm:left-3 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>DIRECT STREAM</span>
+                    <span>{currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
                   </div>
 
-                  <div className="absolute bottom-3 right-3 pointer-events-none flex items-center gap-2 px-2.5 py-1 rounded bg-black/60 backdrop-blur-xs text-[11px] font-mono text-slate-300 border border-white/10">
+                  <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded bg-black/60 backdrop-blur-xs text-[10px] sm:text-[11px] font-mono text-slate-300 border border-white/10">
                     <span>Threshold: {Math.round((currentConfig?.threshold || 0.7) * 100)}%</span>
                     <span>•</span>
                     <span>Cooldown: {currentConfig?.cooldownMinutes || 10}m</span>
@@ -603,18 +648,18 @@ export default function FaceAttendanceCameraPage() {
                 </div>
 
                 {/* Footer Controls */}
-                <div className="p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Lokasi: <strong className="text-slate-200">{currentConfig?.location || 'Gerbang Depan Sekolah'}</strong></span>
+                <div className="p-2.5 sm:p-3 bg-slate-900 border-t border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-400">
+                  <div className="flex items-center gap-2 truncate">
+                    <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="truncate">Lokasi: <strong className="text-slate-200">{currentConfig?.location || 'Gerbang Depan Sekolah'}</strong></span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
                       disabled={isStartingWorker || isStoppingWorker}
-                      className={`h-7 text-xs border-slate-700 font-semibold ${
+                      className={`h-7 text-xs border-slate-700 font-semibold w-full sm:w-auto ${
                         serviceStatus?.is_running ? 'text-rose-400 hover:text-rose-300' : 'text-emerald-400 hover:text-emerald-300'
                       }`}
                     >

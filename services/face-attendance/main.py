@@ -93,5 +93,10 @@ def stop_stream():
     worker.stop()
     return {"success": True, "message": "Worker RTSP/RTMP Stream telah dihentikan", "status": worker.stream_status}
 
+@app.post("/stream/restart")
+def restart_stream():
+    worker.restart()
+    return {"success": True, "message": "Worker RTSP/RTMP Stream telah direstart dengan konfigurasi terbaru", "status": worker.stream_status}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=SERVICE_PORT)

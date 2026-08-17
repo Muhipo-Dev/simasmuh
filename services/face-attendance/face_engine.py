@@ -46,14 +46,22 @@ class FaceRecognitionEngine:
             self.yolo_model = None
 
         # Fallback OpenCV Haar Cascade
-        self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        if hasattr(cv2, 'CascadeClassifier') and hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
+            try:
+                self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            except Exception:
+                self.face_cascade = None
+        else:
+            self.face_cascade = None
         self.is_ready = True
 
     def sync_database_from_backend(self) -> Tuple[int, int]:
         """Mengunduh / membaca foto profil pengguna dari basis data SIMASMUH dan menghitung vektor embedding."""
         print("[INFO] Memulai sinkronisasi profil pengguna dari basis data SIMASMUH...")
         try:
-            res = requests.get(f"{self.backend_url}/api/face-attendance/users-dataset", timeout=10)
+            from config import API_KEY
+            headers = {"x-api-key": API_KEY}
+            res = requests.get(f"{self.backend_url}/face-attendance/users-dataset", headers=headers, timeout=10)
             if res.status_code != 200:
                 print(f"[ERROR] Backend returned status {res.status_code}")
                 return 0, 0
@@ -185,11 +193,14 @@ class FaceRecognitionEngine:
                 pass
 
         # Fallback Haar Cascade
-        if not boxes:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            detected = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
-            for (x, y, w, h) in detected:
-                boxes.append((x, y, w, h))
+        if not boxes and self.face_cascade is not None:
+            try:
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                detected = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
+                for (x, y, w, h) in detected:
+                    boxes.append((x, y, w, h))
+            except Exception:
+                pass
 
         return boxes
 

@@ -17,3 +17,7 @@ frontend/build/
 *.ps1
 *.bat
 *.pid
+__pycache__/
+*.pyc
+*.pt
+*.npz

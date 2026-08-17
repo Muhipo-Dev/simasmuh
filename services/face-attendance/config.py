@@ -3,6 +3,7 @@ import requests
 from pydantic import BaseModel
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:3001")
+API_KEY = os.getenv("API_KEY", "siakad_secret_api_key_2026")
 API_SECRET = os.getenv("API_SECRET", "simasmuh_face_token_secret_2026")
 SERVICE_PORT = int(os.getenv("PORT", "8005"))
 
@@ -17,7 +18,8 @@ class FaceServiceConfig(BaseModel):
 
 def fetch_backend_config() -> FaceServiceConfig:
     try:
-        res = requests.get(f"{BACKEND_URL}/api/face-attendance/config", timeout=5)
+        headers = {"x-api-key": API_KEY}
+        res = requests.get(f"{BACKEND_URL}/face-attendance/config", headers=headers, timeout=5)
         if res.status_code == 200:
             data = res.json()
             return FaceServiceConfig(

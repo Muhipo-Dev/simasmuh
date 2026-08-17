@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -8,7 +9,25 @@ from config import BACKEND_URL, SERVICE_PORT, fetch_backend_config
 from face_engine import FaceRecognitionEngine
 from worker import AttendanceWorker
 
-app = FastAPI(title="SIMASMUH Face Attendance Service (YOLOv11)", version="1.0.0")
+engine = FaceRecognitionEngine(backend_url=BACKEND_URL)
+worker = AttendanceWorker(engine=engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("[INFO] SIMASMUH Face Attendance Service Starting...")
+    engine.sync_database_from_backend()
+    cfg = fetch_backend_config()
+    if cfg.is_active:
+        worker.start()
+    yield
+    worker.stop()
+    print("[INFO] SIMASMUH Face Attendance Service Stopped.")
+
+app = FastAPI(
+    title="SIMASMUH Face Attendance Service (YOLOv11)",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,22 +36,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-engine = FaceRecognitionEngine(backend_url=BACKEND_URL)
-worker = AttendanceWorker(engine=engine)
-
-@app.on_event("startup")
-def startup_event():
-    print("[INFO] SIMASMUH Face Attendance Service Starting...")
-    engine.sync_database_from_backend()
-    # Auto-start worker if config isActive
-    cfg = fetch_backend_config()
-    if cfg.is_active:
-        worker.start()
-
-@app.on_event("shutdown")
-def shutdown_event():
-    worker.stop()
 
 @app.get("/")
 def root():

@@ -161,13 +161,15 @@ class AttendanceWorker:
 
         # Kirim HTTP POST ke Backend NestJS SIMASMUH
         try:
+            from config import API_KEY
+            headers = {"x-api-key": API_KEY}
             payload = {
                 "userId": user_id,
                 "confidence": round(similarity, 3),
                 "secretKey": API_SECRET,
                 "cameraLocation": self.config.location,
             }
-            res = requests.post(f"{BACKEND_URL}/api/face-attendance/record", json=payload, timeout=4)
+            res = requests.post(f"{BACKEND_URL}/face-attendance/record", json=payload, headers=headers, timeout=4)
             if res.status_code in (200, 201):
                 res_data = res.json()
                 print(f"[SUCCESS] Presensi tercatat: {res_data.get('message')}")

@@ -145,7 +145,7 @@ get_app_status() {
 
     test_port_listening 3001 && b_running=true
     test_port_listening 3000 && f_running=true
-    test_port_listening 8005 && a_running=true
+    test_port_listening 8089 && a_running=true
     test_port_listening 54322 && s_running=true
     test_port_listening 51212 && p_running=true
 
@@ -168,7 +168,7 @@ get_app_status() {
 
     echo -n "  | AI Face Attendance | "
     if [ "$a_running" = true ]; then
-        echo -e "${C_GREEN}AKTIF (YOLOv11) :8005${C_RESET}     |"
+        echo -e "${C_GREEN}AKTIF (FaceNet) :8089${C_RESET}     |"
     else
         echo -e "${C_GRAY}MATI${C_RESET}                      |"
     fi
@@ -361,9 +361,9 @@ start_frontend() {
 }
 
 start_face_ai() {
-    write_status "Menjalankan Face Attendance AI Service (Python YOLOv11 di port 8005)..."
-    if test_port_listening 8005; then
-        write_ok "Face AI Service sudah aktif -> http://localhost:8005"
+    write_status "Menjalankan Face Attendance AI Service (Python FaceNet di port 8089)..."
+    if test_port_listening 8089; then
+        write_ok "Face AI Service sudah aktif -> http://localhost:8089"
         return 0
     fi
 
@@ -386,7 +386,7 @@ start_face_ai() {
     local a_pid
     a_pid=$(get_stored_pid "$FACE_AI_PID_FILE")
     stop_process_by_pid "$a_pid"
-    stop_port_process 8005
+    stop_port_process 8089
     rm -f "$FACE_AI_PID_FILE" "$FACE_AI_LOG"
 
     cd "$FACE_AI_DIR"
@@ -395,11 +395,11 @@ start_face_ai() {
     echo "$new_pid" > "$FACE_AI_PID_FILE"
 
     sleep 2
-    if test_port_listening 8005; then
-        write_ok "Face AI Service aktif -> http://localhost:8005"
+    if test_port_listening 8089; then
+        write_ok "Face AI Service aktif -> http://localhost:8089"
         return 0
     fi
-    write_info "Face AI Service berjalan di latar belakang (port 8005)."
+    write_info "Face AI Service berjalan di latar belakang (port 8089)."
     return 0
 }
 
@@ -475,7 +475,7 @@ start_install_dependencies() {
     write_status "Menginstall dependencies Frontend (npm)..."
     (cd "$FRONTEND_DIR" && npm install)
 
-    write_status "Menginstall dependencies Face Attendance AI YOLOv11 (pip)..."
+    write_status "Menginstall dependencies Face Attendance AI FaceNet (pip)..."
     if command -v pip3 >/dev/null 2>&1; then
         (cd "$FACE_AI_DIR" && pip3 install -r requirements.txt) || true
     elif command -v pip >/dev/null 2>&1; then

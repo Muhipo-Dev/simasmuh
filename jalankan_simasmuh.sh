@@ -373,7 +373,15 @@ start_face_ai() {
     fi
 
     local py_cmd="python3"
-    command -v python3 >/dev/null 2>&1 || py_cmd="python"
+    if [ -f "$FACE_AI_DIR/.venv/bin/python" ]; then
+        py_cmd="$FACE_AI_DIR/.venv/bin/python"
+    elif [ -f "$FACE_AI_DIR/.venv/Scripts/python.exe" ]; then
+        py_cmd="$FACE_AI_DIR/.venv/Scripts/python.exe"
+    elif command -v python3 >/dev/null 2>&1; then
+        py_cmd="python3"
+    elif command -v python >/dev/null 2>&1; then
+        py_cmd="python"
+    fi
 
     local a_pid
     a_pid=$(get_stored_pid "$FACE_AI_PID_FILE")
@@ -397,17 +405,17 @@ start_face_ai() {
 
 start_apps() {
     local mode="${1:-Production}"
-    write_status "Memulai SIMASMUH + SUPABASE + PRISMA STUDIO + AI FACE ($mode)..."
+    write_status "Memulai SIMASMUH + SUPABASE + PRISMA STUDIO ($mode)..."
     start_supabase_docker || true
     echo ""
-    start_backend "$mode" && start_frontend "$mode" && start_face_ai || true
+    start_backend "$mode" && start_frontend "$mode" || true
     start_prisma_studio || true
     echo ""
     echo -e "${C_GREEN}  +==========================================================+"
-    echo -e "  | SIMASMUH + SUPABASE + PRISMA STUDIO + AI FACE AKTIF!     |"
+    echo -e "  | SIMASMUH + SUPABASE + PRISMA STUDIO AKTIF!               |"
     echo -e "  | - Aplikasi Web     : http://localhost:3000               |"
     echo -e "  | - Backend API      : http://localhost:3001               |"
-    echo -e "  | - Face AI Service  : http://localhost:8005               |"
+    echo -e "  | - Face AI Service  : On-Demand via Dashboard (Port 8089) |"
     echo -e "  | - Prisma Studio    : http://localhost:51212              |"
     echo -e "  | - Supabase Studio  : http://localhost:54323              |"
     echo -e "  +==========================================================+${C_RESET}"
@@ -430,6 +438,7 @@ stop_apps() {
     stop_process_by_pid "$a_pid"
     stop_port_process 3001
     stop_port_process 3000
+    stop_port_process 8089
     stop_port_process 8005
     stop_port_process 51212
 

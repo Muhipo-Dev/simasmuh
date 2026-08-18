@@ -214,18 +214,44 @@ export function QrScanner({ studentMode = false }: QrScannerProps) {
             </div>
           )}
           {isScanning && !camError && isSecureContext && (
-            <Webcam
-              audio={false}
-              ref={webcamRef}
-              screenshotFormat="image/jpeg"
-              videoConstraints={{ deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined, facingMode: selectedDeviceId ? undefined : 'environment' }}
-              className="w-full h-full object-cover"
-              onUserMedia={() => navigator.mediaDevices.enumerateDevices().then(handleDevices)}
-              onUserMediaError={(err: any) => {
-                console.error('Camera error:', err)
-                setCamError('Gagal mengakses kamera: ' + (err.message || err.name || 'Akses ditolak.'))
-              }}
-            />
+            <div className="relative w-full h-full">
+              <Webcam
+                audio={false}
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                videoConstraints={{ deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined, facingMode: selectedDeviceId ? undefined : 'environment' }}
+                className="w-full h-full object-cover"
+                onUserMedia={() => navigator.mediaDevices.enumerateDevices().then(handleDevices)}
+                onUserMediaError={(err: any) => {
+                  console.error('Camera error:', err)
+                  setCamError('Gagal mengakses kamera: ' + (err.message || err.name || 'Akses ditolak.'))
+                }}
+              />
+
+              {/* REALTIME QR BOUNDING BOX OVERLAY */}
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-6">
+                <div className="relative w-52 h-52 sm:w-60 sm:h-60 rounded-2xl border-2 border-dashed border-blue-400/50 bg-blue-500/10 shadow-[0_0_30px_rgba(59,130,246,0.2)] flex flex-col justify-between p-3">
+                  {/* 4 Corner Brackets */}
+                  <div className="absolute -top-1 -left-1 w-6 h-6 border-t-3 border-l-3 border-blue-400 rounded-tl-lg shadow-[0_0_10px_#3b82f6]" />
+                  <div className="absolute -top-1 -right-1 w-6 h-6 border-t-3 border-r-3 border-blue-400 rounded-tr-lg shadow-[0_0_10px_#3b82f6]" />
+                  <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-3 border-l-3 border-blue-400 rounded-bl-lg shadow-[0_0_10px_#3b82f6]" />
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-3 border-r-3 border-blue-400 rounded-br-lg shadow-[0_0_10px_#3b82f6]" />
+
+                  {/* Animated Horizontal Laser Scan Line */}
+                  <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent shadow-[0_0_12px_#3b82f6] animate-pulse top-1/2 -translate-y-1/2" />
+
+                  {/* Top Badge */}
+                  <div className="self-center -mt-6 px-2.5 py-0.5 rounded-full bg-blue-950/90 border border-blue-500/50 backdrop-blur-sm text-[10px] font-mono font-bold text-blue-300">
+                    AREA SCAN QR
+                  </div>
+
+                  {/* Bottom Instruction */}
+                  <div className="self-center -mb-5 px-2.5 py-0.5 rounded-full bg-black/80 border border-white/20 backdrop-blur-sm text-[9px] sm:text-[10px] font-mono text-slate-300">
+                    Arahkan QR Code ke Dalam Kotak
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
           {isLoading && (
             <div className="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center text-white">

@@ -170,14 +170,15 @@ export default function FaceAttendanceCameraPage() {
   // 1. Fetch Config
   const { data: configData, refetch: refetchConfig } = useQuery<FaceCameraConfig>({
     queryKey: ['face-attendance-config'],
-    queryFn: async () => {
-      const res = await authenticatedQuery('/api-backend/face-attendance/config')
-      if (res && !formConfig) {
-        setFormConfig(res)
-      }
-      return res
-    },
+    queryFn: () => authenticatedQuery('/api-backend/face-attendance/config'),
   })
+
+  // Sinkronisasi formConfig dari server saat data pertama kali dimuat atau di-refresh
+  useEffect(() => {
+    if (configData) {
+      setFormConfig(configData)
+    }
+  }, [configData])
 
   // 2. Fetch Users Dataset stats
   const { data: datasetData, isLoading: isDatasetLoading, refetch: refetchDataset } = useQuery<UsersDatasetResponse>({
@@ -255,13 +256,26 @@ export default function FaceAttendanceCameraPage() {
   const { mutate: startServiceWorker, isPending: isStartingWorker } = useMutation({
     mutationFn: async () => {
       const res = await authenticatedFetch('/api-backend/face-attendance/service/start', { method: 'POST' })
-      if (!res.ok) throw new Error('Gagal menyalakan AI worker')
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal menyalakan AI worker')
+      }
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.setQueryData(['face-attendance-service-status'], (prev: any) => ({
+        ...(prev || {}),
+        isOnline: true,
+        is_running: true,
+        stream_status: 'LIVE_STREAMING',
+      }))
       queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
       setStreamError(false)
       setStreamKey(Date.now())
+      toast.success(data?.message || 'AI Microservice FaceNet berhasil diaktifkan!')
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Gagal menyalakan AI Microservice FaceNet')
     },
   })
 
@@ -269,11 +283,23 @@ export default function FaceAttendanceCameraPage() {
   const { mutate: stopServiceWorker, isPending: isStoppingWorker } = useMutation({
     mutationFn: async () => {
       const res = await authenticatedFetch('/api-backend/face-attendance/service/stop', { method: 'POST' })
-      if (!res.ok) throw new Error('Gagal menghentikan AI worker')
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal menghentikan AI worker')
+      }
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.setQueryData(['face-attendance-service-status'], (prev: any) => ({
+        ...(prev || {}),
+        is_running: false,
+        stream_status: 'STANDBY',
+      }))
       queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+      toast.info(data?.message || 'AI Microservice FaceNet dimatikan (Standby)')
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Gagal mematikan AI Microservice FaceNet')
     },
   })
 
@@ -338,11 +364,11 @@ export default function FaceAttendanceCameraPage() {
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-[11px] sm:text-xs font-semibold uppercase tracking-wider border border-indigo-500/30">
             <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-            Live Camera Stream & YOLOv11 Face Matcher (Port 8005)
+            Live Camera Stream & FaceNet Biometric Engine (Port 8089)
           </div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">Presensi Camera AI</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">Presensi Camera AI FaceNet</h1>
           <p className="text-slate-300 text-xs md:text-sm max-w-2xl">
-            Monitoring realtime live capture berbagai tipe camera (RTSP, RTMP, Webcam, HTTP Stream, Video) dengan deteksi wajah YOLOv11 dan pencatatan presensi otomatis.
+            Monitoring realtime live capture berbagai tipe camera (RTSP, RTMP, Webcam, HTTP Stream, Video) dengan deteksi biometrik FaceNet (512-D) dan pencatatan presensi otomatis.
           </p>
         </div>
         
@@ -590,13 +616,49 @@ export default function FaceAttendanceCameraPage() {
                   className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group"
                 >
                   {!streamError && serviceStatus?.is_running ? (
-                    <img
-                      key={streamKey}
-                      src={`http://localhost:8005/video_feed?t=${streamKey}`}
-                      alt="Live Capture Camera Stream"
-                      className="w-full h-full object-contain"
-                      onError={() => setStreamError(true)}
-                    />
+                    <div className="relative w-full h-full flex items-center justify-center">
+                      <img
+                        key={streamKey}
+                        src={`/api/face-stream?t=${streamKey}`}
+                        alt="Live Capture FaceNet Camera Stream"
+                        className="w-full h-full object-contain"
+                        onError={() => {
+                          console.warn('Stream proxy failed, attempting direct endpoint...')
+                        }}
+                      />
+
+                      {/* REALTIME SCANNER BOUNDING BOX OVERLAY & TARGETING RETICLE */}
+                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
+                        {/* Centered Face Detection Bounding Box Guide */}
+                        <div className="relative w-48 h-56 sm:w-56 sm:h-64 md:w-64 md:h-72 rounded-2xl border-2 border-dashed border-emerald-400/40 bg-emerald-500/5 shadow-[0_0_30px_rgba(16,185,129,0.15)] flex flex-col justify-between p-3 transition-all duration-300">
+                          {/* 4 Glowing Corner Brackets */}
+                          <div className="absolute -top-1 -left-1 w-6 h-6 border-t-3 border-l-3 border-emerald-400 rounded-tl-lg shadow-[0_0_10px_#10b981]" />
+                          <div className="absolute -top-1 -right-1 w-6 h-6 border-t-3 border-r-3 border-emerald-400 rounded-tr-lg shadow-[0_0_10px_#10b981]" />
+                          <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-3 border-l-3 border-emerald-400 rounded-bl-lg shadow-[0_0_10px_#10b981]" />
+                          <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-3 border-r-3 border-emerald-400 rounded-br-lg shadow-[0_0_10px_#10b981]" />
+
+                          {/* Center Crosshair Reticle */}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                            <div className="w-6 h-[1px] bg-emerald-400" />
+                            <div className="h-6 w-[1px] bg-emerald-400 absolute" />
+                          </div>
+
+                          {/* Animated Vertical Scan Laser Line */}
+                          <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#10b981] animate-pulse top-1/2 -translate-y-1/2" />
+
+                          {/* Top Bounding Box Badge */}
+                          <div className="self-center -mt-6 px-2.5 py-0.5 rounded-full bg-emerald-950/90 border border-emerald-500/50 backdrop-blur-sm text-[10px] font-mono font-bold text-emerald-300 tracking-wider flex items-center gap-1 shadow-md">
+                            <Sparkles className="w-3 h-3 text-emerald-400 animate-spin" />
+                            AREA FOKUS WAJAH
+                          </div>
+
+                          {/* Bottom Alignment Instruction */}
+                          <div className="self-center -mb-6 px-2.5 py-0.5 rounded-full bg-black/80 border border-white/20 backdrop-blur-sm text-[9px] sm:text-[10px] font-mono text-slate-300 tracking-tight text-center shadow-md">
+                            Posisikan Wajah di Dalam Kotak
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     /* Fallback when stream is offline / connecting */
                     <div className="text-center p-4 sm:p-6 space-y-3 sm:space-y-4 max-w-md">
@@ -605,21 +667,25 @@ export default function FaceAttendanceCameraPage() {
                       </div>
                       <div className="space-y-1">
                         <p className="font-bold text-xs sm:text-sm text-slate-200">
-                          {serviceStatus?.isOnline ? 'AI Service Siap (Stream Belum Dimulai)' : 'Microservice AI Belum Aktif'}
+                          {serviceStatus?.isOnline ? 'AI FaceNet Siap (Stream Belum Dimulai)' : 'Microservice AI FaceNet Belum Aktif'}
                         </p>
                         <p className="text-[11px] sm:text-xs text-slate-400 leading-relaxed">
-                          Klik tombol di bawah untuk menyalakan AI Microservice dan memulai video feed kamera.
+                          Klik tombol di bawah untuk menyalakan AI Microservice FaceNet dan memulai video feed kamera.
                         </p>
                       </div>
                       <div className="pt-2 flex flex-wrap justify-center gap-2">
                         <Button 
-                          onClick={() => startServiceWorker()} 
+                          onClick={() => {
+                            setStreamError(false)
+                            setStreamKey(Date.now())
+                            startServiceWorker()
+                          }} 
                           disabled={isStartingWorker}
                           size="sm" 
                           className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs font-semibold"
                         >
                           <Power className="w-3.5 h-3.5" />
-                          {isStartingWorker ? 'Menyalakan...' : 'Nyalakan AI Microservice'}
+                          {isStartingWorker ? 'Menyalakan...' : 'Nyalakan AI Microservice FaceNet'}
                         </Button>
                         <Button 
                           onClick={handleReconnectStream} 
@@ -977,7 +1043,7 @@ export default function FaceAttendanceCameraPage() {
                   <CardTitle className="text-base flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Server className="w-4 h-4 text-indigo-600" />
-                      Microservice AI (Port 8005)
+                      Microservice AI FaceNet (Port 8089)
                     </span>
                     <Badge className={serviceStatus?.isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}>
                       {serviceStatus?.isOnline ? 'ONLINE' : 'OFFLINE'}
@@ -988,16 +1054,20 @@ export default function FaceAttendanceCameraPage() {
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
                     <span className="text-slate-500">Status Worker:</span>
                     <span className="font-semibold text-slate-800">
-                      {serviceStatus?.is_running ? 'STREAMING' : 'BERHENTI'}
+                      {serviceStatus?.is_running ? 'STREAMING (ACTIVE)' : 'STANDBY'}
                     </span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
-                    <span className="text-slate-500">Detektor AI:</span>
-                    <span className="font-semibold text-slate-800">YOLOv11 Nano</span>
+                    <span className="text-slate-500">Arsitektur AI:</span>
+                    <span className="font-semibold text-slate-800">FaceNet (Inception-ResNet-v1 512-D)</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-500">Detektor Wajah:</span>
+                    <span className="font-semibold text-slate-800">MTCNN Multi-Task Cascade</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
                     <span className="text-slate-500">Basis Data Wajah:</span>
-                    <span className="font-semibold text-slate-800">Foto Profil User</span>
+                    <span className="font-semibold text-slate-800">Foto Profil Pengguna</span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Total Scan Hari Ini:</span>
@@ -1007,7 +1077,11 @@ export default function FaceAttendanceCameraPage() {
                   {/* Microservice AI Start/Stop Button */}
                   <div className="pt-3 border-t border-slate-100">
                     <Button
-                      onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
+                      onClick={() => {
+                        setStreamError(false)
+                        setStreamKey(Date.now())
+                        serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()
+                      }}
                       disabled={isStartingWorker || isStoppingWorker}
                       className={`w-full font-bold gap-2 ${
                         serviceStatus?.is_running ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'

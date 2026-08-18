@@ -5,7 +5,16 @@ import math
 import numpy as np
 import cv2
 import requests
+import torch
+from PIL import Image
 from typing import List, Dict, Tuple, Optional
+
+try:
+    from facenet_pytorch import MTCNN, InceptionResnetV1
+    FACENET_AVAILABLE = True
+except ImportError:
+    FACENET_AVAILABLE = False
+
 
 class FaceUserRecord:
     def __init__(self, user_id: str, name: str, role: str, identifier: str, avatar_url: Optional[str] = None, local_path: Optional[str] = None):
@@ -17,53 +26,57 @@ class FaceUserRecord:
         self.local_path = local_path
         self.embedding: Optional[np.ndarray] = None
 
+
 class FaceRecognitionEngine:
     def __init__(self, backend_url: str = "http://localhost:3001"):
         self.backend_url = backend_url
         self.user_database: Dict[str, FaceUserRecord] = {}
-        self.yolo_model = None
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        if torch.cuda.is_available():
+            try:
+                torch.backends.cudnn.benchmark = True
+                self.device_name = torch.cuda.get_device_name(0)
+            except Exception:
+                self.device_name = "NVIDIA CUDA GPU"
+        else:
+            self.device_name = "CPU"
+        self.facenet_model: Optional[InceptionResnetV1] = None
+        self.mtcnn_detector: Optional[MTCNN] = None
         self.is_ready = False
         self.cache_file = os.path.join(os.path.dirname(__file__), "face_vectors_cache.npz")
-        self._init_yolo()
+        self._init_facenet()
 
-    def _init_yolo(self):
-        """Inisialisasi Model YOLO Ultra-Lightweight (YOLOv8n / YOLOv11n) dan OpenCV Face Detector."""
+    def _init_facenet(self):
+        """Inisialisasi Model FaceNet (Inception-ResNet-v1 pretrained VGGFace2) & MTCNN Face Detector pada GPU/CPU."""
+        print(f"[INFO] Memuat Model AI FaceNet pada hardware compute: {self.device_name} ({self.device})...")
         try:
-            from ultralytics import YOLO
-            print("[INFO] Memuat model YOLO Ultra-Lightweight (Nano)...")
-            
-            # Prioritas 1: YOLOv8n (terbukti paling stabil, ringan, dan hemat VRAM/CPU ~3.2M params)
-            # Prioritas 2: YOLO11n (~2.6M params)
-            model_loaded = False
-            for model_name in ["yolov8n.pt", "yolo11n.pt"]:
-                try:
-                    self.yolo_model = YOLO(model_name)
-                    print(f"[INFO] Model {model_name} Ultra-Lightweight berhasil dimuat.")
-                    model_loaded = True
-                    break
-                except Exception as e:
-                    print(f"[DEBUG] Coba model {model_name} berikutnya: {e}")
+            if FACENET_AVAILABLE:
+                # MTCNN dengan akselerasi GPU / CPU
+                self.mtcnn_detector = MTCNN(
+                    image_size=160,
+                    margin=15,
+                    min_face_size=15,
+                    thresholds=[0.4, 0.5, 0.5],
+                    factor=0.709,
+                    post_process=True,
+                    keep_all=True,
+                    device=self.device
+                )
+                # InceptionResnetV1 untuk representasi 512-D embedding pada GPU
+                self.facenet_model = InceptionResnetV1(pretrained='vggface2').eval().to(self.device)
+                print(f"[INFO] FaceNet (Inception-ResNet-v1 512-D) & MTCNN berhasil dimuat pada GPU: {self.device_name}.")
+            else:
+                print("[WARN] facenet-pytorch belum terpasang.")
+        except Exception as e:
+            print(f"[ERROR] Gagal memuat FaceNet / MTCNN: {e}")
+            self.facenet_model = None
+            self.mtcnn_detector = None
 
-            if not model_loaded:
-                print("[WARN] Menggunakan OpenCV Haar Cascade Detector.")
-                self.yolo_model = None
-        except ImportError:
-            print("[WARN] Paket ultralytics belum terpasang. Menggunakan OpenCV Haar Cascade.")
-            self.yolo_model = None
-
-        # Fallback OpenCV Haar Cascade
-        if hasattr(cv2, 'CascadeClassifier') and hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
-            try:
-                self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-            except Exception:
-                self.face_cascade = None
-        else:
-            self.face_cascade = None
         self.is_ready = True
 
     def sync_database_from_backend(self) -> Tuple[int, int]:
-        """Mengunduh / membaca foto profil pengguna dari basis data SIMASMUH dan menghitung vektor embedding."""
-        print("[INFO] Memulai sinkronisasi profil pengguna dari basis data SIMASMUH...")
+        """Mengunduh / membaca foto profil pengguna dari basis data SIMASMUH dan menghitung FaceNet 512-D embedding."""
+        print("[INFO] Memulai sinkronisasi profil pengguna ke representasi FaceNet embedding...")
         try:
             from config import API_KEY
             headers = {"x-api-key": API_KEY}
@@ -83,67 +96,96 @@ class FaceRecognitionEngine:
             for item in dataset:
                 user_id = item.get("userId")
                 name = item.get("name", "")
-                role = item.get("role", "")
-                identifier = item.get("identifier", "")
+                role = item.get("role", "SISWA")
+                identifier = item.get("identifier") or item.get("username", "")
                 avatar_url = item.get("avatarUrl")
                 local_path = item.get("localPath")
 
-                record = FaceUserRecord(user_id, name, role, identifier, avatar_url, local_path)
+                record = FaceUserRecord(
+                    user_id=user_id,
+                    name=name,
+                    role=role,
+                    identifier=identifier,
+                    avatar_url=avatar_url,
+                    local_path=local_path,
+                )
 
-                # Prioritas 1: Baca langsung dari path lokal storage eksternal jika ada
-                img = None
-                if local_path and os.path.exists(local_path):
-                    try:
-                        img = cv2.imread(local_path)
-                    except Exception:
-                        img = None
-
-                # Prioritas 2: Download dari URL avatar jika path lokal belum ditemukan
-                if img is None and avatar_url:
-                    img = self._download_image(avatar_url)
-
-                # Jika gambar valid, ekstrak wajah dan hitung vektor embedding
-                if img is not None:
-                    emb = self._extract_face_and_compute_vector(img)
-                    if emb is not None:
-                        record.embedding = emb
-                        vectors_to_save[user_id] = emb
-                        success_embedded += 1
+                # Ekstraksi vector embedding dari foto profil
+                embedding = self._extract_user_embedding(record)
+                if embedding is not None:
+                    record.embedding = embedding
+                    vectors_to_save[user_id] = embedding
+                    success_embedded += 1
 
                 new_db[user_id] = record
 
             self.user_database = new_db
 
-            # Simpan cache vektor lokal
+            # Simpan cache vektor lokal untuk bootstrap cepat
             if vectors_to_save:
                 try:
                     np.savez_compressed(self.cache_file, **vectors_to_save)
-                except Exception as ex:
-                    print(f"[WARN] Gagal menyimpan cache vektor: {ex}")
+                except Exception as e:
+                    print(f"[WARN] Gagal menyimpan cache vektor FaceNet: {e}")
 
-            print(f"[INFO] Sinkronisasi profil selesai: {total_fetched} pengguna, {success_embedded} vektor wajah aktif siap dideteksi.")
+            print(f"[INFO] Sinkronisasi FaceNet selesai: {total_fetched} pengguna, {success_embedded} vektor wajah aktif siap dideteksi.")
             return total_fetched, success_embedded
+
         except Exception as e:
-            print(f"[ERROR] Gagal sinkronisasi data profil: {e}")
+            print(f"[ERROR] Exception saat sinkronisasi database: {e}")
+            return self._load_from_local_cache()
+
+    def _load_from_local_cache(self) -> Tuple[int, int]:
+        """Memuat vektor embedding dari cache offline jika backend offline sementara."""
+        if not os.path.exists(self.cache_file):
+            return 0, 0
+        try:
+            cached = np.load(self.cache_file)
+            loaded_count = 0
+            for user_id in cached.files:
+                if user_id in self.user_database:
+                    self.user_database[user_id].embedding = cached[user_id]
+                    loaded_count += 1
+            print(f"[INFO] Memuat {loaded_count} vektor FaceNet dari file cache offline.")
+            return len(self.user_database), loaded_count
+        except Exception as e:
+            print(f"[WARN] Gagal membaca cache npz FaceNet: {e}")
             return 0, 0
 
-    def _download_image(self, url: str) -> Optional[np.ndarray]:
-        try:
-            img_url = url if url.startswith("http") else f"{self.backend_url}{url}"
-            resp = requests.get(img_url, timeout=5)
-            if resp.status_code == 200:
-                image_bytes = np.frombuffer(resp.content, np.uint8)
-                return cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
-        except Exception:
-            pass
-        return None
+    def _extract_user_embedding(self, record: FaceUserRecord) -> Optional[np.ndarray]:
+        """Ekstraksi embedding wajah dari file lokal atau download avatar URL."""
+        img = None
+        # 1. Coba baca dari file lokal storage
+        if record.local_path and os.path.exists(record.local_path):
+            try:
+                img = cv2.imread(record.local_path)
+            except Exception:
+                img = None
 
-    def _extract_face_and_compute_vector(self, full_img: np.ndarray) -> Optional[np.ndarray]:
-        """Mendeteksi area wajah pada foto profil pengguna dan menghitung representasi vektor."""
+        # 2. Jika file lokal tidak ada, coba fetch HTTP dari avatarUrl
+        if img is None and record.avatar_url:
+            try:
+                url = record.avatar_url
+                if url.startswith("/"):
+                    url = f"{self.backend_url}{url}"
+                r = requests.get(url, timeout=5)
+                if r.status_code == 200:
+                    arr = np.frombuffer(r.content, np.uint8)
+                    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+            except Exception:
+                img = None
+
+        if img is None:
+            return None
+
+        # Deteksi dan potong area wajah
+        return self._extract_face_crop_and_embed(img)
+
+    def _extract_face_crop_and_embed(self, full_img: np.ndarray) -> Optional[np.ndarray]:
+        """Deteksi area wajah pada foto dan hitung FaceNet embedding."""
         try:
             faces = self.detect_faces(full_img)
             if faces:
-                # Ambil wajah terbesar jika ada beberapa wajah
                 largest = max(faces, key=lambda b: b[2] * b[3])
                 x, y, w, h = largest
                 y1 = max(0, y)
@@ -151,86 +193,107 @@ class FaceRecognitionEngine:
                 x1 = max(0, x)
                 x2 = min(full_img.shape[1], x + w)
                 face_crop = full_img[y1:y2, x1:x2]
-                return self._compute_face_vector(face_crop)
+                return self._compute_facenet_embedding(face_crop)
             else:
-                # Fallback: gunakan foto keseluruhan jika deteksi wajah tidak menemukan box khusus
-                return self._compute_face_vector(full_img)
+                return self._compute_facenet_embedding(full_img)
         except Exception:
             return None
 
-    def _compute_face_vector(self, face_crop: np.ndarray) -> np.ndarray:
-        """Menghitung representasi vektor visual ternormalisasi dari wajah (128-D spatial-color-texture)."""
-        resized = cv2.resize(face_crop, (112, 112))
-        gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
-        
-        # Ekstraksi tekstur HOG / Gradien LBP + Color spatial histogram
-        hist_b = cv2.calcHist([resized], [0], None, [32], [0, 256])
-        hist_g = cv2.calcHist([resized], [1], None, [32], [0, 256])
-        hist_r = cv2.calcHist([resized], [2], None, [32], [0, 256])
-        
-        # Fitur gradient edge
-        sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
-        sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
-        mag = np.sqrt(sobelx**2 + sobely**2)
-        hist_edge = cv2.calcHist([mag.astype(np.uint8)], [0], None, [32], [0, 256])
+    def _compute_facenet_embedding(self, face_crop: np.ndarray) -> Optional[np.ndarray]:
+        """Menghitung representasi 512-D FaceNet L2-normalized deep embedding dari potongan wajah."""
+        if face_crop is None or face_crop.size == 0:
+            return None
 
-        feature_vector = np.concatenate([hist_b.flatten(), hist_g.flatten(), hist_r.flatten(), hist_edge.flatten()])
-        norm = np.linalg.norm(feature_vector)
-        if norm > 0:
-            feature_vector = feature_vector / norm
-        return feature_vector
+        if self.facenet_model is not None:
+            try:
+                rgb = cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB)
+                resized = cv2.resize(rgb, (160, 160))
+                # Normalisasi FaceNet: (pixel - 127.5) / 128.0
+                norm_img = (resized.astype(np.float32) - 127.5) / 128.0
+                tensor = torch.from_numpy(norm_img).permute(2, 0, 1).unsqueeze(0).to(self.device)
+                
+                with torch.no_grad():
+                    raw_emb = self.facenet_model(tensor).cpu().numpy()[0]
+                
+                norm = np.linalg.norm(raw_emb)
+                if norm > 0:
+                    raw_emb = raw_emb / norm
+                return raw_emb
+            except Exception as e:
+                print(f"[DEBUG] Error kalkulasi FaceNet embedding: {e}")
+
+        # Fallback LBP / Color Histogram
+        try:
+            resized = cv2.resize(face_crop, (112, 112))
+            gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+            hist_b = cv2.calcHist([resized], [0], None, [32], [0, 256])
+            hist_g = cv2.calcHist([resized], [1], None, [32], [0, 256])
+            hist_r = cv2.calcHist([resized], [2], None, [32], [0, 256])
+            sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+            sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+            mag = np.sqrt(sobelx**2 + sobely**2)
+            hist_edge = cv2.calcHist([mag.astype(np.uint8)], [0], None, [32], [0, 256])
+            feature_vector = np.concatenate([hist_b.flatten(), hist_g.flatten(), hist_r.flatten(), hist_edge.flatten()])
+            norm = np.linalg.norm(feature_vector)
+            if norm > 0:
+                feature_vector = feature_vector / norm
+            return feature_vector
+        except Exception:
+            return None
 
     def detect_faces(self, frame: np.ndarray) -> List[Tuple[int, int, int, int]]:
-        """Mendeteksi kotak wajah (x, y, w, h) dari frame video atau foto profil dengan inferensi ringan & cepat."""
+        """Mendeteksi kotak wajah (x, y, w, h) dari frame video atau foto profil dengan inferensi FaceNet MTCNN."""
         boxes = []
-        if self.yolo_model is not None:
-            try:
-                # Inferensi ultra-cepat: batasi resolusi inferensi ke 320px dan conf 0.45 untuk latensi minimal (<15ms di CPU)
-                results = self.yolo_model(frame, verbose=False, imgsz=320, conf=0.45, max_det=10, classes=[0])
-                for r in results:
-                    if r.boxes is not None and len(r.boxes) > 0:
-                        for box in r.boxes:
-                            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-                            h = y2 - y1
-                            w = x2 - x1
-                            if w >= 30 and h >= 30:
-                                face_y2 = min(y1 + int(h * 0.45), y2)
-                                boxes.append((x1, y1, w, max(20, face_y2 - y1)))
-            except Exception:
-                pass
+        if frame is None or frame.size == 0:
+            return boxes
 
-        # Fallback Haar Cascade jika YOLO kosong
-        if not boxes and self.face_cascade is not None:
+        h_frame, w_frame = frame.shape[:2]
+
+        if self.mtcnn_detector is not None:
             try:
-                # Resize thumbnail untuk haar cascade cepat
-                small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
-                gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
-                detected = self.face_cascade.detectMultiScale(gray, scaleFactor=1.15, minNeighbors=4, minSize=(25, 25))
-                for (sx, sy, sw, sh) in detected:
-                    boxes.append((int(sx * 2), int(sy * 2), int(sw * 2), int(sh * 2)))
-            except Exception:
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_img = Image.fromarray(rgb_frame)
+                detected_boxes, probs = self.mtcnn_detector.detect(pil_img)
+
+                if detected_boxes is not None:
+                    for i, box in enumerate(detected_boxes):
+                        prob = probs[i] if probs is not None else 1.0
+                        if prob is not None and prob >= 0.40:
+                            x1, y1, x2, y2 = box
+                            x1 = max(0, int(x1))
+                            y1 = max(0, int(y1))
+                            x2 = min(w_frame, int(x2))
+                            y2 = min(h_frame, int(y2))
+                            bw = x2 - x1
+                            bh = y2 - y1
+                            if bw >= 16 and bh >= 16:
+                                boxes.append((x1, y1, bw, bh))
+            except Exception as e:
                 pass
 
         return boxes
 
-    def match_face(self, face_crop: np.ndarray, threshold: float = 0.70) -> Optional[Tuple[FaceUserRecord, float]]:
-        """Mencocokkan potongan wajah dengan database vector embedding pengguna."""
+    def match_face(self, face_crop: np.ndarray, threshold: float = 0.65) -> Optional[Tuple[FaceUserRecord, float]]:
+        """Mencocokkan potongan wajah dengan database FaceNet 512-D vector embedding pengguna."""
         if not self.user_database or face_crop.size == 0:
             return None
 
-        detected_vec = self._compute_face_vector(face_crop)
+        detected_vec = self._compute_facenet_embedding(face_crop)
+        if detected_vec is None:
+            return None
+
         best_match: Optional[FaceUserRecord] = None
         highest_similarity = 0.0
 
         for user_id, record in self.user_database.items():
             if record.embedding is not None:
-                # Cosine similarity
-                dot = np.dot(detected_vec, record.embedding)
-                sim = float(dot)
+                # Cosine Similarity: dot(u, v) / (|u| * |v|)
+                sim = float(np.dot(detected_vec, record.embedding))
                 if sim > highest_similarity:
                     highest_similarity = sim
                     best_match = record
 
-        if best_match and highest_similarity >= threshold:
+        if best_match is not None and highest_similarity >= threshold:
             return best_match, highest_similarity
+
         return None

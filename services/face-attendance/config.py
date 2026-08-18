@@ -5,7 +5,7 @@ from pydantic import BaseModel
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:3001")
 API_KEY = os.getenv("API_KEY", "siakad_secret_api_key_2026")
 API_SECRET = os.getenv("API_SECRET", "simasmuh_face_token_secret_2026")
-SERVICE_PORT = int(os.getenv("PORT", "8005"))
+SERVICE_PORT = int(os.getenv("PORT", "8089"))
 
 class FaceServiceConfig(BaseModel):
     stream_url: str = "0"  # 0 for default webcam, or "rtmp://..." / "rtsp://..."

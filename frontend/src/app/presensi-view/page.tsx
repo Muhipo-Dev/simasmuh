@@ -375,7 +375,7 @@ export default function PresensiPegawaiPage() {
                 {!streamError && serviceStatus?.is_running ? (
                   <img
                     key={streamKey}
-                    src={`http://localhost:8005/video_feed?t=${streamKey}`}
+                    src={`http://localhost:8089/video_feed?t=${streamKey}`}
                     alt="Live Camera Presensi"
                     className="w-full h-full object-contain"
                     onError={() => setStreamError(true)}

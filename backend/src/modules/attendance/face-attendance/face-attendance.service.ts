@@ -37,7 +37,8 @@ export interface FaceDetectionLog {
 @Injectable()
 export class FaceAttendanceService {
   private readonly logger = new Logger(FaceAttendanceService.name);
-  private readonly configPath = join(process.cwd(), 'storage', 'face-attendance-config.json');
+  private readonly configPath = join(STORAGE_ROOT, 'face-attendance-config.json');
+  private readonly legacyConfigPath = join(process.cwd(), 'storage', 'face-attendance-config.json');
   private recentLogs: FaceDetectionLog[] = [];
   private readonly maxLogs = 50;
 
@@ -47,13 +48,21 @@ export class FaceAttendanceService {
 
   private ensureConfigExists() {
     try {
-      const dir = join(process.cwd(), 'storage');
-      if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
+      if (!existsSync(STORAGE_ROOT)) {
+        mkdirSync(STORAGE_ROOT, { recursive: true });
       }
+      
+      // Jika config belum ada di STORAGE_ROOT tapi ada di legacy path, salin ke STORAGE_ROOT
+      if (!existsSync(this.configPath) && existsSync(this.legacyConfigPath)) {
+        const legacyData = readFileSync(this.legacyConfigPath, 'utf8');
+        writeFileSync(this.configPath, legacyData, 'utf8');
+        return;
+      }
+
       if (!existsSync(this.configPath)) {
         const defaultConfig: FaceCameraConfig = {
-          streamUrl: 'rtmp://localhost/live/siakad_camera',
+          streamSourceType: 'WEBCAM',
+          streamUrl: '0',
           cameraName: 'Camera Gerbang Utama',
           location: 'Gerbang Depan Sekolah',
           threshold: 0.70,
@@ -76,11 +85,16 @@ export class FaceAttendanceService {
         const raw = readFileSync(this.configPath, 'utf8');
         return JSON.parse(raw);
       }
+      if (existsSync(this.legacyConfigPath)) {
+        const raw = readFileSync(this.legacyConfigPath, 'utf8');
+        return JSON.parse(raw);
+      }
     } catch (err) {
       this.logger.error('Error reading face attendance config', err);
     }
     return {
-      streamUrl: 'rtmp://localhost/live/siakad_camera',
+      streamSourceType: 'WEBCAM',
+      streamUrl: '0',
       cameraName: 'Camera Gerbang Utama',
       location: 'Gerbang Depan Sekolah',
       threshold: 0.70,
@@ -100,11 +114,17 @@ export class FaceAttendanceService {
       updatedAt: new Date().toISOString(),
     };
     try {
-      writeFileSync(this.configPath, JSON.stringify(updated, null, 2), 'utf8');
+      const configStr = JSON.stringify(updated, null, 2);
+      writeFileSync(this.configPath, configStr, 'utf8');
+      try {
+        const legacyDir = join(process.cwd(), 'storage');
+        if (!existsSync(legacyDir)) mkdirSync(legacyDir, { recursive: true });
+        writeFileSync(this.legacyConfigPath, configStr, 'utf8');
+      } catch {}
       
       // Auto trigger reload/restart on python AI worker if active
       try {
-        fetch('http://localhost:8005/stream/restart', {
+        fetch('http://127.0.0.1:8089/stream/restart', {
           method: 'POST',
           signal: AbortSignal.timeout(3000),
         }).catch(() => {});
@@ -320,7 +340,7 @@ export class FaceAttendanceService {
 
   async getAiServiceStatus() {
     try {
-      const res = await fetch('http://localhost:8005/status', { signal: AbortSignal.timeout(2000) });
+      const res = await fetch('http://127.0.0.1:8089/status', { signal: AbortSignal.timeout(5000) });
       if (res.ok) {
         const data = await res.json();
         return { isOnline: true, ...data };
@@ -335,7 +355,7 @@ export class FaceAttendanceService {
     // 1. Check if already online
     let isOnline = false;
     try {
-      const ping = await fetch('http://localhost:8005/status', { signal: AbortSignal.timeout(1500) });
+      const ping = await fetch('http://127.0.0.1:8089/status', { signal: AbortSignal.timeout(1500) });
       if (ping.ok) isOnline = true;
     } catch {
       isOnline = false;
@@ -356,19 +376,30 @@ export class FaceAttendanceService {
 
       if (targetDir) {
         try {
-          const pyProc = spawn('python', ['main.py'], {
+          // Prioritas 1: Gunakan executable dari local virtual environment (.venv)
+          const venvWindows = path.join(targetDir, '.venv', 'Scripts', 'python.exe');
+          const venvLinux = path.join(targetDir, '.venv', 'bin', 'python');
+          
+          let pyCmd = 'python';
+          if (fs.existsSync(venvWindows)) {
+            pyCmd = venvWindows;
+          } else if (fs.existsSync(venvLinux)) {
+            pyCmd = venvLinux;
+          }
+
+          const pyProc = spawn(pyCmd, ['main.py'], {
             cwd: targetDir,
             detached: true,
             stdio: 'ignore',
-            shell: true,
+            shell: false,
           });
           pyProc.unref();
 
-          // Wait up to 6 seconds for port 8005 to come alive
-          for (let i = 0; i < 12; i++) {
+          // Wait up to 12 seconds for port 8089 to come alive
+          for (let i = 0; i < 24; i++) {
             await new Promise((r) => setTimeout(r, 500));
             try {
-              const pingCheck = await fetch('http://localhost:8005/status', { signal: AbortSignal.timeout(1000) });
+              const pingCheck = await fetch('http://127.0.0.1:8089/status', { signal: AbortSignal.timeout(1000) });
               if (pingCheck.ok) {
                 isOnline = true;
                 break;
@@ -383,7 +414,7 @@ export class FaceAttendanceService {
 
     // 3. Trigger stream start
     try {
-      const res = await fetch('http://localhost:8005/stream/start', {
+      const res = await fetch('http://127.0.0.1:8089/stream/start', {
         method: 'POST',
         signal: AbortSignal.timeout(4000),
       });
@@ -392,16 +423,16 @@ export class FaceAttendanceService {
       }
     } catch (err) {
       if (isOnline) {
-        return { success: true, message: 'AI Service aktif di port 8005 (Stream Ingesting)' };
+        return { success: true, message: 'AI Service aktif di port 8089 (Stream Ingesting)' };
       }
-      throw new BadRequestException('Microservice AI Python di port 8005 belum dapat dijangkau. Pastikan Python sudah terinstal di komputer/server.');
+      throw new BadRequestException('Microservice AI Python di port 8089 belum dapat dijangkau. Pastikan Python sudah terinstal di komputer/server.');
     }
     return { success: true, message: 'AI Service berhasil dinyalakan' };
   }
 
   async stopAiWorker() {
     try {
-      const res = await fetch('http://localhost:8005/stream/stop', {
+      const res = await fetch('http://127.0.0.1:8089/stream/stop', {
         method: 'POST',
         signal: AbortSignal.timeout(4000),
       });
@@ -409,7 +440,7 @@ export class FaceAttendanceService {
         return await res.json();
       }
     } catch (err) {
-      throw new BadRequestException('Microservice AI Python di port 8005 tidak aktif atau tidak dapat dijangkau');
+      throw new BadRequestException('Microservice AI Python di port 8089 tidak aktif atau tidak dapat dijangkau');
     }
     return { success: true, message: 'AI Service stream dihentikan' };
   }

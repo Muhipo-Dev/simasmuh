@@ -1,12 +1,12 @@
 {
-  "streamUrl": "rtsp://admin:password@192.168.1.64:554/Streaming/Channels/101",
+  "streamUrl": "2",
   "cameraName": "Camera Gerbang",
   "location": "Gerbang Depan Sekolah",
   "threshold": 0.7,
   "cooldownMinutes": 10,
-  "isActive": true,
+  "isActive": false,
   "welcomeVoice": false,
   "apiKeySecret": "simasmuh_face_token_secret_2026",
-  "updatedAt": "2026-08-17T07:52:48.341Z",
-  "streamSourceType": "RTSP"
+  "updatedAt": "2026-08-18T01:14:26.263Z",
+  "streamSourceType": "WEBCAM"
 }

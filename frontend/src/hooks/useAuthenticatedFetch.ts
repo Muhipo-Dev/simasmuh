@@ -27,10 +27,8 @@ export function useAuthenticatedFetch() {
       }
 
       // Add API Key for backend communication
-      const apiKey = process.env.NEXT_PUBLIC_API_KEY
-      if (apiKey) {
-        mergedHeaders.set('x-api-key', apiKey)
-      }
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026'
+      mergedHeaders.set('x-api-key', apiKey)
 
       const fetchOptions: RequestInit = {
         ...restOptions,

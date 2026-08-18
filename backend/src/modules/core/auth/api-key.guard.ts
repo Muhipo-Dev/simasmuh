@@ -14,13 +14,13 @@ export class ApiKeyGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const apiKey = request.headers['x-api-key'];
 
-    // In a real application, you might want to use ConfigService
     const validApiKey = process.env.API_KEY || 'siakad_secret_api_key_2026';
+    const authHeader = request.headers['authorization'];
 
-    if (!apiKey || apiKey !== validApiKey) {
-      throw new UnauthorizedException('Invalid or missing API Key');
+    if (apiKey === validApiKey || (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer '))) {
+      return true;
     }
 
-    return true;
+    throw new UnauthorizedException('Invalid or missing API Key');
   }
 }

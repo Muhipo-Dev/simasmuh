@@ -1,3 +1,4 @@
+import os
 import time
 import threading
 import cv2
@@ -13,6 +14,7 @@ class AttendanceWorker:
         self.engine = engine
         self.config: FaceServiceConfig = fetch_backend_config()
         self.is_running = False
+        self.stop_event = threading.Event()
         self.capture_thread: Optional[threading.Thread] = None
         self.ai_thread: Optional[threading.Thread] = None
         self.last_attendance_time: Dict[str, float] = {}  # userId -> timestamp
@@ -33,6 +35,7 @@ class AttendanceWorker:
         if self.is_running:
             return
         self.config = fetch_backend_config()
+        self.stop_event.clear()
         self.is_running = True
         self.stream_status = "INITIALIZING"
         
@@ -48,11 +51,12 @@ class AttendanceWorker:
 
     def stop(self):
         self.is_running = False
+        self.stop_event.set()
         self.stream_status = "STOPPED"
         if self.capture_thread and self.capture_thread.is_alive():
-            self.capture_thread.join(timeout=1.5)
+            self.capture_thread.join(timeout=1.0)
         if self.ai_thread and self.ai_thread.is_alive():
-            self.ai_thread.join(timeout=1.5)
+            self.ai_thread.join(timeout=1.0)
             
         self.capture_thread = None
         self.ai_thread = None
@@ -66,7 +70,7 @@ class AttendanceWorker:
     def restart(self):
         print("[INFO] Merestart worker capture untuk sinkronisasi konfigurasi terbaru...")
         self.stop()
-        time.sleep(0.3)
+        time.sleep(0.2)
         self.start()
 
     def reset_cooldown(self, user_id: str = None, all_users: bool = False):
@@ -81,135 +85,178 @@ class AttendanceWorker:
         return True
 
     def _create_placeholder_frame(self, title: str, subtitle: str) -> np.ndarray:
-        """Membuat canvas grafis visual HUD saat stream sedang standby/reconnecting."""
-        canvas = np.zeros((480, 640, 3), dtype=np.uint8)
-        canvas[:] = (18, 15, 24)
+        """Membuat canvas grafis visual HUD qHD (960x540) saat stream sedang standby/reconnecting."""
+        canvas = np.zeros((540, 960, 3), dtype=np.uint8)
+        canvas[:] = (18, 15, 26)
         
         # Subtle Grid lines
-        for y in range(40, 480, 40):
-            cv2.line(canvas, (0, y), (640, y), (28, 24, 38), 1)
-        for x in range(40, 640, 40):
-            cv2.line(canvas, (x, 0), (x, 480), (28, 24, 38), 1)
+        for y in range(45, 540, 45):
+            cv2.line(canvas, (0, y), (960, y), (28, 24, 40), 1)
+        for x in range(45, 960, 45):
+            cv2.line(canvas, (x, 0), (x, 540), (28, 24, 40), 1)
 
-        cv2.putText(canvas, "SIMASMUH AI - FACENET BIOMETRIC ENGINE", (75, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
+        # Title Header
+        cv2.putText(canvas, "SIMASMUH AI - FACENET BIOMETRIC ENGINE", (60, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.70, (255, 255, 255), 2, cv2.LINE_AA)
         camera_label = self.config.camera_name.upper() if self.config else "CAMERA"
-        cv2.putText(canvas, f"CAMERA: {camera_label}", (75, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 180, 220), 1)
+        cv2.putText(canvas, f"CAMERA POINT: {camera_label}", (60, 145), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (180, 180, 230), 1, cv2.LINE_AA)
         
         # Status Card Box
-        cv2.rectangle(canvas, (75, 180), (565, 270), (35, 30, 50), -1)
-        cv2.rectangle(canvas, (75, 180), (565, 270), (100, 80, 160), 1)
-        cv2.putText(canvas, title, (95, 215), cv2.FONT_HERSHEY_SIMPLEX, 0.58, (0, 230, 150), 2)
-        cv2.putText(canvas, subtitle, (95, 248), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 220), 1)
+        cv2.rectangle(canvas, (60, 180), (900, 340), (32, 26, 48), -1)
+        cv2.rectangle(canvas, (60, 180), (900, 340), (95, 80, 150), 2)
+        cv2.putText(canvas, title, (90, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 235, 160), 2, cv2.LINE_AA)
+        cv2.putText(canvas, subtitle, (90, 290), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (215, 215, 235), 1, cv2.LINE_AA)
 
         time_str = time.strftime("%Y-%m-%d %H:%M:%S")
         stream_src = self.config.stream_url if self.config else "0"
-        cv2.putText(canvas, f"TIME: {time_str} | STREAM: {stream_src}", (75, 390), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (130, 130, 160), 1)
+        cv2.putText(canvas, f"SYSTEM TIME: {time_str}  |  SOURCE: {stream_src}", (60, 480), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (140, 140, 175), 1, cv2.LINE_AA)
         
         return canvas
 
     def _run_capture_loop(self):
-        """Thread capture & rendering stabil pada 18-20 FPS hemat daya."""
+        """Thread capture & rendering stabil qHD (960x540) 24 FPS responsif."""
         def _parse_src(src_val):
-            if isinstance(src_val, str) and src_val.strip().isdigit():
-                return int(src_val.strip()), True
+            if not src_val:
+                return 0, True
+            if isinstance(src_val, str):
+                s = src_val.strip()
+                if s.upper() == "BROWSER_WEBCAM":
+                    return "BROWSER_WEBCAM", False
+                if s.isdigit():
+                    return int(s), True
+                return s, False
             elif isinstance(src_val, int):
                 return src_val, True
             return src_val, False
 
         def _open_capture(src, is_num):
-            if is_num:
-                backends = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_ANY] if os.name == 'nt' else [cv2.CAP_V4L2, cv2.CAP_ANY]
-                for backend in backends:
-                    try:
-                        c = cv2.VideoCapture(src, backend)
-                        if c.isOpened():
-                            c.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                            c.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                            c.set(cv2.CAP_PROP_FPS, 20)
-                            try:
-                                c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                            except Exception:
-                                pass
-                            # Warm up: buang 2 frame pertama agar sensor auto-exposure stabil
-                            for _ in range(2):
-                                c.read()
-                            return c
-                    except Exception:
-                        pass
+            if src == "BROWSER_WEBCAM":
                 return None
-            elif isinstance(src, str) and (src.startswith("rtsp://") or src.startswith("rtmp://") or src.startswith("http://") or src.startswith("https://")):
-                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|buffer_size;1048576|max_delay;500000|stimeout;3000000"
+
+            if is_num:
+                # 1. Coba indeks kamera utama (misal 0), lalu fallback ke indeks 1 jika indeks 0 gagal
+                indices_to_try = [src] if src != 0 else [0, 1]
+                backends = [cv2.CAP_DSHOW, cv2.CAP_ANY] if os.name == 'nt' else [cv2.CAP_V4L2, cv2.CAP_ANY]
+                
+                for idx in indices_to_try:
+                    for backend in backends:
+                        try:
+                            c = cv2.VideoCapture(idx, backend)
+                            if c is not None and c.isOpened():
+                                # Set resolusi 960x540 & buffer
+                                try:
+                                    c.set(cv2.CAP_PROP_FRAME_WIDTH, 960)
+                                    c.set(cv2.CAP_PROP_FRAME_HEIGHT, 540)
+                                    c.set(cv2.CAP_PROP_FPS, 24)
+                                    c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                                except Exception:
+                                    pass
+                                
+                                # Verifikasi pembacaan frame awal
+                                ret_test, test_frame = c.read()
+                                if ret_test and test_frame is not None and test_frame.size > 0:
+                                    print(f"[INFO] Webcam USB berhasil dibuka pada indeks {idx} (Backend: {backend})")
+                                    return c
+                                else:
+                                    c.release()
+                        except Exception as e_open:
+                            print(f"[DEBUG] Gagal buka webcam {idx} backend {backend}: {e_open}")
+                return None
+
+            elif isinstance(src, str) and any(src.startswith(proto) for proto in ["rtsp://", "rtmp://", "http://", "https://"]):
+                # Konfigurasi FFMPEG RTSP rendah latensi (TCP transport untuk mencegah packet loss CCTV)
+                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|analyzeduration;2000000|probesize;2000000|max_delay;500000|stimeout;3000000"
                 try:
                     c = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
-                    if not c.isOpened():
-                        c = cv2.VideoCapture(src)
-                    if c.isOpened():
+                    if c is not None and c.isOpened():
                         try:
                             c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                         except Exception:
                             pass
-                        return c
-                except Exception:
-                    return None
+                        ret_test, test_frame = c.read()
+                        if ret_test and test_frame is not None and test_frame.size > 0:
+                            print(f"[INFO] RTSP / Network Stream berhasil terhubung ke: {src}")
+                            return c
+                except Exception as e_rtsp:
+                    print(f"[DEBUG] CAP_FFMPEG RTSP error: {e_rtsp}")
+
+                # Fallback default CAP_ANY untuk RTSP/HTTP
+                try:
+                    c = cv2.VideoCapture(src)
+                    if c is not None and c.isOpened():
+                        ret_test, test_frame = c.read()
+                        if ret_test and test_frame is not None and test_frame.size > 0:
+                            print(f"[INFO] RTSP / Network Stream berhasil terhubung (fallback default): {src}")
+                            return c
+                except Exception as e_fallback:
+                    print(f"[DEBUG] Fallback RTSP error: {e_fallback}")
                 return None
+
             else:
                 try:
                     c = cv2.VideoCapture(src)
-                    if c.isOpened():
-                        return c
+                    if c is not None and c.isOpened():
+                        ret_test, test_frame = c.read()
+                        if ret_test and test_frame is not None and test_frame.size > 0:
+                            return c
                 except Exception:
-                    return None
+                    pass
                 return None
 
         cap = None
         consecutive_failures = 0
         prev_time = time.time()
         frame_counter = 0
-        active_src = None
         last_valid_frame = None
 
-        while self.is_running:
-            try:
-                current_raw_src = self.config.stream_url if self.config else "0"
-                parsed_src, is_num = _parse_src(current_raw_src)
+        while not self.stop_event.is_set() and self.is_running:
+            current_src = self.config.stream_url if self.config else "0"
+            src_val, is_num = _parse_src(current_src)
 
-                # Buka ulang capture jika konfigurasi diganti
-                if parsed_src != active_src and cap is not None:
+            if src_val == "BROWSER_WEBCAM":
+                if cap is not None:
                     try:
                         cap.release()
                     except Exception:
                         pass
                     cap = None
-                    active_src = parsed_src
-                    consecutive_failures = 0
+                self.stream_status = "BROWSER_WEBCAM_STANDBY"
+                self.current_fps = 0
+                with self.frame_lock:
+                    self.latest_frame = self._create_placeholder_frame(
+                        "MODE WEBCAM BROWSER AKTIF",
+                        "Video kamera berjalan langsung melalui browser client untuk latensi ultra-rendah.",
+                    )
+                time.sleep(0.5)
+                continue
 
+            if cap is None:
+                self.stream_status = f"CONNECTING ({current_src})"
+                with self.frame_lock:
+                    self.latest_frame = self._create_placeholder_frame(
+                        "MENGHUBUNGKAN SUMBER KAMERA...",
+                        f"Mencoba membuka stream {current_src}...",
+                    )
+                cap = _open_capture(src_val, is_num)
                 if cap is None or not cap.isOpened():
-                    self.stream_status = f"CONNECTING ({parsed_src})"
-                    if last_valid_frame is None:
-                        with self.frame_lock:
-                            self.latest_frame = self._create_placeholder_frame(
-                                "MENGHUBUNGKAN SUMBER KAMERA...",
-                                f"Membuka '{parsed_src}'. Menyiapkan sinyal video...",
-                            )
-                    try:
-                        cap = _open_capture(parsed_src, is_num)
-                    except Exception:
-                        cap = None
-                    
-                    if cap is None or not cap.isOpened():
-                        time.sleep(0.5)
-                        continue
+                    self.stream_status = "FAILED_TO_CONNECT"
+                    with self.frame_lock:
+                        self.latest_frame = self._create_placeholder_frame(
+                            "TIDAK DAPAT MENGHUBUNGKAN KAMERA",
+                            f"Pastikan URL stream RTSP/Webcam ({current_src}) aktif.",
+                        )
+                    time.sleep(1.5)
+                    continue
 
+            try:
                 ret, frame = cap.read()
                 if not ret or frame is None or frame.size == 0:
                     consecutive_failures += 1
-                    # Anti-flicker: jika hanya 1-15 frame hilang sesaat, tetap pertahankan frame terakhir
-                    if consecutive_failures > 20:
-                        self.stream_status = f"STANDBY: Sinyal Kamera ({parsed_src})"
+                    if consecutive_failures > 5:
+                        self.stream_status = "NO_SIGNAL"
                         with self.frame_lock:
                             self.latest_frame = self._create_placeholder_frame(
-                                "MENUNGGU SINYAL VIDEO...",
-                                f"Frame kosong dari '{parsed_src}'. Sinkronisasi stream...",
+                                "SINYAL STREAM TERPUTUS",
+                                f"Mencoba menyambung kembali ({consecutive_failures}/35)...",
                             )
                     
                     if consecutive_failures > 35:
@@ -236,10 +283,10 @@ class AttendanceWorker:
                     frame_counter = 0
                     prev_time = now
 
-                # Pastikan resolusi standar 640x480
+                # Standarisasi output ke resolusi jernih 960x540 (qHD 16:9 widescreen)
                 h_f, w_f = frame.shape[:2]
-                if w_f != 640 or h_f != 480:
-                    frame = cv2.resize(frame, (640, 480))
+                if w_f != 960 or h_f != 540:
+                    frame = cv2.resize(frame, (960, 540), interpolation=cv2.INTER_AREA)
 
                 last_valid_frame = frame
                 with self.frame_lock:
@@ -249,13 +296,13 @@ class AttendanceWorker:
                 h_frame, w_frame = annotated_frame.shape[:2]
 
                 with self.detection_lock:
-                    detections = list(self.active_detections)
+                    raw_detections = list(self.active_detections)
                     reg_cnt = self.registered_count
                     guest_cnt = self.guest_count
 
                 # Render Bounding Box Wajah
-                for det in detections:
-                    if now - det.get("timestamp", 0) > 0.8:
+                for det in raw_detections:
+                    if now - det.get("timestamp", 0) > 1.2:
                         continue
 
                     x1, y1, x2, y2 = det["box"]
@@ -263,75 +310,91 @@ class AttendanceWorker:
                     label = det["label"]
                     sub_label = det.get("sub_label", "")
 
-                    box_w = max(10, x2 - x1)
-                    box_h = max(10, y2 - y1)
+                    box_w = max(12, x2 - x1)
+                    box_h = max(12, y2 - y1)
 
                     if is_registered:
-                        # Emerald Green untuk pengguna terdaftar di database
                         primary_color = (46, 204, 113)
-                        tag_bg_color = (35, 150, 85)
+                        tag_bg_color = (30, 140, 75)
                     else:
-                        # Amber / Cyan-Yellow untuk Tamu / Orang Asing
                         primary_color = (0, 195, 255)
-                        tag_bg_color = (0, 135, 185)
+                        tag_bg_color = (0, 130, 180)
 
-                    # 1. Kotak Bounding Box
-                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), primary_color, 2)
+                    # 1. Kotak Bounding Box (Tipis & Elegan)
+                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), primary_color, 1)
                     
                     # 2. Corner Accents
-                    c_len = max(6, min(16, box_w // 4))
-                    cv2.line(annotated_frame, (x1, y1), (x1 + c_len, y1), (255, 255, 255), 2)
-                    cv2.line(annotated_frame, (x1, y1), (x1, y1 + c_len), (255, 255, 255), 2)
-                    cv2.line(annotated_frame, (x2, y1), (x2 - c_len, y1), (255, 255, 255), 2)
-                    cv2.line(annotated_frame, (x2, y1), (x2, y1 + c_len), (255, 255, 255), 2)
-                    cv2.line(annotated_frame, (x1, y2), (x1 + c_len, y2), (255, 255, 255), 2)
-                    cv2.line(annotated_frame, (x1, y2), (x1, y2 - c_len), (255, 255, 255), 2)
-                    cv2.line(annotated_frame, (x2, y2), (x2 - c_len, y2), (255, 255, 255), 2)
-                    cv2.line(annotated_frame, (x2, y2), (x2, y2 - c_len), (255, 255, 255), 2)
+                    c_len = max(5, min(14, box_w // 4))
+                    cv2.line(annotated_frame, (x1, y1), (x1 + c_len, y1), (255, 255, 255), 1)
+                    cv2.line(annotated_frame, (x1, y1), (x1, y1 + c_len), (255, 255, 255), 1)
+                    cv2.line(annotated_frame, (x2, y1), (x2 - c_len, y1), (255, 255, 255), 1)
+                    cv2.line(annotated_frame, (x2, y1), (x2, y1 + c_len), (255, 255, 255), 1)
+                    cv2.line(annotated_frame, (x1, y2), (x1 + c_len, y2), (255, 255, 255), 1)
+                    cv2.line(annotated_frame, (x1, y2), (x1, y2 - c_len), (255, 255, 255), 1)
+                    cv2.line(annotated_frame, (x2, y2), (x2 - c_len, y2), (255, 255, 255), 1)
+                    cv2.line(annotated_frame, (x2, y2), (x2, y2 - c_len), (255, 255, 255), 1)
 
-                    # 3. Label Tag
+                    # 3. Label Tag yang proporsional & kompak
                     display_text = f"{label} | {sub_label}" if sub_label else label
-                    (tw, th), _ = cv2.getTextSize(display_text, cv2.FONT_HERSHEY_SIMPLEX, 0.38, 1)
+                    (tw, th), _ = cv2.getTextSize(display_text, cv2.FONT_HERSHEY_SIMPLEX, 0.36, 1)
                     
-                    tag_h = th + 10
-                    tag_w = tw + 14
+                    tag_h = th + 6
+                    tag_w = tw + 10
 
-                    if y1 - tag_h >= 34:
+                    if y1 - tag_h >= 40:
                         tag_y1 = y1 - tag_h
                         tag_y2 = y1
                     else:
                         tag_y1 = y1
                         tag_y2 = y1 + tag_h
 
-                    tag_x1 = max(2, min(w_frame - tag_w - 2, x1))
+                    tag_x1 = max(4, min(w_frame - tag_w - 4, x1))
                     tag_x2 = tag_x1 + tag_w
 
                     cv2.rectangle(annotated_frame, (tag_x1, tag_y1), (tag_x2, tag_y2), tag_bg_color, -1)
                     cv2.rectangle(annotated_frame, (tag_x1, tag_y1), (tag_x2, tag_y2), primary_color, 1)
-                    cv2.putText(annotated_frame, display_text, (tag_x1 + 6, tag_y2 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (255, 255, 255), 1, cv2.LINE_AA)
+                    cv2.putText(annotated_frame, display_text, (tag_x1 + 5, tag_y2 - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (255, 255, 255), 1, cv2.LINE_AA)
 
-                # Header Top HUD Overlay Bar
-                total_faces = len(detections)
+                # =========================================================================
+                # Header Top HUD Overlay Bar (qHD 960x540 - Ringan, Bersih & Bebas Tabrakan)
+                # =========================================================================
+                total_faces = len(raw_detections)
                 time_str = time.strftime("%H:%M:%S")
 
-                cv2.rectangle(annotated_frame, (0, 0), (w_frame, 32), (18, 14, 24), -1)
-                cv2.line(annotated_frame, (0, 32), (w_frame, 32), (55, 45, 75), 1)
+                # Bar background
+                cv2.rectangle(annotated_frame, (0, 0), (w_frame, 36), (16, 12, 24), -1)
+                cv2.line(annotated_frame, (0, 36), (w_frame, 36), (70, 58, 95), 1)
 
-                cv2.putText(annotated_frame, "LIVE CAMERA", (12, 21), cv2.FONT_HERSHEY_SIMPLEX, 0.44, (46, 204, 113), 1, cv2.LINE_AA)
-                cv2.circle(annotated_frame, (115, 17), 4, (46, 204, 113), -1)
+                # 1. Left: Live Status Badge
+                cv2.circle(annotated_frame, (18, 18), 5, (46, 204, 113), -1, cv2.LINE_AA)
+                cv2.putText(annotated_frame, "LIVE CAMERA", (30, 23), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (46, 204, 113), 2, cv2.LINE_AA)
 
-                compute_dev = getattr(self.engine, 'device_name', 'CPU Eco')
-                center_text = f"Deteksi: {total_faces} Wajah ({reg_cnt} Terdaftar, {guest_cnt} Tamu) | {compute_dev}"
-                cv2.putText(annotated_frame, center_text, (max(130, w_frame // 2 - 145), 21), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (235, 235, 245), 1, cv2.LINE_AA)
+                # 2. Right: FPS & Clock pill
+                right_text = f"FPS: {self.current_fps}  •  {time_str}"
+                (rw, rh), _ = cv2.getTextSize(right_text, cv2.FONT_HERSHEY_SIMPLEX, 0.44, 1)
+                rx = max(w_frame - rw - 16, 16)
+                cv2.rectangle(annotated_frame, (rx - 8, 6), (w_frame - 8, 30), (28, 22, 42), -1)
+                cv2.rectangle(annotated_frame, (rx - 8, 6), (w_frame - 8, 30), (65, 55, 90), 1)
+                cv2.putText(annotated_frame, right_text, (rx, 23), cv2.FONT_HERSHEY_SIMPLEX, 0.44, (200, 205, 230), 1, cv2.LINE_AA)
 
-                right_text = f"FPS: {self.current_fps} | {time_str}"
-                cv2.putText(annotated_frame, right_text, (max(w_frame - 165, 300), 21), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (180, 180, 205), 1, cv2.LINE_AA)
+                # 3. Center: Deteksi Count
+                if total_faces > 0:
+                    center_text = f"Deteksi: {total_faces} Wajah ({reg_cnt} Terdaftar)"
+                else:
+                    center_text = "Menunggu Wajah Terdeteksi"
+
+                (cw, ch), _ = cv2.getTextSize(center_text, cv2.FONT_HERSHEY_SIMPLEX, 0.46, 1)
+                cx = (w_frame - cw) // 2
+
+                if cx < 160 or cx + cw > rx - 15:
+                    cx = 165
+
+                cv2.putText(annotated_frame, center_text, (cx, 23), cv2.FONT_HERSHEY_SIMPLEX, 0.46, (255, 255, 255), 1, cv2.LINE_AA)
 
                 with self.frame_lock:
                     self.latest_frame = annotated_frame
 
-                # Jeda frame stabil (18-20 FPS) hemat CPU
-                time.sleep(0.048)
+                time.sleep(0.042)
 
             except Exception as loop_err:
                 print(f"[ERROR] Capture loop exception: {loop_err}")
@@ -402,7 +465,7 @@ class AttendanceWorker:
                         })
 
                         if ai_frame_counter % 2 == 0:
-                            self._process_attendance(user_record, similarity)
+                            self._process_attendance(user_record, similarity, face_crop=face_crop)
                     else:
                         guest_count += 1
                         new_detections.append({
@@ -447,14 +510,14 @@ class AttendanceWorker:
                         "Nyalakan microservice melalui tombol di dashboard untuk memulai stream.",
                     )
 
-            ret, buffer = cv2.imencode('.jpg', frame_to_send, [int(cv2.IMWRITE_JPEG_QUALITY), 78])
+            ret, buffer = cv2.imencode('.jpg', frame_to_send, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
             if ret:
                 frame_bytes = buffer.tobytes()
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-            time.sleep(0.048)
+            time.sleep(0.042)
 
-    def _process_attendance(self, user_record, similarity: float):
+    def _process_attendance(self, user_record, similarity: float, face_crop: Optional[np.ndarray] = None):
         user_id = user_record.user_id
         now = time.time()
         cooldown_mins = self.config.cooldown_minutes if self.config else 10
@@ -468,6 +531,18 @@ class AttendanceWorker:
         self.total_scans_today += 1
         print(f"[ATTENDANCE SCAN] Terdeteksi: {user_record.name} ({user_record.role}) | Kemiripan: {round(similarity*100, 1)}%")
 
+        # Buat snapshot thumbnail JPEG Base64 dari potongan wajah hasil deteksi realtime
+        snapshot_b64 = None
+        if face_crop is not None and face_crop.size > 0:
+            try:
+                import base64
+                thumb = cv2.resize(face_crop, (240, 240), interpolation=cv2.INTER_AREA)
+                ret_s, buf_s = cv2.imencode('.jpg', thumb, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
+                if ret_s:
+                    snapshot_b64 = "data:image/jpeg;base64," + base64.b64encode(buf_s).decode('utf-8')
+            except Exception as e_snap:
+                print(f"[WARN] Gagal membuat snapshot thumbnail wajah: {e_snap}")
+
         try:
             from config import API_KEY
             headers = {"x-api-key": API_KEY}
@@ -476,6 +551,7 @@ class AttendanceWorker:
                 "confidence": round(similarity, 3),
                 "secretKey": API_SECRET,
                 "cameraLocation": self.config.location if self.config else "Gerbang",
+                "snapshot": snapshot_b64,
             }
             res = requests.post(f"{BACKEND_URL}/face-attendance/record", json=payload, headers=headers, timeout=4)
             if res.status_code in (200, 201):

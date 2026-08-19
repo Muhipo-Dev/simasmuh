@@ -1,12 +1,12 @@
 {
-  "streamUrl": "0",
+  "streamUrl": "BROWSER_WEBCAM",
   "cameraName": "Camera AI",
   "location": "Lab Kom",
-  "threshold": 0.9,
-  "cooldownMinutes": 15,
-  "isActive": false,
+  "threshold": 0.72,
+  "cooldownMinutes": 74,
+  "isActive": true,
   "welcomeVoice": false,
   "apiKeySecret": "simasmuh_face_token_secret_2026",
-  "updatedAt": "2026-08-19T02:04:16.344Z",
-  "streamSourceType": "WEBCAM"
+  "updatedAt": "2026-08-19T03:56:22.867Z",
+  "streamSourceType": "BROWSER_WEBCAM"
 }

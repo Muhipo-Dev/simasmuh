@@ -67,6 +67,7 @@ interface FaceDetectionLog {
   userName: string
   userRole: string
   avatarUrl?: string | null
+  snapshotUrl?: string | null
   identifier: string
   confidence: number
   scanType: 'MASUK' | 'PULANG' | 'SUDAH_LENGKAP'
@@ -177,10 +178,13 @@ export default function FaceAttendanceCameraPage() {
 
   // Browser Webcam Direct Hook
   const localVideoRef = useRef<HTMLVideoElement>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null)
   const [isBrowserCamStreaming, setIsBrowserCamStreaming] = useState(false)
   const [browserCamError, setBrowserCamError] = useState<string | null>(null)
   const [browserFps, setBrowserFps] = useState<number>(0)
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([])
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('')
 
   // Dataset filter states
   const [searchQuery, setSearchQuery] = useState('')
@@ -202,23 +206,89 @@ export default function FaceAttendanceCameraPage() {
     }
   }, [configData])
 
-  // Start browser webcam stream dengan resolusi dan FPS ramah CPU
-  const startBrowserWebcam = async () => {
+  // Attach stream to video node whenever ref is attached
+  const setVideoRef = (node: HTMLVideoElement | null) => {
+    (localVideoRef as any).current = node
+    if (node && mediaStreamRef.current) {
+      node.srcObject = mediaStreamRef.current
+      node.muted = true
+      node.playsInline = true
+      node.play().catch(() => {})
+    }
+  }
+
+  // Start browser webcam stream dengan inisialisasi cepat & fallback bertingkat
+  const startBrowserWebcam = async (deviceId?: string) => {
     try {
       setBrowserCamError(null)
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640, max: 800 },
-          height: { ideal: 480, max: 600 },
-          frameRate: { ideal: 20, max: 24 },
-          facingMode: 'user'
-        },
-        audio: false,
-      })
+      if (typeof window === 'undefined' || !navigator?.mediaDevices?.getUserMedia) {
+        setBrowserCamError('Akses webcam browser memerlukan koneksi aman (localhost atau HTTPS) atau perangkat tidak memiliki dukungan webcam.')
+        setIsBrowserCamStreaming(false)
+        return
+      }
+
+      // Hentikan stream lama jika masih aktif
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((t) => {
+          try { t.stop() } catch {}
+        })
+        mediaStreamRef.current = null
+      }
       if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream
-        localVideoRef.current.play().catch(() => {})
+        localVideoRef.current.srcObject = null
+      }
+
+      const targetDeviceId = deviceId || selectedDeviceId
+
+      let stream: MediaStream | null = null
+      // 1. Resolusi jernih 960x540 (16:9 qHD)
+      try {
+        const videoConstraints: MediaTrackConstraints = {
+          width: { ideal: 960, min: 480 },
+          height: { ideal: 540, min: 270 },
+        }
+        if (targetDeviceId) {
+          videoConstraints.deviceId = { exact: targetDeviceId }
+        } else {
+          videoConstraints.facingMode = 'user'
+        }
+
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: videoConstraints,
+          audio: false,
+        })
+      } catch {
+        // 2. Fallback instan ke default video constraints tanpa batasan ketat
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: targetDeviceId ? { deviceId: { exact: targetDeviceId } } : true,
+            audio: false,
+          })
+        } catch (fallbackErr: any) {
+          throw fallbackErr
+        }
+      }
+
+      if (stream) {
+        mediaStreamRef.current = stream
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream
+          localVideoRef.current.muted = true
+          localVideoRef.current.playsInline = true
+          try {
+            await localVideoRef.current.play()
+          } catch (playErr) {
+            console.warn('Video auto-play delayed', playErr)
+          }
+        }
         setIsBrowserCamStreaming(true)
+
+        // Ambil daftar perangkat kamera yang tersedia
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices()
+          const cams = devices.filter((d) => d.kind === 'videoinput')
+          setVideoDevices(cams)
+        } catch {}
       }
     } catch (err: any) {
       setBrowserCamError(err?.message || 'Izin kamera ditolak atau perangkat webcam tidak terdeteksi.')
@@ -227,9 +297,13 @@ export default function FaceAttendanceCameraPage() {
   }
 
   const stopBrowserWebcam = () => {
-    if (localVideoRef.current && localVideoRef.current.srcObject) {
-      const stream = localVideoRef.current.srcObject as MediaStream
-      stream.getTracks().forEach((t) => t.stop())
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => {
+        try { t.stop() } catch {}
+      })
+      mediaStreamRef.current = null
+    }
+    if (localVideoRef.current) {
       localVideoRef.current.srcObject = null
     }
     setIsBrowserCamStreaming(false)
@@ -239,12 +313,30 @@ export default function FaceAttendanceCameraPage() {
     }
   }
 
-  // Draw YOLO bounding box over video canvas (Terdaftar = Hijau, Tamu / Orang Asing = Kuning Amber)
+  // Ref untuk smoothing dan retensi visual bounding box agar tidak flickering
+  const lastDetectionsRef = useRef<{ faces: any[]; timestamp: number; vWidth: number; vHeight: number }>({
+    faces: [],
+    timestamp: 0,
+    vWidth: 640,
+    vHeight: 360,
+  })
+
+  // Draw YOLO bounding box over video canvas (Terdaftar = Hijau HD, Tamu / Orang Asing = Kuning Amber HD)
   const drawYoloBoundingBoxes = (faces: any[], vWidth: number, vHeight: number) => {
     const canvas = overlayCanvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+
+    const now = Date.now()
+
+    if (faces && faces.length > 0) {
+      lastDetectionsRef.current = { faces, timestamp: now, vWidth, vHeight }
+    } else if (now - lastDetectionsRef.current.timestamp > 850) {
+      lastDetectionsRef.current.faces = []
+    }
+
+    const activeFaces = lastDetectionsRef.current.faces
 
     if (canvas.width !== vWidth || canvas.height !== vHeight) {
       canvas.width = vWidth
@@ -252,22 +344,29 @@ export default function FaceAttendanceCameraPage() {
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    faces.forEach((f) => {
+    if (!activeFaces || activeFaces.length === 0) return
+
+    activeFaces.forEach((f) => {
       const [x, y, w, h] = f.box
       const isReg = f.is_registered
       // Hijau Zamrud untuk terdaftar, Kuning Amber untuk Tamu/Orang Asing
       const color = isReg ? '#10b981' : '#f59e0b'
       const tagBg = isReg ? '#059669' : '#d97706'
+      const boxFill = isReg ? 'rgba(16, 185, 129, 0.10)' : 'rgba(245, 158, 11, 0.10)'
 
-      // 1. Bounding Box Segiempat
+      // 0. Semi-transparent fill box
+      ctx.fillStyle = boxFill
+      ctx.fillRect(x, y, w, h)
+
+      // 1. Bounding Box Segiempat (Tipis, Rapih & Elegan)
       ctx.strokeStyle = color
-      ctx.lineWidth = 2.5
+      ctx.lineWidth = 1.6
       ctx.strokeRect(x, y, w, h)
 
       // 2. Corner accents
-      const cLen = Math.max(6, Math.min(18, w / 4))
+      const cLen = Math.max(5, Math.min(14, w / 4))
       ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 2.5
+      ctx.lineWidth = 1.6
       // Top-left
       ctx.beginPath(); ctx.moveTo(x, y + cLen); ctx.lineTo(x, y); ctx.lineTo(x + cLen, y); ctx.stroke()
       // Top-right
@@ -277,7 +376,7 @@ export default function FaceAttendanceCameraPage() {
       // Bottom-right
       ctx.beginPath(); ctx.moveTo(x + w - cLen, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - cLen); ctx.stroke()
 
-      // 3. YOLO Tag Label di atas kotak
+      // 3. YOLO Tag Label di atas kotak (Font Lebih Kecil & Kompak)
       const labelText = isReg 
         ? `${f.name || 'Terdaftar'} (${Math.round((f.confidence || 0) * 100)}%)` 
         : 'Tamu / Orang Asing'
@@ -287,24 +386,24 @@ export default function FaceAttendanceCameraPage() {
         : 'Wajah Belum Terdaftar'
 
       const fullText = `${labelText} • ${subLabelText}`
-      ctx.font = 'bold 11px sans-serif'
+      ctx.font = '600 10px system-ui, -apple-system, sans-serif'
       const textWidth = ctx.measureText(fullText).width
-      const tagH = 22
-      const tagW = Math.max(120, textWidth + 16)
+      const tagH = 18
+      const tagW = Math.max(80, textWidth + 12)
       const tagY = y - tagH >= 0 ? y - tagH : y
 
       ctx.fillStyle = tagBg
       ctx.fillRect(x, tagY, tagW, tagH)
       ctx.strokeStyle = color
-      ctx.lineWidth = 1
+      ctx.lineWidth = 1.0
       ctx.strokeRect(x, tagY, tagW, tagH)
 
       ctx.fillStyle = '#ffffff'
-      ctx.fillText(fullText, x + 8, tagY + 15)
+      ctx.fillText(fullText, x + 6, tagY + 12.5)
     })
   }
 
-  const isBrowserMode = formConfig?.streamSourceType === 'BROWSER_WEBCAM'
+  const isBrowserMode = formConfig?.streamSourceType === 'BROWSER_WEBCAM' || (!formConfig && configData?.streamSourceType === 'BROWSER_WEBCAM')
 
   // Effect untuk mengaktifkan / menonaktifkan webcam browser
   useEffect(() => {
@@ -318,7 +417,7 @@ export default function FaceAttendanceCameraPage() {
     }
   }, [isBrowserMode, activeTab])
 
-  // Periodic frame scanning ke FaceNet backend (mode CPU Eco hemat daya ~3 FPS inferensi)
+  // Periodic frame scanning ke FaceNet backend (mode CPU Eco hemat daya ~4 FPS inferensi)
   useEffect(() => {
     if (!isBrowserCamStreaming) return
     let isProcessing = false
@@ -333,13 +432,13 @@ export default function FaceAttendanceCameraPage() {
       isProcessing = true
       try {
         const offscreen = document.createElement('canvas')
-        const scale = Math.min(1.0, 640 / video.videoWidth)
+        const scale = Math.min(1.0, 480 / video.videoWidth)
         offscreen.width = Math.round(video.videoWidth * scale)
         offscreen.height = Math.round(video.videoHeight * scale)
         const ctx = offscreen.getContext('2d')
         if (ctx) {
           ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height)
-          const base64 = offscreen.toDataURL('image/jpeg', 0.65)
+          const base64 = offscreen.toDataURL('image/jpeg', 0.70)
           const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -359,6 +458,9 @@ export default function FaceAttendanceCameraPage() {
               ],
             }))
             drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
+            if (rawFaces.some((f: any) => f.is_registered)) {
+              queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+            }
           }
         }
         frameCount++
@@ -373,7 +475,7 @@ export default function FaceAttendanceCameraPage() {
       } finally {
         isProcessing = false
       }
-    }, 320)
+    }, 250)
 
     return () => clearInterval(interval)
   }, [isBrowserCamStreaming])
@@ -630,8 +732,14 @@ export default function FaceAttendanceCameraPage() {
   }
 
   const handleReconnectStream = () => {
-    setStreamError(false)
-    setStreamKey(Date.now())
+    if (isBrowserMode) {
+      stopBrowserWebcam()
+      setTimeout(() => startBrowserWebcam(), 300)
+    } else {
+      setStreamError(false)
+      setIsStreamLoading(true)
+      setStreamKey(Date.now())
+    }
   }
 
   return (
@@ -817,13 +925,27 @@ export default function FaceAttendanceCameraPage() {
                     key={preset.id}
                     type="button"
                     onClick={() => {
-                      const updated = {
-                        ...(currentConfig || {}),
-                        streamSourceType: preset.id as any,
-                        streamUrl: preset.example,
+                      if (preset.id === 'BROWSER_WEBCAM') {
+                        const updated = {
+                          ...(currentConfig || {}),
+                          streamSourceType: 'BROWSER_WEBCAM' as const,
+                          streamUrl: 'BROWSER_WEBCAM',
+                        }
+                        setFormConfig(updated as any)
+                        updateConfig(updated as any)
+                      } else {
+                        stopBrowserWebcam()
+                        const updated = {
+                          ...(currentConfig || {}),
+                          streamSourceType: preset.id as any,
+                          streamUrl: preset.example,
+                        }
+                        setFormConfig(updated as any)
+                        updateConfig(updated as any)
+                        if (!serviceStatus?.is_running) {
+                          startServiceWorker()
+                        }
                       }
-                      setFormConfig(updated as any)
-                      updateConfig(updated as any)
                     }}
                     className={`flex items-center gap-2.5 p-2.5 rounded-xl text-left border transition-all text-xs ${
                       isSelected
@@ -872,6 +994,23 @@ export default function FaceAttendanceCameraPage() {
                   </div>
 
                   <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                    {isBrowserMode && videoDevices.length > 1 && (
+                      <select
+                        aria-label="Pilih Perangkat Kamera"
+                        value={selectedDeviceId}
+                        onChange={(e) => {
+                          setSelectedDeviceId(e.target.value)
+                          startBrowserWebcam(e.target.value)
+                        }}
+                        className="h-7 text-[11px] bg-slate-800 text-slate-200 border border-slate-700 rounded-md px-1.5 max-w-[130px] truncate"
+                      >
+                        {videoDevices.map((dev, idx) => (
+                          <option key={dev.deviceId || idx} value={dev.deviceId}>
+                            {dev.label || `Kamera ${idx + 1}`}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -901,7 +1040,7 @@ export default function FaceAttendanceCameraPage() {
                   {isBrowserMode ? (
                     <div className="relative w-full h-full flex items-center justify-center bg-black">
                       <video
-                        ref={localVideoRef}
+                        ref={setVideoRef}
                         autoPlay
                         playsInline
                         muted
@@ -918,7 +1057,7 @@ export default function FaceAttendanceCameraPage() {
                           <Camera className="w-10 h-10 text-rose-400 animate-pulse" />
                           <p className="text-sm font-bold text-white">Gagal Mengakses Webcam Browser</p>
                           <p className="text-xs text-slate-300 max-w-sm">{browserCamError}</p>
-                          <Button size="sm" onClick={startBrowserWebcam} className="bg-indigo-600 text-white text-xs">
+                          <Button size="sm" onClick={() => startBrowserWebcam()} className="bg-indigo-600 text-white text-xs">
                             <RefreshCw className="w-3.5 h-3.5 mr-1" /> Coba Lagi
                           </Button>
                         </div>
@@ -944,7 +1083,7 @@ export default function FaceAttendanceCameraPage() {
                       />
                     </div>
                   ) : (
-                    <div className="text-center p-4 sm:p-6 space-y-3 max-w-md pointer-events-none select-none">
+                    <div className="text-center p-4 sm:p-6 space-y-3 max-w-md select-none z-10">
                       <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
                         <Video className="w-6 h-6 sm:w-7 sm:h-7 animate-pulse" />
                       </div>
@@ -952,13 +1091,50 @@ export default function FaceAttendanceCameraPage() {
                         <p className="font-bold text-xs sm:text-sm text-slate-200">
                           {serviceStatus?.isOnline 
                             ? (serviceStatus?.is_running ? 'Menghubungkan Sinyal Kamera...' : 'AI FaceNet Standby') 
-                            : 'Microservice AI FaceNet Offline'}
+                            : 'Microservice AI FaceNet Standby / Offline'}
                         </p>
                         <p className="text-[11px] sm:text-xs text-slate-400 leading-relaxed">
                           {serviceStatus?.is_running 
                             ? 'Menunggu sinyal frame aktif dari perangkat kamera...'
-                            : 'Nyalakan AI melalui tombol di atas untuk memulai streaming deteksi.'}
+                            : 'Nyalakan AI atau pilih Webcam Browser untuk memulai streaming deteksi.'}
                         </p>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 pt-1">
+                        {!serviceStatus?.is_running && isSuperAdmin && (
+                          <Button
+                            size="sm"
+                            onClick={() => startServiceWorker()}
+                            disabled={isStartingWorker}
+                            className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                          >
+                            <Power className="w-3 h-3 mr-1" /> Nyalakan AI FaceNet
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleReconnectStream}
+                          className="h-7 text-xs border-slate-700 text-slate-300 hover:text-white bg-slate-800/80"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" /> Hubungkan Ulang
+                        </Button>
+                        {!isBrowserMode && (
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              const updated = {
+                                ...(currentConfig || {}),
+                                streamSourceType: 'BROWSER_WEBCAM' as const,
+                                streamUrl: 'BROWSER_WEBCAM',
+                              }
+                              setFormConfig(updated as any)
+                              updateConfig(updated as any)
+                            }}
+                            className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                          >
+                            <Camera className="w-3 h-3 mr-1" /> Pakai Webcam Browser
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -994,21 +1170,26 @@ export default function FaceAttendanceCameraPage() {
 
             {/* RIGHT BOX (5 COLS): REALTIME LIVE SCANNER LOGS */}
             <div className="lg:col-span-5 space-y-3">
-              <Card className="shadow-lg border-slate-200 flex flex-col h-[520px] rounded-2xl overflow-hidden">
-                <CardHeader className="p-4 bg-slate-50 border-b border-slate-200 shrink-0">
+              <Card className="shadow-lg border-slate-200 dark:border-slate-800 flex flex-col h-[580px] rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+                <CardHeader className="p-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
-                        <Activity className="w-4 h-4" />
+                      <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold shadow-xs">
+                        <Activity className="w-4.5 h-4.5" />
                       </div>
                       <div>
-                        <CardTitle className="text-sm font-bold text-slate-900">Scanner Log Wajah Realtime</CardTitle>
-                        <CardDescription className="text-[11px]">Wajah terdaftar & waktu presensi otomatis</CardDescription>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-sm font-bold text-slate-900 dark:text-white">Scanner Log Realtime</CardTitle>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 animate-pulse">
+                            Live Sync
+                          </span>
+                        </div>
+                        <CardDescription className="text-[11px] text-slate-500 dark:text-slate-400">Verifikasi snapshot wajah & pencatatan presensi</CardDescription>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => refetchLogs()} className="h-7 w-7 p-0 text-slate-500">
-                        <RefreshCw className="w-3.5 h-3.5" />
+                      <Button variant="ghost" size="sm" onClick={() => refetchLogs()} title="Segarkan Log" className="h-8 w-8 p-0 text-slate-500 hover:text-indigo-600 rounded-lg">
+                        <RefreshCw className="w-4 h-4" />
                       </Button>
                       <Button 
                         variant="ghost" 
@@ -1016,89 +1197,140 @@ export default function FaceAttendanceCameraPage() {
                         onClick={handleConfirmClearLogs} 
                         disabled={isClearing} 
                         title="Reset Seluruh Log & Presensi Hari Ini di Database"
-                        className="h-7 w-7 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                        className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
 
                 {/* Scrollable Live Scan List */}
-                <CardContent className="p-3 flex-1 overflow-y-auto divide-y divide-slate-100 space-y-2">
+                <CardContent className="p-3.5 flex-1 overflow-y-auto space-y-3">
                   {logsData && logsData.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
-                      <Camera className="w-10 h-10 text-slate-300 stroke-1" />
-                      <p className="text-sm font-medium text-slate-600">Menunggu Wajah Terdeteksi</p>
-                      <p className="text-xs text-slate-400 max-w-xs">
-                        Arahkan wajah siswa atau guru ke depan kamera. Hasil identifikasi akan otomatis muncul di sini dan tersimpan ke basis data secara realtime.
+                    <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2.5">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                        <Camera className="w-7 h-7 stroke-1" />
+                      </div>
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Menunggu Wajah Terdeteksi</p>
+                      <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+                        Arahkan wajah siswa atau guru ke depan kamera. Hasil identifikasi dan foto snapshot kamera akan otomatis muncul di sini.
                       </p>
                     </div>
                   ) : (
                     logsData?.map((log, index) => (
                       <div 
                         key={log.id} 
-                        className={`pt-2.5 first:pt-0 p-2.5 rounded-xl transition-all ${
-                          index === 0 ? 'bg-indigo-50/70 border border-indigo-200/80 shadow-xs' : 'hover:bg-slate-50'
+                        className={`p-3.5 rounded-2xl transition-all border ${
+                          index === 0 
+                            ? 'bg-gradient-to-br from-indigo-50/90 via-white to-indigo-50/40 dark:from-indigo-950/40 dark:via-slate-900 dark:to-indigo-950/20 border-indigo-300/80 dark:border-indigo-700/60 shadow-md ring-1 ring-indigo-400/20' 
+                            : 'bg-white dark:bg-slate-800/60 border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-2.5">
-                          {/* Avatar & User Details */}
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="relative">
-                              <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center border-2 border-white shadow-xs">
-                                {log.avatarUrl ? (
-                                  <img src={log.avatarUrl} alt={log.userName} className="w-full h-full object-cover" />
-                                ) : (
-                                  <span className="font-bold text-slate-600 text-xs">{log.userName.charAt(0)}</span>
-                                )}
-                              </div>
-                              <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${
-                                log.scanType === 'MASUK' ? 'bg-emerald-500' : 'bg-blue-500'
-                              }`} />
+                        {/* Header: User identity & Scan status */}
+                        <div className="flex items-start justify-between gap-2.5 pb-2.5 border-b border-slate-100 dark:border-slate-800/80">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">{log.userName}</h4>
+                              <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                                log.userRole?.includes('SISWA') ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' :
+                                log.userRole?.includes('GURU') ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' :
+                                'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                              }`}>
+                                {log.userRole}
+                              </span>
                             </div>
-
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-slate-900 truncate">{log.userName}</p>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className="text-[10px] font-mono text-slate-500">{log.identifier}</span>
-                                <span className="text-[10px] text-slate-300">•</span>
-                                <span className="text-[10px] text-indigo-700 font-medium truncate max-w-[120px]">{log.userRole}</span>
-                              </div>
-                            </div>
+                            <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
+                              <span>ID: {log.identifier}</span>
+                            </p>
                           </div>
 
-                          {/* Time, Attendance Badge & Single Delete */}
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1.5 shrink-0">
                             <div className="text-right">
-                              <Badge className={`text-[10px] font-bold py-0.5 px-2 ${
-                                log.scanType === 'MASUK' ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-none' :
-                                log.scanType === 'PULANG' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 border-none' : 'bg-slate-100 text-slate-700'
+                              <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold py-0.5 px-2.5 rounded-full ${
+                                log.scanType === 'MASUK' 
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
+                                  : log.scanType === 'PULANG' 
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' 
+                                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                               }`}>
+                                <CheckCircle2 className="w-3 h-3 shrink-0" />
                                 {log.scanType}
-                              </Badge>
-                              <p className="text-[11px] font-mono font-bold text-slate-700 mt-1 flex items-center justify-end gap-1">
+                              </span>
+                              <p className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 mt-0.5 flex items-center justify-end gap-1">
                                 <Clock className="w-3 h-3 text-slate-400" />
                                 {log.timestamp}
                               </p>
                             </div>
+
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleConfirmDeleteSingle(log)}
                               disabled={isDeletingSingle}
                               title="Hapus log & reset presensi pengguna ini dari database"
-                              className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                              className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg shrink-0"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           </div>
                         </div>
 
-                        {/* Match Confidence progress indicator */}
-                        <div className="mt-2 pt-1.5 border-t border-slate-200/50 flex items-center justify-between text-[10px] text-slate-500">
-                          <span>Akurasi Kemiripan AI FaceNet:</span>
-                          <span className="font-bold text-indigo-600">{Math.round(log.confidence * 100)}%</span>
+                        {/* Middle: Visual Face Comparison Box (Profil vs Snapshot Kamera Realtime) */}
+                        <div className="py-2.5 grid grid-cols-2 gap-3 items-center">
+                          {/* 1. Foto Profil Terdaftar */}
+                          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/60 min-w-0">
+                            <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600 shadow-xs flex items-center justify-center">
+                              {log.avatarUrl ? (
+                                <img src={log.avatarUrl} alt={log.userName} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="font-extrabold text-slate-500 text-sm">{log.userName.charAt(0)}</span>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Database</span>
+                              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">Foto Profil</p>
+                            </div>
+                          </div>
+
+                          {/* 2. Hasil Snapshot Kamera Realtime */}
+                          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 min-w-0">
+                            <div className="w-12 h-12 rounded-xl bg-slate-900 overflow-hidden shrink-0 border-2 border-emerald-500 shadow-xs flex items-center justify-center">
+                              {log.snapshotUrl ? (
+                                <img src={log.snapshotUrl} alt="Snapshot Kamera Realtime" className="w-full h-full object-cover" />
+                              ) : (
+                                <Camera className="w-5 h-5 text-emerald-400" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                                Live Shot
+                              </span>
+                              <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200 truncate">Snapshot AI</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Footer: AI FaceNet Match Confidence & Details */}
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium flex items-center gap-1">
+                              <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                              Akurasi Kemiripan AI:
+                            </span>
+                            <span className="font-extrabold text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">
+                              {Math.round(log.confidence * 100)}%
+                            </span>
+                          </div>
+
+                          {/* Progress Meter Bar */}
+                          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-emerald-500 to-indigo-600 rounded-full transition-all"
+                              style={{ width: `${Math.min(100, Math.max(0, log.confidence * 100))}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
                     ))
@@ -1212,55 +1444,66 @@ export default function FaceAttendanceCameraPage() {
                 {/* Range: Threshold */}
                 <div className="space-y-3 pt-2">
                   <div className="flex justify-between items-center">
-                    <Label className="text-sm font-medium text-slate-700">
-                      Batas Kemiripan Wajah (*Cosine Threshold*)
+                    <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      Batas Sensitivitas Kemiripan Wajah (*Threshold*)
                     </Label>
-                    <Badge variant="outline" className="text-xs font-bold text-indigo-600 border-indigo-200">
-                      {Math.round((currentConfig?.threshold || 0.48) * 100)}%
+                    <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-0.5">
+                      {Math.round((currentConfig?.threshold || 0.50) * 100)}%
                     </Badge>
                   </div>
                   <input
                     type="range"
-                    min={40}
-                    max={85}
+                    min={1}
+                    max={100}
                     step={1}
-                    value={Math.round((currentConfig?.threshold || 0.48) * 100)}
+                    value={Math.round((currentConfig?.threshold || 0.50) * 100)}
                     onChange={(e) => {
                       const num = Number(e.target.value)
                       setFormConfig((prev) => prev ? { ...prev, threshold: num / 100 } : null)
                     }}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
                   />
-                  <p className="text-xs text-slate-500">
-                    Standar optimal FaceNet CPU: <strong>48% - 55%</strong>. Nilai ini menangkap variasi pencahayaan foto profil secara akurat dan otomatis menandai wajah lain sebagai Tamu / Orang Asing.
-                  </p>
+                  <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                    <span>1% (Sangat Fleksibel)</span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">Rekomendasi: 50% - 75%</span>
+                    <span>100% (Identik Sempurna)</span>
+                  </div>
                 </div>
 
                 {/* Range: Cooldown */}
                 <div className="space-y-3 pt-2">
                   <div className="flex justify-between items-center">
-                    <Label className="text-sm font-medium text-slate-700">
+                    <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                       Jeda Cooldown Presensi Antar Scan (*Anti-Spam*)
                     </Label>
-                    <Badge variant="outline" className="text-xs font-bold text-indigo-600 border-indigo-200">
-                      {currentConfig?.cooldownMinutes || 10} Menit
+                    <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-0.5">
+                      {(() => {
+                        const mins = currentConfig?.cooldownMinutes || 10
+                        if (mins < 60) return `${mins} Menit`
+                        const hours = Math.floor(mins / 60)
+                        const remainder = mins % 60
+                        return `${hours} Jam${remainder > 0 ? ` ${remainder} Menit` : ''} (${mins}m)`
+                      })()}
                     </Badge>
                   </div>
                   <input
                     type="range"
-                    min={2}
-                    max={30}
+                    min={1}
+                    max={240}
                     step={1}
                     value={currentConfig?.cooldownMinutes || 10}
                     onChange={(e) => {
                       const num = Number(e.target.value)
                       setFormConfig((prev) => prev ? { ...prev, cooldownMinutes: num } : null)
                     }}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
                   />
-                  <p className="text-xs text-slate-500">
-                    Mencegah siswa/guru tercatat dobel saat berdiri lama di depan camera sebelum jeda waktu ini terlewati untuk absen pulang.
-                  </p>
+                  <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                    <span>1 Menit</span>
+                    <span>1 Jam (60m)</span>
+                    <span>2 Jam (120m)</span>
+                    <span>4 Jam (240m)</span>
+                  </div>
                 </div>
 
                 {/* Switches */}

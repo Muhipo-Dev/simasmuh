@@ -62,12 +62,12 @@ class FaceRecognitionEngine:
         print(f"[INFO] Memuat Model AI FaceNet pada compute: {self.device_name}...")
         try:
             if FACENET_AVAILABLE:
-                # MTCNN detector teroptimasi untuk CPU
+                # MTCNN detector teroptimasi untuk sensitivitas tinggi & responsif
                 self.mtcnn_detector = MTCNN(
                     image_size=160,
-                    margin=16,
-                    min_face_size=28,
-                    thresholds=[0.65, 0.75, 0.75],
+                    margin=14,
+                    min_face_size=18,
+                    thresholds=[0.50, 0.60, 0.60],
                     factor=0.709,
                     post_process=True,
                     keep_all=True,
@@ -75,6 +75,15 @@ class FaceRecognitionEngine:
                 )
                 # InceptionResnetV1 pretrained VGGFace2
                 self.facenet_model = InceptionResnetV1(pretrained='vggface2').eval().to(self.device)
+                
+                # Pre-warm model dengan dummy inference agar inference pertama langsung cepat
+                try:
+                    dummy_tensor = torch.zeros((1, 3, 160, 160), dtype=torch.float32, device=self.device)
+                    with torch.inference_mode():
+                        self.facenet_model(dummy_tensor)
+                except Exception:
+                    pass
+
                 print(f"[INFO] FaceNet Inception-ResNet-v1 (512-D) & MTCNN siap ({self.device_name}).")
             else:
                 print("[WARN] facenet-pytorch belum terpasang.")
@@ -112,7 +121,7 @@ class FaceRecognitionEngine:
         try:
             from config import API_KEY
             headers = {"x-api-key": API_KEY}
-            res = requests.get(f"{self.backend_url}/face-attendance/users-dataset", headers=headers, timeout=15)
+            res = requests.get(f"{self.backend_url}/face-attendance/users-dataset", headers=headers, timeout=6)
             if res.status_code != 200:
                 print(f"[ERROR] Backend returned status {res.status_code}")
                 return self._load_from_local_cache()
@@ -377,48 +386,27 @@ class FaceRecognitionEngine:
             return None
 
     def detect_faces(self, frame: np.ndarray) -> List[Tuple[int, int, int, int]]:
-        """Mendeteksi wajah (x, y, w, h) dengan pre-filter ringan hemat CPU 320p."""
+        """Mendeteksi wajah (x, y, w, h) dengan MTCNN Deep Learning dan OpenCV Haar Cascade fallback."""
         boxes = []
         if frame is None or frame.size == 0:
             return boxes
 
         h_frame, w_frame = frame.shape[:2]
 
-        # Downsample frame untuk inferensi jika resolusi lebih besar dari 320p (Ultra Cepat & Ringan)
+        # Standardize resolusi inferensi ke 480p (detail wajah tajam, akurasi tinggi, tetap ringan)
         scale = 1.0
-        if w_frame > 320:
-            scale = 320.0 / float(w_frame)
-            infer_w = 320
-            infer_h = int(h_frame * scale)
-            infer_frame = cv2.resize(frame, (infer_w, infer_h))
+        if w_frame > 480:
+            scale = 480.0 / float(w_frame)
+            infer_w = 480
+            infer_h = max(1, int(h_frame * scale))
+            infer_frame = cv2.resize(frame, (infer_w, infer_h), interpolation=cv2.INTER_AREA)
         else:
             infer_frame = frame
 
-        # 1. Cek cepat Haar Cascade untuk deteksi kandidat
-        if self.cascade_detector is not None:
-            try:
-                gray = cv2.cvtColor(infer_frame, cv2.COLOR_BGR2GRAY)
-                detected = self.cascade_detector.detectMultiScale(
-                    gray,
-                    scaleFactor=1.18,
-                    minNeighbors=4,
-                    minSize=(20, 20)
-                )
-                if len(detected) == 0 and self.mtcnn_detector is None:
-                    return []
-                
-                inv_scale = 1.0 / scale
-                for (cx, cy, cw, ch) in detected:
-                    x1 = max(0, int(cx * inv_scale))
-                    y1 = max(0, int(cy * inv_scale))
-                    bw = int(cw * inv_scale)
-                    bh = int(ch * inv_scale)
-                    boxes.append((x1, y1, bw, bh))
-            except Exception:
-                pass
+        inv_scale = 1.0 / scale
 
-        # 2. Jika MTCNN tersedia dan ada indikasi wajah / deteksi lanjutan
-        if self.mtcnn_detector is not None and (len(boxes) > 0 or self.cascade_detector is None):
+        # 1. Metode Utama: MTCNN (Multi-angle, tahan pencahayaan dan rotasi)
+        if self.mtcnn_detector is not None:
             try:
                 rgb_frame = cv2.cvtColor(infer_frame, cv2.COLOR_BGR2RGB)
                 pil_img = Image.fromarray(rgb_frame)
@@ -427,28 +415,47 @@ class FaceRecognitionEngine:
 
                 if detected_boxes is not None and len(detected_boxes) > 0:
                     mtcnn_boxes = []
-                    inv_scale = 1.0 / scale
                     for i, box in enumerate(detected_boxes):
                         prob = probs[i] if probs is not None else 1.0
-                        if prob is not None and prob >= 0.60:
+                        if prob is not None and prob >= 0.50:
                             x1, y1, x2, y2 = box
                             x1 = max(0, int(x1 * inv_scale))
                             y1 = max(0, int(y1 * inv_scale))
                             x2 = min(w_frame, int(x2 * inv_scale))
                             y2 = min(h_frame, int(y2 * inv_scale))
-                            bw = x2 - x1
-                            bh = y2 - y1
-                            if bw >= 20 and bh >= 20:
+                            bw = max(1, x2 - x1)
+                            bh = max(1, y2 - y1)
+                            if bw >= 16 and bh >= 16:
                                 mtcnn_boxes.append((x1, y1, bw, bh))
-                    if mtcnn_boxes:
+                    if len(mtcnn_boxes) > 0:
                         return mtcnn_boxes
-            except Exception:
-                pass
+            except Exception as e_mtcnn:
+                print(f"[DEBUG] MTCNN detect exception: {e_mtcnn}")
+
+        # 2. Metode Cadangan: Haar Cascade jika MTCNN tidak menemukan wajah / belum siap
+        if self.cascade_detector is not None:
+            try:
+                gray = cv2.cvtColor(infer_frame, cv2.COLOR_BGR2GRAY)
+                gray_eq = cv2.equalizeHist(gray)
+                detected = self.cascade_detector.detectMultiScale(
+                    gray_eq,
+                    scaleFactor=1.12,
+                    minNeighbors=3,
+                    minSize=(18, 18)
+                )
+                for (cx, cy, cw, ch) in detected:
+                    x1 = max(0, int(cx * inv_scale))
+                    y1 = max(0, int(cy * inv_scale))
+                    bw = int(cw * inv_scale)
+                    bh = int(ch * inv_scale)
+                    boxes.append((x1, y1, bw, bh))
+            except Exception as e_haar:
+                print(f"[DEBUG] Haar Cascade detect exception: {e_haar}")
 
         return boxes
 
-    def match_face(self, face_crop: np.ndarray, threshold: float = 0.48) -> Optional[Tuple[FaceUserRecord, float]]:
-        """Mencocokkan potongan wajah dengan database FaceNet 512-D vector embedding pengguna."""
+    def match_face(self, face_crop: np.ndarray, threshold: float = 0.46) -> Optional[Tuple[FaceUserRecord, float]]:
+        """Mencocokkan potongan wajah dengan database FaceNet 512-D vector embedding pengguna secara instan."""
         if not self.user_database or face_crop is None or face_crop.size == 0:
             return None
 
@@ -466,7 +473,7 @@ class FaceRecognitionEngine:
                     highest_similarity = sim
                     best_match = record
 
-        effective_threshold = max(0.40, min(0.80, threshold))
+        effective_threshold = max(0.01, min(1.0, float(threshold)))
         if best_match is not None and highest_similarity >= effective_threshold:
             return best_match, highest_similarity
 

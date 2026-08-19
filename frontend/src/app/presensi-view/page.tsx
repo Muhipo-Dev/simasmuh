@@ -23,7 +23,10 @@ import {
   Video,
   Radio,
   Activity,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
+  Camera,
+  Zap
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -50,6 +53,7 @@ interface FaceDetectionLog {
   userName: string
   userRole: string
   avatarUrl?: string | null
+  snapshotUrl?: string | null
   identifier: string
   confidence: number
   scanType: 'MASUK' | 'PULANG' | 'SUDAH_LENGKAP'
@@ -154,7 +158,7 @@ export default function PresensiPegawaiPage() {
     }
 
     fetchAttendance()
-  }, [selectedDate])
+  }, [selectedDate, liveLogs])
 
   // Filter & Pencarian
   const filteredData = useMemo(() => {
@@ -250,7 +254,7 @@ export default function PresensiPegawaiPage() {
       </nav>
 
       {/* Konten Utama */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-5 md:p-6 lg:p-8 space-y-6 sm:space-y-8 transition-all duration-200">
         {/* Banner Utama */}
         <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-slate-800 p-6 sm:p-8 rounded-2xl text-white shadow-md flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="space-y-2">
@@ -333,9 +337,9 @@ export default function PresensiPegawaiPage() {
         {/* AREA PREVIEW LIVE REALTIME CAMERA & LOG SCANNER WAJAH */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
           {/* LEFT: LIVE CAMERA FEED (7 COLS) */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 space-y-3">
             <Card className="shadow-lg border-slate-800 bg-slate-950 text-white overflow-hidden rounded-2xl">
-              <div className="p-3 sm:p-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2">
+              <div className="p-3 sm:p-4 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="flex h-3 w-3 relative shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
@@ -344,7 +348,7 @@ export default function PresensiPegawaiPage() {
                   <div className="min-w-0">
                     <h2 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5 sm:gap-2 truncate">
                       <span className="truncate">{cameraConfig?.cameraName || 'Camera Gerbang Utama'}</span>
-                      <span className="text-[10px] py-0.5 px-1.5 rounded bg-indigo-500/20 text-indigo-300 font-mono shrink-0 border border-indigo-500/30">
+                      <span className="text-[10px] py-0.5 px-2 rounded-full bg-indigo-500/20 text-indigo-300 font-mono shrink-0 border border-indigo-500/30">
                         {cameraConfig?.streamSourceType || 'LIVE STREAM'}
                       </span>
                     </h2>
@@ -354,7 +358,7 @@ export default function PresensiPegawaiPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -362,15 +366,16 @@ export default function PresensiPegawaiPage() {
                       setStreamError(false)
                       setStreamKey(Date.now())
                     }}
-                    title="Refresh Stream"
-                    className="text-slate-400 hover:text-white hover:bg-slate-800 h-7 sm:h-8 px-2"
+                    title="Segarkan Stream Video"
+                    className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 px-2.5 rounded-lg text-xs"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
+                    <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                    <span className="hidden sm:inline">Refresh</span>
                   </Button>
                 </div>
               </div>
 
-              {/* Video Feed Canvas */}
+              {/* Video Feed Canvas (16:9 Widescreen) */}
               <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden">
                 {!streamError && serviceStatus?.is_running ? (
                   <img
@@ -387,12 +392,12 @@ export default function PresensiPegawaiPage() {
                     </div>
                     <div className="space-y-1">
                       <p className="font-bold text-xs sm:text-sm text-slate-200">
-                        {serviceStatus?.isOnline ? 'Camera Standby (Siap Memindai)' : 'Camera Standby'}
+                        {serviceStatus?.isOnline ? 'Camera Standby (Siap Memindai)' : 'AI Service Offline'}
                       </p>
                       <p className="text-[11px] text-slate-400">
                         {serviceStatus?.is_running 
-                          ? 'Memuat live feed kamera presensi...' 
-                          : 'Arahkan wajah ke depan kamera untuk mencatat presensi harian otomatis.'}
+                          ? 'Menghubungkan stream video presensi...' 
+                          : 'Arahkan wajah ke depan kamera gerbang untuk mencatat presensi harian secara otomatis.'}
                       </p>
                     </div>
                     <Button
@@ -412,93 +417,171 @@ export default function PresensiPegawaiPage() {
 
                 <div className="absolute top-2 left-2 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                  <span>REALTIME FACE SCANNER</span>
+                  <span>LIVE SCANNER AKTIF</span>
                 </div>
 
                 <div className="absolute bottom-2 right-2 pointer-events-none px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-slate-300 border border-white/10">
                   Sensitivitas: {Math.round((cameraConfig?.threshold || 0.7) * 100)}%
                 </div>
               </div>
+
+              {/* Bottom Camera Info Bar */}
+              <div className="p-2.5 sm:p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-400">
+                <div className="flex items-center gap-2 truncate">
+                  <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="truncate">Sistem Biometrik AI: <strong className="text-slate-200">FaceNet Inception-V1</strong></span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                    <span className={`w-1.5 h-1.5 rounded-full ${serviceStatus?.is_running ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                    {serviceStatus?.is_running ? 'Live Active' : 'Standby'}
+                  </span>
+                </div>
+              </div>
             </Card>
           </div>
 
           {/* RIGHT: REALTIME DETECTION LOGS (5 COLS) */}
-          <div className="lg:col-span-5">
-            <Card className="shadow-lg border-slate-200 dark:border-slate-800 flex flex-col h-[320px] sm:h-[350px] md:h-[390px] rounded-2xl overflow-hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-md">
-              <CardHeader className="p-3.5 bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 shrink-0">
+          <div className="lg:col-span-5 space-y-3">
+            <Card className="shadow-lg border-slate-200 dark:border-slate-800 flex flex-col h-[520px] rounded-2xl overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+              <CardHeader className="p-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 shrink-0">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold">
-                      <Activity className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold shadow-xs">
+                      <Activity className="w-4.5 h-4.5" />
                     </div>
                     <div>
-                      <CardTitle className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Log Presensi Wajah Realtime</CardTitle>
-                      <CardDescription className="text-[10px]">Aktivitas presensi guru & karyawan hari ini</CardDescription>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-sm font-bold text-slate-900 dark:text-white">Scanner Log Realtime</CardTitle>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 animate-pulse">
+                          Live Sync
+                        </span>
+                      </div>
+                      <CardDescription className="text-[11px] text-slate-500 dark:text-slate-400">Verifikasi snapshot wajah & pencatatan presensi</CardDescription>
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => refetchLiveLogs()}
-                    className="h-7 w-7 p-0 text-slate-500"
+                    title="Segarkan Log"
+                    className="h-8 w-8 p-0 text-slate-500 hover:text-indigo-600 rounded-lg"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
+                    <RefreshCw className="w-4 h-4" />
                   </Button>
                 </div>
               </CardHeader>
 
-              <CardContent className="p-2.5 flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 space-y-1.5">
+              <CardContent className="p-3.5 flex-1 overflow-y-auto space-y-3">
                 {!liveLogs || liveLogs.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-400 space-y-1.5">
-                    <Radio className="w-8 h-8 text-slate-300 dark:text-slate-700 stroke-1 animate-pulse" />
-                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Menunggu Deteksi Wajah</p>
-                    <p className="text-[10px] text-slate-400 max-w-[200px]">
-                      Presensi otomatis tercatat saat Anda berada di depan kamera.
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2.5">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                      <Camera className="w-7 h-7 stroke-1" />
+                    </div>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Menunggu Wajah Terdeteksi</p>
+                    <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+                      Arahkan wajah Anda ke depan kamera. Hasil identifikasi dan foto snapshot akan otomatis muncul di sini.
                     </p>
                   </div>
                 ) : (
                   liveLogs.map((log, idx) => (
                     <div
                       key={log.id || idx}
-                      className={`p-2 rounded-xl transition-all ${
+                      className={`p-3.5 rounded-2xl transition-all border ${
                         idx === 0
-                          ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/50 shadow-xs'
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-900/50'
+                          ? 'bg-gradient-to-br from-indigo-50/90 via-white to-indigo-50/40 dark:from-indigo-950/40 dark:via-slate-900 dark:to-indigo-950/20 border-indigo-300/80 dark:border-indigo-700/60 shadow-md ring-1 ring-indigo-400/20'
+                          : 'bg-white dark:bg-slate-800/60 border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="relative">
-                            <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 flex items-center justify-center border border-white dark:border-slate-700">
-                              {log.avatarUrl ? (
-                                <img src={log.avatarUrl} alt={log.userName} className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="font-bold text-slate-600 dark:text-slate-300 text-[10px]">{log.userName.charAt(0)}</span>
-                              )}
-                            </div>
-                            <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900 ${
-                              log.scanType === 'MASUK' ? 'bg-emerald-500' : 'bg-blue-500'
-                            }`} />
+                      {/* Header: User identity & Scan status */}
+                      <div className="flex items-start justify-between gap-2.5 pb-2.5 border-b border-slate-100 dark:border-slate-800/80">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">{log.userName}</h4>
+                            <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                              log.userRole?.includes('SISWA') ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' :
+                              log.userRole?.includes('GURU') ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' :
+                              'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            }`}>
+                              {log.userRole}
+                            </span>
                           </div>
-
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{log.userName}</p>
-                            <p className="text-[10px] text-indigo-700 dark:text-indigo-400 font-medium truncate">{log.userRole}</p>
-                          </div>
+                          <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                            ID: {log.identifier}
+                          </p>
                         </div>
 
                         <div className="text-right shrink-0">
-                          <span className={`text-[9px] font-bold py-0.5 px-2 rounded-full ${
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold py-0.5 px-2.5 rounded-full ${
                             log.scanType === 'MASUK'
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                              : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                              : log.scanType === 'PULANG'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                           }`}>
+                            <CheckCircle2 className="w-3 h-3 shrink-0" />
                             {log.scanType}
                           </span>
-                          <p className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-400 mt-0.5 flex items-center justify-end gap-1">
-                            <Clock className="w-2.5 h-2.5" />
+                          <p className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 mt-0.5 flex items-center justify-end gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
                             {log.timestamp}
                           </p>
+                        </div>
+                      </div>
+
+                      {/* Middle: Visual Face Comparison Box (Profil vs Snapshot Kamera Realtime) */}
+                      <div className="py-2.5 grid grid-cols-2 gap-3 items-center">
+                        {/* 1. Foto Profil Terdaftar */}
+                        <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/60 min-w-0">
+                          <div className="w-11 h-11 rounded-xl bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600 shadow-xs flex items-center justify-center">
+                            {log.avatarUrl ? (
+                              <img src={log.avatarUrl} alt={log.userName} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="font-extrabold text-slate-500 text-xs">{log.userName.charAt(0)}</span>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Database</span>
+                            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">Foto Profil</p>
+                          </div>
+                        </div>
+
+                        {/* 2. Hasil Snapshot Kamera Realtime */}
+                        <div className="flex items-center gap-2.5 p-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 min-w-0">
+                          <div className="w-11 h-11 rounded-xl bg-slate-900 overflow-hidden shrink-0 border-2 border-emerald-500 shadow-xs flex items-center justify-center">
+                            {log.snapshotUrl ? (
+                              <img src={log.snapshotUrl} alt="Snapshot Kamera Realtime" className="w-full h-full object-cover" />
+                            ) : (
+                              <Camera className="w-5 h-5 text-emerald-400" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                              Live Shot
+                            </span>
+                            <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200 truncate">Snapshot AI</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer: AI FaceNet Match Confidence & Details */}
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium flex items-center gap-1">
+                            <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                            Akurasi Kemiripan AI:
+                          </span>
+                          <span className="font-extrabold text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">
+                            {Math.round(log.confidence * 100)}%
+                          </span>
+                        </div>
+
+                        <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-emerald-500 to-indigo-600 rounded-full transition-all"
+                            style={{ width: `${Math.min(100, Math.max(0, log.confidence * 100))}%` }}
+                          />
                         </div>
                       </div>
                     </div>

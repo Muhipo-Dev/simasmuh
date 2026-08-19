@@ -92,6 +92,9 @@ def video_feed():
     )
 
 @app.post("/sync-profiles")
+@app.get("/sync-profiles")
+@app.post("/sync")
+@app.get("/sync")
 def sync_profiles():
     total, active_vectors = engine.sync_database_from_backend(force_refresh=True)
     return {
@@ -127,7 +130,7 @@ class ResetCooldownRequest(BaseModel):
 @app.post("/reset-cooldown")
 def reset_cooldown_endpoint(payload: ResetCooldownRequest = ResetCooldownRequest()):
     """Mereset interval cooldown deteksi kamera pada AI worker."""
-    camera_worker.reset_cooldown(user_id=payload.userId, all_users=payload.all)
+    worker.reset_cooldown(user_id=payload.userId, all_users=payload.all)
     return {
         "success": True,
         "message": "Cooldown timer presensi kamera berhasil direset.",
@@ -154,24 +157,24 @@ def scan_frame(payload: ScanFrameRequest):
         results = []
 
         for (x, y, w, h) in faces:
-            if w < 18 or h < 18:
+            if w < 12 or h < 12:
                 continue
             
-            pad_y = int(h * 0.1)
-            pad_x = int(w * 0.1)
+            pad_y = int(h * 0.12)
+            pad_x = int(w * 0.12)
             y1 = max(0, y - pad_y)
             y2 = min(h_frame, y + h + pad_y)
             x1 = max(0, x - pad_x)
             x2 = min(w_frame, x + w + pad_x)
             face_crop = frame[y1:y2, x1:x2]
 
-            threshold = worker.config.threshold if worker.config else 0.58
+            threshold = worker.config.threshold if worker.config and worker.config.threshold is not None else 0.46
             match_res = engine.match_face(face_crop, threshold=threshold)
 
             if match_res:
                 user_rec, sim = match_res
                 pct = int(sim * 100)
-                worker._process_attendance(user_rec, sim)
+                worker._process_attendance(user_rec, sim, face_crop=face_crop)
                 results.append({
                     "box": [int(x), int(y), int(w), int(h)],
                     "is_registered": True,

@@ -216,7 +216,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full pb-24 lg:pb-10">
+        <div className="flex-1 p-3 sm:p-5 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full pb-28 lg:pb-10 transition-all duration-200">
           {children}
         </div>
 

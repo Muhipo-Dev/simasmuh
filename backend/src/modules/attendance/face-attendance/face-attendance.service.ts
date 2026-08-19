@@ -27,6 +27,7 @@ export interface FaceDetectionLog {
   userName: string;
   userRole: string;
   avatarUrl?: string | null;
+  snapshotUrl?: string | null;
   identifier: string;
   confidence: number;
   scanType: 'MASUK' | 'PULANG' | 'SUDAH_LENGKAP';
@@ -236,6 +237,7 @@ export class FaceAttendanceService {
     confidence: number;
     secretKey?: string;
     cameraLocation?: string;
+    snapshot?: string;
   }) {
     const config = this.getConfig();
     if (payload.secretKey && payload.secretKey !== config.apiKeySecret) {
@@ -326,6 +328,7 @@ export class FaceAttendanceService {
       userName: user.name,
       userRole: user.role + (user.student?.class ? ` (${user.student.class.name})` : ''),
       avatarUrl: user.avatarUrl,
+      snapshotUrl: payload.snapshot || null,
       identifier: user.student?.nis || user.nipNbm || user.teacherProfile?.nip || user.username,
       confidence: Math.round(payload.confidence * 100) / 100,
       scanType,
@@ -524,17 +527,17 @@ export class FaceAttendanceService {
           });
           pyProc.unref();
 
-          // Wait up to 15 seconds for port 8089 to come alive
-          for (let i = 0; i < 30; i++) {
-            await new Promise((r) => setTimeout(r, 500));
+          // Wait up to 10 seconds for port 8089 to come alive with fast 250ms polling
+          for (let i = 0; i < 40; i++) {
+            await new Promise((r) => setTimeout(r, 250));
             const pingCheck = await this.getAiServiceStatus();
             if (pingCheck.isOnline) {
               isOnline = true;
               break;
             }
           }
-        } catch (spawnErr) {
-          this.logger.error(`Gagal meluncurkan proses python: ${spawnErr.message}`);
+        } catch (spawnErr: any) {
+          this.logger.error(`Gagal meluncurkan proses python: ${spawnErr?.message || spawnErr}`);
         }
       }
     }
@@ -696,13 +699,14 @@ export class FaceAttendanceService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: imageBase64 }),
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(4000),
       });
       if (res.ok) {
         return await res.json();
       }
     } catch (err) {
-      // return empty if python offline
+      // Jika microservice offline, otomatis nyalakan di background
+      this.startAiWorker().catch(() => {});
     }
     return { faces: [] };
   }

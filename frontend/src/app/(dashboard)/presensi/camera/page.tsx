@@ -39,11 +39,14 @@ import {
   Power,
   Tv,
   Film,
-  Globe
+  Globe,
+  UserX
 } from 'lucide-react'
 
+import { toast } from 'sonner'
+
 interface FaceCameraConfig {
-  streamSourceType?: 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO'
+  streamSourceType?: 'BROWSER_WEBCAM' | 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO'
   streamUrl: string
   cameraName: string
   location: string
@@ -96,6 +99,7 @@ interface ServiceStatusResponse {
   stream_status?: string
   stream_url?: string
   camera_name?: string
+  device?: string
   fps?: number
   threshold?: number
   cooldown_minutes?: number
@@ -104,6 +108,14 @@ interface ServiceStatusResponse {
 }
 
 const STREAM_PRESETS = [
+  {
+    id: 'BROWSER_WEBCAM',
+    title: 'Webcam Browser (Langsung)',
+    description: 'Kamera webcam laptop / HP / USB yang terhubung di browser (Rekomendasi)',
+    icon: Camera,
+    example: 'BROWSER_WEBCAM',
+    badge: 'Browser Direct',
+  },
   {
     id: 'RTSP',
     title: 'IP Camera RTSP',
@@ -122,11 +134,11 @@ const STREAM_PRESETS = [
   },
   {
     id: 'WEBCAM',
-    title: 'Webcam USB / Laptop',
-    description: 'Kamera bawaan komputer / USB webcam lokal (Index 0, 1)',
+    title: 'Webcam USB Server (0)',
+    description: 'Kamera bawaan komputer / USB webcam lokal pada server',
     icon: Camera,
     example: '0',
-    badge: 'Direct USB',
+    badge: 'Server Direct USB',
   },
   {
     id: 'HTTP_STREAM',
@@ -159,6 +171,13 @@ export default function FaceAttendanceCameraPage() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const videoContainerRef = useRef<HTMLDivElement>(null)
 
+  // Browser Webcam Direct Hook
+  const localVideoRef = useRef<HTMLVideoElement>(null)
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null)
+  const [isBrowserCamStreaming, setIsBrowserCamStreaming] = useState(false)
+  const [browserCamError, setBrowserCamError] = useState<string | null>(null)
+  const [browserFps, setBrowserFps] = useState<number>(0)
+
   // Dataset filter states
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'SISWA' | 'GURU' | 'PEGAWAI'>('ALL')
@@ -173,12 +192,187 @@ export default function FaceAttendanceCameraPage() {
     queryFn: () => authenticatedQuery('/api-backend/face-attendance/config'),
   })
 
-  // Sinkronisasi formConfig dari server saat data pertama kali dimuat atau di-refresh
   useEffect(() => {
     if (configData) {
       setFormConfig(configData)
     }
   }, [configData])
+
+  // Start browser webcam stream dengan resolusi dan FPS ramah CPU
+  const startBrowserWebcam = async () => {
+    try {
+      setBrowserCamError(null)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640, max: 800 },
+          height: { ideal: 480, max: 600 },
+          frameRate: { ideal: 20, max: 24 },
+          facingMode: 'user'
+        },
+        audio: false,
+      })
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream
+        localVideoRef.current.play().catch(() => {})
+        setIsBrowserCamStreaming(true)
+      }
+    } catch (err: any) {
+      setBrowserCamError(err?.message || 'Izin kamera ditolak atau perangkat webcam tidak terdeteksi.')
+      setIsBrowserCamStreaming(false)
+    }
+  }
+
+  const stopBrowserWebcam = () => {
+    if (localVideoRef.current && localVideoRef.current.srcObject) {
+      const stream = localVideoRef.current.srcObject as MediaStream
+      stream.getTracks().forEach((t) => t.stop())
+      localVideoRef.current.srcObject = null
+    }
+    setIsBrowserCamStreaming(false)
+    if (overlayCanvasRef.current) {
+      const ctx = overlayCanvasRef.current.getContext('2d')
+      if (ctx) ctx.clearRect(0, 0, overlayCanvasRef.current.width, overlayCanvasRef.current.height)
+    }
+  }
+
+  // Draw YOLO bounding box over video canvas (Terdaftar = Hijau, Tamu / Orang Asing = Kuning Amber)
+  const drawYoloBoundingBoxes = (faces: any[], vWidth: number, vHeight: number) => {
+    const canvas = overlayCanvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    if (canvas.width !== vWidth || canvas.height !== vHeight) {
+      canvas.width = vWidth
+      canvas.height = vHeight
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    faces.forEach((f) => {
+      const [x, y, w, h] = f.box
+      const isReg = f.is_registered
+      // Hijau Zamrud untuk terdaftar, Kuning Amber untuk Tamu/Orang Asing
+      const color = isReg ? '#10b981' : '#f59e0b'
+      const tagBg = isReg ? '#059669' : '#d97706'
+
+      // 1. Bounding Box Segiempat
+      ctx.strokeStyle = color
+      ctx.lineWidth = 2.5
+      ctx.strokeRect(x, y, w, h)
+
+      // 2. Corner accents
+      const cLen = Math.max(6, Math.min(18, w / 4))
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 2.5
+      // Top-left
+      ctx.beginPath(); ctx.moveTo(x, y + cLen); ctx.lineTo(x, y); ctx.lineTo(x + cLen, y); ctx.stroke()
+      // Top-right
+      ctx.beginPath(); ctx.moveTo(x + w - cLen, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + cLen); ctx.stroke()
+      // Bottom-left
+      ctx.beginPath(); ctx.moveTo(x, y + h - cLen); ctx.lineTo(x, y + h); ctx.lineTo(x + cLen, y + h); ctx.stroke()
+      // Bottom-right
+      ctx.beginPath(); ctx.moveTo(x + w - cLen, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - cLen); ctx.stroke()
+
+      // 3. YOLO Tag Label di atas kotak
+      const labelText = isReg 
+        ? `${f.name || 'Terdaftar'} (${Math.round((f.confidence || 0) * 100)}%)` 
+        : 'Tamu / Orang Asing'
+      
+      const subLabelText = isReg 
+        ? (f.sub_label || `${f.role || ''} - ${f.identifier || ''}`)
+        : 'Wajah Belum Terdaftar'
+
+      const fullText = `${labelText} • ${subLabelText}`
+      ctx.font = 'bold 11px sans-serif'
+      const textWidth = ctx.measureText(fullText).width
+      const tagH = 22
+      const tagW = Math.max(120, textWidth + 16)
+      const tagY = y - tagH >= 0 ? y - tagH : y
+
+      ctx.fillStyle = tagBg
+      ctx.fillRect(x, tagY, tagW, tagH)
+      ctx.strokeStyle = color
+      ctx.lineWidth = 1
+      ctx.strokeRect(x, tagY, tagW, tagH)
+
+      ctx.fillStyle = '#ffffff'
+      ctx.fillText(fullText, x + 8, tagY + 15)
+    })
+  }
+
+  const isBrowserMode = formConfig?.streamSourceType === 'BROWSER_WEBCAM'
+
+  // Effect untuk mengaktifkan / menonaktifkan webcam browser
+  useEffect(() => {
+    if (isBrowserMode && activeTab === 'monitor') {
+      startBrowserWebcam()
+    } else {
+      stopBrowserWebcam()
+    }
+    return () => {
+      stopBrowserWebcam()
+    }
+  }, [isBrowserMode, activeTab])
+
+  // Periodic frame scanning ke FaceNet backend (mode CPU Eco hemat daya ~3 FPS inferensi)
+  useEffect(() => {
+    if (!isBrowserCamStreaming) return
+    let isProcessing = false
+    let frameCount = 0
+    let lastTime = Date.now()
+
+    const interval = setInterval(async () => {
+      if (isProcessing || !localVideoRef.current || !overlayCanvasRef.current) return
+      const video = localVideoRef.current
+      if (video.readyState < 2 || video.videoWidth === 0) return
+
+      isProcessing = true
+      try {
+        const offscreen = document.createElement('canvas')
+        const scale = Math.min(1.0, 640 / video.videoWidth)
+        offscreen.width = Math.round(video.videoWidth * scale)
+        offscreen.height = Math.round(video.videoHeight * scale)
+        const ctx = offscreen.getContext('2d')
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height)
+          const base64 = offscreen.toDataURL('image/jpeg', 0.65)
+          const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64 }),
+          })
+          if (res.ok) {
+            const data = await res.json()
+            const rawFaces = data.faces || []
+            const invScale = 1.0 / scale
+            const scaledFaces = rawFaces.map((f: any) => ({
+              ...f,
+              box: [
+                Math.round(f.box[0] * invScale),
+                Math.round(f.box[1] * invScale),
+                Math.round(f.box[2] * invScale),
+                Math.round(f.box[3] * invScale),
+              ],
+            }))
+            drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
+          }
+        }
+        frameCount++
+        const now = Date.now()
+        if (now - lastTime >= 1000) {
+          setBrowserFps(frameCount)
+          frameCount = 0
+          lastTime = now
+        }
+      } catch (err) {
+        // silent
+      } finally {
+        isProcessing = false
+      }
+    }, 320)
+
+    return () => clearInterval(interval)
+  }, [isBrowserCamStreaming])
 
   // 2. Fetch Users Dataset stats
   const { data: datasetData, isLoading: isDatasetLoading, refetch: refetchDataset } = useQuery<UsersDatasetResponse>({
@@ -193,7 +387,7 @@ export default function FaceAttendanceCameraPage() {
     refetchInterval: 2000,
   })
 
-  // 4. Fetch Python AI Service Status (Port 8005)
+  // 4. Fetch Python AI Service Status (Port 8089)
   const { data: serviceStatus, refetch: refetchServiceStatus } = useQuery<ServiceStatusResponse>({
     queryKey: ['face-attendance-service-status'],
     queryFn: () => authenticatedQuery('/api-backend/face-attendance/service-status'),
@@ -368,13 +562,12 @@ export default function FaceAttendanceCameraPage() {
           </div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">Presensi Camera AI FaceNet</h1>
           <p className="text-slate-300 text-xs md:text-sm max-w-2xl">
-            Monitoring realtime live capture berbagai tipe camera (RTSP, RTMP, Webcam, HTTP Stream, Video) dengan deteksi biometrik FaceNet (512-D) dan pencatatan presensi otomatis.
+            Monitoring realtime live capture berbagai tipe camera (RTSP, RTMP, Webcam Browser, HTTP Stream, Video) dengan deteksi biometrik FaceNet (512-D), penandaan tamu/orang asing, dan pencatatan presensi otomatis.
           </p>
         </div>
         
         {/* Top Control Action Badges */}
         <div className="flex flex-wrap sm:flex-nowrap lg:flex-col gap-2 shrink-0">
-          {/* AI Microservice Port 8005 Status Pill */}
           <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${
@@ -394,6 +587,11 @@ export default function FaceAttendanceCameraPage() {
               <Power className="w-3 h-3 mr-1" />
               {isStartingWorker ? 'Starting...' : isStoppingWorker ? 'Stopping...' : serviceStatus?.is_running ? 'Stop' : 'Start'}
             </Button>
+          </div>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
+            <Cpu className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span className="font-medium truncate text-[11px] sm:text-xs">CPU Eco-Safe Mode (Anti Panas)</span>
           </div>
 
           <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
@@ -462,7 +660,7 @@ export default function FaceAttendanceCameraPage() {
         </button>
       </div>
 
-      {/* TAB 1: LIVE MONITOR & SCANNER LOG (SPLIT SCREEN) */}
+      {/* TAB 1: LIVE MONITOR & SCANNER LOG */}
       {activeTab === 'monitor' && (
         <div className="space-y-4 md:space-y-6">
           {/* Quick Stats Bar */}
@@ -563,7 +761,7 @@ export default function FaceAttendanceCameraPage() {
             </div>
           </div>
 
-          {/* SPLIT SCREEN LAYOUT: LEFT = LIVE CAPTURE STREAM | RIGHT = SCANNER LOGS */}
+          {/* SPLIT SCREEN LAYOUT */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
             {/* LEFT BOX (7 COLS): REALTIME LIVE CAPTURE STREAM */}
             <div className="lg:col-span-7 space-y-3">
@@ -615,7 +813,33 @@ export default function FaceAttendanceCameraPage() {
                   ref={videoContainerRef}
                   className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group"
                 >
-                  {!streamError && serviceStatus?.is_running ? (
+                  {isBrowserMode ? (
+                    <div className="relative w-full h-full flex items-center justify-center bg-black">
+                      <video
+                        ref={localVideoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-contain"
+                        onPlay={() => setIsBrowserCamStreaming(true)}
+                      />
+                      <canvas
+                        ref={overlayCanvasRef}
+                        className="absolute inset-0 w-full h-full pointer-events-none object-contain"
+                      />
+
+                      {browserCamError && (
+                        <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center space-y-3 z-20">
+                          <Camera className="w-10 h-10 text-rose-400 animate-pulse" />
+                          <p className="text-sm font-bold text-white">Gagal Mengakses Webcam Browser</p>
+                          <p className="text-xs text-slate-300 max-w-sm">{browserCamError}</p>
+                          <Button size="sm" onClick={startBrowserWebcam} className="bg-indigo-600 text-white text-xs">
+                            <RefreshCw className="w-3.5 h-3.5 mr-1" /> Coba Lagi
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : !streamError && serviceStatus?.is_running ? (
                     <div className="relative w-full h-full flex items-center justify-center">
                       <img
                         key={streamKey}
@@ -623,57 +847,41 @@ export default function FaceAttendanceCameraPage() {
                         alt="Live Capture FaceNet Camera Stream"
                         className="w-full h-full object-contain"
                         onError={() => {
+                          setStreamError(true)
                           console.warn('Stream proxy failed, attempting direct endpoint...')
                         }}
                       />
-
-                      {/* REALTIME SCANNER BOUNDING BOX OVERLAY & TARGETING RETICLE */}
-                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
-                        {/* Centered Face Detection Bounding Box Guide */}
-                        <div className="relative w-48 h-56 sm:w-56 sm:h-64 md:w-64 md:h-72 rounded-2xl border-2 border-dashed border-emerald-400/40 bg-emerald-500/5 shadow-[0_0_30px_rgba(16,185,129,0.15)] flex flex-col justify-between p-3 transition-all duration-300">
-                          {/* 4 Glowing Corner Brackets */}
-                          <div className="absolute -top-1 -left-1 w-6 h-6 border-t-3 border-l-3 border-emerald-400 rounded-tl-lg shadow-[0_0_10px_#10b981]" />
-                          <div className="absolute -top-1 -right-1 w-6 h-6 border-t-3 border-r-3 border-emerald-400 rounded-tr-lg shadow-[0_0_10px_#10b981]" />
-                          <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-3 border-l-3 border-emerald-400 rounded-bl-lg shadow-[0_0_10px_#10b981]" />
-                          <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-3 border-r-3 border-emerald-400 rounded-br-lg shadow-[0_0_10px_#10b981]" />
-
-                          {/* Center Crosshair Reticle */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                            <div className="w-6 h-[1px] bg-emerald-400" />
-                            <div className="h-6 w-[1px] bg-emerald-400 absolute" />
-                          </div>
-
-                          {/* Animated Vertical Scan Laser Line */}
-                          <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#10b981] animate-pulse top-1/2 -translate-y-1/2" />
-
-                          {/* Top Bounding Box Badge */}
-                          <div className="self-center -mt-6 px-2.5 py-0.5 rounded-full bg-emerald-950/90 border border-emerald-500/50 backdrop-blur-sm text-[10px] font-mono font-bold text-emerald-300 tracking-wider flex items-center gap-1 shadow-md">
-                            <Sparkles className="w-3 h-3 text-emerald-400 animate-spin" />
-                            AREA FOKUS WAJAH
-                          </div>
-
-                          {/* Bottom Alignment Instruction */}
-                          <div className="self-center -mb-6 px-2.5 py-0.5 rounded-full bg-black/80 border border-white/20 backdrop-blur-sm text-[9px] sm:text-[10px] font-mono text-slate-300 tracking-tight text-center shadow-md">
-                            Posisikan Wajah di Dalam Kotak
-                          </div>
-                        </div>
-                      </div>
                     </div>
                   ) : (
-                    /* Fallback when stream is offline / connecting */
                     <div className="text-center p-4 sm:p-6 space-y-3 sm:space-y-4 max-w-md">
                       <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
                         <Video className="w-6 h-6 sm:w-8 sm:h-8 animate-pulse" />
                       </div>
                       <div className="space-y-1">
                         <p className="font-bold text-xs sm:text-sm text-slate-200">
-                          {serviceStatus?.isOnline ? 'AI FaceNet Siap (Stream Belum Dimulai)' : 'Microservice AI FaceNet Belum Aktif'}
+                          {serviceStatus?.isOnline ? 'AI FaceNet Siap (Menghubungkan Sinyal)' : 'Microservice AI FaceNet Belum Aktif'}
                         </p>
                         <p className="text-[11px] sm:text-xs text-slate-400 leading-relaxed">
-                          Klik tombol di bawah untuk menyalakan AI Microservice FaceNet dan memulai video feed kamera.
+                          Jika tidak ada kamera USB terhubung di server atau RTSP belum aktif, Anda dapat langsung beralih ke <strong>Webcam Browser</strong> dengan 1 klik.
                         </p>
                       </div>
                       <div className="pt-2 flex flex-wrap justify-center gap-2">
+                        <Button 
+                          onClick={() => {
+                            const updated = {
+                              ...(currentConfig || {}),
+                              streamSourceType: 'BROWSER_WEBCAM' as any,
+                              streamUrl: 'BROWSER_WEBCAM',
+                            }
+                            setFormConfig(updated as any)
+                            updateConfig(updated as any)
+                          }} 
+                          size="sm" 
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs font-semibold"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          Gunakan Webcam Browser (Langsung)
+                        </Button>
                         <Button 
                           onClick={() => {
                             setStreamError(false)
@@ -682,19 +890,11 @@ export default function FaceAttendanceCameraPage() {
                           }} 
                           disabled={isStartingWorker}
                           size="sm" 
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs font-semibold"
-                        >
-                          <Power className="w-3.5 h-3.5" />
-                          {isStartingWorker ? 'Menyalakan...' : 'Nyalakan AI Microservice FaceNet'}
-                        </Button>
-                        <Button 
-                          onClick={handleReconnectStream} 
-                          size="sm" 
                           variant="outline"
                           className="border-slate-700 text-slate-300 hover:text-white gap-1.5 text-xs font-semibold"
                         >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          Refresh
+                          <Power className="w-3.5 h-3.5" />
+                          {isStartingWorker ? 'Menyalakan...' : 'Nyalakan Ulang AI Stream'}
                         </Button>
                       </div>
                     </div>
@@ -703,11 +903,11 @@ export default function FaceAttendanceCameraPage() {
                   {/* Corner Visual HUD Targets */}
                   <div className="absolute top-2 sm:top-3 left-2 sm:left-3 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>{currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
+                    <span>{isBrowserMode ? `BROWSER WEBCAM (${browserFps} FPS)` : currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
                   </div>
 
                   <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded bg-black/60 backdrop-blur-xs text-[10px] sm:text-[11px] font-mono text-slate-300 border border-white/10">
-                    <span>Threshold: {Math.round((currentConfig?.threshold || 0.7) * 100)}%</span>
+                    <span>Sensitivitas: {Math.round((currentConfig?.threshold || 0.58) * 100)}%</span>
                     <span>•</span>
                     <span>Cooldown: {currentConfig?.cooldownMinutes || 10}m</span>
                   </div>
@@ -748,7 +948,7 @@ export default function FaceAttendanceCameraPage() {
                       </div>
                       <div>
                         <CardTitle className="text-sm font-bold text-slate-900">Scanner Log Wajah Realtime</CardTitle>
-                        <CardDescription className="text-[11px]">Wajah yang berhasil dicocokkan & waktu presensi</CardDescription>
+                        <CardDescription className="text-[11px]">Wajah terdaftar & waktu presensi otomatis</CardDescription>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -829,7 +1029,7 @@ export default function FaceAttendanceCameraPage() {
 
                         {/* Match Confidence progress indicator */}
                         <div className="mt-2 pt-1.5 border-t border-slate-200/50 flex items-center justify-between text-[10px] text-slate-500">
-                          <span>Akurasi Kemiripan AI:</span>
+                          <span>Akurasi Kemiripan AI FaceNet:</span>
                           <span className="font-bold text-indigo-600">{Math.round(log.confidence * 100)}%</span>
                         </div>
                       </div>
@@ -945,18 +1145,18 @@ export default function FaceAttendanceCameraPage() {
                 <div className="space-y-3 pt-2">
                   <div className="flex justify-between items-center">
                     <Label className="text-sm font-medium text-slate-700">
-                      Tingkat Kemiripan Wajah (*Confidence Threshold*)
+                      Tingkat Sensitivitas Kemiripan Wajah (*Confidence Threshold*)
                     </Label>
                     <Badge variant="outline" className="text-xs font-bold text-indigo-600 border-indigo-200">
-                      {Math.round((currentConfig?.threshold || 0.70) * 100)}%
+                      {Math.round((currentConfig?.threshold || 0.58) * 100)}%
                     </Badge>
                   </div>
                   <input
                     type="range"
-                    min={50}
-                    max={95}
+                    min={45}
+                    max={90}
                     step={1}
-                    value={Math.round((currentConfig?.threshold || 0.70) * 100)}
+                    value={Math.round((currentConfig?.threshold || 0.58) * 100)}
                     onChange={(e) => {
                       const num = Number(e.target.value)
                       setFormConfig((prev) => prev ? { ...prev, threshold: num / 100 } : null)
@@ -964,7 +1164,7 @@ export default function FaceAttendanceCameraPage() {
                     className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                   />
                   <p className="text-xs text-slate-500">
-                    Standar rekomendasi: <strong>70%</strong>. Nilai lebih tinggi meningkatkan presisi agar tidak tertukar, nilai lebih rendah mempermudah deteksi dari jarak lebih jauh.
+                    Standar optimal FaceNet CPU: <strong>58% - 65%</strong>. Nilai ini menangkap variasi pencahayaan foto profil secara akurat dan otomatis menandai wajah lain sebagai Tamu / Orang Asing.
                   </p>
                 </div>
 
@@ -1058,16 +1258,16 @@ export default function FaceAttendanceCameraPage() {
                     </span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
-                    <span className="text-slate-500">Arsitektur AI:</span>
-                    <span className="font-semibold text-slate-800">FaceNet (Inception-ResNet-v1 512-D)</span>
+                    <span className="text-slate-500">Mode Komputasi:</span>
+                    <span className="font-semibold text-emerald-700">CPU Eco-Safe Mode</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
-                    <span className="text-slate-500">Detektor Wajah:</span>
-                    <span className="font-semibold text-slate-800">MTCNN Multi-Task Cascade</span>
+                    <span className="text-slate-500">Arsitektur AI:</span>
+                    <span className="font-semibold text-slate-800">FaceNet (512-D) + MTCNN</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
                     <span className="text-slate-500">Basis Data Wajah:</span>
-                    <span className="font-semibold text-slate-800">Foto Profil Pengguna</span>
+                    <span className="font-semibold text-slate-800">Foto Profil SIMASMUH</span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Total Scan Hari Ini:</span>
@@ -1106,7 +1306,7 @@ export default function FaceAttendanceCameraPage() {
                     Menu ini hanya dapat dikonfigurasi oleh role <strong>SUPERADMIN</strong> dan <strong>ADMIN_IT</strong>.
                   </p>
                   <p>
-                    Foto profil pengguna otomatis dikonversi menjadi vektor wajah berkecepatan tinggi tanpa perlu training ulang model.
+                    Foto profil pengguna otomatis dikonversi menjadi vektor 512-D berkecepatan tinggi tanpa perlu training ulang model.
                   </p>
                 </CardContent>
               </Card>
@@ -1483,10 +1683,10 @@ export default function FaceAttendanceCameraPage() {
                 Tips Pengaturan Kamera Presensi:
               </h4>
               <ul className="list-disc list-inside text-xs space-y-1 text-indigo-900/90 leading-relaxed">
-                <li>Untuk pengujian di laptop/PC tanpa CCTV, Anda dapat memilih preset <strong>Webcam USB (0)</strong> atau <strong>File Video Lokal</strong>.</li>
+                <li>Untuk pengujian di laptop/PC tanpa CCTV, Anda dapat memilih preset <strong>Webcam Browser (Langsung)</strong> atau <strong>Webcam USB (0)</strong>.</li>
                 <li>Posisikan camera setinggi 1.6 - 1.8 meter menghadap ke lorong / gerbang masuk siswa.</li>
                 <li>Hindari posisi *backlight* (menghadap langsung ke arah sinar matahari terik).</li>
-                <li>Gunakan resolusi stream 720p / 1080p dengan frame rate 15–25 FPS untuk efisiensi komputasi server.</li>
+                <li>Resolusi ideal adalah 640x480 pada 18-20 FPS untuk pemrosesan CPU yang dingin dan stabil.</li>
               </ul>
             </div>
           </CardContent>

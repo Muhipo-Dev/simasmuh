@@ -1,12 +1,12 @@
 {
-  "streamUrl": "2",
+  "streamUrl": "0",
   "cameraName": "Camera Gerbang",
   "location": "Gerbang Depan Sekolah",
-  "threshold": 0.7,
+  "threshold": 0.57,
   "cooldownMinutes": 10,
   "isActive": false,
   "welcomeVoice": false,
   "apiKeySecret": "simasmuh_face_token_secret_2026",
-  "updatedAt": "2026-08-18T01:14:26.263Z",
+  "updatedAt": "2026-08-18T02:22:31.335Z",
   "streamSourceType": "WEBCAM"
 }

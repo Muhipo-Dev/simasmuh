@@ -65,7 +65,7 @@ export class FaceAttendanceService {
           streamUrl: '0',
           cameraName: 'Camera Gerbang Utama',
           location: 'Gerbang Depan Sekolah',
-          threshold: 0.70,
+          threshold: 0.58,
           cooldownMinutes: 10,
           isActive: true,
           welcomeVoice: true,
@@ -97,7 +97,7 @@ export class FaceAttendanceService {
       streamUrl: '0',
       cameraName: 'Camera Gerbang Utama',
       location: 'Gerbang Depan Sekolah',
-      threshold: 0.70,
+      threshold: 0.58,
       cooldownMinutes: 10,
       isActive: true,
       welcomeVoice: true,
@@ -340,10 +340,15 @@ export class FaceAttendanceService {
 
   async getAiServiceStatus() {
     try {
-      const res = await fetch('http://127.0.0.1:8089/status', { signal: AbortSignal.timeout(5000) });
-      if (res.ok) {
-        const data = await res.json();
-        return { isOnline: true, ...data };
+      const endpoints = ['http://127.0.0.1:8089/status', 'http://localhost:8089/status'];
+      for (const url of endpoints) {
+        try {
+          const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+          if (res.ok) {
+            const data = await res.json();
+            return { isOnline: true, ...data };
+          }
+        } catch {}
       }
     } catch (err) {
       // offline
@@ -353,13 +358,8 @@ export class FaceAttendanceService {
 
   async startAiWorker() {
     // 1. Check if already online
-    let isOnline = false;
-    try {
-      const ping = await fetch('http://127.0.0.1:8089/status', { signal: AbortSignal.timeout(1500) });
-      if (ping.ok) isOnline = true;
-    } catch {
-      isOnline = false;
-    }
+    const status = await this.getAiServiceStatus();
+    let isOnline = status.isOnline;
 
     // 2. If offline, spawn Python process automatically
     if (!isOnline) {
@@ -376,13 +376,19 @@ export class FaceAttendanceService {
 
       if (targetDir) {
         try {
-          // Prioritas 1: Gunakan executable dari local virtual environment (.venv)
+          // Prioritas 1: Gunakan executable GPU dari .venv-gpu jika tersedia
+          const venvGpuWindows = path.join(targetDir, '.venv-gpu', 'Scripts', 'python.exe');
           const venvWindows = path.join(targetDir, '.venv', 'Scripts', 'python.exe');
+          const venvGpuLinux = path.join(targetDir, '.venv-gpu', 'bin', 'python');
           const venvLinux = path.join(targetDir, '.venv', 'bin', 'python');
           
           let pyCmd = 'python';
-          if (fs.existsSync(venvWindows)) {
+          if (fs.existsSync(venvGpuWindows)) {
+            pyCmd = venvGpuWindows;
+          } else if (fs.existsSync(venvWindows)) {
             pyCmd = venvWindows;
+          } else if (fs.existsSync(venvGpuLinux)) {
+            pyCmd = venvGpuLinux;
           } else if (fs.existsSync(venvLinux)) {
             pyCmd = venvLinux;
           }
@@ -392,19 +398,18 @@ export class FaceAttendanceService {
             detached: true,
             stdio: 'ignore',
             shell: false,
+            windowsHide: true,
           });
           pyProc.unref();
 
-          // Wait up to 12 seconds for port 8089 to come alive
-          for (let i = 0; i < 24; i++) {
+          // Wait up to 15 seconds for port 8089 to come alive
+          for (let i = 0; i < 30; i++) {
             await new Promise((r) => setTimeout(r, 500));
-            try {
-              const pingCheck = await fetch('http://127.0.0.1:8089/status', { signal: AbortSignal.timeout(1000) });
-              if (pingCheck.ok) {
-                isOnline = true;
-                break;
-              }
-            } catch {}
+            const pingCheck = await this.getAiServiceStatus();
+            if (pingCheck.isOnline) {
+              isOnline = true;
+              break;
+            }
           }
         } catch (spawnErr) {
           this.logger.error(`Gagal meluncurkan proses python: ${spawnErr.message}`);
@@ -414,20 +419,32 @@ export class FaceAttendanceService {
 
     // 3. Trigger stream start
     try {
-      const res = await fetch('http://127.0.0.1:8089/stream/start', {
-        method: 'POST',
-        signal: AbortSignal.timeout(4000),
-      });
-      if (res.ok) {
-        return await res.json();
+      const startUrls = ['http://127.0.0.1:8089/stream/start', 'http://localhost:8089/stream/start'];
+      for (const url of startUrls) {
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            signal: AbortSignal.timeout(4000),
+          });
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch {}
+      }
+      if (isOnline) {
+        return { success: true, message: 'AI Service aktif di port 8089 (Stream Siap)' };
       }
     } catch (err) {
       if (isOnline) {
         return { success: true, message: 'AI Service aktif di port 8089 (Stream Ingesting)' };
       }
-      throw new BadRequestException('Microservice AI Python di port 8089 belum dapat dijangkau. Pastikan Python sudah terinstal di komputer/server.');
     }
-    return { success: true, message: 'AI Service berhasil dinyalakan' };
+
+    if (isOnline) {
+      return { success: true, message: 'AI Microservice FaceNet aktif' };
+    }
+
+    throw new BadRequestException('Microservice AI Python di port 8089 sedang memuat model FaceNet. Silakan klik kembali tombol Nyalakan dalam beberapa detik.');
   }
 
   async stopAiWorker() {
@@ -443,5 +460,22 @@ export class FaceAttendanceService {
       throw new BadRequestException('Microservice AI Python di port 8089 tidak aktif atau tidak dapat dijangkau');
     }
     return { success: true, message: 'AI Service stream dihentikan' };
+  }
+
+  async scanFrame(imageBase64: string) {
+    try {
+      const res = await fetch('http://127.0.0.1:8089/scan_frame', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageBase64 }),
+        signal: AbortSignal.timeout(6000),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      // return empty if python offline
+    }
+    return { faces: [] };
   }
 }

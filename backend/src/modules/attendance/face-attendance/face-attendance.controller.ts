@@ -57,4 +57,9 @@ export class FaceAttendanceController {
   stopAiService() {
     return this.faceAttendanceService.stopAiWorker();
   }
+
+  @Post('scan-frame')
+  scanFrame(@Body('image') image: string) {
+    return this.faceAttendanceService.scanFrame(image);
+  }
 }

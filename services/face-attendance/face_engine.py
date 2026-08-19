@@ -9,6 +9,15 @@ import torch
 from PIL import Image
 from typing import List, Dict, Tuple, Optional
 
+# Optimasi CPU: Batasi thread torch agar tidak membebani 100% core CPU dan mencegah perangkat panas
+num_cores = os.cpu_count() or 4
+cpu_threads = max(1, min(2, num_cores // 2))
+torch.set_num_threads(cpu_threads)
+try:
+    cv2.setNumThreads(cpu_threads)
+except Exception:
+    pass
+
 try:
     from facenet_pytorch import MTCNN, InceptionResnetV1
     FACENET_AVAILABLE = True
@@ -31,40 +40,39 @@ class FaceRecognitionEngine:
     def __init__(self, backend_url: str = "http://localhost:3001"):
         self.backend_url = backend_url
         self.user_database: Dict[str, FaceUserRecord] = {}
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        if torch.cuda.is_available():
-            try:
-                torch.backends.cudnn.benchmark = True
-                self.device_name = torch.cuda.get_device_name(0)
-            except Exception:
-                self.device_name = "NVIDIA CUDA GPU"
-        else:
-            self.device_name = "CPU"
+        
+        # Pemrosesan tetap di CPU dengan mode hemat daya & termal aman
+        self.device = torch.device('cpu')
+        self.device_name = f"CPU Eco-Safe ({cpu_threads} Threads)"
+        
         self.facenet_model: Optional[InceptionResnetV1] = None
         self.mtcnn_detector: Optional[MTCNN] = None
+        self.cascade_detector = None
         self.is_ready = False
         self.cache_file = os.path.join(os.path.dirname(__file__), "face_vectors_cache.npz")
+        
         self._init_facenet()
+        self._init_cascade_fallback()
 
     def _init_facenet(self):
-        """Inisialisasi Model FaceNet (Inception-ResNet-v1 pretrained VGGFace2) & MTCNN Face Detector pada GPU/CPU."""
-        print(f"[INFO] Memuat Model AI FaceNet pada hardware compute: {self.device_name} ({self.device})...")
+        """Inisialisasi Model FaceNet Inception-ResNet-v1 (512-D) & MTCNN dengan konfigurasi CPU hemat daya."""
+        print(f"[INFO] Memuat Model AI FaceNet pada compute: {self.device_name}...")
         try:
             if FACENET_AVAILABLE:
-                # MTCNN dengan akselerasi GPU / CPU
+                # MTCNN detector teroptimasi untuk CPU
                 self.mtcnn_detector = MTCNN(
                     image_size=160,
-                    margin=15,
-                    min_face_size=15,
-                    thresholds=[0.4, 0.5, 0.5],
+                    margin=20,
+                    min_face_size=24,
+                    thresholds=[0.6, 0.7, 0.7],
                     factor=0.709,
                     post_process=True,
                     keep_all=True,
                     device=self.device
                 )
-                # InceptionResnetV1 untuk representasi 512-D embedding pada GPU
+                # InceptionResnetV1 pretrained VGGFace2
                 self.facenet_model = InceptionResnetV1(pretrained='vggface2').eval().to(self.device)
-                print(f"[INFO] FaceNet (Inception-ResNet-v1 512-D) & MTCNN berhasil dimuat pada GPU: {self.device_name}.")
+                print(f"[INFO] FaceNet Inception-ResNet-v1 (512-D) & MTCNN berhasil dimuat ({self.device_name}).")
             else:
                 print("[WARN] facenet-pytorch belum terpasang.")
         except Exception as e:
@@ -74,9 +82,18 @@ class FaceRecognitionEngine:
 
         self.is_ready = True
 
+    def _init_cascade_fallback(self):
+        """Inisialisasi OpenCV Haar Cascade sebagai pre-detector ringan hemat CPU."""
+        try:
+            cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            if os.path.exists(cascade_path):
+                self.cascade_detector = cv2.CascadeClassifier(cascade_path)
+        except Exception:
+            self.cascade_detector = None
+
     def sync_database_from_backend(self) -> Tuple[int, int]:
-        """Mengunduh / membaca foto profil pengguna dari basis data SIMASMUH dan menghitung FaceNet 512-D embedding."""
-        print("[INFO] Memulai sinkronisasi profil pengguna ke representasi FaceNet embedding...")
+        """Mengunduh foto profil pengguna dari basis data SIMASMUH dan menghitung FaceNet 512-D embedding."""
+        print("[INFO] Memulai sinkronisasi profil pengguna ke FaceNet 512-D vector embedding...")
         try:
             from config import API_KEY
             headers = {"x-api-key": API_KEY}
@@ -110,7 +127,6 @@ class FaceRecognitionEngine:
                     local_path=local_path,
                 )
 
-                # Ekstraksi vector embedding dari foto profil
                 embedding = self._extract_user_embedding(record)
                 if embedding is not None:
                     record.embedding = embedding
@@ -128,7 +144,7 @@ class FaceRecognitionEngine:
                 except Exception as e:
                     print(f"[WARN] Gagal menyimpan cache vektor FaceNet: {e}")
 
-            print(f"[INFO] Sinkronisasi FaceNet selesai: {total_fetched} pengguna, {success_embedded} vektor wajah aktif siap dideteksi.")
+            print(f"[INFO] Sinkronisasi FaceNet selesai: {total_fetched} pengguna, {success_embedded} vektor wajah aktif.")
             return total_fetched, success_embedded
 
         except Exception as e:
@@ -178,7 +194,6 @@ class FaceRecognitionEngine:
         if img is None:
             return None
 
-        # Deteksi dan potong area wajah
         return self._extract_face_crop_and_embed(img)
 
     def _extract_face_crop_and_embed(self, full_img: np.ndarray) -> Optional[np.ndarray]:
@@ -188,10 +203,12 @@ class FaceRecognitionEngine:
             if faces:
                 largest = max(faces, key=lambda b: b[2] * b[3])
                 x, y, w, h = largest
-                y1 = max(0, y)
-                y2 = min(full_img.shape[0], y + h)
-                x1 = max(0, x)
-                x2 = min(full_img.shape[1], x + w)
+                pad_y = int(h * 0.1)
+                pad_x = int(w * 0.1)
+                y1 = max(0, y - pad_y)
+                y2 = min(full_img.shape[0], y + h + pad_y)
+                x1 = max(0, x - pad_x)
+                x2 = min(full_img.shape[1], x + w + pad_x)
                 face_crop = full_img[y1:y2, x1:x2]
                 return self._compute_facenet_embedding(face_crop)
             else:
@@ -220,9 +237,9 @@ class FaceRecognitionEngine:
                     raw_emb = raw_emb / norm
                 return raw_emb
             except Exception as e:
-                print(f"[DEBUG] Error kalkulasi FaceNet embedding: {e}")
+                pass
 
-        # Fallback LBP / Color Histogram
+        # Fallback Histogram Features jika model belum siap
         try:
             resized = cv2.resize(face_crop, (112, 112))
             gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
@@ -242,40 +259,74 @@ class FaceRecognitionEngine:
             return None
 
     def detect_faces(self, frame: np.ndarray) -> List[Tuple[int, int, int, int]]:
-        """Mendeteksi kotak wajah (x, y, w, h) dari frame video atau foto profil dengan inferensi FaceNet MTCNN."""
+        """Mendeteksi kotak wajah (x, y, w, h) dari frame video atau foto profil dengan inferensi CPU ringan & akurat."""
         boxes = []
         if frame is None or frame.size == 0:
             return boxes
 
         h_frame, w_frame = frame.shape[:2]
 
+        # Downsample frame untuk inferensi jika resolusi lebih besar dari 480p (Hemat CPU & Cepat)
+        scale = 1.0
+        if w_frame > 480:
+            scale = 480.0 / float(w_frame)
+            infer_w = 480
+            infer_h = int(h_frame * scale)
+            infer_frame = cv2.resize(frame, (infer_w, infer_h))
+        else:
+            infer_frame = frame
+
+        # 1. Coba deteksi dengan MTCNN
         if self.mtcnn_detector is not None:
             try:
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                rgb_frame = cv2.cvtColor(infer_frame, cv2.COLOR_BGR2RGB)
                 pil_img = Image.fromarray(rgb_frame)
                 detected_boxes, probs = self.mtcnn_detector.detect(pil_img)
 
                 if detected_boxes is not None:
+                    inv_scale = 1.0 / scale
                     for i, box in enumerate(detected_boxes):
                         prob = probs[i] if probs is not None else 1.0
-                        if prob is not None and prob >= 0.40:
+                        if prob is not None and prob >= 0.50:
                             x1, y1, x2, y2 = box
-                            x1 = max(0, int(x1))
-                            y1 = max(0, int(y1))
-                            x2 = min(w_frame, int(x2))
-                            y2 = min(h_frame, int(y2))
+                            x1 = max(0, int(x1 * inv_scale))
+                            y1 = max(0, int(y1 * inv_scale))
+                            x2 = min(w_frame, int(x2 * inv_scale))
+                            y2 = min(h_frame, int(y2 * inv_scale))
                             bw = x2 - x1
                             bh = y2 - y1
-                            if bw >= 16 and bh >= 16:
+                            if bw >= 20 and bh >= 20:
                                 boxes.append((x1, y1, bw, bh))
-            except Exception as e:
+            except Exception:
+                pass
+
+        # 2. Fallback Haar Cascade jika MTCNN tidak mendeteksi apapun
+        if not boxes and self.cascade_detector is not None:
+            try:
+                gray = cv2.cvtColor(infer_frame, cv2.COLOR_BGR2GRAY)
+                detected = self.cascade_detector.detectMultiScale(
+                    gray,
+                    scaleFactor=1.15,
+                    minNeighbors=4,
+                    minSize=(24, 24)
+                )
+                inv_scale = 1.0 / scale
+                for (cx, cy, cw, ch) in detected:
+                    x1 = max(0, int(cx * inv_scale))
+                    y1 = max(0, int(cy * inv_scale))
+                    bw = int(cw * inv_scale)
+                    bh = int(ch * inv_scale)
+                    boxes.append((x1, y1, bw, bh))
+            except Exception:
                 pass
 
         return boxes
 
-    def match_face(self, face_crop: np.ndarray, threshold: float = 0.65) -> Optional[Tuple[FaceUserRecord, float]]:
-        """Mencocokkan potongan wajah dengan database FaceNet 512-D vector embedding pengguna."""
-        if not self.user_database or face_crop.size == 0:
+    def match_face(self, face_crop: np.ndarray, threshold: float = 0.58) -> Optional[Tuple[FaceUserRecord, float]]:
+        """Mencocokkan potongan wajah dengan database FaceNet 512-D vector embedding pengguna.
+        Mengembalikan (user_record, similarity) jika cocok, atau None jika wajah Tamu / Tidak Terdaftar.
+        """
+        if not self.user_database or face_crop is None or face_crop.size == 0:
             return None
 
         detected_vec = self._compute_facenet_embedding(face_crop)
@@ -287,13 +338,15 @@ class FaceRecognitionEngine:
 
         for user_id, record in self.user_database.items():
             if record.embedding is not None:
-                # Cosine Similarity: dot(u, v) / (|u| * |v|)
+                # Cosine Similarity pada L2-normalized deep embedding
                 sim = float(np.dot(detected_vec, record.embedding))
                 if sim > highest_similarity:
                     highest_similarity = sim
                     best_match = record
 
-        if best_match is not None and highest_similarity >= threshold:
+        # Batas sensitivitas FaceNet (Default 0.58 - 0.65 optimal untuk Inception-ResNet-v1 VGGFace2)
+        effective_threshold = max(0.45, min(0.85, threshold))
+        if best_match is not None and highest_similarity >= effective_threshold:
             return best_match, highest_similarity
 
         return None

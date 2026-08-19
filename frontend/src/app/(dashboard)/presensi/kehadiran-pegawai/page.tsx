@@ -251,30 +251,6 @@ export default function LogKehadiranPegawaiPage() {
                     className="w-full h-full object-contain"
                     onError={() => setStreamError(true)}
                   />
-
-                  {/* REALTIME BOUNDING BOX OVERLAY */}
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
-                    <div className="relative w-44 h-52 sm:w-52 sm:h-60 rounded-2xl border-2 border-dashed border-emerald-400/40 bg-emerald-500/5 shadow-[0_0_25px_rgba(16,185,129,0.15)] flex flex-col justify-between p-3">
-                      {/* 4 Corner Brackets */}
-                      <div className="absolute -top-1 -left-1 w-5 h-5 border-t-3 border-l-3 border-emerald-400 rounded-tl-lg shadow-[0_0_8px_#10b981]" />
-                      <div className="absolute -top-1 -right-1 w-5 h-5 border-t-3 border-r-3 border-emerald-400 rounded-tr-lg shadow-[0_0_8px_#10b981]" />
-                      <div className="absolute -bottom-1 -left-1 w-5 h-5 border-b-3 border-l-3 border-emerald-400 rounded-bl-lg shadow-[0_0_8px_#10b981]" />
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 border-b-3 border-r-3 border-emerald-400 rounded-br-lg shadow-[0_0_8px_#10b981]" />
-
-                      {/* Animated Scan Line */}
-                      <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_10px_#10b981] animate-pulse top-1/2 -translate-y-1/2" />
-
-                      {/* Top Bounding Box Label */}
-                      <div className="self-center -mt-6 px-2.5 py-0.5 rounded-full bg-emerald-950/90 border border-emerald-500/50 backdrop-blur-sm text-[9px] font-mono font-bold text-emerald-300 tracking-wider">
-                        AREA SCAN WAJAH
-                      </div>
-
-                      {/* Bottom Instruction */}
-                      <div className="self-center -mb-5 px-2 py-0.5 rounded-full bg-black/80 border border-white/20 backdrop-blur-sm text-[9px] font-mono text-slate-300 text-center">
-                        Posisikan Wajah di Kotak
-                      </div>
-                    </div>
-                  </div>
                 </div>
               ) : (
                 <div className="text-center p-6 space-y-3 max-w-sm">

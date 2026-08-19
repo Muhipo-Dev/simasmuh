@@ -641,7 +641,7 @@ export default function FaceAttendanceCameraPage() {
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-[11px] sm:text-xs font-semibold uppercase tracking-wider border border-indigo-500/30">
             <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-            Live Camera Stream & FaceNet Biometric Engine (Port 8089)
+            Live Camera Stream & FaceNet Biometric Engine
           </div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">Presensi Camera AI FaceNet</h1>
           <p className="text-slate-300 text-xs md:text-sm max-w-2xl leading-relaxed">
@@ -678,11 +678,6 @@ export default function FaceAttendanceCameraPage() {
                 Superadmin Only
               </Badge>
             )}
-          </div>
-
-          <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
-            <Cpu className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span className="font-medium truncate text-[11px] sm:text-xs">CPU Ultra-Eco (Anti Beban Booting)</span>
           </div>
 
           <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
@@ -1316,7 +1311,7 @@ export default function FaceAttendanceCameraPage() {
                   <CardTitle className="text-base flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Server className="w-4 h-4 text-indigo-600" />
-                      Microservice AI FaceNet (Port 8089)
+                      Microservice AI FaceNet Engine
                     </span>
                     <Badge className={serviceStatus?.isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}>
                       {serviceStatus?.isOnline ? 'ONLINE' : 'OFFLINE'}

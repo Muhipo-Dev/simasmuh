@@ -794,23 +794,9 @@ export default function FaceAttendanceCameraPage() {
                   </span>
                 </div>
               </div>
-              {isSuperAdmin ? (
-                <Button
-                  size="sm"
-                  onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
-                  disabled={isStartingWorker || isStoppingWorker}
-                  className={`h-7 sm:h-8 px-2 sm:px-2.5 text-[11px] sm:text-xs font-bold shrink-0 ${
-                    serviceStatus?.is_running ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
-                  } text-white`}
-                >
-                  <Power className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
-                  {isStartingWorker ? 'Memuat...' : isStoppingWorker ? 'Mematikan...' : serviceStatus?.is_running ? 'Matikan AI' : 'Nyalakan AI'}
-                </Button>
-              ) : (
-                <Badge variant="outline" className="text-[10px] text-purple-200 border-purple-400/30">
-                  Superadmin Only
-                </Badge>
-              )}
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <Cpu className="w-5 h-5 sm:w-6 sm:h-6 text-purple-200" />
+              </div>
             </div>
           </div>
 

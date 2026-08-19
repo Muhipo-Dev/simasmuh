@@ -29,16 +29,29 @@ export default function LogPresensiSiswaPage() {
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString())
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedStudentUserId, setSelectedStudentUserId] = useState<string>('')
+
+  // Ambil daftar anak jika user adalah wali murid
+  const { data: myStudents = [] } = useQuery<any[]>({
+    queryKey: ['my-students-for-attendance'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/parents/my-students')
+      if (!res.ok) return []
+      return res.json()
+    },
+  })
+
+  const targetUserId = selectedStudentUserId || userId
 
   const { data: logs, isLoading } = useQuery<LogEntry[]>({
-    queryKey: ['monthly-log-siswa', userId, selectedYear, selectedMonth],
+    queryKey: ['monthly-log-siswa', targetUserId, selectedYear, selectedMonth],
     queryFn: async () => {
-      if (!userId) return []
-      const res = await authenticatedFetch(`/api-backend/daily-attendances/monthly?userId=${userId}&year=${selectedYear}&month=${selectedMonth}`)
+      if (!targetUserId) return []
+      const res = await authenticatedFetch(`/api-backend/daily-attendances/monthly?userId=${targetUserId}&year=${selectedYear}&month=${selectedMonth}`)
       if (!res.ok) throw new Error('Gagal memuat log presensi siswa')
       return res.json()
     },
-    enabled: !!userId,
+    enabled: !!targetUserId,
   })
 
   const months = [
@@ -90,7 +103,25 @@ export default function LogPresensiSiswaPage() {
           <p className="text-slate-500 dark:text-slate-400 mt-1">Rekapitulasi riwayat presensi masuk harian Anda.</p>
         </div>
 
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
+          {myStudents.length > 0 && (
+            <Select 
+              value={selectedStudentUserId || myStudents[0]?.student?.userId || ''} 
+              onValueChange={(val) => { if (val) setSelectedStudentUserId(val) }}
+            >
+              <SelectTrigger className="w-[180px] bg-white dark:bg-slate-900 font-bold text-xs">
+                <SelectValue placeholder="Pilih Siswa" />
+              </SelectTrigger>
+              <SelectContent>
+                {myStudents.map((rel: any) => (
+                  <SelectItem key={rel.id || rel.studentId} value={rel.student?.userId || ''}>
+                    {rel.student?.name} ({rel.student?.nis})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <Select value={selectedMonth} onValueChange={(val) => { if (val) setSelectedMonth(val) }}>
             <SelectTrigger className="w-[140px] bg-white dark:bg-slate-900">
               <SelectValue placeholder="Pilih Bulan" />

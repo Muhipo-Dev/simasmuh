@@ -8,6 +8,7 @@ import { AuthModule } from './modules/core/auth/auth.module';
 import { ClassesModule } from './modules/master-data/classes/classes.module';
 import { UsersModule } from './modules/master-data/users/users.module';
 import { StudentsModule } from './modules/master-data/students/students.module';
+import { ParentsModule } from './modules/master-data/parents/parents.module';
 import { SchedulesModule } from './modules/academic/schedules/schedules.module';
 import { AttendancesModule } from './modules/attendance/attendances/attendances.module';
 import { HomeroomJournalsModule } from './modules/academic/homeroom-journals/homeroom-journals.module';
@@ -26,7 +27,9 @@ import { IzinKeluarModule } from './modules/attendance/izin-keluar/izin-keluar.m
 import { FinanceModule } from './modules/finance/finance/finance.module';
 import { PaymentProofsModule } from './modules/finance/payment-proofs/payment-proofs.module';
 import { NotificationsModule } from './modules/communication/notifications/notifications.module';
+import { WhatsAppModule } from './modules/communication/whatsapp/whatsapp.module';
 import { FaceAttendanceModule } from './modules/attendance/face-attendance/face-attendance.module';
+import { SystemLogModule } from './modules/core/system-log/system-log.module';
 import { APP_GUARD } from '@nestjs/core';
 import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
 
@@ -43,10 +46,12 @@ import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
       serveRoot: '/uploads',
     }),
     PrismaModule,
+    SystemLogModule,
     AuthModule,
     ClassesModule,
     UsersModule,
     StudentsModule,
+    ParentsModule,
     SchedulesModule,
     AttendancesModule,
     HomeroomJournalsModule,
@@ -63,6 +68,7 @@ import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
     FinanceModule,
     PaymentProofsModule,
     NotificationsModule,
+    WhatsAppModule,
     FaceAttendanceModule,
   ],
   controllers: [AppController],

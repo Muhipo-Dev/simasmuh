@@ -15,8 +15,11 @@ frontend/.next/
 frontend/out/
 frontend/build/
 *.ps1
+!simasmuh.ps1
 *.bat
+!JALANKAN_SIMASMUH.bat
 *.pid
+.*.pid
 __pycache__/
 *.pyc
 *.pt
@@ -25,4 +28,7 @@ __pycache__/
 .venv-gpu/
 venv/
 .vscode/
+services/whatsapp-gateway/auth_session/
+services/whatsapp-gateway/dist/
+storage/compressed-logs/
 

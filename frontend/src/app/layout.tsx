@@ -7,7 +7,7 @@ import NotificationProvider from "@/components/notifications/NotificationProvide
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SIMASMUH - Sistem Informasi Management",
+  title: "SIMASMUH - Sistem Informasi Manajemen",
   description: "Administrasi Mengajar Guru dan Manajemen Sekolah",
   icons: {
     icon: "/pic_logo.png",

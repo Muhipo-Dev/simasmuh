@@ -194,7 +194,7 @@ export default function ErrorPageContainer({
               SIMASMUH
             </span>
             <span className="hidden sm:block text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 -mt-1 font-medium truncate max-w-[180px] sm:max-w-none">
-              Sistem Informasi Management Sekolah
+              Sistem Informasi Manajemen Sekolah
             </span>
           </div>
         </Link>

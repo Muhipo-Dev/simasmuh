@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { WhatsAppService } from '../whatsapp/whatsapp.service';
 
 @Injectable()
 export class AnnouncementsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private whatsAppService: WhatsAppService,
+  ) {}
 
   async create(data: {
     title: string;
@@ -26,9 +30,24 @@ export class AnnouncementsService {
       payload.image = null;
     }
 
-    return this.prisma.announcement.create({
+    const created = await this.prisma.announcement.create({
       data: payload,
+      include: {
+        author: { select: { name: true } },
+      },
     });
+
+    // Kirim Notifikasi Siaran Berita / Pengumuman via WhatsApp
+    this.whatsAppService.sendAnnouncementBroadcast({
+      title: created.title,
+      content: created.content,
+      authorName: created.author?.name,
+      target: created.target,
+      type: created.type,
+      eventDate: created.eventDate ? created.eventDate.toLocaleDateString('id-ID') : undefined,
+    }).catch(() => {});
+
+    return created;
   }
 
   async findAll(targetFilter?: string[]) {

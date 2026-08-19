@@ -93,8 +93,13 @@ export class RolesGuard implements CanActivate {
       return Object.values(PaymentPermission);
     }
 
-    // Student permissions
-    if (user.role === UserRole.SISWA) {
+    // Student and Parent (WALI_MURID) permissions
+    if (
+      user.role === UserRole.SISWA ||
+      user.role === 'WALI_MURID' ||
+      user.role === 'PARENT' ||
+      user.role === 'ORANG_TUA'
+    ) {
       permissions.push(
         PaymentPermission.VIEW_OWN_BILLS,
         PaymentPermission.UPLOAD_PAYMENT_PROOF,

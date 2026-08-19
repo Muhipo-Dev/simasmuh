@@ -1,4 +1,5 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -6,9 +7,11 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  async login(@Body() body: any) {
+  async login(@Body() body: any, @Req() req: Request) {
     const { username, password } = body;
-    // We expect frontend to send either username or email in the `username` field
-    return this.authService.login(username, password);
+    const ipAddress = req.ip || req.headers['x-forwarded-for']?.toString() || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return this.authService.login(username, password, ipAddress, userAgent);
   }
 }
+

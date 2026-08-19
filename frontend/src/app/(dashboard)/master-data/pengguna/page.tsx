@@ -17,9 +17,10 @@ type User = {
   id: string
   name: string
   email: string
+  phone?: string
   username?: string
   nipNbm?: string
-  teacherProfile?: { nip?: string }
+  teacherProfile?: { nip?: string; phone?: string }
   role: string
   subRole?: string
   subRole2?: string
@@ -75,7 +76,7 @@ export default function UsersPage() {
   const [open, setOpen] = useState(false)
   const [isEdit, setIsEdit] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [formData, setFormData] = useState({ id: '', name: '', username: '', nipNbm: '', email: '', password: '', role: 'GURU', subRole: 'NONE', subRole2: 'NONE', subRole3: 'NONE' })
+  const [formData, setFormData] = useState({ id: '', name: '', username: '', nipNbm: '', phone: '', email: '', password: '', role: 'GURU', subRole: 'NONE', subRole2: 'NONE', subRole3: 'NONE' })
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -185,7 +186,7 @@ export default function UsersPage() {
 
   const handleOpenAddDialog = () => {
     setIsEdit(false)
-    setFormData({ id: '', name: '', username: '', nipNbm: '', email: '', password: '', role: 'GURU', subRole: 'NONE', subRole2: 'NONE', subRole3: 'NONE' })
+    setFormData({ id: '', name: '', username: '', nipNbm: '', phone: '', email: '', password: '', role: 'GURU', subRole: 'NONE', subRole2: 'NONE', subRole3: 'NONE' })
     setOpen(true)
   }
 
@@ -196,6 +197,7 @@ export default function UsersPage() {
       name: user.name || '', 
       username: user.username || '',
       nipNbm: user.nipNbm || user.teacherProfile?.nip || '',
+      phone: user.phone || user.teacherProfile?.phone || '',
       email: user.email || '', 
       password: '', 
       role: user.role, 
@@ -208,7 +210,7 @@ export default function UsersPage() {
 
   const handleCloseDialog = () => {
     setOpen(false)
-    setFormData({ id: '', name: '', username: '', nipNbm: '', email: '', password: '', role: 'GURU', subRole: 'NONE', subRole2: 'NONE', subRole3: 'NONE' })
+    setFormData({ id: '', name: '', username: '', nipNbm: '', phone: '', email: '', password: '', role: 'GURU', subRole: 'NONE', subRole2: 'NONE', subRole3: 'NONE' })
   }
 
   const handleOpenDeleteDialog = (user: User) => {
@@ -349,15 +351,28 @@ export default function UsersPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email (Opsional)</Label>
-                <Input 
-                  id="email" 
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Contoh: ahmad@sekolah.sch.id"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">No. WhatsApp *</Label>
+                  <Input 
+                    id="phone" 
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="Contoh: 088293733330"
+                    required
+                  />
+                  <p className="text-[11px] text-slate-500">Wajib aktif WhatsApp untuk notifikasi otomatis.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email (Opsional)</Label>
+                  <Input 
+                    id="email" 
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="Contoh: ahmad@sekolah.sch.id"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -391,6 +406,7 @@ export default function UsersPage() {
                     <SelectItem value="ADMIN_IT">ADMIN IT</SelectItem>
                     <SelectItem value="KEPALA_SEKOLAH">KEPALA SEKOLAH</SelectItem>
                     <SelectItem value="KEUANGAN">KEUANGAN (Bendahara)</SelectItem>
+                    <SelectItem value="WALI_MURID">WALI MURID (Orang Tua / Wali)</SelectItem>
                     <SelectItem value="SISWA">SISWA</SelectItem>
                   </SelectContent>
                 </Select>
@@ -531,6 +547,11 @@ export default function UsersPage() {
                                 @{item.username}
                               </span>
                             )}
+                            {(item.phone || item.teacherProfile?.phone) && (
+                              <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 rounded font-medium text-[11px] border border-emerald-200/60 dark:border-emerald-800/60 flex items-center gap-1">
+                                🟢 WA: {item.phone || item.teacherProfile?.phone}
+                              </span>
+                            )}
                             {item.email && <span className="truncate">{item.email}</span>}
                             {nip && <span className="md:hidden text-slate-400">NIP: {nip}</span>}
                           </div>
@@ -547,9 +568,10 @@ export default function UsersPage() {
                             item.role === 'KEPALA_SEKOLAH' ? 'bg-amber-100 text-amber-800' :
                             item.role === 'GURU' ? 'bg-emerald-100 text-emerald-800' :
                             item.role === 'PEGAWAI' ? 'bg-cyan-100 text-cyan-800' :
+                            item.role === 'WALI_MURID' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
                             'bg-slate-100 text-slate-800'
                           }`}>
-                            {item.role}
+                            {item.role === 'WALI_MURID' ? 'WALI MURID' : item.role}
                           </span>
                           {item.subRole && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">

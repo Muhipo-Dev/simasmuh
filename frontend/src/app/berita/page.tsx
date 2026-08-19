@@ -84,24 +84,24 @@ export default function BeritaPage() {
         <div className="hidden lg:flex items-center gap-8">
           <Link href="/" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Beranda</Link>
           <Link href="/profil" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Profil</Link>
-          <Link href="/guru-karyawan" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Guru & Karyawan</Link>
+          <Link href="/guru-karyawan" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">TenDik</Link>
           <Link href="/tentang" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Tentang</Link>
           <Link href="/berita" className="text-[#2B50A1] dark:text-blue-400 font-bold transition-colors">Berita</Link>
 
           <div className="flex items-center gap-4 border-l border-slate-200 dark:border-slate-800 pl-8">
             <ThemeToggle />
-            <Link href="/login" className="bg-[#2B50A1] hover:bg-[#1f3c7a] dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-5 py-2.5 rounded-full font-bold text-sm flex items-center transition-all shadow-sm">
+            <Link href="/login" className="bg-[#2B50A1] hover:bg-[#1f3c7a] dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-5 py-2.5 rounded-full font-bold text-sm flex items-center transition-all shadow-sm hover:shadow-md active:scale-95">
               <LogIn className="w-4 h-4 mr-2" />
               Login SIMASMUH
             </Link>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu & Theme Toggle */}
         <div className="lg:hidden flex items-center gap-2.5">
           <ThemeToggle size="sm" />
           <DropdownMenu>
-            <DropdownMenuTrigger className="bg-[#2B50A1] hover:bg-[#1f3c7a] text-white rounded-xl w-10 h-10 p-0 flex items-center justify-center shadow-xs">
+            <DropdownMenuTrigger className="bg-[#2B50A1] hover:bg-[#1f3c7a] text-white rounded-xl w-10 h-10 p-0 flex items-center justify-center shadow-xs transition-colors">
               <Menu className="h-5 w-5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60 mt-2 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-2 text-slate-900 dark:text-slate-100 shadow-xl rounded-xl">
@@ -112,7 +112,7 @@ export default function BeritaPage() {
                 <Link href="/profil" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg">Profil</Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Link href="/guru-karyawan" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg">Guru & Karyawan</Link>
+                <Link href="/guru-karyawan" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg">TenDik</Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Link href="/tentang" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg">Tentang</Link>

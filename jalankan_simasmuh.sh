@@ -99,6 +99,36 @@ stop_port_process() {
     fi
 }
 
+compress_log_file_gzip() {
+    local src_file="$1"
+    local target_dir="$ROOT/storage/compressed-logs"
+    if [ -f "$src_file" ] && [ -s "$src_file" ]; then
+        mkdir -p "$target_dir"
+        local timestamp
+        timestamp=$(date +"%Y%m%d_%H%M%S")
+        local base_name
+        base_name=$(basename "$src_file" .log)
+        local gz_path="$target_dir/${base_name}_${timestamp}.log.gz"
+        gzip -c -9 "$src_file" > "$gz_path" 2>/dev/null || true
+        if [ -f "$gz_path" ]; then
+            local orig_size
+            local gz_size
+            orig_size=$(wc -c < "$src_file")
+            gz_size=$(wc -c < "$gz_path")
+            write_ok "Log terkompresi otomatis: $(basename "$src_file") ($orig_size B -> $gz_size B) -> $gz_path"
+            > "$src_file"
+        fi
+    fi
+}
+
+compress_all_log_files() {
+    write_status "Mengompresi dan merotasi seluruh berkas log aplikasi..."
+    compress_log_file_gzip "$BACKEND_LOG"
+    compress_log_file_gzip "$FRONTEND_LOG"
+    compress_log_file_gzip "$PRISMA_STUDIO_LOG"
+    compress_log_file_gzip "$FACE_AI_LOG"
+}
+
 test_port_listening() {
     local port="$1"
     if command -v nc >/dev/null 2>&1; then
@@ -442,8 +472,9 @@ stop_apps() {
     stop_port_process 8005
     stop_port_process 51212
 
+    compress_all_log_files
     rm -f "$BACKEND_PID_FILE" "$FRONTEND_PID_FILE" "$PRISMA_STUDIO_PID_FILE" "$FACE_AI_PID_FILE"
-    write_ok "Semua layanan berhasil dihentikan."
+    write_ok "Semua layanan berhasil dihentikan dan log terkompresi rapi."
 }
 
 start_setup_env() {

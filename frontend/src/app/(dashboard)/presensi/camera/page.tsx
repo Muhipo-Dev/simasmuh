@@ -56,6 +56,8 @@ interface FaceCameraConfig {
   cooldownMinutes: number
   isActive: boolean
   welcomeVoice: boolean
+  showPublicStream?: boolean
+  showPublicLogs?: boolean
   apiKeySecret: string
   updatedAt: string
 }
@@ -569,10 +571,13 @@ export default function FaceAttendanceCameraPage() {
         is_running: true,
         stream_status: 'LIVE_STREAMING',
       }))
+      queryClient.setQueryData(['face-attendance-config'], (prev: any) => prev ? { ...prev, isActive: true } : prev)
+      setFormConfig((prev) => prev ? { ...prev, isActive: true } : prev)
       queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+      queryClient.invalidateQueries({ queryKey: ['face-attendance-config'] })
       setStreamError(false)
       setStreamKey(Date.now())
-      toast.success(data?.message || 'AI Microservice FaceNet berhasil diaktifkan!')
+      toast.success(data?.message || 'AI Microservice FaceNet berhasil diaktifkan di server!')
     },
     onError: (err: any) => {
       toast.error(err?.message || 'Gagal menyalakan AI Microservice FaceNet')
@@ -595,8 +600,11 @@ export default function FaceAttendanceCameraPage() {
         is_running: false,
         stream_status: 'STANDBY',
       }))
+      queryClient.setQueryData(['face-attendance-config'], (prev: any) => prev ? { ...prev, isActive: false } : prev)
+      setFormConfig((prev) => prev ? { ...prev, isActive: false } : prev)
       queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
-      toast.info(data?.message || 'AI Microservice FaceNet dimatikan (Standby)')
+      queryClient.invalidateQueries({ queryKey: ['face-attendance-config'] })
+      toast.info(data?.message || 'AI Microservice FaceNet dimatikan di server (Standby)')
     },
     onError: (err: any) => {
       toast.error(err?.message || 'Gagal mematikan AI Microservice FaceNet')
@@ -1527,6 +1535,34 @@ export default function FaceAttendanceCameraPage() {
                     <Switch
                       checked={currentConfig?.welcomeVoice ?? true}
                       onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, welcomeVoice: checked } : null)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100/80">
+                    <div>
+                      <Label className="text-sm font-medium text-slate-800 flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5 text-blue-600" />
+                        Tampilkan Live Stream di Halaman Publik (<code className="text-xs bg-slate-100 px-1 py-0.5 rounded text-indigo-600">/presensi-view</code>)
+                      </Label>
+                      <p className="text-xs text-slate-500">Mengizinkan seluruh pengguna/tamu melihat streaming video kamera secara real-time di portal publik</p>
+                    </div>
+                    <Switch
+                      checked={currentConfig?.showPublicStream ?? true}
+                      onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, showPublicStream: checked } : null)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm font-medium text-slate-800 flex items-center gap-1.5">
+                        <Activity className="w-3.5 h-3.5 text-indigo-600" />
+                        Tampilkan Scanner Log Realtime di Halaman Publik (<code className="text-xs bg-slate-100 px-1 py-0.5 rounded text-indigo-600">/presensi-view</code>)
+                      </Label>
+                      <p className="text-xs text-slate-500">Menampilkan feed hasil pencatatan presensi wajah & foto snapshot terkini secara real-time di portal publik</p>
+                    </div>
+                    <Switch
+                      checked={currentConfig?.showPublicLogs ?? true}
+                      onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, showPublicLogs: checked } : null)}
                     />
                   </div>
                 </div>

@@ -5,7 +5,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Users, UserSquare2, CalendarDays, ClipboardCheck, QrCode, Loader2, Briefcase, BookOpen, UserCheck, Receipt, CreditCard, AlertTriangle, GraduationCap, Award } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Users, UserSquare2, CalendarDays, ClipboardCheck, QrCode, Loader2, Briefcase, BookOpen, UserCheck, Receipt, CreditCard, AlertTriangle, GraduationCap, Award, BellRing, Sparkles, ChevronDown } from 'lucide-react'
 import { QrScanner } from '@/components/QrScanner'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import Link from 'next/link'
@@ -96,6 +98,8 @@ export default function DashboardPage() {
     enabled: role !== 'SISWA'
   })
 
+  const [selectedChildIdx, setSelectedChildIdx] = useState(0)
+
   // Query untuk tagihan siswa (khusus siswa)
   const { data: studentTagihans } = useQuery<{
     student: any;
@@ -103,7 +107,14 @@ export default function DashboardPage() {
   }>({
     queryKey: ['my-tagihans'],
     queryFn: () => authenticatedQuery('/api-backend/finance/my-tagihan'),
-    enabled: role === 'SISWA'
+    enabled: role === 'SISWA' || role === 'WALI_MURID' || role === 'PARENT' || role === 'ORANG_TUA'
+  })
+
+  // Query khusus Dashboard Wali Murid
+  const { data: parentDashboard } = useQuery<any>({
+    queryKey: ['parent-my-dashboard'],
+    queryFn: () => authenticatedQuery('/api-backend/parents/my-dashboard'),
+    enabled: role === 'WALI_MURID' || role === 'PARENT' || role === 'ORANG_TUA'
   })
 
   const isLoading = loadingStudents || loadingClasses || loadingSchedules || loadingAttendances || loadingAnnouncements || (role !== 'SISWA' && (loadingUsers || loadingSubjects || loadingStaffAttendances))
@@ -484,6 +495,459 @@ export default function DashboardPage() {
         <PaymentBillingPopup
           open={showPaymentPopup}
           onClose={() => setShowPaymentPopup(false)}
+        />
+      </div>
+    )
+  }
+
+  // ============================================================
+  // DASHBOARD WALI MURID (Orang Tua / Wali Siswa)
+  // ============================================================
+  if (role === 'WALI_MURID' || role === 'PARENT' || role === 'ORANG_TUA') {
+    const parentStudents = parentDashboard?.students || []
+    const activeStudent = parentStudents[selectedChildIdx] || parentStudents[0]
+    const studentClass = activeStudent ? { name: activeStudent.className } : null
+    
+    // Tagihan belum lunas siswa aktif
+    const allUnpaid = (activeStudent?.unpaidTagihans || []).filter((t: any) => t.status === 'BELUM_LUNAS' || t.status === 'ANGSURAN')
+    const totalUnpaidAmount = allUnpaid.reduce((sum: number, tagihan: any) => sum + Math.max(0, tagihan.amount - (tagihan.amountPaid || 0)), 0)
+    
+    const formatCurrency = (amount: number) =>
+      new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0
+      }).format(amount)
+
+    const todayDayIndex = new Date().getDay()
+    const daysMap = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+
+    const myClassSchedules = (activeStudent?.schedules || [])
+      .sort((a: any, b: any) => {
+        if (a.dayOfWeek !== b.dayOfWeek) return a.dayOfWeek - b.dayOfWeek
+        return a.startTime.localeCompare(b.startTime)
+      })
+
+    const parentNavLinks = getRoleLinks(role, subRole, subRole2, subRole3).filter(link => link.href !== '/dashboard')
+
+    return (
+      <div className="space-y-6 lg:space-y-8 w-full flex flex-col justify-between">
+        {/* Banner Welcome Header & Dropdown Selektor Siswa */}
+        <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-slate-900 p-5 sm:p-6 lg:p-8 rounded-3xl text-white shadow-xl flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 w-full relative overflow-hidden border border-white/10">
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-500/20 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-extrabold backdrop-blur-md border border-white/20 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                Portal Wali Murid
+              </span>
+              <span className="text-xs text-indigo-200 font-medium hidden sm:inline">
+                Terhubung dengan {parentStudents.length} Siswa
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+              Dashboard Orang Tua & Wali
+            </h1>
+            <p className="text-indigo-100 text-sm sm:text-base font-medium">
+              Selamat datang, <strong className="text-white font-bold">{(session?.user as any)?.name || 'Bapak/Ibu Wali Murid'}</strong>.
+            </p>
+          </div>
+
+          {/* Dropdown Selektor Siswa Terhubung */}
+          <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-extrabold text-indigo-200 uppercase tracking-wider flex items-center gap-1.5">
+                <GraduationCap className="w-4 h-4 text-emerald-300" />
+                Pilih Siswa yang Dipantau:
+              </label>
+              
+              <Select
+                value={selectedChildIdx.toString()}
+                onValueChange={(val) => {
+                  if (val !== null && val !== undefined) {
+                    setSelectedChildIdx(parseInt(val, 10))
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[280px] lg:w-[320px] bg-white text-slate-900 dark:bg-slate-900 dark:text-white font-bold text-xs sm:text-sm h-12 rounded-2xl border-2 border-indigo-300 dark:border-indigo-700 shadow-lg focus:ring-2 focus:ring-indigo-400">
+                  <div className="flex items-center gap-2 truncate text-left">
+                    <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black text-xs shrink-0">
+                      {selectedChildIdx + 1}
+                    </div>
+                    <div className="truncate">
+                      <span className="font-extrabold block text-xs sm:text-sm">{activeStudent?.name || 'Pilih Siswa'}</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-mono -mt-0.5">
+                        Kelas: {activeStudent?.className || '-'} &bull; NIS: {activeStudent?.nis || '-'}
+                      </span>
+                    </div>
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-800 p-1.5 shadow-2xl">
+                  {parentStudents.map((st: any, idx: number) => (
+                    <SelectItem
+                      key={st.id || idx}
+                      value={idx.toString()}
+                      className="rounded-xl py-2.5 px-3 font-semibold text-xs cursor-pointer focus:bg-indigo-50 dark:focus:bg-indigo-950"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                          selectedChildIdx === idx ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                        }`}>
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <p className="font-extrabold text-slate-900 dark:text-white text-xs">{st.name}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                            Kelas: {st.className} &bull; NIS: {st.nis} {st.program ? `(${st.program})` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Tombol Cepat Tagihan jika ada yang belum lunas */}
+            {allUnpaid.length > 0 && (
+              <div className="sm:self-end">
+                <Button
+                  onClick={() => setShowPaymentPopup(true)}
+                  className="w-full sm:w-auto h-12 px-4 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black rounded-2xl shadow-lg border border-amber-300 text-xs sm:text-sm flex items-center justify-center gap-2"
+                >
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{allUnpaid.length} Tagihan</span>
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Card Identitas Siswa Aktif yang Dipilih */}
+        {activeStudent && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-black text-lg shadow-md shrink-0">
+                {activeStudent.name?.charAt(0) || 'S'}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">
+                    {activeStudent.name}
+                  </h3>
+                  <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950/80 dark:text-indigo-300 text-xs font-bold">
+                    Kelas {activeStudent.className}
+                  </Badge>
+                  {activeStudent.program && (
+                    <Badge variant="outline" className="text-xs font-semibold">
+                      {formatProgramName(activeStudent.program)}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                  NIS: <strong>{activeStudent.nis}</strong> {activeStudent.nisn ? `• NISN: ${activeStudent.nisn}` : ''} • Wali Kelas: <strong>{activeStudent.homeroomTeacherName}</strong>
+                </p>
+              </div>
+            </div>
+            <div className="text-xs bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between md:justify-end gap-4">
+              <div>
+                <span className="text-[10px] text-slate-400 block font-semibold uppercase">Status Tagihan:</span>
+                <span className={`font-black text-xs sm:text-sm ${allUnpaid.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  {allUnpaid.length > 0 ? `${allUnpaid.length} Tagihan (${formatCurrency(totalUnpaidAmount)})` : 'Semua Tagihan Lunas'}
+                </span>
+              </div>
+              {allUnpaid.length > 0 && (
+                <Button
+                  size="sm"
+                  onClick={() => setShowPaymentPopup(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs h-8 rounded-lg"
+                >
+                  Bayar
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Banner Alert Notifikasi Tagihan Belum Lunas & Virtual Account */}
+        {allUnpaid.length > 0 && (
+          <div className="bg-gradient-to-r from-red-500/15 via-amber-500/15 to-orange-500/15 border-2 border-red-500/50 dark:border-red-500/70 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-red-600 to-rose-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                <AlertTriangle className="w-6 h-6 text-white drop-shadow-sm" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="bg-red-600 text-white text-[10px] font-black tracking-widest uppercase px-2.5 py-0.5 rounded shadow-xs flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                    TAGIHAN: {activeStudent?.name}
+                  </span>
+                  <span className="text-xs font-bold text-red-700 dark:text-red-300">
+                    Kelas {activeStudent?.className || '-'} (NIS: {activeStudent?.nis || '-'})
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-tight">
+                  {allUnpaid.length} Tagihan senilai <span className="text-red-600 dark:text-red-400 font-black">{formatCurrency(totalUnpaidAmount)}</span> dapat dibayarkan melalui Transfer Bank atau Virtual Account.
+                </h3>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+              <Button
+                onClick={() => setShowPaymentPopup(true)}
+                size="sm"
+                className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-extrabold shadow-sm flex-1 sm:flex-initial rounded-xl text-xs sm:text-sm"
+              >
+                <CreditCard className="w-4 h-4 mr-1.5" />
+                Bayar Sekarang
+              </Button>
+              <Link href="/keuangan/laporan" className="flex-1 sm:flex-initial">
+                <Button size="sm" variant="outline" className="w-full font-bold rounded-xl border-slate-300 dark:border-slate-700 text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-800">
+                  Rincian Tagihan
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Menu Navigasi Cepat Wali Murid (Mengikuti Siswa) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          {parentNavLinks.map((link: any, idx: number) => {
+            const Icon = link.icon
+            return (
+              <Link key={idx} href={link.href} className="group">
+                <Card className="h-full border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-xs hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-300 flex flex-col items-center justify-center p-4 gap-2.5 hover:-translate-y-1 rounded-2xl">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-200 text-center text-xs sm:text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {link.name}
+                  </h3>
+                </Card>
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* Bagian Atas: Ringkasan Etika & Tata Tertib Siswa bersanding dengan Jadwal Pelajaran */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full items-stretch">
+          {/* Card Penilaian Etika & Tatib (View Only - Coming Soon) */}
+          <Card className="border-slate-200 dark:border-slate-800 dark:bg-slate-900/60 shadow-sm rounded-2xl flex flex-col justify-between overflow-hidden">
+            <CardHeader className="bg-emerald-50/70 dark:bg-emerald-950/30 border-b border-emerald-100 dark:border-emerald-900 pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Award className="w-5 h-5 text-emerald-600" />
+                  Penilaian Etika & Tata Tertib Siswa
+                </CardTitle>
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] font-bold">
+                  Coming Soon
+                </Badge>
+              </div>
+              <CardDescription className="text-xs mt-0.5">
+                Monitoring kedisiplinan dan amalan ibadah {activeStudent?.name || 'siswa'} (Terkoneksi Tim Tatib & BK)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-center">
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Poin Tatib</span>
+                  <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">100 / 100</span>
+                  <span className="text-[10px] text-emerald-600 block mt-0.5 font-semibold">Tertib & Taat</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-center">
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Amalan Ibadah</span>
+                  <span className="text-xl font-extrabold text-teal-600 dark:text-teal-400">A (Sangat Baik)</span>
+                  <span className="text-[10px] text-teal-600 block mt-0.5 font-semibold">Sholat Berjamaah</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-center">
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Etika Kesopanan</span>
+                  <span className="text-xl font-extrabold text-cyan-600 dark:text-cyan-400">A (Terpuji)</span>
+                  <span className="text-[10px] text-cyan-600 block mt-0.5 font-semibold">Santun & Rukun</span>
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
+                <p className="font-semibold text-slate-900 dark:text-white mb-1">Catatan Karakter Wali Kelas:</p>
+                <p className="italic leading-relaxed">
+                  &quot;Ananda {activeStudent?.name || 'Siswa'} senantiasa menjaga adab, mematuhi peraturan madrasah, dan aktif dalam sholat berjamaah.&quot;
+                </p>
+              </div>
+              <div className="flex justify-end pt-1">
+                <Link href="/akademik/etika-tatib">
+                  <Button variant="ghost" size="sm" className="text-xs text-emerald-600 hover:text-emerald-700 font-bold">
+                    Lihat Rincian Buku Saku &rarr;
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card Jadwal Pelajaran Kelas Siswa */}
+          <Card className="border-slate-200 dark:border-slate-800 dark:bg-slate-900/60 shadow-sm overflow-hidden rounded-2xl flex flex-col justify-between">
+            <CardHeader className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 pb-3 shrink-0">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    Jadwal Pelajaran ({activeStudent?.className || 'Kelas'})
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    Mata pelajaran {activeStudent?.name || 'siswa'} hari {daysMap[todayDayIndex]}
+                  </CardDescription>
+                </div>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950/90 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                  Hari: {daysMap[todayDayIndex]}
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 flex-1 overflow-y-auto max-h-[300px] space-y-2.5">
+              {myClassSchedules.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 border border-dashed rounded-xl">
+                  <CalendarDays className="w-10 h-10 mx-auto mb-1 opacity-30" />
+                  <p className="text-xs font-medium">Belum ada jadwal pelajaran terdaftar.</p>
+                </div>
+              ) : (
+                myClassSchedules.map((sch: any, idx: number) => {
+                  const isToday = sch.dayOfWeek === todayDayIndex
+                  return (
+                    <div
+                      key={sch.id || idx}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs ${
+                        isToday
+                          ? 'bg-blue-50/80 dark:bg-slate-800/90 border-blue-200 dark:border-blue-700 font-medium'
+                          : 'bg-slate-50/50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800'
+                      }`}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded ${
+                            isToday ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                          }`}>
+                            {daysMap[sch.dayOfWeek]}
+                          </span>
+                          <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                            {sch.startTime} - {sch.endTime}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
+                          {sch.subject?.name || 'Mata Pelajaran'}
+                        </h4>
+                      </div>
+                      <div className="text-right text-[11px]">
+                        <span className="text-slate-400 block text-[10px]">Guru</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">
+                          {sch.teacher?.user?.name || sch.teacher?.nip || '-'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bagian Tengah: Widget Notifikasi WhatsApp & Widget E-Rapor */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full items-stretch">
+          {/* Card Notifikasi WhatsApp */}
+          <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl">
+            <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
+                  <BellRing className="w-5 h-5 text-emerald-600" />
+                  Penerimaan Notifikasi WhatsApp
+                </CardTitle>
+                <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-300">
+                  Aktif ke No: {(session?.user as any)?.username || '-'}
+                </Badge>
+              </div>
+              <CardDescription className="text-xs">
+                Notifikasi otomatis langsung ke kontak WhatsApp resmi orang tua / wali.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">Notifikasi Presensi Kedatangan Siswa</span>
+                <Badge className="bg-emerald-600 text-white text-[10px]">Aktif</Badge>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">Notifikasi Presensi Kepulangan Siswa</span>
+                <Badge className="bg-emerald-600 text-white text-[10px]">Aktif</Badge>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">Notifikasi Tagihan Keuangan Baru</span>
+                <Badge className="bg-emerald-600 text-white text-[10px]">Aktif</Badge>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">Notifikasi Kuitansi Pembayaran Terverifikasi</span>
+                <Badge className="bg-emerald-600 text-white text-[10px]">Aktif</Badge>
+              </div>
+              <div className="flex justify-end pt-1">
+                <Link href="/pengaturan/notifikasi-wali">
+                  <Button variant="outline" size="sm" className="text-xs font-bold">
+                    Kelola Notifikasi WA &rarr;
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card E-Rapor & Statistika */}
+          <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl flex flex-col justify-between">
+            <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-purple-600" />
+                  Statistika E-Rapor & Prestasi
+                </CardTitle>
+                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 text-[10px] font-bold">
+                  Coming Soon
+                </Badge>
+              </div>
+              <CardDescription className="text-xs">
+                Hasil belajar semester {activeStudent?.name || 'siswa'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900">
+                  <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 block uppercase">Indeks Prestasi</span>
+                  <span className="text-2xl font-extrabold text-purple-800 dark:text-purple-200">3.85</span>
+                </div>
+                <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900">
+                  <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 block uppercase">Peringkat Kelas</span>
+                  <span className="text-2xl font-extrabold text-indigo-800 dark:text-indigo-200">3 / 32</span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Fitur cetak dan unduh lembar Rapor Hasil Belajar Digital PDF resmi sedang dalam tahap finalisasi integrasi nilai leger.
+              </p>
+              <div className="flex justify-end pt-1">
+                <Link href="/akademik/e-rapor">
+                  <Button variant="outline" size="sm" className="text-xs text-purple-700 border-purple-200 font-bold">
+                    Buka Halaman E-Rapor &rarr;
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bagian Bawah: Informasi Pengumuman Sekolah dan Log Kehadiran */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full items-stretch">
+          <div className="w-full flex flex-col h-full">
+            {renderAnnouncements()}
+          </div>
+          <div className="w-full flex flex-col h-full">
+            {renderAttendanceLog(true)}
+          </div>
+        </div>
+
+        {/* Payment Popup (Transfer Bank & Virtual Account) */}
+        <PaymentBillingPopup
+          open={showPaymentPopup}
+          onClose={() => setShowPaymentPopup(false)}
+          studentId={activeStudent?.id}
         />
       </div>
     )

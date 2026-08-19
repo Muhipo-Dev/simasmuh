@@ -29,6 +29,17 @@ async def lifespan(app: FastAPI):
     sync_thread = threading.Thread(target=engine.sync_database_from_backend, daemon=True)
     sync_thread.start()
     
+    # Periksa konfigurasi server backend, jika is_active == True jalankan streaming capture worker
+    try:
+        cfg = fetch_backend_config()
+        if cfg and cfg.is_active:
+            print("[INFO] Konfigurasi server isActive=True: Menjalankan worker AI Stream di latar belakang...")
+            worker.start()
+        else:
+            print("[INFO] Konfigurasi server isActive=False: Worker AI Standby.")
+    except Exception as e:
+        print(f"[WARN] Inisialisasi awal stream worker: {e}")
+
     yield
     worker.stop()
     print("[INFO] SIMASMUH Face Attendance Service Stopped.")

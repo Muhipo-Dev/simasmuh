@@ -163,8 +163,8 @@ class AttendanceWorker:
                 return None
 
             elif isinstance(src, str) and any(src.startswith(proto) for proto in ["rtsp://", "rtmp://", "http://", "https://"]):
-                # Konfigurasi FFMPEG RTSP rendah latensi (TCP transport untuk mencegah packet loss CCTV)
-                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|analyzeduration;2000000|probesize;2000000|max_delay;500000|stimeout;3000000"
+                # Konfigurasi FFMPEG RTSP ultra low-latency (tanpa buffering, max_delay 0)
+                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|fflags;nobuffer|flags;low_delay|max_delay;0|probesize;32768|analyzeduration;0|stimeout;3000000"
                 try:
                     c = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
                     if c is not None and c.isOpened():
@@ -174,7 +174,7 @@ class AttendanceWorker:
                             pass
                         ret_test, test_frame = c.read()
                         if ret_test and test_frame is not None and test_frame.size > 0:
-                            print(f"[INFO] RTSP / Network Stream berhasil terhubung ke: {src}")
+                            print(f"[INFO] RTSP / Network Stream ultra low-latency terhubung ke: {src}")
                             return c
                 except Exception as e_rtsp:
                     print(f"[DEBUG] CAP_FFMPEG RTSP error: {e_rtsp}")
@@ -183,6 +183,10 @@ class AttendanceWorker:
                 try:
                     c = cv2.VideoCapture(src)
                     if c is not None and c.isOpened():
+                        try:
+                            c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        except Exception:
+                            pass
                         ret_test, test_frame = c.read()
                         if ret_test and test_frame is not None and test_frame.size > 0:
                             print(f"[INFO] RTSP / Network Stream berhasil terhubung (fallback default): {src}")
@@ -394,11 +398,12 @@ class AttendanceWorker:
                 with self.frame_lock:
                     self.latest_frame = annotated_frame
 
-                time.sleep(0.042)
+                # Yield thread execution tanpa artificial sleep agar buffer hardware tidak menumpuk
+                time.sleep(0.001)
 
             except Exception as loop_err:
                 print(f"[ERROR] Capture loop exception: {loop_err}")
-                time.sleep(0.2)
+                time.sleep(0.05)
 
         if cap:
             try:
@@ -420,7 +425,7 @@ class AttendanceWorker:
                         target_frame = self.latest_raw_frame.copy()
 
                 if target_frame is None:
-                    time.sleep(0.1)
+                    time.sleep(0.05)
                     continue
 
                 ai_frame_counter += 1
@@ -484,19 +489,20 @@ class AttendanceWorker:
                     self.guest_count = guest_count
 
                 # Jeda inferensi hemat daya CPU: jika tidak ada wajah, istirahatkan CPU lebih lama (~4 FPS idle, ~6-7 FPS active)
-                time.sleep(0.14 if faces else 0.28)
+                time.sleep(0.12 if faces else 0.25)
 
             except Exception as ai_err:
                 print(f"[ERROR] AI Inference exception: {ai_err}")
-                time.sleep(0.3)
+                time.sleep(0.2)
 
     def generate_mjpeg_stream(self):
-        """Generator frame MJPEG stabil (18-20 FPS) dengan kompresi hemat bandwidth."""
+        """Generator frame MJPEG real-time ultra low-latency (25-30 FPS responsif tanpa delay buffer)."""
+        encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), 74]
         while True:
             frame_to_send = None
             with self.frame_lock:
                 if self.latest_frame is not None:
-                    frame_to_send = self.latest_frame.copy()
+                    frame_to_send = self.latest_frame
 
             if frame_to_send is None:
                 if self.is_running:
@@ -510,12 +516,13 @@ class AttendanceWorker:
                         "Nyalakan microservice melalui tombol di dashboard untuk memulai stream.",
                     )
 
-            ret, buffer = cv2.imencode('.jpg', frame_to_send, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
+            ret, buffer = cv2.imencode('.jpg', frame_to_send, encode_params)
             if ret:
                 frame_bytes = buffer.tobytes()
                 yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-            time.sleep(0.042)
+                       b'Content-Type: image/jpeg\r\n'
+                       b'Content-Length: ' + str(len(frame_bytes)).encode() + b'\r\n\r\n' + frame_bytes + b'\r\n')
+            time.sleep(0.025)
 
     def _process_attendance(self, user_record, similarity: float, face_crop: Optional[np.ndarray] = None):
         user_id = user_record.user_id

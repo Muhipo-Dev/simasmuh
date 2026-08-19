@@ -13,6 +13,7 @@ model User {
   password          String
   name              String
   role              String            @default("GURU")
+  phone             String?
   avatarUrl         String?
   address           String?
   createdAt         DateTime          @default(now())
@@ -33,6 +34,7 @@ model User {
   staffJournals     StaffJournal[]
   student           Student?
   teacherProfile    TeacherProfile?
+  parentProfile     ParentProfile?
 }
 
 model TeacherProfile {
@@ -48,6 +50,32 @@ model TeacherProfile {
   schedules           Schedule[]
   user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   teachingJournals    TeachingJournal[]
+}
+
+model ParentProfile {
+  id                  String            @id @default(uuid())
+  userId              String            @unique
+  phone               String?
+  occupation          String?
+  address             String?
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students            ParentStudent[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+
+model ParentStudent {
+  id                  String            @id @default(uuid())
+  parentId            String
+  studentId           String
+  relation            String?           @default("ORANG_TUA") // AYAH, IBU, WALI, ORANG_TUA
+  parent              ParentProfile     @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student             Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt           DateTime          @default(now())
+
+  @@unique([parentId, studentId])
+  @@index([parentId])
+  @@index([studentId])
 }
 
 model Class {
@@ -69,6 +97,8 @@ model Student {
   gender             String
   classId            String
   userId             String?        @unique
+  phone              String?
+  parentPhone        String?
   program            String?
   gelombang          String?        @default("Gelombang 1")
   jalurPendaftaran   String?        @default("Mandiri")
@@ -82,6 +112,7 @@ model Student {
   grades             Grade[]
   payments           Payment[]
   paymentProofs      PaymentProof[]
+  parentRelations    ParentStudent[]
   class              Class          @relation(fields: [classId], references: [id])
   user               User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
   tagihans           Tagihan[]
@@ -174,25 +205,28 @@ model HomeroomJournal {
 }
 
 model Setting {
-  id            String  @id @default(uuid())
-  schoolName    String
-  address       String
-  phone         String?
-  email         String?
-  logoUrl       String?
-  principalName String?
-  principalNip  String?
-  qrPublicToken String?
-  bankName      String?
-  bankNumber    String?
-  bankOwner     String?
-  academicYear  String? @default("2026/2027")
-  semester      String? @default("Ganjil")
-  defaultDpp     Float?  @default(0)
-  defaultUka     Float?  @default(0)
-  defaultUks     Float?  @default(0)
-  defaultInfaq   Float?  @default(0)
-  defaultSeragam Float?  @default(2000000)
+  id                  String  @id @default(uuid())
+  schoolName          String
+  address             String
+  phone               String?
+  email               String?
+  logoUrl             String?
+  principalName       String?
+  principalNip        String?
+  qrPublicToken       String?
+  bankName            String?
+  bankNumber          String?
+  bankOwner           String?
+  academicYear        String? @default("2026/2027")
+  semester            String? @default("Ganjil")
+  defaultDpp           Float?  @default(0)
+  defaultUka           Float?  @default(0)
+  defaultUks           Float?  @default(0)
+  defaultInfaq         Float?  @default(0)
+  defaultSeragam       Float?  @default(2000000)
+  whatsappSenderNumber String? @default("088293733330")
+  whatsappApiKey       String?
+  whatsappApiUrl       String?
 }
 
 model Announcement {
@@ -416,4 +450,68 @@ model VirtualAccountTransaction {
   @@index([reference])
 }
 
+model WhatsAppLog {
+  id             String   @id @default(uuid())
+  recipientPhone String
+  recipientName  String?
+  recipientRole  String?
+  category       String   // ABSENSI, TAGIHAN, PEMBAYARAN, INFORMASI, SISTEM
+  title          String?
+  message        String
+  senderNumber   String   @default("088293733330")
+  status         String   @default("SENT") // SENT, PENDING, FAILED, SIMULATED
+  error          String?
+  createdAt      DateTime @default(now())
 
+  @@index([recipientPhone])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model SystemLog {
+  id          String    @id @default(uuid())
+  category    String    // AUTH, PRESENSI, KEUANGAN, WHATSAPP, AKADEMIK, SISTEM, SECURITY
+  level       String    @default("INFO") // INFO, WARN, ERROR, CRITICAL
+  action      String    // e.g. "USER_LOGIN", "PAYMENT_CREATED", "ABSEN_FACE", "WA_SEND", etc.
+  message     String
+  details     Json?     // structured metadata
+  ipAddress   String?
+  userAgent   String?
+  userId      String?
+  userName    String?
+  userRole    String?
+  isArchived  Boolean   @default(false)
+  archiveId   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([category])
+  @@index([level])
+  @@index([action])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([isArchived])
+}
+
+model CompressedLogArchive {
+  id                  String    @id @default(uuid())
+  filename            String    // e.g. "archives/2026-08/log_2026-08-19.json.gz"
+  storagePath         String    // Supabase bucket path e.g. "system-logs/archives/2026-08/log_2026-08-19.json.gz"
+  bucketName          String    @default("system-logs")
+  category            String    @default("ALL") // ALL, SYSTEM, WHATSAPP, SECURITY, AUDIT
+  originalSizeBytes   Int       // bytes before compression
+  compressedSizeBytes Int       // bytes after compression (sekecil-kecilnya)
+  compressionRatio    Float     // e.g. 92.5 (%)
+  compressionAlgo     String    @default("GZIP_LEVEL_9") // GZIP_LEVEL_9, BROTLI_MAX
+  recordCount         Int       @default(0)
+  startDate           DateTime
+  endDate             DateTime
+  checksumSha256      String?
+  uploadedToSupabase  Boolean   @default(true)
+  supabaseUrl         String?
+  notes               String?
+  createdAt           DateTime  @default(now())
+
+  @@index([category])
+  @@index([createdAt])
+  @@index([bucketName])
+}

@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
         'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
         'Pragma': 'no-cache',
         'Expires': '0',
+        'X-Accel-Buffering': 'no',
+        'Connection': 'keep-alive',
         'Access-Control-Allow-Origin': '*',
       },
     })

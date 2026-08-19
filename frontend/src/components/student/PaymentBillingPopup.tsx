@@ -56,6 +56,7 @@ type PaymentBillingPopupProps = {
   open: boolean
   onClose: () => void
   initialTagihanId?: string
+  studentId?: string
 }
 
 const PAYMENT_TYPE_LABELS: Record<string, { label: string; color: string }> = {
@@ -117,7 +118,7 @@ const parseDiscountInfo = (notes: string | null) => {
   }
 }
 
-export default function PaymentBillingPopup({ open, onClose, initialTagihanId }: PaymentBillingPopupProps) {
+export default function PaymentBillingPopup({ open, onClose, initialTagihanId, studentId }: PaymentBillingPopupProps) {
   const [selectedTagihan, setSelectedTagihan] = useState<Tagihan | null>(null)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [paymentNotes, setPaymentNotes] = useState('')
@@ -134,8 +135,8 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId }:
     student: any;
     tagihans: Tagihan[];
   }>({
-    queryKey: ['my-tagihans'],
-    queryFn: () => authenticatedQuery(`/api-backend/finance/my-tagihan`),
+    queryKey: ['my-tagihans', studentId],
+    queryFn: () => authenticatedQuery(`/api-backend/finance/my-tagihan${studentId ? `?studentId=${studentId}` : ''}`),
     enabled: open,
   })
 

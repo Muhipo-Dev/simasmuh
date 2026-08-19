@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { SystemLogService } from '../../core/services/system-log.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as bcrypt from 'bcryptjs';
 
@@ -11,6 +12,7 @@ export class FinanceService {
   constructor(
     private prisma: PrismaService,
     private eventEmitter: EventEmitter2,
+    private systemLogService: SystemLogService,
   ) {}
 
   // ============================================================
@@ -1213,30 +1215,66 @@ export class FinanceService {
     return student;
   }
 
-  /** Get unpaid tagihans for student based on userId */
-  async getMyUnpaidTagihan(userId: string) {
-    // Get student record from user
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        student: {
-          include: {
-            class: { select: { name: true } },
+  /** Get unpaid tagihans for student based on userId or studentId */
+  async getMyUnpaidTagihan(userId: string, studentId?: string) {
+    let student: any = null;
+
+    if (studentId) {
+      student = await this.prisma.student.findUnique({
+        where: { id: studentId },
+        include: {
+          class: { select: { name: true } },
+        },
+      });
+    }
+
+    if (!student) {
+      // Get student record from user
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          student: {
+            include: {
+              class: { select: { name: true } },
+            },
           },
         },
-      },
-    });
+      });
 
-    let student = user?.student;
+      student = user?.student;
+      if (!student) {
+        // Cek apakah user adalah wali murid
+        const parentUser = await this.prisma.user.findUnique({
+          where: { id: userId },
+          include: {
+            parentProfile: {
+              include: {
+                students: {
+                  include: {
+                    student: {
+                      include: {
+                        class: { select: { name: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (parentUser?.parentProfile?.students?.length) {
+          student = parentUser.parentProfile.students[0].student as any;
+        }
+      }
+    }
+
     if (!student) {
       student = await this.prisma.student.findFirst({
         where: {
           OR: [
             { userId: userId },
-            ...(user?.username
-              ? [{ nisn: user.username }, { nis: user.username }]
-              : []),
-            ...(user?.email ? [{ nisn: user.email }, { nis: user.email }] : []),
+            ...(userId ? [{ id: userId }] : []),
           ],
         },
         include: {
@@ -1272,19 +1310,32 @@ export class FinanceService {
       student: {
         id: student.id,
         name: student.name,
-        nisn: student.nisn,
         nis: student.nis,
+        nisn: student.nisn,
         className: student.class?.name || '-',
-        program: student.program || null,
-        beasiswaPercentage: student.beasiswaPercentage || 0,
-        beasiswaReason: student.beasiswaReason || null,
       },
       tagihans,
     };
   }
 
-  /** Get ALL tagihans (paid and unpaid) for student based on userId (for Laporan Keuangan Siswa) */
-  async getMyAllTagihan(userId: string) {
+  /** Get ALL tagihans (paid and unpaid) for student based on userId or studentId (for Laporan Keuangan Siswa) */
+  async getMyAllTagihan(userId: string, studentId?: string) {
+    if (studentId) {
+      const student = await (this.prisma.student as any).findUnique({
+        where: { id: studentId },
+        include: {
+          class: { select: { name: true } },
+          tagihans: {
+            orderBy: { createdAt: 'desc' },
+            include: { payments: { orderBy: { paymentDate: 'desc' } } },
+          },
+        },
+      });
+      if (student) {
+        return student;
+      }
+    }
+
     const user: any = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -1297,10 +1348,31 @@ export class FinanceService {
             },
           },
         },
+        parentProfile: {
+          include: {
+            students: {
+              include: {
+                student: {
+                  include: {
+                    class: { select: { name: true } },
+                    tagihans: {
+                      orderBy: { createdAt: 'desc' },
+                      include: { payments: { orderBy: { paymentDate: 'desc' } } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       } as any,
     });
 
     let student = user?.student;
+    if (!student && user?.parentProfile?.students?.length) {
+      student = user.parentProfile.students[0].student;
+    }
+
     if (!student) {
       student = await (this.prisma.student as any).findFirst({
         where: {

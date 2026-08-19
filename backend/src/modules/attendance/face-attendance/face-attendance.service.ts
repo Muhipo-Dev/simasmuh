@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import * as fs from 'fs';
@@ -16,6 +16,8 @@ export interface FaceCameraConfig {
   cooldownMinutes: number; // e.g. 10 minutes
   isActive: boolean;
   welcomeVoice: boolean;
+  showPublicStream?: boolean; // Tampilkan Feed Kamera di Halaman Presensi Publik (/presensi-view)
+  showPublicLogs?: boolean; // Tampilkan Log Presensi Wajah di Halaman Presensi Publik (/presensi-view)
   apiKeySecret: string;
   updatedAt: string;
 }
@@ -35,16 +37,39 @@ export interface FaceDetectionLog {
   cameraName: string;
 }
 
+import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
+import { SystemLogService } from '../../core/services/system-log.service';
+
 @Injectable()
-export class FaceAttendanceService {
+export class FaceAttendanceService implements OnModuleInit {
   private readonly logger = new Logger(FaceAttendanceService.name);
   private readonly configPath = join(STORAGE_ROOT, 'face-attendance-config.json');
   private readonly legacyConfigPath = join(process.cwd(), 'storage', 'face-attendance-config.json');
   private recentLogs: FaceDetectionLog[] = [];
   private readonly maxLogs = 50;
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private whatsAppService: WhatsAppService,
+    private systemLogService: SystemLogService,
+  ) {
     this.ensureConfigExists();
+  }
+
+  async onModuleInit() {
+    try {
+      const cfg = this.getConfig();
+      if (cfg && cfg.isActive) {
+        this.logger.log('Konfigurasi server AI Microservice bernilai AKTIF (isActive: true). Memastikan microservice berjalan di latar belakang server...');
+        this.startAiWorker().catch((err) => {
+          this.logger.warn(`Startup otomatis AI Microservice background: ${err?.message || err}`);
+        });
+      } else {
+        this.logger.log('Konfigurasi server AI Microservice bernilai NONAKTIF (isActive: false). Microservice dalam mode Standby.');
+      }
+    } catch (err) {
+      this.logger.error('Gagal memeriksa status awal AI Microservice pada onModuleInit', err);
+    }
   }
 
   private ensureConfigExists() {
@@ -70,13 +95,29 @@ export class FaceAttendanceService {
           cooldownMinutes: 10,
           isActive: true,
           welcomeVoice: true,
+          showPublicStream: true,
+          showPublicLogs: true,
           apiKeySecret: 'simasmuh_face_token_secret_2026',
           updatedAt: new Date().toISOString(),
         };
-        writeFileSync(this.configPath, JSON.stringify(defaultConfig, null, 2), 'utf8');
+        this.saveConfigFile(defaultConfig);
       }
     } catch (err) {
       this.logger.error('Failed to initialize face attendance config file', err);
+    }
+  }
+
+  private saveConfigFile(config: FaceCameraConfig) {
+    try {
+      const configStr = JSON.stringify(config, null, 2);
+      writeFileSync(this.configPath, configStr, 'utf8');
+      try {
+        const legacyDir = join(process.cwd(), 'storage');
+        if (!existsSync(legacyDir)) mkdirSync(legacyDir, { recursive: true });
+        writeFileSync(this.legacyConfigPath, configStr, 'utf8');
+      } catch {}
+    } catch (err) {
+      this.logger.error('Gagal menulis file konfigurasi face-attendance-config.json', err);
     }
   }
 
@@ -84,11 +125,21 @@ export class FaceAttendanceService {
     try {
       if (existsSync(this.configPath)) {
         const raw = readFileSync(this.configPath, 'utf8');
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        return {
+          showPublicStream: true,
+          showPublicLogs: true,
+          ...parsed,
+        };
       }
       if (existsSync(this.legacyConfigPath)) {
         const raw = readFileSync(this.legacyConfigPath, 'utf8');
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        return {
+          showPublicStream: true,
+          showPublicLogs: true,
+          ...parsed,
+        };
       }
     } catch (err) {
       this.logger.error('Error reading face attendance config', err);
@@ -102,6 +153,8 @@ export class FaceAttendanceService {
       cooldownMinutes: 10,
       isActive: true,
       welcomeVoice: true,
+      showPublicStream: true,
+      showPublicLogs: true,
       apiKeySecret: 'simasmuh_face_token_secret_2026',
       updatedAt: new Date().toISOString(),
     };
@@ -115,21 +168,25 @@ export class FaceAttendanceService {
       updatedAt: new Date().toISOString(),
     };
     try {
-      const configStr = JSON.stringify(updated, null, 2);
-      writeFileSync(this.configPath, configStr, 'utf8');
-      try {
-        const legacyDir = join(process.cwd(), 'storage');
-        if (!existsSync(legacyDir)) mkdirSync(legacyDir, { recursive: true });
-        writeFileSync(this.legacyConfigPath, configStr, 'utf8');
-      } catch {}
-      
-      // Auto trigger reload/restart on python AI worker if active
-      try {
-        fetch('http://127.0.0.1:8089/stream/restart', {
-          method: 'POST',
-          signal: AbortSignal.timeout(3000),
-        }).catch(() => {});
-      } catch {}
+      this.saveConfigFile(updated);
+
+      if (data.isActive === true) {
+        this.startAiWorker().catch((err) => {
+          this.logger.warn(`Gagal memulai AI worker setelah updateConfig: ${err?.message || err}`);
+        });
+      } else if (data.isActive === false) {
+        this.stopAiWorker().catch((err) => {
+          this.logger.warn(`Gagal menghentikan AI worker setelah updateConfig: ${err?.message || err}`);
+        });
+      } else {
+        // Auto trigger reload/restart on python AI worker if active
+        try {
+          fetch('http://127.0.0.1:8089/stream/restart', {
+            method: 'POST',
+            signal: AbortSignal.timeout(3000),
+          }).catch(() => {});
+        } catch {}
+      }
     } catch (err) {
       this.logger.error('Failed to save face attendance config', err);
       throw new BadRequestException('Gagal menyimpan konfigurasi');
@@ -290,6 +347,19 @@ export class FaceAttendanceService {
       });
       scanType = 'MASUK';
       message = `Presensi Masuk berhasil dicatat pukul ${timeString}`;
+
+      // Kirim Notifikasi WhatsApp Otomatis
+      this.whatsAppService.sendAttendanceNotification({
+        studentOrUserName: user.name,
+        role: user.role,
+        phone: user.phone || user.teacherProfile?.phone || user.student?.phone || undefined,
+        parentPhone: user.student?.parentPhone || undefined,
+        className: user.student?.class?.name || undefined,
+        scanType: 'MASUK',
+        time: timeString,
+        date: today.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+        method: 'Face Recognition AI Camera',
+      }).catch(() => {});
     } else if (!existing.checkOutTime) {
       // Check cooldown time between in and out
       if (existing.checkInTime) {
@@ -304,6 +374,19 @@ export class FaceAttendanceService {
           });
           scanType = 'PULANG';
           message = `Presensi Pulang berhasil dicatat pukul ${timeString}`;
+
+          // Kirim Notifikasi WhatsApp Otomatis
+          this.whatsAppService.sendAttendanceNotification({
+            studentOrUserName: user.name,
+            role: user.role,
+            phone: user.phone || user.teacherProfile?.phone || user.student?.phone || undefined,
+            parentPhone: user.student?.parentPhone || undefined,
+            className: user.student?.class?.name || undefined,
+            scanType: 'PULANG',
+            time: timeString,
+            date: today.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+            method: 'Face Recognition AI Camera',
+          }).catch(() => {});
         } else {
           scanType = 'SUDAH_LENGKAP';
           message = `Sudah tercatat masuk pada ${existing.checkInTime}. Cooldown ${config.cooldownMinutes} menit sebelum absen pulang.`;
@@ -315,6 +398,19 @@ export class FaceAttendanceService {
         });
         scanType = 'PULANG';
         message = `Presensi Pulang berhasil dicatat pukul ${timeString}`;
+
+        // Kirim Notifikasi WhatsApp Otomatis
+        this.whatsAppService.sendAttendanceNotification({
+          studentOrUserName: user.name,
+          role: user.role,
+          phone: user.phone || user.teacherProfile?.phone || user.student?.phone || undefined,
+          parentPhone: user.student?.parentPhone || undefined,
+          className: user.student?.class?.name || undefined,
+          scanType: 'PULANG',
+          time: timeString,
+          date: today.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+          method: 'Face Recognition AI Camera',
+        }).catch(() => {});
       }
     } else {
       scanType = 'SUDAH_LENGKAP';
@@ -340,6 +436,23 @@ export class FaceAttendanceService {
     if (this.recentLogs.length > this.maxLogs) {
       this.recentLogs = this.recentLogs.slice(0, this.maxLogs);
     }
+
+    // Rekam ke Log Sistem untuk pengarsipan terkompresi di Supabase
+    this.systemLogService.log({
+      category: 'PRESENSI',
+      level: 'INFO',
+      action: `FACE_SCAN_${scanType}`,
+      message: `Presensi Wajah AI: ${user.name} (${user.role}) - ${scanType} [Akurasi: ${logEntry.confidence}]`,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      details: {
+        scanType,
+        confidence: logEntry.confidence,
+        cameraName: logEntry.cameraName,
+        time: timeString,
+      },
+    }).catch(() => {});
 
     return {
       success: true,
@@ -482,11 +595,19 @@ export class FaceAttendanceService {
   }
 
   async startAiWorker() {
-    // 1. Check if already online
+    // 1. Simpan status isActive: true secara permanen di konfigurasi server
+    const current = this.getConfig();
+    if (!current.isActive) {
+      current.isActive = true;
+      current.updatedAt = new Date().toISOString();
+      this.saveConfigFile(current);
+    }
+
+    // 2. Check if already online
     const status = await this.getAiServiceStatus();
     let isOnline = status.isOnline;
 
-    // 2. If offline, spawn Python process automatically
+    // 3. If offline, spawn Python process automatically
     if (!isOnline) {
       this.logger.log('Microservice Python AI offline, mencoba meluncurkan python main.py...');
       
@@ -542,7 +663,7 @@ export class FaceAttendanceService {
       }
     }
 
-    // 3. Trigger stream start
+    // 4. Trigger stream start
     try {
       const startUrls = ['http://127.0.0.1:8089/stream/start', 'http://localhost:8089/stream/start'];
       for (const url of startUrls) {
@@ -573,6 +694,14 @@ export class FaceAttendanceService {
   }
 
   async stopAiWorker() {
+    // 1. Simpan status isActive: false secara permanen di konfigurasi server
+    const current = this.getConfig();
+    if (current.isActive) {
+      current.isActive = false;
+      current.updatedAt = new Date().toISOString();
+      this.saveConfigFile(current);
+    }
+
     try {
       const endpoints = [
         'http://127.0.0.1:8089/terminate',

@@ -1,12 +1,14 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { IzinKeluarService } from '../izin-keluar/izin-keluar.service';
+import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
 
 @Injectable()
 export class DailyAttendancesService {
   constructor(
     private prisma: PrismaService,
     private izinKeluarService: IzinKeluarService,
+    private whatsAppService: WhatsAppService,
   ) {}
 
   getQrToken() {
@@ -44,6 +46,14 @@ export class DailyAttendancesService {
       );
     }
 
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        student: { include: { class: true } },
+        teacherProfile: true,
+      },
+    });
+
     const startOfDay = new Date(today);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(today);
@@ -57,6 +67,12 @@ export class DailyAttendancesService {
     });
 
     const timeString = this.getTimeString(today);
+    const dateFormatted = today.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
 
     if (!existing) {
       // First scan of the day = Check-in
@@ -69,6 +85,22 @@ export class DailyAttendancesService {
           userId,
         },
       });
+
+      // Kirim Notifikasi WhatsApp Otomatis
+      if (user) {
+        this.whatsAppService.sendAttendanceNotification({
+          studentOrUserName: user.name,
+          role: user.role,
+          phone: user.phone || user.teacherProfile?.phone || user.student?.phone || undefined,
+          parentPhone: user.student?.parentPhone || undefined,
+          className: user.student?.class?.name || undefined,
+          scanType: 'MASUK',
+          time: timeString,
+          date: dateFormatted,
+          method: 'Scan QR Code SIMASMUH',
+        }).catch(() => {});
+      }
+
       return {
         ...record,
         scanType: 'MASUK',
@@ -101,6 +133,21 @@ export class DailyAttendancesService {
       where: { id: existing.id },
       data: { checkOutTime: timeString },
     });
+
+    // Kirim Notifikasi WhatsApp Otomatis
+    if (user) {
+      this.whatsAppService.sendAttendanceNotification({
+        studentOrUserName: user.name,
+        role: user.role,
+        phone: user.phone || user.teacherProfile?.phone || user.student?.phone || undefined,
+        parentPhone: user.student?.parentPhone || undefined,
+        className: user.student?.class?.name || undefined,
+        scanType: 'PULANG',
+        time: timeString,
+        date: dateFormatted,
+        method: 'Scan QR Code SIMASMUH',
+      }).catch(() => {});
+    }
 
     return {
       ...updated,
@@ -236,20 +283,47 @@ export class DailyAttendancesService {
   async getMonthlyLog(userId: string, year: number, month: number) {
     if (!userId) return [];
 
+    let targetUserId = userId;
+    const parentUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        parentProfile: {
+          include: {
+            students: {
+              include: {
+                student: {
+                  include: {
+                    user: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (parentUser?.role === 'WALI_MURID' || parentUser?.parentProfile?.students?.length) {
+      const firstStudent = parentUser?.parentProfile?.students?.[0]?.student;
+      if (firstStudent?.userId) {
+        targetUserId = firstStudent.userId;
+      }
+    }
+
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     endDate.setHours(23, 59, 59, 999);
 
     const attendances = await this.prisma.dailyAttendance.findMany({
       where: {
-        userId,
+        userId: targetUserId,
         date: { gte: startDate, lte: endDate },
       },
     });
 
     const izinKeluarList = await this.prisma.izinKeluar.findMany({
       where: {
-        userId,
+        userId: targetUserId,
         status: 'DISETUJUI',
         date: { gte: startDate, lte: endDate },
       },

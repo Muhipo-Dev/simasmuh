@@ -37,3 +37,28 @@ Semua catatan perubahan dan pembaruan sistem SIMASMUH didokumentasikan di berkas
 - **Kontrol Tunggal**: Tombol "Nyalakan / Matikan AI" disederhanakan menjadi satu tombol utama di atas informasi CPU pada header.
 - **Clean Preview Screen**: Menghapus tombol-tombol overlay yang menutupi layar pemutar video kamera.
 - **Penyederhanaan Preset Kamera**: Menghapus pilihan RTMP dan file video lokal, memusatkan konfigurasi pada 3 standar utama: Webcam Browser, IP Camera RTSP (CCTV), dan Webcam USB Server.
+
+#### 6. Persistensi Penuh Siklus Hidup Microservice di Sisi Server
+- **Server-Wide Persistence**: Pengaturan ON/OFF AI Microservice oleh Superadmin kini tersimpan permanen di disk server (`isActive` pada `face-attendance-config.json`).
+- **Independen dari Sesi Pengguna**: Ketika Superadmin menyalakan AI Microservice dan melakukan logout / menutup browser, Microservice AI Python tetap terus berjalan aktif di server melayani presensi dan kamera.
+- **Siklus Standby Saat Dimatikan**: Jika Superadmin mematikan AI Microservice, sistem menyimpan status non-aktif dan melepaskan resource CPU/RAM ke mode Standby.
+- **Autonomous Booting via OnModuleInit**: Backend NestJS secara otomatis memeriksa dan menghidupkan proses Python AI worker saat startup server jika konfigurasi `isActive: true`.
+
+#### 7. Integrasi Publik Real-Time Stream & Log Presensi (`/presensi-view`)
+- **Saklar Publikasi di Panel Superadmin**: Penambahan opsi `showPublicStream` dan `showPublicLogs` pada halaman kamera dashboard untuk mengontrol tayangan live stream dan feed log presensi.
+- **Tampilan Real-Time Responsif**: Halaman `/presensi-view` otomatis menampilkan feed stream kamera live dan scanner log wajah secara realtime dengan interval polling 2000-2500ms.
+- **Layout Adaptif**: Grid menyesuaikan secara otomatis (Split 7:5, Full Width, atau disembunyikan rapi) mengikuti preferensi server yang dikonfigurasi Superadmin.
+
+#### 8. Optimasi Aliran Kamera Ultra Rendah Latensi (*Zero Delay*)
+- **Pembersihan Antrean Buffer Kamera**: Menghapus jeda *artificial sleep* pada loop penangkapan frame OpenCV (`cap.read()`) sehingga buffer frame hardware selalu kosong (`buffer_size=1`) dan tidak terjadi penumpukan *delay* akumulatif.
+- **Konfigurasi FFMPEG RTSP Low-Latency**: Mengaktifkan flag `fflags;nobuffer|flags;low_delay|max_delay;0|probesize;32768|analyzeduration;0` pada koneksi IP Camera / CCTV RTSP.
+- **Fast MJPEG Encoding & Streaming Headers**: Kompresi frame JPEG cepat (Quality: 74) dengan penyisipan header `X-Accel-Buffering: no` dan `Content-Length` untuk mencegah *buffering* pada perantara proxy / Next.js.
+
+#### 9. Indikator Status & Banner Notifikasi AI Nonaktif di `/presensi-view`
+- **Banner Peringatan Khusus**: Menampilkan kartu notifikasi adaptif (*Amber Banner*) di halaman publik `/presensi-view` saat AI Microservice FaceNet dimatikan oleh Superadmin.
+- **Visual Placeholder & Scanner Status**: Mengubah kanvas kamera dan kartu scanner log secara terpadu dengan ikon `PowerOff` dan status `STANDBY / OFF (Diatur Admin)` agar pengguna memahami bahwa layanan sedang diistirahatkan oleh administrator.
+
+#### 10. Integrasi Notifikasi Ganda WhatsApp Otomatis untuk Presensi Kamera AI
+- **WhatsApp Notification Integration**: Setiap kali sistem kamera AI FaceNet berhasil memindai dan mencatat presensi (Masuk atau Pulang), sistem secara otomatis mengirimkan notifikasi resmi WhatsApp ke nomor pengguna dan/atau nomor orang tua/wali siswa secara *real-time*.
+- **Informasi Lengkap**: Pesan mencakup status presensi, nama, peran/kelas, jam akurat WIB, tanggal, dan metode presensi (*Face Recognition AI Camera*).
+- **Nomor Pengirim Resmi**: Menggunakan nomor resmi sistem `088293733330` dan terintegrasi dengan tabel log `WhatsAppLog`.

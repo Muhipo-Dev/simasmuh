@@ -16,4 +16,14 @@
      - **Backend API NestJS**: `http://localhost:3001`
      - **Prisma Studio**: `http://localhost:51212`
      - **Supabase Studio (Docker)**: `http://localhost:54323` (Database: `54322`, API: `54321`)
-
+7. **Standar Notifikasi Ganda (In-App & WhatsApp) & Keharusan Nomor Telepon**:
+   - Setiap fitur yang mengharuskan adanya notifikasi (seperti presensi/absen, tagihan keuangan, bukti & verifikasi pembayaran, informasi berita/pengumuman, perizinan, ataupun fitur masa depan lainnya), seluruh notifikasi selain wajib dikirim ke akun pengguna di sistem (In-App notification), **WAJIB** dikirimkan juga notifikasinya melalui WhatsApp.
+   - Setiap data pengguna (Siswa, Guru, Karyawan/Pegawai, dan Orang Tua/Wali) tabel data dirinya diwajibkan menggunakan nomor telepon yang aktif WhatsApp.
+   - Nomor pengirim resmi sistem ke pengguna adalah: `088293733330`.
+   - Data pengguna baru maupun eksisting wajib menyertakan nomor telepon WhatsApp (nomor dummy `088293733330` disediakan sebagai fallback pengembangan jika pengguna belum memasukkan nomor).
+8. **Standar Akun & Peran Pengguna Wali Murid (Orang Tua / Wali)**:
+   - **Peran & Relasi**: Pengguna dengan role `WALI_MURID` adalah akun orang tua/wali murid yang dapat terhubung dengan 1 atau lebih siswa di sistem melalui relasi `ParentProfile` dan `ParentStudent`.
+   - **Koneksi Identitas Siswa**: No. NIS atau NISN menjadi kunci penghubung antara data wali murid dan siswa yang diwalikan.
+   - **Kredensial Login**: Username wali murid adalah nomor telepon aktif WhatsApp, dan kata sandi awalnya adalah NIS dari siswa yang terhubung.
+   - **Sinkronisasi Nama**: Nama lengkap wali murid tersinkronisasi dari biodata orang tua siswa (nama ayah/ibu/wali) atau dapat disesuaikan manual oleh superadmin.
+   - **Notifikasi & Laporan**: Nomor telepon wali murid digunakan sebagai tujuan resmi pengiriman notifikasi WhatsApp otomatis untuk presensi harian, update status perkembangan siswa, dan tagihan keuangan sekolah.

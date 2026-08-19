@@ -195,15 +195,15 @@ export class FinanceController {
   // ----- Student unpaid bills (for payment popup) -----
   @Get('my-tagihan')
   @RequirePermissions(PaymentPermission.VIEW_OWN_BILLS)
-  getMyUnpaidTagihan(@Req() req: any) {
-    return this.financeService.getMyUnpaidTagihan(req.user?.id);
+  getMyUnpaidTagihan(@Req() req: any, @Query('studentId') studentId?: string) {
+    return this.financeService.getMyUnpaidTagihan(req.user?.id, studentId);
   }
 
   // ----- Student all bills (for Laporan Keuangan) -----
   @Get('my-all-tagihan')
   @RequirePermissions(PaymentPermission.VIEW_OWN_BILLS)
-  getMyAllTagihan(@Req() req: any) {
-    return this.financeService.getMyAllTagihan(req.user?.id);
+  getMyAllTagihan(@Req() req: any, @Query('studentId') studentId?: string) {
+    return this.financeService.getMyAllTagihan(req.user?.id, studentId);
   }
 
   // ============================================================

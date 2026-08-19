@@ -303,7 +303,8 @@ export default function JadwalPelajaranPage() {
     s.nisn === username || 
     s.nis === username ||
     s.nisn === userEmail ||
-    s.nis === userEmail
+    s.nis === userEmail ||
+    (s.parentRelations && s.parentRelations.some((pr: any) => pr.parent?.userId === userId))
   )
   const myClassId = myProfile?.classId
   const activeStudentClass = classes?.find((c: any) => c.id === myClassId) || myProfile?.class || (classes && classes.length > 0 ? classes[0] : null)
@@ -314,7 +315,7 @@ export default function JadwalPelajaranPage() {
       if (selectedClassId === 'ALL') return true
       return sch.classId === selectedClassId
     }
-    if (role === 'SISWA') {
+    if (role === 'SISWA' || role === 'WALI_MURID' || role === 'PARENT' || role === 'ORANG_TUA') {
       return sch.classId === activeStudentClass?.id
     }
     // Guru / Pegawai view

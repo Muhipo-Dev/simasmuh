@@ -4,25 +4,29 @@ import {
   DoorOpen, UserCircle2, Megaphone, Wallet, Receipt, X, MoreHorizontal, 
   Banknote, FileText, Image as ImageIcon, Award, FileCheck,
   ShieldAlert, Sparkles, ShieldCheck, UserCheck, HeartHandshake,
-  Library, BookMarked, Mail, Contact, Package, Boxes, Camera
+  Library, BookMarked, Mail, Contact, Package, Boxes, Camera, BellRing, Database
 } from 'lucide-react'
 
 export const superadminLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Guru', href: '/master-data/guru', icon: Users },
   { name: 'Siswa', href: '/master-data/siswa', icon: UserSquare2 },
+  { name: 'Wali Murid', href: '/master-data/wali-murid', icon: Users },
   { name: 'Kelas', href: '/master-data/kelas', icon: BookOpen },
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'QR Layar (Publik)', href: '/presensi/manajemen-qr', icon: QrCode },
   { name: 'Presensi Camera AI', href: '/presensi/camera', icon: Camera },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
+  { name: 'Kelola Notifikasi', href: '/pengaturan/notifikasi', icon: BellRing },
+  { name: 'Log Sistem (Supabase)', href: '/pengaturan/log-sistem', icon: Database },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
 ]
 
 export const bauLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Siswa', href: '/master-data/siswa', icon: UserSquare2 },
+  { name: 'Wali Murid', href: '/master-data/wali-murid', icon: Users },
   { name: 'Guru', href: '/master-data/guru', icon: Users },
   { name: 'Kelas', href: '/master-data/kelas', icon: BookOpen },
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap },
@@ -32,6 +36,7 @@ export const bauLinks = [
   { name: 'Arsip & Persuratan', href: '/fitur/persuratan', icon: Mail },
   { name: 'Inventaris & Aset', href: '/fitur/inventaris', icon: Package },
   { name: 'Kepegawaian & HRD', href: '/fitur/kepegawaian', icon: UserCheck },
+  { name: 'Kelola Notifikasi', href: '/pengaturan/notifikasi', icon: BellRing },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
 ]
 
@@ -50,6 +55,18 @@ export const siswaLinks = [
   { name: 'Log Presensi', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
   { name: 'Jadwal', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Keuangan', href: '/keuangan/laporan', icon: Wallet },
+  { name: 'Etika & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck },
+  { name: 'E-Rapor', href: '/akademik/e-rapor', icon: GraduationCap },
+]
+
+export const waliMuridLinks = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
+  { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
+  { name: 'Tagihan & SPP', href: '/keuangan/laporan', icon: Wallet },
+  { name: 'Etika & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck },
+  { name: 'E-Rapor Siswa', href: '/akademik/e-rapor', icon: GraduationCap },
+  { name: 'Notifikasi WA', href: '/pengaturan/notifikasi-wali', icon: BellRing },
 ]
 
 export const pegawaiLinks = [
@@ -61,8 +78,8 @@ export const pegawaiLinks = [
 ]
 
 export const superAdminOnlyPaths = [
-  '/master-data/pengguna', '/master-data/mata-pelajaran',
-  '/master-data/siswa', '/master-data/kelas', '/master-data/guru', '/pengaturan/sistem', '/presensi/manajemen-qr', '/presensi/camera'
+  '/master-data/pengguna', '/master-data/wali-murid', '/master-data/mata-pelajaran',
+  '/master-data/siswa', '/master-data/kelas', '/master-data/guru', '/pengaturan/sistem', '/pengaturan/log-sistem', '/presensi/manajemen-qr', '/presensi/camera'
 ]
 
 export function getRoleLinks(role: string, subRole?: string, subRole2?: string, subRole3?: string) {
@@ -85,6 +102,8 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
     addLinks(guruLinks)
   } else if (role === 'SISWA') {
     addLinks(siswaLinks)
+  } else if (role === 'WALI_MURID' || role === 'ORANG_TUA' || role === 'PARENT') {
+    addLinks(waliMuridLinks)
   } else if (role === 'PEGAWAI' || role === 'KARYAWAN') {
     addLinks(pegawaiLinks)
   } else {

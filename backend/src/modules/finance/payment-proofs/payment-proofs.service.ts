@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { FileHashService } from '../../core/services/file-hash.service';
 import { FileSecurityUtil } from '../../core/utils/file-security.util';
+import { SystemLogService } from '../../core/services/system-log.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class PaymentProofsService {
     private prisma: PrismaService,
     private fileHashService: FileHashService,
     private eventEmitter: EventEmitter2,
+    private systemLogService: SystemLogService,
   ) {}
 
   /**
@@ -170,6 +172,16 @@ export class PaymentProofsService {
 
       // Log the file upload activity
       await this.logFileActivity(userId, 'UPLOAD', proof.id, fileMetadata);
+
+      this.systemLogService.log({
+        category: 'KEUANGAN',
+        level: 'INFO',
+        action: 'PAYMENT_PROOF_UPLOADED',
+        message: `Bukti transfer diunggah: Siswa '${proof.student.name}' (Rp ${amount.toLocaleString('id-ID')})`,
+        userId,
+        userName: proof.student.name,
+        details: { proofId: proof.id, amount, tagihanId },
+      }).catch(() => {});
 
       return proof;
     } catch (error) {
@@ -481,6 +493,17 @@ export class PaymentProofsService {
         );
         // Don't fail the whole operation for event emission failure
       }
+
+      this.systemLogService.log({
+        category: 'KEUANGAN',
+        level: status === 'DIVERIFIKASI' ? 'INFO' : 'WARN',
+        action: `PAYMENT_PROOF_${status}`,
+        message: `Bukti transfer ${status.toLowerCase()} oleh '${verifier.name}' untuk siswa '${updatedProof.student.name}' (Rp ${updatedProof.amount.toLocaleString('id-ID')})`,
+        userId: verifiedBy,
+        userName: verifier.name,
+        userRole: verifier.role,
+        details: { proofId: updatedProof.id, status, amount: updatedProof.amount, studentId: updatedProof.studentId },
+      }).catch(() => {});
 
       return updatedProof;
     } catch (error) {

@@ -64,6 +64,23 @@ npm run dev
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-19 (v1.4.0 - Modul Akun Wali Murid / Orang Tua, Multi-Anak Dashboard Selektor, Standar Notifikasi WhatsApp & Desain Autentikasi Modern):**
+  * **Role Pengguna Baru `WALI_MURID` (Orang Tua / Wali):** Implementasi skema basis data relasi `ParentProfile` dan `ParentStudent` yang menghubungkan satu akun orang tua dengan 1 atau banyak siswa melalui No. NIS/NISN sebagai kunci identitas.
+  * **Kredensial Login Fleksibel & Terpusat:** Username wali murid menggunakan nomor WhatsApp terdaftar, dan kata sandi default adalah NIS siswa anak yang terdaftar pertama.
+  * **Dashboard Wali Murid Terintegrasi (7 Fitur Terhubung):**
+    * **Selektor Dropdown Multi-Anak Dinamis:** Orang tua dapat memilih anak yang dipantau melalui dropdown di header banner, dan seluruh widget (tagihan, jadwal, nilai etika, e-rapor, presensi) otomatis berganti secara real-time.
+    * **Notifikasi & Modal Pembayaran Tagihan:** Pemantauan nominal tagihan belum lunas siswa dan pembayaran langsung via Transfer Bank & Virtual Account (`PaymentBillingPopup`).
+    * **Monitoring Jadwal Pelajaran:** Jadwal harian mata pelajaran dan guru pengajar sesuai kelas anak yang dipilih.
+    * **Penilaian Etika & Tata Tertib (Views Only):** Monitoring poin tatib (100/100), amalan ibadah sholat berjamaah, dan catatan karakter wali kelas terhubung ke subrole Tim Tatatertib & BK.
+    * **Statistika E-Rapor Digital:** Ringkasan capaian Indeks Prestasi dan Peringkat Kelas siswa.
+    * **Log Kehadiran Harian Siswa:** Log waktu presensi masuk dan status kehadiran harian siswa.
+    * **Pengaturan Notifikasi WhatsApp (`088293733330`):** Pengaturan preferensi pesan WA untuk presensi kedatangan/kepulangan, tagihan baru, dan kuitansi pembayaran terverifikasi.
+  * **Desain Autentikasi Halaman Login Modern (Single Island Card):**
+    * Tata letak satu card terpadu berdampingan: Area *Autentikasi Akun* di kiri dan kotak *Panduan Kredensial Pengguna* di kanan.
+    * Optimasi ergonomis perangkat mobile, tablet, dan desktop dengan Dynamic Viewport Height (`100dvh`), touch target 48px, dan whitespace yang nyaman.
+  * **Penyelarasan Istilah Resmi & Kata Baku:** Mengubah tautan navbar landing page menjadi *TenDik* (Tenaga Pendidik & Kependidikan) dan standardisasi kata baku bahasa Indonesia *Manajemen*.
+  * **Penyempurnaan Launcher Windows (`JALANKAN_SIMASMUH.bat` & `simasmuh.ps1`):** Penataan direktori kerja otomatis, dukungan UTF-8 (CP 65001), dan verifikasi 4 port tetap produksi (Frontend 3000, Backend 3001, Prisma Studio 51212, Supabase Studio 54323).
+
 * **2026-08-19 (v1.3.2 - MTCNN Facial Landmark Alignment, Realtime 2-Way Database Sync & Zero-Flicker Camera UI):**
   * **MTCNN Facial Landmark Alignment & Multi-Angle Augmentation:** Ekstraksi landmark 5-titik wajah (kedua mata, hidung, sudut bibir) otomatis dirotasi & disejajarkan ke kanvas standar 160x160 piksel sebelum ekstraksi embedding FaceNet 512-D. Menambahkan augmentasi *horizontal mirroring* pada foto profil sehingga mengenali wajah dari webcam laptop / HP dengan akurasi 85%–99%.
   * **Adaptive Detection Pipeline & Fallback Robustness:** Integrasi fallback deteksi otomatis (MTCNN multi-scale pyramid cascade dengan OpenCV Haar fallback) untuk memastikan akurasi deteksi wajah optimal di resolusi tinggi maupun variasi sudut miring/pencahayaan ekstrem.

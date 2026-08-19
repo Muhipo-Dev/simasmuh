@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import Swal from 'sweetalert2'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Save, Building2, CreditCard, ImageIcon, CalendarDays, Sparkles, Pencil, Trash2, Percent } from 'lucide-react'
+import { Loader2, Save, Building2, CreditCard, ImageIcon, CalendarDays, Sparkles, Pencil, Trash2, Percent, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -203,9 +204,17 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Pengaturan Sekolah</h1>
-        <p className="text-slate-500 mt-1">Kelola informasi dasar sekolah dan rekening untuk pembayaran.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Pengaturan Sekolah</h1>
+          <p className="text-slate-500 mt-1">Kelola informasi dasar sekolah, rekening pembayaran, dan log sistem.</p>
+        </div>
+        <Link href="/pengaturan/log-sistem">
+          <Button variant="outline" className="border-emerald-500/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold shadow-sm">
+            <Database className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" />
+            Penyimpanan Log Sistem (Supabase)
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

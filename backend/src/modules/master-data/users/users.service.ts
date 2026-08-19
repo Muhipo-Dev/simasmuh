@@ -18,6 +18,7 @@ export class UsersService {
         name: true,
         email: true,
         username: true,
+        phone: true,
         nipNbm: true,
         role: true,
         subRole: true,
@@ -25,6 +26,19 @@ export class UsersService {
         subRole3: true,
         createdAt: true,
         teacherProfile: true,
+        parentProfile: {
+          include: {
+            students: {
+              include: {
+                student: {
+                  include: {
+                    class: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
   }
@@ -75,12 +89,16 @@ export class UsersService {
 
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
+    const phoneValue =
+      data.phone && data.phone.trim() !== '' ? data.phone.trim() : '088293733330';
+
     return this.prisma.user.create({
       data: {
         username: usernameValue,
         name: data.name,
         email: emailValue,
         nipNbm: nipNbmValue,
+        phone: phoneValue,
         password: hashedPassword,
         role: data.role || 'GURU',
         subRole: data.subRole || null,
@@ -94,6 +112,7 @@ export class UsersService {
               teacherProfile: {
                 create: {
                   ...(nipNbmValue ? { nip: nipNbmValue } : {}),
+                  phone: phoneValue,
                 },
               },
             }
@@ -104,6 +123,7 @@ export class UsersService {
         name: true,
         email: true,
         username: true,
+        phone: true,
         nipNbm: true,
         role: true,
         subRole: true,
@@ -121,6 +141,10 @@ export class UsersService {
       subRole2: data.subRole2 || null,
       subRole3: data.subRole3 || null,
     };
+
+    if (data.phone !== undefined) {
+      updateData.phone = data.phone && data.phone.trim() !== '' ? data.phone.trim() : '088293733330';
+    }
 
     if (data.username !== undefined) {
       const usernameValue = data.username ? data.username.trim() : '';
@@ -203,6 +227,7 @@ export class UsersService {
         name: true,
         email: true,
         username: true,
+        phone: true,
         nipNbm: true,
         role: true,
         subRole: true,

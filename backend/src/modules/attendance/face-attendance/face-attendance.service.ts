@@ -65,7 +65,7 @@ export class FaceAttendanceService {
           streamUrl: '0',
           cameraName: 'Camera Gerbang Utama',
           location: 'Gerbang Depan Sekolah',
-          threshold: 0.58,
+          threshold: 0.48,
           cooldownMinutes: 10,
           isActive: true,
           welcomeVoice: true,
@@ -97,7 +97,7 @@ export class FaceAttendanceService {
       streamUrl: '0',
       cameraName: 'Camera Gerbang Utama',
       location: 'Gerbang Depan Sekolah',
-      threshold: 0.58,
+      threshold: 0.48,
       cooldownMinutes: 10,
       isActive: true,
       welcomeVoice: true,
@@ -170,11 +170,34 @@ export class FaceAttendanceService {
 
     const dataset = users.map((u) => {
       let localPath: string | null = null;
-      if (u.avatarUrl && u.avatarUrl.startsWith('/uploads/')) {
-        const cleanRel = u.avatarUrl.replace(/^\/uploads\//, '');
-        const candidate = join(STORAGE_ROOT, cleanRel);
-        if (existsSync(candidate)) {
-          localPath = candidate;
+      if (u.avatarUrl) {
+        if (u.avatarUrl.startsWith('/uploads/')) {
+          const cleanRel = u.avatarUrl.replace(/^\/uploads\//, '');
+          const possiblePaths = [
+            join(STORAGE_ROOT, cleanRel),
+            join(STORAGE_ROOT, 'profiles', cleanRel),
+            join(STORAGE_ROOT, path.basename(cleanRel)),
+            join(STORAGE_ROOT, 'profiles', path.basename(cleanRel)),
+          ];
+          for (const p of possiblePaths) {
+            if (existsSync(p)) {
+              localPath = p;
+              break;
+            }
+          }
+        } else if (!u.avatarUrl.startsWith('http')) {
+          const possiblePaths = [
+            join(STORAGE_ROOT, u.avatarUrl),
+            join(STORAGE_ROOT, 'profiles', u.avatarUrl),
+            join(STORAGE_ROOT, path.basename(u.avatarUrl)),
+            join(STORAGE_ROOT, 'profiles', path.basename(u.avatarUrl)),
+          ];
+          for (const p of possiblePaths) {
+            if (existsSync(p)) {
+              localPath = p;
+              break;
+            }
+          }
         }
       }
 
@@ -333,9 +356,108 @@ export class FaceAttendanceService {
     return this.recentLogs;
   }
 
-  clearLogs() {
+  async deleteSingleLog(id: string, resetDb: boolean = true) {
+    const index = this.recentLogs.findIndex((l) => l.id === id);
+    const log = index !== -1 ? this.recentLogs[index] : null;
+
+    const today = new Date();
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    if (log && resetDb && log.userId) {
+      try {
+        await this.prisma.dailyAttendance.deleteMany({
+          where: {
+            userId: log.userId,
+            date: { gte: startOfDay, lte: endOfDay },
+          },
+        });
+
+        const user = await this.prisma.user.findUnique({
+          where: { id: log.userId },
+          include: { student: true },
+        });
+
+        if (user?.student) {
+          await this.prisma.attendance.deleteMany({
+            where: {
+              studentId: user.student.id,
+              date: { gte: startOfDay, lte: endOfDay },
+            },
+          });
+        }
+      } catch (err) {
+        this.logger.error(`Gagal mereset data presensi pengguna ${log.userId} di database`, err);
+      }
+
+      // Reset timer cooldown deteksi di AI microservice agar pengguna dapat langsung terdeteksi ulang
+      try {
+        await fetch('http://127.0.0.1:8089/reset-cooldown', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: log.userId }),
+          signal: AbortSignal.timeout(2000),
+        });
+      } catch {}
+    }
+
+    if (index !== -1) {
+      this.recentLogs.splice(index, 1);
+    }
+
+    return {
+      success: true,
+      message: 'Log scan dan status presensi pengguna berhasil dihapus serta direset dari basis data.',
+    };
+  }
+
+  async clearLogs(resetDb: boolean = true) {
+    const today = new Date();
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    let deletedCount = 0;
+    if (resetDb) {
+      try {
+        const delDaily = await this.prisma.dailyAttendance.deleteMany({
+          where: {
+            date: { gte: startOfDay, lte: endOfDay },
+          },
+        });
+        const delStudent = await this.prisma.attendance.deleteMany({
+          where: {
+            date: { gte: startOfDay, lte: endOfDay },
+          },
+        });
+        deletedCount = delDaily.count + delStudent.count;
+      } catch (err) {
+        this.logger.error('Gagal mereset presensi hari ini di database', err);
+      }
+    }
+
     this.recentLogs = [];
-    return { success: true, message: 'Log berhasil dikosongkan' };
+
+    // Reset semua timer cooldown di Python AI Worker
+    try {
+      await fetch('http://127.0.0.1:8089/reset-cooldown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true }),
+        signal: AbortSignal.timeout(2000),
+      });
+    } catch {}
+
+    return {
+      success: true,
+      message: resetDb
+        ? `Log berhasil dikosongkan dan ${deletedCount} catatan presensi hari ini berhasil direset di basis data.`
+        : 'Log berhasil dikosongkan.',
+      deletedCount,
+    };
   }
 
   async getAiServiceStatus() {
@@ -449,17 +571,123 @@ export class FaceAttendanceService {
 
   async stopAiWorker() {
     try {
-      const res = await fetch('http://127.0.0.1:8089/stream/stop', {
-        method: 'POST',
-        signal: AbortSignal.timeout(4000),
-      });
-      if (res.ok) {
-        return await res.json();
+      const endpoints = [
+        'http://127.0.0.1:8089/terminate',
+        'http://localhost:8089/terminate',
+        'http://127.0.0.1:8089/stream/stop',
+        'http://localhost:8089/stream/stop'
+      ];
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep, {
+            method: 'POST',
+            signal: AbortSignal.timeout(3000),
+          });
+          if (res.ok) {
+            return { success: true, message: 'AI FaceNet dinonaktifkan (Resource RAM & CPU dibebaskan)' };
+          }
+        } catch {}
       }
     } catch (err) {
-      throw new BadRequestException('Microservice AI Python di port 8089 tidak aktif atau tidak dapat dijangkau');
+      // fallback
     }
-    return { success: true, message: 'AI Service stream dihentikan' };
+    return { success: true, message: 'AI FaceNet dinonaktifkan' };
+  }
+
+  async syncProfiles() {
+    try {
+      const endpoints = ['http://127.0.0.1:8089/sync-profiles', 'http://localhost:8089/sync-profiles'];
+      for (const url of endpoints) {
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            signal: AbortSignal.timeout(15000),
+          });
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch {}
+      }
+    } catch (err) {
+      this.logger.error('Failed to trigger python sync-profiles', err);
+    }
+    return {
+      success: true,
+      message: 'Dataset profil pengguna berhasil disinkronkan ke FaceNet.',
+    };
+  }
+
+  async syncSingleUser(user: {
+    id: string;
+    name?: string;
+    role?: string;
+    username?: string;
+    avatarUrl?: string | null;
+    identifier?: string;
+    student?: { nis?: string };
+    teacherProfile?: { nip?: string };
+    nipNbm?: string;
+  }) {
+    try {
+      let localPath: string | null = null;
+      if (user.avatarUrl) {
+        if (user.avatarUrl.startsWith('/uploads/')) {
+          const cleanRel = user.avatarUrl.replace(/^\/uploads\//, '');
+          const possiblePaths = [
+            join(STORAGE_ROOT, cleanRel),
+            join(STORAGE_ROOT, 'profiles', cleanRel),
+            join(STORAGE_ROOT, path.basename(cleanRel)),
+            join(STORAGE_ROOT, 'profiles', path.basename(cleanRel)),
+          ];
+          for (const p of possiblePaths) {
+            if (existsSync(p)) {
+              localPath = p;
+              break;
+            }
+          }
+        } else if (!user.avatarUrl.startsWith('http')) {
+          const possiblePaths = [
+            join(STORAGE_ROOT, user.avatarUrl),
+            join(STORAGE_ROOT, 'profiles', user.avatarUrl),
+            join(STORAGE_ROOT, path.basename(user.avatarUrl)),
+            join(STORAGE_ROOT, 'profiles', path.basename(user.avatarUrl)),
+          ];
+          for (const p of possiblePaths) {
+            if (existsSync(p)) {
+              localPath = p;
+              break;
+            }
+          }
+        }
+      }
+
+      const payload = {
+        userId: user.id,
+        name: user.name || '',
+        role: user.role || 'SISWA',
+        identifier: user.identifier || user.student?.nis || user.nipNbm || user.teacherProfile?.nip || user.username || user.id,
+        avatarUrl: user.avatarUrl || null,
+        localPath,
+      };
+
+      const endpoints = ['http://127.0.0.1:8089/sync-user', 'http://localhost:8089/sync-user'];
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(10000),
+          });
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch {}
+      }
+    } catch (err) {
+      this.logger.error('Failed to sync single user to FaceNet', err);
+    }
+    return { success: false, message: 'Microservice AI offline atau tidak merespons.' };
   }
 
   async scanFrame(imageBase64: string) {

@@ -69,6 +69,17 @@ class AttendanceWorker:
         time.sleep(0.3)
         self.start()
 
+    def reset_cooldown(self, user_id: str = None, all_users: bool = False):
+        """Mereset timer cooldown deteksi presensi agar wajah dapat langsung dicatat ulang."""
+        if all_users or not user_id:
+            self.last_attendance_time.clear()
+            self.total_scans_today = 0
+            print("[INFO] Semua timer cooldown presensi kamera berhasil direset.")
+        else:
+            self.last_attendance_time.pop(user_id, None)
+            print(f"[INFO] Timer cooldown presensi untuk user '{user_id}' berhasil direset.")
+        return True
+
     def _create_placeholder_frame(self, title: str, subtitle: str) -> np.ndarray:
         """Membuat canvas grafis visual HUD saat stream sedang standby/reconnecting."""
         canvas = np.zeros((480, 640, 3), dtype=np.uint8)
@@ -107,59 +118,55 @@ class AttendanceWorker:
 
         def _open_capture(src, is_num):
             if is_num:
-                # 1. DirectShow (Windows)
-                try:
-                    c = cv2.VideoCapture(src, cv2.CAP_DSHOW)
-                    if c.isOpened():
-                        c.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                        c.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                        c.set(cv2.CAP_PROP_FPS, 20)
-                        c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                        return c
-                except Exception:
-                    pass
-                # 2. Windows Media Foundation
-                try:
-                    c = cv2.VideoCapture(src, cv2.CAP_MSMF)
-                    if c.isOpened():
-                        c.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                        c.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                        c.set(cv2.CAP_PROP_FPS, 20)
-                        c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                        return c
-                except Exception:
-                    pass
-                # 3. Fallback
-                try:
-                    c = cv2.VideoCapture(src, cv2.CAP_ANY)
-                    if c.isOpened():
-                        c.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                        c.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                        return c
-                except Exception:
-                    pass
+                backends = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_ANY] if os.name == 'nt' else [cv2.CAP_V4L2, cv2.CAP_ANY]
+                for backend in backends:
+                    try:
+                        c = cv2.VideoCapture(src, backend)
+                        if c.isOpened():
+                            c.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                            c.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                            c.set(cv2.CAP_PROP_FPS, 20)
+                            try:
+                                c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                            except Exception:
+                                pass
+                            # Warm up: buang 2 frame pertama agar sensor auto-exposure stabil
+                            for _ in range(2):
+                                c.read()
+                            return c
+                    except Exception:
+                        pass
                 return None
             elif isinstance(src, str) and (src.startswith("rtsp://") or src.startswith("rtmp://") or src.startswith("http://") or src.startswith("https://")):
-                import os
-                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|analyzeduration;1000000|probesize;1000000|stimeout;5000000"
+                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|buffer_size;1048576|max_delay;500000|stimeout;3000000"
                 try:
                     c = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
                     if not c.isOpened():
                         c = cv2.VideoCapture(src)
-                    return c
+                    if c.isOpened():
+                        try:
+                            c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        except Exception:
+                            pass
+                        return c
                 except Exception:
                     return None
+                return None
             else:
                 try:
-                    return cv2.VideoCapture(src)
+                    c = cv2.VideoCapture(src)
+                    if c.isOpened():
+                        return c
                 except Exception:
                     return None
+                return None
 
         cap = None
         consecutive_failures = 0
         prev_time = time.time()
         frame_counter = 0
         active_src = None
+        last_valid_frame = None
 
         while self.is_running:
             try:
@@ -174,43 +181,48 @@ class AttendanceWorker:
                         pass
                     cap = None
                     active_src = parsed_src
+                    consecutive_failures = 0
 
                 if cap is None or not cap.isOpened():
                     self.stream_status = f"CONNECTING ({parsed_src})"
-                    with self.frame_lock:
-                        self.latest_frame = self._create_placeholder_frame(
-                            "MENGHUBUNGKAN SUMBER KAMERA...",
-                            f"Membuka '{parsed_src}'. Pastikan kamera/stream aktif.",
-                        )
+                    if last_valid_frame is None:
+                        with self.frame_lock:
+                            self.latest_frame = self._create_placeholder_frame(
+                                "MENGHUBUNGKAN SUMBER KAMERA...",
+                                f"Membuka '{parsed_src}'. Menyiapkan sinyal video...",
+                            )
                     try:
                         cap = _open_capture(parsed_src, is_num)
                     except Exception:
                         cap = None
                     
                     if cap is None or not cap.isOpened():
-                        time.sleep(0.8)
+                        time.sleep(0.5)
                         continue
 
                 ret, frame = cap.read()
                 if not ret or frame is None or frame.size == 0:
                     consecutive_failures += 1
-                    self.stream_status = f"STANDBY: Sinyal Kamera ({parsed_src})"
-                    with self.frame_lock:
-                        self.latest_frame = self._create_placeholder_frame(
-                            "MENUNGGU SINYAL VIDEO...",
-                            f"Frame kosong dari '{parsed_src}'. Sinkronisasi...",
-                        )
+                    # Anti-flicker: jika hanya 1-15 frame hilang sesaat, tetap pertahankan frame terakhir
+                    if consecutive_failures > 20:
+                        self.stream_status = f"STANDBY: Sinyal Kamera ({parsed_src})"
+                        with self.frame_lock:
+                            self.latest_frame = self._create_placeholder_frame(
+                                "MENUNGGU SINYAL VIDEO...",
+                                f"Frame kosong dari '{parsed_src}'. Sinkronisasi stream...",
+                            )
                     
-                    if consecutive_failures > 6:
+                    if consecutive_failures > 35:
                         try:
                             if cap:
                                 cap.release()
                         except Exception:
                             pass
                         cap = None
-                        time.sleep(0.8)
+                        consecutive_failures = 0
+                        time.sleep(0.5)
                     else:
-                        time.sleep(0.05)
+                        time.sleep(0.04)
                     continue
 
                 consecutive_failures = 0
@@ -224,11 +236,12 @@ class AttendanceWorker:
                     frame_counter = 0
                     prev_time = now
 
-                # Pastikan resolusi nyaman & standar 640x480
+                # Pastikan resolusi standar 640x480
                 h_f, w_f = frame.shape[:2]
                 if w_f != 640 or h_f != 480:
                     frame = cv2.resize(frame, (640, 480))
 
+                last_valid_frame = frame
                 with self.frame_lock:
                     self.latest_raw_frame = frame
 
@@ -407,12 +420,12 @@ class AttendanceWorker:
                     self.registered_count = reg_count
                     self.guest_count = guest_count
 
-                # Rate limiting inferensi CPU: ~7-8 FPS agar CPU dingin dan perangkat tidak panas
-                time.sleep(0.12 if faces else 0.18)
+                # Jeda inferensi hemat daya CPU: jika tidak ada wajah, istirahatkan CPU lebih lama (~4 FPS idle, ~6-7 FPS active)
+                time.sleep(0.14 if faces else 0.28)
 
             except Exception as ai_err:
                 print(f"[ERROR] AI Inference exception: {ai_err}")
-                time.sleep(0.2)
+                time.sleep(0.3)
 
     def generate_mjpeg_stream(self):
         """Generator frame MJPEG stabil (18-20 FPS) dengan kompresi hemat bandwidth."""

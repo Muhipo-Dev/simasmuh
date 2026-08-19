@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0",
+    "dev": "next dev --turbo -H 0.0.0.0",
+    "clean": "node -e \"try { require('fs').rmSync('.next/cache', { recursive: true, force: true }); console.log('Cleaned .next/cache'); } catch(e){}\"",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "lint": "eslint"

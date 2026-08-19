@@ -63,6 +63,7 @@ function getDynamicServerOrigins() {
 const dynamicServerData = getDynamicServerOrigins();
 
 const nextConfig: NextConfig = {
+  compress: true,
   allowedDevOrigins: [
     '*',
     ...dynamicServerData.origins,
@@ -78,6 +79,10 @@ const nextConfig: NextConfig = {
       {
         source: '/uploads/:path*',
         destination: `${backendUrl}/uploads/:path*`, // Proxy uploads to backend
+      },
+      {
+        source: '/api/face-stream',
+        destination: 'http://127.0.0.1:8089/video_feed', // Proxy to FaceNet AI Microservice
       }
     ]
   },
@@ -94,7 +99,35 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
+  serverExternalPackages: ['@react-pdf/renderer'],
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+  onDemandEntries: {
+    maxInactiveAge: 60 * 1000,
+    pagesBufferLength: 8,
+  },
   experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'date-fns',
+      'exceljs',
+      'xlsx',
+      'framer-motion',
+      '@tanstack/react-query',
+      'sweetalert2',
+      'sonner',
+      '@radix-ui/react-separator',
+      '@radix-ui/react-switch',
+      '@radix-ui/react-slot',
+      'clsx',
+      'tailwind-merge',
+      'class-variance-authority',
+      'socket.io-client',
+      'qrcode.react',
+    ],
     serverActions: {
       bodySizeLimit: '50mb',
       allowedOrigins: [

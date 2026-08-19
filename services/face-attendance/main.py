@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 import uvicorn
 
+from typing import Optional
 from config import BACKEND_URL, SERVICE_PORT, fetch_backend_config
 from face_engine import FaceRecognitionEngine
 from worker import AttendanceWorker
@@ -92,12 +93,44 @@ def video_feed():
 
 @app.post("/sync-profiles")
 def sync_profiles():
-    total, active_vectors = engine.sync_database_from_backend()
+    total, active_vectors = engine.sync_database_from_backend(force_refresh=True)
     return {
         "success": True,
         "message": f"Sinkronisasi FaceNet selesai: {total} total pengguna, {active_vectors} profil berfoto aktif siap dideteksi.",
         "total_users": total,
         "active_vectors": active_vectors,
+    }
+
+class SyncUserRequest(BaseModel):
+    userId: str
+    name: str = ""
+    role: str = "SISWA"
+    identifier: str = ""
+    avatarUrl: Optional[str] = None
+    localPath: Optional[str] = None
+
+@app.post("/sync-user")
+def sync_user(payload: SyncUserRequest):
+    """Menyinkronkan satu profil pengguna secara langsung ke FaceNet setelah upload foto."""
+    success, msg = engine.sync_single_user(payload.dict())
+    return {
+        "success": success,
+        "message": msg,
+        "total_users": len(engine.user_database),
+        "active_vectors": sum(1 for rec in engine.user_database.values() if rec.embedding is not None),
+    }
+
+class ResetCooldownRequest(BaseModel):
+    userId: Optional[str] = None
+    all: bool = False
+
+@app.post("/reset-cooldown")
+def reset_cooldown_endpoint(payload: ResetCooldownRequest = ResetCooldownRequest()):
+    """Mereset interval cooldown deteksi kamera pada AI worker."""
+    camera_worker.reset_cooldown(user_id=payload.userId, all_users=payload.all)
+    return {
+        "success": True,
+        "message": "Cooldown timer presensi kamera berhasil direset.",
     }
 
 class ScanFrameRequest(BaseModel):

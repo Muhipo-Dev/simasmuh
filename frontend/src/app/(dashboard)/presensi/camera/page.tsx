@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useSession } from 'next-auth/react'
+import Swal from 'sweetalert2'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
@@ -125,14 +127,6 @@ const STREAM_PRESETS = [
     badge: 'RTSP Stream',
   },
   {
-    id: 'RTMP',
-    title: 'RTMP Live Stream',
-    description: 'OBS Studio, NGINX RTMP, MediaMTX live broadcast',
-    icon: Radio,
-    example: 'rtmp://127.0.0.1:1935/live/siakad_camera',
-    badge: 'RTMP Ingest',
-  },
-  {
     id: 'WEBCAM',
     title: 'Webcam USB Server (0)',
     description: 'Kamera bawaan komputer / USB webcam lokal pada server',
@@ -140,25 +134,16 @@ const STREAM_PRESETS = [
     example: '0',
     badge: 'Server Direct USB',
   },
-  {
-    id: 'HTTP_STREAM',
-    title: 'HTTP / MJPEG Stream',
-    description: 'IP Webcam Android, ESP32-CAM, atau browser stream',
-    icon: Globe,
-    example: 'http://192.168.1.50:8080/video',
-    badge: 'HTTP MJPEG',
-  },
-  {
-    id: 'LOCAL_VIDEO',
-    title: 'File Video Lokal (Simulasi)',
-    description: 'File rekaman MP4 / MKV untuk pengujian & simulasi',
-    icon: Film,
-    example: 'D:/simasmuh_storage/test_presensi.mp4',
-    badge: 'MP4 / MKV',
-  },
 ]
 
 export default function FaceAttendanceCameraPage() {
+  const { data: session } = useSession()
+  const userRoles = useMemo(() => {
+    const u = session?.user as any
+    return [u?.role, u?.subRole, u?.subRole2, u?.subRole3].filter(Boolean)
+  }, [session])
+  const isSuperAdmin = userRoles.includes('ADMIN_IT') || userRoles.includes('SUPERADMIN')
+
   const queryClient = useQueryClient()
   const authenticatedQuery = useAuthenticatedQuery()
   const authenticatedFetch = useAuthenticatedFetch()
@@ -167,9 +152,28 @@ export default function FaceAttendanceCameraPage() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null)
   const [streamError, setStreamError] = useState(false)
+  const [isStreamLoading, setIsStreamLoading] = useState(true)
   const [streamKey, setStreamKey] = useState(Date.now())
   const [isFullscreen, setIsFullscreen] = useState(false)
   const videoContainerRef = useRef<HTMLDivElement>(null)
+  const streamRetryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const handleStreamImgError = () => {
+    if (streamRetryTimeoutRef.current) clearTimeout(streamRetryTimeoutRef.current)
+    streamRetryTimeoutRef.current = setTimeout(() => {
+      setStreamError(true)
+      setIsStreamLoading(false)
+    }, 3000)
+  }
+
+  const handleStreamImgLoad = () => {
+    if (streamRetryTimeoutRef.current) {
+      clearTimeout(streamRetryTimeoutRef.current)
+      streamRetryTimeoutRef.current = null
+    }
+    setStreamError(false)
+    setIsStreamLoading(false)
+  }
 
   // Browser Webcam Direct Hook
   const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -497,17 +501,91 @@ export default function FaceAttendanceCameraPage() {
     },
   })
 
-  // Mutation to clear logs
+  // Mutation to clear logs and reset attendance database
   const { mutate: clearLogs, isPending: isClearing } = useMutation({
-    mutationFn: async () => {
-      const res = await authenticatedFetch('/api-backend/face-attendance/logs/clear', { method: 'POST' })
+    mutationFn: async ({ resetDb = true }: { resetDb?: boolean } = {}) => {
+      const res = await authenticatedFetch('/api-backend/face-attendance/logs/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resetDb }),
+      })
       if (!res.ok) throw new Error('Gagal mengosongkan log')
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+      queryClient.invalidateQueries({ queryKey: ['daily-attendances'] })
+      queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+      Swal.fire({
+        title: 'Berhasil Direset!',
+        text: data?.message || 'Seluruh scanner log dan data presensi hari ini berhasil direset.',
+        icon: 'success',
+        timer: 2500,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        title: 'Gagal',
+        text: err?.message || 'Gagal mereset data presensi',
+        icon: 'error',
+      })
     },
   })
+
+  // Mutation to delete single log & reset individual attendance
+  const { mutate: deleteSingleLog, isPending: isDeletingSingle } = useMutation({
+    mutationFn: async ({ id, resetDb = true }: { id: string; resetDb?: boolean }) => {
+      const res = await authenticatedFetch(`/api-backend/face-attendance/logs/${id}?resetDb=${resetDb}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Gagal menghapus log')
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+      queryClient.invalidateQueries({ queryKey: ['daily-attendances'] })
+      queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+      toast.success(data?.message || 'Log dan status presensi berhasil dihapus')
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Gagal menghapus log scan')
+    },
+  })
+
+  const handleConfirmClearLogs = () => {
+    Swal.fire({
+      title: 'Reset Seluruh Log & Presensi Hari Ini?',
+      text: 'Semua riwayat scanner log dan catatan presensi hari ini di database utama (Supabase/PostgreSQL) akan ikut direset. Lanjutkan?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Reset Semua',
+      cancelButtonText: 'Batal',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        clearLogs({ resetDb: true })
+      }
+    })
+  }
+
+  const handleConfirmDeleteSingle = (log: FaceDetectionLog) => {
+    Swal.fire({
+      title: 'Hapus Log & Reset Presensi?',
+      html: `Hapus log scanner dan reset presensi <strong>${log.userName}</strong> (${log.scanType}) dari database utama?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Hapus & Reset',
+      cancelButtonText: 'Batal',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        deleteSingleLog({ id: log.id, resetDb: true })
+      }
+    })
+  }
 
   const currentConfig = formConfig || configData
 
@@ -528,11 +606,16 @@ export default function FaceAttendanceCameraPage() {
   }
 
   const handleSyncDatabase = async () => {
-    await refetchDataset()
+    try {
+      await authenticatedFetch('/api-backend/face-attendance/sync-dataset', { method: 'POST' })
+    } catch {}
+    const updated = await refetchDataset()
+    const usersCount = updated.data?.totalUsers || datasetData?.totalUsers || 0
+    const photosCount = updated.data?.usersWithPhoto || datasetData?.usersWithPhoto || 0
     setSyncSuccessMsg(
-      `Berhasil memperbarui dataset wajah! ${datasetData?.usersWithPhoto || 0} dari ${datasetData?.totalUsers || 0} profil pengguna siap dicocokkan oleh sistem AI.`
+      `Sinkronisasi FaceNet Sukses! ${photosCount} dari ${usersCount} profil pengguna siap dicocokkan untuk absensi wajah AI.`
     )
-    setTimeout(() => setSyncSuccessMsg(null), 5000)
+    setTimeout(() => setSyncSuccessMsg(null), 6000)
   }
 
   const toggleFullscreen = () => {
@@ -571,27 +654,33 @@ export default function FaceAttendanceCameraPage() {
           <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${
-                serviceStatus?.isOnline ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'
+                serviceStatus?.isOnline && serviceStatus?.is_running ? 'bg-emerald-400 animate-ping' : serviceStatus?.isOnline ? 'bg-amber-400' : 'bg-slate-400'
               }`} />
               <span className="font-semibold text-[11px] sm:text-xs">
-                {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'STREAM ACTIVE' : 'AI STANDBY') : 'AI OFFLINE'}
+                {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'STREAM ACTIVE' : 'AI STANDBY (HEMAT DAYA)') : 'AI STANDBY (OFF)'}
               </span>
             </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
-              disabled={isStartingWorker || isStoppingWorker}
-              className="h-6 px-2 text-[10px] bg-white/20 hover:bg-white/30 text-white font-bold rounded-md"
-            >
-              <Power className="w-3 h-3 mr-1" />
-              {isStartingWorker ? 'Starting...' : isStoppingWorker ? 'Stopping...' : serviceStatus?.is_running ? 'Stop' : 'Start'}
-            </Button>
+            {isSuperAdmin ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
+                disabled={isStartingWorker || isStoppingWorker}
+                className="h-6 px-2 text-[10px] bg-white/20 hover:bg-white/30 text-white font-bold rounded-md"
+              >
+                <Power className="w-3 h-3 mr-1" />
+                {isStartingWorker ? 'Memuat...' : isStoppingWorker ? 'Mematikan...' : serviceStatus?.is_running ? 'Matikan AI' : 'Nyalakan AI'}
+              </Button>
+            ) : (
+              <Badge variant="outline" className="text-[10px] text-slate-300 border-white/20">
+                Superadmin Only
+              </Badge>
+            )}
           </div>
 
           <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
             <Cpu className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span className="font-medium truncate text-[11px] sm:text-xs">CPU Eco-Safe Mode (Anti Panas)</span>
+            <span className="font-medium truncate text-[11px] sm:text-xs">CPU Ultra-Eco (Anti Beban Booting)</span>
           </div>
 
           <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
@@ -697,25 +786,31 @@ export default function FaceAttendanceCameraPage() {
 
             <div className="bg-gradient-to-br from-purple-700 to-indigo-900 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-purple-600/30">
               <div className="min-w-0">
-                <p className="text-[11px] sm:text-xs font-semibold text-purple-200 uppercase tracking-wider truncate">Microservice AI</p>
+                <p className="text-[11px] sm:text-xs font-semibold text-purple-200 uppercase tracking-wider truncate">AI FaceNet Engine</p>
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${serviceStatus?.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${serviceStatus?.isOnline && serviceStatus?.is_running ? 'bg-emerald-400 animate-pulse' : serviceStatus?.isOnline ? 'bg-amber-400' : 'bg-slate-400'}`} />
                   <span className="font-bold text-xs sm:text-sm truncate">
-                    {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'STREAMING' : 'IDLE') : 'OFFLINE'}
+                    {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'STREAMING' : 'STANDBY') : 'NONAKTIF (HEMAT)'}
                   </span>
                 </div>
               </div>
-              <Button
-                size="sm"
-                onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
-                disabled={isStartingWorker || isStoppingWorker}
-                className={`h-7 sm:h-8 px-2 sm:px-2.5 text-[11px] sm:text-xs font-bold shrink-0 ${
-                  serviceStatus?.is_running ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
-                } text-white`}
-              >
-                <Power className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
-                {isStartingWorker ? '...' : isStoppingWorker ? '...' : serviceStatus?.is_running ? 'Matikan' : 'Nyalakan'}
-              </Button>
+              {isSuperAdmin ? (
+                <Button
+                  size="sm"
+                  onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
+                  disabled={isStartingWorker || isStoppingWorker}
+                  className={`h-7 sm:h-8 px-2 sm:px-2.5 text-[11px] sm:text-xs font-bold shrink-0 ${
+                    serviceStatus?.is_running ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                  } text-white`}
+                >
+                  <Power className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
+                  {isStartingWorker ? 'Memuat...' : isStoppingWorker ? 'Mematikan...' : serviceStatus?.is_running ? 'Matikan AI' : 'Nyalakan AI'}
+                </Button>
+              ) : (
+                <Badge variant="outline" className="text-[10px] text-purple-200 border-purple-400/30">
+                  Superadmin Only
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -840,62 +935,40 @@ export default function FaceAttendanceCameraPage() {
                       )}
                     </div>
                   ) : !streamError && serviceStatus?.is_running ? (
-                    <div className="relative w-full h-full flex items-center justify-center">
+                    <div className="relative w-full h-full flex items-center justify-center bg-black">
+                      {isStreamLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 z-10">
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-xs text-slate-300 font-medium">Menghubungkan Sinyal Kamera...</span>
+                          </div>
+                        </div>
+                      )}
                       <img
                         key={streamKey}
                         src={`/api/face-stream?t=${streamKey}`}
                         alt="Live Capture FaceNet Camera Stream"
                         className="w-full h-full object-contain"
-                        onError={() => {
-                          setStreamError(true)
-                          console.warn('Stream proxy failed, attempting direct endpoint...')
-                        }}
+                        onLoad={handleStreamImgLoad}
+                        onError={handleStreamImgError}
                       />
                     </div>
                   ) : (
-                    <div className="text-center p-4 sm:p-6 space-y-3 sm:space-y-4 max-w-md">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
-                        <Video className="w-6 h-6 sm:w-8 sm:h-8 animate-pulse" />
+                    <div className="text-center p-4 sm:p-6 space-y-3 max-w-md pointer-events-none select-none">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
+                        <Video className="w-6 h-6 sm:w-7 sm:h-7 animate-pulse" />
                       </div>
                       <div className="space-y-1">
                         <p className="font-bold text-xs sm:text-sm text-slate-200">
-                          {serviceStatus?.isOnline ? 'AI FaceNet Siap (Menghubungkan Sinyal)' : 'Microservice AI FaceNet Belum Aktif'}
+                          {serviceStatus?.isOnline 
+                            ? (serviceStatus?.is_running ? 'Menghubungkan Sinyal Kamera...' : 'AI FaceNet Standby') 
+                            : 'Microservice AI FaceNet Offline'}
                         </p>
                         <p className="text-[11px] sm:text-xs text-slate-400 leading-relaxed">
-                          Jika tidak ada kamera USB terhubung di server atau RTSP belum aktif, Anda dapat langsung beralih ke <strong>Webcam Browser</strong> dengan 1 klik.
+                          {serviceStatus?.is_running 
+                            ? 'Menunggu sinyal frame aktif dari perangkat kamera...'
+                            : 'Nyalakan AI melalui tombol di atas untuk memulai streaming deteksi.'}
                         </p>
-                      </div>
-                      <div className="pt-2 flex flex-wrap justify-center gap-2">
-                        <Button 
-                          onClick={() => {
-                            const updated = {
-                              ...(currentConfig || {}),
-                              streamSourceType: 'BROWSER_WEBCAM' as any,
-                              streamUrl: 'BROWSER_WEBCAM',
-                            }
-                            setFormConfig(updated as any)
-                            updateConfig(updated as any)
-                          }} 
-                          size="sm" 
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs font-semibold"
-                        >
-                          <Camera className="w-3.5 h-3.5" />
-                          Gunakan Webcam Browser (Langsung)
-                        </Button>
-                        <Button 
-                          onClick={() => {
-                            setStreamError(false)
-                            setStreamKey(Date.now())
-                            startServiceWorker()
-                          }} 
-                          disabled={isStartingWorker}
-                          size="sm" 
-                          variant="outline"
-                          className="border-slate-700 text-slate-300 hover:text-white gap-1.5 text-xs font-semibold"
-                        >
-                          <Power className="w-3.5 h-3.5" />
-                          {isStartingWorker ? 'Menyalakan...' : 'Nyalakan Ulang AI Stream'}
-                        </Button>
                       </div>
                     </div>
                   )}
@@ -907,31 +980,23 @@ export default function FaceAttendanceCameraPage() {
                   </div>
 
                   <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded bg-black/60 backdrop-blur-xs text-[10px] sm:text-[11px] font-mono text-slate-300 border border-white/10">
-                    <span>Sensitivitas: {Math.round((currentConfig?.threshold || 0.58) * 100)}%</span>
+                    <span>Sensitivitas: {Math.round((currentConfig?.threshold || 0.48) * 100)}%</span>
                     <span>•</span>
                     <span>Cooldown: {currentConfig?.cooldownMinutes || 10}m</span>
                   </div>
                 </div>
 
-                {/* Footer Controls */}
-                <div className="p-2.5 sm:p-3 bg-slate-900 border-t border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-400">
+                {/* Footer Controls - Clean Information Only */}
+                <div className="p-2.5 sm:p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-400">
                   <div className="flex items-center gap-2 truncate">
                     <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span className="truncate">Lokasi: <strong className="text-slate-200">{currentConfig?.location || 'Gerbang Depan Sekolah'}</strong></span>
+                    <span className="truncate">Lokasi Kamera: <strong className="text-slate-200">{currentConfig?.location || 'Gerbang Depan Sekolah'}</strong></span>
                   </div>
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
-                      disabled={isStartingWorker || isStoppingWorker}
-                      className={`h-7 text-xs border-slate-700 font-semibold w-full sm:w-auto ${
-                        serviceStatus?.is_running ? 'text-rose-400 hover:text-rose-300' : 'text-emerald-400 hover:text-emerald-300'
-                      }`}
-                    >
-                      <Power className="w-3.5 h-3.5 mr-1" />
-                      {isStartingWorker ? 'Menyalakan...' : isStoppingWorker ? 'Mematikan...' : serviceStatus?.is_running ? 'Hentikan AI Stream' : 'Mulai AI Stream'}
-                    </Button>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                      <span className={`w-1.5 h-1.5 rounded-full ${serviceStatus?.is_running ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                      {serviceStatus?.is_running ? 'Stream Aktif' : 'Standby'}
+                    </span>
                   </div>
                 </div>
               </Card>
@@ -958,8 +1023,9 @@ export default function FaceAttendanceCameraPage() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => clearLogs()} 
+                        onClick={handleConfirmClearLogs} 
                         disabled={isClearing} 
+                        title="Reset Seluruh Log & Presensi Hari Ini di Database"
                         className="h-7 w-7 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -975,7 +1041,7 @@ export default function FaceAttendanceCameraPage() {
                       <Camera className="w-10 h-10 text-slate-300 stroke-1" />
                       <p className="text-sm font-medium text-slate-600">Menunggu Wajah Terdeteksi</p>
                       <p className="text-xs text-slate-400 max-w-xs">
-                        Arahkan wajah siswa atau guru ke depan kamera. Hasil identifikasi akan otomatis muncul di sini secara langsung.
+                        Arahkan wajah siswa atau guru ke depan kamera. Hasil identifikasi akan otomatis muncul di sini dan tersimpan ke basis data secara realtime.
                       </p>
                     </div>
                   ) : (
@@ -1012,18 +1078,30 @@ export default function FaceAttendanceCameraPage() {
                             </div>
                           </div>
 
-                          {/* Time & Attendance Badge */}
-                          <div className="text-right shrink-0">
-                            <Badge className={`text-[10px] font-bold py-0.5 px-2 ${
-                              log.scanType === 'MASUK' ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-none' :
-                              log.scanType === 'PULANG' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 border-none' : 'bg-slate-100 text-slate-700'
-                            }`}>
-                              {log.scanType}
-                            </Badge>
-                            <p className="text-[11px] font-mono font-bold text-slate-700 mt-1 flex items-center justify-end gap-1">
-                              <Clock className="w-3 h-3 text-slate-400" />
-                              {log.timestamp}
-                            </p>
+                          {/* Time, Attendance Badge & Single Delete */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="text-right">
+                              <Badge className={`text-[10px] font-bold py-0.5 px-2 ${
+                                log.scanType === 'MASUK' ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-none' :
+                                log.scanType === 'PULANG' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 border-none' : 'bg-slate-100 text-slate-700'
+                              }`}>
+                                {log.scanType}
+                              </Badge>
+                              <p className="text-[11px] font-mono font-bold text-slate-700 mt-1 flex items-center justify-end gap-1">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                {log.timestamp}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleConfirmDeleteSingle(log)}
+                              disabled={isDeletingSingle}
+                              title="Hapus log & reset presensi pengguna ini dari database"
+                              className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
                           </div>
                         </div>
 
@@ -1051,7 +1129,7 @@ export default function FaceAttendanceCameraPage() {
               <Tv className="w-4 h-4 text-indigo-600" />
               Pilih Tipe Sumber Kamera / Stream (*Input Preset*)
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {STREAM_PRESETS.map((preset) => {
                 const IconComponent = preset.icon
                 const isSelected = formConfig?.streamSourceType === preset.id || 
@@ -1116,7 +1194,7 @@ export default function FaceAttendanceCameraPage() {
                     className="font-mono text-sm"
                   />
                   <p className="text-xs text-slate-500">
-                    Masukkan URL RTSP/RTMP, URL HTTP MJPEG (IP Webcam), index webcam <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">0</code>, atau path file video lokal.
+                    Masukkan URL RTSP (IP Camera/CCTV), index USB webcam <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">0</code>, atau <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">BROWSER_WEBCAM</code>.
                   </p>
                 </div>
 
@@ -1131,10 +1209,10 @@ export default function FaceAttendanceCameraPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="location" className="text-sm font-medium text-slate-700">Lokasi Penempatan</Label>
+                    <Label htmlFor="location" className="text-sm font-medium text-slate-700">Lokasi / Area Pemasangan</Label>
                     <Input
                       id="location"
-                      placeholder="Contoh: Gerbang Depan Timur"
+                      placeholder="Contoh: Gerbang Depan Sekolah"
                       value={currentConfig?.location || ''}
                       onChange={(e) => setFormConfig((prev) => prev ? { ...prev, location: e.target.value } : null)}
                     />
@@ -1145,18 +1223,18 @@ export default function FaceAttendanceCameraPage() {
                 <div className="space-y-3 pt-2">
                   <div className="flex justify-between items-center">
                     <Label className="text-sm font-medium text-slate-700">
-                      Tingkat Sensitivitas Kemiripan Wajah (*Confidence Threshold*)
+                      Batas Kemiripan Wajah (*Cosine Threshold*)
                     </Label>
                     <Badge variant="outline" className="text-xs font-bold text-indigo-600 border-indigo-200">
-                      {Math.round((currentConfig?.threshold || 0.58) * 100)}%
+                      {Math.round((currentConfig?.threshold || 0.48) * 100)}%
                     </Badge>
                   </div>
                   <input
                     type="range"
-                    min={45}
-                    max={90}
+                    min={40}
+                    max={85}
                     step={1}
-                    value={Math.round((currentConfig?.threshold || 0.58) * 100)}
+                    value={Math.round((currentConfig?.threshold || 0.48) * 100)}
                     onChange={(e) => {
                       const num = Number(e.target.value)
                       setFormConfig((prev) => prev ? { ...prev, threshold: num / 100 } : null)
@@ -1164,7 +1242,7 @@ export default function FaceAttendanceCameraPage() {
                     className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                   />
                   <p className="text-xs text-slate-500">
-                    Standar optimal FaceNet CPU: <strong>58% - 65%</strong>. Nilai ini menangkap variasi pencahayaan foto profil secara akurat dan otomatis menandai wajah lain sebagai Tamu / Orang Asing.
+                    Standar optimal FaceNet CPU: <strong>48% - 55%</strong>. Nilai ini menangkap variasi pencahayaan foto profil secara akurat dan otomatis menandai wajah lain sebagai Tamu / Orang Asing.
                   </p>
                 </div>
 
@@ -1272,24 +1350,6 @@ export default function FaceAttendanceCameraPage() {
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Total Scan Hari Ini:</span>
                     <span className="font-bold text-indigo-600">{serviceStatus?.total_scans_today || 0}</span>
-                  </div>
-
-                  {/* Microservice AI Start/Stop Button */}
-                  <div className="pt-3 border-t border-slate-100">
-                    <Button
-                      onClick={() => {
-                        setStreamError(false)
-                        setStreamKey(Date.now())
-                        serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()
-                      }}
-                      disabled={isStartingWorker || isStoppingWorker}
-                      className={`w-full font-bold gap-2 ${
-                        serviceStatus?.is_running ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
-                      } text-white`}
-                    >
-                      <Power className="w-4 h-4" />
-                      {isStartingWorker ? 'Menyalakan Microservice...' : isStoppingWorker ? 'Menghentikan...' : serviceStatus?.is_running ? 'Matikan AI Microservice Stream' : 'Nyalakan AI Microservice Stream'}
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -1572,9 +1632,15 @@ export default function FaceAttendanceCameraPage() {
                 <RefreshCw className="w-3.5 h-3.5" />
                 Refresh
               </Button>
-              <Button variant="outline" size="sm" onClick={() => clearLogs()} disabled={isClearing} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 gap-1.5">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleConfirmClearLogs} 
+                disabled={isClearing} 
+                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 gap-1.5"
+              >
                 <Trash2 className="w-3.5 h-3.5" />
-                Bersihkan Log
+                Reset Semua Log & Presensi DB
               </Button>
             </div>
           </CardHeader>
@@ -1583,7 +1649,7 @@ export default function FaceAttendanceCameraPage() {
               <div className="text-center py-12 text-slate-500 space-y-2">
                 <Camera className="w-10 h-10 mx-auto text-slate-300 stroke-1" />
                 <p className="font-medium text-slate-600">Belum ada aktivitas presensi wajah hari ini.</p>
-                <p className="text-xs text-slate-400">Log akan otomatis muncul saat siswa atau guru terdeteksi di depan camera.</p>
+                <p className="text-xs text-slate-400">Log akan otomatis muncul saat siswa atau guru terdeteksi di depan camera dan tersinkronisasi ke basis data Supabase.</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
@@ -1612,7 +1678,7 @@ export default function FaceAttendanceCameraPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 self-end md:self-auto">
+                    <div className="flex items-center gap-3 self-end md:self-auto">
                       <div className="text-right">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${
                           log.scanType === 'MASUK' ? 'bg-emerald-100 text-emerald-800' :
@@ -1622,6 +1688,16 @@ export default function FaceAttendanceCameraPage() {
                         </span>
                         <p className="text-[11px] text-slate-400 font-mono mt-0.5">{log.timestamp}</p>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleConfirmDeleteSingle(log)}
+                        disabled={isDeletingSingle}
+                        title="Hapus log dan reset presensi pengguna ini dari database"
+                        className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -1649,7 +1725,7 @@ export default function FaceAttendanceCameraPage() {
                 <Video className="w-4 h-4 text-indigo-600" />
                 Format Sumber Kamera Populer
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
                   <p className="font-bold text-xs text-slate-800">1. IP Camera RTSP (Hikvision / Hilook / Dahua / Tapo)</p>
                   <code className="block text-xs bg-slate-200/70 p-2 rounded text-slate-800 font-mono">
@@ -1657,21 +1733,15 @@ export default function FaceAttendanceCameraPage() {
                   </code>
                 </div>
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                  <p className="font-bold text-xs text-slate-800">2. Webcam USB / Laptop Terintegrasi</p>
+                  <p className="font-bold text-xs text-slate-800">2. Webcam USB Server</p>
                   <code className="block text-xs bg-slate-200/70 p-2 rounded text-slate-800 font-mono">
-                    0 (atau 1, 2 untuk webcam eksternal kedua)
+                    0 (atau 1, 2 untuk webcam eksternal)
                   </code>
                 </div>
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                  <p className="font-bold text-xs text-slate-800">3. HTTP / MJPEG Stream (IP Webcam Android)</p>
+                  <p className="font-bold text-xs text-slate-800">3. Webcam Browser Direct</p>
                   <code className="block text-xs bg-slate-200/70 p-2 rounded text-slate-800 font-mono">
-                    http://192.168.1.50:8080/video
-                  </code>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                  <p className="font-bold text-xs text-slate-800">4. RTMP Server / OBS Studio Broadcast</p>
-                  <code className="block text-xs bg-slate-200/70 p-2 rounded text-slate-800 font-mono">
-                    rtmp://127.0.0.1:1935/live/siakad_camera
+                    BROWSER_WEBCAM
                   </code>
                 </div>
               </div>

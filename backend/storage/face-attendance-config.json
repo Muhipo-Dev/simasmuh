@@ -1,12 +1,12 @@
 {
   "streamUrl": "0",
-  "cameraName": "Camera Gerbang",
-  "location": "Gerbang Depan Sekolah",
-  "threshold": 0.57,
-  "cooldownMinutes": 10,
+  "cameraName": "Camera AI",
+  "location": "Lab Kom",
+  "threshold": 0.9,
+  "cooldownMinutes": 15,
   "isActive": false,
   "welcomeVoice": false,
   "apiKeySecret": "simasmuh_face_token_secret_2026",
-  "updatedAt": "2026-08-18T02:22:31.335Z",
+  "updatedAt": "2026-08-19T02:04:16.344Z",
   "streamSourceType": "WEBCAM"
 }

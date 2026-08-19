@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { FaceAttendanceService, FaceCameraConfig } from './face-attendance.service';
 
 @Controller('face-attendance')
@@ -20,6 +20,16 @@ export class FaceAttendanceController {
     return this.faceAttendanceService.getUsersDataset();
   }
 
+  @Post('sync-dataset')
+  syncDataset() {
+    return this.faceAttendanceService.syncProfiles();
+  }
+
+  @Post('sync-user')
+  syncUser(@Body() body: any) {
+    return this.faceAttendanceService.syncSingleUser(body);
+  }
+
   @Post('record')
   recordAttendance(
     @Body()
@@ -39,8 +49,18 @@ export class FaceAttendanceController {
   }
 
   @Post('logs/clear')
-  clearLogs() {
-    return this.faceAttendanceService.clearLogs();
+  clearLogs(@Body('resetDb') resetDb?: boolean) {
+    return this.faceAttendanceService.clearLogs(resetDb !== false);
+  }
+
+  @Post('logs/delete/:id')
+  deleteSingleLogPost(@Param('id') id: string, @Body('resetDb') resetDb?: boolean) {
+    return this.faceAttendanceService.deleteSingleLog(id, resetDb !== false);
+  }
+
+  @Delete('logs/:id')
+  deleteSingleLog(@Param('id') id: string, @Query('resetDb') resetDb?: string) {
+    return this.faceAttendanceService.deleteSingleLog(id, resetDb !== 'false');
   }
 
   @Get('service-status')

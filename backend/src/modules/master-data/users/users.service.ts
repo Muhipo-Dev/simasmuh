@@ -195,7 +195,7 @@ export class UsersService {
       }
     }
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id },
       data: updateData,
       select: {
@@ -208,8 +208,15 @@ export class UsersService {
         subRole: true,
         subRole2: true,
         subRole3: true,
+        avatarUrl: true,
       },
     });
+
+    if (data.avatarUrl !== undefined) {
+      this.triggerFaceNetSync(updated.id);
+    }
+
+    return updated;
   }
 
   async remove(id: string) {
@@ -325,7 +332,7 @@ export class UsersService {
       }
     }
 
-    return this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id },
       data: updateData,
       select: {
@@ -349,5 +356,49 @@ export class UsersService {
         },
       },
     });
+
+    if (data.avatarUrl !== undefined) {
+      this.triggerFaceNetSync(updatedUser.id);
+    }
+
+    return updatedUser;
+  }
+
+  private triggerFaceNetSync(userId: string) {
+    setTimeout(async () => {
+      try {
+        const user = await this.prisma.user.findUnique({
+          where: { id: userId },
+          include: {
+            student: true,
+            teacherProfile: true,
+          },
+        });
+        if (!user || !user.avatarUrl) return;
+
+        const payload = {
+          userId: user.id,
+          name: user.name,
+          role: user.role,
+          identifier: user.student?.nis || user.nipNbm || user.teacherProfile?.nip || user.username || user.id,
+          avatarUrl: user.avatarUrl,
+        };
+
+        const endpoints = ['http://127.0.0.1:8089/sync-user', 'http://localhost:8089/sync-user'];
+        for (const ep of endpoints) {
+          try {
+            await fetch(ep, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              signal: AbortSignal.timeout(6000),
+            });
+            break;
+          } catch {}
+        }
+      } catch (err) {
+        // silent fail
+      }
+    }, 100);
   }
 }

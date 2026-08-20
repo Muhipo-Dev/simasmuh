@@ -34,6 +34,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User not found');
     }
 
+    // Jika token memiliki sessionId, periksa apakah sesi tersebut masih aktif di database
+    if (payload.sessionId) {
+      const activeSession = await this.prisma.userSession.findFirst({
+        where: {
+          id: payload.sessionId,
+          userId: payload.sub,
+          isActive: true,
+        },
+      });
+
+      if (!activeSession) {
+        throw new UnauthorizedException('Sesi login telah di-unlink atau kedaluwarsa.');
+      }
+    }
+
     return user;
   }
 }

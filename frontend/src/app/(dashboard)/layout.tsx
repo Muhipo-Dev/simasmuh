@@ -25,8 +25,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     queryKey: ['profile', userId],
     queryFn: () => userId ? authenticatedQuery(`/api-backend/users/${userId}/profile`) : Promise.resolve(null),
     enabled: !!userId,
-    staleTime: 1000 * 10,
+    staleTime: 1000 * 5,
     refetchOnWindowFocus: true,
+    retry: false,
   })
 
   const { data: systemSettings } = useQuery<{ academicYear?: string; semester?: string }>({

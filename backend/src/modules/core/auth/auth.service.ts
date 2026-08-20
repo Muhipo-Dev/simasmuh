@@ -108,19 +108,6 @@ export class AuthService {
       throw new UnauthorizedException('Email, username, atau kata sandi salah');
     }
 
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      username: user.username,
-      nipNbm: user.nipNbm || user.teacherProfile?.nip || null,
-      name: user.name,
-      role: user.role,
-      subRole: user.subRole,
-      subRole2: user.subRole2,
-      subRole3: user.subRole3,
-    };
-    const token = this.jwtService.sign(payload);
-
     // Parse Device Information for Active Session
     let devType = 'Desktop / Laptop';
     let devOs = 'Windows';
@@ -142,7 +129,7 @@ export class AuthService {
       else if (/Firefox/i.test(userAgent)) devBrowser = 'Mozilla Firefox';
     }
 
-    // Buat atau perbarui sesi aktif pengguna
+    // Buat record sesi aktif pengguna baru
     const sessionRecord = await this.prisma.userSession.create({
       data: {
         userId: user.id,
@@ -155,6 +142,20 @@ export class AuthService {
         lastActiveAt: new Date(),
       },
     });
+
+    const payload = {
+      sub: user.id,
+      sessionId: sessionRecord.id,
+      email: user.email,
+      username: user.username,
+      nipNbm: user.nipNbm || user.teacherProfile?.nip || null,
+      name: user.name,
+      role: user.role,
+      subRole: user.subRole,
+      subRole2: user.subRole2,
+      subRole3: user.subRole3,
+    };
+    const token = this.jwtService.sign(payload);
 
     await this.systemLogService.log({
       category: 'AUTH',

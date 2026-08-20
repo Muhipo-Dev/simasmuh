@@ -15,15 +15,24 @@ import {
 } from 'lucide-react'
 import { getPublicApiUrl } from '@/lib/api-config'
 
+import { useSession } from 'next-auth/react'
 import { AppNavbar, AppFooter } from '@/components/layout'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { data: session, status } = useSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState<string | false>(false)
   const [error, setError] = useState('')
   const [showGuide, setShowGuide] = useState(false)
+
+  // Jika sudah dalam keadaan login aktif, langsung arahkan ke dashboard
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      router.replace('/dashboard')
+    }
+  }, [status, session, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

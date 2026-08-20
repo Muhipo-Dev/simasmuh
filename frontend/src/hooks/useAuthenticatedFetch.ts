@@ -1,4 +1,4 @@
-import { getSession } from 'next-auth/react'
+import { getSession, signOut } from 'next-auth/react'
 import { useCallback } from 'react'
 
 interface AuthenticatedFetchOptions extends RequestInit {
@@ -36,7 +36,20 @@ export function useAuthenticatedFetch() {
         cache: 'no-store' // prevent browser caching to fix sync issues
       }
 
-      return fetch(url, fetchOptions)
+      const res = await fetch(url, fetchOptions)
+
+      // Jika sesi telah di-unlink atau token tidak lagi valid (401 Unauthorized), logout otomatis
+      if (res.status === 401 && !skipAuth) {
+        try {
+          if (typeof window !== 'undefined') {
+            signOut({ callbackUrl: '/login?expired=1' })
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      return res
     },
     []
   )

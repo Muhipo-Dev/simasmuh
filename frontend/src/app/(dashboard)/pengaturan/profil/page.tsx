@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Camera, Loader2, CheckCircle2, User, MapPin, Mail, Shield, Pencil, X, 
   GraduationCap, Award, Key, Lock, AlertCircle, Laptop, Clock, Globe, ShieldCheck, RefreshCw,
-  Smartphone, Monitor, Calendar, LogOut, Unlink
+  Smartphone, Monitor, Calendar, LogOut, Unlink, ShieldAlert, Sparkles
 } from 'lucide-react'
 
 import { compressImageFile } from '@/utils/imageCompressor'

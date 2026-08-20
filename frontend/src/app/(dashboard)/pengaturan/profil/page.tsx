@@ -67,6 +67,9 @@ export default function ProfilePage() {
 
   const [pwdForm, setPwdForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
   const [pwdMsg, setPwdMsg] = useState({ type: '', text: '' })
+  const [showWaitingRoomDemo, setShowWaitingRoomDemo] = useState(false)
+  const [demoPosition, setDemoPosition] = useState(14)
+  const [demoWait, setDemoWait] = useState(25)
 
   const pwdMutation = useMutation({
     mutationFn: async (data: { oldPassword: string; newPassword: string }) => {
@@ -625,7 +628,17 @@ export default function ProfilePage() {
                 </CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowWaitingRoomDemo(true)}
+                className="h-8 px-2.5 text-xs flex items-center gap-1.5 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                title="Uji Coba Tampilan Waiting Room"
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span>Simulasi Waiting Room</span>
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -780,6 +793,100 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* MODAL SIMULASI WAITING ROOM */}
+      {showWaitingRoomDemo && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/95 backdrop-blur-xl p-4 text-white">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 p-8 shadow-2xl shadow-emerald-950/50 text-center">
+            
+            {/* Close Button for Demo */}
+            <button
+              onClick={() => setShowWaitingRoomDemo(false)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition"
+              title="Tutup Simulasi"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Animated Halo Glow */}
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Badge Icon */}
+            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shadow-inner">
+              <ShieldAlert className="h-10 w-10 animate-pulse text-emerald-400" />
+            </div>
+
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 mb-3">
+              <Sparkles className="w-3.5 h-3.5" /> Proteksi Lonjakan Server Aktif
+            </span>
+
+            <h2 className="text-2xl font-bold tracking-tight text-white mb-2">
+              Ruang Tunggu Antrean
+            </h2>
+            <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+              Lalu lintas pengguna saat ini sedang sangat padat. Demi menjaga kestabilan data & keamanan sistem, Anda ditempatkan di antrean virtual.
+            </p>
+
+            {/* Position & Stats Card */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="rounded-2xl bg-slate-800/60 border border-slate-700/50 p-4">
+                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 mb-1">
+                  <User className="w-3.5 h-3.5 text-emerald-400" /> Nomor Antrean
+                </div>
+                <div className="text-3xl font-extrabold text-emerald-400">
+                  #{demoPosition}
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-slate-800/60 border border-slate-700/50 p-4">
+                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 mb-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" /> Estimasi Waktu
+                </div>
+                <div className="text-3xl font-extrabold text-amber-300">
+                  ~{demoWait}s
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Animation */}
+            <div className="space-y-2 mb-5">
+              <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full animate-pulse transition-all duration-300"
+                  style={{ width: `${Math.max(15, 100 - demoPosition * 6)}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
+                <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                Memperbarui posisi antrean secara otomatis...
+              </div>
+            </div>
+
+            {/* Tombol Interaktif Majukan Antrean */}
+            <div className="flex gap-2 justify-center mb-4">
+              <button
+                onClick={() => {
+                  setDemoPosition((prev) => (prev > 1 ? prev - 1 : 14))
+                  setDemoWait((prev) => (prev > 4 ? prev - 3 : 25))
+                }}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Majukan Antrean
+              </button>
+              <button
+                onClick={() => setShowWaitingRoomDemo(false)}
+                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition cursor-pointer"
+              >
+                Selesai / Tutup
+              </button>
+            </div>
+
+            <div className="text-[11px] text-slate-500 border-t border-slate-800 pt-3">
+              Mohon jangan menutup atau merefresh tab ini agar posisi antrean Anda tidak tereset.
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

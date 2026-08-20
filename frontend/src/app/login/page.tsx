@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { getPublicApiUrl } from '@/lib/api-config'
 
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { AppNavbar, AppFooter } from '@/components/layout'
 
 export default function LoginPage() {
@@ -27,10 +27,27 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [showGuide, setShowGuide] = useState(false)
 
-  // Jika sudah dalam keadaan login aktif, langsung arahkan ke dashboard
+  // Cek parameter URL untuk sesi yang telah di-unlink / kedaluwarsa
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('expired') === '1') {
+        setError('Sesi perangkat Anda telah di-unlink atau berakhir. Silakan login kembali.')
+        // Bersihkan session cookie NextAuth di browser secara tuntas
+        signOut({ redirect: false })
+      }
+    }
+  }, [])
+
+  // Jika sudah dalam keadaan login aktif yang valid (bukan setelah expired), arahkan ke dashboard
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      router.replace('/dashboard')
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('expired') !== '1') {
+          router.replace('/dashboard')
+        }
+      }
     }
   }, [status, session, router])
 

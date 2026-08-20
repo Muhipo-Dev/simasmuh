@@ -89,6 +89,27 @@ const authOptions = {
         ;(session.user as any).subRole2 = (token as any).subRole2
         ;(session.user as any).subRole3 = (token as any).subRole3
         ;(session as any).accessToken = (token as any).accessToken
+
+        // Verifikasi apakah token masih aktif dan belum di-unlink oleh superadmin/user
+        if ((token as any).accessToken) {
+          try {
+            const backendUrl = getBackendUrl();
+            const verifyRes = await fetch(`${backendUrl}/users/${(token as any).id}/profile`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${(token as any).accessToken}`,
+                'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026'
+              },
+              cache: 'no-store'
+            });
+
+            if (verifyRes.status === 401) {
+              return null as any; // Sesi di-unlink atau token invalid -> Sesi NextAuth mati
+            }
+          } catch (e) {
+            // Abaikan kesalahan jaringan sementara
+          }
+        }
       }
       return session
     }

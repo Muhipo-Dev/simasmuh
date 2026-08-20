@@ -4,6 +4,7 @@ import { ArrowRight, GraduationCap, Users, Building2, LogIn, Menu, Calendar, Boo
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { AppNavbar, AppFooter } from '@/components/layout';
 import HeroCarousel from '@/components/home/HeroCarousel';
 import ProgramUnggulanSection from '@/components/home/ProgramUnggulanSection';
 import { getPublicApiUrl } from '@/lib/api-config';
@@ -83,77 +84,69 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors duration-300 text-slate-900 dark:text-slate-100 selection:bg-blue-600 selection:text-white">
-      {/* Navbar */}
-      <nav className="h-16 sm:h-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 lg:px-12 shadow-xs border-b border-slate-100 dark:border-slate-800/80 sticky top-0 z-30 transition-colors duration-300">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/pic_logo.png"
-            alt="Logo SMA MUHIPO"
-            width={150}
-            height={50}
-            priority
-            className="object-contain h-9 sm:h-12 w-auto"
-          />
-        </div>
+      {/* Navbar Induk Terpadu: Kiri Logo, Tengah Menu Publik, Kanan Info TA, Theme, Login SIMASMUH */}
+      <AppNavbar
+        actions={
+          <>
+            {/* Desktop Actions */}
+            <div className="hidden lg:flex items-center gap-4">
+              {settings?.academicYear && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs">
+                  <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span>TA: {settings.academicYear}</span>
+                  {settings?.semester && <span className="font-medium text-[11px]">({settings.semester})</span>}
+                </div>
+              )}
+              <ThemeToggle />
+              <Link href="/login" className="bg-[#2B50A1] hover:bg-[#1f3c7a] dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-5 py-2.5 rounded-full font-bold text-sm flex items-center transition-all shadow-sm hover:shadow-md active:scale-95">
+                <LogIn className="w-4 h-4 mr-2" />
+                Login SIMASMUH
+              </Link>
+            </div>
 
-        {/* Desktop Navigation Links */}
-        <div className="hidden lg:flex items-center gap-8">
-          <Link href="/" className="text-[#2B50A1] dark:text-blue-400 font-bold transition-colors">Beranda</Link>
-          <Link href="/profil" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Profil</Link>
-          <Link href="/guru-karyawan" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">TenDik</Link>
-          <Link href="/tentang" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Tentang</Link>
-          <Link href="/berita" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Berita</Link>
-
-          <div className="flex items-center gap-4 border-l border-slate-200 dark:border-slate-800 pl-8">
-            {settings?.academicYear && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs">
-                <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                <span>TA: {settings.academicYear}</span>
-                {settings?.semester && <span className="font-medium text-[11px]">({settings.semester})</span>}
-              </div>
-            )}
-            <ThemeToggle />
-            <Link href="/login" className="bg-[#2B50A1] hover:bg-[#1f3c7a] dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-5 py-2.5 rounded-full font-bold text-sm flex items-center transition-all shadow-sm hover:shadow-md active:scale-95">
-              <LogIn className="w-4 h-4 mr-2" />
-              Login SIMASMUH
-            </Link>
-          </div>
-        </div>
-
-        {/* Mobile Menu & Theme Toggle */}
-        <div className="lg:hidden flex items-center gap-2.5">
-          <ThemeToggle size="sm" />
-          <DropdownMenu>
-            <DropdownMenuTrigger className="bg-[#2B50A1] hover:bg-[#1f3c7a] text-white rounded-xl w-10 h-10 p-0 flex items-center justify-center shadow-xs transition-colors">
-              <Menu className="h-5 w-5" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-60 mt-2 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-2 text-slate-900 dark:text-slate-100 shadow-xl rounded-xl">
-              <DropdownMenuItem>
-                <Link href="/" className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-[#2B50A1] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 rounded-lg">Beranda</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Link href="/profil" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">Profil</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Link href="/guru-karyawan" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">TenDik</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Link href="/tentang" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">Tentang</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Link href="/berita" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">Berita</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="my-1.5" />
-              <DropdownMenuItem>
-                <Link href="/login" className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-white bg-[#2B50A1] hover:bg-[#1f3c7a] rounded-lg flex items-center justify-center shadow-xs">
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Login SIMASMUH
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </nav>
+            {/* Mobile Menu & Theme Toggle */}
+            <div className="lg:hidden flex items-center gap-2">
+              <ThemeToggle size="sm" />
+              <DropdownMenu>
+                <DropdownMenuTrigger className="bg-[#2B50A1] hover:bg-[#1f3c7a] text-white rounded-xl w-9 h-9 p-0 flex items-center justify-center shadow-xs transition-colors">
+                  <Menu className="h-5 w-5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-60 mt-2 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-2 text-slate-900 dark:text-slate-100 shadow-xl rounded-xl">
+                  <DropdownMenuItem>
+                    <Link href="/" className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-[#2B50A1] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 rounded-lg">Beranda</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Link href="/profil" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">Profil</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Link href="/guru-karyawan" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">TenDik</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Link href="/tentang" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">Tentang</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Link href="/berita" className="w-full cursor-pointer py-2.5 px-3 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">Berita</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-1.5" />
+                  <DropdownMenuItem>
+                    <Link href="/login" className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-white bg-[#2B50A1] hover:bg-[#1f3c7a] rounded-lg flex items-center justify-center shadow-xs">
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Login SIMASMUH
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </>
+        }
+      >
+        {/* Desktop Navigation Links (Middle Slot) */}
+        <Link href="/" className="text-[#2B50A1] dark:text-blue-400 font-bold transition-colors">Beranda</Link>
+        <Link href="/profil" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Profil</Link>
+        <Link href="/guru-karyawan" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">TenDik</Link>
+        <Link href="/tentang" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Tentang</Link>
+        <Link href="/berita" className="text-slate-600 dark:text-slate-300 hover:text-[#2B50A1] dark:hover:text-blue-400 font-semibold transition-colors">Berita</Link>
+      </AppNavbar>
 
       {/* Hero Section */}
       <main className="flex-1 flex flex-col">
@@ -410,13 +403,8 @@ export default async function Home() {
         </div>
       </footer>
 
-      {/* Copyright Bar */}
-      <footer className="bg-slate-950 text-slate-400 py-6 px-4 text-center text-xs font-semibold border-t border-slate-800">
-        <p className="flex items-center justify-center gap-2 text-slate-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0"></span>
-          Copyright &copy; 2026 - Muhipo Dev
-        </p>
-      </footer>
+      {/* Copyright Bar Induk */}
+      <AppFooter className="bg-slate-950 border-slate-800 text-slate-400 py-6" />
     </div>
   );
 }

@@ -200,7 +200,7 @@ export class AuthService {
         category: 'AUTH',
         level: 'INFO',
         action: 'LOGOUT_SESSION',
-        message: `Sesi perangkat '${session?.device || sessionId}' milik '${user?.username || userId}' telah di-unlink / logout.`,
+        message: `Sesi perangkat '${session?.device || sessionId}' milik '${user?.username || userId}' telah dikeluarkan / logout.`,
         userId,
         userName: user?.name || undefined,
         userRole: user?.role || undefined,
@@ -223,7 +223,7 @@ export class AuthService {
         category: 'AUTH',
         level: 'INFO',
         action: 'UNLINK_ALL_SESSIONS',
-        message: `Seluruh sesi perangkat milik '${user?.username || userId}' (${user?.name}) telah di-unlink / logout serentak.`,
+        message: `Seluruh sesi perangkat milik '${user?.username || userId}' (${user?.name}) telah diputuskan / logout serentak.`,
         userId,
         userName: user?.name || undefined,
         userRole: user?.role || undefined,
@@ -232,7 +232,7 @@ export class AuthService {
       });
     }
 
-    return { success: true, message: 'Sesi perangkat berhasil di-unlink / diakhiri.' };
+    return { success: true, message: 'Sesi perangkat berhasil dikeluarkan / diakhiri.' };
   }
 }
 

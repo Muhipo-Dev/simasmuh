@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Camera, Loader2, CheckCircle2, User, MapPin, Mail, Shield, Pencil, X, 
   GraduationCap, Award, Key, Lock, AlertCircle, Laptop, Clock, Globe, ShieldCheck, RefreshCw,
-  Smartphone, Monitor, Calendar, LogOut, Unlink, ShieldAlert, Sparkles
+  Smartphone, Monitor, Calendar, LogOut, ShieldAlert, Sparkles, LogOut as DisconnectIcon
 } from 'lucide-react'
 
 import { compressImageFile } from '@/utils/imageCompressor'
@@ -191,13 +191,13 @@ export default function ProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId })
       })
-      if (!res.ok) throw new Error('Gagal meng-unlink sesi perangkat')
+      if (!res.ok) throw new Error('Gagal memutuskan sesi perangkat')
       return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['login-history', userId] })
       queryClient.invalidateQueries({ queryKey: ['unlink-logs', userId] })
-      setUnlinkMsg('Sesi perangkat berhasil di-unlink!')
+      setUnlinkMsg('Sesi perangkat berhasil diputuskan!')
       setTimeout(() => setUnlinkMsg(''), 4000)
     }
   })
@@ -209,13 +209,13 @@ export default function ProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })
       })
-      if (!res.ok) throw new Error('Gagal meng-unlink seluruh perangkat')
+      if (!res.ok) throw new Error('Gagal memutuskan seluruh sesi perangkat')
       return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['login-history', userId] })
       queryClient.invalidateQueries({ queryKey: ['unlink-logs', userId] })
-      setUnlinkMsg('Seluruh sesi perangkat lain berhasil di-unlink!')
+      setUnlinkMsg('Seluruh sesi perangkat lain berhasil diputuskan!')
       setTimeout(() => setUnlinkMsg(''), 4000)
     }
   })
@@ -671,9 +671,9 @@ export default function ProfilePage() {
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Perangkat Login & Riwayat Log Unlink</CardTitle>
+                <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Perangkat Login & Riwayat Pemutusan Sesi</CardTitle>
                 <CardDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">
-                  Kelola sesi aktif dan pantau riwayat unlink / pemutusan perangkat akun Anda
+                  Kelola sesi aktif dan pantau riwayat pemutusan / logout perangkat akun Anda
                 </CardDescription>
               </div>
             </div>
@@ -707,20 +707,20 @@ export default function ProfilePage() {
                   size="sm"
                   disabled={unlinkAllMutation.isPending}
                   onClick={() => {
-                    if (confirm('Apakah Anda yakin ingin meng-unlink seluruh perangkat lain? Anda akan tetap login di sesi saat ini.')) {
+                    if (confirm('Apakah Anda yakin ingin mengeluarkan seluruh perangkat lain? Anda akan tetap login di sesi saat ini.')) {
                       unlinkAllMutation.mutate()
                     }
                   }}
                   className="h-8 px-2.5 text-xs flex items-center gap-1.5 shadow-xs rounded-xl"
                 >
-                  <Unlink className="w-3.5 h-3.5" />
-                  <span>Unlink Semua</span>
+                  <DisconnectIcon className="w-3.5 h-3.5" />
+                  <span>Keluarkan Semua Perangkat</span>
                 </Button>
               )}
             </div>
           </div>
 
-          {/* Sub-Tab Switcher: Sesi Aktif vs Riwayat Log Unlink */}
+          {/* Sub-Tab Switcher: Sesi Aktif vs Riwayat Log Pemutusan */}
           <div className="flex items-center gap-2 pt-3">
             {(() => {
               const activeCount = (loginHistory || []).filter(s => s.isActive !== false).length
@@ -748,8 +748,8 @@ export default function ProfilePage() {
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    <Unlink className="w-3.5 h-3.5 text-red-500" />
-                    <span>Riwayat Log Unlink ({logsCount})</span>
+                    <DisconnectIcon className="w-3.5 h-3.5 text-red-500" />
+                    <span>Riwayat Pemutusan Sesi ({logsCount})</span>
                   </button>
                 </div>
               )
@@ -775,7 +775,7 @@ export default function ProfilePage() {
                     Sesi Perangkat Ini Aktif (Tidak Logout Otomatis)
                   </p>
                   <p className="text-emerald-700/90 dark:text-emerald-400 text-xs leading-relaxed">
-                    Sistem SIMASMUH menjaga sesi Anda tetap aktif dan aman. Jika perangkat lain di-unlink, sistem mencatat audit log dan memutuskan sesi secara seketika.
+                    Sistem SIMASMUH menjaga sesi Anda tetap aktif dan aman. Jika perangkat lain diputuskan/dikeluarkan, sistem mencatat audit log dan mengakhiri sesi seketika.
                   </p>
                 </div>
               </div>
@@ -852,7 +852,7 @@ export default function ProfilePage() {
                             </div>
                           </div>
 
-                          {/* Tanggal & Tombol Unlink */}
+                          {/* Tanggal & Tombol Putuskan Perangkat */}
                           <div className="flex items-center justify-between md:justify-end gap-3 shrink-0 pl-12 md:pl-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800/60">
                             <div className="flex flex-col sm:items-end text-[11px] text-slate-500 dark:text-slate-400">
                               <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
@@ -870,15 +870,15 @@ export default function ProfilePage() {
                               size="sm"
                               disabled={unlinkMutation.isPending}
                               onClick={() => {
-                                if (confirm('Keluarkan (unlink) akun dari perangkat ini?')) {
+                                if (confirm('Keluarkan dan putuskan sesi akun dari perangkat ini?')) {
                                   unlinkMutation.mutate(item.id)
                                 }
                               }}
                               className="h-8 px-2.5 text-xs text-red-600 dark:text-red-400 hover:text-white hover:bg-red-600 dark:hover:bg-red-600 rounded-lg transition-colors border border-red-200 dark:border-red-900/60"
-                              title="Unlink / Logout Perangkat"
+                              title="Keluarkan / Putuskan Perangkat"
                             >
-                              <Unlink className="w-3.5 h-3.5 mr-1" />
-                              Unlink
+                              <DisconnectIcon className="w-3.5 h-3.5 mr-1" />
+                              Keluarkan
                             </Button>
                           </div>
                         </div>
@@ -893,13 +893,13 @@ export default function ProfilePage() {
               </div>
             </>
           ) : (
-            /* TAB RIWAYAT LOG UNLINK & AUDIT */
+            /* TAB RIWAYAT LOG PEMUTUSAN SESI & AUDIT */
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Unlink className="w-4 h-4 text-red-500" />
+                  <DisconnectIcon className="w-4 h-4 text-red-500" />
                   <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-                    Log Pemutusan & Unlink Sesi ({unlinkLogs?.length || 0})
+                    Log Riwayat Pemutusan Sesi ({unlinkLogs?.length || 0})
                   </h4>
                 </div>
               </div>
@@ -907,7 +907,7 @@ export default function ProfilePage() {
               {isUnlinkLogsLoading ? (
                 <div className="py-6 flex items-center justify-center gap-2 text-slate-400 text-xs">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Memuat riwayat audit log unlink...</span>
+                  <span>Memuat riwayat log pemutusan sesi...</span>
                 </div>
               ) : unlinkLogs && unlinkLogs.length > 0 ? (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200/90 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xs">
@@ -932,12 +932,12 @@ export default function ProfilePage() {
                       >
                         <div className="flex items-start gap-3">
                           <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5 border border-red-200 dark:border-red-900/60">
-                            <Unlink className="w-4 h-4" />
+                            <DisconnectIcon className="w-4 h-4" />
                           </div>
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 text-[10px] font-bold border border-red-200 dark:border-red-900">
-                                {log.action === 'UNLINK_ALL_SESSIONS' ? 'Unlink Semua Sesi' : log.action === 'LOGOUT_SESSION' ? 'Sesi Logout' : 'Sesi Di-unlink'}
+                                {log.action === 'UNLINK_ALL_SESSIONS' ? 'Keluarkan Semua Sesi' : log.action === 'LOGOUT_SESSION' ? 'Sesi Keluar' : 'Sesi Diputuskan'}
                               </span>
                               <span className="text-slate-700 dark:text-slate-200 font-semibold text-xs">
                                 {log.details?.device || log.details?.os || 'Perangkat Pengguna'}
@@ -973,7 +973,7 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="py-6 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-slate-400 text-xs">
-                  Belum ada catatan riwayat unlink untuk akun ini.
+                  Belum ada catatan riwayat pemutusan sesi untuk akun ini.
                 </div>
               )}
             </div>

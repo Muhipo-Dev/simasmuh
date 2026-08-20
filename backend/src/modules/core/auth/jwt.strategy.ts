@@ -45,7 +45,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
 
       if (!activeSession) {
-        throw new UnauthorizedException('Sesi login telah di-unlink atau kedaluwarsa.');
+        throw new UnauthorizedException('Sesi login telah diakhiri atau kedaluwarsa.');
       }
     }
 

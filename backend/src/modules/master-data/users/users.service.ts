@@ -339,7 +339,7 @@ export class UsersService {
         category: 'AUTH',
         level: 'INFO',
         action: 'UNLINK_SESSION',
-        message: `Sesi perangkat '${session.device || session.userAgent || sessionId}' milik '${session.user?.username || userId}' telah di-unlink / diputus.`,
+        message: `Sesi perangkat '${session.device || session.userAgent || sessionId}' milik '${session.user?.username || userId}' telah diputus / dikeluarkan.`,
         userId: userId,
         userName: session.user?.name || undefined,
         userRole: session.user?.role || undefined,
@@ -354,7 +354,7 @@ export class UsersService {
       });
     }
 
-    return { success: true, message: 'Sesi perangkat berhasil di-unlink.' };
+    return { success: true, message: 'Sesi perangkat berhasil diputus dan diakhiri.' };
   }
 
   async getUnlinkLogs(userId: string) {

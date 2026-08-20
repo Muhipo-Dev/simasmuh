@@ -58,12 +58,12 @@ export default function LoginPage() {
     return '/dashboard'
   }
 
-  // Cek parameter URL untuk sesi yang telah di-unlink / kedaluwarsa
+  // Cek parameter URL untuk sesi yang telah diputus / kedaluwarsa
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href)
       if (url.searchParams.get('expired') === '1') {
-        setError('Sesi perangkat Anda telah di-unlink atau berakhir. Silakan login kembali.')
+        setError('Sesi perangkat Anda telah diakhiri atau kedaluwarsa. Silakan masuk kembali.')
         // Bersihkan session cookie NextAuth di browser secara tuntas
         signOut({ redirect: false })
 
@@ -268,7 +268,7 @@ export default function LoginPage() {
                           <GraduationCap className="w-3.5 h-3.5 text-emerald-300" />
                         </div>
                         <div>
-                          <span className="font-bold text-emerald-200">Siswa:</span> Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">NIS</span> sebagai username & password.
+                          <span className="font-bold text-emerald-200">Siswa:</span> Masuk menggunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">NIS</span> sebagai nama pengguna dan kata sandi.
                         </div>
                       </div>
                       <div className="flex items-start gap-2.5">
@@ -276,7 +276,7 @@ export default function LoginPage() {
                           <Phone className="w-3.5 h-3.5 text-purple-300" />
                         </div>
                         <div>
-                          <span className="font-bold text-purple-200">Wali Murid:</span> Username <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">No. WA</span> & password <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">NIS Anak</span>.
+                          <span className="font-bold text-purple-200">Wali Murid:</span> Nama Pengguna <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">No. WhatsApp</span> & Kata Sandi <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">NIS Siswa</span>.
                         </div>
                       </div>
                       <div className="flex items-start gap-2.5">
@@ -284,11 +284,11 @@ export default function LoginPage() {
                           <ShieldCheck className="w-3.5 h-3.5 text-blue-300" />
                         </div>
                         <div>
-                          <span className="font-bold text-blue-200">Guru / Staff:</span> Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">Username</span> & password terdaftar.
+                          <span className="font-bold text-blue-200">Guru / Tenaga Pendidik:</span> Masuk menggunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">Nama Pengguna</span> dan kata sandi resmi yang terdaftar.
                         </div>
                       </div>
                       <div className="pt-2 border-t border-white/15 text-[10px] text-slate-300">
-                        Ada kendala? Hubungi <span className="font-semibold text-white">Helpdesk Admin</span> WhatsApp: <span className="font-mono font-bold text-emerald-300">{helpdeskPhone}</span>.
+                        Mengalami kendala? Hubungi <span className="font-semibold text-white">Layanan Bantuan (Helpdesk)</span> WhatsApp: <span className="font-mono font-bold text-emerald-300">{helpdeskPhone}</span>.
                       </div>
                     </div>
                   )}
@@ -322,7 +322,7 @@ export default function LoginPage() {
                   Petunjuk Kredensial Pengguna
                 </h2>
                 <p className="text-slate-200/90 text-xs sm:text-sm mt-0.5">
-                  Format akun resmi sesuai peran Anda di lingkungan sekolah.
+                  Format akun resmi sesuai dengan peran Anda di lingkungan sekolah.
                 </p>
               </div>
 
@@ -335,7 +335,7 @@ export default function LoginPage() {
                   <div className="text-xs space-y-0.5">
                     <div className="font-bold text-emerald-200">Siswa</div>
                     <div className="text-slate-200 leading-relaxed">
-                      Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">NIS</span> sebagai username & password awal.
+                      Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">NIS</span> sebagai nama pengguna dan kata sandi.
                     </div>
                   </div>
                 </div>
@@ -347,7 +347,7 @@ export default function LoginPage() {
                   <div className="text-xs space-y-0.5">
                     <div className="font-bold text-purple-200">Wali Murid / Orang Tua</div>
                     <div className="text-slate-200 leading-relaxed">
-                      Username: <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">No. WA</span> & Password: <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">NIS Anak</span>.
+                      Nama Pengguna: <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">No. WhatsApp</span> & Kata Sandi: <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">NIS Siswa</span>.
                     </div>
                   </div>
                 </div>
@@ -357,9 +357,9 @@ export default function LoginPage() {
                     <ShieldCheck className="w-4 h-4 text-blue-300" />
                   </div>
                   <div className="text-xs space-y-0.5">
-                    <div className="font-bold text-blue-200">Guru / Pegawai / Staff</div>
+                    <div className="font-bold text-blue-200">Guru / Tenaga Kependidikan</div>
                     <div className="text-slate-200 leading-relaxed">
-                      Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">Username</span> & password resmi terdaftar.
+                      Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">Nama Pengguna</span> dan kata sandi resmi yang terdaftar.
                     </div>
                   </div>
                 </div>
@@ -370,10 +370,10 @@ export default function LoginPage() {
             <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-600/30 to-indigo-600/30 border border-blue-400/30 backdrop-blur-md space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-blue-200">
                 <HelpCircle className="w-3.5 h-3.5 text-blue-300" />
-                <span>Kendala Akses atau Lupa Password?</span>
+                <span>Kendala Akses atau Lupa Kata Sandi?</span>
               </div>
               <p className="text-[11px] text-slate-200 leading-relaxed">
-                Hubungi <span className="font-semibold text-white">Admin / Helpdesk</span> WhatsApp resmi <span className="font-mono font-bold text-emerald-300">{helpdeskPhone}</span>.
+                Hubungi <span className="font-semibold text-white">Layanan Bantuan (Helpdesk)</span> WhatsApp resmi <span className="font-mono font-bold text-emerald-300">{helpdeskPhone}</span>.
               </p>
               <div className="pt-0.5">
                 <a

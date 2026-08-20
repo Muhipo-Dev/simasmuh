@@ -29,6 +29,24 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-20 (v1.5.0 - Waiting Room Virtual Queue, Manajemen Sesi & Perangkat Aktif, Serta Penguatan Keamanan & Layout Terpadu):**
+  * **Sistem Virtual Queue / Waiting Room Otomatis (`WaitingRoomModule` & `WaitingRoomProvider`):**
+    * Implementasi mekanisme antrean virtual cerdas saat sistem mengalami lonjakan traffic tinggi (Ujian, PPDB, atau pengumuman serentak).
+    * Backend NestJS middleware (`WaitingRoomMiddleware`) dengan manajemen antrean berbasis token JWT, estimasi waktu tunggu real-time, dan auto-admission ketika kapasitas tersedia.
+    * Tampilan antrean frontend (`WaitingRoomProvider`) yang elegan dengan visual progres interaktif, estimasi waktu tunggu, dan auto-redirect begitu giliran tiba.
+  * **Manajemen Sesi & Perangkat Aktif (Device Session Tracking & Unlink):**
+    * Fitur pelacakan perangkat dan riwayat login pengguna lengkap dengan deteksi tipe perangkat (Mobile/Desktop/Tablet), OS/Browser, IP Address, lokasi perkiraan, serta stempel waktu login terakhir.
+    * Kemampuan putus sesi jarak jauh (*Unlink / Logout Other Devices*) dari halaman Pengaturan Profil (`/pengaturan/profil`) untuk keamanan akun.
+    * Penambahan model database `UserSession` di Prisma ORM untuk mengelola token aktif dan validasi sesi server-side.
+  * **Penyempurnaan Autentikasi NextAuth & Session Caching:**
+    * Perbaikan dan standardisasi handler NextAuth.js App Router (`route.ts`) untuk kompatibilitas penuh.
+    * Persistensi cache sesi pengguna di sisi frontend guna memastikan respon navigasi instan dan transisi halaman bebas kedip.
+  * **Unifikasi Komponen Layout Global & Redesain Halaman Login:**
+    * Refaktorisasi komponen layout inti (`AppNavbar`, `AppFooter`, `AppSidebar`) menjadi modul reusable terpadu di folder `@/components/layout`.
+    * Redesain UI halaman login dengan tata letak modern berorientasi kontras tinggi, navigasi cepat, dan estetika premium yang responsif.
+  * **Penyelarasan Unit Test & Stabilitas Modul:**
+    * Perbaikan dan penyesuaian seluruh pengujian unit test pada modul `attendance/staff-journals` dan `core/waiting-room`.
+
 * **2026-08-19 (v1.4.0 - Modul Akun Wali Murid / Orang Tua, Multi-Anak Dashboard Selektor, Standar Notifikasi WhatsApp & Desain Autentikasi Modern):**
   * **Role Pengguna Baru `WALI_MURID` (Orang Tua / Wali):** Implementasi skema basis data relasi `ParentProfile` dan `ParentStudent` yang menghubungkan satu akun orang tua dengan 1 atau banyak siswa melalui No. NIS/NISN sebagai kunci identitas.
   * **Kredensial Login Fleksibel & Terpusat:** Username wali murid menggunakan nomor WhatsApp terdaftar, dan kata sandi default adalah NIS siswa anak yang terdaftar pertama.

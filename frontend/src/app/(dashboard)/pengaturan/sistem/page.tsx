@@ -23,6 +23,7 @@ type Setting = {
   principalNip: string | null
   academicYear: string | null
   semester: string | null
+  helpdeskPhone?: string | null
   defaultDpp?: number | null
   defaultUka?: number | null
   defaultUks?: number | null
@@ -44,6 +45,7 @@ export default function SettingsPage() {
     logoUrl: '',
     principalName: '',
     principalNip: '',
+    helpdeskPhone: '088293733330',
     academicYear: '2026/2027',
     semester: 'Ganjil',
     defaultDpp: 0,
@@ -81,6 +83,7 @@ export default function SettingsPage() {
         logoUrl: settings.logoUrl || '',
         principalName: settings.principalName || '',
         principalNip: settings.principalNip || '',
+        helpdeskPhone: settings.helpdeskPhone || '088293733330',
         academicYear: settings.academicYear || '2026/2027',
         semester: settings.semester || 'Ganjil',
         defaultDpp: settings.defaultDpp || 0,
@@ -269,11 +272,12 @@ export default function SettingsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Nomor Telepon</Label>
+                    <Label htmlFor="phone">Nomor Telepon Kantor</Label>
                     <Input 
                       id="phone" 
                       value={formData.phone}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      placeholder="Contoh: (0352) 481428"
                     />
                   </div>
                   <div className="space-y-2">
@@ -283,8 +287,28 @@ export default function SettingsPage() {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      placeholder="Contoh: info@sekolah.sch.id"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2 p-3.5 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="helpdeskPhone" className="font-bold text-blue-900 dark:text-blue-200 text-xs">
+                      Nomor WhatsApp Helpdesk & Bantuan Login
+                    </Label>
+                    <span className="text-[11px] text-slate-500">Tampil di halaman login & kontak bantuan</span>
+                  </div>
+                  <Input 
+                    id="helpdeskPhone" 
+                    value={formData.helpdeskPhone}
+                    onChange={(e) => setFormData({...formData, helpdeskPhone: e.target.value})}
+                    placeholder="Contoh: 088293733330"
+                    className="bg-white dark:bg-slate-900 font-mono text-sm"
+                  />
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Nomor WhatsApp ini khusus untuk menerima pesan kendala login / bantuan dari pengguna, terpisah dari gateway nomor pengirim notifikasi.
+                  </p>
                 </div>
               </div>
 

@@ -35,6 +35,8 @@ export class SettingsService {
           defaultUks: 100000,
           defaultInfaq: 300000,
           defaultSeragam: 2000000,
+          whatsappSenderNumber: '088293733330',
+          helpdeskPhone: '088293733330',
         } as any,
       });
       await this.cacheManager.set(cacheKey, created, 60000); // 60s cache
@@ -63,6 +65,7 @@ export class SettingsService {
         defaultUks: true,
         defaultInfaq: true,
         defaultSeragam: true,
+        helpdeskPhone: true,
       } as any,
     });
     if (!settings) {
@@ -79,6 +82,7 @@ export class SettingsService {
         defaultUks: 100000,
         defaultInfaq: 300000,
         defaultSeragam: 2000000,
+        helpdeskPhone: '088293733330',
       };
       await this.cacheManager.set(cacheKey, defaultPublic, 60000);
       return defaultPublic;

@@ -4,6 +4,7 @@ import { NextRequest } from "next/server"
 import { getBackendUrl } from "@/lib/api-config"
 
 const authOptions = {
+  secret: process.env.NEXTAUTH_SECRET || "simasmuh-secret-key-2026-muhipo-dev",
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -12,7 +13,7 @@ const authOptions = {
         password: { label: "Password", type: "password" },
         action: { label: "Action", type: "text" }
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null;
 
         try {
@@ -24,18 +25,23 @@ const authOptions = {
             password: credentials.password
           };
 
+          const clientIp = (req as any)?.headers?.['x-forwarded-for'] || (req as any)?.headers?.['x-real-ip'] || '';
+          const userAgent = (req as any)?.headers?.['user-agent'] || '';
+
           const res = await fetch(`${backendUrl}${endpoint}`, {
             method: 'POST',
             body: JSON.stringify(bodyPayload),
             headers: { 
               "Content-Type": "application/json",
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026'
+              "x-api-key": process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+              ...(clientIp ? { "x-forwarded-for": clientIp } : {}),
+              ...(userAgent ? { "user-agent": userAgent } : {})
             }
           });
           
           const user = await res.json();
           
-          if (res.ok && user) {
+          if (res.ok && user && user.user) {
             return {
               id: user.user.id,
               name: user.user.name,
@@ -58,7 +64,7 @@ const authOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user, account }: any) {
+    async jwt({ token, user }: any) {
       if (user) {
         token.sub = user.id;
         token.id = user.id;
@@ -98,34 +104,7 @@ const authOptions = {
   trustHost: true
 };
 
-const handler = async (req: NextRequest, context: any) => {
-  const url = new URL(req.url);
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || url.host;
-  const protoHeader = req.headers.get("x-forwarded-proto") || url.protocol.replace(':', '');
-  const protocol = protoHeader.startsWith('http') ? protoHeader : 'http';
-  
-  // Update NEXTAUTH_URL dinamis sesuai asal request (IP jaringan lokal atau domain utama)
-  process.env.NEXTAUTH_URL = `${protocol}://${host}`;
-  
-  const isHttps = protocol === 'https';
-  
-  const customAuthOptions: any = {
-    ...authOptions,
-    useSecureCookies: isHttps,
-    cookies: isHttps ? undefined : {
-      sessionToken: {
-        name: "next-auth.session-token",
-        options: {
-          httpOnly: true,
-          sameSite: "lax",
-          path: "/",
-          secure: false
-        }
-      }
-    }
-  };
-
-  return NextAuth(req as any, context as any, customAuthOptions);
-};
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST }
+

@@ -23,6 +23,11 @@ export class UsersController {
     return this.usersService.getLoginHistory(id);
   }
 
+  @Post(':id/unlink-session')
+  unlinkSession(@Param('id') id: string, @Body('sessionId') sessionId: string) {
+    return this.usersService.unlinkSession(id, sessionId);
+  }
+
   @Put(':id/profile')
   updateProfile(@Param('id') id: string, @Body() data: any) {
     return this.usersService.updateProfile(id, data);

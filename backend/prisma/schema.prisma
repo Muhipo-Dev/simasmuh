@@ -35,6 +35,25 @@ model User {
   student           Student?
   teacherProfile    TeacherProfile?
   parentProfile     ParentProfile?
+  sessions          UserSession[]
+}
+
+model UserSession {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String?
+  ipAddress   String?
+  userAgent   String?
+  device      String?
+  browser     String?
+  os          String?
+  isActive    Boolean  @default(true)
+  lastActiveAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([isActive])
 }
 
 model TeacherProfile {

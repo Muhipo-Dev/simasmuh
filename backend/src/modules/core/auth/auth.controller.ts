@@ -13,5 +13,11 @@ export class AuthController {
     const userAgent = req.headers['user-agent'];
     return this.authService.login(username, password, ipAddress, userAgent);
   }
+
+  @Post('logout')
+  async logout(@Body() body: { userId: string; sessionId?: string }) {
+    return this.authService.logoutSession(body.userId, body.sessionId);
+  }
 }
+
 

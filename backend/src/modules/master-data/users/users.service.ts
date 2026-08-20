@@ -297,25 +297,34 @@ export class UsersService {
   }
 
   async getLoginHistory(id: string) {
-    return this.prisma.systemLog.findMany({
+    return this.prisma.userSession.findMany({
       where: {
         userId: id,
-        category: 'AUTH',
-        action: 'LOGIN_SUCCESS',
+        isActive: true,
       },
       orderBy: {
-        createdAt: 'desc',
+        lastActiveAt: 'desc',
       },
-      take: 15,
       select: {
         id: true,
-        action: true,
-        message: true,
+        device: true,
+        browser: true,
+        os: true,
         ipAddress: true,
         userAgent: true,
+        isActive: true,
+        lastActiveAt: true,
         createdAt: true,
       },
     });
+  }
+
+  async unlinkSession(userId: string, sessionId: string) {
+    await this.prisma.userSession.updateMany({
+      where: { id: sessionId, userId },
+      data: { isActive: false },
+    });
+    return { success: true, message: 'Sesi perangkat berhasil di-unlink.' };
   }
 
   async updateProfile(id: string, data: any) {

@@ -152,7 +152,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   variant="ghost"
                   size="icon"
                   className="h-9 w-9 sm:h-10 sm:w-10 text-slate-500 hover:text-white hover:bg-red-500 dark:hover:bg-red-600 rounded-full transition-colors shadow-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-                  onClick={async () => { await signOut({ redirect: false }); window.location.href = '/login' }}
+                  onClick={async () => {
+                    if (userId) {
+                      try {
+                        await fetch('/api-backend/auth/logout', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId }),
+                        })
+                      } catch {}
+                    }
+                    await signOut({ redirect: false })
+                    window.location.href = '/login'
+                  }}
                   title="Keluar"
                 >
                   <LogOut className="w-4 h-4" />

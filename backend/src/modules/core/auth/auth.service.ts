@@ -121,6 +121,41 @@ export class AuthService {
     };
     const token = this.jwtService.sign(payload);
 
+    // Parse Device Information for Active Session
+    let devType = 'Desktop / Laptop';
+    let devOs = 'Windows';
+    let devBrowser = 'Browser';
+
+    if (userAgent) {
+      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) {
+        devType = 'Ponsel / Tablet';
+      }
+      if (/Windows/i.test(userAgent)) devOs = 'Windows';
+      else if (/Android/i.test(userAgent)) devOs = 'Android';
+      else if (/iPhone|iPad|iPod/i.test(userAgent)) devOs = 'iOS';
+      else if (/Macintosh|Mac OS/i.test(userAgent)) devOs = 'macOS';
+      else if (/Linux/i.test(userAgent)) devOs = 'Linux';
+
+      if (/Edg/i.test(userAgent)) devBrowser = 'Microsoft Edge';
+      else if (/Chrome/i.test(userAgent)) devBrowser = 'Google Chrome';
+      else if (/Safari/i.test(userAgent) && !/Chrome/i.test(userAgent)) devBrowser = 'Safari';
+      else if (/Firefox/i.test(userAgent)) devBrowser = 'Mozilla Firefox';
+    }
+
+    // Buat atau perbarui sesi aktif pengguna
+    const sessionRecord = await this.prisma.userSession.create({
+      data: {
+        userId: user.id,
+        ipAddress: ipAddress || '127.0.0.1',
+        userAgent: userAgent || 'Web Browser',
+        device: `${devType} (${devOs})`,
+        os: devOs,
+        browser: devBrowser,
+        isActive: true,
+        lastActiveAt: new Date(),
+      },
+    });
+
     await this.systemLogService.log({
       category: 'AUTH',
       level: 'INFO',
@@ -135,6 +170,7 @@ export class AuthService {
 
     return {
       access_token: token,
+      sessionId: sessionRecord.id,
       user: {
         id: user.id,
         email: user.email,
@@ -148,4 +184,21 @@ export class AuthService {
       },
     };
   }
+
+  async logoutSession(userId: string, sessionId?: string) {
+    if (sessionId) {
+      await this.prisma.userSession.updateMany({
+        where: { id: sessionId, userId },
+        data: { isActive: false },
+      });
+    } else {
+      await this.prisma.userSession.updateMany({
+        where: { userId },
+        data: { isActive: false },
+      });
+    }
+
+    return { success: true, message: 'Sesi perangkat berhasil di-unlink / diakhiri.' };
+  }
 }
+

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Camera, Loader2, CheckCircle2, User, MapPin, Mail, Shield, Pencil, X, 
   GraduationCap, Award, Key, Lock, AlertCircle, Laptop, Clock, Globe, ShieldCheck, RefreshCw,
-  Smartphone, Monitor, Calendar
+  Smartphone, Monitor, Calendar, LogOut, Unlink
 } from 'lucide-react'
 
 import { compressImageFile } from '@/utils/imageCompressor'
@@ -130,6 +130,42 @@ export default function ProfilePage() {
       return res.json()
     },
     enabled: !!userId
+  })
+
+  const [unlinkMsg, setUnlinkMsg] = useState('')
+
+  const unlinkMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      const res = await authenticatedFetch(`/api-backend/users/${userId}/unlink-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      })
+      if (!res.ok) throw new Error('Gagal meng-unlink sesi perangkat')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['login-history', userId] })
+      setUnlinkMsg('Sesi perangkat berhasil di-unlink!')
+      setTimeout(() => setUnlinkMsg(''), 4000)
+    }
+  })
+
+  const unlinkAllMutation = useMutation({
+    mutationFn: async () => {
+      const res = await authenticatedFetch('/api-backend/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+      if (!res.ok) throw new Error('Gagal meng-unlink seluruh perangkat')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['login-history', userId] })
+      setUnlinkMsg('Seluruh sesi perangkat lain berhasil di-unlink!')
+      setTimeout(() => setUnlinkMsg(''), 4000)
+    }
   })
 
   useEffect(() => {
@@ -577,57 +613,84 @@ export default function ProfilePage() {
       {/* Sesi Login & Pengelolaan Cache Akun */}
       <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
         <CardHeader className="bg-slate-50/70 dark:bg-slate-950/60 border-b border-slate-100 dark:border-slate-800 pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shadow-sm">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">Status Sesi & Riwayat Login</CardTitle>
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">Perangkat Login & Status Sesi Aktif</CardTitle>
                 <CardDescription className="text-slate-500 dark:text-slate-400">
-                  Sistem mempertahankan status login aktif di perangkat Anda hingga Anda keluar manual
+                  Kelola dan unlink perangkat yang sedang terhubung ke akun Anda
                 </CardDescription>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetchHistory()}
-              className="h-8 px-2.5 text-xs flex items-center gap-1.5"
-              title="Perbarui Riwayat"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isHistoryLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetchHistory()}
+                className="h-8 px-2.5 text-xs flex items-center gap-1.5"
+                title="Perbarui Sesi"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isHistoryLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </Button>
+              {loginHistory && loginHistory.length > 1 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={unlinkAllMutation.isPending}
+                  onClick={() => {
+                    if (confirm('Apakah Anda yakin ingin meng-unlink seluruh perangkat lain? Anda akan tetap login di sesi saat ini.')) {
+                      unlinkAllMutation.mutate()
+                    }
+                  }}
+                  className="h-8 px-2.5 text-xs flex items-center gap-1.5 shadow-xs"
+                >
+                  <Unlink className="w-3.5 h-3.5" />
+                  <span>Unlink Semua</span>
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-6 space-y-5">
+          {unlinkMsg && (
+            <div className="flex items-center gap-2 p-3.5 bg-green-50 dark:bg-green-950/60 border border-green-200 dark:border-green-900 rounded-xl text-green-700 dark:text-green-300 text-xs font-semibold animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-green-600" />
+              <span>{unlinkMsg}</span>
+            </div>
+          )}
+
           {/* Status Sesi Aktif */}
           <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/60 flex items-start gap-3.5">
             <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse mt-1 shrink-0" />
             <div className="space-y-1 text-xs sm:text-sm">
               <p className="font-bold text-emerald-900 dark:text-emerald-200">
-                Sesi Perangkat Ini Sedang Aktif (Permanen)
+                Sesi Perangkat Ini Aktif (Tidak Logout Otomatis)
               </p>
               <p className="text-emerald-700/90 dark:text-emerald-400 text-xs leading-relaxed">
-                Cache autentikasi tersimpan aman pada browser Anda dan tidak akan logout otomatis kecuali Anda menekan tombol <strong>Keluar (Logout)</strong> secara manual.
+                Riwayat sesi hanya menampilkan daftar perangkat yang <strong>sedang aktif login</strong> saat ini. Ketika Anda atau perangkat terkait melakukan logout/unlink, sesi tersebut langsung dihapus dari daftar aktif.
               </p>
             </div>
           </div>
 
-          {/* Daftar Riwayat Login Akun */}
+          {/* Daftar Perangkat Terhubung */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-slate-500" />
-              <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-                Catatan Akses & Riwayat Login Terakhir
-              </h4>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Laptop className="w-4 h-4 text-slate-500" />
+                <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                  Perangkat Terhubung ({loginHistory?.length || 0})
+                </h4>
+              </div>
             </div>
 
             {isHistoryLoading ? (
               <div className="py-6 flex items-center justify-center gap-2 text-slate-400 text-xs">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Memuat riwayat sesi login...</span>
+                <span>Memeriksa perangkat aktif...</span>
               </div>
             ) : loginHistory && loginHistory.length > 0 ? (
               <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200/90 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xs">
@@ -663,10 +726,10 @@ export default function ProfilePage() {
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm">
-                              {dev.device}
+                              {item.device || dev.device}
                             </span>
                             <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-semibold border border-slate-200/60 dark:border-slate-700">
-                              {dev.browser}
+                              {item.browser || dev.browser}
                             </span>
                           </div>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-0.5">
@@ -676,16 +739,34 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {/* Tanggal & Pukul Akses */}
-                      <div className="flex flex-col sm:flex-row md:flex-col sm:items-center md:items-end gap-1 text-[11px] text-slate-500 dark:text-slate-400 shrink-0 pl-12 md:pl-0 pt-1 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800/60">
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                          {fullDate}
-                        </span>
-                        <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px] flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          Pukul {timeStr} WIB
-                        </span>
+                      {/* Tanggal & Tombol Unlink */}
+                      <div className="flex items-center justify-between md:justify-end gap-3 shrink-0 pl-12 md:pl-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800/60">
+                        <div className="flex flex-col sm:items-end text-[11px] text-slate-500 dark:text-slate-400">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                            {fullDate}
+                          </span>
+                          <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px] flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            Pukul {timeStr} WIB
+                          </span>
+                        </div>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={unlinkMutation.isPending}
+                          onClick={() => {
+                            if (confirm('Keluarkan (unlink) akun dari perangkat ini?')) {
+                              unlinkMutation.mutate(item.id)
+                            }
+                          }}
+                          className="h-8 px-2.5 text-xs text-red-600 dark:text-red-400 hover:text-white hover:bg-red-600 dark:hover:bg-red-600 rounded-lg transition-colors border border-red-200 dark:border-red-900/60"
+                          title="Unlink / Logout Perangkat"
+                        >
+                          <Unlink className="w-3.5 h-3.5 mr-1" />
+                          Unlink
+                        </Button>
                       </div>
                     </div>
                   )
@@ -693,14 +774,14 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="py-6 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-slate-400 text-xs">
-                Belum ada catatan aktivitas login tersimpan.
+                Tidak ada sesi perangkat lain yang sedang aktif.
               </div>
             )}
           </div>
         </CardContent>
       </Card>
-
     </div>
   )
 }
+
 

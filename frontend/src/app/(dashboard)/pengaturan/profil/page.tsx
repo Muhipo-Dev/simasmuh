@@ -49,6 +49,41 @@ function parseDeviceInfo(ua?: string) {
   }
 }
 
+function formatIpLocation(ip?: string | null): { label: string; isLocal: boolean; ipFormatted: string } {
+  if (!ip || ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') {
+    return {
+      label: 'Localhost / Server Internal (127.0.0.1)',
+      isLocal: true,
+      ipFormatted: '127.0.0.1'
+    }
+  }
+
+  const cleanIp = ip.replace(/^::ffff:/, '').trim()
+
+  // Cek Private IP Networks (RFC 1918):
+  // 10.0.0.0 - 10.255.255.255
+  // 172.16.0.0 - 172.31.255.255
+  // 192.168.0.0 - 192.168.255.255
+  const is192 = cleanIp.startsWith('192.168.')
+  const is10 = cleanIp.startsWith('10.')
+  const is172 = /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(cleanIp)
+
+  if (is192 || is10 || is172) {
+    return {
+      label: `Jaringan Lokal / WiFi Sekolah (${cleanIp})`,
+      isLocal: true,
+      ipFormatted: cleanIp
+    }
+  }
+
+  // Public IP / Internet / Tunnel (Cloudflare Tunnel, Ngrok, Telkomsel, IndiHome, dsb)
+  return {
+    label: `Akses Publik / Tunnel (${cleanIp})`,
+    isLocal: false,
+    ipFormatted: cleanIp
+  }
+}
+
 export default function ProfilePage() {
   const { data: session } = useSession()
   const userId = (session?.user as any)?.id
@@ -70,6 +105,7 @@ export default function ProfilePage() {
   const [showWaitingRoomDemo, setShowWaitingRoomDemo] = useState(false)
   const [demoPosition, setDemoPosition] = useState(14)
   const [demoWait, setDemoWait] = useState(25)
+  const [sessionTab, setSessionTab] = useState<'active' | 'logs'>('active')
 
   const pwdMutation = useMutation({
     mutationFn: async (data: { oldPassword: string; newPassword: string }) => {
@@ -135,6 +171,17 @@ export default function ProfilePage() {
     enabled: !!userId
   })
 
+  const { data: unlinkLogs, isLoading: isUnlinkLogsLoading, refetch: refetchUnlinkLogs } = useQuery<any[]>({
+    queryKey: ['unlink-logs', userId],
+    queryFn: async () => {
+      if (!userId) return []
+      const res = await authenticatedFetch(`/api-backend/users/${userId}/unlink-logs`)
+      if (!res.ok) return []
+      return res.json()
+    },
+    enabled: !!userId
+  })
+
   const [unlinkMsg, setUnlinkMsg] = useState('')
 
   const unlinkMutation = useMutation({
@@ -149,6 +196,7 @@ export default function ProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['login-history', userId] })
+      queryClient.invalidateQueries({ queryKey: ['unlink-logs', userId] })
       setUnlinkMsg('Sesi perangkat berhasil di-unlink!')
       setTimeout(() => setUnlinkMsg(''), 4000)
     }
@@ -166,6 +214,7 @@ export default function ProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['login-history', userId] })
+      queryClient.invalidateQueries({ queryKey: ['unlink-logs', userId] })
       setUnlinkMsg('Seluruh sesi perangkat lain berhasil di-unlink!')
       setTimeout(() => setUnlinkMsg(''), 4000)
     }
@@ -613,18 +662,18 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Sesi Login & Pengelolaan Cache Akun */}
-      <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
-        <CardHeader className="bg-slate-50/70 dark:bg-slate-950/60 border-b border-slate-100 dark:border-slate-800 pb-4">
+      {/* Sesi Login & Pengelolaan Keamanan Perangkat */}
+      <Card className="border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl rounded-2xl">
+        <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shadow-xs border border-emerald-200/60 dark:border-emerald-800/40">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">Perangkat Login & Status Sesi Aktif</CardTitle>
-                <CardDescription className="text-slate-500 dark:text-slate-400">
-                  Kelola dan unlink perangkat yang sedang terhubung ke akun Anda
+                <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Perangkat Login & Riwayat Log Unlink</CardTitle>
+                <CardDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">
+                  Kelola sesi aktif dan pantau riwayat unlink / pemutusan perangkat akun Anda
                 </CardDescription>
               </div>
             </div>
@@ -633,7 +682,7 @@ export default function ProfilePage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowWaitingRoomDemo(true)}
-                className="h-8 px-2.5 text-xs flex items-center gap-1.5 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                className="h-8 px-2.5 text-xs flex items-center gap-1.5 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-xl"
                 title="Uji Coba Tampilan Waiting Room"
               >
                 <ShieldAlert className="w-3.5 h-3.5" />
@@ -642,14 +691,17 @@ export default function ProfilePage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => refetchHistory()}
-                className="h-8 px-2.5 text-xs flex items-center gap-1.5"
-                title="Perbarui Sesi"
+                onClick={() => {
+                  refetchHistory()
+                  refetchUnlinkLogs()
+                }}
+                className="h-8 px-2.5 text-xs flex items-center gap-1.5 rounded-xl border-slate-200 dark:border-slate-800"
+                title="Perbarui Data Sesi"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isHistoryLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${isHistoryLoading || isUnlinkLogsLoading ? 'animate-spin' : ''}`} />
                 <span>Refresh</span>
               </Button>
-              {loginHistory && loginHistory.length > 1 && (
+              {loginHistory && loginHistory.filter(s => s.isActive !== false).length > 1 && (
                 <Button
                   variant="destructive"
                   size="sm"
@@ -659,7 +711,7 @@ export default function ProfilePage() {
                       unlinkAllMutation.mutate()
                     }
                   }}
-                  className="h-8 px-2.5 text-xs flex items-center gap-1.5 shadow-xs"
+                  className="h-8 px-2.5 text-xs flex items-center gap-1.5 shadow-xs rounded-xl"
                 >
                   <Unlink className="w-3.5 h-3.5" />
                   <span>Unlink Semua</span>
@@ -667,8 +719,45 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+
+          {/* Sub-Tab Switcher: Sesi Aktif vs Riwayat Log Unlink */}
+          <div className="flex items-center gap-2 pt-3">
+            {(() => {
+              const activeCount = (loginHistory || []).filter(s => s.isActive !== false).length
+              const logsCount = (unlinkLogs || []).length
+              return (
+                <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setSessionTab('active')}
+                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      sessionTab === 'active'
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Laptop className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Sesi Aktif ({activeCount})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSessionTab('logs')}
+                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      sessionTab === 'logs'
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Unlink className="w-3.5 h-3.5 text-red-500" />
+                    <span>Riwayat Log Unlink ({logsCount})</span>
+                  </button>
+                </div>
+              )
+            })()}
+          </div>
         </CardHeader>
-        <CardContent className="pt-6 space-y-5">
+
+        <CardContent className="p-4 sm:p-6 space-y-5">
           {unlinkMsg && (
             <div className="flex items-center gap-2 p-3.5 bg-green-50 dark:bg-green-950/60 border border-green-200 dark:border-green-900 rounded-xl text-green-700 dark:text-green-300 text-xs font-semibold animate-in fade-in">
               <CheckCircle2 className="w-4 h-4 shrink-0 text-green-600" />
@@ -676,87 +765,201 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Status Sesi Aktif */}
-          <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/60 flex items-start gap-3.5">
-            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse mt-1 shrink-0" />
-            <div className="space-y-1 text-xs sm:text-sm">
-              <p className="font-bold text-emerald-900 dark:text-emerald-200">
-                Sesi Perangkat Ini Aktif (Tidak Logout Otomatis)
-              </p>
-              <p className="text-emerald-700/90 dark:text-emerald-400 text-xs leading-relaxed">
-                Riwayat sesi hanya menampilkan daftar perangkat yang <strong>sedang aktif login</strong> saat ini. Ketika Anda atau perangkat terkait melakukan logout/unlink, sesi tersebut langsung dihapus dari daftar aktif.
-              </p>
-            </div>
-          </div>
-
-          {/* Daftar Perangkat Terhubung */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Laptop className="w-4 h-4 text-slate-500" />
-                <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-                  Perangkat Terhubung ({loginHistory?.length || 0})
-                </h4>
+          {sessionTab === 'active' ? (
+            <>
+              {/* Status Sesi Aktif */}
+              <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/60 flex items-start gap-3.5">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse mt-1 shrink-0" />
+                <div className="space-y-1 text-xs sm:text-sm">
+                  <p className="font-bold text-emerald-900 dark:text-emerald-200">
+                    Sesi Perangkat Ini Aktif (Tidak Logout Otomatis)
+                  </p>
+                  <p className="text-emerald-700/90 dark:text-emerald-400 text-xs leading-relaxed">
+                    Sistem SIMASMUH menjaga sesi Anda tetap aktif dan aman. Jika perangkat lain di-unlink, sistem mencatat audit log dan memutuskan sesi secara seketika.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            {isHistoryLoading ? (
-              <div className="py-6 flex items-center justify-center gap-2 text-slate-400 text-xs">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Memeriksa perangkat aktif...</span>
-              </div>
-            ) : loginHistory && loginHistory.length > 0 ? (
-              <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200/90 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xs">
-                {loginHistory.map((item, idx) => {
-                  const dev = parseDeviceInfo(item.userAgent)
-                  const d = new Date(item.createdAt)
-                  const fullDate = d.toLocaleDateString('id-ID', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })
-                  const timeStr = d.toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  })
+              {/* Daftar Perangkat Terhubung */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Laptop className="w-4 h-4 text-slate-500" />
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                      Perangkat Sedang Aktif ({((loginHistory || []).filter(s => s.isActive !== false)).length})
+                    </h4>
+                  </div>
+                </div>
 
-                  return (
-                    <div
-                      key={item.id || idx}
-                      className="p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors text-xs"
-                    >
-                      {/* Perangkat & Browser */}
-                      <div className="flex items-start gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                          dev.type === 'mobile' 
-                            ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400' 
-                            : 'bg-blue-100 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400'
-                        }`}>
-                          {dev.type === 'mobile' ? <Smartphone className="w-4.5 h-4.5" /> : <Monitor className="w-4.5 h-4.5" />}
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm">
-                              {item.device || dev.device}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-semibold border border-slate-200/60 dark:border-slate-700">
-                              {item.browser || dev.browser}
-                            </span>
+                {isHistoryLoading ? (
+                  <div className="py-6 flex items-center justify-center gap-2 text-slate-400 text-xs">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Memeriksa perangkat aktif...</span>
+                  </div>
+                ) : loginHistory && loginHistory.filter(s => s.isActive !== false).length > 0 ? (
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200/90 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xs">
+                    {loginHistory.filter(s => s.isActive !== false).map((item, idx) => {
+                      const dev = parseDeviceInfo(item.userAgent)
+                      const d = new Date(item.createdAt || item.lastActiveAt)
+                      const fullDate = d.toLocaleDateString('id-ID', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })
+                      const timeStr = d.toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                      })
+
+                      return (
+                        <div
+                          key={item.id || idx}
+                          className="p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors text-xs"
+                        >
+                          {/* Perangkat & Browser */}
+                          <div className="flex items-start gap-3">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                              dev.type === 'mobile' 
+                                ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400' 
+                                : 'bg-blue-100 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400'
+                            }`}>
+                              {dev.type === 'mobile' ? <Smartphone className="w-4.5 h-4.5" /> : <Monitor className="w-4.5 h-4.5" />}
+                            </div>
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm">
+                                  {item.device || dev.device}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-semibold border border-slate-200/60 dark:border-slate-700">
+                                  {item.browser || dev.browser}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-900 flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  Aktif
+                                </span>
+                              </div>
+                              {(() => {
+                                const ipInfo = formatIpLocation(item.ipAddress)
+                                return (
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-0.5">
+                                    <MapPin className={`w-3.5 h-3.5 shrink-0 ${ipInfo.isLocal ? 'text-slate-400' : 'text-blue-500'}`} />
+                                    <span>Lokasi IP: <strong className="text-slate-700 dark:text-slate-300">{ipInfo.label}</strong></span>
+                                  </p>
+                                )
+                              })()}
+                            </div>
                           </div>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-0.5">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span>Lokasi Akses: <strong className="text-slate-700 dark:text-slate-300">{item.ipAddress === '127.0.0.1' || item.ipAddress === '::1' ? 'Jaringan Internal / Lokal Sekolah' : item.ipAddress || 'Jaringan Terdaftar'}</strong></span>
-                          </p>
-                        </div>
-                      </div>
 
-                      {/* Tanggal & Tombol Unlink */}
-                      <div className="flex items-center justify-between md:justify-end gap-3 shrink-0 pl-12 md:pl-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800/60">
-                        <div className="flex flex-col sm:items-end text-[11px] text-slate-500 dark:text-slate-400">
+                          {/* Tanggal & Tombol Unlink */}
+                          <div className="flex items-center justify-between md:justify-end gap-3 shrink-0 pl-12 md:pl-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800/60">
+                            <div className="flex flex-col sm:items-end text-[11px] text-slate-500 dark:text-slate-400">
+                              <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                                <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                {fullDate}
+                              </span>
+                              <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px] flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                Pukul {timeStr} WIB
+                              </span>
+                            </div>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={unlinkMutation.isPending}
+                              onClick={() => {
+                                if (confirm('Keluarkan (unlink) akun dari perangkat ini?')) {
+                                  unlinkMutation.mutate(item.id)
+                                }
+                              }}
+                              className="h-8 px-2.5 text-xs text-red-600 dark:text-red-400 hover:text-white hover:bg-red-600 dark:hover:bg-red-600 rounded-lg transition-colors border border-red-200 dark:border-red-900/60"
+                              title="Unlink / Logout Perangkat"
+                            >
+                              <Unlink className="w-3.5 h-3.5 mr-1" />
+                              Unlink
+                            </Button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-6 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-slate-400 text-xs">
+                    Tidak ada sesi perangkat lain yang sedang aktif.
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            /* TAB RIWAYAT LOG UNLINK & AUDIT */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Unlink className="w-4 h-4 text-red-500" />
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                    Log Pemutusan & Unlink Sesi ({unlinkLogs?.length || 0})
+                  </h4>
+                </div>
+              </div>
+
+              {isUnlinkLogsLoading ? (
+                <div className="py-6 flex items-center justify-center gap-2 text-slate-400 text-xs">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Memuat riwayat audit log unlink...</span>
+                </div>
+              ) : unlinkLogs && unlinkLogs.length > 0 ? (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200/90 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xs">
+                  {unlinkLogs.map((log: any, idx: number) => {
+                    const d = new Date(log.createdAt)
+                    const fullDate = d.toLocaleDateString('id-ID', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })
+                    const timeStr = d.toLocaleTimeString('id-ID', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    })
+
+                    return (
+                      <div
+                        key={log.id || idx}
+                        className="p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors text-xs"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5 border border-red-200 dark:border-red-900/60">
+                            <Unlink className="w-4 h-4" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 text-[10px] font-bold border border-red-200 dark:border-red-900">
+                                {log.action === 'UNLINK_ALL_SESSIONS' ? 'Unlink Semua Sesi' : log.action === 'LOGOUT_SESSION' ? 'Sesi Logout' : 'Sesi Di-unlink'}
+                              </span>
+                              <span className="text-slate-700 dark:text-slate-200 font-semibold text-xs">
+                                {log.details?.device || log.details?.os || 'Perangkat Pengguna'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed pt-0.5">
+                              {log.message}
+                            </p>
+                            {(() => {
+                              const ipInfo = formatIpLocation(log.ipAddress)
+                              return (
+                                <p className="text-[10px] text-slate-400 flex items-center gap-1.5 font-mono">
+                                  <span>Lokasi IP: {ipInfo.label}</span>
+                                </p>
+                              )
+                            })()}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:items-end text-[11px] text-slate-500 dark:text-slate-400 shrink-0 pl-12 md:pl-0">
                           <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
                             {fullDate}
                           </span>
                           <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px] flex items-center gap-1">
@@ -764,33 +967,17 @@ export default function ProfilePage() {
                             Pukul {timeStr} WIB
                           </span>
                         </div>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={unlinkMutation.isPending}
-                          onClick={() => {
-                            if (confirm('Keluarkan (unlink) akun dari perangkat ini?')) {
-                              unlinkMutation.mutate(item.id)
-                            }
-                          }}
-                          className="h-8 px-2.5 text-xs text-red-600 dark:text-red-400 hover:text-white hover:bg-red-600 dark:hover:bg-red-600 rounded-lg transition-colors border border-red-200 dark:border-red-900/60"
-                          title="Unlink / Logout Perangkat"
-                        >
-                          <Unlink className="w-3.5 h-3.5 mr-1" />
-                          Unlink
-                        </Button>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="py-6 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-slate-400 text-xs">
-                Tidak ada sesi perangkat lain yang sedang aktif.
-              </div>
-            )}
-          </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="py-6 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-slate-400 text-xs">
+                  Belum ada catatan riwayat unlink untuk akun ini.
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

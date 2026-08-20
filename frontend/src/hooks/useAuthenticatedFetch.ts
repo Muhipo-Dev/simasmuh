@@ -5,6 +5,8 @@ interface AuthenticatedFetchOptions extends RequestInit {
   skipAuth?: boolean
 }
 
+let isHandling401 = false
+
 export function useAuthenticatedFetch() {
   const authenticatedFetch = useCallback(
     async (url: string, options: AuthenticatedFetchOptions = {}) => {
@@ -38,14 +40,15 @@ export function useAuthenticatedFetch() {
 
       const res = await fetch(url, fetchOptions)
 
-      // Jika sesi telah di-unlink atau token tidak lagi valid (401 Unauthorized), logout otomatis
+      // Jika sesi telah di-unlink atau token tidak lagi valid (401 Unauthorized), logout otomatis terarah
       if (res.status === 401 && !skipAuth) {
-        try {
-          if (typeof window !== 'undefined') {
+        if (!isHandling401 && typeof window !== 'undefined') {
+          isHandling401 = true
+          try {
             signOut({ callbackUrl: '/login?expired=1' })
+          } catch (e) {
+            window.location.href = '/login?expired=1'
           }
-        } catch (e) {
-          // ignore
         }
       }
 

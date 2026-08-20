@@ -222,14 +222,14 @@ export default function SettingsPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Pengaturan Sekolah */}
-        <Card className="shadow-sm border-slate-200">
+        <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl rounded-2xl overflow-hidden">
           <form onSubmit={handleSubmit}>
-            <CardHeader className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 sm:p-6">
               <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-extrabold">
                 <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 Identitas Sekolah
               </CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-300 font-medium">Informasi ini akan ditampilkan pada kop surat dan laporan.</CardDescription>
+              <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">Informasi ini akan ditampilkan pada kop surat dan laporan.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="space-y-4">
@@ -393,8 +393,8 @@ export default function SettingsPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-slate-50 border-t border-slate-100">
-              <Button type="submit" disabled={mutation.isPending} className="w-full bg-blue-600 hover:bg-blue-700">
+            <CardFooter className="bg-slate-50/50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800/80 p-5 sm:p-6">
+              <Button type="submit" disabled={mutation.isPending} className="w-full bg-blue-600 hover:bg-blue-700 font-bold rounded-xl shadow-sm">
                 {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                 Simpan Identitas Sekolah
               </Button>
@@ -403,14 +403,14 @@ export default function SettingsPage() {
         </Card>
 
         {/* Pengaturan Bank */}
-        <Card className="shadow-sm border-slate-200">
+        <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl rounded-2xl overflow-hidden">
           <form onSubmit={handleBankSubmit}>
-            <CardHeader className="bg-emerald-50/80 dark:bg-slate-800/80 border-b border-emerald-100 dark:border-slate-800">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 sm:p-6">
               <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-extrabold">
                 <CreditCard className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 Informasi Rekening Sekolah
               </CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-300 font-medium">
+              <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">
                 Informasi rekening untuk pembayaran siswa. Data ini akan ditampilkan pada popup tagihan.
               </CardDescription>
             </CardHeader>
@@ -471,11 +471,11 @@ export default function SettingsPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-green-50 border-t border-green-100">
+            <CardFooter className="bg-slate-50/50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800/80 p-5 sm:p-6">
               <Button 
                 type="submit" 
                 disabled={bankMutation.isPending || !bankData.bankName || !bankData.bankNumber || !bankData.bankOwner}
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 font-bold rounded-xl shadow-sm"
               >
                 {bankMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                 Simpan Informasi Bank

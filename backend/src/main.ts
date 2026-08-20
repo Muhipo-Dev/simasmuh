@@ -8,6 +8,12 @@ import helmet from 'helmet';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
 
+  // Enable trust proxy for reverse proxies, Cloudflare, ngrok, localtunnel, etc.
+  const expressApp = app.getHttpAdapter().getInstance() as any;
+  if (expressApp && typeof expressApp.set === 'function') {
+    expressApp.set('trust proxy', true);
+  }
+
   // Security Headers (Protection from XSS, Clickjacking, Sniffing)
   app.use(
     helmet({

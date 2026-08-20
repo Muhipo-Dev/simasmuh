@@ -25,8 +25,17 @@ const authOptions = {
             password: credentials.password
           };
 
-          const clientIp = (req as any)?.headers?.['x-forwarded-for'] || (req as any)?.headers?.['x-real-ip'] || '';
-          const userAgent = (req as any)?.headers?.['user-agent'] || '';
+          const getHeader = (key: string): string => {
+            if (!req?.headers) return '';
+            if (typeof (req.headers as any).get === 'function') {
+              return (req.headers as any).get(key) || '';
+            }
+            return (req.headers as any)[key] || (req.headers as any)[key.toLowerCase()] || '';
+          };
+
+          const rawForwarded = getHeader('cf-connecting-ip') || getHeader('x-real-ip') || getHeader('x-forwarded-for') || getHeader('true-client-ip') || getHeader('x-client-ip') || '';
+          const clientIp = rawForwarded.split(',')[0].trim();
+          const userAgent = getHeader('user-agent') || '';
 
           const res = await fetch(`${backendUrl}${endpoint}`, {
             method: 'POST',
@@ -34,7 +43,7 @@ const authOptions = {
             headers: { 
               "Content-Type": "application/json",
               "x-api-key": process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
-              ...(clientIp ? { "x-forwarded-for": clientIp } : {}),
+              ...(clientIp ? { "x-forwarded-for": clientIp, "x-real-ip": clientIp } : {}),
               ...(userAgent ? { "user-agent": userAgent } : {})
             }
           });
@@ -104,7 +113,7 @@ const authOptions = {
             });
 
             if (verifyRes.status === 401) {
-              return null as any; // Sesi di-unlink atau token invalid -> Sesi NextAuth mati
+              (session as any).error = 'SessionExpired';
             }
           } catch (e) {
             // Abaikan kesalahan jaringan sementara
@@ -112,10 +121,19 @@ const authOptions = {
         }
       }
       return session
+    },
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      try {
+        if (new URL(url).origin === baseUrl) return url;
+      } catch {}
+      return `${baseUrl}/dashboard`;
     }
   },
   pages: {
     signIn: '/login',
+    signOut: '/login',
+    error: '/login',
   },
   session: {
     strategy: "jwt" as const,

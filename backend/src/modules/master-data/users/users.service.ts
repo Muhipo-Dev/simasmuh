@@ -1,10 +1,14 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { SystemLogService } from '../../core/services/system-log.service';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private systemLogService: SystemLogService,
+  ) {}
 
   async findAll() {
     return this.prisma.user.findMany({
@@ -300,11 +304,11 @@ export class UsersService {
     return this.prisma.userSession.findMany({
       where: {
         userId: id,
-        isActive: true,
       },
       orderBy: {
         lastActiveAt: 'desc',
       },
+      take: 20,
       select: {
         id: true,
         device: true,
@@ -320,11 +324,63 @@ export class UsersService {
   }
 
   async unlinkSession(userId: string, sessionId: string) {
+    const session = await this.prisma.userSession.findUnique({
+      where: { id: sessionId },
+      include: { user: true },
+    });
+
     await this.prisma.userSession.updateMany({
       where: { id: sessionId, userId },
       data: { isActive: false },
     });
+
+    if (session) {
+      await this.systemLogService.log({
+        category: 'AUTH',
+        level: 'INFO',
+        action: 'UNLINK_SESSION',
+        message: `Sesi perangkat '${session.device || session.userAgent || sessionId}' milik '${session.user?.username || userId}' telah di-unlink / diputus.`,
+        userId: userId,
+        userName: session.user?.name || undefined,
+        userRole: session.user?.role || undefined,
+        ipAddress: session.ipAddress || undefined,
+        userAgent: session.userAgent || undefined,
+        details: {
+          sessionId,
+          device: session.device,
+          os: session.os,
+          browser: session.browser,
+        },
+      });
+    }
+
     return { success: true, message: 'Sesi perangkat berhasil di-unlink.' };
+  }
+
+  async getUnlinkLogs(userId: string) {
+    return this.prisma.systemLog.findMany({
+      where: {
+        userId,
+        category: 'AUTH',
+        action: {
+          in: ['UNLINK_SESSION', 'UNLINK_ALL_SESSIONS', 'LOGOUT_SESSION'],
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 20,
+      select: {
+        id: true,
+        action: true,
+        message: true,
+        level: true,
+        ipAddress: true,
+        userAgent: true,
+        details: true,
+        createdAt: true,
+      },
+    });
   }
 
   async updateProfile(id: string, data: any) {

@@ -47,25 +47,42 @@ export default function LoginPage() {
     loadPublicSettings()
   }, [])
 
+  // Dapatkan callbackUrl tujuan dinamis (misal setelah redirect dari halaman terproteksi)
+  const getSafeCallbackUrl = () => {
+    if (typeof window === 'undefined') return '/dashboard'
+    const params = new URLSearchParams(window.location.search)
+    const rawCallback = params.get('callbackUrl')
+    if (rawCallback && rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.startsWith('/login')) {
+      return rawCallback
+    }
+    return '/dashboard'
+  }
+
   // Cek parameter URL untuk sesi yang telah di-unlink / kedaluwarsa
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      if (params.get('expired') === '1') {
+      const url = new URL(window.location.href)
+      if (url.searchParams.get('expired') === '1') {
         setError('Sesi perangkat Anda telah di-unlink atau berakhir. Silakan login kembali.')
         // Bersihkan session cookie NextAuth di browser secara tuntas
         signOut({ redirect: false })
+
+        // Bersihkan parameter 'expired' dari bilah URL tanpa refresh halaman
+        url.searchParams.delete('expired')
+        const cleanQuery = url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''
+        window.history.replaceState({}, document.title, `${url.pathname}${cleanQuery}`)
       }
     }
   }, [])
 
-  // Jika sudah dalam keadaan login aktif yang valid (bukan setelah expired), arahkan ke dashboard
+  // Jika sudah dalam keadaan login aktif yang valid (bukan setelah expired), arahkan dinamis ke halaman tujuan / dashboard
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
+    if (status === 'authenticated' && session?.user && (session as any)?.error !== 'SessionExpired') {
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search)
         if (params.get('expired') !== '1') {
-          router.replace('/dashboard')
+          const target = getSafeCallbackUrl()
+          router.replace(target)
         }
       }
     }
@@ -87,7 +104,8 @@ export default function LoginPage() {
         setError('Username atau kata sandi tidak sesuai.')
       } else if (result?.ok) {
         setLoading('Mengalihkan...')
-        window.location.href = '/dashboard'
+        const targetUrl = getSafeCallbackUrl()
+        window.location.href = targetUrl
         return
       } else {
         setError('Gagal masuk. Silakan coba lagi.')

@@ -23,6 +23,11 @@ export class UsersController {
     return this.usersService.getLoginHistory(id);
   }
 
+  @Get(':id/unlink-logs')
+  getUnlinkLogs(@Param('id') id: string) {
+    return this.usersService.getUnlinkLogs(id);
+  }
+
   @Post(':id/unlink-session')
   unlinkSession(@Param('id') id: string, @Body('sessionId') sessionId: string) {
     return this.usersService.unlinkSession(id, sessionId);

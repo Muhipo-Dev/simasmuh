@@ -44,8 +44,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isBannerManagerOnly = pathname.startsWith('/informasi/banner')
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.push('/login')
-  }, [status, router])
+    if (status === 'unauthenticated' || (session as any)?.error === 'SessionExpired') {
+      if ((session as any)?.error === 'SessionExpired') {
+        router.push('/login?expired=1')
+      } else {
+        const callbackParam = pathname && pathname !== '/login' ? `?callbackUrl=${encodeURIComponent(pathname)}` : ''
+        router.push(`/login${callbackParam}`)
+      }
+    }
+  }, [status, session, pathname, router])
 
   useEffect(() => {
     if (session) {

@@ -1,6 +1,6 @@
 {
   "showPublicStream": true,
-  "showPublicLogs": false,
+  "showPublicLogs": true,
   "streamUrl": "0",
   "cameraName": "Camera AI",
   "location": "Lab Kom",
@@ -9,6 +9,6 @@
   "isActive": false,
   "welcomeVoice": true,
   "apiKeySecret": "simasmuh_face_token_secret_2026",
-  "updatedAt": "2026-08-20T00:30:20.289Z",
+  "updatedAt": "2026-08-20T22:36:47.046Z",
   "streamSourceType": "WEBCAM"
 }

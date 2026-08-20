@@ -504,8 +504,8 @@ export default function PresensiPegawaiPage() {
               {/* RIGHT: REALTIME DETECTION LOGS */}
               {isLogsVisible && (
                 <div className={`${isStreamVisible ? 'lg:col-span-5' : 'lg:col-span-12'} space-y-3`}>
-                  <Card className="shadow-lg border-slate-200 dark:border-slate-800 flex flex-col h-[520px] rounded-2xl overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
-                    <CardHeader className="p-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 shrink-0">
+                  <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 flex flex-col h-[520px] rounded-2xl overflow-hidden bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl">
+                    <CardHeader className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold shadow-xs">
@@ -670,17 +670,17 @@ export default function PresensiPegawaiPage() {
         })()}
 
         {/* Filter dan Tabel Presensi */}
-        <Card className="border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
-          <CardHeader className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 p-4 sm:p-6">
+        <Card className="border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 sm:p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <CardTitle className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <CardTitle className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                   <span>Daftar Kehadiran</span>
                   <span className="text-xs px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-900">
                     {formattedDate}
                   </span>
                 </CardTitle>
-                <CardDescription className="dark:text-slate-400 mt-1">
+                <CardDescription className="text-slate-500 dark:text-slate-400 font-medium mt-1">
                   Menampilkan {filteredData.length} dari total {data.length} pegawai dan guru
                 </CardDescription>
               </div>

@@ -145,13 +145,69 @@ export default function DashboardPage() {
     : 0
 
   const stats = [
-    { title: 'Total Siswa', value: students?.length || 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-950/80' },
-    { title: 'Total Pegawai', value: totalPegawai, icon: Briefcase, color: 'text-teal-600', bg: 'bg-teal-100 dark:bg-teal-950/80' },
-    { title: 'Total Kelas', value: classes?.length || 0, icon: UserSquare2, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-950/80' },
-    { title: 'Total Mapel', value: totalMapel, icon: BookOpen, color: 'text-indigo-600', bg: 'bg-indigo-100 dark:bg-indigo-950/80' },
-    { title: 'Jadwal Hari Ini', value: todaySchedules.length, icon: CalendarDays, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-950/80' },
-    { title: 'Kehadiran Siswa', value: `${attendancePercentage}%`, icon: ClipboardCheck, color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-950/80' },
-    { title: 'Kehadiran Guru & Karyawan', value: `${staffAttendancePercentage}%`, icon: UserCheck, color: 'text-rose-600', bg: 'bg-rose-100 dark:bg-rose-950/80' },
+    {
+      title: 'Total Siswa',
+      value: students?.length || 0,
+      icon: Users,
+      color: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-50 dark:bg-blue-500/20',
+      border: 'border-blue-200/80 dark:border-blue-400/30',
+      glow: 'from-blue-500/10 to-indigo-500/10'
+    },
+    {
+      title: 'Total Pegawai',
+      value: totalPegawai,
+      icon: Briefcase,
+      color: 'text-teal-600 dark:text-teal-400',
+      bg: 'bg-teal-50 dark:bg-teal-500/20',
+      border: 'border-teal-200/80 dark:border-teal-400/30',
+      glow: 'from-teal-500/10 to-emerald-500/10'
+    },
+    {
+      title: 'Total Kelas',
+      value: classes?.length || 0,
+      icon: UserSquare2,
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-50 dark:bg-emerald-500/20',
+      border: 'border-emerald-200/80 dark:border-emerald-400/30',
+      glow: 'from-emerald-500/10 to-teal-500/10'
+    },
+    {
+      title: 'Total Mapel',
+      value: totalMapel,
+      icon: BookOpen,
+      color: 'text-indigo-600 dark:text-indigo-400',
+      bg: 'bg-indigo-50 dark:bg-indigo-500/20',
+      border: 'border-indigo-200/80 dark:border-indigo-400/30',
+      glow: 'from-indigo-500/10 to-purple-500/10'
+    },
+    {
+      title: 'Jadwal Hari Ini',
+      value: todaySchedules.length,
+      icon: CalendarDays,
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-500/20',
+      border: 'border-amber-200/80 dark:border-amber-400/30',
+      glow: 'from-amber-500/10 to-orange-500/10'
+    },
+    {
+      title: 'Kehadiran Siswa',
+      value: `${attendancePercentage}%`,
+      icon: ClipboardCheck,
+      color: 'text-purple-600 dark:text-purple-400',
+      bg: 'bg-purple-50 dark:bg-purple-500/20',
+      border: 'border-purple-200/80 dark:border-purple-400/30',
+      glow: 'from-purple-500/10 to-pink-500/10'
+    },
+    {
+      title: 'Kehadiran Guru & Karyawan',
+      value: `${staffAttendancePercentage}%`,
+      icon: UserCheck,
+      color: 'text-rose-600 dark:text-rose-400',
+      bg: 'bg-rose-50 dark:bg-rose-500/20',
+      border: 'border-rose-200/80 dark:border-rose-400/30',
+      glow: 'from-rose-500/10 to-red-500/10'
+    },
   ]
 
   const adminStats = [
@@ -172,12 +228,12 @@ export default function DashboardPage() {
   }
 
   const renderAttendanceLog = (isStudent = false) => (
-    <Card className="border-slate-200 dark:border-slate-800 dark:bg-slate-900/60 shadow-sm w-full h-full flex flex-col rounded-2xl overflow-hidden">
-      <CardHeader className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 pb-4 shrink-0">
-        <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">Log Absensi (30 Hari Terakhir)</CardTitle>
-        <CardDescription className="dark:text-slate-300">Riwayat kehadiran harian Anda</CardDescription>
+    <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs w-full h-full flex flex-col rounded-2xl overflow-hidden">
+      <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-4 shrink-0">
+        <CardTitle className="text-lg font-extrabold text-slate-900 dark:text-white">Log Absensi (30 Hari Terakhir)</CardTitle>
+        <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">Riwayat kehadiran harian Anda</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto max-h-[460px] p-4">
+      <CardContent className="flex-1 overflow-y-auto max-h-[460px] p-4 sm:p-5">
         {loadingHistory ? (
           <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
         ) : !myHistory || myHistory.length === 0 ? (
@@ -216,17 +272,17 @@ export default function DashboardPage() {
   )
 
   const renderAnnouncements = () => (
-    <Card className="border-slate-200 dark:border-slate-800 dark:bg-slate-900/60 shadow-sm w-full h-full rounded-2xl overflow-hidden flex flex-col">
-      <CardHeader className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 pb-4 shrink-0 flex flex-row items-center gap-4">
+    <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs w-full h-full rounded-2xl overflow-hidden flex flex-col">
+      <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-4 shrink-0 flex flex-row items-center gap-4">
         {settings?.logoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={settings.logoUrl} alt="Logo" className="w-12 h-12 object-contain rounded-md" />
         )}
         <div>
-          <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+          <CardTitle className="text-lg font-extrabold text-slate-900 dark:text-white">
             Informasi dan Berita Sekolah
           </CardTitle>
-          <CardDescription className="dark:text-slate-300">
+          <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">
             Berita dan pengumuman terbaru untuk Anda
           </CardDescription>
         </div>
@@ -396,11 +452,11 @@ export default function DashboardPage() {
             const Icon = link.icon
             return (
               <Link key={idx} href={link.href} className="group">
-                <Card className="h-full border-white/20 dark:border-white/10 bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg hover:shadow-2xl hover:border-blue-400/40 hover:bg-white/15 dark:hover:bg-slate-900/60 transition-all duration-300 flex flex-col items-center justify-center p-4 sm:p-5 lg:p-6 gap-3 hover:-translate-y-1 rounded-2xl text-white">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-500/20 border border-blue-400/30 text-blue-300 flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-500/30 transition-transform duration-300 backdrop-blur-md">
-                    <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-blue-300 group-hover:text-white transition-colors" />
+                <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs hover:shadow-xl hover:border-blue-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-4 sm:p-5 lg:p-6 gap-3 hover:-translate-y-1 rounded-2xl">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md transition-all duration-300 shadow-2xs">
+                    <Icon className="w-6 h-6 sm:w-7 sm:h-7 transition-colors" />
                   </div>
-                  <h3 className="font-bold text-slate-100 dark:text-white text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-300 transition-colors">
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {link.name}
                   </h3>
                 </Card>
@@ -416,19 +472,19 @@ export default function DashboardPage() {
           </div>
 
           <div className="w-full flex flex-col h-full">
-            <Card className="border-slate-200 dark:border-slate-800 dark:bg-slate-900/60 shadow-sm overflow-hidden rounded-2xl h-full flex flex-col justify-between">
-              <CardHeader className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 pb-4 shrink-0">
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs overflow-hidden rounded-2xl h-full flex flex-col justify-between">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-4 shrink-0">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <CardTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <CardTitle className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                       <CalendarDays className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                       Jadwal Pelajaran ({studentClass?.name || 'Kelas'})
                     </CardTitle>
-                    <CardDescription className="text-xs mt-1 dark:text-slate-300 font-medium">
+                    <CardDescription className="text-xs mt-1 text-slate-500 dark:text-slate-400 font-medium">
                       Jadwal kelas {studentClass?.name || 'Anda'}
                     </CardDescription>
                   </div>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950/90 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
                     Hari ini: {daysMap[todayDayIndex]}
                   </span>
                 </div>
@@ -717,11 +773,11 @@ export default function DashboardPage() {
             const Icon = link.icon
             return (
               <Link key={idx} href={link.href} className="group">
-                <Card className="h-full border-white/20 dark:border-white/10 bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg hover:shadow-2xl hover:border-indigo-400/40 hover:bg-white/15 dark:hover:bg-slate-900/60 transition-all duration-300 flex flex-col items-center justify-center p-4 gap-2.5 hover:-translate-y-1 rounded-2xl text-white">
-                  <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500/30 transition-transform duration-300 backdrop-blur-md">
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-300 group-hover:text-white transition-colors" />
+                <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs hover:shadow-xl hover:border-indigo-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-4 gap-2.5 hover:-translate-y-1 rounded-2xl">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-indigo-600 group-hover:to-purple-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md transition-all duration-300 shadow-2xs">
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 transition-colors" />
                   </div>
-                  <h3 className="font-bold text-slate-100 dark:text-white text-center text-xs sm:text-sm group-hover:text-indigo-300 transition-colors">
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center text-xs sm:text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     {link.name}
                   </h3>
                 </Card>
@@ -733,22 +789,22 @@ export default function DashboardPage() {
         {/* Bagian Atas: Ringkasan Etika & Tata Tertib Siswa bersanding dengan Jadwal Pelajaran */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full items-stretch">
           {/* Card Penilaian Etika & Tatib (View Only - Coming Soon) */}
-          <Card className="border-slate-200 dark:border-slate-800 dark:bg-slate-900/60 shadow-sm rounded-2xl flex flex-col justify-between overflow-hidden">
-            <CardHeader className="bg-emerald-50/70 dark:bg-emerald-950/30 border-b border-emerald-100 dark:border-emerald-900 pb-3">
+          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl flex flex-col justify-between overflow-hidden">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Award className="w-5 h-5 text-emerald-600" />
+                <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   Penilaian Etika & Tata Tertib Siswa
                 </CardTitle>
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] font-bold">
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 text-[10px] font-bold">
                   Coming Soon
                 </Badge>
               </div>
-              <CardDescription className="text-xs mt-0.5">
+              <CardDescription className="text-xs mt-0.5 text-slate-500 dark:text-slate-400 font-medium">
                 Monitoring kedisiplinan dan amalan ibadah {activeStudent?.name || 'siswa'} (Terkoneksi Tim Tatib & BK)
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+            <CardContent className="p-4 sm:p-5 space-y-3 flex-1 flex flex-col justify-between">
               <div className="grid grid-cols-3 gap-2">
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-center">
                   <span className="text-[10px] font-bold text-slate-400 block uppercase">Poin Tatib</span>
@@ -783,24 +839,24 @@ export default function DashboardPage() {
           </Card>
 
           {/* Card Jadwal Pelajaran Kelas Siswa */}
-          <Card className="border-slate-200 dark:border-slate-800 dark:bg-slate-900/60 shadow-sm overflow-hidden rounded-2xl flex flex-col justify-between">
-            <CardHeader className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 pb-3 shrink-0">
+          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs overflow-hidden rounded-2xl flex flex-col justify-between">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-3 shrink-0">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                     <CalendarDays className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                     Jadwal Pelajaran ({activeStudent?.className || 'Kelas'})
                   </CardTitle>
-                  <CardDescription className="text-xs mt-0.5">
+                  <CardDescription className="text-xs mt-0.5 text-slate-500 dark:text-slate-400 font-medium">
                     Mata pelajaran {activeStudent?.name || 'siswa'} hari {daysMap[todayDayIndex]}
                   </CardDescription>
                 </div>
-                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950/90 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
                   Hari: {daysMap[todayDayIndex]}
                 </span>
               </div>
             </CardHeader>
-            <CardContent className="p-4 flex-1 overflow-y-auto max-h-[300px] space-y-2.5">
+            <CardContent className="p-4 sm:p-5 flex-1 overflow-y-auto max-h-[300px] space-y-2.5">
               {myClassSchedules.length === 0 ? (
                 <div className="text-center py-10 text-slate-400 border border-dashed rounded-xl">
                   <CalendarDays className="w-10 h-10 mx-auto mb-1 opacity-30" />
@@ -850,22 +906,22 @@ export default function DashboardPage() {
         {/* Bagian Tengah: Widget Notifikasi WhatsApp & Widget E-Rapor */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full items-stretch">
           {/* Card Notifikasi WhatsApp */}
-          <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl">
-            <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl">
+            <CardHeader className="p-5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
-                  <BellRing className="w-5 h-5 text-emerald-600" />
+                <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <BellRing className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   Penerimaan Notifikasi WhatsApp
                 </CardTitle>
-                <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-300">
+                <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700">
                   Aktif ke No: {(session?.user as any)?.username || '-'}
                 </Badge>
               </div>
-              <CardDescription className="text-xs">
+              <CardDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 Notifikasi otomatis langsung ke kontak WhatsApp resmi orang tua / wali.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 space-y-2.5 text-xs">
+            <CardContent className="p-4 sm:p-5 space-y-2.5 text-xs">
               <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60">
                 <span className="font-semibold text-slate-800 dark:text-slate-200">Notifikasi Presensi Kedatangan Siswa</span>
                 <Badge className="bg-emerald-600 text-white text-[10px]">Aktif</Badge>
@@ -893,18 +949,18 @@ export default function DashboardPage() {
           </Card>
 
           {/* Card E-Rapor & Statistika */}
-          <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl flex flex-col justify-between">
-            <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl flex flex-col justify-between">
+            <CardHeader className="p-5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
-                  <GraduationCap className="w-5 h-5 text-purple-600" />
+                <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                   Statistika E-Rapor & Prestasi
                 </CardTitle>
-                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 text-[10px] font-bold">
+                <Badge variant="outline" className="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 text-[10px] font-bold">
                   Coming Soon
                 </Badge>
               </div>
-              <CardDescription className="text-xs">
+              <CardDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 Hasil belajar semester {activeStudent?.name || 'siswa'}
               </CardDescription>
             </CardHeader>
@@ -974,20 +1030,19 @@ export default function DashboardPage() {
       {(role === 'ADMIN_IT' || role === 'SUPERADMIN' || role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') && (
         <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {adminStats.map((stat, i) => (
-            <Card key={i} className="group relative border-white/40 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl shadow-md dark:shadow-indigo-950/20 hover:shadow-2xl dark:hover:shadow-indigo-900/30 transition-all duration-300 overflow-hidden hover:-translate-y-1 flex flex-col justify-between">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-white/10 to-transparent dark:from-indigo-500/15 dark:via-purple-500/5 dark:to-transparent z-0 transition-colors duration-300"></div>
-              <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full ${stat.bg} opacity-50 group-hover:scale-150 transition-transform duration-500 z-0 blur-2xl`}></div>
-              <CardHeader className="flex flex-row items-start justify-between pb-2 space-y-0 relative z-10 gap-2">
-                <CardTitle className="text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider leading-tight sm:leading-snug pr-1">
+            <Card key={i} className="group relative border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs hover:shadow-xl dark:hover:border-slate-700 transition-all duration-300 overflow-hidden hover:-translate-y-1 flex flex-col justify-between rounded-2xl p-4 sm:p-5">
+              <div className={`absolute top-0 right-0 w-28 h-28 bg-gradient-to-br ${stat.glow} rounded-full blur-2xl pointer-events-none opacity-80 group-hover:scale-125 transition-transform duration-500`}></div>
+              <div className="flex items-start justify-between gap-2 relative z-10">
+                <span className="text-[11px] sm:text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider leading-snug">
                   {stat.title}
-                </CardTitle>
-                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl shrink-0 flex items-center justify-center ${stat.bg} shadow-inner backdrop-blur-md border border-white/50 dark:border-slate-700/60`}>
-                  <stat.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.color} dark:brightness-125 drop-shadow-sm`} />
+                </span>
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl shrink-0 flex items-center justify-center ${stat.bg} border ${stat.border} shadow-2xs group-hover:scale-110 transition-transform duration-300 backdrop-blur-md`}>
+                  <stat.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.color}`} />
                 </div>
-              </CardHeader>
-              <CardContent className="relative z-10 pt-1">
-                <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{stat.value}</div>
-              </CardContent>
+              </div>
+              <div className="relative z-10 mt-3 sm:mt-4">
+                <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight">{stat.value}</div>
+              </div>
             </Card>
           ))}
         </div>
@@ -998,11 +1053,11 @@ export default function DashboardPage() {
           const Icon = link.icon
           return (
             <Link key={idx} href={link.href} className="group">
-              <Card className="h-full border-white/20 dark:border-white/10 bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg hover:shadow-2xl hover:border-blue-400/40 hover:bg-white/15 dark:hover:bg-slate-900/60 transition-all duration-300 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 gap-3 sm:gap-4 hover:-translate-y-1 rounded-2xl group text-white">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-500/20 border border-blue-400/30 text-blue-300 flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-500/30 transition-all duration-300 backdrop-blur-md shadow-sm">
-                  <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-blue-300 group-hover:text-white transition-colors" />
+              <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs hover:shadow-xl hover:border-blue-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-7 gap-3 sm:gap-4 hover:-translate-y-1 rounded-2xl">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md transition-all duration-300 shadow-2xs">
+                  <Icon className="w-6 h-6 sm:w-7 sm:h-7 transition-colors" />
                 </div>
-                <h3 className="font-bold text-slate-100 dark:text-white text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-300 transition-colors">
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                   {link.name}
                 </h3>
               </Card>

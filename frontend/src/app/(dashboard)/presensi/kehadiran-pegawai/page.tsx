@@ -315,8 +315,8 @@ export default function LogKehadiranPegawaiPage() {
 
         {/* RIGHT: REALTIME DETECTION LOGS (5 COLS) */}
         <div className="lg:col-span-5 space-y-3">
-          <Card className="shadow-lg border-slate-200 dark:border-slate-800 flex flex-col h-[520px] rounded-2xl overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
-            <CardHeader className="p-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 shrink-0">
+          <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 flex flex-col h-[520px] rounded-2xl overflow-hidden bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl">
+            <CardHeader className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold shadow-xs">

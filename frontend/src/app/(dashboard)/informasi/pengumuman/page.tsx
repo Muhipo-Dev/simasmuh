@@ -307,11 +307,11 @@ export default function AnnouncementsPage() {
         </Dialog>
       </div>
 
-      <Card className="border-slate-200 shadow-sm overflow-hidden">
-        <CardHeader className="bg-white border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs overflow-hidden rounded-2xl">
+        <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <CardTitle className="text-lg">Daftar Pengumuman</CardTitle>
-            <CardDescription>Semua berita dan informasi yang pernah Anda publikasikan.</CardDescription>
+            <CardTitle className="text-lg font-extrabold text-slate-900 dark:text-white">Daftar Pengumuman</CardTitle>
+            <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">Semua berita dan informasi yang pernah Anda publikasikan.</CardDescription>
           </div>
           <TableSearch
             value={searchQuery}
@@ -322,7 +322,7 @@ export default function AnnouncementsPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-slate-50/80">
+              <TableHeader className="bg-slate-50/50 dark:bg-slate-800/40">
                 <TableRow>
                   <TableHead className="w-[40%] font-semibold text-slate-700">Judul & Isi</TableHead>
                   <TableHead className="font-semibold text-slate-700">Target Audiens</TableHead>

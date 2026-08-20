@@ -186,16 +186,49 @@ export class AuthService {
     };
   }
 
-  async logoutSession(userId: string, sessionId?: string) {
+  async logoutSession(userId: string, sessionId?: string, ipAddress?: string, userAgent?: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
     if (sessionId) {
+      const session = await this.prisma.userSession.findUnique({ where: { id: sessionId } });
       await this.prisma.userSession.updateMany({
         where: { id: sessionId, userId },
         data: { isActive: false },
+      });
+
+      await this.systemLogService.log({
+        category: 'AUTH',
+        level: 'INFO',
+        action: 'LOGOUT_SESSION',
+        message: `Sesi perangkat '${session?.device || sessionId}' milik '${user?.username || userId}' telah di-unlink / logout.`,
+        userId,
+        userName: user?.name || undefined,
+        userRole: user?.role || undefined,
+        ipAddress: ipAddress || session?.ipAddress || undefined,
+        userAgent: userAgent || session?.userAgent || undefined,
+        details: {
+          sessionId,
+          device: session?.device,
+          os: session?.os,
+          browser: session?.browser,
+        },
       });
     } else {
       await this.prisma.userSession.updateMany({
         where: { userId },
         data: { isActive: false },
+      });
+
+      await this.systemLogService.log({
+        category: 'AUTH',
+        level: 'INFO',
+        action: 'UNLINK_ALL_SESSIONS',
+        message: `Seluruh sesi perangkat milik '${user?.username || userId}' (${user?.name}) telah di-unlink / logout serentak.`,
+        userId,
+        userName: user?.name || undefined,
+        userRole: user?.role || undefined,
+        ipAddress: ipAddress || undefined,
+        userAgent: userAgent || undefined,
       });
     }
 

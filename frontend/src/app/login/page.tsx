@@ -134,29 +134,36 @@ export default function LoginPage() {
         }
       />
 
-      {/* Konten Utama: Desktop Grid 2 Kolom Sejajar & Rapi (Kiri Form Login, Kanan Petunjuk Kredensial & Helpdesk) */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 z-10 w-full max-w-5xl mx-auto my-auto">
+      {/* Konten Utama: Desktop Grid 2 Kolom Sejajar, Rata Tengah Sedikit Kebawah dengan Efek Glassmorphic & Icon Berwarna */}
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 pt-8 sm:pt-12 pb-12 sm:pb-16 z-10 w-full max-w-5xl mx-auto my-auto">
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
           
-          {/* Kolom Kiri: Card Login Form (Transparan Glassmorphism Selaras) */}
+          {/* Kolom Kiri: Card Login Form (Transparan Glassmorphism Selaras & Icon Berwarna Khas) */}
           <div className="lg:col-span-6 flex flex-col">
-            <div className="w-full h-full flex flex-col justify-between rounded-3xl shadow-2xl border border-white/20 dark:border-white/10 bg-white/10 dark:bg-slate-900/40 backdrop-blur-2xl overflow-hidden p-6 sm:p-8 space-y-6 text-white">
+            <div className="w-full h-full flex flex-col justify-between rounded-3xl shadow-2xl border border-white/20 dark:border-white/10 bg-white/10 dark:bg-slate-900/50 backdrop-blur-2xl overflow-hidden p-6 sm:p-8 space-y-6 text-white relative group">
               
+              {/* Subtle Ambient Glow Effect inside card */}
+              <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/15 rounded-full blur-3xl pointer-events-none -z-10" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none -z-10" />
+
               <div className="space-y-6">
-                {/* Header Card */}
-                <div className="text-center space-y-1">
-                  <h1 className="text-2xl font-extrabold text-white tracking-tight">
+                {/* Header Card dengan Icon Berwarna Khas Transparan */}
+                <div className="text-center space-y-2">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600/30 to-cyan-500/30 border border-blue-400/40 backdrop-blur-xl shadow-lg shadow-blue-500/20 mb-1">
+                    <Lock className="w-6 h-6 text-blue-300 drop-shadow-md" />
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                     Masuk Akun
                   </h1>
-                  <p className="text-slate-200/90 text-xs sm:text-sm">
+                  <p className="text-slate-200/80 text-xs sm:text-sm font-medium">
                     Sistem Informasi Manajemen Terpadu
                   </p>
                 </div>
 
                 {/* Alert Error */}
                 {error && (
-                  <div className="p-3 rounded-xl bg-red-500/20 border border-red-400/30 text-red-200 text-xs font-medium flex items-center gap-2 animate-in fade-in backdrop-blur-md">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                  <div className="p-3.5 rounded-2xl bg-red-500/20 border border-red-400/30 text-red-200 text-xs font-medium flex items-center gap-2.5 animate-in fade-in backdrop-blur-md">
+                    <div className="w-2 h-2 rounded-full bg-red-400 shrink-0 animate-pulse" />
                     <span>{error}</span>
                   </div>
                 )}
@@ -165,8 +172,10 @@ export default function LoginPage() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="email" className="font-semibold text-slate-200 text-xs flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-blue-300" />
-                      Username / NIS / No. WhatsApp
+                      <div className="w-5 h-5 rounded-md bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
+                        <User className="w-3 h-3 text-blue-300" />
+                      </div>
+                      <span>Username / NIS / No. WhatsApp</span>
                     </Label>
                     <Input
                       id="email"
@@ -176,14 +185,16 @@ export default function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       autoComplete="username"
-                      className="h-11 px-3.5 rounded-xl text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-400 bg-white/10 dark:bg-slate-800/50 border-white/20 dark:border-white/15 text-white placeholder:text-slate-300/60 backdrop-blur-md"
+                      className="h-11 px-3.5 rounded-xl text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-400 bg-white/10 dark:bg-slate-800/60 border-white/20 dark:border-white/15 text-white placeholder:text-slate-300/60 backdrop-blur-md focus:bg-white/15"
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <Label htmlFor="password" className="font-semibold text-slate-200 text-xs flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5 text-blue-300" />
-                      Password / Kata Sandi
+                      <div className="w-5 h-5 rounded-md bg-cyan-500/20 flex items-center justify-center border border-cyan-400/30">
+                        <Lock className="w-3 h-3 text-cyan-300" />
+                      </div>
+                      <span>Password / Kata Sandi</span>
                     </Label>
                     <Input
                       id="password"
@@ -193,14 +204,14 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       autoComplete="current-password"
-                      className="h-11 px-3.5 rounded-xl text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-400 bg-white/10 dark:bg-slate-800/50 border-white/20 dark:border-white/15 text-white placeholder:text-slate-300/60 backdrop-blur-md"
+                      className="h-11 px-3.5 rounded-xl text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-400 bg-white/10 dark:bg-slate-800/60 border-white/20 dark:border-white/15 text-white placeholder:text-slate-300/60 backdrop-blur-md focus:bg-white/15"
                     />
                   </div>
 
                   <Button
                     type="submit"
                     disabled={!!loading}
-                    className="w-full h-11 bg-blue-600/80 hover:bg-blue-600 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-blue-900/30 active:scale-[0.99] border border-blue-400/30 backdrop-blur-md mt-2"
+                    className="w-full h-11 bg-gradient-to-r from-blue-600/90 to-indigo-600/90 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-sm rounded-xl transition-all shadow-xl shadow-blue-900/40 active:scale-[0.99] border border-blue-400/40 backdrop-blur-md mt-2"
                   >
                     {loading ? (
                       <div className="flex items-center justify-center gap-2">
@@ -224,7 +235,9 @@ export default function LoginPage() {
                     className="w-full flex items-center justify-between text-xs font-semibold text-slate-200 hover:text-blue-300 transition-colors py-1 px-1 rounded-lg"
                   >
                     <span className="flex items-center gap-1.5">
-                      <Info className="w-3.5 h-3.5 text-blue-300" />
+                      <div className="w-5 h-5 rounded-md bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
+                        <Info className="w-3 h-3 text-blue-300" />
+                      </div>
                       Petunjuk Kredensial Pengguna
                     </span>
                     {showGuideMobile ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -232,22 +245,28 @@ export default function LoginPage() {
 
                   {showGuideMobile && (
                     <div className="space-y-2.5 p-3.5 rounded-2xl bg-white/10 dark:bg-slate-800/60 border border-white/15 text-[11px] leading-relaxed text-slate-200 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
-                      <div className="flex items-start gap-2">
-                        <GraduationCap className="w-3.5 h-3.5 text-emerald-300 mt-0.5 shrink-0" />
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-6 h-6 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center shrink-0 mt-0.5">
+                          <GraduationCap className="w-3.5 h-3.5 text-emerald-300" />
+                        </div>
                         <div>
-                          <span className="font-bold text-emerald-200">Siswa:</span> Gunakan <span className="font-mono font-bold bg-white/15 px-1 rounded">NIS</span> sebagai username & password.
+                          <span className="font-bold text-emerald-200">Siswa:</span> Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">NIS</span> sebagai username & password.
                         </div>
                       </div>
-                      <div className="flex items-start gap-2">
-                        <Phone className="w-3.5 h-3.5 text-purple-300 mt-0.5 shrink-0" />
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-6 h-6 rounded-lg bg-purple-500/20 border border-purple-400/30 flex items-center justify-center shrink-0 mt-0.5">
+                          <Phone className="w-3.5 h-3.5 text-purple-300" />
+                        </div>
                         <div>
-                          <span className="font-bold text-purple-200">Wali Murid:</span> Username <span className="font-mono font-bold bg-white/15 px-1 rounded">No. WA</span> & password <span className="font-mono font-bold bg-white/15 px-1 rounded">NIS Anak</span>.
+                          <span className="font-bold text-purple-200">Wali Murid:</span> Username <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">No. WA</span> & password <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">NIS Anak</span>.
                         </div>
                       </div>
-                      <div className="flex items-start gap-2">
-                        <ShieldCheck className="w-3.5 h-3.5 text-blue-300 mt-0.5 shrink-0" />
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-6 h-6 rounded-lg bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 mt-0.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-blue-300" />
+                        </div>
                         <div>
-                          <span className="font-bold text-blue-200">Guru / Staff:</span> Gunakan <span className="font-mono font-bold bg-white/15 px-1 rounded">Username</span> & password terdaftar.
+                          <span className="font-bold text-blue-200">Guru / Staff:</span> Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">Username</span> & password terdaftar.
                         </div>
                       </div>
                       <div className="pt-2 border-t border-white/15 text-[10px] text-slate-300">
@@ -262,9 +281,9 @@ export default function LoginPage() {
               <div className="pt-2">
                 <Link
                   href="/"
-                  className="w-full flex items-center justify-center py-2.5 px-3 border border-white/20 font-medium text-xs text-slate-200 hover:text-white bg-white/5 hover:bg-white/15 rounded-xl backdrop-blur-md transition-all gap-1.5"
+                  className="w-full flex items-center justify-center py-2.5 px-3 border border-white/20 font-semibold text-xs text-slate-200 hover:text-white bg-white/5 hover:bg-white/15 rounded-xl backdrop-blur-md transition-all gap-1.5 shadow-sm"
                 >
-                  <Home className="w-3.5 h-3.5" />
+                  <Home className="w-3.5 h-3.5 text-slate-300" />
                   Kembali ke Beranda
                 </Link>
               </div>

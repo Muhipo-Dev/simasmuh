@@ -3,6 +3,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { getServerTimeInfo } from '../utils/timezone.util';
 
 @Injectable()
 export class SettingsService {
@@ -10,6 +11,27 @@ export class SettingsService {
     private prisma: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
+
+  async getServerTime(): Promise<any> {
+    const settings = await this.prisma.setting.findFirst({
+      select: { address: true, schoolName: true },
+    });
+    const location = settings?.address || 'Ponorogo, Jawa Timur, Indonesia';
+    return getServerTimeInfo(location);
+  }
+
+  async getTimeSync(clientTime?: number): Promise<any> {
+    const serverReceivedAt = Date.now();
+    const serverTimeInfo = await this.getServerTime();
+    const serverSentAt = Date.now();
+
+    return {
+      ...serverTimeInfo,
+      clientSentAt: clientTime || null,
+      serverReceivedAt,
+      serverSentAt,
+    };
+  }
 
   async getSettings(): Promise<any> {
     const cacheKey = 'app_settings_full';

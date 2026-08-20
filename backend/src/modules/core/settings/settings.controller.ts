@@ -28,6 +28,17 @@ export class SettingsController {
     return this.settingsService.getPublicSettings();
   }
 
+  @Get('server-time')
+  getServerTime() {
+    return this.settingsService.getServerTime();
+  }
+
+  @Get('time-sync')
+  getTimeSync(@Query('t') clientTime?: string) {
+    const timestamp = clientTime ? parseInt(clientTime, 10) : undefined;
+    return this.settingsService.getTimeSync(timestamp);
+  }
+
   @Get('program-configs')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN)

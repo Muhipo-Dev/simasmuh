@@ -4,6 +4,10 @@ import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
 import compression from 'compression';
 import helmet from 'helmet';
+import { initializeSystemTimezone } from './modules/core/utils/timezone.util';
+
+// Set zona waktu seragam UTC+7 (Asia/Jakarta / Bangkok)
+initializeSystemTimezone();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });

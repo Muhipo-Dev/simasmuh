@@ -4,6 +4,34 @@ Semua catatan perubahan dan pembaruan sistem SIMASMUH didokumentasikan di berkas
 
 ---
 
+## [2026-08-21] - v1.5.2: Server Time Synchronization (UTC+7 / Asia/Jakarta) & Supabase Log Decommissioning
+
+### 🚀 Fitur Baru & Peningkatan Utama
+
+#### 1. Algoritma Sinkronisasi Tanggal & Waktu Terpusat (UTC+7 / Asia/Jakarta / Bangkok)
+- **NodeJS Global TZ Init**: Inisialisasi zona waktu proses backend ke `Asia/Jakarta` (`process.env.TZ = 'Asia/Jakarta'`) di `main.ts` sebelum bootstrap aplikasi.
+- **Backend Timezone Utility (`timezone.util.ts`)**:
+  - `getNowUtc7()`, `getTimeStringUtc7()`, `getDateStringUtc7()`, `getStartOfDayUtc7()`, `getEndOfDayUtc7()`.
+  - Format terstandarisasi Bahasa Indonesia (`formatDateIndonesia`, `formatDateTimeIndonesia`).
+  - Metadata waktu server lengkap (`getServerTimeInfo`) mencakup host server, lokasi instalasi sekolah, offset menit, dan uptime.
+- **API Endpoints**:
+  - `GET /api-backend/settings/server-time`: Mengembalikan metadata waktu dan konfigurasi server.
+  - `GET /api-backend/settings/time-sync`: Endpoint estimasi latensi round-trip (NTP-style clock sync).
+
+#### 2. Kalibrasi Realtime Server Clock di Frontend (Next.js)
+- **Modul `frontend/src/lib/time-sync.ts`**:
+  - Penghitungan kompensasi time drift browser terhadap waktu server (`t0`, `t1`, `t2`, `t3`).
+  - Hook React `useRealtimeServerClock` dengan tick real-time per detik dan sinkronisasi berkala.
+  - Format helper `formatDateWib`, `formatTimeWib`, `formatDateTimeWib`.
+- **UI & Panel Interaktif**:
+  - **Live Clock Panel di Pengaturan Sistem** (`/pengaturan/sistem`): Menampilkan jam digital live WIB, hari/tanggal, zona waktu, lokasi server, latensi jaringan, dan tombol kalibrasi instan.
+  - **Navbar Header Live Clock**: Badge Live Server Time UTC+7 (WIB) pada navbar atas dashboard (`layout.tsx`).
+
+#### 3. Decommissioning & Pembersihan Modul Log Sistem Supabase
+- Penghapusan modul pencatatan log sistem Supabase (`SystemLogService`, `SupabaseStorageService`, cron arsip, dan interceptor HTTP) untuk optimasi efisiensi sistem dan menyederhanakan arsitektur pemeliharaan.
+
+---
+
 ## [2026-08-19] - FaceNet Biometric AI, Realtime Database Sync & Camera Engine Optimization
 
 ### 🚀 Fitur Baru & Peningkatan Utama

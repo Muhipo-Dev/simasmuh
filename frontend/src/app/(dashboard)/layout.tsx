@@ -5,13 +5,14 @@ import { useRouter, usePathname } from 'next/navigation'
 import NextImage from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { LogOut, Menu, X, MoreHorizontal, LayoutDashboard, QrCode, CalendarDays } from 'lucide-react'
+import { LogOut, Menu, X, MoreHorizontal, LayoutDashboard, QrCode, CalendarDays, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useQuery } from '@tanstack/react-query'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { AppNavbar, AppFooter, AppSidebar } from '@/components/layout'
 import { superAdminOnlyPaths, getRoleLinks } from '@/lib/nav-links'
+import { useRealtimeServerClock } from '@/lib/time-sync'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
@@ -19,6 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const authenticatedQuery = useAuthenticatedQuery()
+  const clock = useRealtimeServerClock(60000)
 
   const userId = (session?.user as { id?: string })?.id
   const { data: profileData } = useQuery<{ name?: string; avatarUrl?: string }>({
@@ -124,12 +126,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <AppNavbar
           actions={
             <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-3 shrink-0">
+              {/* Live Server Time UTC+7 Badge */}
+              <div 
+                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 font-mono font-bold text-xs shadow-2xs shrink-0 backdrop-blur-md cursor-default"
+                title={`Waktu Server Terkalibrasi (${clock.timezone} ${clock.utcOffset}) - ${clock.serverLocation}`}
+              >
+                <Clock className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                <span>{clock.timeString} <span className="text-[10px] font-sans font-normal opacity-80">WIB</span></span>
+              </div>
+
               {/* Tahun Ajaran Badge (Sembunyi di mobile kecil agar tidak tabrakan) */}
               <div className="hidden md:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200 font-bold text-[10px] sm:text-xs shadow-2xs shrink-0 backdrop-blur-md">
                 <CalendarDays className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-300 shrink-0" />
                 <span>TA: {systemSettings?.academicYear || '2026/2027'}</span>
                 {systemSettings?.semester && (
-                  <span className="hidden lg:inline text-[11px] opacity-85 font-medium">({systemSettings.semester})</span>
+                  <span className="hidden xl:inline text-[11px] opacity-85 font-medium">({systemSettings.semester})</span>
                 )}
               </div>
 

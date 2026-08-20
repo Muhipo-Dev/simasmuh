@@ -29,6 +29,19 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-21 (v1.5.2 - Sinkronisasi Algoritma Tanggal & Waktu UTC+7 Server-Centric, NTP-Style Live Clock Calibration & Decommissioning Log Supabase):**
+  * **Sinkronisasi Algoritma Tanggal & Waktu Sistem Terpusat (UTC+7 / Asia/Jakarta / Bangkok):**
+    * Inisialisasi global timezone proses NodeJS ke `Asia/Jakarta` (`process.env.TZ = 'Asia/Jakarta'`) pada bootstrap utama NestJS (`main.ts`).
+    * Implementasi modul utilitas waktu terstandarisasi [`timezone.util.ts`](file:///d:/simasmuh/backend/src/modules/core/utils/timezone.util.ts) di backend untuk menjamin seluruh proses presensi, pencatatan transaksi keuangan, log sistem, dan penjadwalan selalu seragam mengacu pada zona waktu UTC+7 (WIB) tanpa terpengaruh lokasi server diinstal.
+    * Endpoint API `/api-backend/settings/server-time` dan `/api-backend/settings/time-sync` untuk menyediakan metadata waktu server, zona aktif, offset UTC, dan estimasi round-trip latency jaringan.
+  * **Kalibrasi Realtime Clock Presisi di Frontend Next.js (`time-sync.ts`):**
+    * Implementasi algoritma estimasi offset & drift jam browser terhadap waktu server (NTP-like roundtrip synchronization) di modul [`time-sync.ts`](file:///d:/simasmuh/frontend/src/lib/time-sync.ts).
+    * Custom React Hook `useRealtimeServerClock` yang menjalankan *tick* detik real-time dan re-sinkronisasi periodik dengan backend sehingga jam aplikasi selalu akurat meskipun jam di perangkat pengguna salah.
+    * Penambahan panel **Sinkronisasi Tanggal & Waktu Server** interaktif di halaman **Pengaturan Sistem** (`/pengaturan/sistem`) lengkap dengan live clock, informasi zona waktu, lokasi server, latensi jaringan, serta tombol kalibrasi instan.
+    * Integrasi badge Live Server Time UTC+7 (WIB) pada navbar atas dashboard (`layout.tsx`) berdampingan dengan badge Tahun Ajaran aktif.
+  * **Decommissioning & Pembersihan Modul Log Sistem Supabase:**
+    * Penonaktifan dan penghapusan modul pencatatan log sistem Supabase (`SystemLogService`, `SupabaseStorageService`, `log-archive-cron`, `http-logging.interceptor`, dan rute `/pengaturan/log-sistem`) untuk menghemat resource dan menyederhanakan arsitektur pemeliharaan.
+
 * **2026-08-20 (v1.5.1 - Unifikasi Tema Gelap Transparan Global, Redesain Login Glassmorphic, Pemisahan Konfigurasi Helpdesk & Tombol Fitur Transparan):**
   * **Unifikasi Tema Gelap Transparan Global (`AppNavbar`, `AppSidebar`, `AppFooter`):**
     * Seluruh kerangka layout sistem (Navbar atas, Sidebar menu navigasi, Bottom bar mobile, dan Footer) kini diselaraskan menggunakan standar *dark translucent glassmorphism* (`bg-slate-950/80 backdrop-blur-2xl border-white/10`) dengan tipografi kontras tinggi yang tajam dan elegan.

@@ -19,7 +19,6 @@ export const superadminLinks = [
   { name: 'Presensi Camera AI', href: '/presensi/camera', icon: Camera },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
   { name: 'Kelola Notifikasi', href: '/pengaturan/notifikasi', icon: BellRing },
-  { name: 'Log Sistem (Supabase)', href: '/pengaturan/log-sistem', icon: Database },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
 ]
 
@@ -79,7 +78,7 @@ export const pegawaiLinks = [
 
 export const superAdminOnlyPaths = [
   '/master-data/pengguna', '/master-data/wali-murid', '/master-data/mata-pelajaran',
-  '/master-data/siswa', '/master-data/kelas', '/master-data/guru', '/pengaturan/sistem', '/pengaturan/log-sistem', '/presensi/manajemen-qr', '/presensi/camera'
+  '/master-data/siswa', '/master-data/kelas', '/master-data/guru', '/pengaturan/sistem', '/presensi/manajemen-qr', '/presensi/camera'
 ]
 
 export function getRoleLinks(role: string, subRole?: string, subRole2?: string, subRole3?: string) {

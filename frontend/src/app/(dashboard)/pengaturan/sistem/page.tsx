@@ -4,13 +4,34 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Swal from 'sweetalert2'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Save, Building2, CreditCard, ImageIcon, CalendarDays, Sparkles, Pencil, Trash2, Percent, Database } from 'lucide-react'
+import { 
+  Building2, 
+  CreditCard, 
+  Save, 
+  Upload, 
+  Loader2, 
+  DollarSign, 
+  Landmark,
+  Layers,
+  Sparkles,
+  Phone,
+  MessageSquare,
+  CalendarDays,
+  Clock,
+  Globe,
+  Server,
+  RefreshCw,
+  CheckCircle2,
+  MapPin,
+  Wifi
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { compressImageFile } from '@/utils/imageCompressor'
+import { useRealtimeServerClock } from '@/lib/time-sync'
 
 type Setting = {
   id: string
@@ -37,6 +58,8 @@ type BankAccount = {
 
 export default function SettingsPage() {
   const queryClient = useQueryClient()
+  const clock = useRealtimeServerClock(30000) // Sinkronisasi setiap 30 detik
+
   const [formData, setFormData] = useState({
     schoolName: '',
     address: '',
@@ -209,16 +232,97 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Pengaturan Sekolah</h1>
-          <p className="text-slate-500 mt-1">Kelola informasi dasar sekolah, rekening pembayaran, dan log sistem.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Pengaturan Sistem & Sekolah</h1>
+          <p className="text-slate-500 mt-1">Kelola informasi dasar sekolah, rekening pembayaran, dan sinkronisasi waktu server.</p>
         </div>
-        <Link href="/pengaturan/log-sistem">
-          <Button variant="outline" className="border-emerald-500/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold shadow-sm">
-            <Database className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" />
-            Penyimpanan Log Sistem (Supabase)
-          </Button>
-        </Link>
       </div>
+
+      {/* Card Sinkronisasi Tanggal & Waktu Server (UTC+7 / Jakarta / Bangkok) */}
+      <Card className="border-blue-200/80 dark:border-blue-900/50 bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40 backdrop-blur-xl rounded-2xl overflow-hidden shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-blue-600 text-white shadow-sm">
+                  <Clock className="w-5 h-5" />
+                </span>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    Sinkronisasi Tanggal & Waktu Server SIMASMUH
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      <CheckCircle2 className="w-3 h-3" /> Terkalibrasi Aktif
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Standar zona waktu server <strong>UTC+7 (WIB / Asia/Jakarta / Bangkok)</strong> mengunci konsistensi presensi, log, dan keuangan di manapun server diinstal.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                  <Globe className="w-4 h-4 text-blue-600 shrink-0" />
+                  <div>
+                    <div className="font-semibold text-slate-900 dark:text-white">Zona Waktu Aktif</div>
+                    <div className="text-[11px] text-slate-500 font-mono">{clock.timezone} ({clock.utcOffset})</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                  <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <div className="font-semibold text-slate-900 dark:text-white">Lokasi Instalasi Server</div>
+                    <div className="text-[11px] text-slate-500 truncate max-w-[180px]">{clock.serverLocation}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                  <Wifi className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <div>
+                    <div className="font-semibold text-slate-900 dark:text-white">Latensi Sinkronisasi</div>
+                    <div className="text-[11px] text-slate-500 font-mono">{clock.latency} ms (Realtime Sync)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Clock Display & Sync Button */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-white dark:bg-slate-800/90 p-4 rounded-2xl border border-blue-100 dark:border-slate-700/80 shadow-xs shrink-0">
+              <div className="text-center sm:text-right">
+                <div className="text-3xl font-extrabold tracking-tight text-blue-600 dark:text-blue-400 font-mono">
+                  {clock.timeString} <span className="text-xs font-sans font-semibold text-slate-500">WIB</span>
+                </div>
+                <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {clock.dateString}
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  {clock.lastSyncTime ? `Sinkron terakhir: ${clock.lastSyncTime.toLocaleTimeString('id-ID')}` : 'Sinkronisasi otomatis'}
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  clock.reSync()
+                  Swal.fire({
+                    title: 'Waktu Berhasil Dikalibrasi!',
+                    text: `Waktu sistem telah disinkronkan langsung dengan server pada ${clock.timeString} WIB.`,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                  })
+                }}
+                disabled={clock.isSyncing}
+                className="rounded-xl border-blue-200 hover:bg-blue-50 text-blue-700 dark:text-blue-300 dark:border-blue-800 font-bold gap-2 text-xs"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${clock.isSyncing ? 'animate-spin' : ''}`} />
+                {clock.isSyncing ? 'Sinkronisasi...' : 'Kalibrasi Sekarang'}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Pengaturan Sekolah */}

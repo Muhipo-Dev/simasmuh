@@ -73,15 +73,15 @@ export default function LoginPage() {
 
       {/* Navbar Atas Terpadu: Kiri Logo, Kanan Presensi View & Theme Switcher */}
       <AppNavbar
-        className="bg-slate-950/40 dark:bg-slate-950/60 border-white/10 text-white backdrop-blur-xl"
+        isDarkWallpaper
         actions={
           <>
             <Link
               href="/presensi-view"
-              className="h-8 sm:h-9 px-3 text-xs font-semibold border border-white/20 text-white/90 bg-white/10 hover:bg-white/20 hover:text-white rounded-xl backdrop-blur-md transition-all flex items-center gap-1.5 shadow-xs shrink-0"
+              className="h-9 px-3.5 text-xs font-bold border border-white/20 text-white bg-white/10 hover:bg-white/20 hover:text-white rounded-xl backdrop-blur-md transition-all flex items-center gap-1.5 shadow-sm shrink-0"
             >
-              <ClipboardCheck className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
-              <span className="hidden sm:inline">Presensi</span>
+              <ClipboardCheck className="w-4 h-4 text-emerald-300 shrink-0" />
+              <span>Presensi</span>
             </Link>
             <ThemeToggle />
           </>
@@ -217,8 +217,8 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* Footer Minimalis Bersatu */}
-      <AppFooter className="bg-transparent border-t border-white/10 text-white/60 py-3" />
+      {/* Footer Induk dengan Kontras Jelas */}
+      <AppFooter isDarkWallpaper />
     </div>
   )
 }

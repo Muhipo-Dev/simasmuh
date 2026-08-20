@@ -296,6 +296,28 @@ export class UsersService {
     });
   }
 
+  async getLoginHistory(id: string) {
+    return this.prisma.systemLog.findMany({
+      where: {
+        userId: id,
+        category: 'AUTH',
+        action: 'LOGIN_SUCCESS',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 15,
+      select: {
+        id: true,
+        action: true,
+        message: true,
+        ipAddress: true,
+        userAgent: true,
+        createdAt: true,
+      },
+    });
+  }
+
   async updateProfile(id: string, data: any) {
     const updateData: any = {};
     if (data.name !== undefined) updateData.name = data.name;

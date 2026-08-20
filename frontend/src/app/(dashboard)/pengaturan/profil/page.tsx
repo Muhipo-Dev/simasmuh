@@ -10,7 +10,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Camera, Loader2, CheckCircle2, User, MapPin, Mail, Shield, Pencil, X, GraduationCap, Award, Key, Lock, AlertCircle } from 'lucide-react'
+import { 
+  Camera, Loader2, CheckCircle2, User, MapPin, Mail, Shield, Pencil, X, 
+  GraduationCap, Award, Key, Lock, AlertCircle, Laptop, Clock, Globe, ShieldCheck, RefreshCw
+} from 'lucide-react'
 
 import { compressImageFile } from '@/utils/imageCompressor'
 
@@ -88,6 +91,17 @@ export default function ProfilePage() {
       if (!userId) return null
       const res = await authenticatedFetch(`/api-backend/users/${userId}/profile`)
       if (!res.ok) return null
+      return res.json()
+    },
+    enabled: !!userId
+  })
+
+  const { data: loginHistory, isLoading: isHistoryLoading, refetch: refetchHistory } = useQuery<any[]>({
+    queryKey: ['login-history', userId],
+    queryFn: async () => {
+      if (!userId) return []
+      const res = await authenticatedFetch(`/api-backend/users/${userId}/login-history`)
+      if (!res.ok) return []
       return res.json()
     },
     enabled: !!userId
@@ -534,6 +548,107 @@ export default function ProfilePage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Sesi Login & Pengelolaan Cache Akun */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+        <CardHeader className="bg-slate-50/70 dark:bg-slate-950/60 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shadow-sm">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">Status Sesi & Riwayat Login</CardTitle>
+                <CardDescription className="text-slate-500 dark:text-slate-400">
+                  Sistem mempertahankan status login aktif di perangkat Anda hingga Anda keluar manual
+                </CardDescription>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetchHistory()}
+              className="h-8 px-2.5 text-xs flex items-center gap-1.5"
+              title="Perbarui Riwayat"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isHistoryLoading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-5">
+          {/* Status Sesi Aktif */}
+          <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/60 flex items-start gap-3.5">
+            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse mt-1 shrink-0" />
+            <div className="space-y-1 text-xs sm:text-sm">
+              <p className="font-bold text-emerald-900 dark:text-emerald-200">
+                Sesi Perangkat Ini Sedang Aktif (Permanen)
+              </p>
+              <p className="text-emerald-700/90 dark:text-emerald-400 text-xs leading-relaxed">
+                Cache autentikasi tersimpan aman pada browser Anda dan tidak akan logout otomatis kecuali Anda menekan tombol <strong>Keluar (Logout)</strong> secara manual.
+              </p>
+            </div>
+          </div>
+
+          {/* Daftar Riwayat Login Akun */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-slate-500" />
+              <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                Catatan Akses & Riwayat Login Terakhir
+              </h4>
+            </div>
+
+            {isHistoryLoading ? (
+              <div className="py-6 flex items-center justify-center gap-2 text-slate-400 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Memuat riwayat sesi login...</span>
+              </div>
+            ) : loginHistory && loginHistory.length > 0 ? (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden">
+                {loginHistory.map((item, idx) => {
+                  const dateStr = new Date(item.createdAt).toLocaleString('id-ID', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })
+                  return (
+                    <div
+                      key={item.id || idx}
+                      className="p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors text-xs"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <Laptop className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-slate-800 dark:text-slate-200">
+                            {item.message || 'Login Berhasil'}
+                          </p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 max-w-md">
+                            {item.userAgent || 'Browser Web'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 shrink-0 pl-6 sm:pl-0">
+                        {item.ipAddress && (
+                          <span className="inline-flex items-center gap-1 font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700">
+                            <Globe className="w-3 h-3 text-slate-400" />
+                            {item.ipAddress}
+                          </span>
+                        )}
+                        <span className="font-medium text-slate-600 dark:text-slate-300">{dateStr}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="py-6 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-slate-400 text-xs">
+                Belum ada catatan aktivitas login tersimpan.
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
+

@@ -90,6 +90,11 @@ const authOptions = {
   pages: {
     signIn: '/login',
   },
+  session: {
+    strategy: "jwt" as const,
+    maxAge: 365 * 24 * 60 * 60, // 365 hari (1 Tahun)
+    updateAge: 24 * 60 * 60, // Perbarui token setiap 24 jam di background
+  },
   trustHost: true
 };
 

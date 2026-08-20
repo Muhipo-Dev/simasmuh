@@ -18,6 +18,11 @@ export class UsersController {
     return this.usersService.getProfile(id);
   }
 
+  @Get(':id/login-history')
+  getLoginHistory(@Param('id') id: string) {
+    return this.usersService.getLoginHistory(id);
+  }
+
   @Put(':id/profile')
   updateProfile(@Param('id') id: string, @Body() data: any) {
     return this.usersService.updateProfile(id, data);

@@ -186,20 +186,21 @@ Pesan ini dikirim secara otomatis oleh SIMASMUH sebagai rekaman data kehadiran r
     if (params.phone && params.phone.trim() !== '') phonesToSend.add(params.phone.trim());
     if (params.parentPhone && params.parentPhone.trim() !== '') phonesToSend.add(params.parentPhone.trim());
 
-    if (phonesToSend.size === 0) {
-      phonesToSend.add(WhatsAppService.DEFAULT_SENDER_NUMBER);
-    }
-
-    for (const phone of phonesToSend) {
-      await this.sendDirectMessage({
-        to: phone,
-        recipientName: params.studentOrUserName,
-        recipientRole: params.role,
-        category: 'ABSENSI',
-        title: `Presensi ${params.scanType} - ${params.studentOrUserName}`,
-        message,
-      });
-    }
+    // Eksekusi pengiriman notifikasi secara Asynchronous di background tanpa menahan respon HTTP presensi
+    Promise.allSettled(
+      Array.from(phonesToSend).map((phone) =>
+        this.sendDirectMessage({
+          to: phone,
+          recipientName: params.studentOrUserName,
+          recipientRole: params.role,
+          category: 'ABSENSI',
+          title: `Presensi ${params.scanType} - ${params.studentOrUserName}`,
+          message,
+        }),
+      ),
+    ).catch((err) => {
+      this.logger.error(`Error in async attendance notification delivery: ${err?.message}`);
+    });
   }
 
   /**

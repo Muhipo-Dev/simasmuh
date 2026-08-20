@@ -1,15 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class SettingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
-  async getSettings() {
+  async getSettings(): Promise<any> {
+    const cacheKey = 'app_settings_full';
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
+
     const settings = await this.prisma.setting.findFirst();
     if (!settings) {
-      return this.prisma.setting.create({
+      const created = await this.prisma.setting.create({
         data: {
           schoolName: 'SMA Muhammadiyah 1 Ponorogo',
           address: 'Jl. Sultan Agung No. 83, Ponorogo, Jawa Timur',
@@ -28,11 +37,18 @@ export class SettingsService {
           defaultSeragam: 2000000,
         } as any,
       });
+      await this.cacheManager.set(cacheKey, created, 60000); // 60s cache
+      return created;
     }
+    await this.cacheManager.set(cacheKey, settings, 60000);
     return settings;
   }
 
-  async getPublicSettings() {
+  async getPublicSettings(): Promise<any> {
+    const cacheKey = 'app_settings_public';
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
+
     const settings = await this.prisma.setting.findFirst({
       select: {
         schoolName: true,
@@ -50,7 +66,7 @@ export class SettingsService {
       } as any,
     });
     if (!settings) {
-      return {
+      const defaultPublic = {
         schoolName: 'SMA Muhammadiyah 1 Ponorogo',
         address: 'Jl. Sultan Agung No. 83, Ponorogo, Jawa Timur',
         phone: '(0352) 481428',
@@ -64,11 +80,16 @@ export class SettingsService {
         defaultInfaq: 300000,
         defaultSeragam: 2000000,
       };
+      await this.cacheManager.set(cacheKey, defaultPublic, 60000);
+      return defaultPublic;
     }
+    await this.cacheManager.set(cacheKey, settings, 60000);
     return settings;
   }
 
   async upsertSettings(data: any) {
+    await this.cacheManager.del('app_settings_full');
+    await this.cacheManager.del('app_settings_public');
     const settings = await this.prisma.setting.findFirst();
     if (settings) {
       return this.prisma.setting.update({
@@ -96,18 +117,18 @@ export class SettingsService {
   }
 
   async getQrPublicToken() {
-    let settings = await this.prisma.setting.findFirst();
+    let settings: any = await this.prisma.setting.findFirst();
     if (!settings) {
       settings = await this.getSettings();
     }
-    if (!settings.qrPublicToken) {
+    if (!settings?.qrPublicToken) {
       const token = randomBytes(16).toString('hex');
       settings = await this.prisma.setting.update({
         where: { id: settings.id },
         data: { qrPublicToken: token },
       });
     }
-    return { token: settings.qrPublicToken };
+    return { token: settings?.qrPublicToken || '' };
   }
 
   async regenerateQrPublicToken() {

@@ -1,11 +1,14 @@
 import { Controller, Post, Body, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // 🛡️ Proteksi Brute Force: Maksimal 6 percobaan login per 60 detik per IP
+  @Throttle({ default: { limit: 6, ttl: 60000 } })
   @Post('login')
   async login(@Body() body: any, @Req() req: Request) {
     const { username, password } = body;

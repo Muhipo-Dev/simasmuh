@@ -152,7 +152,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 text-slate-500 hover:text-white hover:bg-red-500 dark:hover:bg-red-600 rounded-full transition-colors shadow-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                  className="h-9 w-9 sm:h-10 sm:w-10 text-slate-300 hover:text-white hover:bg-red-500/80 rounded-full transition-colors shadow-sm bg-white/10 dark:bg-slate-800/60 border border-white/20 dark:border-white/10 backdrop-blur-md"
                   onClick={async () => {
                     if (userId) {
                       try {
@@ -175,7 +175,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <button
                     type="button"
                     onClick={() => setIsMobileMenuOpen(true)}
-                    className="lg:hidden h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl bg-[#2B50A1] hover:bg-[#1f3c7a] text-white transition-colors active:scale-95 shadow-sm"
+                    className="lg:hidden h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl bg-blue-600/80 hover:bg-blue-600 border border-blue-400/30 text-white transition-colors active:scale-95 shadow-sm backdrop-blur-md"
                     aria-label="Buka Menu"
                   >
                     <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -190,8 +190,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </div>
 
-        {/* Mobile Bottom Navigation Bar */}
-        <nav className="fixed bottom-0 inset-x-0 lg:hidden z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 safe-area-inset-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+        {/* Mobile Bottom Navigation Bar (Glassmorphic Gelap Selaras) */}
+        <nav className="fixed bottom-0 inset-x-0 lg:hidden z-40 bg-slate-950/90 dark:bg-slate-950/95 backdrop-blur-2xl border-t border-white/10 text-white safe-area-inset-bottom shadow-2xl">
           <div className="flex items-end justify-around h-16 px-1 relative pb-1">
             {(() => {
               const dashLink = currentLinks.find(l => l.href === '/dashboard') || { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }
@@ -214,10 +214,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       className="relative -top-5 flex flex-col items-center justify-center gap-1 z-50 flex-1 px-1 min-w-0"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
-                      <div className={`flex items-center justify-center w-14 h-14 rounded-full shadow-lg border-[4px] border-slate-50 dark:border-slate-950 transition-transform active:scale-95 ${isActive ? 'bg-blue-700 dark:bg-blue-600' : 'bg-blue-600 dark:bg-blue-500'}`}>
+                      <div className={`flex items-center justify-center w-14 h-14 rounded-full shadow-lg border-[4px] border-slate-950 transition-transform active:scale-95 ${isActive ? 'bg-blue-600' : 'bg-blue-700'}`}>
                         <Icon className="w-6 h-6 text-white" />
                       </div>
-                      <span className={`text-[10px] font-semibold tracking-wide ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                      <span className={`text-[10px] font-bold tracking-wide ${isActive ? 'text-blue-300' : 'text-slate-300'}`}>
                         {link.name}
                       </span>
                     </Link>
@@ -228,13 +228,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`flex flex-col items-center justify-center gap-0.5 flex-1 px-1 min-w-0 transition-colors active:scale-95 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                    className={`flex flex-col items-center justify-center gap-0.5 flex-1 px-1 min-w-0 transition-colors active:scale-95 ${isActive ? 'text-blue-300' : 'text-slate-400 hover:text-white'}`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <div className={`relative flex items-center justify-center w-10 h-8 rounded-full mb-0.5 transition-all duration-300 ${isActive ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-transparent'}`}>
-                      <Icon className={`w-5 h-5 ${isActive ? 'scale-110' : 'scale-100'}`} />
+                    <div className={`relative flex items-center justify-center w-10 h-8 rounded-full mb-0.5 transition-all duration-300 ${isActive ? 'bg-blue-600/30 border border-blue-400/30' : 'bg-transparent'}`}>
+                      <Icon className={`w-5 h-5 ${isActive ? 'scale-110 text-blue-300' : 'scale-100 text-slate-400'}`} />
                     </div>
-                    <span className="text-[10px] font-semibold tracking-wide truncate w-full text-center">
+                    <span className="text-[10px] font-medium tracking-wide truncate w-full text-center">
                       {link.name}
                     </span>
                   </Link>
@@ -249,12 +249,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {renderNavButton(rightLink)}
                   <button
                     onClick={() => setIsMobileMenuOpen(true)}
-                    className="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 min-w-0 transition-colors active:scale-95 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    className="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 min-w-0 transition-colors active:scale-95 text-slate-400 hover:text-white"
                   >
                     <div className="relative flex items-center justify-center w-10 h-8 rounded-full mb-0.5 transition-all duration-300 bg-transparent">
                       <Menu className="w-5 h-5 scale-100" />
                     </div>
-                    <span className="text-[10px] font-semibold tracking-wide truncate w-full text-center">
+                    <span className="text-[10px] font-medium tracking-wide truncate w-full text-center">
                       Lainnya
                     </span>
                   </button>
@@ -262,7 +262,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )
             })()}
           </div>
-          <div className="h-safe-bottom bg-white/95 dark:bg-slate-900/95" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
+          <div className="h-safe-bottom bg-slate-950" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
         </nav>
 
         {/* Footer Induk Bersatu */}

@@ -29,17 +29,20 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
-* **2026-08-20 (v1.5.1 - Redesain Tata Letak Login Glassmorphic Sejajar, Pemisahan Konfigurasi Helpdesk & Nomor Notifikasi WhatsApp):**
+* **2026-08-20 (v1.5.1 - Unifikasi Tema Gelap Transparan Global, Redesain Login Glassmorphic, Pemisahan Konfigurasi Helpdesk & Tombol Fitur Transparan):**
+  * **Unifikasi Tema Gelap Transparan Global (`AppNavbar`, `AppSidebar`, `AppFooter`):**
+    * Seluruh kerangka layout sistem (Navbar atas, Sidebar menu navigasi, Bottom bar mobile, dan Footer) kini diselaraskan menggunakan standar *dark translucent glassmorphism* (`bg-slate-950/80 backdrop-blur-2xl border-white/10`) dengan tipografi kontras tinggi yang tajam dan elegan.
+  * **Tombol Fitur Dashboard Transparan & Beraksen Glow:**
+    * Penyelarasan seluruh tombol menu fitur cepat di dashboard (Admin, Guru, Siswa, dan Wali Murid) menjadi kartu transparan glassmorphic (`bg-white/10 dark:bg-slate-900/40 border-white/20 hover:border-blue-400/40`) dengan badge icon berwarna transparan dan efek hover modern.
   * **Redesain & Penyelarasan Layout Halaman Login (`/login`):**
-    * Penyelarasan tata letak desktop 2 kolom yang sejajar proporsional (`items-stretch` & height balance) antara form login dan panel petunjuk kredensial.
-    * Pembaruan hierarki visual dengan form login di sebelah kiri dan panduan petunjuk kredensial peran (Siswa, Wali Murid, Guru/Staff) di sebelah kanan.
-    * Penerapan styling *glassmorphism* transparan terpadu pada card login, input field placeholder, dan tombol submit beraksen glow modern.
+    * Penyelarasan tata letak desktop 2 kolom yang sejajar proporsional (`items-stretch` & height balance) antara form login di sebelah kiri dan panel petunjuk kredensial di sebelah kanan.
+    * Posisi rata tengah vertikal sedikit ke bawah (`pt-8 sm:pt-12 pb-12 sm:pb-16`) dengan aksen pendaran cahaya (*ambient glow*) dan badge icon berwarna transparan.
   * **Pemisahan Pengaturan Nomor Helpdesk vs Gateway Notifikasi:**
     * Penambahan kolom `helpdeskPhone` pada skema Prisma `Setting` untuk mengelola nomor kontak bantuan/helpdesk login secara terpusat oleh Superadmin di menu **Pengaturan Sekolah / Sistem** (`/pengaturan/sistem`).
     * Gateway pengiriman pesan notifikasi otomatis tetap terisolasi dan dikelola terpisah di menu **Pengaturan Notifikasi** (`/pengaturan/notifikasi`) (`whatsappSenderNumber`).
     * Tampilan nomor dan tautan langsung WhatsApp Helpdesk (`wa.me`) di halaman login terhubung secara dinamis dengan database konfigurasi sistem.
   * **Penyempurnaan Mobile Ergonomics:**
-    * Accordion interaktif "Petunjuk Kredensial Pengguna" yang responsif dan ringkas pada perangkat layar kecil/smartphone lengkap dengan informasi helpdesk resmi.
+    * Accordion interaktif "Petunjuk Kredensial Pengguna" dan Bottom Navigation Bar yang responsif dan ringkas pada perangkat smartphone.
 
 * **2026-08-20 (v1.5.0 - Waiting Room Virtual Queue, Manajemen Sesi & Perangkat Aktif, Serta Penguatan Keamanan & Layout Terpadu):**
   * **Sistem Virtual Queue / Waiting Room Otomatis (`WaitingRoomModule` & `WaitingRoomProvider`):**

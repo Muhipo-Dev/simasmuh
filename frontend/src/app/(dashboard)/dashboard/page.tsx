@@ -396,11 +396,11 @@ export default function DashboardPage() {
             const Icon = link.icon
             return (
               <Link key={idx} href={link.href} className="group">
-                <Card className="h-full border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-xs hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 flex flex-col items-center justify-center p-4 sm:p-5 lg:p-6 gap-3 hover:-translate-y-1 rounded-2xl">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Icon className="w-6 h-6 sm:w-7 sm:h-7" />
+                <Card className="h-full border-white/20 dark:border-white/10 bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg hover:shadow-2xl hover:border-blue-400/40 hover:bg-white/15 dark:hover:bg-slate-900/60 transition-all duration-300 flex flex-col items-center justify-center p-4 sm:p-5 lg:p-6 gap-3 hover:-translate-y-1 rounded-2xl text-white">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-500/20 border border-blue-400/30 text-blue-300 flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-500/30 transition-transform duration-300 backdrop-blur-md">
+                    <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-blue-300 group-hover:text-white transition-colors" />
                   </div>
-                  <h3 className="font-bold text-slate-800 dark:text-slate-200 text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <h3 className="font-bold text-slate-100 dark:text-white text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-300 transition-colors">
                     {link.name}
                   </h3>
                 </Card>
@@ -717,11 +717,11 @@ export default function DashboardPage() {
             const Icon = link.icon
             return (
               <Link key={idx} href={link.href} className="group">
-                <Card className="h-full border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-xs hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-300 flex flex-col items-center justify-center p-4 gap-2.5 hover:-translate-y-1 rounded-2xl">
-                  <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+                <Card className="h-full border-white/20 dark:border-white/10 bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg hover:shadow-2xl hover:border-indigo-400/40 hover:bg-white/15 dark:hover:bg-slate-900/60 transition-all duration-300 flex flex-col items-center justify-center p-4 gap-2.5 hover:-translate-y-1 rounded-2xl text-white">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500/30 transition-transform duration-300 backdrop-blur-md">
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-300 group-hover:text-white transition-colors" />
                   </div>
-                  <h3 className="font-bold text-slate-800 dark:text-slate-200 text-center text-xs sm:text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  <h3 className="font-bold text-slate-100 dark:text-white text-center text-xs sm:text-sm group-hover:text-indigo-300 transition-colors">
                     {link.name}
                   </h3>
                 </Card>
@@ -998,11 +998,11 @@ export default function DashboardPage() {
           const Icon = link.icon
           return (
             <Link key={idx} href={link.href} className="group">
-              <Card className="h-full border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-sm hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 gap-3 sm:gap-4 hover:-translate-y-1">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <Icon className="w-6 h-6 sm:w-7 sm:h-7" />
+              <Card className="h-full border-white/20 dark:border-white/10 bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg hover:shadow-2xl hover:border-blue-400/40 hover:bg-white/15 dark:hover:bg-slate-900/60 transition-all duration-300 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 gap-3 sm:gap-4 hover:-translate-y-1 rounded-2xl group text-white">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-500/20 border border-blue-400/30 text-blue-300 flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-500/30 transition-all duration-300 backdrop-blur-md shadow-sm">
+                  <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-blue-300 group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="font-bold text-slate-800 dark:text-slate-200 text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                <h3 className="font-bold text-slate-100 dark:text-white text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-300 transition-colors">
                   {link.name}
                 </h3>
               </Card>

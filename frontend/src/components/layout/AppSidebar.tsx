@@ -39,21 +39,21 @@ export function AppSidebar({
 
       {/* Sidebar Frame */}
       <aside
-        className={`w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed inset-y-0 z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl lg:shadow-none ${
+        className={`w-72 bg-slate-950/90 dark:bg-slate-950/95 border-r border-white/10 text-white backdrop-blur-2xl flex flex-col fixed inset-y-0 z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Sidebar Header */}
-        <div className="h-16 flex items-center justify-between px-5 bg-gradient-to-r from-blue-700 to-indigo-600 shrink-0">
+        <div className="h-16 flex items-center justify-between px-5 bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border-b border-white/10 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-2.5">
             <NextImage
               src="/pic_logo.png"
               alt="Logo"
               width={34}
               height={34}
-              className="object-contain rounded-md bg-white/10 p-0.5"
+              className="object-contain rounded-xl bg-white/15 border border-white/20 p-1 backdrop-blur-md"
             />
-            <span className="text-white font-extrabold text-2xl tracking-widest">{title}</span>
+            <span className="text-white font-black text-xl tracking-wider">{title}</span>
           </div>
           <button
             type="button"
@@ -65,7 +65,7 @@ export function AppSidebar({
         </div>
 
         {/* Sidebar Menu Items */}
-        <div className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
+        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {links.map((link) => {
             const Icon = link.icon
             const isActive =
@@ -75,17 +75,17 @@ export function AppSidebar({
             return (
               <Link key={link.href} href={link.href} onClick={onClose}>
                 <div
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-150 text-sm font-semibold ${
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 text-xs sm:text-sm font-semibold ${
                     isActive
-                      ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'
+                      ? 'bg-blue-600/30 text-blue-200 border border-blue-400/30 backdrop-blur-md shadow-inner'
+                      : 'text-slate-300/80 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   <Icon
                     className={`w-4.5 h-4.5 shrink-0 ${
                       isActive
-                        ? 'text-blue-600 dark:text-blue-400'
-                        : 'text-slate-400 dark:text-slate-500'
+                        ? 'text-blue-300'
+                        : 'text-slate-400 group-hover:text-white'
                     }`}
                   />
                   <span className="truncate">{link.name}</span>

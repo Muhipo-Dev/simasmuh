@@ -116,43 +116,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Navbar Induk Terpadu (Kiri Logo, Kanan Info TA, Theme, Profil, Logout) */}
         <AppNavbar
           actions={
-            <>
-              {/* Tahun Ajaran Badge */}
-              <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-[10px] sm:text-xs shadow-2xs shrink-0">
-                <CalendarDays className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+            <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-3 shrink-0">
+              {/* Tahun Ajaran Badge (Sembunyi di mobile kecil agar tidak tabrakan) */}
+              <div className="hidden md:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200 font-bold text-[10px] sm:text-xs shadow-2xs shrink-0 backdrop-blur-md">
+                <CalendarDays className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-300 shrink-0" />
                 <span>TA: {systemSettings?.academicYear || '2026/2027'}</span>
                 {systemSettings?.semester && (
-                  <span className="hidden md:inline text-[11px] opacity-85 font-medium">({systemSettings.semester})</span>
+                  <span className="hidden lg:inline text-[11px] opacity-85 font-medium">({systemSettings.semester})</span>
                 )}
               </div>
 
-              <div className="hidden lg:block border-r border-slate-200 dark:border-slate-700 pr-4">
+              <div className="hidden sm:block border-r border-white/15 pr-2.5 lg:pr-3">
                 <ThemeToggle />
               </div>
-              <div className="lg:hidden">
+              <div className="sm:hidden">
                 <ThemeToggle size="sm" />
               </div>
               
               {/* Profile Card & Logout */}
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Link href="/pengaturan/profil" className="flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 p-1 sm:p-1.5 sm:pr-3 rounded-full transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 relative rounded-full overflow-hidden bg-[#2B50A1]/10 dark:bg-blue-900/30 flex items-center justify-center text-[#2B50A1] dark:text-blue-400 font-bold text-xs sm:text-sm border-2 border-white dark:border-slate-800 shadow-sm">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Link href="/pengaturan/profil" className="flex items-center gap-2 hover:bg-white/10 p-1 sm:p-1.5 sm:pr-2.5 rounded-full transition-colors border border-white/10 shrink-0">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 relative rounded-full overflow-hidden bg-blue-600/30 flex items-center justify-center text-blue-300 font-black text-xs sm:text-sm border border-white/20 shadow-xs">
                     {profileData?.avatarUrl ? (
                       <NextImage src={profileData.avatarUrl} alt="Avatar" fill className="object-cover" />
                     ) : (
                       <span>{(profileData?.name || session.user?.name || 'U').charAt(0).toUpperCase()}</span>
                     )}
                   </div>
-                  <div className="hidden sm:block text-left">
-                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight max-w-[140px] truncate">{profileData?.name || session.user?.name}</p>
-                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">{displayRole}</p>
+                  <div className="hidden md:block text-left">
+                    <p className="text-xs sm:text-sm font-bold text-white leading-tight max-w-[120px] lg:max-w-[150px] truncate">{profileData?.name || session.user?.name}</p>
+                    <p className="text-[10px] sm:text-[11px] font-medium text-slate-300/80 truncate max-w-[120px] lg:max-w-[150px]">{displayRole}</p>
                   </div>
                 </Link>
                 
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 text-slate-300 hover:text-white hover:bg-red-500/80 rounded-full transition-colors shadow-sm bg-white/10 dark:bg-slate-800/60 border border-white/20 dark:border-white/10 backdrop-blur-md"
+                  className="h-8 w-8 sm:h-9 sm:w-9 text-slate-300 hover:text-white hover:bg-red-500/80 rounded-full transition-colors shadow-sm bg-white/10 dark:bg-slate-800/60 border border-white/20 dark:border-white/10 backdrop-blur-md shrink-0"
                   onClick={async () => {
                     if (userId) {
                       try {
@@ -168,25 +168,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   }}
                   title="Keluar"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </Button>
 
                 {!hideSidebar && (
                   <button
                     type="button"
                     onClick={() => setIsMobileMenuOpen(true)}
-                    className="lg:hidden h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl bg-blue-600/80 hover:bg-blue-600 border border-blue-400/30 text-white transition-colors active:scale-95 shadow-sm backdrop-blur-md"
+                    className="lg:hidden h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-xl bg-blue-600/80 hover:bg-blue-600 border border-blue-400/30 text-white transition-colors active:scale-95 shadow-sm backdrop-blur-md shrink-0"
                     aria-label="Buka Menu"
                   >
-                    <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Menu className="w-4 h-4" />
                   </button>
                 )}
               </div>
-            </>
+            </div>
           }
         />
 
-        <div className="flex-1 p-3 sm:p-5 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full pb-28 lg:pb-10 transition-all duration-200">
+        <div className="flex-1 p-3 sm:p-5 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full pb-24 sm:pb-28 lg:pb-12 transition-all duration-200">
           {children}
         </div>
 

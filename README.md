@@ -41,7 +41,9 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
     * Penambahan kolom `helpdeskPhone` pada skema Prisma `Setting` untuk mengelola nomor kontak bantuan/helpdesk login secara terpusat oleh Superadmin di menu **Pengaturan Sekolah / Sistem** (`/pengaturan/sistem`).
     * Gateway pengiriman pesan notifikasi otomatis tetap terisolasi dan dikelola terpisah di menu **Pengaturan Notifikasi** (`/pengaturan/notifikasi`) (`whatsappSenderNumber`).
     * Tampilan nomor dan tautan langsung WhatsApp Helpdesk (`wa.me`) di halaman login terhubung secara dinamis dengan database konfigurasi sistem.
-  * **Penyempurnaan Mobile Ergonomics:**
+  * **Penyempurnaan Responsivitas Mobile & Tablet (Anti-Collision Layout):**
+    * Penyelarasan ukuran komponen di header navbar (`AppNavbar`) dan actions layout (`layout.tsx`) agar bebas dari tabrakan/tumpuk di layar smartphone sempit dan tablet.
+    * Sembunyikan badge Tahun Ajaran otomatis pada layar sangat kecil (<768px), penyesuaian skala logo & avatar profil, serta penambahan *bottom safe padding* (`pb-24 sm:pb-28`) agar konten terbawah tidak tertutup oleh *Mobile Bottom Navigation Bar*.
     * Accordion interaktif "Petunjuk Kredensial Pengguna" dan Bottom Navigation Bar yang responsif dan ringkas pada perangkat smartphone.
 
 * **2026-08-20 (v1.5.0 - Waiting Room Virtual Queue, Manajemen Sesi & Perangkat Aktif, Serta Penguatan Keamanan & Layout Terpadu):**

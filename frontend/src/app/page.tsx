@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, GraduationCap, Users, Building2, LogIn, Menu, Calendar, BookOpen, Trophy, MapPin, Phone, Mail, Globe, Cpu, Music, Briefcase, Microscope, CalendarDays } from 'lucide-react';
@@ -9,7 +10,7 @@ import HeroCarousel from '@/components/home/HeroCarousel';
 import ProgramUnggulanSection from '@/components/home/ProgramUnggulanSection';
 import { getPublicApiUrl } from '@/lib/api-config';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "System by. Muhipo Dev",
   description: "Portal Resmi SMA Muhammadiyah 1 Ponorogo - Cerdas, Mandiri, Berprestasi, Mendunia.",
 };

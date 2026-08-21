@@ -91,7 +91,7 @@ export function PublicNavbar({
               className="bg-[#2B50A1] hover:bg-[#1f3c7a] dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-4 2xl:px-5 py-2 rounded-full font-bold text-xs 2xl:text-sm flex items-center transition-all shadow-sm hover:shadow-md active:scale-95 shrink-0"
             >
               <LogIn className="w-4 h-4 mr-1.5 2xl:mr-2" />
-              <span>Login SIMASMUH</span>
+              <span>Login</span>
             </Link>
           </div>
 
@@ -145,7 +145,7 @@ export function PublicNavbar({
                     className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-white bg-[#2B50A1] hover:bg-[#1f3c7a] rounded-xl flex items-center justify-center shadow-sm"
                   >
                     <LogIn className="w-4 h-4 mr-2" />
-                    Login SIMASMUH
+                    Login
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>

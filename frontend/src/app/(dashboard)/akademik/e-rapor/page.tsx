@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { 
   Sparkles, Award, ArrowRight, Bell, FileText, CheckCircle2, 
   Clock, BookOpenCheck, BarChart3, Printer, Download, GraduationCap, 
-  AlertCircle, Users, TrendingUp
+  AlertCircle, Users, TrendingUp, BookOpen
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

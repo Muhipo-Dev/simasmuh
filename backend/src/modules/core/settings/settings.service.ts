@@ -326,6 +326,39 @@ export class SettingsService {
       count: s._count.id,
     })).sort((a, b) => b.count - a.count);
 
+    // Agregasi Kurva Tren Mingguan (7 Hari Terakhir) Presensi & Keuangan
+    const weeklyTrends: any[] = [];
+    const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const startD = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+      const endD = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+      
+      const dayLabel = `${dayNames[startD.getDay()]} (${startD.getDate()}/${startD.getMonth() + 1})`;
+      
+      // Ambil presensi siswa pada hari d
+      const [dayAtt, dayStaffAtt] = await Promise.all([
+        this.prisma.attendance.count({
+          where: { date: { gte: startD, lte: endD }, status: 'HADIR' }
+        }),
+        this.prisma.dailyAttendance.count({
+          where: { date: { gte: startD, lte: endD }, status: 'HADIR' }
+        })
+      ]);
+
+      const pctSiswa = totalSiswa > 0 ? Math.min(100, Math.round((dayAtt / totalSiswa) * 100)) : 0;
+      const pctStaff = totalPegawai > 0 ? Math.min(100, Math.round((dayStaffAtt / totalPegawai) * 100)) : 0;
+
+      weeklyTrends.push({
+        date: dayLabel,
+        siswaHadir: dayAtt,
+        siswaPct: pctSiswa,
+        staffHadir: dayStaffAtt,
+        staffPct: pctStaff,
+      });
+    }
+
     return {
       overview: {
         totalSiswa,
@@ -382,6 +415,7 @@ export class SettingsService {
         pengeluaranByCategory,
       },
       studentDistribution,
+      weeklyTrends,
       recentAnnouncements,
       recentLogs,
     };

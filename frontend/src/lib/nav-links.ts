@@ -81,7 +81,18 @@ export const pegawaiLinks = [
 ]
 
 export const kepalaSekolahLinks = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Dashboard Eksekutif', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Scan QR Presensi', href: '/presensi/scan-qr', icon: QrCode },
+  { name: 'Presensi Pegawai', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
+  { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: UserCheck },
+  { name: 'Jurnal Pegawai', href: '/presensi/jurnal-karyawan', icon: BookOpen },
+  { name: 'Izin Presensi', href: '/presensi/izin-keluar', icon: DoorOpen },
+  { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: Wallet },
+  { name: 'Guru & Tendik', href: '/master-data/guru', icon: Users },
+  { name: 'Data Siswa', href: '/master-data/siswa', icon: UserSquare2 },
+  { name: 'Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen },
+  { name: 'Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
+  { name: 'Pengumuman', href: '/informasi/pengumuman', icon: Megaphone },
 ]
 
 export const superAdminOnlyPaths = [

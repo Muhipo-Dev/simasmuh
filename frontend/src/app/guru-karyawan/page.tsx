@@ -198,7 +198,21 @@ const totalGuru = guruCategories.reduce((sum, cat) => sum + cat.members.length, 
 
 export default function GuruKaryawanPage() {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col relative text-slate-900 dark:text-slate-100 transition-colors duration-300 overflow-x-hidden">
+      {/* Background Wallpaper with Smooth Glass Overlay */}
+      <div className="fixed inset-0 -z-30 w-full h-full overflow-hidden pointer-events-none">
+        <Image
+          src="/muhipo-log.jpg"
+          alt="Latar Belakang SMA MUHIPO"
+          fill
+          priority
+          unoptimized
+          sizes="100vw"
+          className="object-cover object-center w-full h-full scale-105"
+        />
+      </div>
+      <div className="fixed inset-0 bg-slate-100/80 dark:bg-slate-950/90 backdrop-blur-[3px] -z-20 pointer-events-none" />
+
       {/* Navbar Induk Terpadu */}
       <PublicNavbar />
 

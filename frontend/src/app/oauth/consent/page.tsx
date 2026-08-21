@@ -63,7 +63,21 @@ function OAuthConsentContent() {
   if (!googleEmail) return null;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 pt-16 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center relative p-4 overflow-x-hidden selection:bg-blue-600 selection:text-white">
+      {/* Background Wallpaper with Smooth Glass Overlay */}
+      <div className="fixed inset-0 -z-30 w-full h-full overflow-hidden pointer-events-none">
+        <NextImage
+          src="/muhipo-log.jpg"
+          alt="Latar Belakang SMA MUHIPO"
+          fill
+          priority
+          unoptimized
+          sizes="100vw"
+          className="object-cover object-center w-full h-full scale-105"
+        />
+      </div>
+      <div className="fixed inset-0 bg-slate-100/80 dark:bg-slate-950/90 backdrop-blur-[3px] -z-20 pointer-events-none" />
+
       <nav className="fixed top-0 left-0 right-0 h-14 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between shadow-xs">
         <Link href="/" className="flex items-center gap-2 group">
           <NextImage src="/pic_logo.png" alt="Logo SIMASMUH" width={90} height={36} className="h-7 sm:h-8 w-auto object-contain transition-transform group-hover:scale-105" />

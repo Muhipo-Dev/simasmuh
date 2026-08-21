@@ -7,6 +7,8 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useParams } from 'next/navigation'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 
+import NextImage from 'next/image'
+
 export default function QrGeneratorPage() {
   const authenticatedFetch = useAuthenticatedFetch();
   const params = useParams()
@@ -47,7 +49,20 @@ export default function QrGeneratorPage() {
   const isValid = validation?.valid === true
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center relative p-6 overflow-x-hidden">
+      {/* Background Wallpaper with Smooth Glass Overlay */}
+      <div className="fixed inset-0 -z-30 w-full h-full overflow-hidden pointer-events-none">
+        <NextImage
+          src="/muhipo-log.jpg"
+          alt="Latar Belakang SMA MUHIPO"
+          fill
+          priority
+          unoptimized
+          sizes="100vw"
+          className="object-cover object-center w-full h-full scale-105"
+        />
+      </div>
+      <div className="fixed inset-0 bg-slate-100/80 dark:bg-slate-950/90 backdrop-blur-[3px] -z-20 pointer-events-none" />
       <div className="w-full max-w-xl space-y-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">QR Absen Harian</h1>

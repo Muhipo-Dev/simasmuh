@@ -41,7 +41,8 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
     * Penyesuaian hak akses RBAC dan visibilitas tautan navigasi di `nav-links.ts` serta `AppSidebar.tsx` untuk peran `ADMIN_TU` agar mencakup manajemen data kesiswaan, kepegawaian, etika, dan presensi secara proporsional.
   * **Penyelarasan Identitas Title Bar & Favicon Aplikasi Web:**
     * Mengubah judul default title bar web desktop & tablet menjadi **SIMASMUH** (`layout.tsx` & `page.tsx`).
-    * Konfigurasi logo gabungan resmi sekolah & aplikasi (`/pic_logo.png`) sebagai favicon title bar, shortcut icon, dan apple-touch-icon.
+  * **Unifikasi Wallpaper & Glassmorphism Blur Global:**
+    * Mengganti seluruh latar belakang polos/putih di semua halaman publik ([page.tsx](file:///d:/simasmuh/frontend/src/app/page.tsx), [tentang](file:///d:/simasmuh/frontend/src/app/tentang/page.tsx), [profil](file:///d:/simasmuh/frontend/src/app/profil/page.tsx), [guru-karyawan](file:///d:/simasmuh/frontend/src/app/guru-karyawan/page.tsx), [agenda](file:///d:/simasmuh/frontend/src/app/agenda/page.tsx), [qr-display](file:///d:/simasmuh/frontend/src/app/qr-display/%5Btoken%5D/page.tsx), dan [oauth/consent](file:///d:/simasmuh/frontend/src/app/oauth/consent/page.tsx)) dengan wallpaper resmi gedung SMA MUHIPO beraksen blur dan overlay transparan selaras dengan dashboard dan halaman login.
   * **Penyempurnaan Antarmuka Master Data & Profil Pengguna:**
     * Perbaikan tampilan form master data pengguna dan siswa dengan integrasi validasi nomor WhatsApp aktif serta standarisasi badge role.
   * **Penyajian Multi-Kurva & Multi-Metrik Analitik Per Sektor Terpilih:**

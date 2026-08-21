@@ -83,7 +83,21 @@ export default async function Home() {
   const classCount = stats?.classes || 0
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors duration-300 text-slate-900 dark:text-slate-100 selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen flex flex-col relative transition-colors duration-300 text-slate-900 dark:text-slate-100 selection:bg-blue-600 selection:text-white overflow-x-hidden">
+      {/* Background Wallpaper with Smooth Glass Overlay */}
+      <div className="fixed inset-0 -z-30 w-full h-full overflow-hidden pointer-events-none">
+        <Image
+          src="/muhipo-log.jpg"
+          alt="Latar Belakang SMA MUHIPO"
+          fill
+          priority
+          unoptimized
+          sizes="100vw"
+          className="object-cover object-center w-full h-full scale-105"
+        />
+      </div>
+      <div className="fixed inset-0 bg-slate-100/80 dark:bg-slate-950/90 backdrop-blur-[3px] -z-20 pointer-events-none" />
+
       {/* Navbar Induk Terpadu */}
       <PublicNavbar academicYear={settings?.academicYear} semester={settings?.semester} />
 

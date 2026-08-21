@@ -1118,146 +1118,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* KURVA GRAFIK ANALITIK TREN MINGGUAN (PRESENSI SISWA & PEGAWAI) */}
-        <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-3xl p-5 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-5">
-            <div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                  Kurva & Tren Presensi Sekolah (7 Hari Terakhir)
-                </h2>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">Visualisasi kurva tingkat kehadiran harian Siswa dan Guru/Pegawai</p>
-            </div>
-            <div className="flex items-center gap-4 text-xs font-bold">
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-blue-600 inline-block shadow-xs" />
-                <span className="text-slate-700 dark:text-slate-300">Siswa (%)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-teal-500 inline-block shadow-xs" />
-                <span className="text-slate-700 dark:text-slate-300">Pegawai & Guru (%)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Render Kurva SVG Responsive */}
-          <div className="space-y-4">
-            <div className="h-52 w-full pt-4 pb-2 relative">
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 700 160" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="siswaGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.35" />
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
-                  </linearGradient>
-                  <linearGradient id="staffGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#14b8a6" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-
-                {/* Grid horizontal lines */}
-                {[0, 25, 50, 75, 100].map((level, idx) => {
-                  const y = 140 - (level / 100) * 120
-                  return (
-                    <g key={idx}>
-                      <line x1="0" y1={y} x2="700" y2={y} stroke="currentColor" strokeDasharray="4 4" className="text-slate-200 dark:text-slate-800" strokeWidth="1" />
-                      <text x="5" y={y - 3} className="text-[9px] fill-slate-400 font-mono font-medium">{level}%</text>
-                    </g>
-                  )
-                })}
-
-                {/* Data Points Calculations */}
-                {(() => {
-                  const weekly = execStats?.weeklyTrends || []
-                  if (weekly.length === 0) return null
-
-                  const pointsSiswa = weekly.map((w: any, i: number) => {
-                    const x = 50 + (i * (600 / Math.max(1, weekly.length - 1)))
-                    const y = 140 - ((w.siswaPct || 0) / 100) * 120
-                    return { x, y, pct: w.siswaPct, count: w.siswaHadir, date: w.date }
-                  })
-
-                  const pointsStaff = weekly.map((w: any, i: number) => {
-                    const x = 50 + (i * (600 / Math.max(1, weekly.length - 1)))
-                    const y = 140 - ((w.staffPct || 0) / 100) * 120
-                    return { x, y, pct: w.staffPct, count: w.staffHadir, date: w.date }
-                  })
-
-                  const createSmoothPath = (pts: any[]) => {
-                    if (pts.length === 0) return ''
-                    return pts.reduce((acc, p, i, a) => {
-                      if (i === 0) return `M ${p.x} ${p.y}`
-                      const prev = a[i - 1]
-                      const cx1 = prev.x + (p.x - prev.x) / 2
-                      const cy1 = prev.y
-                      const cx2 = prev.x + (p.x - prev.x) / 2
-                      const cy2 = p.y
-                      return `${acc} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p.x} ${p.y}`
-                    }, '')
-                  }
-
-                  const pathSiswa = createSmoothPath(pointsSiswa)
-                  const pathStaff = createSmoothPath(pointsStaff)
-
-                  const areaSiswa = `${pathSiswa} L ${pointsSiswa[pointsSiswa.length - 1].x} 140 L ${pointsSiswa[0].x} 140 Z`
-                  const areaStaff = `${pathStaff} L ${pointsStaff[pointsStaff.length - 1].x} 140 L ${pointsStaff[0].x} 140 Z`
-
-                  return (
-                    <>
-                      {/* Area Gradients */}
-                      <path d={areaSiswa} fill="url(#siswaGradient)" />
-                      <path d={areaStaff} fill="url(#staffGradient)" />
-
-                      {/* Line Curves */}
-                      <path d={pathSiswa} fill="none" stroke="#2563eb" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d={pathStaff} fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-
-                      {/* Dots Siswa */}
-                      {pointsSiswa.map((p: any, i: number) => (
-                        <g key={`siswa-${i}`} className="cursor-pointer group">
-                          <circle cx={p.x} cy={p.y} r="5" fill="#2563eb" stroke="#ffffff" strokeWidth="2.5" className="transition-transform group-hover:scale-125" />
-                        </g>
-                      ))}
-
-                      {/* Dots Staff */}
-                      {pointsStaff.map((p: any, i: number) => (
-                        <g key={`staff-${i}`} className="cursor-pointer group">
-                          <circle cx={p.x} cy={p.y} r="4.5" fill="#14b8a6" stroke="#ffffff" strokeWidth="2" className="transition-transform group-hover:scale-125" />
-                        </g>
-                      ))}
-                    </>
-                  )
-                })()}
-              </svg>
-            </div>
-
-            {/* Label Tanggal Bawah */}
-            <div className="grid grid-cols-7 gap-1 text-center border-t border-slate-100 dark:border-slate-800 pt-3">
-              {(execStats?.weeklyTrends || []).map((w: any, idx: number) => (
-                <div key={idx} className="space-y-1">
-                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">{w.date}</span>
-                  <div className="flex items-center justify-center gap-2 text-[10px]">
-                    <span className="text-blue-600 font-extrabold">{w.siswaPct}%</span>
-                    <span className="text-slate-300 dark:text-slate-700">&bull;</span>
-                    <span className="text-teal-600 font-extrabold">{w.staffPct}%</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-
         {/* PILIHAN STATISTIKA KHUSUS (TAB NAVIGATION FILTER) */}
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-2 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto shadow-xs">
           {[
             { id: 'SEMUA', label: '📊 Semua Statistika', desc: 'Ringkasan Penuh' },
-            { id: 'DEMOGRAFIS', label: '👥 Siswa & Demografis', desc: 'Gender, Jalur & Program' },
             { id: 'PRESENSI', label: '⏱️ Presensi & Kehadiran', desc: 'Siswa, Guru & Karyawan' },
             { id: 'KEDISIPLINAN', label: '🛡️ Adab & Tata Tertib', desc: 'Pelanggaran, Ibadah & BK' },
             { id: 'KEUANGAN', label: '💰 Neraca & Keuangan', desc: 'Kas, Tagihan & Realisasi' },
             { id: 'AKADEMIK', label: '📚 Akademik & Pembelajaran', desc: 'Rombel, Jurnal & Sesi' },
+            { id: 'DEMOGRAFIS', label: '👥 Siswa & Demografis', desc: 'Gender, Jalur & Program' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1276,7 +1145,7 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* 1. KARTU RINGKASAN POPULASI & MASTER DATA (Ditampilkan pada SEMUA atau DEMOGRAFIS) */}
+        {/* 1. KARTU RINGKASAN POPULASI & MASTER DATA */}
         {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'DEMOGRAFIS') && (
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -1369,64 +1238,140 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* STATISTIKA KHUSUS DEMOGRAFIS SISWA */}
-        {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'DEMOGRAFIS') && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Gender */}
-            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
-              <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Komposisi Gender Siswa</span>
-              <div className="space-y-2">
-                {demo.gender?.map((g: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">{g.name === 'L' ? 'Laki-Laki' : g.name === 'P' ? 'Perempuan' : g.name}</span>
-                    <span className="font-black text-slate-900 dark:text-white">{g.count} Siswa</span>
-                  </div>
-                ))}
+        {/* 2. KURVA GRAFIK ANALITIK TREN MINGGUAN (BARIS NOMOR 2 SETELAH POPULASI EKOSISTEM) */}
+        {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'PRESENSI') && (
+          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-3xl p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                    Kurva & Tren Presensi Sekolah (7 Hari Terakhir)
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">Visualisasi kurva tingkat kehadiran harian Siswa dan Guru/Pegawai</p>
               </div>
-            </Card>
+              <div className="flex items-center gap-4 text-xs font-bold">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-blue-600 inline-block shadow-xs" />
+                  <span className="text-slate-700 dark:text-slate-300">Siswa (%)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-teal-500 inline-block shadow-xs" />
+                  <span className="text-slate-700 dark:text-slate-300">Pegawai & Guru (%)</span>
+                </div>
+              </div>
+            </div>
 
-            {/* Program */}
-            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
-              <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Distribusi Program Belajar</span>
-              <div className="space-y-2">
-                {demo.program?.map((p: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">{p.name}</span>
-                    <span className="font-black text-slate-900 dark:text-white">{p.count} Siswa</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
+            {/* Render Kurva SVG Responsive */}
+            <div className="space-y-4">
+              <div className="h-52 w-full pt-4 pb-2 relative">
+                <svg className="w-full h-full overflow-visible" viewBox="0 0 700 160" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="siswaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#2563eb" stopOpacity="0.35" />
+                      <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
+                    </linearGradient>
+                    <linearGradient id="staffGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#14b8a6" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
 
-            {/* Jalur Pendaftaran */}
-            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
-              <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Jalur Pendaftaran</span>
-              <div className="space-y-2">
-                {demo.jalur?.map((j: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">{j.name}</span>
-                    <span className="font-black text-slate-900 dark:text-white">{j.count} Siswa</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
+                  {/* Grid horizontal lines */}
+                  {[0, 25, 50, 75, 100].map((level, idx) => {
+                    const y = 140 - (level / 100) * 120
+                    return (
+                      <g key={idx}>
+                        <line x1="0" y1={y} x2="700" y2={y} stroke="currentColor" strokeDasharray="4 4" className="text-slate-200 dark:text-slate-800" strokeWidth="1" />
+                        <text x="5" y={y - 3} className="text-[9px] fill-slate-400 font-mono font-medium">{level}%</text>
+                      </g>
+                    )
+                  })}
 
-            {/* Gelombang */}
-            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
-              <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Gelombang Masuk</span>
-              <div className="space-y-2">
-                {demo.gelombang?.map((g: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">{g.name}</span>
-                    <span className="font-black text-slate-900 dark:text-white">{g.count} Siswa</span>
+                  {/* Data Points Calculations */}
+                  {(() => {
+                    const weekly = execStats?.weeklyTrends || []
+                    if (weekly.length === 0) return null
+
+                    const pointsSiswa = weekly.map((w: any, i: number) => {
+                      const x = 50 + (i * (600 / Math.max(1, weekly.length - 1)))
+                      const y = 140 - ((w.siswaPct || 0) / 100) * 120
+                      return { x, y, pct: w.siswaPct, count: w.siswaHadir, date: w.date }
+                    })
+
+                    const pointsStaff = weekly.map((w: any, i: number) => {
+                      const x = 50 + (i * (600 / Math.max(1, weekly.length - 1)))
+                      const y = 140 - ((w.staffPct || 0) / 100) * 120
+                      return { x, y, pct: w.staffPct, count: w.staffHadir, date: w.date }
+                    })
+
+                    const createSmoothPath = (pts: any[]) => {
+                      if (pts.length === 0) return ''
+                      return pts.reduce((acc, p, i, a) => {
+                        if (i === 0) return `M ${p.x} ${p.y}`
+                        const prev = a[i - 1]
+                        const cx1 = prev.x + (p.x - prev.x) / 2
+                        const cy1 = prev.y
+                        const cx2 = prev.x + (p.x - prev.x) / 2
+                        const cy2 = p.y
+                        return `${acc} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p.x} ${p.y}`
+                      }, '')
+                    }
+
+                    const pathSiswa = createSmoothPath(pointsSiswa)
+                    const pathStaff = createSmoothPath(pointsStaff)
+
+                    const areaSiswa = `${pathSiswa} L ${pointsSiswa[pointsSiswa.length - 1].x} 140 L ${pointsSiswa[0].x} 140 Z`
+                    const areaStaff = `${pathStaff} L ${pointsStaff[pointsStaff.length - 1].x} 140 L ${pointsStaff[0].x} 140 Z`
+
+                    return (
+                      <>
+                        {/* Area Gradients */}
+                        <path d={areaSiswa} fill="url(#siswaGradient)" />
+                        <path d={areaStaff} fill="url(#staffGradient)" />
+
+                        {/* Line Curves */}
+                        <path d={pathSiswa} fill="none" stroke="#2563eb" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={pathStaff} fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+                        {/* Dots Siswa */}
+                        {pointsSiswa.map((p: any, i: number) => (
+                          <g key={`siswa-${i}`} className="cursor-pointer group">
+                            <circle cx={p.x} cy={p.y} r="5" fill="#2563eb" stroke="#ffffff" strokeWidth="2.5" className="transition-transform group-hover:scale-125" />
+                          </g>
+                        ))}
+
+                        {/* Dots Staff */}
+                        {pointsStaff.map((p: any, i: number) => (
+                          <g key={`staff-${i}`} className="cursor-pointer group">
+                            <circle cx={p.x} cy={p.y} r="4.5" fill="#14b8a6" stroke="#ffffff" strokeWidth="2" className="transition-transform group-hover:scale-125" />
+                          </g>
+                        ))}
+                      </>
+                    )
+                  })()}
+                </svg>
+              </div>
+
+              {/* Label Tanggal Bawah */}
+              <div className="grid grid-cols-7 gap-1 text-center border-t border-slate-100 dark:border-slate-800 pt-3">
+                {(execStats?.weeklyTrends || []).map((w: any, idx: number) => (
+                  <div key={idx} className="space-y-1">
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">{w.date}</span>
+                    <div className="flex items-center justify-center gap-2 text-[10px]">
+                      <span className="text-blue-600 font-extrabold">{w.siswaPct}%</span>
+                      <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+                      <span className="text-teal-600 font-extrabold">{w.staffPct}%</span>
+                    </div>
                   </div>
                 ))}
               </div>
-            </Card>
-          </div>
+            </div>
+          </Card>
         )}
 
-        {/* 2. STATISTIK PRESENSI & KEHADIRAN */}
+        {/* 3. STATISTIK PRESENSI & KEHADIRAN */}
         {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'PRESENSI') && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Presensi Siswa Card */}
@@ -1785,7 +1730,74 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 5. INFORMASI & PENGUMUMAN SEKOLAH */}
+        {/* 5. STATISTIKA KHUSUS DEMOGRAFIS SISWA (KOMPOSISI GENDER, PROGRAM, JALUR & GELOMBANG) */}
+        {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'DEMOGRAFIS') && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                Komposisi Demografis & Jalur Pendaftaran Siswa
+              </h3>
+              <span className="text-xs text-slate-500 font-medium">Rekapitulasi Kesiswaan</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Gender */}
+              <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
+                <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Komposisi Gender Siswa</span>
+                <div className="space-y-2">
+                  {demo.gender?.map((g: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{g.name === 'L' ? 'Laki-Laki' : g.name === 'P' ? 'Perempuan' : g.name}</span>
+                      <span className="font-black text-slate-900 dark:text-white">{g.count} Siswa</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Program */}
+              <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
+                <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Distribusi Program Belajar</span>
+                <div className="space-y-2">
+                  {demo.program?.map((p: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{p.name}</span>
+                      <span className="font-black text-slate-900 dark:text-white">{p.count} Siswa</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Jalur Pendaftaran */}
+              <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
+                <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Jalur Pendaftaran</span>
+                <div className="space-y-2">
+                  {demo.jalur?.map((j: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{j.name}</span>
+                      <span className="font-black text-slate-900 dark:text-white">{j.count} Siswa</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Gelombang */}
+              <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
+                <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Gelombang Masuk</span>
+                <div className="space-y-2">
+                  {demo.gelombang?.map((g: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{g.name}</span>
+                      <span className="font-black text-slate-900 dark:text-white">{g.count} Siswa</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* 6. INFORMASI & PENGUMUMAN SEKOLAH */}
         <div className="w-full">
           {renderAnnouncements()}
         </div>

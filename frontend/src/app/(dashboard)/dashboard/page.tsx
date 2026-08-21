@@ -1210,7 +1210,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 2. KURVA & GRAFIK ANALITIK MULTI-SEKTOR EKSEKUTIF (PRESENSI, KEUANGAN, PRESTASI & DEMOGRAFI) */}
+        {/* 2. KURVA & GRAFIK ANALITIK MULTI-SEKTOR EKSEKUTIF (PRESENSI, KEUANGAN KESELURUHAN, PRESTASI & DEMOGRAFI) */}
         <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-3xl p-5 sm:p-7">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5 mb-6">
             <div>
@@ -1223,7 +1223,7 @@ export default function DashboardPage() {
                 </h2>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Visualisasi dinamika data mingguan 7 hari terakhir: Presensi kehadiran, arus kas penerimaan, catatan karakter, serta komposisi demografis.
+                Visualisasi dinamika data mingguan 7 hari terakhir: Presensi kehadiran, arus penerimaan keuangan keseluruhan, catatan karakter, serta komposisi demografis.
               </p>
             </div>
 
@@ -1231,7 +1231,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 overflow-x-auto shrink-0">
               {[
                 { id: 'PRESENSI', label: '⏱️ Kehadiran', desc: 'Siswa & Guru' },
-                { id: 'KEUANGAN', label: '💰 Arus Kas', desc: 'Penerimaan Harian' },
+                { id: 'KEUANGAN', label: '💰 Keuangan Keseluruhan', desc: 'Penerimaan Harian' },
                 { id: 'PRESTASI', label: '🛡️ Adab & Tatib', desc: 'Prestasi & Catatan' },
                 { id: 'DEMOGRAFI', label: '👥 Demografi', desc: 'Distribusi Gender' },
               ].map((c) => (
@@ -1249,7 +1249,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Area Kurva Interaktif Responsive (Tinggi Proporsional h-64 sampai h-80, tidak gepeng) */}
+          {/* Area Kurva Interaktif Responsive (Tinggi Proporsional h-80 / 320px, bentuk kurva tegas & tidak gepeng) */}
           <div className="space-y-4">
             {/* Legend Sesuai Mode Kurva */}
             <div className="flex items-center justify-between flex-wrap gap-3 px-1 text-xs font-bold">
@@ -1271,7 +1271,7 @@ export default function DashboardPage() {
                   <>
                     <div className="flex items-center gap-1.5">
                       <span className="w-3 h-3 rounded-full bg-emerald-600 inline-block shadow-xs" />
-                      <span className="text-slate-700 dark:text-slate-300">Pemasukan Kas Harian (Rp)</span>
+                      <span className="text-slate-700 dark:text-slate-300">Pemasukan Keuangan Keseluruhan (Rp)</span>
                     </div>
                   </>
                 )}
@@ -1302,35 +1302,35 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Kanvas Kurva SVG Proporsional */}
-            <div className="h-64 sm:h-72 w-full pt-4 pb-2 relative bg-slate-50/40 dark:bg-slate-950/20 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-2 sm:p-4">
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 700 200" preserveAspectRatio="none">
+            {/* Kanvas Kurva SVG Proporsional Tegas */}
+            <div className="h-72 sm:h-80 w-full pt-4 pb-2 relative bg-slate-50/50 dark:bg-slate-950/30 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-3 sm:p-5">
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 700 240" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.4" />
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.45" />
                     <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
                   </linearGradient>
                   <linearGradient id="tealGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.35" />
+                    <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.38" />
                     <stop offset="100%" stopColor="#14b8a6" stopOpacity="0.0" />
                   </linearGradient>
                   <linearGradient id="emeraldGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.45" />
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.5" />
                     <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
                   </linearGradient>
                   <linearGradient id="roseGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.35" />
+                    <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.38" />
                     <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
 
                 {/* Grid horizontal lines */}
                 {[0, 25, 50, 75, 100].map((level, idx) => {
-                  const y = 175 - (level / 100) * 150
+                  const y = 210 - (level / 100) * 180
                   return (
                     <g key={idx}>
                       <line x1="0" y1={y} x2="700" y2={y} stroke="currentColor" strokeDasharray="3 3" className="text-slate-200 dark:text-slate-800" strokeWidth="1" />
-                      <text x="5" y={y - 3} className="text-[9px] fill-slate-400 font-mono font-medium">
+                      <text x="5" y={y - 4} className="text-[10px] fill-slate-400 font-mono font-semibold">
                         {selectedCurveType === 'PRESENSI' ? `${level}%` : level === 100 ? 'Maks' : level === 50 ? 'Med' : level === 0 ? '0' : ''}
                       </text>
                     </g>
@@ -1358,31 +1358,31 @@ export default function DashboardPage() {
                   if (selectedCurveType === 'PRESENSI') {
                     const ptsSiswa = weekly.map((w: any, i: number) => ({
                       x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
-                      y: 175 - ((w.siswaPct || 0) / 100) * 150,
+                      y: 210 - ((w.siswaPct || 0) / 100) * 180,
                       val: `${w.siswaPct}%`
                     }))
                     const ptsStaff = weekly.map((w: any, i: number) => ({
                       x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
-                      y: 175 - ((w.staffPct || 0) / 100) * 150,
+                      y: 210 - ((w.staffPct || 0) / 100) * 180,
                       val: `${w.staffPct}%`
                     }))
 
                     const pathSiswa = createSmoothPath(ptsSiswa)
                     const pathStaff = createSmoothPath(ptsStaff)
-                    const areaSiswa = `${pathSiswa} L ${ptsSiswa[ptsSiswa.length - 1].x} 175 L ${ptsSiswa[0].x} 175 Z`
-                    const areaStaff = `${pathStaff} L ${ptsStaff[ptsStaff.length - 1].x} 175 L ${ptsStaff[0].x} 175 Z`
+                    const areaSiswa = `${pathSiswa} L ${ptsSiswa[ptsSiswa.length - 1].x} 210 L ${ptsSiswa[0].x} 210 Z`
+                    const areaStaff = `${pathStaff} L ${ptsStaff[ptsStaff.length - 1].x} 210 L ${ptsStaff[0].x} 210 Z`
 
                     return (
                       <>
                         <path d={areaSiswa} fill="url(#blueGrad)" />
                         <path d={areaStaff} fill="url(#tealGrad)" />
-                        <path d={pathSiswa} fill="none" stroke="#2563eb" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d={pathStaff} fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={pathSiswa} fill="none" stroke="#2563eb" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={pathStaff} fill="none" stroke="#14b8a6" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
                         {ptsSiswa.map((p: any, i: number) => (
-                          <circle key={`s-${i}`} cx={p.x} cy={p.y} r="5.5" fill="#2563eb" stroke="#ffffff" strokeWidth="2.5" />
+                          <circle key={`s-${i}`} cx={p.x} cy={p.y} r="6" fill="#2563eb" stroke="#ffffff" strokeWidth="3" />
                         ))}
                         {ptsStaff.map((p: any, i: number) => (
-                          <circle key={`st-${i}`} cx={p.x} cy={p.y} r="4.5" fill="#14b8a6" stroke="#ffffff" strokeWidth="2" />
+                          <circle key={`st-${i}`} cx={p.x} cy={p.y} r="5" fill="#14b8a6" stroke="#ffffff" strokeWidth="2.5" />
                         ))}
                       </>
                     )
@@ -1392,19 +1392,19 @@ export default function DashboardPage() {
                     const maxPemasukan = Math.max(...weekly.map((w: any) => w.pemasukan || 0), 1000000)
                     const ptsUang = weekly.map((w: any, i: number) => ({
                       x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
-                      y: 175 - ((w.pemasukan || 0) / maxPemasukan) * 140,
+                      y: 210 - ((w.pemasukan || 0) / maxPemasukan) * 170,
                       val: w.pemasukan
                     }))
 
                     const pathUang = createSmoothPath(ptsUang)
-                    const areaUang = `${pathUang} L ${ptsUang[ptsUang.length - 1].x} 175 L ${ptsUang[0].x} 175 Z`
+                    const areaUang = `${pathUang} L ${ptsUang[ptsUang.length - 1].x} 210 L ${ptsUang[0].x} 210 Z`
 
                     return (
                       <>
                         <path d={areaUang} fill="url(#emeraldGrad)" />
-                        <path d={pathUang} fill="none" stroke="#10b981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={pathUang} fill="none" stroke="#10b981" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
                         {ptsUang.map((p: any, i: number) => (
-                          <circle key={`u-${i}`} cx={p.x} cy={p.y} r="6" fill="#10b981" stroke="#ffffff" strokeWidth="2.5" />
+                          <circle key={`u-${i}`} cx={p.x} cy={p.y} r="6.5" fill="#10b981" stroke="#ffffff" strokeWidth="3" />
                         ))}
                       </>
                     )
@@ -1414,29 +1414,29 @@ export default function DashboardPage() {
                     const maxCount = Math.max(...weekly.map((w: any) => Math.max(w.prestasi || 0, w.pelanggaran || 0)), 5)
                     const ptsPrestasi = weekly.map((w: any, i: number) => ({
                       x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
-                      y: 175 - ((w.prestasi || 0) / maxCount) * 140,
+                      y: 210 - ((w.prestasi || 0) / maxCount) * 170,
                     }))
                     const ptsPelanggaran = weekly.map((w: any, i: number) => ({
                       x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
-                      y: 175 - ((w.pelanggaran || 0) / maxCount) * 140,
+                      y: 210 - ((w.pelanggaran || 0) / maxCount) * 170,
                     }))
 
                     const pathPres = createSmoothPath(ptsPrestasi)
                     const pathPel = createSmoothPath(ptsPelanggaran)
-                    const areaPres = `${pathPres} L ${ptsPrestasi[ptsPrestasi.length - 1].x} 175 L ${ptsPrestasi[0].x} 175 Z`
-                    const areaPel = `${pathPel} L ${ptsPelanggaran[ptsPelanggaran.length - 1].x} 175 L ${ptsPelanggaran[0].x} 175 Z`
+                    const areaPres = `${pathPres} L ${ptsPrestasi[ptsPrestasi.length - 1].x} 210 L ${ptsPrestasi[0].x} 210 Z`
+                    const areaPel = `${pathPel} L ${ptsPelanggaran[ptsPelanggaran.length - 1].x} 210 L ${ptsPelanggaran[0].x} 210 Z`
 
                     return (
                       <>
                         <path d={areaPres} fill="url(#emeraldGrad)" />
                         <path d={areaPel} fill="url(#roseGrad)" />
-                        <path d={pathPres} fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d={pathPel} fill="none" stroke="#f43f5e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={pathPres} fill="none" stroke="#10b981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={pathPel} fill="none" stroke="#f43f5e" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
                         {ptsPrestasi.map((p: any, i: number) => (
-                          <circle key={`pr-${i}`} cx={p.x} cy={p.y} r="5" fill="#10b981" stroke="#ffffff" strokeWidth="2" />
+                          <circle key={`pr-${i}`} cx={p.x} cy={p.y} r="5.5" fill="#10b981" stroke="#ffffff" strokeWidth="2.5" />
                         ))}
                         {ptsPelanggaran.map((p: any, i: number) => (
-                          <circle key={`pl-${i}`} cx={p.x} cy={p.y} r="5" fill="#f43f5e" stroke="#ffffff" strokeWidth="2" />
+                          <circle key={`pl-${i}`} cx={p.x} cy={p.y} r="5.5" fill="#f43f5e" stroke="#ffffff" strokeWidth="2.5" />
                         ))}
                       </>
                     )
@@ -1451,11 +1451,11 @@ export default function DashboardPage() {
 
                     return (
                       <g className="text-center">
-                        <line x1="100" y1="100" x2="600" y2="100" stroke="#94a3b8" strokeWidth="12" strokeLinecap="round" />
-                        <line x1="100" y1="100" x2={100 + (pctL / 100) * 500} y2="100" stroke="#3b82f6" strokeWidth="12" strokeLinecap="round" />
-                        <line x1={100 + (pctL / 100) * 500} y1="100" x2="600" y2="100" stroke="#a855f7" strokeWidth="12" strokeLinecap="round" />
-                        <text x="200" y="70" className="text-xs font-bold fill-blue-600">Laki-Laki: {lCount} Siswa ({pctL}%)</text>
-                        <text x="450" y="70" className="text-xs font-bold fill-purple-600">Perempuan: {pCount} Siswa ({pctP}%)</text>
+                        <line x1="100" y1="120" x2="600" y2="120" stroke="#94a3b8" strokeWidth="16" strokeLinecap="round" />
+                        <line x1="100" y1="120" x2={100 + (pctL / 100) * 500} y2="120" stroke="#3b82f6" strokeWidth="16" strokeLinecap="round" />
+                        <line x1={100 + (pctL / 100) * 500} y1="120" x2="600" y2="120" stroke="#a855f7" strokeWidth="16" strokeLinecap="round" />
+                        <text x="200" y="80" className="text-sm font-extrabold fill-blue-600">Laki-Laki: {lCount} Siswa ({pctL}%)</text>
+                        <text x="450" y="80" className="text-sm font-extrabold fill-purple-600">Perempuan: {pCount} Siswa ({pctP}%)</text>
                       </g>
                     )
                   }
@@ -1703,7 +1703,7 @@ export default function DashboardPage() {
               <div>
                 <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                   <Landmark className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  Neraca & Ringkasan Keuangan Sekolah
+                  Neraca & Ringkasan Keuangan Keseluruhan
                 </h2>
                 <p className="text-xs text-slate-500">Statistik akumulatif penerimaan SPP, DPP, bantuan operasional, dan pengeluaran</p>
               </div>
@@ -1713,13 +1713,13 @@ export default function DashboardPage() {
               {/* Saldo Bersih */}
               <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-transparent border border-emerald-200 dark:border-emerald-800/50">
                 <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase">
-                  <span>Saldo Kas Sekolah</span>
+                  <span>Saldo Keuangan Keseluruhan</span>
                   <Wallet className="w-4 h-4" />
                 </div>
                 <div className="mt-2 text-2xl lg:text-3xl font-black text-emerald-800 dark:text-emerald-200">
                   {formatCurrency(fin.saldoKasSekolah ?? 0)}
                 </div>
-                <span className="text-[11px] text-slate-500 mt-1 block">Arus kas bersih aktif</span>
+                <span className="text-[11px] text-slate-500 mt-1 block">Arus keuangan bersih aktif</span>
               </div>
 
               {/* Total Pemasukan Lunas */}
@@ -1779,7 +1779,9 @@ export default function DashboardPage() {
                         <div className="mt-2 text-xs font-bold text-slate-900 dark:text-white">
                           {formatCurrency(val.lunas)}
                         </div>
-                        <span className="text-[10px] text-slate-400 block">dari {formatCurrency(val.total)}</span>
+                        <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                          dari {formatCurrency(val.total)}
+                        </span>
                       </div>
                     )
                   })}

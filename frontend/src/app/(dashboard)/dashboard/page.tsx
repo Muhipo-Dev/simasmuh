@@ -1089,13 +1089,13 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-col sm:items-end gap-2 shrink-0">
-              <div className="px-3.5 py-2 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white text-xs shadow-inner">
+              <div className="px-4 py-2 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white text-xs shadow-inner max-w-xs">
                 <div className="flex items-center gap-1.5 font-bold mb-0.5">
                   <Activity className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                  <span>Tahun Ajaran 2026/2027</span>
+                  <span>Periode T.A. 2026/2027</span>
                 </div>
                 <p className="text-[11px] text-amber-100/90 leading-tight">
-                  Data aktif sistem terintegrasi realtime.
+                  Data terintegrasi mulai T.A. 2026/2027 (tidak tersinkronisasi dengan arsip sistem lama).
                 </p>
               </div>
             </div>

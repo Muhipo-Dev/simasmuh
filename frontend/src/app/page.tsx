@@ -105,7 +105,7 @@ export default async function Home() {
           />
         )}
       </div>
-      <div className="fixed inset-0 bg-slate-100/80 dark:bg-slate-950/90 backdrop-blur-[3px] -z-20 pointer-events-none" />
+      <div className="fixed inset-0 bg-slate-100/70 dark:bg-slate-950/80 backdrop-blur-[1.5px] -z-20 pointer-events-none" />
 
       {/* Navbar Induk Terpadu */}
       <PublicNavbar academicYear={settings?.academicYear} semester={settings?.semester} />

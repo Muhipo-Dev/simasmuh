@@ -115,7 +115,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
         )}
       </div>
-      <div className="fixed inset-0 bg-slate-100/85 dark:bg-slate-950/90 backdrop-blur-[2px] -z-20 pointer-events-none" />
+      <div className="fixed inset-0 bg-slate-100/75 dark:bg-slate-950/80 backdrop-blur-[1px] -z-20 pointer-events-none" />
 
       {/* Kerangka Sidebar Induk Terpadu */}
       {!hideSidebar && (

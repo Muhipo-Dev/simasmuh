@@ -144,8 +144,8 @@ export default function LoginPage() {
           />
         )}
       </div>
-      <div className="fixed inset-0 bg-slate-950/75 dark:bg-slate-950/90 backdrop-blur-md -z-20" />
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))] -z-10" />
+      <div className="fixed inset-0 bg-slate-950/60 dark:bg-slate-950/75 backdrop-blur-[2px] -z-20" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.1),rgba(255,255,255,0))] -z-10" />
 
       {/* Navbar Atas Terpadu: Kiri Logo, Kanan Presensi View & Theme Switcher */}
       <AppNavbar

@@ -14,10 +14,11 @@ export class SettingsService {
 
   async getServerTime(): Promise<any> {
     const settings = await this.prisma.setting.findFirst({
-      select: { address: true, schoolName: true },
+      select: { address: true, schoolName: true, serverLocation: true, timezone: true } as any,
     });
-    const location = settings?.address || 'Ponorogo, Jawa Timur, Indonesia';
-    return getServerTimeInfo(location);
+    const location = (settings as any)?.serverLocation || (settings as any)?.address || 'Ponorogo, Jawa Timur';
+    const tz = (settings as any)?.timezone || 'Asia/Jakarta';
+    return getServerTimeInfo(location, tz);
   }
 
   async getTimeSync(clientTime?: number): Promise<any> {
@@ -83,6 +84,8 @@ export class SettingsService {
         semester: true,
         logoUrl: true,
         backgroundUrl: true,
+        timezone: true,
+        serverLocation: true,
         defaultDpp: true,
         defaultUka: true,
         defaultUks: true,
@@ -101,6 +104,8 @@ export class SettingsService {
         semester: 'Ganjil',
         logoUrl: null,
         backgroundUrl: null,
+        timezone: 'Asia/Jakarta',
+        serverLocation: 'Ponorogo, Jawa Timur',
         defaultDpp: 1500000,
         defaultUka: 500000,
         defaultUks: 100000,

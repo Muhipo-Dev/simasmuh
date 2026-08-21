@@ -40,6 +40,7 @@ type Setting = {
   phone: string | null
   email: string | null
   logoUrl: string | null
+  backgroundUrl?: string | null
   principalName: string | null
   principalNip: string | null
   academicYear: string | null
@@ -48,6 +49,8 @@ type Setting = {
   defaultDpp?: number | null
   defaultUka?: number | null
   defaultUks?: number | null
+  timezone?: string | null
+  serverLocation?: string | null
 }
 
 type BankAccount = {
@@ -75,6 +78,8 @@ export default function SettingsPage() {
     defaultDpp: 0,
     defaultUka: 0,
     defaultUks: 0,
+    timezone: 'Asia/Jakarta',
+    serverLocation: 'Ponorogo, Jawa Timur',
   })
 
   const [bankData, setBankData] = useState({
@@ -83,10 +88,12 @@ export default function SettingsPage() {
     bankOwner: ''
   })
 
+  const [isEditingServerMeta, setIsEditingServerMeta] = useState(false)
+
   const authenticatedQuery = useAuthenticatedQuery()
   const authenticatedFetch = useAuthenticatedFetch()
 
-  const { data: settings, isLoading } = useQuery<Setting & { backgroundUrl?: string | null }>({
+  const { data: settings, isLoading } = useQuery<Setting>({
     queryKey: ['settings'],
     queryFn: () => authenticatedQuery('/api-backend/settings')
   })
@@ -105,7 +112,7 @@ export default function SettingsPage() {
         phone: settings.phone || '',
         email: settings.email || '',
         logoUrl: settings.logoUrl || '',
-        backgroundUrl: (settings as any).backgroundUrl || '',
+        backgroundUrl: settings.backgroundUrl || '',
         principalName: settings.principalName || '',
         principalNip: settings.principalNip || '',
         helpdeskPhone: settings.helpdeskPhone || '088293733330',
@@ -114,6 +121,8 @@ export default function SettingsPage() {
         defaultDpp: settings.defaultDpp || 0,
         defaultUka: settings.defaultUka || 0,
         defaultUks: settings.defaultUks || 0,
+        timezone: settings.timezone || 'Asia/Jakarta',
+        serverLocation: settings.serverLocation || 'Ponorogo, Jawa Timur',
       })
     }
   }, [settings])
@@ -284,27 +293,55 @@ export default function SettingsPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
-                  <Globe className="w-4 h-4 text-blue-600 shrink-0" />
-                  <div>
-                    <div className="font-semibold text-slate-900 dark:text-white">Zona Waktu Aktif</div>
-                    <div className="text-[11px] text-slate-500 font-mono">{clock.timezone} ({clock.utcOffset})</div>
+                <div className="flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 group">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Globe className="w-4 h-4 text-blue-600 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-900 dark:text-white">Zona Waktu Aktif</div>
+                      <div className="text-[11px] text-slate-500 font-mono truncate">{formData.timezone || clock.timezone} ({clock.utcOffset})</div>
+                    </div>
                   </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditingServerMeta(true)}
+                    className="h-6 px-2 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg shrink-0"
+                  >
+                    Edit
+                  </Button>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
-                  <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <div>
-                    <div className="font-semibold text-slate-900 dark:text-white">Lokasi Instalasi Server</div>
-                    <div className="text-[11px] text-slate-500 truncate max-w-[180px]">{clock.serverLocation}</div>
+                <div className="flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 group">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-900 dark:text-white">Lokasi Instalasi Server</div>
+                      <div className="text-[11px] text-slate-500 truncate">{formData.serverLocation || clock.serverLocation}</div>
+                    </div>
                   </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditingServerMeta(true)}
+                    className="h-6 px-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg shrink-0"
+                  >
+                    Edit
+                  </Button>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
                   <Wifi className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <div>
-                    <div className="font-semibold text-slate-900 dark:text-white">Latensi Sinkronisasi</div>
-                    <div className="text-[11px] text-slate-500 font-mono">{clock.latency} ms (Realtime Sync)</div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      Latensi Endpoint Akses Web
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    </div>
+                    <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">{clock.latency} ms</span>
+                      <span className="text-[10px] text-slate-400">({typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'})</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -314,7 +351,7 @@ export default function SettingsPage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-white dark:bg-slate-800/90 p-4 rounded-2xl border border-blue-100 dark:border-slate-700/80 shadow-xs shrink-0">
               <div className="text-center sm:text-right">
                 <div className="text-3xl font-extrabold tracking-tight text-blue-600 dark:text-blue-400 font-mono">
-                  {clock.timeString} <span className="text-xs font-sans font-semibold text-slate-500">WIB</span>
+                  {clock.timeString} <span className="text-xs font-sans font-semibold text-slate-500">{formData.timezone === 'Asia/Makassar' ? 'WITA' : formData.timezone === 'Asia/Jayapura' ? 'WIT' : 'WIB'}</span>
                 </div>
                 <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   {clock.dateString}
@@ -331,7 +368,7 @@ export default function SettingsPage() {
                   clock.reSync()
                   Swal.fire({
                     title: 'Waktu Berhasil Dikalibrasi!',
-                    text: `Waktu sistem telah disinkronkan langsung dengan server pada ${clock.timeString} WIB.`,
+                    text: `Waktu sistem telah disinkronkan langsung dengan server endpoint (${clock.latency} ms).`,
                     icon: 'success',
                     timer: 2000,
                     showConfirmButton: false,
@@ -345,6 +382,71 @@ export default function SettingsPage() {
               </Button>
             </div>
           </div>
+
+          {/* Modal / Dialog Edit Konfigurasi Zona Waktu & Lokasi Instalasi */}
+          {isEditingServerMeta && (
+            <div className="mt-4 pt-4 border-t border-blue-200/60 dark:border-blue-900/60 flex flex-col md:flex-row md:items-end gap-3 bg-white/90 dark:bg-slate-800/80 p-4 rounded-xl border animate-in fade-in zoom-in-95">
+              <div className="flex-1 space-y-1.5">
+                <Label htmlFor="timezoneSelect" className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-blue-600" />
+                  Pilih Zona Waktu Server
+                </Label>
+                <select
+                  id="timezoneSelect"
+                  value={formData.timezone || 'Asia/Jakarta'}
+                  onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+                  className="w-full h-9 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Asia/Jakarta">WIB - Asia/Jakarta (UTC+07:00)</option>
+                  <option value="Asia/Pontianak">WIB - Asia/Pontianak (UTC+07:00)</option>
+                  <option value="Asia/Makassar">WITA - Asia/Makassar (UTC+08:00)</option>
+                  <option value="Asia/Jayapura">WIT - Asia/Jayapura (UTC+09:00)</option>
+                  <option value="Asia/Bangkok">ICT - Asia/Bangkok (UTC+07:00)</option>
+                  <option value="UTC">UTC - Coordinated Universal Time (UTC+00:00)</option>
+                </select>
+              </div>
+
+              <div className="flex-1 space-y-1.5">
+                <Label htmlFor="serverLocationInput" className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                  Lokasi Instalasi Server
+                </Label>
+                <Input
+                  id="serverLocationInput"
+                  value={formData.serverLocation || ''}
+                  onChange={(e) => setFormData({ ...formData, serverLocation: e.target.value })}
+                  placeholder="Contoh: Ponorogo, Jawa Timur / Cloud Data Center"
+                  className="h-9 text-xs bg-white dark:bg-slate-900"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 pt-2 md:pt-0">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    mutation.mutate(formData)
+                    setIsEditingServerMeta(false)
+                    setTimeout(() => clock.reSync(), 400)
+                  }}
+                  disabled={mutation.isPending}
+                  className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm"
+                >
+                  <Save className="w-3.5 h-3.5 mr-1" />
+                  Simpan Perubahan
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingServerMeta(false)}
+                  className="h-9 px-3 text-xs rounded-lg"
+                >
+                  Tutup
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

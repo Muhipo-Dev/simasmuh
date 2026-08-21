@@ -124,21 +124,78 @@ export function formatDateTimeIndonesia(date: Date | string): string {
   }).format(target).replace(/\./g, ':');
 }
 
+export function getOffsetMinutesForTimezone(tz: string, date: Date = new Date()): number {
+  try {
+    const dStr = date.toLocaleString('en-US', { timeZone: tz });
+    const localDate = new Date(dStr);
+    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+    return Math.round((localDate.getTime() - utcDate.getTime()) / 60000);
+  } catch {
+    return 420;
+  }
+}
+
+export function formatUtcOffsetString(minutes: number): string {
+  const sign = minutes >= 0 ? '+' : '-';
+  const absMinutes = Math.abs(minutes);
+  const hours = Math.floor(absMinutes / 60);
+  const mins = absMinutes % 60;
+  return `${sign}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}
+
 /**
  * Mendapatkan informasi lengkap waktu dan konfigurasi server
  */
-export function getServerTimeInfo(locationName: string = 'Ponorogo, Jawa Timur, Indonesia'): ServerTimeInfo {
+export function getServerTimeInfo(locationName: string = 'Ponorogo, Jawa Timur', tz: string = DEFAULT_TIMEZONE): ServerTimeInfo {
   const now = new Date();
-  
+  const effectiveTz = tz || DEFAULT_TIMEZONE;
+  const offsetMinutes = getOffsetMinutesForTimezone(effectiveTz, now);
+  const offsetStr = formatUtcOffsetString(offsetMinutes);
+
+  let timeString = getTimeStringUtc7(now);
+  let dateString = formatDateIndonesia(now);
+  let dateTimeString = formatDateTimeIndonesia(now);
+
+  try {
+    timeString = new Intl.DateTimeFormat('id-ID', {
+      timeZone: effectiveTz,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(now).replace(/\./g, ':');
+
+    dateString = new Intl.DateTimeFormat('id-ID', {
+      timeZone: effectiveTz,
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(now);
+
+    dateTimeString = new Intl.DateTimeFormat('id-ID', {
+      timeZone: effectiveTz,
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(now).replace(/\./g, ':');
+  } catch {
+    // fallback to default wib
+  }
+
   return {
     serverTimestamp: now.getTime(),
     serverTimeIso: now.toISOString(),
-    serverTimeFormatted: formatDateTimeIndonesia(now),
-    serverDateFormatted: formatDateIndonesia(now),
-    serverTimeString: getTimeStringUtc7(now),
-    timezone: DEFAULT_TIMEZONE,
-    utcOffset: '+07:00',
-    utcOffsetMinutes: DEFAULT_UTC_OFFSET_MINUTES,
+    serverTimeFormatted: dateTimeString,
+    serverDateFormatted: dateString,
+    serverTimeString: timeString,
+    timezone: effectiveTz,
+    utcOffset: offsetStr,
+    utcOffsetMinutes: offsetMinutes,
     serverLocation: locationName,
     serverHost: os.hostname(),
     serverUptime: Math.floor(process.uptime()),

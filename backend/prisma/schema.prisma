@@ -250,6 +250,8 @@ model Setting {
   whatsappApiUrl       String?
   helpdeskPhone        String? @default("088293733330")
   backgroundUrl        String?
+  timezone             String? @default("Asia/Jakarta")
+  serverLocation       String? @default("Ponorogo, Jawa Timur")
 }
 
 model Announcement {

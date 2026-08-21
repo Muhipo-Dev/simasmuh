@@ -353,19 +353,12 @@ export default function SettingsPage() {
         <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl rounded-2xl overflow-hidden">
           <form onSubmit={handleSubmit}>
             <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 sm:p-6">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-extrabold">
-                  <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  Identitas Sekolah & Media Sistem
-                </CardTitle>
-                <div className="flex items-center gap-1.5">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                    SUPERADMIN & ADMIN
-                  </span>
-                </div>
-              </div>
+              <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-extrabold">
+                <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                Identitas Sekolah
+              </CardTitle>
               <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">
-                Informasi identitas, logo resmi, wallpaper master, dan kontak sekolah untuk seluruh ekosistem SIMASMUH.
+                Informasi identitas, logo resmi, dan wallpaper latar belakang sistem.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
@@ -388,16 +381,13 @@ export default function SettingsPage() {
                       className="bg-white dark:bg-slate-900"
                     />
                   </div>
-                  <p className="text-[11px] text-slate-500">Logo ini digunakan secara seragam di navbar, favicon browser, dan dokumen resmi.</p>
+                  <p className="text-[11px] text-slate-500">Logo ini digunakan pada navbar, favicon browser, dan dokumen resmi.</p>
                 </div>
 
                 <div className="space-y-2 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="backgroundMaster" className="font-bold text-slate-900 dark:text-slate-100 text-xs">
-                      Wallpaper Background Master (Gedung Sekolah / Ekosistem)
-                    </Label>
-                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">Khusus Superadmin & Admin</span>
-                  </div>
+                  <Label htmlFor="backgroundMaster" className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                    Wallpaper Background Master
+                  </Label>
                   <div className="flex items-center gap-4 mt-2">
                     {formData.backgroundUrl ? (
                       <div className="relative w-20 h-12 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0 shadow-xs">
@@ -425,7 +415,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                    Wallpaper ini menjadi latar belakang master dengan efek blur di halaman login, beranda, dashboard, dan seluruh halaman publik SIMASMUH.
+                    Wallpaper latar belakang yang diselaraskan di seluruh halaman aplikasi.
                   </p>
                 </div>
                 <div className="space-y-2">

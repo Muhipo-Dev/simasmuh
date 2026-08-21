@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Users, UserSquare2, CalendarDays, ClipboardCheck, QrCode, Loader2, 
-  Briefcase, BookOpen, UserCheck, Receipt, CreditCard, AlertTriangle, 
-  GraduationCap, Award, BellRing, Sparkles, ChevronDown, TrendingUp, 
-  TrendingDown, Wallet, Landmark, DollarSign, Activity, CheckCircle2, 
+import {
+  Users, UserSquare2, CalendarDays, ClipboardCheck, QrCode, Loader2,
+  Briefcase, BookOpen, UserCheck, Receipt, CreditCard, AlertTriangle,
+  GraduationCap, Award, BellRing, Sparkles, ChevronDown, TrendingUp,
+  TrendingDown, Wallet, Landmark, DollarSign, Activity, CheckCircle2,
   ArrowUpRight, FileText, PieChart, ShieldAlert, BarChart3, Clock,
   ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake
 } from 'lucide-react'
@@ -580,11 +580,11 @@ export default function DashboardPage() {
     const parentStudents = parentDashboard?.students || []
     const activeStudent = parentStudents[selectedChildIdx] || parentStudents[0]
     const studentClass = activeStudent ? { name: activeStudent.className } : null
-    
+
     // Tagihan belum lunas siswa aktif
     const allUnpaid = (activeStudent?.unpaidTagihans || []).filter((t: any) => t.status === 'BELUM_LUNAS' || t.status === 'ANGSURAN')
     const totalUnpaidAmount = allUnpaid.reduce((sum: number, tagihan: any) => sum + Math.max(0, tagihan.amount - (tagihan.amountPaid || 0)), 0)
-    
+
     const formatCurrency = (amount: number) =>
       new Intl.NumberFormat('id-ID', {
         style: 'currency',
@@ -635,7 +635,7 @@ export default function DashboardPage() {
                 <GraduationCap className="w-4 h-4 text-emerald-300" />
                 Pilih Siswa yang Dipantau:
               </label>
-              
+
               <Select
                 value={selectedChildIdx.toString()}
                 onValueChange={(val) => {
@@ -665,9 +665,8 @@ export default function DashboardPage() {
                       className="rounded-xl py-2.5 px-3 font-semibold text-xs cursor-pointer focus:bg-indigo-50 dark:focus:bg-indigo-950"
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                          selectedChildIdx === idx ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                        }`}>
+                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${selectedChildIdx === idx ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          }`}>
                           {idx + 1}
                         </div>
                         <div>
@@ -893,17 +892,15 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={sch.id || idx}
-                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs ${
-                        isToday
+                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs ${isToday
                           ? 'bg-blue-50/80 dark:bg-slate-800/90 border-blue-200 dark:border-blue-700 font-medium'
                           : 'bg-slate-50/50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800'
-                      }`}
+                        }`}
                     >
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded ${
-                            isToday ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                          }`}>
+                          <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded ${isToday ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                            }`}>
                             {daysMap[sch.dayOfWeek]}
                           </span>
                           <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
@@ -1060,7 +1057,7 @@ export default function DashboardPage() {
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-orange-600 to-slate-900 p-6 sm:p-8 text-white shadow-xl border border-white/10">
           <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-amber-400/20 blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 rounded-full bg-orange-500/20 blur-3xl pointer-events-none" />
-          
+
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -1107,11 +1104,10 @@ export default function DashboardPage() {
             <button
               key={tab.id}
               onClick={() => setSelectedStatCategory(tab.id)}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex flex-col items-start ${
-                selectedStatCategory === tab.id
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex flex-col items-start ${selectedStatCategory === tab.id
                   ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
+                }`}
             >
               <span>{tab.label}</span>
               <span className={`text-[10px] font-normal ${selectedStatCategory === tab.id ? 'text-amber-100' : 'text-slate-400'}`}>
@@ -1242,11 +1238,10 @@ export default function DashboardPage() {
                 <button
                   key={c.id}
                   onClick={() => setSelectedCurveType(c.id as any)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
-                    selectedCurveType === c.id
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${selectedCurveType === c.id
                       ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200 dark:ring-slate-700'
                       : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
+                    }`}
                 >
                   <span>{c.label}</span>
                 </button>

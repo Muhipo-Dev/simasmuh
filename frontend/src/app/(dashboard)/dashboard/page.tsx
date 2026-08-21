@@ -1102,6 +1102,58 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* PUSAT PENGAWASAN & AKSES CEPAT LAYANAN DATA SEKOLAH (ATAS) */}
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 px-1">
+            <div>
+              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                Pusat Pengawasan & Akses Layanan Data Sekolah
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Tampilan log terpadu dan monitoring mandiri data sekolah (Akses supervisi & pemantauan eksekutif).
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-900 flex items-center gap-1 shadow-2xs">
+                <ShieldCheck className="w-3.5 h-3.5" /> Mode Supervisi (Read-Only)
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
+            {[
+              { name: 'Guru & Tendik', href: '/master-data/guru', icon: Users, desc: 'Log Pendidik' },
+              { name: 'Data Siswa', href: '/master-data/siswa', icon: UserSquare2, desc: 'Buku Induk' },
+              { name: 'Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen, desc: 'Daftar Kelas' },
+              { name: 'Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, desc: 'Jadwal Belajar' },
+              { name: 'Laporan Keuangan', href: '/keuangan/pemasukan', icon: Wallet, desc: 'Arsip Keuangan' },
+              { name: 'Pengumuman', href: '/informasi/pengumuman', icon: Megaphone, desc: 'Pemberitahuan' },
+              { name: 'Presensi Pegawai', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck, desc: 'Log Kehadiran' },
+              { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: UserCheck, desc: 'Log Presensi' },
+            ].map((link, idx) => {
+              const Icon = link.icon
+              return (
+                <Link key={idx} href={link.href} className="group">
+                  <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-2xs hover:shadow-lg hover:border-amber-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-3.5 gap-2 rounded-2xl hover:-translate-y-0.5 text-center">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-amber-500 group-hover:to-orange-600 group-hover:text-white group-hover:border-transparent transition-all duration-300 shadow-2xs">
+                      <Icon className="w-5 h-5 transition-colors" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800 dark:text-slate-100 text-xs group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
+                        {link.name}
+                      </h3>
+                      <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                        {link.desc}
+                      </span>
+                    </div>
+                  </Card>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+
         {/* PILIHAN STATISTIKA KHUSUS (TAB NAVIGATION FILTER) */}
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-2 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto shadow-xs">
           {[
@@ -1304,7 +1356,7 @@ export default function DashboardPage() {
                             <>
                               <path d={areaStr} fill="url(#finGradIn)" />
                               <path d={pathStr} fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-                              {pts.map((p, i) => (
+                              {pts.map((p: any, i: number) => (
                                 <circle key={i} cx={p.x} cy={p.y} r="4.5" fill="#10b981" stroke="#ffffff" strokeWidth="2" />
                               ))}
                             </>
@@ -2479,58 +2531,6 @@ export default function DashboardPage() {
         {/* 6. INFORMASI & PENGUMUMAN SEKOLAH */}
         <div className="w-full">
           {renderAnnouncements()}
-        </div>
-
-        {/* 7. MENU AKSES CEPAT PENGAWASAN & MONITORING DATA SEKOLAH (SUPERVISI & LOG VIEW ONLY) */}
-        <div className="space-y-3 pt-2">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border-t border-slate-100 dark:border-slate-800 pt-5">
-            <div>
-              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-500" />
-                Pusat Pengawasan & Akses Layanan Data Sekolah
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Tampilan log terpadu dan monitoring mandiri data sekolah (Akses supervisi & pemantauan eksekutif).
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-900 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> Mode Supervisi (Read-Only)
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
-            {[
-              { name: 'Guru & Tendik', href: '/master-data/guru', icon: Users, desc: 'Log Pendidik' },
-              { name: 'Data Siswa', href: '/master-data/siswa', icon: UserSquare2, desc: 'Buku Induk' },
-              { name: 'Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen, desc: 'Daftar Kelas' },
-              { name: 'Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, desc: 'Jadwal Belajar' },
-              { name: 'Laporan Keuangan', href: '/keuangan/pemasukan', icon: Wallet, desc: 'Arsip Keuangan' },
-              { name: 'Pengumuman', href: '/informasi/pengumuman', icon: Megaphone, desc: 'Pemberitahuan' },
-              { name: 'Presensi Pegawai', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck, desc: 'Log Kehadiran' },
-              { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: UserCheck, desc: 'Log Presensi' },
-            ].map((link, idx) => {
-              const Icon = link.icon
-              return (
-                <Link key={idx} href={link.href} className="group">
-                  <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-2xs hover:shadow-lg hover:border-amber-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-3.5 gap-2 rounded-2xl hover:-translate-y-0.5 text-center">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-amber-500 group-hover:to-orange-600 group-hover:text-white group-hover:border-transparent transition-all duration-300 shadow-2xs">
-                      <Icon className="w-5 h-5 transition-colors" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-800 dark:text-slate-100 text-xs group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
-                        {link.name}
-                      </h3>
-                      <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
-                        {link.desc}
-                      </span>
-                    </div>
-                  </Card>
-                </Link>
-              )
-            })}
-          </div>
         </div>
       </div>
     )

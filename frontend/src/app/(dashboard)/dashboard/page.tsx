@@ -107,6 +107,7 @@ export default function DashboardPage() {
 
   const [selectedChildIdx, setSelectedChildIdx] = useState(0)
   const [selectedStatCategory, setSelectedStatCategory] = useState<string>('SEMUA')
+  const [selectedCurveType, setSelectedCurveType] = useState<'PRESENSI' | 'KEUANGAN' | 'PRESTASI' | 'DEMOGRAFI'>('PRESENSI')
 
   // Query untuk tagihan siswa (khusus siswa)
   const { data: studentTagihans } = useQuery<{
@@ -1244,138 +1245,296 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 2. KURVA GRAFIK ANALITIK TREN MINGGUAN (BARIS NOMOR 2 SETELAH POPULASI EKOSISTEM) */}
-        {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'PRESENSI') && (
-          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-3xl p-5 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                  <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                    Kurva & Tren Presensi Sekolah (7 Hari Terakhir)
-                  </h2>
+        {/* 2. KURVA & GRAFIK ANALITIK MULTI-SEKTOR EKSEKUTIF (PRESENSI, KEUANGAN, PRESTASI & DEMOGRAFI) */}
+        <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-3xl p-5 sm:p-7">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5 mb-6">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5" />
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">Visualisasi kurva tingkat kehadiran harian Siswa dan Guru/Pegawai</p>
+                <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                  Kurva & Tren Analitik Komprehensif Sekolah
+                </h2>
               </div>
-              <div className="flex items-center gap-4 text-xs font-bold">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-blue-600 inline-block shadow-xs" />
-                  <span className="text-slate-700 dark:text-slate-300">Siswa (%)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-teal-500 inline-block shadow-xs" />
-                  <span className="text-slate-700 dark:text-slate-300">Pegawai & Guru (%)</span>
-                </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Visualisasi dinamika data mingguan 7 hari terakhir: Presensi kehadiran, arus kas penerimaan, catatan karakter, serta komposisi demografis.
+              </p>
+            </div>
+
+            {/* Selector Tab Jenis Kurva */}
+            <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 overflow-x-auto shrink-0">
+              {[
+                { id: 'PRESENSI', label: '⏱️ Kehadiran', desc: 'Siswa & Guru' },
+                { id: 'KEUANGAN', label: '💰 Arus Kas', desc: 'Penerimaan Harian' },
+                { id: 'PRESTASI', label: '🛡️ Adab & Tatib', desc: 'Prestasi & Catatan' },
+                { id: 'DEMOGRAFI', label: '👥 Demografi', desc: 'Distribusi Gender' },
+              ].map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCurveType(c.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                    selectedCurveType === c.id
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200 dark:ring-slate-700'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <span>{c.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Area Kurva Interaktif Responsive (Tinggi Proporsional h-64 sampai h-80, tidak gepeng) */}
+          <div className="space-y-4">
+            {/* Legend Sesuai Mode Kurva */}
+            <div className="flex items-center justify-between flex-wrap gap-3 px-1 text-xs font-bold">
+              <span className="text-slate-400 text-[11px] font-medium">Periode: 7 Hari Terakhir</span>
+              <div className="flex items-center gap-4">
+                {selectedCurveType === 'PRESENSI' && (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-blue-600 inline-block shadow-xs" />
+                      <span className="text-slate-700 dark:text-slate-300">Tingkat Hadir Siswa (%)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-teal-500 inline-block shadow-xs" />
+                      <span className="text-slate-700 dark:text-slate-300">Tingkat Hadir Guru & Pegawai (%)</span>
+                    </div>
+                  </>
+                )}
+                {selectedCurveType === 'KEUANGAN' && (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-emerald-600 inline-block shadow-xs" />
+                      <span className="text-slate-700 dark:text-slate-300">Pemasukan Kas Harian (Rp)</span>
+                    </div>
+                  </>
+                )}
+                {selectedCurveType === 'PRESTASI' && (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow-xs" />
+                      <span className="text-slate-700 dark:text-slate-300">Apresiasi & Prestasi Siswa</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-rose-500 inline-block shadow-xs" />
+                      <span className="text-slate-700 dark:text-slate-300">Catatan Pelanggaran</span>
+                    </div>
+                  </>
+                )}
+                {selectedCurveType === 'DEMOGRAFI' && (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-blue-500 inline-block shadow-xs" />
+                      <span className="text-slate-700 dark:text-slate-300">Laki-Laki</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-purple-500 inline-block shadow-xs" />
+                      <span className="text-slate-700 dark:text-slate-300">Perempuan</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Render Kurva SVG Responsive */}
-            <div className="space-y-4">
-              <div className="h-52 w-full pt-4 pb-2 relative">
-                <svg className="w-full h-full overflow-visible" viewBox="0 0 700 160" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="siswaGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2563eb" stopOpacity="0.35" />
-                      <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
-                    </linearGradient>
-                    <linearGradient id="staffGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.3" />
-                      <stop offset="100%" stopColor="#14b8a6" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
+            {/* Kanvas Kurva SVG Proporsional */}
+            <div className="h-64 sm:h-72 w-full pt-4 pb-2 relative bg-slate-50/40 dark:bg-slate-950/20 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-2 sm:p-4">
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 700 200" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.4" />
+                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
+                  </linearGradient>
+                  <linearGradient id="tealGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.35" />
+                    <stop offset="100%" stopColor="#14b8a6" stopOpacity="0.0" />
+                  </linearGradient>
+                  <linearGradient id="emeraldGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.45" />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                  </linearGradient>
+                  <linearGradient id="roseGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.35" />
+                    <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
 
-                  {/* Grid horizontal lines */}
-                  {[0, 25, 50, 75, 100].map((level, idx) => {
-                    const y = 140 - (level / 100) * 120
-                    return (
-                      <g key={idx}>
-                        <line x1="0" y1={y} x2="700" y2={y} stroke="currentColor" strokeDasharray="4 4" className="text-slate-200 dark:text-slate-800" strokeWidth="1" />
-                        <text x="5" y={y - 3} className="text-[9px] fill-slate-400 font-mono font-medium">{level}%</text>
-                      </g>
-                    )
-                  })}
+                {/* Grid horizontal lines */}
+                {[0, 25, 50, 75, 100].map((level, idx) => {
+                  const y = 175 - (level / 100) * 150
+                  return (
+                    <g key={idx}>
+                      <line x1="0" y1={y} x2="700" y2={y} stroke="currentColor" strokeDasharray="3 3" className="text-slate-200 dark:text-slate-800" strokeWidth="1" />
+                      <text x="5" y={y - 3} className="text-[9px] fill-slate-400 font-mono font-medium">
+                        {selectedCurveType === 'PRESENSI' ? `${level}%` : level === 100 ? 'Maks' : level === 50 ? 'Med' : level === 0 ? '0' : ''}
+                      </text>
+                    </g>
+                  )
+                })}
 
-                  {/* Data Points Calculations */}
-                  {(() => {
-                    const weekly = execStats?.weeklyTrends || []
-                    if (weekly.length === 0) return null
+                {/* Data Points Calculations */}
+                {(() => {
+                  const weekly = execStats?.weeklyTrends || []
+                  if (weekly.length === 0) return null
 
-                    const pointsSiswa = weekly.map((w: any, i: number) => {
-                      const x = 50 + (i * (600 / Math.max(1, weekly.length - 1)))
-                      const y = 140 - ((w.siswaPct || 0) / 100) * 120
-                      return { x, y, pct: w.siswaPct, count: w.siswaHadir, date: w.date }
-                    })
+                  const createSmoothPath = (pts: any[]) => {
+                    if (pts.length === 0) return ''
+                    return pts.reduce((acc, p, i, a) => {
+                      if (i === 0) return `M ${p.x} ${p.y}`
+                      const prev = a[i - 1]
+                      const cx1 = prev.x + (p.x - prev.x) / 2
+                      const cy1 = prev.y
+                      const cx2 = prev.x + (p.x - prev.x) / 2
+                      const cy2 = p.y
+                      return `${acc} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p.x} ${p.y}`
+                    }, '')
+                  }
 
-                    const pointsStaff = weekly.map((w: any, i: number) => {
-                      const x = 50 + (i * (600 / Math.max(1, weekly.length - 1)))
-                      const y = 140 - ((w.staffPct || 0) / 100) * 120
-                      return { x, y, pct: w.staffPct, count: w.staffHadir, date: w.date }
-                    })
+                  if (selectedCurveType === 'PRESENSI') {
+                    const ptsSiswa = weekly.map((w: any, i: number) => ({
+                      x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
+                      y: 175 - ((w.siswaPct || 0) / 100) * 150,
+                      val: `${w.siswaPct}%`
+                    }))
+                    const ptsStaff = weekly.map((w: any, i: number) => ({
+                      x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
+                      y: 175 - ((w.staffPct || 0) / 100) * 150,
+                      val: `${w.staffPct}%`
+                    }))
 
-                    const createSmoothPath = (pts: any[]) => {
-                      if (pts.length === 0) return ''
-                      return pts.reduce((acc, p, i, a) => {
-                        if (i === 0) return `M ${p.x} ${p.y}`
-                        const prev = a[i - 1]
-                        const cx1 = prev.x + (p.x - prev.x) / 2
-                        const cy1 = prev.y
-                        const cx2 = prev.x + (p.x - prev.x) / 2
-                        const cy2 = p.y
-                        return `${acc} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p.x} ${p.y}`
-                      }, '')
-                    }
-
-                    const pathSiswa = createSmoothPath(pointsSiswa)
-                    const pathStaff = createSmoothPath(pointsStaff)
-
-                    const areaSiswa = `${pathSiswa} L ${pointsSiswa[pointsSiswa.length - 1].x} 140 L ${pointsSiswa[0].x} 140 Z`
-                    const areaStaff = `${pathStaff} L ${pointsStaff[pointsStaff.length - 1].x} 140 L ${pointsStaff[0].x} 140 Z`
+                    const pathSiswa = createSmoothPath(ptsSiswa)
+                    const pathStaff = createSmoothPath(ptsStaff)
+                    const areaSiswa = `${pathSiswa} L ${ptsSiswa[ptsSiswa.length - 1].x} 175 L ${ptsSiswa[0].x} 175 Z`
+                    const areaStaff = `${pathStaff} L ${ptsStaff[ptsStaff.length - 1].x} 175 L ${ptsStaff[0].x} 175 Z`
 
                     return (
                       <>
-                        {/* Area Gradients */}
-                        <path d={areaSiswa} fill="url(#siswaGradient)" />
-                        <path d={areaStaff} fill="url(#staffGradient)" />
-
-                        {/* Line Curves */}
-                        <path d={pathSiswa} fill="none" stroke="#2563eb" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={areaSiswa} fill="url(#blueGrad)" />
+                        <path d={areaStaff} fill="url(#tealGrad)" />
+                        <path d={pathSiswa} fill="none" stroke="#2563eb" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
                         <path d={pathStaff} fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-
-                        {/* Dots Siswa */}
-                        {pointsSiswa.map((p: any, i: number) => (
-                          <g key={`siswa-${i}`} className="cursor-pointer group">
-                            <circle cx={p.x} cy={p.y} r="5" fill="#2563eb" stroke="#ffffff" strokeWidth="2.5" className="transition-transform group-hover:scale-125" />
-                          </g>
+                        {ptsSiswa.map((p: any, i: number) => (
+                          <circle key={`s-${i}`} cx={p.x} cy={p.y} r="5.5" fill="#2563eb" stroke="#ffffff" strokeWidth="2.5" />
                         ))}
-
-                        {/* Dots Staff */}
-                        {pointsStaff.map((p: any, i: number) => (
-                          <g key={`staff-${i}`} className="cursor-pointer group">
-                            <circle cx={p.x} cy={p.y} r="4.5" fill="#14b8a6" stroke="#ffffff" strokeWidth="2" className="transition-transform group-hover:scale-125" />
-                          </g>
+                        {ptsStaff.map((p: any, i: number) => (
+                          <circle key={`st-${i}`} cx={p.x} cy={p.y} r="4.5" fill="#14b8a6" stroke="#ffffff" strokeWidth="2" />
                         ))}
                       </>
                     )
-                  })()}
-                </svg>
-              </div>
+                  }
 
-              {/* Label Tanggal Bawah */}
-              <div className="grid grid-cols-7 gap-1 text-center border-t border-slate-100 dark:border-slate-800 pt-3">
-                {(execStats?.weeklyTrends || []).map((w: any, idx: number) => (
-                  <div key={idx} className="space-y-1">
-                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">{w.date}</span>
-                    <div className="flex items-center justify-center gap-2 text-[10px]">
+                  if (selectedCurveType === 'KEUANGAN') {
+                    const maxPemasukan = Math.max(...weekly.map((w: any) => w.pemasukan || 0), 1000000)
+                    const ptsUang = weekly.map((w: any, i: number) => ({
+                      x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
+                      y: 175 - ((w.pemasukan || 0) / maxPemasukan) * 140,
+                      val: w.pemasukan
+                    }))
+
+                    const pathUang = createSmoothPath(ptsUang)
+                    const areaUang = `${pathUang} L ${ptsUang[ptsUang.length - 1].x} 175 L ${ptsUang[0].x} 175 Z`
+
+                    return (
+                      <>
+                        <path d={areaUang} fill="url(#emeraldGrad)" />
+                        <path d={pathUang} fill="none" stroke="#10b981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                        {ptsUang.map((p: any, i: number) => (
+                          <circle key={`u-${i}`} cx={p.x} cy={p.y} r="6" fill="#10b981" stroke="#ffffff" strokeWidth="2.5" />
+                        ))}
+                      </>
+                    )
+                  }
+
+                  if (selectedCurveType === 'PRESTASI') {
+                    const maxCount = Math.max(...weekly.map((w: any) => Math.max(w.prestasi || 0, w.pelanggaran || 0)), 5)
+                    const ptsPrestasi = weekly.map((w: any, i: number) => ({
+                      x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
+                      y: 175 - ((w.prestasi || 0) / maxCount) * 140,
+                    }))
+                    const ptsPelanggaran = weekly.map((w: any, i: number) => ({
+                      x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
+                      y: 175 - ((w.pelanggaran || 0) / maxCount) * 140,
+                    }))
+
+                    const pathPres = createSmoothPath(ptsPrestasi)
+                    const pathPel = createSmoothPath(ptsPelanggaran)
+                    const areaPres = `${pathPres} L ${ptsPrestasi[ptsPrestasi.length - 1].x} 175 L ${ptsPrestasi[0].x} 175 Z`
+                    const areaPel = `${pathPel} L ${ptsPelanggaran[ptsPelanggaran.length - 1].x} 175 L ${ptsPelanggaran[0].x} 175 Z`
+
+                    return (
+                      <>
+                        <path d={areaPres} fill="url(#emeraldGrad)" />
+                        <path d={areaPel} fill="url(#roseGrad)" />
+                        <path d={pathPres} fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={pathPel} fill="none" stroke="#f43f5e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                        {ptsPrestasi.map((p: any, i: number) => (
+                          <circle key={`pr-${i}`} cx={p.x} cy={p.y} r="5" fill="#10b981" stroke="#ffffff" strokeWidth="2" />
+                        ))}
+                        {ptsPelanggaran.map((p: any, i: number) => (
+                          <circle key={`pl-${i}`} cx={p.x} cy={p.y} r="5" fill="#f43f5e" stroke="#ffffff" strokeWidth="2" />
+                        ))}
+                      </>
+                    )
+                  }
+
+                  if (selectedCurveType === 'DEMOGRAFI') {
+                    const lCount = demo.gender?.find((g: any) => g.name === 'L')?.count || 0
+                    const pCount = demo.gender?.find((g: any) => g.name === 'P')?.count || 0
+                    const totalG = Math.max(lCount + pCount, 1)
+                    const pctL = Math.round((lCount / totalG) * 100)
+                    const pctP = Math.round((pCount / totalG) * 100)
+
+                    return (
+                      <g className="text-center">
+                        <line x1="100" y1="100" x2="600" y2="100" stroke="#94a3b8" strokeWidth="12" strokeLinecap="round" />
+                        <line x1="100" y1="100" x2={100 + (pctL / 100) * 500} y2="100" stroke="#3b82f6" strokeWidth="12" strokeLinecap="round" />
+                        <line x1={100 + (pctL / 100) * 500} y1="100" x2="600" y2="100" stroke="#a855f7" strokeWidth="12" strokeLinecap="round" />
+                        <text x="200" y="70" className="text-xs font-bold fill-blue-600">Laki-Laki: {lCount} Siswa ({pctL}%)</text>
+                        <text x="450" y="70" className="text-xs font-bold fill-purple-600">Perempuan: {pCount} Siswa ({pctP}%)</text>
+                      </g>
+                    )
+                  }
+
+                  return null
+                })()}
+              </svg>
+            </div>
+
+            {/* Label Tanggal Bawah Dinamis */}
+            <div className="grid grid-cols-7 gap-1 text-center border-t border-slate-100 dark:border-slate-800 pt-3">
+              {(execStats?.weeklyTrends || []).map((w: any, idx: number) => (
+                <div key={idx} className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">{w.date}</span>
+                  {selectedCurveType === 'PRESENSI' && (
+                    <div className="flex items-center justify-center gap-1.5 text-[10px]">
                       <span className="text-blue-600 font-extrabold">{w.siswaPct}%</span>
                       <span className="text-slate-300 dark:text-slate-700">&bull;</span>
                       <span className="text-teal-600 font-extrabold">{w.staffPct}%</span>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  )}
+                  {selectedCurveType === 'KEUANGAN' && (
+                    <span className="text-[10px] text-emerald-600 font-extrabold block truncate">
+                      {w.pemasukan > 0 ? `Rp ${(w.pemasukan / 1000).toLocaleString('id-ID')}k` : 'Rp 0'}
+                    </span>
+                  )}
+                  {selectedCurveType === 'PRESTASI' && (
+                    <div className="flex items-center justify-center gap-1.5 text-[10px]">
+                      <span className="text-emerald-600 font-extrabold">+{w.prestasi}</span>
+                      <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+                      <span className="text-rose-600 font-extrabold">-{w.pelanggaran}</span>
+                    </div>
+                  )}
+                  {selectedCurveType === 'DEMOGRAFI' && (
+                    <span className="text-[10px] text-slate-400 font-medium block">
+                      {w.siswaHadir} Aktif
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
-          </Card>
-        )}
+          </div>
+        </Card>
 
         {/* 3. STATISTIK PRESENSI & KEHADIRAN */}
         {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'PRESENSI') && (

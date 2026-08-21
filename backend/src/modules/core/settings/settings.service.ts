@@ -326,7 +326,7 @@ export class SettingsService {
       count: s._count.id,
     })).sort((a, b) => b.count - a.count);
 
-    // Agregasi Kurva Tren Mingguan (7 Hari Terakhir) Presensi & Keuangan
+    // Agregasi Kurva Tren Mingguan (7 Hari Terakhir) Presensi, Keuangan, Karakter & Demografi
     const weeklyTrends: any[] = [];
     const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
     for (let i = 6; i >= 0; i--) {
@@ -337,18 +337,29 @@ export class SettingsService {
       
       const dayLabel = `${dayNames[startD.getDay()]} (${startD.getDate()}/${startD.getMonth() + 1})`;
       
-      // Ambil presensi siswa pada hari d
-      const [dayAtt, dayStaffAtt] = await Promise.all([
+      // Ambil presensi, keuangan, dan prestasi karakter pada hari d
+      const [dayAtt, dayStaffAtt, dayPayments, dayPrestasi, dayPelanggaran] = await Promise.all([
         this.prisma.attendance.count({
           where: { date: { gte: startD, lte: endD }, status: 'HADIR' }
         }),
         this.prisma.dailyAttendance.count({
           where: { date: { gte: startD, lte: endD }, status: 'HADIR' }
+        }),
+        this.prisma.tagihan.findMany({
+          where: { updatedAt: { gte: startD, lte: endD }, status: { in: ['LUNAS', 'ANGSURAN'] } },
+          select: { amountPaid: true, amount: true, status: true }
+        }),
+        this.prisma.characterAssessment.count({
+          where: { createdAt: { gte: startD, lte: endD }, OR: [{ category: 'PRESTASI_PENGHARGAAN' }, { type: 'POSITIF' }] }
+        }),
+        this.prisma.characterAssessment.count({
+          where: { createdAt: { gte: startD, lte: endD }, OR: [{ category: 'PELANGGARAN' }, { type: 'NEGATIF' }] }
         })
       ]);
 
       const pctSiswa = totalSiswa > 0 ? Math.min(100, Math.round((dayAtt / totalSiswa) * 100)) : 0;
       const pctStaff = totalPegawai > 0 ? Math.min(100, Math.round((dayStaffAtt / totalPegawai) * 100)) : 0;
+      const nominalPemasukan = dayPayments.reduce((sum, p) => sum + (p.amountPaid || (p.status === 'LUNAS' ? p.amount : 0)), 0);
 
       weeklyTrends.push({
         date: dayLabel,
@@ -356,6 +367,9 @@ export class SettingsService {
         siswaPct: pctSiswa,
         staffHadir: dayStaffAtt,
         staffPct: pctStaff,
+        pemasukan: nominalPemasukan,
+        prestasi: dayPrestasi,
+        pelanggaran: dayPelanggaran,
       });
     }
 

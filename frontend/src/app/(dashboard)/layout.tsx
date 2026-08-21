@@ -121,6 +121,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className={`flex-1 flex flex-col min-h-dvh w-full overflow-x-hidden ${hideSidebar ? '' : 'lg:ml-72'}`}>
         {/* Navbar Induk Terpadu (Kiri Logo, Kanan Info TA, Theme, Profil, Logout) */}
         <AppNavbar
+          logoUrl={systemSettings?.logoUrl}
           actions={
             <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-3 shrink-0">
               {/* Tahun Ajaran Badge (Sembunyi di mobile kecil agar tidak tabrakan) */}

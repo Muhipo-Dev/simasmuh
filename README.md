@@ -39,9 +39,10 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
     * Optimalisasi konfigurasi kamera face attendance biometrik dan live clock synchronization.
   * **Penyelarasan Hak Akses & Navigasi Admin TU (Tata Usaha):**
     * Penyesuaian hak akses RBAC dan visibilitas tautan navigasi di `nav-links.ts` serta `AppSidebar.tsx` untuk peran `ADMIN_TU` agar mencakup manajemen data kesiswaan, kepegawaian, etika, dan presensi secara proporsional.
-  * **Penyelarasan Identitas Title Bar & Favicon Resmi:**
+  * **Penyelarasan Identitas Title Bar, Logo Dinamis & Favicon Resmi:**
     * Mengubah judul default title bar web desktop & tablet menjadi **"System by. Muhipo Dev"** ([layout.tsx](file:///d:/simasmuh/frontend/src/app/layout.tsx) & [page.tsx](file:///d:/simasmuh/frontend/src/app/page.tsx)).
     * Mengganti seluruh aset `favicon.ico` bawaan Next.js dengan logo resmi sekolah & aplikasi (`/pic_logo.png`) di direktori `src/app/favicon.ico` dan `public/favicon.ico`.
+    * Mengintegrasikan sinkronisasi dinamis logo sekolah di navbar ([AppNavbar.tsx](file:///d:/simasmuh/frontend/src/components/layout/AppNavbar.tsx)) dan favicon tab browser langsung dari data konfigurasi logo yang diatur pada panel **Pengaturan Sistem Admin** (`logoUrl`).
   * **Unifikasi Wallpaper & Glassmorphism Blur Global:**
     * Mengganti seluruh latar belakang polos/putih di semua halaman publik ([page.tsx](file:///d:/simasmuh/frontend/src/app/page.tsx), [tentang](file:///d:/simasmuh/frontend/src/app/tentang/page.tsx), [profil](file:///d:/simasmuh/frontend/src/app/profil/page.tsx), [guru-karyawan](file:///d:/simasmuh/frontend/src/app/guru-karyawan/page.tsx), [agenda](file:///d:/simasmuh/frontend/src/app/agenda/page.tsx), [qr-display](file:///d:/simasmuh/frontend/src/app/qr-display/%5Btoken%5D/page.tsx), dan [oauth/consent](file:///d:/simasmuh/frontend/src/app/oauth/consent/page.tsx)) dengan wallpaper resmi gedung SMA MUHIPO beraksen blur dan overlay transparan selaras dengan dashboard dan halaman login.
   * **Penyempurnaan Antarmuka Master Data & Profil Pengguna:**

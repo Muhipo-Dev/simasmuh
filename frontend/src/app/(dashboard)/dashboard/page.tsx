@@ -1433,7 +1433,7 @@ export default function DashboardPage() {
                             x: 45 + (i * (420 / Math.max(1, weekly.length - 1))),
                             y: 150 - (Math.min(maxP, (w.pemasukan * 0.65) + 100000) / maxP) * 120,
                           }))
-                          const createPath = (pArr: any[]) => pArr.reduce((acc, p, i, a) => {
+                          const createPath = (pArr: any[]) => pArr.reduce((acc: string, p: any, i: number, a: any[]) => {
                             if (i === 0) return `M ${p.x} ${p.y}`
                             const prev = a[i - 1]
                             const cx1 = prev.x + (p.x - prev.x) / 2
@@ -1450,10 +1450,10 @@ export default function DashboardPage() {
                               <path d={`${pathOut} L ${ptsOut[ptsOut.length - 1].x} 150 L ${ptsOut[0].x} 150 Z`} fill="url(#finGradOut)" />
                               <path d={pathSaldo} fill="none" stroke="#0ea5e9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                               <path d={pathOut} fill="none" stroke="#f43f5e" strokeWidth="2.5" strokeDasharray="4 4" strokeLinecap="round" />
-                              {ptsSaldo.map((p, i) => (
+                              {ptsSaldo.map((p: any, i: number) => (
                                 <circle key={`s-${i}`} cx={p.x} cy={p.y} r="4" fill="#0ea5e9" stroke="#ffffff" strokeWidth="2" />
                               ))}
-                              {ptsOut.map((p, i) => (
+                              {ptsOut.map((p: any, i: number) => (
                                 <circle key={`o-${i}`} cx={p.x} cy={p.y} r="3.5" fill="#f43f5e" stroke="#ffffff" strokeWidth="1.5" />
                               ))}
                             </>
@@ -1550,7 +1550,7 @@ export default function DashboardPage() {
                             x: 45 + (i * (420 / Math.max(1, weekly.length - 1))),
                             y: 150 - ((w.staffPct || 0) / 100) * 125,
                           }))
-                          const createPath = (pArr: any[]) => pArr.reduce((acc, p, i, a) => {
+                          const createPath = (pArr: any[]) => pArr.reduce((acc: string, p: any, i: number, a: any[]) => {
                             if (i === 0) return `M ${p.x} ${p.y}`
                             const prev = a[i - 1]
                             const cx1 = prev.x + (p.x - prev.x) / 2
@@ -1567,10 +1567,10 @@ export default function DashboardPage() {
                               <path d={`${pathSt} L ${ptsSt[ptsSt.length - 1].x} 150 L ${ptsSt[0].x} 150 Z`} fill="url(#presGradStaff)" />
                               <path d={pathS} fill="none" stroke="#2563eb" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
                               <path d={pathSt} fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                              {ptsS.map((p, i) => (
+                              {ptsS.map((p: any, i: number) => (
                                 <circle key={`s-${i}`} cx={p.x} cy={p.y} r="4.5" fill="#2563eb" stroke="#ffffff" strokeWidth="2" />
                               ))}
-                              {ptsSt.map((p, i) => (
+                              {ptsSt.map((p: any, i: number) => (
                                 <circle key={`st-${i}`} cx={p.x} cy={p.y} r="4" fill="#14b8a6" stroke="#ffffff" strokeWidth="1.5" />
                               ))}
                             </>
@@ -1737,7 +1737,7 @@ export default function DashboardPage() {
                             x: 45 + (i * (420 / Math.max(1, weekly.length - 1))),
                             y: 150 - ((w.pelanggaran || 0) / maxC) * 120,
                           }))
-                          const createPath = (pArr: any[]) => pArr.reduce((acc, p, i, a) => {
+                          const createPath = (pArr: any[]) => pArr.reduce((acc: string, p: any, i: number, a: any[]) => {
                             if (i === 0) return `M ${p.x} ${p.y}`
                             const prev = a[i - 1]
                             const cx1 = prev.x + (p.x - prev.x) / 2
@@ -1754,10 +1754,10 @@ export default function DashboardPage() {
                               <path d={`${pathPl} L ${ptsPl[ptsPl.length - 1].x} 150 L ${ptsPl[0].x} 150 Z`} fill="url(#tatibGradPel)" />
                               <path d={pathP} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                               <path d={pathPl} fill="none" stroke="#f43f5e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                              {ptsP.map((p, i) => (
+                              {ptsP.map((p: any, i: number) => (
                                 <circle key={`p-${i}`} cx={p.x} cy={p.y} r="4" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
                               ))}
-                              {ptsPl.map((p, i) => (
+                              {ptsPl.map((p: any, i: number) => (
                                 <circle key={`pl-${i}`} cx={p.x} cy={p.y} r="4" fill="#f43f5e" stroke="#ffffff" strokeWidth="1.5" />
                               ))}
                             </>
@@ -2036,7 +2036,7 @@ export default function DashboardPage() {
                             <>
                               <path d={areaStr} fill="url(#akaGrad)" />
                               <path d={pathStr} fill="none" stroke="#6366f1" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-                              {pts.map((p, i) => (
+                              {pts.map((p: any, i: number) => (
                                 <circle key={i} cx={p.x} cy={p.y} r="4.5" fill="#6366f1" stroke="#ffffff" strokeWidth="2" />
                               ))}
                             </>

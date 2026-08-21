@@ -32,6 +32,9 @@ interface Announcement {
 
 export default function AnnouncementsPage() {
   const { data: session } = useSession()
+  const userRole = (session?.user as any)?.role || ''
+  const userSubRole = (session?.user as any)?.subRole || ''
+  const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || userSubRole === 'KEPALA_SEKOLAH'
   const queryClient = useQueryClient()
   const authenticatedFetch = useAuthenticatedFetch()
   const [open, setOpen] = useState(false)
@@ -186,10 +189,16 @@ export default function AnnouncementsPage() {
           <p className="text-slate-500 mt-1">Kelola berita untuk halaman utama dan informasi internal sekolah.</p>
         </div>
         
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all" onClick={() => setOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Tulis Pengumuman
-        </Button>
+        {!isKepalaSekolah ? (
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all" onClick={() => setOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Tulis Pengumuman
+          </Button>
+        ) : (
+          <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-1.5">
+            🔍 Mode Supervisi (Read-Only)
+          </div>
+        )}
         <Dialog open={open} onOpenChange={(val) => {
           setOpen(val);
           if (!val) {
@@ -399,40 +408,44 @@ export default function AnnouncementsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            onClick={() => {
-                              setEditingId(item.id)
-                              setFormData({
-                                title: item.title,
-                                content: item.content,
-                                target: item.target,
-                                type: item.type,
-                                eventDate: item.eventDate ? new Date(item.eventDate).toISOString().slice(0, 16) : '',
-                                image: item.image || ''
-                              })
-                              setOpen(true)
-                            }}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => {
-                              if (confirm('Apakah Anda yakin ingin menghapus pengumuman ini?')) {
-                                deleteMutation.mutate(item.id)
-                              }
-                            }}
-                            disabled={deleteMutation.isPending}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        {!isKepalaSekolah ? (
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => {
+                                setEditingId(item.id)
+                                setFormData({
+                                  title: item.title,
+                                  content: item.content,
+                                  target: item.target,
+                                  type: item.type,
+                                  eventDate: item.eventDate ? new Date(item.eventDate).toISOString().slice(0, 16) : '',
+                                  image: item.image || ''
+                                })
+                                setOpen(true)
+                              }}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => {
+                                if (confirm('Apakah Anda yakin ingin menghapus pengumuman ini?')) {
+                                  deleteMutation.mutate(item.id)
+                                }
+                              }}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">Read-Only</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

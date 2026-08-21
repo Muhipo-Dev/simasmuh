@@ -41,7 +41,7 @@ export default function EtikaTatibPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
               <ShieldCheck className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               Buku Saku Adab, Ibadah & Tata Tertib Siswa
@@ -51,31 +51,40 @@ export default function EtikaTatibPage() {
             </Badge>
           </div>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-            Monitoring rekam jejak kedisiplinan, etika kesantunan, dan amalan ibadah siswa secara langsung (Terkoneksi Tim Tatib, BK, Wali Kelas & Kesiswaan).
+            Monitoring rekam jejak kedisiplinan, etika kesantunan, perizinan dispensasi, dan amalan ibadah siswa secara langsung.
           </p>
         </div>
 
-        {/* Tab Pilih Anak (Jika ada lebih dari 1 siswa) */}
-        {students.length > 1 && (
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-            <span className="text-xs font-semibold text-slate-500 px-2">Pilih Siswa:</span>
-            {students.map((st: any, idx: number) => (
-              <Button
-                key={st.id || idx}
-                size="sm"
-                variant={selectedChildIndex === idx ? 'default' : 'ghost'}
-                onClick={() => setSelectedChildIndex(idx)}
-                className={`text-xs h-8 ${
-                  selectedChildIndex === idx
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 font-bold'
-                    : 'text-slate-600 dark:text-slate-300'
-                }`}
-              >
-                {st.name} ({st.nis})
-              </Button>
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          <a href="/presensi/izin-keluar">
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5">
+              <Clock className="w-4 h-4" />
+              Ajukan Izin / Sakit / Dispensasi
+            </Button>
+          </a>
+
+          {/* Tab Pilih Anak (Jika ada lebih dari 1 siswa) */}
+          {students.length > 1 && (
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="text-xs font-semibold text-slate-500 px-2">Pilih Siswa:</span>
+              {students.map((st: any, idx: number) => (
+                <Button
+                  key={st.id || idx}
+                  size="sm"
+                  variant={selectedChildIndex === idx ? 'default' : 'ghost'}
+                  onClick={() => setSelectedChildIndex(idx)}
+                  className={`text-xs h-8 ${
+                    selectedChildIndex === idx
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-700 font-bold'
+                      : 'text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  {st.name} ({st.nis})
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Banner Integrasi Tim Tatatertib & BK */}

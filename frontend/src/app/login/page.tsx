@@ -12,7 +12,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { 
   ClipboardCheck, Lock, User, ArrowRight, Home, Info, 
   ChevronDown, ChevronUp, ShieldCheck, GraduationCap, Phone,
-  HelpCircle, MessageSquare, Sparkles
+  HelpCircle, MessageSquare, Sparkles, KeyRound, Globe, Layers
 } from 'lucide-react'
 import { getPublicApiUrl } from '@/lib/api-config'
 
@@ -164,7 +164,7 @@ export default function LoginPage() {
               <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/15 rounded-full blur-3xl pointer-events-none -z-10" />
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none -z-10" />
 
-              <div className="space-y-6">
+              <div className="my-auto space-y-6">
                 {/* Header Card dengan Icon Berwarna Khas Transparan */}
                 <div className="text-center space-y-2">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600/30 to-cyan-500/30 border border-blue-400/40 backdrop-blur-xl shadow-lg shadow-blue-500/20 mb-1">
@@ -173,9 +173,11 @@ export default function LoginPage() {
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                     Masuk Akun
                   </h1>
-                  <p className="text-slate-200/80 text-xs sm:text-sm font-medium">
-                    Sistem Informasi Manajemen Terpadu
-                  </p>
+                  <div className="flex items-center justify-center gap-1.5 text-slate-200/90 text-xs sm:text-sm font-medium">
+                    <KeyRound className="w-3.5 h-3.5 text-blue-300 shrink-0" />
+                    <span>Single Sign-On (SSO)</span>
+                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/20">Aktif</span>
+                  </div>
                 </div>
 
                 {/* Alert Error */}
@@ -187,8 +189,8 @@ export default function LoginPage() {
                 )}
 
                 {/* Form Login */}
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-1.5">
+                <form onSubmit={handleSubmit} className="space-y-4.5 pt-1">
+                  <div className="space-y-2">
                     <Label htmlFor="email" className="font-semibold text-slate-200 text-xs flex items-center gap-1.5">
                       <div className="w-5 h-5 rounded-md bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
                         <User className="w-3 h-3 text-blue-300" />
@@ -207,7 +209,7 @@ export default function LoginPage() {
                     />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label htmlFor="password" className="font-semibold text-slate-200 text-xs flex items-center gap-1.5">
                       <div className="w-5 h-5 rounded-md bg-cyan-500/20 flex items-center justify-center border border-cyan-400/30">
                         <Lock className="w-3 h-3 text-cyan-300" />
@@ -229,7 +231,7 @@ export default function LoginPage() {
                   <Button
                     type="submit"
                     disabled={!!loading}
-                    className="w-full h-11 bg-gradient-to-r from-blue-600/90 to-indigo-600/90 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-sm rounded-xl transition-all shadow-xl shadow-blue-900/40 active:scale-[0.99] border border-blue-400/40 backdrop-blur-md mt-2"
+                    className="w-full h-11 bg-gradient-to-r from-blue-600/90 to-indigo-600/90 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-sm rounded-xl transition-all shadow-xl shadow-blue-900/40 active:scale-[0.99] border border-blue-400/40 backdrop-blur-md mt-2.5"
                   >
                     {loading ? (
                       <div className="flex items-center justify-center gap-2">
@@ -268,7 +270,7 @@ export default function LoginPage() {
                           <GraduationCap className="w-3.5 h-3.5 text-emerald-300" />
                         </div>
                         <div>
-                          <span className="font-bold text-emerald-200">Siswa:</span> Masuk menggunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">NIS</span> sebagai nama pengguna dan kata sandi.
+                          <span className="font-bold text-emerald-200">Siswa:</span> Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">NIS</span> sebagai username dan kata sandi.
                         </div>
                       </div>
                       <div className="flex items-start gap-2.5">
@@ -276,7 +278,7 @@ export default function LoginPage() {
                           <Phone className="w-3.5 h-3.5 text-purple-300" />
                         </div>
                         <div>
-                          <span className="font-bold text-purple-200">Wali Murid:</span> Nama Pengguna <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">No. WhatsApp</span> & Kata Sandi <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">NIS Siswa</span>.
+                          <span className="font-bold text-purple-200">Wali Murid / Orang Tua:</span> Username: <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">No. WhatsApp</span> & Kata Sandi: <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">NIS Siswa</span>.
                         </div>
                       </div>
                       <div className="flex items-start gap-2.5">
@@ -284,7 +286,7 @@ export default function LoginPage() {
                           <ShieldCheck className="w-3.5 h-3.5 text-blue-300" />
                         </div>
                         <div>
-                          <span className="font-bold text-blue-200">Guru / Tenaga Pendidik:</span> Masuk menggunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">Nama Pengguna</span> dan kata sandi resmi yang terdaftar.
+                          <span className="font-bold text-blue-200">Guru / Tenaga Kependidikan:</span> Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded">Username</span> dan kata sandi yang terdaftar.
                         </div>
                       </div>
                       <div className="pt-2 border-t border-white/15 text-[10px] text-slate-300">
@@ -296,12 +298,12 @@ export default function LoginPage() {
               </div>
 
               {/* Tombol Beranda */}
-              <div className="pt-2">
+              <div className="pt-4">
                 <Link
                   href="/"
-                  className="w-full flex items-center justify-center py-2.5 px-3 border border-white/20 font-semibold text-xs text-slate-200 hover:text-white bg-white/5 hover:bg-white/15 rounded-xl backdrop-blur-md transition-all gap-1.5 shadow-sm"
+                  className="w-full flex items-center justify-center py-3 px-4 border border-white/20 font-semibold text-xs text-slate-200 hover:text-white bg-white/5 hover:bg-white/15 rounded-xl backdrop-blur-md transition-all gap-2 shadow-sm active:scale-[0.99]"
                 >
-                  <Home className="w-3.5 h-3.5 text-slate-300" />
+                  <Home className="w-4 h-4 text-slate-300" />
                   Kembali ke Beranda
                 </Link>
               </div>
@@ -322,44 +324,44 @@ export default function LoginPage() {
                   Petunjuk Kredensial Pengguna
                 </h2>
                 <p className="text-slate-200/90 text-xs sm:text-sm mt-0.5">
-                  Format akun resmi sesuai dengan peran Anda di lingkungan sekolah.
+                  Format akun sesuai dengan peran Anda di lingkungan sekolah.
                 </p>
               </div>
 
               {/* Card List Petunjuk Kredensial */}
-              <div className="space-y-2.5 pt-1">
-                <div className="flex items-start gap-3 p-3 rounded-2xl bg-white/10 dark:bg-slate-800/50 border border-white/15 backdrop-blur-md transition-all hover:bg-white/15">
+              <div className="space-y-3 pt-1">
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/10 dark:bg-slate-800/50 border border-white/15 backdrop-blur-md transition-all hover:bg-white/15">
                   <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center shrink-0">
                     <GraduationCap className="w-4 h-4 text-emerald-300" />
                   </div>
-                  <div className="text-xs space-y-0.5">
+                  <div className="text-xs space-y-0.5 w-full">
                     <div className="font-bold text-emerald-200">Siswa</div>
                     <div className="text-slate-200 leading-relaxed">
-                      Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">NIS</span> sebagai nama pengguna dan kata sandi.
+                      Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">NIS</span> sebagai username dan kata sandi.
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-2xl bg-white/10 dark:bg-slate-800/50 border border-white/15 backdrop-blur-md transition-all hover:bg-white/15">
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/10 dark:bg-slate-800/50 border border-white/15 backdrop-blur-md transition-all hover:bg-white/15">
                   <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center shrink-0">
                     <Phone className="w-4 h-4 text-purple-300" />
                   </div>
-                  <div className="text-xs space-y-0.5">
+                  <div className="text-xs space-y-0.5 w-full">
                     <div className="font-bold text-purple-200">Wali Murid / Orang Tua</div>
                     <div className="text-slate-200 leading-relaxed">
-                      Nama Pengguna: <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">No. WhatsApp</span> & Kata Sandi: <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">NIS Siswa</span>.
+                      Username: <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">No. WhatsApp</span> & Kata Sandi: <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">NIS Siswa</span>.
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-2xl bg-white/10 dark:bg-slate-800/50 border border-white/15 backdrop-blur-md transition-all hover:bg-white/15">
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/10 dark:bg-slate-800/50 border border-white/15 backdrop-blur-md transition-all hover:bg-white/15">
                   <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-4 h-4 text-blue-300" />
                   </div>
-                  <div className="text-xs space-y-0.5">
+                  <div className="text-xs space-y-0.5 w-full">
                     <div className="font-bold text-blue-200">Guru / Tenaga Kependidikan</div>
                     <div className="text-slate-200 leading-relaxed">
-                      Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">Nama Pengguna</span> dan kata sandi resmi yang terdaftar.
+                      Gunakan <span className="font-mono font-bold bg-white/15 px-1.5 py-0.5 rounded text-white">Username</span> dan kata sandi yang terdaftar.
                     </div>
                   </div>
                 </div>
@@ -367,20 +369,20 @@ export default function LoginPage() {
             </div>
 
             {/* Kotak Bantuan Admin & Helpdesk */}
-            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-600/30 to-indigo-600/30 border border-blue-400/30 backdrop-blur-md space-y-2">
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-600/30 to-indigo-600/30 border border-blue-400/30 backdrop-blur-md space-y-2.5">
               <div className="flex items-center gap-2 text-xs font-bold text-blue-200">
-                <HelpCircle className="w-3.5 h-3.5 text-blue-300" />
+                <HelpCircle className="w-4 h-4 text-blue-300" />
                 <span>Kendala Akses atau Lupa Kata Sandi?</span>
               </div>
               <p className="text-[11px] text-slate-200 leading-relaxed">
-                Hubungi <span className="font-semibold text-white">Layanan Bantuan (Helpdesk)</span> WhatsApp resmi <span className="font-mono font-bold text-emerald-300">{helpdeskPhone}</span>.
+                Hubungi <span className="font-semibold text-white">Layanan Bantuan (Helpdesk)</span> WhatsApp <span className="font-mono font-bold text-emerald-300">{helpdeskPhone}</span> jika mengalami kendala akun.
               </p>
               <div className="pt-0.5">
                 <a
                   href={`https://wa.me/${helpdeskPhone.replace(/[^0-9]/g, '').replace(/^0/, '62')}?text=Halo%20Admin%20SIMASMUH,%20saya%20membutuhkan%20bantuan%20kendala%20login%20akun.`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-sm border border-emerald-400/30 backdrop-blur-md"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-sm border border-emerald-400/30 backdrop-blur-md"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span>Hubungi Helpdesk WhatsApp</span>

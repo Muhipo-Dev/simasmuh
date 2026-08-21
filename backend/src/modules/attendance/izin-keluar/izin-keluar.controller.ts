@@ -45,6 +45,8 @@ export class IzinKeluarController {
       estimasiKembali?: string;
       alasan: string;
       targetUserId?: string;
+      lampiranUrl?: string;
+      tipeIzin?: 'SAKIT' | 'KEGIATAN' | 'DISPENSASI' | 'KELUARGA' | 'LAINNYA';
     },
   ) {
     const user = this.getUserFromToken(auth);

@@ -143,9 +143,9 @@ export default function FaceAttendanceCameraPage() {
   const { data: session } = useSession()
   const userRoles = useMemo(() => {
     const u = session?.user as any
-    return [u?.role, u?.subRole, u?.subRole2, u?.subRole3].filter(Boolean)
+    return [u?.role, u?.subRole, u?.subRole2, u?.subRole3].filter(Boolean) as string[]
   }, [session])
-  const isSuperAdmin = userRoles.includes('ADMIN_IT') || userRoles.includes('SUPERADMIN')
+  const isSuperAdmin = userRoles.some(r => ['ADMIN_IT', 'SUPERADMIN', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(r))
 
   const queryClient = useQueryClient()
   const authenticatedQuery = useAuthenticatedQuery()

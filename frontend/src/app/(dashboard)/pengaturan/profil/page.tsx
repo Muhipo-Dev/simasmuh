@@ -356,7 +356,7 @@ export default function ProfilePage() {
 
   const roleLabels: Record<string, string> = {
     GURU: 'Guru', PEGAWAI: 'Karyawan', SISWA: 'Siswa', ADMIN_IT: 'Admin IT', KEUANGAN: 'Keuangan',
-    ADMIN_TU: 'Admin Tata Usaha (BAU)', BAU: 'Badan Administrasi Umum (BAU)', TATA_USAHA: 'Tata Usaha (BAU)',
+    ADMIN_TU: 'Tata Usaha (Badan Administrasi Umum)', BAU: 'Tata Usaha (Badan Administrasi Umum)', TATA_USAHA: 'Tata Usaha (Badan Administrasi Umum)',
     BK_BP: 'BK/BP', PEMBINA_EXTRA: 'Pembina Ekstrakulikuler', PEMBINA_EKSTRA: 'Pembina Ekstrakulikuler',
     KURIKULUM: 'Kurikulum', KESISWAAN: 'Kesiswaan', KEAMANAN: 'Keamanan', KEPEGAWAIAN: 'Kepegawaian',
     KEBERSIHAN: 'Kebersihan', KEPALA_SEKOLAH: 'Kepala Sekolah', ADMIN_WEB: 'Admin Web',

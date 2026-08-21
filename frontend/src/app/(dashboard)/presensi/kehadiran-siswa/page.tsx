@@ -25,13 +25,18 @@ export default function LogPresensiSiswaPage() {
   const { data: session } = useSession()
   const userId = (session?.user as any)?.id
   const authenticatedFetch = useAuthenticatedFetch()
+  const user = session?.user as any
+  const userRole = user?.role || ''
+  const isWaliKelas = user?.subRole === 'WALI_KELAS' || user?.subRole2 === 'WALI_KELAS' || user?.subRole3 === 'WALI_KELAS'
+  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole)
+  const isStaffOrGuru = isSuperOrAdmin || ['GURU', 'KETERTIBAN'].includes(userRole) || isWaliKelas
 
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString())
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStudentUserId, setSelectedStudentUserId] = useState<string>('')
 
-  // Ambil daftar anak jika user adalah wali murid
+  // 1. Ambil daftar anak jika user adalah wali murid
   const { data: myStudents = [] } = useQuery<any[]>({
     queryKey: ['my-students-for-attendance'],
     queryFn: async () => {
@@ -41,7 +46,38 @@ export default function LogPresensiSiswaPage() {
     },
   })
 
-  const targetUserId = selectedStudentUserId || userId
+  // 2. Ambil seluruh data siswa untuk Wali Kelas, Guru, Tatib, dan Admin
+  const { data: allStudents = [] } = useQuery<any[]>({
+    queryKey: ['all-students-for-attendance'],
+    queryFn: async () => {
+      if (!isStaffOrGuru) return []
+      const res = await authenticatedFetch('/api-backend/students')
+      if (!res.ok) return []
+      return res.json()
+    },
+    enabled: isStaffOrGuru,
+  })
+
+  // Ambil kelas perwalian jika Wali Kelas
+  const { data: classesData = [] } = useQuery<any[]>({
+    queryKey: ['classes-for-homeroom'],
+    queryFn: async () => {
+      if (!isStaffOrGuru) return []
+      const res = await authenticatedFetch('/api-backend/classes')
+      if (!res.ok) return []
+      return res.json()
+    },
+    enabled: isStaffOrGuru,
+  })
+
+  // Siswa yang diwalikan oleh wali kelas saat ini
+  const homeroomClass = classesData.find((c: any) => c.homeroomTeacher?.userId === userId || c.homeroomTeacher?.user?.id === userId)
+  const relevantStudents = isWaliKelas && homeroomClass
+    ? allStudents.filter((s: any) => s.classId === homeroomClass.id)
+    : allStudents
+
+  const effectiveStudentList = myStudents.length > 0 ? myStudents : relevantStudents
+  const targetUserId = selectedStudentUserId || (effectiveStudentList[0]?.student?.userId || effectiveStudentList[0]?.userId || userId)
 
   const { data: logs, isLoading } = useQuery<LogEntry[]>({
     queryKey: ['monthly-log-siswa', targetUserId, selectedYear, selectedMonth],
@@ -104,20 +140,25 @@ export default function LogPresensiSiswaPage() {
         </div>
 
         <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
-          {myStudents.length > 0 && (
+          {effectiveStudentList.length > 0 && (
             <Select 
-              value={selectedStudentUserId || myStudents[0]?.student?.userId || ''} 
+              value={targetUserId} 
               onValueChange={(val) => { if (val) setSelectedStudentUserId(val) }}
             >
-              <SelectTrigger className="w-[180px] bg-white dark:bg-slate-900 font-bold text-xs">
+              <SelectTrigger className="w-[200px] bg-white dark:bg-slate-900 font-bold text-xs">
                 <SelectValue placeholder="Pilih Siswa" />
               </SelectTrigger>
               <SelectContent>
-                {myStudents.map((rel: any) => (
-                  <SelectItem key={rel.id || rel.studentId} value={rel.student?.userId || ''}>
-                    {rel.student?.name} ({rel.student?.nis})
-                  </SelectItem>
-                ))}
+                {effectiveStudentList.map((item: any) => {
+                  const sName = item.student?.name || item.name
+                  const sNis = item.student?.nis || item.nis
+                  const sUid = item.student?.userId || item.userId
+                  return (
+                    <SelectItem key={item.id || sUid} value={sUid || ''}>
+                      {sName} {sNis ? `(${sNis})` : ''}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           )}

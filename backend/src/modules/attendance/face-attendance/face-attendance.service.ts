@@ -45,6 +45,8 @@ export class FaceAttendanceService implements OnModuleInit {
   private readonly logger = new Logger(FaceAttendanceService.name);
   private readonly configPath = join(STORAGE_ROOT, 'face-attendance-config.json');
   private readonly legacyConfigPath = join(process.cwd(), 'storage', 'face-attendance-config.json');
+  private readonly logsPath = join(STORAGE_ROOT, 'face-attendance-logs.json');
+  private readonly legacyLogsPath = join(process.cwd(), 'storage', 'face-attendance-logs.json');
   private recentLogs: FaceDetectionLog[] = [];
   private readonly maxLogs = 50;
 
@@ -54,19 +56,49 @@ export class FaceAttendanceService implements OnModuleInit {
     private systemLogService: SystemLogService,
   ) {
     this.ensureConfigExists();
+    this.loadLogsFile();
+  }
+
+  private loadLogsFile() {
+    try {
+      if (existsSync(this.logsPath)) {
+        const raw = readFileSync(this.logsPath, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          this.recentLogs = parsed.slice(0, this.maxLogs);
+          return;
+        }
+      }
+      if (existsSync(this.legacyLogsPath)) {
+        const raw = readFileSync(this.legacyLogsPath, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          this.recentLogs = parsed.slice(0, this.maxLogs);
+          this.saveLogsFile();
+        }
+      }
+    } catch (err) {
+      this.logger.error('Gagal memuat face-attendance-logs.json dari penyimpanan', err);
+    }
+  }
+
+  private saveLogsFile() {
+    try {
+      const logsStr = JSON.stringify(this.recentLogs, null, 2);
+      writeFileSync(this.logsPath, logsStr, 'utf8');
+      try {
+        const legacyDir = join(process.cwd(), 'storage');
+        if (!existsSync(legacyDir)) mkdirSync(legacyDir, { recursive: true });
+        writeFileSync(this.legacyLogsPath, logsStr, 'utf8');
+      } catch {}
+    } catch (err) {
+      this.logger.error('Gagal menyimpan file face-attendance-logs.json', err);
+    }
   }
 
   async onModuleInit() {
     try {
-      const cfg = this.getConfig();
-      if (cfg && cfg.isActive) {
-        this.logger.log('Konfigurasi server AI Microservice bernilai AKTIF (isActive: true). Memastikan microservice berjalan di latar belakang server...');
-        this.startAiWorker().catch((err) => {
-          this.logger.warn(`Startup otomatis AI Microservice background: ${err?.message || err}`);
-        });
-      } else {
-        this.logger.log('Konfigurasi server AI Microservice bernilai NONAKTIF (isActive: false). Microservice dalam mode Standby.');
-      }
+      this.logger.log('Face Attendance AI Service berada dalam mode Standby (On-Demand). Layanan akan aktif saat dihidupkan melalui panel Presensi Camera AI.');
     } catch (err) {
       this.logger.error('Gagal memeriksa status awal AI Microservice pada onModuleInit', err);
     }
@@ -93,7 +125,7 @@ export class FaceAttendanceService implements OnModuleInit {
           location: 'Gerbang Depan Sekolah',
           threshold: 0.48,
           cooldownMinutes: 10,
-          isActive: true,
+          isActive: false,
           welcomeVoice: true,
           showPublicStream: true,
           showPublicLogs: true,
@@ -151,7 +183,7 @@ export class FaceAttendanceService implements OnModuleInit {
       location: 'Gerbang Depan Sekolah',
       threshold: 0.48,
       cooldownMinutes: 10,
-      isActive: true,
+      isActive: false,
       welcomeVoice: true,
       showPublicStream: true,
       showPublicLogs: true,
@@ -436,6 +468,7 @@ export class FaceAttendanceService implements OnModuleInit {
     if (this.recentLogs.length > this.maxLogs) {
       this.recentLogs = this.recentLogs.slice(0, this.maxLogs);
     }
+    this.saveLogsFile();
 
     // Rekam ke Log Sistem untuk pengarsipan terkompresi di Supabase
     this.systemLogService.log({
@@ -521,6 +554,7 @@ export class FaceAttendanceService implements OnModuleInit {
 
     if (index !== -1) {
       this.recentLogs.splice(index, 1);
+      this.saveLogsFile();
     }
 
     return {
@@ -556,6 +590,7 @@ export class FaceAttendanceService implements OnModuleInit {
     }
 
     this.recentLogs = [];
+    this.saveLogsFile();
 
     // Reset semua timer cooldown di Python AI Worker
     try {
@@ -834,8 +869,7 @@ export class FaceAttendanceService implements OnModuleInit {
         return await res.json();
       }
     } catch (err) {
-      // Jika microservice offline, otomatis nyalakan di background
-      this.startAiWorker().catch(() => {});
+      // Microservice dalam kondisi offline / standby
     }
     return { faces: [] };
   }

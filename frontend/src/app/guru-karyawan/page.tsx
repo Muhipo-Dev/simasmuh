@@ -135,13 +135,13 @@ const guruCategories: GuruCategory[] = [
 
 const staffList: StaffMember[] = [
   { name: "Agung Tribowo, S.E.", role: "Kepala Biro Administrasi Keuangan (BAK)" },
-  { name: "Mulyani, S.Kom.", role: "Kepala Biro Administrasi Umum (BAU)/Operator Sekolah" },
+  { name: "Mulyani, S.Kom.", role: "Kepala Badan Administrasi Umum (Tata Usaha)/Operator Sekolah" },
   { name: "Rudi Setyono", role: "Kepala Biro Kerumahtanggaan" },
   { name: "Ervina Maghdalena, S.Pd.", role: "Staf Biro Administrasi Keuangan (BAK)" },
   { name: "Yuli Budi Arsih, A.Md.", role: "Staf Biro Administrasi Keuangan (BAK)" },
-  { name: "Muhammad Afifurrouf, ST.", role: "Staf Biro Administrasi Umum (BAU)" },
-  { name: "Uun Yulianti", role: "Staf Biro Administrasi Umum (BAU)" },
-  { name: "Joko Susanto", role: "Staf Biro Administrasi Umum (BAU)" },
+  { name: "Muhammad Afifurrouf, ST.", role: "Staf Tata Usaha (Badan Administrasi Umum)" },
+  { name: "Uun Yulianti", role: "Staf Tata Usaha (Badan Administrasi Umum)" },
+  { name: "Joko Susanto", role: "Staf Tata Usaha (Badan Administrasi Umum)" },
   { name: "Anis Rochani, S.Si.", role: "Staf Laboratorium IPA" },
   { name: "Mamba'un Ni'am K. F., S.Kom", role: "Staf Lab. Komputer & Dokumentasi" },
   { name: "Naza Nur 'Ulummi", role: "Staf Perpustakaan" },

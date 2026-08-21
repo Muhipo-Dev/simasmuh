@@ -22,6 +22,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
 import { InteractiveCharacterAssessmentManagement } from '@/components/academic/InteractiveCharacterAssessmentManagement'
+import { CutiPegawaiManagement } from '@/app/(dashboard)/presensi/cuti/page'
+import { IzinSiswaManagement } from '@/app/(dashboard)/presensi/izin-siswa/page'
 
 type GuestEntry = {
   id: string
@@ -50,8 +52,8 @@ type FeatureConfig = {
 
 const FEATURE_MAP: Record<string, FeatureConfig> = {
   'buku-tamu': {
-    title: 'Buku Tamu & Kunjungan (BAU)',
-    roleName: 'BAU (Badan Administrasi Umum)',
+    title: 'Buku Tamu & Kunjungan',
+    roleName: 'Tata Usaha (Badan Administrasi Umum)',
     category: 'Badan Administrasi Umum & Relasi Publik',
     icon: Contact,
     gradient: 'from-blue-600 via-indigo-600 to-purple-600',
@@ -65,8 +67,8 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
     ]
   },
   inventaris: {
-    title: 'Inventaris & Aset Sekolah (BAU)',
-    roleName: 'ADMIN TATA USAHA / BAU',
+    title: 'Inventaris & Aset Sekolah (Tata Usaha)',
+    roleName: 'ADMIN TATA USAHA (Badan Administrasi Umum)',
     category: 'Sarana Prasarana & Aset',
     icon: Package,
     gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
@@ -196,8 +198,8 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
     ]
   },
   persuratan: {
-    title: 'Persuratan & Tata Usaha (E-Surat BAU)',
-    roleName: 'PERSURATAN / BAU',
+    title: 'Persuratan & Tata Usaha (E-Surat Tata Usaha)',
+    roleName: 'PERSURATAN / TATA USAHA',
     category: 'Administrasi & Disposisi Digital',
     icon: Mail,
     gradient: 'from-amber-600 via-yellow-600 to-orange-600',
@@ -206,7 +208,7 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
     modules: [
       { title: 'Penomoran Surat Masuk & Keluar Otomatis', desc: 'Sistem penomoran otomatis terstandar untuk semua jenis dokumen sekolah.', status: 'DALAM_PENGEMBANGAN' },
       { title: 'Template Surat Resmi & Legalisir Ijazah', desc: 'Generator surat keterangan aktif, rekomendasi, legalisir ijazah alumni, dan panggilan.', status: 'TAHAP_DESAIN' },
-      { title: 'Disposisi Digital Kepala Sekolah / BAU', desc: 'Alur penerusan surat masuk ke unit kerja terkait secara realtime.', status: 'SEGERA_HADIR' },
+      { title: 'Disposisi Digital Kepala Sekolah / Tata Usaha', desc: 'Alur penerusan surat masuk ke unit kerja terkait secara realtime.', status: 'SEGERA_HADIR' },
       { title: 'E-Archive & Pengarsipan Digital', desc: 'Penyimpanan arsip dokumen penting sekolah dengan indexing pencarian cepat.', status: 'DALAM_PENGEMBANGAN' },
     ]
   }
@@ -220,7 +222,7 @@ const INITIAL_GUESTS: GuestEntry[] = [
     instansi: 'Dinas Pendidikan & Dikdasmen Muhammadiyah',
     kategori: 'PEJABAT',
     tujuan: 'Kunjungan Monitoring Mutu & Supervisi Kurikulum',
-    dituju: 'Kepala Sekolah & Tim Waka',
+    dituju: 'Kepala Sekolah & Tim Tata Usaha',
     tanggal: new Date().toISOString().split('T')[0],
     waktu: '08:30 WIB',
     status: 'PROSES',
@@ -232,8 +234,8 @@ const INITIAL_GUESTS: GuestEntry[] = [
     namaTamu: 'Tim Rombongan SMA Muh 2 Yogyakarta (15 Orang)',
     instansi: 'SMA Muhammadiyah 2 Yogyakarta',
     kategori: 'STUDI_TIRU',
-    tujuan: 'Studi Tiru Sistem Manajemen Digital SIMASMUH & e-Rapor',
-    dituju: 'Tim BAU & Admin IT',
+    tujuan: 'Studi Tiru Sistem Manajemen Digital & e-Rapor',
+    dituju: 'Tim Tata Usaha & Admin IT',
     tanggal: new Date().toISOString().split('T')[0],
     waktu: '09:45 WIB',
     status: 'TIBA',
@@ -259,7 +261,7 @@ const INITIAL_GUESTS: GuestEntry[] = [
     instansi: 'PT Media Edukasi Nusantara',
     kategori: 'VENDOR_UMUM',
     tujuan: 'Penawaran Kerjasama Buku Bahan Ajar & Alat Lab Computer',
-    dituju: 'Kepala BAU & Sarpras',
+    dituju: 'Kepala Tata Usaha & Sarpras',
     tanggal: new Date().toISOString().split('T')[0],
     waktu: '11:00 WIB',
     status: 'TIBA',
@@ -279,7 +281,7 @@ function InteractiveGuestBook() {
     instansi: '',
     kategori: 'STUDI_TIRU' as GuestEntry['kategori'],
     tujuan: '',
-    dituju: 'Tata Usaha / BAU',
+    dituju: 'Tata Usaha (Badan Administrasi Umum)',
     tanggal: new Date().toISOString().split('T')[0],
     waktu: '09:00 WIB',
     status: 'TIBA' as GuestEntry['status'],
@@ -369,7 +371,7 @@ function InteractiveGuestBook() {
             <div>
               <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Total Tamu Hari Ini</p>
               <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{guests.length}</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Tercatat di Log BAU</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Tercatat di Log Tata Usaha</p>
             </div>
             <div className="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md">
               <Users className="w-6 h-6" />
@@ -430,7 +432,7 @@ function InteractiveGuestBook() {
             <div>
               <CardTitle className="text-lg flex items-center gap-2 text-slate-900 dark:text-white">
                 <Contact className="w-5 h-5 text-indigo-600" />
-                Registrasi & Log Kedatangan Tamu (BAU)
+                Registrasi & Log Kedatangan Tamu
               </CardTitle>
               <CardDescription>
                 Pencatatan resmi kedatangan tamu studi tiru, tamu pejabat, alumni pengurusan ijazah, serta vendor umum.
@@ -563,7 +565,7 @@ function InteractiveGuestBook() {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-indigo-700">
-              <Contact className="w-5 h-5" /> Form Registrasi Tamu Baru (BAU)
+              <Contact className="w-5 h-5" /> Form Registrasi Tamu Baru
             </DialogTitle>
             <DialogDescription>
               Isikan rincian kedatangan tamu studi tiru, tamu pejabat, alumni (pengurusan ijazah/legalisir), atau vendor.
@@ -644,7 +646,7 @@ function InteractiveGuestBook() {
             </div>
 
             <div className="sm:col-span-2 space-y-1.5">
-              <Label>Catatan / Keterangan Pelayanan BAU</Label>
+              <Label>Catatan / Keterangan Pelayanan Tata Usaha</Label>
               <Textarea
                 rows={2}
                 placeholder="Catatan ruang pertemuan, nomor resi legalisir, dll..."
@@ -720,7 +722,7 @@ export default function FiturSubRolePage() {
           <div className="space-y-4 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-amber-300">
               <Sparkle className="w-3.5 h-3.5 animate-pulse text-amber-400" />
-              <span>Modul Layanan Administrasi & BAU</span>
+              <span>Modul Layanan Administrasi & Tata Usaha</span>
             </div>
             
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
@@ -750,9 +752,62 @@ export default function FiturSubRolePage() {
         <InteractiveGuestBook />
       )}
 
+      {/* Render Interaktif khusus Kepegawaian: Manajemen & Verifikasi Cuti Pegawai */}
+      {slug === 'kepegawaian' && (
+        <div className="space-y-6">
+          <div className="bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/60 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-extrabold text-purple-950 dark:text-purple-200 text-base flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-purple-600" />
+                Pusat Verifikasi Izin Cuti & HRD Kepegawaian
+              </h3>
+              <p className="text-xs sm:text-sm text-purple-800/80 dark:text-purple-300/80 mt-0.5">
+                Kelola permohonan cuti tahunan, cuti sakit, melahirkan, dan ibadah pegawai serta persetujuan resmi SDM.
+              </p>
+            </div>
+            <Link href="/presensi/cuti">
+              <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shrink-0">
+                Buka Halaman Penuh Cuti
+              </Button>
+            </Link>
+          </div>
+          <CutiPegawaiManagement />
+        </div>
+      )}
+
       {/* Render Interaktif khusus Ketertiban & BP/BK */}
       {(slug === 'ketertiban' || slug === 'bk-bp') && (
-        <InteractiveCharacterAssessmentManagement defaultCategory={slug === 'ketertiban' ? 'PELANGGARAN' : 'ALL'} />
+        <div className="space-y-8">
+          {slug === 'ketertiban' && (
+            <div className="space-y-4">
+              <div className="bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-extrabold text-blue-950 dark:text-blue-200 text-base flex items-center gap-2">
+                    <ShieldAlert className="w-5 h-5 text-blue-600" />
+                    Pusat Verifikasi Izin & Penerbitan Dispensasi Siswa (Tim Tata Tertib)
+                  </h3>
+                  <p className="text-xs sm:text-sm text-blue-800/80 dark:text-blue-300/80 mt-0.5">
+                    Verifikasi izin sakit/keluarga siswa dan terbitkan surat dispensasi resmi kegiatan/lomba siswa.
+                  </p>
+                </div>
+                <Link href="/presensi/izin-siswa">
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shrink-0">
+                    Buka Halaman Penuh Izin Siswa
+                  </Button>
+                </Link>
+              </div>
+              <IzinSiswaManagement />
+            </div>
+          )}
+
+          <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-rose-600" />
+              Pencatatan Poin Pelanggaran & Apresiasi Kedisiplinan Siswa
+            </h3>
+            <InteractiveCharacterAssessmentManagement defaultCategory={slug === 'ketertiban' ? 'PELANGGARAN' : 'ALL'} />
+          </div>
+        </div>
       )}
 
       {/* Grid Status Modul Terencana */}
@@ -761,7 +816,7 @@ export default function FiturSubRolePage() {
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              Rencana Modul Fitur Integrasi BAU
+              Rencana Modul Fitur Integrasi Tata Usaha
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               Daftar spesifikasi sub-fitur yang terintegrasi penuh untuk operasional Badan Administrasi Umum & Tata Usaha.
@@ -796,7 +851,7 @@ export default function FiturSubRolePage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <h3 className="font-bold text-slate-900 dark:text-white text-base">
-              Akses Penuh Tata Usaha & Badan Administrasi Umum (BAU)
+              Akses Penuh Tata Usaha (Badan Administrasi Umum)
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
               Role Admin Tata Usaha / BAU memiliki hak akses pengelolaan setara Superadmin dengan fitur tambahan buku tamu, persuratan, inventaris aset, kepegawaian HRD, dan pencatatan keuangan.

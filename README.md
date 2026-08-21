@@ -29,7 +29,18 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
-* **2026-08-21 (v1.5.5 - Panel Multi-Kurva Analitik Komprehensif Sektor Eksekutif):**
+* **2026-08-21 (v1.5.6 - Penguatan Keamanan RLS Database, Verifikasi Izin Keluar & Cuti, dan Aksesibilitas Terpadu Navigasi Admin TU):**
+  * **Proteksi Row Level Security (RLS) & Kebijakan Keamanan Database Menyeluruh:**
+    * Menerapkan kebijakan Row Level Security (RLS) pada seluruh tabel publik PostgreSQL SIMASMUH (presensi, transaksi keuangan, log sistem, etika/tatib, master data) dengan bypass aman terkendali untuk service role backend dan superadmin.
+    * Penambahan migrasi SQL aman idempotente (`20260821090000_secure_attendance_and_logs_rls.sql` dan `20260821093000_enable_comprehensive_rls_all_tables.sql`).
+  * **Penyempurnaan Alur Presensi, Izin Keluar & Cuti:**
+    * Penambahan antarmuka dan modul verifikasi/persetujuan Izin Siswa (`/presensi/izin-siswa`) dan Cuti Pegawai/Guru (`/presensi/cuti`).
+    * Refaktorisasi dan perbaikan alur persetujuan Izin Keluar Sekolah (`/presensi/izin-keluar`) yang terhubung langsung dengan backend NestJS.
+    * Optimalisasi konfigurasi kamera face attendance biometrik dan live clock synchronization.
+  * **Penyelarasan Hak Akses & Navigasi Admin TU (Tata Usaha):**
+    * Penyesuaian hak akses RBAC dan visibilitas tautan navigasi di `nav-links.ts` serta `AppSidebar.tsx` untuk peran `ADMIN_TU` agar mencakup manajemen data kesiswaan, kepegawaian, etika, dan presensi secara proporsional.
+  * **Penyempurnaan Antarmuka Master Data & Profil Pengguna:**
+    * Perbaikan tampilan form master data pengguna dan siswa dengan integrasi validasi nomor WhatsApp aktif serta standarisasi badge role.
   * **Penyajian Multi-Kurva & Multi-Metrik Analitik Per Sektor Terpilih:**
     * Mengganti tampilan kurva tunggal menjadi susunan *grid* multi-kurva interaktif kaya data saat Kepala Sekolah memilih sektor manapun.
     * **Sektor Neraca & Keuangan (`KEUANGAN`):** Menyajikan kurva tren penerimaan pembayaran harian, kurva beban pengeluaran vs estimasi saldo kas aktif, kartu status piutang siswa, serta distribusi realisasi per pos tagihan.

@@ -179,7 +179,8 @@ export default function StudentsPage() {
   const subRole = (session?.user as any)?.subRole || ''
   const subRole2 = (session?.user as any)?.subRole2 || ''
   const subRole3 = (session?.user as any)?.subRole3 || ''
-  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole2) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole3)
+  const isWaliKelas = userRole === 'WALI_KELAS' || subRole === 'WALI_KELAS' || subRole2 === 'WALI_KELAS' || subRole3 === 'WALI_KELAS'
+  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole2) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole3) || isWaliKelas
   const isSuperadmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole2) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole3)
   const isKepalaSekolah = [userRole, subRole, subRole2, subRole3].includes('KEPALA_SEKOLAH')
   const isFinance = ['SUPERADMIN', 'ADMIN_IT', 'KEUANGAN'].includes(userRole) || [subRole, subRole2, subRole3].includes('KEUANGAN')
@@ -342,7 +343,7 @@ export default function StudentsPage() {
     return Array.from(setJalur)
   }, [students])
 
-  const { data: classes } = useQuery<Class[]>({
+  const { data: classes } = useQuery<any[]>({
     queryKey: ['classes'],
     queryFn: async () => {
       const res = await authenticatedFetch('/api-backend/classes')
@@ -350,6 +351,17 @@ export default function StudentsPage() {
       return res.json()
     }
   })
+
+  // Jika user adalah Wali Kelas, otomatis filter ke kelas perwaliannya
+  useEffect(() => {
+    if (isWaliKelas && classes && classes.length > 0 && filterClassId === 'ALL') {
+      const myUserId = (session?.user as any)?.id
+      const myClass = classes.find((c: any) => c.homeroomTeacher?.userId === myUserId || c.homeroomTeacher?.user?.id === myUserId)
+      if (myClass) {
+        setFilterClassId(myClass.id)
+      }
+    }
+  }, [isWaliKelas, classes, session, filterClassId])
 
   useEffect(() => {
     const handleOpenBeasiswa = (e: any) => {

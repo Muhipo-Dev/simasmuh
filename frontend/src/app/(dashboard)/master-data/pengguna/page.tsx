@@ -28,48 +28,67 @@ type User = {
   createdAt: string
 }
 
+const ROLE_CONFIG: Record<string, { label: string; bg: string; text: string; border: string; icon?: string }> = {
+  SUPERADMIN: { label: 'SUPERADMIN', bg: 'bg-purple-50 dark:bg-purple-950/80', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
+  ADMIN_IT: { label: 'ADMIN IT', bg: 'bg-indigo-50 dark:bg-indigo-950/80', text: 'text-indigo-700 dark:text-indigo-300', border: 'border-indigo-200 dark:border-indigo-800' },
+  KEPALA_SEKOLAH: { label: 'KEPALA SEKOLAH', bg: 'bg-amber-50 dark:bg-amber-950/80', text: 'text-amber-800 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
+  ADMIN_TU: { label: 'ADMIN TU (BAU)', bg: 'bg-sky-50 dark:bg-sky-950/80', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  BAU: { label: 'ADMIN TU (BAU)', bg: 'bg-sky-50 dark:bg-sky-950/80', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  TATA_USAHA: { label: 'ADMIN TU (BAU)', bg: 'bg-sky-50 dark:bg-sky-950/80', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  GURU: { label: 'GURU', bg: 'bg-emerald-50 dark:bg-emerald-950/80', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
+  PEGAWAI: { label: 'PEGAWAI', bg: 'bg-cyan-50 dark:bg-cyan-950/80', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
+  KARYAWAN: { label: 'PEGAWAI', bg: 'bg-cyan-50 dark:bg-cyan-950/80', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
+  KEUANGAN: { label: 'KEUANGAN', bg: 'bg-emerald-50 dark:bg-emerald-950/80', text: 'text-emerald-800 dark:text-emerald-200', border: 'border-emerald-300 dark:border-emerald-700' },
+  WALI_MURID: { label: 'WALI MURID', bg: 'bg-blue-50 dark:bg-blue-950/80', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
+  ORANG_TUA: { label: 'WALI MURID', bg: 'bg-blue-50 dark:bg-blue-950/80', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
+  PARENT: { label: 'WALI MURID', bg: 'bg-blue-50 dark:bg-blue-950/80', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
+  SISWA: { label: 'SISWA', bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-300', border: 'border-slate-200 dark:border-slate-700' },
+}
+
 const SUB_ROLE_OPTIONS = [
-  { value: 'NONE', label: 'Tanpa Sub Role' },
-  { value: 'KEPALA_SEKOLAH', label: 'Kepala Sekolah' },
-  { value: 'ADMIN_TU', label: 'BAU (Badan Administrasi Umum)' },
-  { value: 'GURU', label: 'Guru' },
-  { value: 'PEGAWAI', label: 'Pegawai / Karyawan' },
-  { value: 'ADMIN_WEB', label: 'Admin Web' },
-  { value: 'PEMBINA_EKSTRA', label: 'Pembina Ekstrakulikuler' },
+  { value: 'NONE', label: '— Tanpa Sub Role —' },
+  { value: 'ADMIN_TU', label: 'Tata Usaha (Badan Administrasi Umum)' },
+  { value: 'WALI_KELAS', label: 'Wali Kelas' },
+  { value: 'KEUANGAN', label: 'Keuangan' },
+  { value: 'KEPEGAWAIAN', label: 'Kepegawaian / HRD' },
   { value: 'KETERTIBAN', label: 'Ketertiban' },
-  { value: 'KEBERSIHAN', label: 'Kebersihan' },
-  { value: 'KEAMANAN', label: 'Keamanan' },
-  { value: 'KEPEGAWAIAN', label: 'Kepegawaian' },
-  { value: 'BK_BP', label: 'BK/BP' },
+  { value: 'BK_BP', label: 'BK / BP' },
+  { value: 'PERSURATAN', label: 'Persuratan' },
   { value: 'PUSTAKAWAN', label: 'Pustakawan' },
   { value: 'GURU_TAHFIDZ', label: 'Guru Tahfidz' },
-  { value: 'PERSURATAN', label: 'Persuratan' },
-  { value: 'WALI_KELAS', label: 'Wali Kelas' },
+  { value: 'PEMBINA_EKSTRA', label: 'Pembina Ekstrakulikuler' },
+  { value: 'ADMIN_WEB', label: 'Admin Web' },
+  { value: 'KEAMANAN', label: 'Keamanan' },
+  { value: 'KEBERSIHAN', label: 'Kebersihan' },
   { value: 'GURU_PIKET', label: 'Guru Piket' },
-  { value: 'KEUANGAN', label: 'Keuangan' },
   { value: 'KURIKULUM', label: 'Kurikulum' },
+  { value: 'GURU', label: 'Guru' },
+  { value: 'PEGAWAI', label: 'Pegawai / Karyawan' },
+  { value: 'KEPALA_SEKOLAH', label: 'Kepala Sekolah' },
 ]
 
-const SUB_ROLE_LABELS: Record<string, string> = {
-  KEPALA_SEKOLAH: 'Kepala Sekolah',
-  ADMIN_TU: 'BAU (Badan Administrasi Umum)',
-  TATA_USAHA: 'BAU (Badan Administrasi Umum)',
-  GURU: 'Guru',
-  PEGAWAI: 'Pegawai / Karyawan',
-  ADMIN_WEB: 'Admin Web',
-  PEMBINA_EKSTRA: 'Pembina Ekstrakulikuler',
-  KETERTIBAN: 'Ketertiban',
-  KEBERSIHAN: 'Kebersihan',
-  KEAMANAN: 'Keamanan',
-  KEPEGAWAIAN: 'Kepegawaian',
-  BK_BP: 'BK/BP',
-  PUSTAKAWAN: 'Pustakawan',
-  GURU_TAHFIDZ: 'Guru Tahfidz',
-  PERSURATAN: 'Persuratan',
-  WALI_KELAS: 'Wali Kelas',
-  GURU_PIKET: 'Guru Piket',
-  KEUANGAN: 'Keuangan',
-  KURIKULUM: 'Kurikulum',
+const SUB_ROLE_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  ADMIN_TU: { label: 'Tata Usaha (BAU)', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  TATA_USAHA: { label: 'Tata Usaha (BAU)', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  BAU: { label: 'Tata Usaha (BAU)', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  WALI_KELAS: { label: 'Wali Kelas', bg: 'bg-blue-50/90 dark:bg-blue-950/60', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
+  KEUANGAN: { label: 'Keuangan', bg: 'bg-emerald-50/90 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
+  KEPEGAWAIAN: { label: 'Kepegawaian', bg: 'bg-violet-50/90 dark:bg-violet-950/60', text: 'text-violet-700 dark:text-violet-300', border: 'border-violet-200 dark:border-violet-800' },
+  KETERTIBAN: { label: 'Ketertiban', bg: 'bg-rose-50/90 dark:bg-rose-950/60', text: 'text-rose-700 dark:text-rose-300', border: 'border-rose-200 dark:border-rose-800' },
+  BK_BP: { label: 'BK / BP', bg: 'bg-pink-50/90 dark:bg-pink-950/60', text: 'text-pink-700 dark:text-pink-300', border: 'border-pink-200 dark:border-pink-800' },
+  PERSURATAN: { label: 'Persuratan', bg: 'bg-amber-50/90 dark:bg-amber-950/60', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
+  PUSTAKAWAN: { label: 'Pustakawan', bg: 'bg-teal-50/90 dark:bg-teal-950/60', text: 'text-teal-700 dark:text-teal-300', border: 'border-teal-200 dark:border-teal-800' },
+  GURU_TAHFIDZ: { label: 'Guru Tahfidz', bg: 'bg-green-50/90 dark:bg-green-950/60', text: 'text-green-700 dark:text-green-300', border: 'border-green-200 dark:border-green-800' },
+  PEMBINA_EKSTRA: { label: 'Pembina Ekskul', bg: 'bg-orange-50/90 dark:bg-orange-950/60', text: 'text-orange-700 dark:text-orange-300', border: 'border-orange-200 dark:border-orange-800' },
+  PEMBINA_EXTRA: { label: 'Pembina Ekskul', bg: 'bg-orange-50/90 dark:bg-orange-950/60', text: 'text-orange-700 dark:text-orange-300', border: 'border-orange-200 dark:border-orange-800' },
+  ADMIN_WEB: { label: 'Admin Web', bg: 'bg-indigo-50/90 dark:bg-indigo-950/60', text: 'text-indigo-700 dark:text-indigo-300', border: 'border-indigo-200 dark:border-indigo-800' },
+  KEAMANAN: { label: 'Keamanan', bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-300', border: 'border-slate-300 dark:border-slate-700' },
+  KEBERSIHAN: { label: 'Kebersihan', bg: 'bg-teal-50/90 dark:bg-teal-950/60', text: 'text-teal-700 dark:text-teal-300', border: 'border-teal-200 dark:border-teal-800' },
+  GURU_PIKET: { label: 'Guru Piket', bg: 'bg-lime-50/90 dark:bg-lime-950/60', text: 'text-lime-700 dark:text-lime-300', border: 'border-lime-200 dark:border-lime-800' },
+  KURIKULUM: { label: 'Kurikulum', bg: 'bg-fuchsia-50/90 dark:bg-fuchsia-950/60', text: 'text-fuchsia-700 dark:text-fuchsia-300', border: 'border-fuchsia-200 dark:border-fuchsia-800' },
+  GURU: { label: 'Guru', bg: 'bg-emerald-50/90 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
+  PEGAWAI: { label: 'Pegawai / Karyawan', bg: 'bg-cyan-50/90 dark:bg-cyan-950/60', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
+  KEPALA_SEKOLAH: { label: 'Kepala Sekolah', bg: 'bg-amber-50/90 dark:bg-amber-950/60', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
 }
 
 export default function UsersPage() {
@@ -403,7 +422,7 @@ export default function UsersPage() {
                   <SelectContent>
                     <SelectItem value="GURU">GURU (Guru)</SelectItem>
                     <SelectItem value="PEGAWAI">PEGAWAI (Karyawan / Staf)</SelectItem>
-                    <SelectItem value="ADMIN_TU">ADMIN TU (BAU)</SelectItem>
+                    <SelectItem value="ADMIN_TU">ADMIN TU (Badan Administrasi Umum)</SelectItem>
                     <SelectItem value="SUPERADMIN">SUPERADMIN</SelectItem>
                     <SelectItem value="ADMIN_IT">ADMIN IT</SelectItem>
                     <SelectItem value="KEPALA_SEKOLAH">KEPALA SEKOLAH</SelectItem>
@@ -564,32 +583,68 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
-                            item.role === 'SUPERADMIN' ? 'bg-purple-100 text-purple-800' :
-                            item.role === 'ADMIN_IT' ? 'bg-indigo-100 text-indigo-800' :
-                            item.role === 'KEPALA_SEKOLAH' ? 'bg-amber-100 text-amber-800' :
-                            item.role === 'GURU' ? 'bg-emerald-100 text-emerald-800' :
-                            item.role === 'PEGAWAI' ? 'bg-cyan-100 text-cyan-800' :
-                            item.role === 'WALI_MURID' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
-                            'bg-slate-100 text-slate-800'
-                          }`}>
-                            {item.role === 'WALI_MURID' ? 'WALI MURID' : item.role}
-                          </span>
-                          {item.subRole && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
-                              {SUB_ROLE_LABELS[item.subRole] || item.subRole}
-                            </span>
-                          )}
-                          {item.subRole2 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-800 border border-indigo-200">
-                              {SUB_ROLE_LABELS[item.subRole2] || item.subRole2}
-                            </span>
-                          )}
-                          {item.subRole3 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-teal-50 text-teal-800 border border-teal-200">
-                              {SUB_ROLE_LABELS[item.subRole3] || item.subRole3}
-                            </span>
-                          )}
+                          {/* Role Utama Badge */}
+                          {(() => {
+                            const roleCfg = ROLE_CONFIG[item.role] || {
+                              label: item.role,
+                              bg: 'bg-slate-100 dark:bg-slate-800',
+                              text: 'text-slate-700 dark:text-slate-300',
+                              border: 'border-slate-200 dark:border-slate-700'
+                            }
+                            return (
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black tracking-wide border shadow-2xs ${roleCfg.bg} ${roleCfg.text} ${roleCfg.border}`}>
+                                {roleCfg.label}
+                              </span>
+                            )
+                          })()}
+
+                          {/* Sub Role 1 Badge */}
+                          {item.subRole && item.subRole !== 'NONE' && (() => {
+                            const subCfg = SUB_ROLE_CONFIG[item.subRole] || {
+                              label: item.subRole,
+                              bg: 'bg-slate-50 dark:bg-slate-900',
+                              text: 'text-slate-700 dark:text-slate-300',
+                              border: 'border-slate-200 dark:border-slate-800'
+                            }
+                            return (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold border shadow-2xs ${subCfg.bg} ${subCfg.text} ${subCfg.border}`}>
+                                <span className="opacity-60 text-[9px] mr-1">✦</span>
+                                {subCfg.label}
+                              </span>
+                            )
+                          })()}
+
+                          {/* Sub Role 2 Badge */}
+                          {item.subRole2 && item.subRole2 !== 'NONE' && (() => {
+                            const subCfg = SUB_ROLE_CONFIG[item.subRole2] || {
+                              label: item.subRole2,
+                              bg: 'bg-slate-50 dark:bg-slate-900',
+                              text: 'text-slate-700 dark:text-slate-300',
+                              border: 'border-slate-200 dark:border-slate-800'
+                            }
+                            return (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold border shadow-2xs ${subCfg.bg} ${subCfg.text} ${subCfg.border}`}>
+                                <span className="opacity-60 text-[9px] mr-1">✦</span>
+                                {subCfg.label}
+                              </span>
+                            )
+                          })()}
+
+                          {/* Sub Role 3 Badge */}
+                          {item.subRole3 && item.subRole3 !== 'NONE' && (() => {
+                            const subCfg = SUB_ROLE_CONFIG[item.subRole3] || {
+                              label: item.subRole3,
+                              bg: 'bg-slate-50 dark:bg-slate-900',
+                              text: 'text-slate-700 dark:text-slate-300',
+                              border: 'border-slate-200 dark:border-slate-800'
+                            }
+                            return (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold border shadow-2xs ${subCfg.bg} ${subCfg.text} ${subCfg.border}`}>
+                                <span className="opacity-60 text-[9px] mr-1">✦</span>
+                                {subCfg.label}
+                              </span>
+                            )
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell className="text-right pr-4">

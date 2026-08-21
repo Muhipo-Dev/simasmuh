@@ -22,19 +22,39 @@ export class IzinKeluarService {
       estimasiKembali?: string;
       alasan: string;
       targetUserId?: string; // Jika wali murid/admin mengajukan untuk siswa tertentu
+      lampiranUrl?: string; // URL foto/dokumen surat keterangan dokter/dispensasi
+      tipeIzin?: 'SAKIT' | 'KEGIATAN' | 'DISPENSASI' | 'KELUARGA' | 'LAINNYA';
     },
   ) {
     const finalUserId = data.targetUserId || userId;
     const dateObj = new Date(data.date);
     dateObj.setHours(0, 0, 0, 0);
 
+    // Encode informasi tambahan (lampiran & tipe) ke string alasan secara terstruktur jika ada
+    let finalAlasan = data.alasan;
+    if (data.lampiranUrl) {
+      finalAlasan += `\n[LAMPIRAN_SURAT]: ${data.lampiranUrl}`;
+    }
+
+    // Ambil info user untuk menentukan apakah pemohon adalah Pegawai/Guru atau Siswa
+    const targetUserRecord = await this.prisma.user.findUnique({
+      where: { id: finalUserId },
+      select: { role: true, subRole: true, name: true, phone: true }
+    });
+
+    const isPegawai = targetUserRecord && targetUserRecord.role !== 'SISWA';
+    // Ketentuan Izin Keluar Pegawai: Langsung tercatat otomatis (DISETUJUI) tanpa verifikasi manual
+    const initialStatus = isPegawai ? 'DISETUJUI' : 'MENUNGGU';
+    const autoCatatan = isPegawai ? 'Izin keluar pegawai tercatat otomatis di sistem.' : null;
+
     const izin = await this.prisma.izinKeluar.create({
       data: {
         date: dateObj,
         waktuKeluar: data.waktuKeluar,
         estimasiKembali: data.estimasiKembali || null,
-        alasan: data.alasan,
-        status: 'MENUNGGU',
+        alasan: finalAlasan,
+        status: initialStatus,
+        catatanAdmin: autoCatatan,
         userId: finalUserId,
       },
       include: {

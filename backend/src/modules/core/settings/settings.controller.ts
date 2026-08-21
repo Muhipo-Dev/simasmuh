@@ -21,7 +21,7 @@ export class SettingsController {
   constructor(
     private readonly settingsService: SettingsService,
     private readonly programConfigService: ProgramConfigService,
-  ) {}
+  ) { }
 
   @Get('public')
   getPublicSettings() {
@@ -87,14 +87,14 @@ export class SettingsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, 'KEPALA_SEKOLAH')
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, 'KEPALA_SEKOLAH', UserRole.ADMIN_TU, UserRole.BAU, UserRole.TATA_USAHA, SubRole.ADMIN_TU, SubRole.BAU)
   getSettings() {
     return this.settingsService.getSettings();
   }
 
   @Put()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, UserRole.ADMIN_TU, UserRole.BAU, UserRole.TATA_USAHA, SubRole.ADMIN_TU, SubRole.BAU)
   upsertSettings(@Body() data: any) {
     return this.settingsService.upsertSettings(data);
   }

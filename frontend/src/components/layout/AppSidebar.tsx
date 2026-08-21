@@ -4,7 +4,8 @@ import React from 'react'
 import Link from 'next/link'
 import NextImage from 'next/image'
 import { usePathname } from 'next/navigation'
-import { X, LucideIcon } from 'lucide-react'
+import { X, LucideIcon, Clock } from 'lucide-react'
+import { useRealtimeServerClock } from '@/lib/time-sync'
 
 export interface NavLinkItem {
   name: string
@@ -26,6 +27,7 @@ export function AppSidebar({
   title = 'SIMASMUH',
 }: AppSidebarProps) {
   const pathname = usePathname()
+  const clock = useRealtimeServerClock(60000)
 
   return (
     <>
@@ -43,17 +45,21 @@ export function AppSidebar({
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Sidebar Header */}
-        <div className="h-16 flex items-center justify-between px-5 bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border-b border-white/10 backdrop-blur-md shrink-0">
-          <div className="flex items-center gap-2.5">
-            <NextImage
-              src="/pic_logo.png"
-              alt="Logo"
-              width={34}
-              height={34}
-              className="object-contain rounded-xl bg-white/15 border border-white/20 p-1 backdrop-blur-md"
-            />
-            <span className="text-white font-black text-xl tracking-wider">{title}</span>
+        {/* Sidebar Header: Area Informasi Waktu Tanggal dan Jam Real-Time */}
+        <div className="h-16 flex items-center justify-between px-4 bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border-b border-white/10 backdrop-blur-md shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 shadow-inner flex items-center justify-center shrink-0">
+              <Clock className="w-5 h-5 animate-pulse" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1.5 font-mono font-bold text-white text-base tracking-tight leading-none">
+                <span>{clock.timeString}</span>
+                <span className="text-[10px] font-sans font-semibold px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/20">WIB</span>
+              </div>
+              <span className="text-[11px] text-slate-300 truncate font-medium mt-1 leading-tight" title={clock.dateString}>
+                {clock.dateString}
+              </span>
+            </div>
           </div>
           <button
             type="button"

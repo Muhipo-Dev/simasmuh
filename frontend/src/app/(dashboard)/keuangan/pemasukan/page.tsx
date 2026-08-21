@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, createContext, useContext } from 'react'
+import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -104,6 +105,12 @@ const formatDate = (d: string) =>
 
 const currentYear = new Date().getFullYear()
 const YEARS = [currentYear - 1, currentYear, currentYear + 1]
+
+// ============================================================
+// CONTEXT ROLE (untuk proteksi CRUD Kepala Sekolah)
+// ============================================================
+const KeuanganRoleContext = createContext({ isKepalaSekolah: false })
+const useKeuanganRole = () => useContext(KeuanganRoleContext)
 
 // ============================================================
 // CONFIRM DIALOG
@@ -1825,6 +1832,7 @@ function ManualCashPaymentModal({
 // ============================================================
 function TabTagihan() {
   const authenticatedFetch = useAuthenticatedFetch();
+  const { isKepalaSekolah } = useKeuanganRole()
   const [search, setSearch] = useState('')
   const [filterKelas, setFilterKelas] = useState('')
   const [selectedStudent, setSelectedStudent] = useState<StudentSummary | null>(null)
@@ -2069,17 +2077,25 @@ function TabTagihan() {
           </Select>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
-          <Button onClick={() => setCashModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm">
-            <Wallet className="w-4 h-4" /> Pembayaran Tunai / Manual
-          </Button>
-          <Button variant="outline" onClick={() => setMassalOpen(true)}
-            className="border-purple-400 text-purple-700 hover:bg-purple-50 gap-2">
-            <Layers className="w-4 h-4" /> Tagihan Massal
-          </Button>
+          {isKepalaSekolah ? (
+            <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-1.5">
+              🔍 Mode Supervisi (Read-Only)
+            </div>
+          ) : (
+            <>
+              <Button onClick={() => setCashModalOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm">
+                <Wallet className="w-4 h-4" /> Pembayaran Tunai / Manual
+              </Button>
+              <Button variant="outline" onClick={() => setMassalOpen(true)}
+                className="border-purple-400 text-purple-700 hover:bg-purple-50 gap-2">
+                <Layers className="w-4 h-4" /> Tagihan Massal
+              </Button>
+            </>
+          )}
           <Button variant="outline" onClick={handleExportRekapKelas}
             className="border-indigo-600 text-indigo-700 hover:bg-indigo-50 gap-1.5 font-bold"
-            title="Eksport Excel Rekap Keuangan Per Kelas (No, Nama, Frekuensi/Bulan, SPP, Tag Kelas Non DPP, UKS, UIS/UAK, DPP)">
+            title="Eksport Excel Rekap Keuangan Per Kelas">
             <FileSpreadsheet className="w-4 h-4 text-indigo-600" /> Rekap Excel Kelas
           </Button>
           <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}
@@ -3333,9 +3349,14 @@ const TABS = [
 
 export default function KeuanganMasukPage() {
   const authenticatedFetch = useAuthenticatedFetch();
+  const { data: session } = useSession()
+  const userRole = (session?.user as any)?.role || ''
+  const userSubRole = (session?.user as any)?.subRole || ''
+  const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || userSubRole === 'KEPALA_SEKOLAH'
   const [activeTab, setActiveTab] = useState('tagihan')
 
   return (
+    <KeuanganRoleContext.Provider value={{ isKepalaSekolah }}>
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
@@ -3370,6 +3391,7 @@ export default function KeuanganMasukPage() {
         {activeTab === 'dana-bantuan' && <TabDanaBantuan />}
       </div>
     </div>
+    </KeuanganRoleContext.Provider>
   )
 }
 

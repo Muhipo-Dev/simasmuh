@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -40,6 +41,10 @@ const MONTHS = [
 ]
 
 export default function KeuanganKeluarPage() {
+  const { data: session } = useSession()
+  const userRole = (session?.user as any)?.role || ''
+  const userSubRole = (session?.user as any)?.subRole || ''
+  const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || userSubRole === 'KEPALA_SEKOLAH'
   const [year, setYear] = useState<string>(currentYear.toString())
   const [month, setMonth] = useState<string>('all')
   const [search, setSearch] = useState('')
@@ -103,9 +108,15 @@ export default function KeuanganKeluarPage() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Keuangan Keluar</h1>
           <p className="text-slate-500 mt-1">Kelola data pengeluaran dan arus kas keluar sekolah</p>
         </div>
-        <Button onClick={() => setModalOpen(true)} className="bg-rose-600 hover:bg-rose-700 text-white gap-2">
-          <PlusCircle className="w-4 h-4" /> Catat Pengeluaran
-        </Button>
+        {!isKepalaSekolah ? (
+          <Button onClick={() => setModalOpen(true)} className="bg-rose-600 hover:bg-rose-700 text-white gap-2">
+            <PlusCircle className="w-4 h-4" /> Catat Pengeluaran
+          </Button>
+        ) : (
+          <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-1.5">
+            🔍 Mode Supervisi (Read-Only)
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -193,9 +204,13 @@ export default function KeuanganKeluarPage() {
                       </TableCell>
                       <TableCell className="text-right font-bold text-rose-600 text-base">{currency(item.amount)}</TableCell>
                       <TableCell className="text-center">
-                        <Button variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50 hover:text-rose-700" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {!isKepalaSekolah ? (
+                          <Button variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50 hover:text-rose-700" onClick={() => handleDelete(item.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">Read-Only</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

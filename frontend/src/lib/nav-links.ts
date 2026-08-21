@@ -104,8 +104,10 @@ export const superAdminOnlyPaths = [
 // Path yang bisa diakses KEPALA_SEKOLAH dalam mode supervisi (read-only)
 export const supervisorAccessPaths = [
   '/master-data/siswa', '/master-data/kelas', '/master-data/guru',
-  '/akademik/jadwal-pelajaran', '/keuangan/laporan', '/informasi/pengumuman',
-  '/presensi/kehadiran-pegawai', '/presensi/kehadiran-siswa'
+  '/akademik/jadwal-pelajaran', '/informasi/pengumuman',
+  '/presensi/kehadiran-pegawai', '/presensi/kehadiran-siswa',
+  '/keuangan/laporan', '/keuangan/pemasukan', '/keuangan/pengeluaran',
+  '/keuangan/penggajian', '/keuangan/lpj', '/keuangan/verifikasi-pembayaran',
 ]
 
 export function getRoleLinks(role: string, subRole?: string, subRole2?: string, subRole3?: string) {

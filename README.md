@@ -29,6 +29,15 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-21 (v1.5.5 - Panel Multi-Kurva Analitik Komprehensif Sektor Eksekutif):**
+  * **Penyajian Multi-Kurva & Multi-Metrik Analitik Per Sektor Terpilih:**
+    * Mengganti tampilan kurva tunggal menjadi susunan *grid* multi-kurva interaktif kaya data saat Kepala Sekolah memilih sektor manapun.
+    * **Sektor Neraca & Keuangan (`KEUANGAN`):** Menyajikan kurva tren penerimaan pembayaran harian, kurva beban pengeluaran vs estimasi saldo kas aktif, kartu status piutang siswa, serta distribusi realisasi per pos tagihan.
+    * **Sektor Presensi & Kehadiran (`PRESENSI`):** Menyajikan kurva komparasi kehadiran siswa vs guru/pegawai harian dan diagram proporsi status kehadiran realtime (*Hadir, Sakit, Izin, Alpha*).
+    * **Sektor Adab & Ketertiban (`KEDISIPLINAN`):** Menyajikan kurva dinamika apresiasi prestasi vs catatan pelanggaran tatib, serta metrik amalan ibadah sholat dan konseling BK.
+    * **Sektor Siswa & Demografis (`DEMOGRAFIS`):** Menyajikan grafik rasio gender laki-laki vs perempuan dan diagram distribusi persentase program peminatan siswa.
+    * **Sektor Akademik & Pembelajaran (`AKADEMIK`):** Menyajikan kurva aktivitas sesi KBM mingguan dan distribusi komposisi jumlah siswa per rombel/kelas.
+
 * **2026-08-21 (v1.5.4 - Sinkronisasi & Penyelarasan Algoritma Keuangan, Audit Integritas Data, dan Redesain Kurva Analitik Terpadu):**
   * **Sinkronisasi Algoritma & Logika Perhitungan Keuangan Sekolah (Backend & Frontend):**
     * Penyelarasan algoritma kalkulasi tarif SPP dan DPP berbasis basis data dinamis (`ProgramConfig` & `Setting`) pada modul [finance-calculation.service.ts](file:///d:/simasmuh/backend/src/modules/finance/finance-calculation/finance-calculation.service.ts) dan [finance.service.ts](file:///d:/simasmuh/backend/src/modules/finance/finance/finance.service.ts).

@@ -775,36 +775,16 @@ export default function FiturSubRolePage() {
         </div>
       )}
 
-      {/* Render Interaktif khusus Ketertiban & BP/BK */}
+      {/* Render Interaktif khusus Ketertiban & BP/BK: Manajemen Poin Kedisiplinan & Pelanggaran */}
       {(slug === 'ketertiban' || slug === 'bk-bp') && (
-        <div className="space-y-8">
-          {slug === 'ketertiban' && (
-            <div className="space-y-4">
-              <div className="bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-extrabold text-blue-950 dark:text-blue-200 text-base flex items-center gap-2">
-                    <ShieldAlert className="w-5 h-5 text-blue-600" />
-                    Pusat Verifikasi Izin & Penerbitan Dispensasi Siswa (Tim Tata Tertib)
-                  </h3>
-                  <p className="text-xs sm:text-sm text-blue-800/80 dark:text-blue-300/80 mt-0.5">
-                    Verifikasi izin sakit/keluarga siswa dan terbitkan surat dispensasi resmi kegiatan/lomba siswa.
-                  </p>
-                </div>
-                <Link href="/presensi/izin-siswa">
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shrink-0">
-                    Buka Halaman Penuh Izin Siswa
-                  </Button>
-                </Link>
-              </div>
-              <IzinSiswaManagement />
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-rose-600" />
+                Pencatatan Poin Pelanggaran & Apresiasi Kedisiplinan Siswa
+              </h3>
             </div>
-          )}
-
-          <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-            <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-rose-600" />
-              Pencatatan Poin Pelanggaran & Apresiasi Kedisiplinan Siswa
-            </h3>
             <InteractiveCharacterAssessmentManagement defaultCategory={slug === 'ketertiban' ? 'PELANGGARAN' : 'ALL'} />
           </div>
         </div>

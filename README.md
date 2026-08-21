@@ -37,8 +37,9 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
     * Penambahan antarmuka dan modul verifikasi/persetujuan Izin Siswa (`/presensi/izin-siswa`) dan Cuti Pegawai/Guru (`/presensi/cuti`).
     * Refaktorisasi dan perbaikan alur persetujuan Izin Keluar Sekolah (`/presensi/izin-keluar`) yang terhubung langsung dengan backend NestJS.
     * Optimalisasi konfigurasi kamera face attendance biometrik dan live clock synchronization.
-  * **Penyelarasan Hak Akses & Navigasi Admin TU (Tata Usaha):**
+  * **Penyelarasan Hak Akses & Navigasi Admin TU (Tata Usaha) & Sub-Role Ketertiban:**
     * Penyesuaian hak akses RBAC dan visibilitas tautan navigasi di `nav-links.ts` serta `AppSidebar.tsx` untuk peran `ADMIN_TU` agar mencakup manajemen data kesiswaan, kepegawaian, etika, dan presensi secara proporsional.
+    * Menyatukan dan meniadakan duplikasi modul: menu **Izin Siswa & Dispensasi** difokuskan di `/presensi/izin-siswa` untuk sub-role `KETERTIBAN` dan `WALI_KELAS`, sedangkan menu **Poin Kedisiplinan Siswa** di `/fitur/ketertiban` dikhususkan penuh untuk pencatatan poin kedisiplinan dan apresiasi siswa.
   * **Penyelarasan Identitas Title Bar, Logo Dinamis & Favicon Resmi:**
     * Mengubah judul default title bar web desktop & tablet menjadi **"System by. Muhipo Dev"** ([layout.tsx](file:///d:/simasmuh/frontend/src/app/layout.tsx) & [page.tsx](file:///d:/simasmuh/frontend/src/app/page.tsx)).
     * Mengganti seluruh aset `favicon.ico` bawaan Next.js dengan logo resmi sekolah & aplikasi (`/pic_logo.png`) di direktori `src/app/favicon.ico` dan `public/favicon.ico`.

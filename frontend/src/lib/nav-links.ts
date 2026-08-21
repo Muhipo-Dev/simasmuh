@@ -273,8 +273,8 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
     } else if (roleName === 'WALI_KELAS') {
       addLinks([
         { name: 'Manajemen Siswa Kelas', href: '/master-data/siswa', icon: UserSquare2 },
-        { name: 'Presensi & Izin Siswa', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
-        { name: 'Verifikasi Izin Siswa', href: '/presensi/izin-siswa', icon: UserCheck },
+        { name: 'Presensi & Kehadiran', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
+        { name: 'Izin Siswa & Dispensasi', href: '/presensi/izin-siswa', icon: UserCheck },
         { name: 'Jurnal Kelas', href: '/akademik/jurnal-wali-kelas', icon: BookOpen },
       ])
     } else if (roleName === 'KEUANGAN') {
@@ -306,8 +306,8 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
       ])
     } else if (roleName === 'KETERTIBAN') {
       addLinks([
-        { name: 'Ketertiban', href: '/fitur/ketertiban', icon: ShieldAlert },
         { name: 'Izin Siswa & Dispensasi', href: '/presensi/izin-siswa', icon: ClipboardCheck },
+        { name: 'Poin Kedisiplinan Siswa', href: '/fitur/ketertiban', icon: ShieldAlert },
       ])
     } else if (roleName === 'KEBERSIHAN') {
       addLinks([

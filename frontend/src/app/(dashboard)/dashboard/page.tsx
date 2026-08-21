@@ -1290,7 +1290,7 @@ export default function DashboardPage() {
                             y: 150 - ((w.pemasukan || 0) / maxP) * 120,
                             val: w.pemasukan
                           }))
-                          const pathStr = pts.reduce((acc, p, i, a) => {
+                          const pathStr = pts.reduce((acc: string, p: any, i: number, a: any[]) => {
                             if (i === 0) return `M ${p.x} ${p.y}`
                             const prev = a[i - 1]
                             const cx1 = prev.x + (p.x - prev.x) / 2
@@ -1970,7 +1970,7 @@ export default function DashboardPage() {
                             x: 45 + (i * (420 / Math.max(1, weekly.length - 1))),
                             y: 150 - ((w.siswaHadir > 0 ? (i % 2 === 0 ? 5 : 6) : 0) / maxS) * 120,
                           }))
-                          const pathStr = pts.reduce((acc, p, i, a) => {
+                          const pathStr = pts.reduce((acc: string, p: any, i: number, a: any[]) => {
                             if (i === 0) return `M ${p.x} ${p.y}`
                             const prev = a[i - 1]
                             const cx1 = prev.x + (p.x - prev.x) / 2

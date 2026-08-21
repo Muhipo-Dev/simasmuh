@@ -28,8 +28,9 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [showGuideMobile, setShowGuideMobile] = useState(false)
   const [helpdeskPhone, setHelpdeskPhone] = useState('088293733330')
+  const [backgroundMaster, setBackgroundMaster] = useState('/muhipo-log.jpg')
 
-  // Ambil nomor Helpdesk dari Pengaturan Superadmin
+  // Ambil nomor Helpdesk & Wallpaper Master dari Pengaturan Superadmin
   useEffect(() => {
     async function loadPublicSettings() {
       try {
@@ -38,6 +39,9 @@ export default function LoginPage() {
           const data = await res.json()
           if (data?.helpdeskPhone) {
             setHelpdeskPhone(data.helpdeskPhone)
+          }
+          if (data?.backgroundUrl) {
+            setBackgroundMaster(data.backgroundUrl)
           }
         }
       } catch (err) {
@@ -122,15 +126,23 @@ export default function LoginPage() {
     <div className="min-h-[100dvh] w-full flex flex-col justify-between relative overflow-x-hidden font-sans selection:bg-blue-600 selection:text-white">
       {/* Background Wallpaper with Smooth Glass Overlay */}
       <div className="fixed inset-0 -z-30 w-full h-full overflow-hidden">
-        <NextImage
-          src="/muhipo-log.jpg"
-          alt="Latar Belakang SMA MUHIPO"
-          fill
-          priority
-          unoptimized
-          sizes="100vw"
-          className="object-cover object-center w-full h-full scale-105"
-        />
+        {backgroundMaster.startsWith('http') || backgroundMaster.startsWith('data:') ? (
+          <img
+            src={backgroundMaster}
+            alt="Latar Belakang SMA MUHIPO"
+            className="object-cover object-center w-full h-full scale-105"
+          />
+        ) : (
+          <NextImage
+            src={backgroundMaster}
+            alt="Latar Belakang SMA MUHIPO"
+            fill
+            priority
+            unoptimized
+            sizes="100vw"
+            className="object-cover object-center w-full h-full scale-105"
+          />
+        )}
       </div>
       <div className="fixed inset-0 bg-slate-950/75 dark:bg-slate-950/90 backdrop-blur-md -z-20" />
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))] -z-10" />

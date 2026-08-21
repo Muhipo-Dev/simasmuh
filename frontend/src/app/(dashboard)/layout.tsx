@@ -97,15 +97,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-dvh flex relative transition-colors duration-200 overflow-x-hidden">
       {/* Background Image & Overlay for all dashboard pages */}
       <div className="fixed inset-0 -z-30 w-full h-full overflow-hidden pointer-events-none">
-        <NextImage
-          src="/muhipo-log.jpg"
-          alt="Latar Belakang SMA MUHIPO"
-          fill
-          priority
-          unoptimized
-          sizes="100vw"
-          className="object-cover object-center w-full h-full scale-105"
-        />
+        {systemSettings?.backgroundUrl && (systemSettings.backgroundUrl.startsWith('http') || systemSettings.backgroundUrl.startsWith('data:')) ? (
+          <img
+            src={systemSettings.backgroundUrl}
+            alt="Latar Belakang SMA MUHIPO"
+            className="object-cover object-center w-full h-full scale-105"
+          />
+        ) : (
+          <NextImage
+            src={systemSettings?.backgroundUrl || "/muhipo-log.jpg"}
+            alt="Latar Belakang SMA MUHIPO"
+            fill
+            priority
+            unoptimized
+            sizes="100vw"
+            className="object-cover object-center w-full h-full scale-105"
+          />
+        )}
       </div>
       <div className="fixed inset-0 bg-slate-100/85 dark:bg-slate-950/90 backdrop-blur-[2px] -z-20 pointer-events-none" />
 

@@ -66,6 +66,7 @@ export default function SettingsPage() {
     phone: '',
     email: '',
     logoUrl: '',
+    backgroundUrl: '',
     principalName: '',
     principalNip: '',
     helpdeskPhone: '088293733330',
@@ -85,7 +86,7 @@ export default function SettingsPage() {
   const authenticatedQuery = useAuthenticatedQuery()
   const authenticatedFetch = useAuthenticatedFetch()
 
-  const { data: settings, isLoading } = useQuery<Setting>({
+  const { data: settings, isLoading } = useQuery<Setting & { backgroundUrl?: string | null }>({
     queryKey: ['settings'],
     queryFn: () => authenticatedQuery('/api-backend/settings')
   })
@@ -104,6 +105,7 @@ export default function SettingsPage() {
         phone: settings.phone || '',
         email: settings.email || '',
         logoUrl: settings.logoUrl || '',
+        backgroundUrl: (settings as any).backgroundUrl || '',
         principalName: settings.principalName || '',
         principalNip: settings.principalNip || '',
         helpdeskPhone: settings.helpdeskPhone || '088293733330',
@@ -141,7 +143,19 @@ export default function SettingsPage() {
         logoUrl = uploadData.url;
       }
 
-      const payload = { ...updatedSettings, logoUrl };
+      let backgroundUrl = updatedSettings.backgroundUrl;
+      if (backgroundUrl && backgroundUrl.startsWith('data:image')) {
+        const uploadRes = await authenticatedFetch('/api-backend/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: backgroundUrl })
+        });
+        if (!uploadRes.ok) throw new Error('Gagal mengunggah wallpaper background master');
+        const uploadData = await uploadRes.json();
+        backgroundUrl = uploadData.url;
+      }
+
+      const payload = { ...updatedSettings, logoUrl, backgroundUrl };
       const res = await authenticatedFetch('/api-backend/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -154,15 +168,15 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['settings'] })
       queryClient.invalidateQueries({ queryKey: ['system-settings'] })
       queryClient.invalidateQueries({ queryKey: ['public-settings'] })
+      queryClient.invalidateQueries({ queryKey: ['navbar-public-settings'] })
       Swal.fire({
         title: 'Berhasil Disimpan!',
-        text: `Tahun Pelajaran Utama diatur ke ${formData.academicYear} (${formData.semester}). Seluruh data sistem akan otomatis mengacu pada tahun ajaran ini.`,
+        text: `Pengaturan identitas sekolah, logo, dan background master berhasil diperbarui ke seluruh aplikasi.`,
         icon: 'success',
-        confirmButtonColor: '#2563eb'
       })
     },
-    onError: () => {
-      Swal.fire('Informasi', 'Gagal menyimpan pengaturan', 'info')
+    onError: (err: any) => {
+      Swal.fire('Error!', err.message || 'Gagal menyimpan pengaturan', 'error')
     }
   })
 
@@ -173,7 +187,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedBank)
       })
-      if (!res.ok) throw new Error('Gagal menyimpan info bank')
+      if (!res.ok) throw new Error('Gagal menyimpan rekening')
       return res.json()
     },
     onSuccess: () => {
@@ -181,9 +195,7 @@ export default function SettingsPage() {
       Swal.fire({
         title: 'Berhasil!',
         text: 'Informasi rekening bank berhasil disimpan',
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false
+        icon: 'success'
       })
     },
     onError: () => {
@@ -204,6 +216,18 @@ export default function SettingsPage() {
     } catch (err) {
       console.error('Gagal mengompres logo:', err)
       Swal.fire('Gagal', 'Terjadi kesalahan saat mengompres logo.', 'error')
+    }
+  }
+
+  const handleBackgroundChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const compressed = await compressImageFile(file, { maxWidth: 1920, maxHeight: 1080, quality: 0.82 })
+      setFormData(prev => ({ ...prev, backgroundUrl: compressed.dataUrl }))
+    } catch (err) {
+      console.error('Gagal mengompres background master:', err)
+      Swal.fire('Gagal', 'Terjadi kesalahan saat mengompres background master.', 'error')
     }
   }
 
@@ -338,13 +362,13 @@ export default function SettingsPage() {
             <CardContent className="p-6 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="logo">Logo Sekolah (Terkompres Otomatis)</Label>
+                  <Label htmlFor="logo">Logo Sekolah & Sistem (Terkompres Otomatis)</Label>
                   <div className="flex items-center gap-4">
                     {formData.logoUrl && (
                       <img 
                         src={formData.logoUrl} 
                         alt="Preview Logo" 
-                        className="w-12 h-12 object-contain rounded-lg border border-slate-200 p-1 bg-slate-50" 
+                        className="w-12 h-12 object-contain rounded-lg border border-slate-200 p-1 bg-slate-50 shrink-0" 
                       />
                     )}
                     <Input 
@@ -352,9 +376,48 @@ export default function SettingsPage() {
                       type="file" 
                       accept="image/*" 
                       onChange={handleLogoChange}
-                      className="bg-white"
+                      className="bg-white dark:bg-slate-900"
                     />
                   </div>
+                  <p className="text-[11px] text-slate-500">Logo ini digunakan secara seragam di navbar, favicon browser, dan dokumen resmi.</p>
+                </div>
+
+                <div className="space-y-2 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="backgroundMaster" className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                      Wallpaper Background Master (Gedung Sekolah / Ekosistem)
+                    </Label>
+                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">Sumber Terpadu Multi-Halaman</span>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2">
+                    {formData.backgroundUrl ? (
+                      <div className="relative w-20 h-12 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0 shadow-xs">
+                        <img 
+                          src={formData.backgroundUrl} 
+                          alt="Preview Background Master" 
+                          className="w-full h-full object-cover" 
+                        />
+                      </div>
+                    ) : (
+                      <div className="relative w-20 h-12 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0 shadow-xs">
+                        <img 
+                          src="/muhipo-log.jpg" 
+                          alt="Default Background Master" 
+                          className="w-full h-full object-cover opacity-70" 
+                        />
+                      </div>
+                    )}
+                    <Input 
+                      id="backgroundMaster" 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleBackgroundChange}
+                      className="bg-white dark:bg-slate-900"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                    Wallpaper ini menjadi latar belakang master dengan efek blur di halaman login, beranda, dashboard, dan seluruh halaman publik SIMASMUH.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="schoolName">Nama Sekolah</Label>

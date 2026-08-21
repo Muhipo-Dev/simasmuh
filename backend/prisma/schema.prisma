@@ -249,6 +249,7 @@ model Setting {
   whatsappApiKey       String?
   whatsappApiUrl       String?
   helpdeskPhone        String? @default("088293733330")
+  backgroundUrl        String?
 }
 
 model Announcement {

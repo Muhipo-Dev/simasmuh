@@ -87,15 +87,23 @@ export default async function Home() {
     <div className="min-h-screen flex flex-col relative transition-colors duration-300 text-slate-900 dark:text-slate-100 selection:bg-blue-600 selection:text-white overflow-x-hidden">
       {/* Background Wallpaper with Smooth Glass Overlay */}
       <div className="fixed inset-0 -z-30 w-full h-full overflow-hidden pointer-events-none">
-        <Image
-          src="/muhipo-log.jpg"
-          alt="Latar Belakang SMA MUHIPO"
-          fill
-          priority
-          unoptimized
-          sizes="100vw"
-          className="object-cover object-center w-full h-full scale-105"
-        />
+        {settings?.backgroundUrl && (settings.backgroundUrl.startsWith('http') || settings.backgroundUrl.startsWith('data:')) ? (
+          <img
+            src={settings.backgroundUrl}
+            alt="Latar Belakang SMA MUHIPO"
+            className="object-cover object-center w-full h-full scale-105"
+          />
+        ) : (
+          <Image
+            src={settings?.backgroundUrl || "/muhipo-log.jpg"}
+            alt="Latar Belakang SMA MUHIPO"
+            fill
+            priority
+            unoptimized
+            sizes="100vw"
+            className="object-cover object-center w-full h-full scale-105"
+          />
+        )}
       </div>
       <div className="fixed inset-0 bg-slate-100/80 dark:bg-slate-950/90 backdrop-blur-[3px] -z-20 pointer-events-none" />
 

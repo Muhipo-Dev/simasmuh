@@ -623,22 +623,6 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Info Banner Pengalihan Pengaturan Biaya Ke Keuangan */}
-              <div className="border-t border-slate-200 pt-6 bg-purple-50/60 dark:bg-purple-950/30 p-4 rounded-xl border border-purple-100 dark:border-purple-900/50 space-y-2">
-                <div className="flex items-start gap-3">
-                  <CreditCard className="w-5 h-5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
-                  <div className="text-xs text-slate-700 dark:text-slate-300">
-                    <p className="font-bold text-sm text-purple-900 dark:text-purple-200">Pengaturan Biaya & Diskon Dikelola Keuangan</p>
-                    <p className="mt-1">
-                      Pengaturan default nominal tagihan umum (DPP, UKA, UKS) dan tarif SPP & diskon default berdasarkan program siswa sepenuhnya diatur oleh akun <strong>Bagian Keuangan</strong> di menu <strong>Keuangan &rarr; Pengaturan Biaya & Diskon</strong>.
-                    </p>
-                    <p className="mt-1 font-semibold text-purple-800 dark:text-purple-300">
-                      Superadmin hanya perlu memberikan label program (Kader, Tahfidz, Reguler, dll) pada akun siswa di menu Master Data Siswa.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               <div className="border-t border-slate-200 pt-6">
                 <h3 className="text-lg font-medium leading-none mb-4">Informasi Kepala Sekolah</h3>
                 <div className="grid grid-cols-1 gap-4">

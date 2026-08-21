@@ -1065,24 +1065,30 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-extrabold backdrop-blur-md border border-white/20 uppercase tracking-wider flex items-center gap-1.5 shadow-inner">
                   <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-                  Portal Statistika Eksekutif
+                  Pusat Informasi & Analisis Eksekutif
                 </span>
                 <span className="text-xs text-amber-100 font-semibold bg-amber-500/30 px-2.5 py-0.5 rounded-full">
-                  Executive Real-Time Monitor
+                  Executive Real-Time Dashboard
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
-                Statistika Penuh SIMASMUH
+                Dasbor Eksekutif & Ringkasan Sekolah
               </h1>
-              <p className="text-amber-100 text-sm sm:text-base font-medium max-w-2xl">
-                Selamat bertugas, <strong className="text-white font-bold">{(session?.user as any)?.name || 'Kepala Sekolah'}</strong>. Akses analitik komprehensif, rekapitulasi data, serta pilihan statistika khusus seluruh sektor SIMASMUH.
+              <p className="text-amber-100 text-sm sm:text-base font-medium max-w-2xl leading-relaxed">
+                Selamat datang, <strong className="text-white font-bold">{(session?.user as any)?.name || 'Bapak/Ibu Kepala Sekolah'}</strong>. Berikut adalah ikhtisar analitik komprehensif, rekapitulasi operasional, serta monitoring berkala seluruh sektor kegiatan sekolah.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="px-4 py-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold text-xs sm:text-sm">
-                Mode: Eksekutif (Statistika & Analisis Penuh)
-              </span>
+            <div className="flex flex-col sm:items-end gap-2 shrink-0">
+              <div className="px-4 py-2.5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white text-xs sm:text-sm shadow-inner max-w-sm">
+                <div className="flex items-center gap-2 font-bold mb-0.5">
+                  <Activity className="w-4 h-4 text-amber-300 shrink-0" />
+                  <span>Periode Data Sistem</span>
+                </div>
+                <p className="text-[11px] text-amber-100/90 leading-snug">
+                  Pencatatan data terintegrasi aktif dimulai sejak <strong>Tahun Ajaran 2026/2027</strong>. Data riwayat sebelum periode ini tersimpan pada arsip sistem terdahulu.
+                </p>
+              </div>
             </div>
           </div>
         </div>

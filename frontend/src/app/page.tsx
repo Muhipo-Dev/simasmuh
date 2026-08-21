@@ -171,14 +171,14 @@ export default async function Home() {
         <ProgramUnggulanSection />
 
         {/* Berita & Agenda Section */}
-        <section className="py-16 sm:py-24 px-4 sm:px-8 lg:px-20 bg-slate-50/60 dark:bg-slate-950/80 border-t border-slate-200/80 dark:border-slate-800 transition-colors duration-300 relative">
+        <section className="py-16 sm:py-24 px-4 sm:px-8 lg:px-20 bg-transparent transition-colors duration-300 relative">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-12">
 
             {/* Kolom Berita Utama (2/3 width) */}
             <div className="lg:col-span-2 space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 text-xs font-extrabold mb-2 border border-blue-100 dark:border-blue-900/60">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50/80 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 text-xs font-extrabold mb-2 border border-blue-200/80 dark:border-blue-900/60 backdrop-blur-md">
                     <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping shrink-0" />
                     INFORMASI TERKINI
                   </div>
@@ -186,7 +186,7 @@ export default async function Home() {
                 </div>
                 <Link
                   href="/berita"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-950/50 transition-all shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-blue-600 dark:text-blue-400 bg-white/80 dark:bg-slate-900/70 border border-white/40 dark:border-white/10 hover:border-blue-300 hover:bg-white dark:hover:bg-slate-900 transition-all shadow-xs backdrop-blur-md"
                 >
                   Lihat Semua Berita &rarr;
                 </Link>
@@ -194,12 +194,12 @@ export default async function Home() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {beritaList.length === 0 ? (
-                  <div className="col-span-2 text-center py-12 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl">
+                  <div className="col-span-2 text-center py-12 text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-900/70 border border-dashed border-slate-200/80 dark:border-slate-800 rounded-3xl backdrop-blur-md">
                     Belum ada berita terbaru.
                   </div>
                 ) : (
                   beritaList.slice(0, 2).map((news) => (
-                    <Link key={news.id} href="/berita" className="group flex flex-col bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 overflow-hidden shadow-sm hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-800 transition-all duration-300">
+                    <Link key={news.id} href="/berita" className="group flex flex-col bg-white/85 dark:bg-slate-900/70 rounded-3xl border border-white/40 dark:border-white/10 overflow-hidden shadow-sm hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-800 transition-all duration-300 backdrop-blur-xl">
                       {news.image ? (
                         <div className="relative h-52 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
                           <Image
@@ -227,7 +227,7 @@ export default async function Home() {
                           <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
                             {news.title}
                           </h3>
-                          <p className="text-slate-600 dark:text-slate-400 line-clamp-3 text-xs sm:text-sm leading-relaxed">
+                          <p className="text-slate-600 dark:text-slate-400 line-clamp-3 text-xs sm:text-sm leading-relaxed font-medium">
                             {news.content}
                           </p>
                         </div>
@@ -248,7 +248,7 @@ export default async function Home() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-950/80 text-orange-700 dark:text-orange-300 text-xs font-extrabold mb-2 border border-orange-100 dark:border-orange-900/60">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50/80 dark:bg-orange-950/80 text-orange-700 dark:text-orange-300 text-xs font-extrabold mb-2 border border-orange-200/80 dark:border-orange-900/60 backdrop-blur-md">
                     <Calendar className="w-3.5 h-3.5 text-orange-600" />
                     JADWAL ACARA
                   </div>
@@ -256,7 +256,7 @@ export default async function Home() {
                 </div>
                 <Link
                   href="/agenda"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-orange-300 transition-all shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-orange-600 dark:text-orange-400 bg-white/80 dark:bg-slate-900/70 border border-white/40 dark:border-white/10 hover:border-orange-300 transition-all shadow-xs backdrop-blur-md"
                 >
                   Semua &rarr;
                 </Link>
@@ -264,7 +264,7 @@ export default async function Home() {
 
               <div className="space-y-3.5">
                 {agendaList.length === 0 ? (
-                  <div className="text-center py-10 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl">
+                  <div className="text-center py-10 text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-900/70 border border-dashed border-slate-200/80 dark:border-slate-800 rounded-3xl backdrop-blur-md">
                     Belum ada agenda terbaru.
                   </div>
                 ) : (
@@ -277,7 +277,7 @@ export default async function Home() {
                       <Link
                         key={agenda.id}
                         href="/agenda"
-                        className="flex gap-4 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 hover:border-orange-300 dark:hover:border-orange-800/80 shadow-xs hover:shadow-md transition-all duration-300 group cursor-pointer"
+                        className="flex gap-4 p-4 rounded-2xl bg-white/85 dark:bg-slate-900/70 border border-white/40 dark:border-white/10 hover:border-orange-300 dark:hover:border-orange-800/80 shadow-xs hover:shadow-md transition-all duration-300 group cursor-pointer backdrop-blur-xl"
                       >
                         <div className="flex flex-col items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shrink-0 shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform duration-300">
                           <span className="text-lg font-black leading-none">{day}</span>
@@ -287,7 +287,7 @@ export default async function Home() {
                           <h4 className="font-bold text-slate-900 dark:text-white mb-1 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors truncate text-sm sm:text-base">
                             {agenda.title}
                           </h4>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 leading-relaxed">
+                          <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1 leading-relaxed font-medium">
                             {agenda.content}
                           </p>
                         </div>

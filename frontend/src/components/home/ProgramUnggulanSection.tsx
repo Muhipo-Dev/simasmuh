@@ -216,10 +216,10 @@ export default function ProgramUnggulanSection() {
   ]
 
   return (
-    <section className="pt-16 sm:pt-20 pb-16 md:pb-24 px-4 sm:px-8 lg:px-12 bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+    <section className="pt-16 sm:pt-20 pb-16 md:pb-24 px-4 sm:px-8 lg:px-12 bg-transparent transition-colors duration-300">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-10 sm:mb-14 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-100 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-extrabold shadow-xs">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-100/80 dark:bg-blue-950/80 border border-blue-200/80 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-extrabold shadow-xs backdrop-blur-md">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             Keunggulan Pendidikan SMA MUHIPO
           </div>
@@ -238,7 +238,7 @@ export default function ProgramUnggulanSection() {
             return (
               <div
                 key={prog.id}
-                className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-100 dark:border-slate-700/60 hover:shadow-lg transition-all duration-200 group flex flex-col justify-between min-h-[220px]"
+                className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-xs border border-white/40 dark:border-white/10 hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-700/60 transition-all duration-300 group flex flex-col justify-between min-h-[220px]"
               >
                 <div>
                   <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-3 sm:mb-4 transition-colors ${prog.iconBg}`}>
@@ -247,7 +247,7 @@ export default function ProgramUnggulanSection() {
                   <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-1.5 leading-snug">
                     {prog.title}
                   </h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-relaxed line-clamp-4">
+                  <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm leading-relaxed line-clamp-4 font-medium">
                     {prog.description}
                   </p>
                 </div>

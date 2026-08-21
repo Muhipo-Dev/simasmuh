@@ -2527,11 +2527,6 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
-
-        {/* 6. INFORMASI & PENGUMUMAN SEKOLAH */}
-        <div className="w-full">
-          {renderAnnouncements()}
-        </div>
       </div>
     )
   }

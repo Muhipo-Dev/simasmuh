@@ -124,7 +124,7 @@ export function PublicNavbar({
                 {navItems.map((item) => {
                   const active = isActive(item.href)
                   return (
-                    <DropdownMenuItem key={item.href} asChild>
+                    <DropdownMenuItem key={item.href} className="p-0 focus:bg-transparent">
                       <Link
                         href={item.href}
                         className={`w-full cursor-pointer py-2 px-3 text-sm rounded-xl transition-colors ${
@@ -139,7 +139,7 @@ export function PublicNavbar({
                   )
                 })}
                 <DropdownMenuSeparator className="my-1.5 border-white/10" />
-                <DropdownMenuItem asChild>
+                <DropdownMenuItem className="p-0 focus:bg-transparent">
                   <Link
                     href="/login"
                     className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-white bg-[#2B50A1] hover:bg-[#1f3c7a] rounded-xl flex items-center justify-center shadow-sm"

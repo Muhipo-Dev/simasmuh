@@ -869,6 +869,10 @@ export class FinanceService {
     const results: any[] = [];
     const dueDate = this.parseDueDate(dto.dueDate);
 
+    // Fetch default DPP from Setting or ProgramConfig
+    const setting = await this.prisma.setting.findFirst();
+    const systemDefaultDpp = setting?.defaultDpp && setting.defaultDpp > 0 ? setting.defaultDpp : 1500000;
+
     for (const student of students) {
       // Check if DPP already exists for this student
       const existingDPP = await this.prisma.tagihan.findFirst({
@@ -889,14 +893,17 @@ export class FinanceService {
         continue;
       }
 
+      // Base DPP from setting/dto
+      let studentBaseDpp = dto.baseAmount || systemDefaultDpp;
+
       // SERVER-SIDE CALCULATION: Apply student default beasiswa if set
-      let finalAmount = dto.baseAmount;
-      let beasiswaPercentage = student.beasiswaPercentage || 0;
+      let finalAmount = studentBaseDpp;
+      const beasiswaPercentage = student.beasiswaDppPct || student.beasiswaPercentage || 0;
       let beasiswaAmount = 0;
 
       if (beasiswaPercentage > 0) {
-        beasiswaAmount = Math.round(dto.baseAmount * (beasiswaPercentage / 100));
-        finalAmount = dto.baseAmount - beasiswaAmount;
+        beasiswaAmount = Math.round(studentBaseDpp * (beasiswaPercentage / 100));
+        finalAmount = Math.max(0, studentBaseDpp - beasiswaAmount);
       }
 
       // Create tagihan with SERVER-CALCULATED amount
@@ -915,16 +922,17 @@ export class FinanceService {
         },
       });
 
-      // Store beasiswa info in notes as JSON (temporary workaround until schema update)
+      // Store beasiswa info in notes as JSON
       if (beasiswaPercentage > 0) {
         await this.prisma.tagihan.update({
           where: { id: tagihan.id },
           data: {
             notes: `${tagihan.notes} | BEASISWA_INFO: ${JSON.stringify({
-              originalAmount: dto.baseAmount,
+              originalAmount: studentBaseDpp,
               beasiswaPercentage,
               beasiswaAmount,
               finalAmount,
+              reason: student.beasiswaReason || 'Beasiswa DPP',
             })}`,
           },
         });
@@ -934,7 +942,7 @@ export class FinanceService {
         studentId: student.id,
         studentName: student.name,
         program: student.program || 'reguler',
-        originalAmount: dto.baseAmount,
+        originalAmount: studentBaseDpp,
         beasiswaPercentage,
         beasiswaAmount,
         finalAmount,
@@ -1142,51 +1150,59 @@ export class FinanceService {
   }
 
   // ============================================================
-  // REKAPITULASI (dari tagihan yang sudah LUNAS)
+  // REKAPITULASI (dari tagihan yang sudah LUNAS & ANGSURAN)
   // ============================================================
   async getRecapitulasi(year: number, month?: number) {
-    const types = ['SPP', 'DPP', 'INFAQ', 'AKADEMIK', 'SEKOLAH'];
+    // Dynamic distinct types or standard types
+    const types = ['SPP', 'DPP', 'INFAQ', 'AKADEMIK', 'SEKOLAH', 'SERAGAM', 'UKS', 'UKA'];
 
-    // Tagihan LUNAS tahunan
+    // Tagihan LUNAS / ANGSURAN tahunan
     const yearlyPaid = await this.prisma.tagihan.findMany({
-      where: { year, status: 'LUNAS' },
-      select: { type: true, amount: true },
+      where: { year, status: { in: ['LUNAS', 'ANGSURAN'] } },
+      select: { type: true, amount: true, amountPaid: true, status: true },
     });
 
-    // Tagihan LUNAS bulanan
+    // Tagihan LUNAS / ANGSURAN bulanan
     const monthlyPaid = month
       ? await this.prisma.tagihan.findMany({
-          where: { year, month, status: 'LUNAS' },
-          select: { type: true, amount: true },
+          where: { year, month, status: { in: ['LUNAS', 'ANGSURAN'] } },
+          select: { type: true, amount: true, amountPaid: true, status: true },
         })
       : [];
 
-    // Tagihan BELUM LUNAS (piutang)
+    // Tagihan BELUM LUNAS / Sisa ANGSURAN (piutang)
     const yearlyUnpaid = await this.prisma.tagihan.findMany({
-      where: { year, status: 'BELUM_LUNAS' },
-      select: { type: true, amount: true },
+      where: { year, status: { in: ['BELUM_LUNAS', 'ANGSURAN'] } },
+      select: { type: true, amount: true, amountPaid: true, status: true },
     });
 
-    // Tren bulanan (tagihan LUNAS per bulan dalam setahun)
+    // Tren bulanan (penerimaan tagihan per bulan dalam setahun)
     const trendPaid = await this.prisma.tagihan.findMany({
-      where: { year, status: 'LUNAS', NOT: { month: null } },
-      select: { month: true, amount: true },
+      where: { year, status: { in: ['LUNAS', 'ANGSURAN'] }, NOT: { month: null } },
+      select: { month: true, amount: true, amountPaid: true, status: true },
     });
 
-    const buildSummary = (items: { type: string; amount: number }[]) =>
-      types.map((t) => ({
-        type: t,
-        total: items
-          .filter((p) => p.type === t)
-          .reduce((s, p) => s + p.amount, 0),
-        count: items.filter((p) => p.type === t).length,
-      }));
+    const buildSummary = (items: { type: string; amount: number; amountPaid?: number | null; status?: string }[], isUnpaid = false) =>
+      types.map((t) => {
+        const filtered = items.filter((p) => p.type.toUpperCase() === t.toUpperCase());
+        const total = filtered.reduce((s, p) => {
+          if (isUnpaid) {
+            return s + Math.max(0, p.amount - (p.amountPaid || 0));
+          }
+          return s + (p.amountPaid || (p.status === 'LUNAS' ? p.amount : 0));
+        }, 0);
+        return {
+          type: t,
+          total,
+          count: filtered.length,
+        };
+      });
 
     const monthlyTrend = Array.from({ length: 12 }, (_, i) => {
       const m = i + 1;
       const total = trendPaid
         .filter((p) => p.month === m)
-        .reduce((s, p) => s + p.amount, 0);
+        .reduce((s, p) => s + (p.amountPaid || (p.status === 'LUNAS' ? p.amount : 0)), 0);
       return { month: m, total };
     });
 
@@ -1195,7 +1211,7 @@ export class FinanceService {
       month: month ?? null,
       yearly: buildSummary(yearlyPaid),
       monthly: buildSummary(monthlyPaid),
-      unpaid: buildSummary(yearlyUnpaid),
+      unpaid: buildSummary(yearlyUnpaid, true),
       monthlyTrend,
     };
   }
@@ -1407,6 +1423,15 @@ export class FinanceService {
    * Checks if SPP for the current month and year has been generated for all active students.
    * If not, it creates a new "BELUM_LUNAS" tagihan.
    */
+  // ============================================================
+  // AUTOMATIC BILLING (CRON)
+  // ============================================================
+
+  /**
+   * Run every day at 01:00 AM.
+   * Checks if SPP for the current month and year has been generated for all active students.
+   * If not, it creates a new tagihan synchronized with ProgramConfig and student scholarships.
+   */
   @Cron(CronExpression.EVERY_DAY_AT_1AM)
   async generateMonthlySPP() {
     this.logger.log('Running automatic SPP generation check...');
@@ -1415,12 +1440,19 @@ export class FinanceService {
     const currentMonth = now.getMonth() + 1; // 1-12
     const currentYear = now.getFullYear();
 
-    // Default SPP amount, could be moved to a settings table later
-    const DEFAULT_SPP_AMOUNT = 150000;
+    // Default SPP fallback
+    const DEFAULT_SPP_AMOUNT = 300000;
 
-    // Get all students
+    // Get all students with program and scholarship data
     const students = await this.prisma.student.findMany({
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        program: true,
+        beasiswaSppPct: true,
+        beasiswaPercentage: true,
+        beasiswaReason: true,
+      },
     });
 
     let generatedCount = 0;
@@ -1437,6 +1469,46 @@ export class FinanceService {
       });
 
       if (!existingSPP) {
+        // Fetch SPP baseline from ProgramConfig
+        let sppAmount = DEFAULT_SPP_AMOUNT;
+        if (student.program) {
+          const progConfig =
+            (await this.prisma.programConfig.findUnique({
+              where: { code: student.program },
+            })) ||
+            (await this.prisma.programConfig.findFirst({
+              where: { code: { equals: student.program, mode: 'insensitive' } },
+            }));
+
+          if (progConfig && progConfig.defaultSpp > 0) {
+            sppAmount = progConfig.defaultSpp;
+          }
+        }
+
+        const calculatedAmount = Math.round(sppAmount);
+        let finalAmount = calculatedAmount;
+        const pct = student.beasiswaSppPct || student.beasiswaPercentage || 0;
+        let notes = `Tagihan otomatis SPP ${currentMonth}/${currentYear} - Program: ${student.program || 'reguler'}`;
+        let status = 'BELUM_LUNAS';
+        let paidDate: Date | null = null;
+
+        if (pct > 0) {
+          const beasiswaAmount = Math.round(calculatedAmount * (pct / 100));
+          finalAmount = Math.max(0, calculatedAmount - beasiswaAmount);
+          const beasiswaInfo = {
+            originalAmount: calculatedAmount,
+            beasiswaPercentage: pct,
+            beasiswaAmount,
+            finalAmount,
+            reason: student.beasiswaReason || 'Beasiswa Default Siswa',
+          };
+          notes = `${notes} | BEASISWA_INFO: ${JSON.stringify(beasiswaInfo)}`;
+          if (finalAmount === 0) {
+            status = 'LUNAS';
+            paidDate = new Date();
+          }
+        }
+
         // Generate new tagihan
         const dueDate = new Date(currentYear, currentMonth - 1, 10); // Due on the 10th of the month
 
@@ -1444,12 +1516,13 @@ export class FinanceService {
           data: {
             studentId: student.id,
             type: 'SPP',
-            amount: DEFAULT_SPP_AMOUNT,
+            amount: finalAmount,
             month: currentMonth,
             year: currentYear,
             dueDate,
-            status: 'BELUM_LUNAS',
-            notes: 'Tagihan otomatis',
+            status,
+            paidDate,
+            notes,
           },
         });
         generatedCount++;
@@ -1521,7 +1594,7 @@ export class FinanceService {
   // ============================================================
   async getLpj(year: number, month?: number) {
     const wherePengeluaran: any = {};
-    const whereTagihan: any = { status: 'LUNAS' };
+    const whereTagihan: any = { status: { in: ['LUNAS', 'ANGSURAN'] } };
 
     if (month) {
       const start = new Date(year, month - 1, 1);
@@ -1535,10 +1608,10 @@ export class FinanceService {
       whereTagihan.paidDate = { gte: start, lte: end };
     }
 
-    // 1. Ambil semua Pemasukan (Tagihan Lunas)
+    // 1. Ambil semua Pemasukan (Tagihan Lunas & Angsuran)
     const tagihans = await this.prisma.tagihan.findMany({
       where: whereTagihan,
-      select: { type: true, amount: true, paidDate: true },
+      select: { type: true, amount: true, amountPaid: true, status: true, paidDate: true },
     });
 
     // 2. Ambil semua Pengeluaran
@@ -1551,8 +1624,9 @@ export class FinanceService {
     let totalPemasukan = 0;
     const rincianPemasukan: Record<string, number> = {};
     tagihans.forEach((t) => {
-      totalPemasukan += t.amount;
-      rincianPemasukan[t.type] = (rincianPemasukan[t.type] || 0) + t.amount;
+      const nominal = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0);
+      totalPemasukan += nominal;
+      rincianPemasukan[t.type] = (rincianPemasukan[t.type] || 0) + nominal;
     });
 
     // Hitung Total Pengeluaran
@@ -1584,9 +1658,9 @@ export class FinanceService {
         amount: rincianPengeluaran[key],
       })),
       // Histori
-      historyPemasukan: tagihans.sort(
-        (a, b) => b.paidDate!.getTime() - a.paidDate!.getTime(),
-      ),
+      historyPemasukan: tagihans
+        .filter((t) => t.paidDate)
+        .sort((a, b) => b.paidDate!.getTime() - a.paidDate!.getTime()),
       historyPengeluaran: pengeluarans.sort(
         (a, b) => b.date.getTime() - a.date.getTime(),
       ),

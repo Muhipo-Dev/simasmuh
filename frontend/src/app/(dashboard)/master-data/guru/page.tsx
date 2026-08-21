@@ -46,8 +46,10 @@ export default function TeachersPage() {
   const { data: session } = useSession()
   const userRole = (session?.user as any)?.role || ''
   const subRole = (session?.user as any)?.subRole || ''
-  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
-  const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH'
+  const subRole2 = (session?.user as any)?.subRole2 || ''
+  const subRole3 = (session?.user as any)?.subRole3 || ''
+  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole2) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole3)
+  const isKepalaSekolah = [userRole, subRole, subRole2, subRole3].includes('KEPALA_SEKOLAH')
   const authenticatedFetch = useAuthenticatedFetch();
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -586,31 +588,33 @@ export default function TeachersPage() {
           <Table className="w-full table-auto">
             <TableHeader className="bg-slate-50 dark:bg-slate-900/60">
               <TableRow>
-                <TableHead className="w-10 text-center pl-4">
-                  <input 
-                    type="checkbox"
-                    checked={isAllSelected}
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 cursor-pointer accent-blue-600"
-                    title="Pilih Semua"
-                  />
-                </TableHead>
+                {isSuperOrAdmin && (
+                  <TableHead className="w-12 text-center pl-4">
+                    <input 
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 cursor-pointer accent-blue-600"
+                      title="Pilih Semua"
+                    />
+                  </TableHead>
+                )}
                 <TableHead>Guru & Identitas</TableHead>
                 <TableHead>Kontak & Akun Login</TableHead>
-                <TableHead className="text-right pr-4">Aksi</TableHead>
+                {isSuperOrAdmin && <TableHead className="text-right pr-4">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={isSuperOrAdmin ? 4 : 2} className="text-center py-8 text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Memuat data...
                   </TableCell>
                 </TableRow>
               ) : filterDataBySearch(teachers, searchQuery)?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={isSuperOrAdmin ? 4 : 2} className="text-center py-8 text-slate-500">
                     {searchQuery ? 'Tidak ada data guru yang sesuai dengan pencarian.' : 'Belum ada data guru.'}
                   </TableCell>
                 </TableRow>
@@ -620,14 +624,16 @@ export default function TeachersPage() {
                   const nip = item.nip || item.user?.nipNbm
                   return (
                     <TableRow key={item.id} className={isSelected ? 'bg-blue-50/80 dark:bg-blue-950/40' : ''}>
-                      <TableCell className="text-center pl-4">
-                        <input 
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleSelectOne(item.id)}
-                          className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 cursor-pointer accent-blue-600"
-                        />
-                      </TableCell>
+                      {isSuperOrAdmin && (
+                        <TableCell className="text-center pl-4">
+                          <input 
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleSelectOne(item.id)}
+                            className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 cursor-pointer accent-blue-600"
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
                           <span className="font-bold text-slate-900 dark:text-white text-sm">{item.user?.name || '-'}</span>
@@ -645,8 +651,8 @@ export default function TeachersPage() {
                           {item.user?.email && <span className="text-slate-500 text-[11px]">{item.user.email}</span>}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right pr-4">
-                        {isSuperOrAdmin ? (
+                      {isSuperOrAdmin && (
+                        <TableCell className="text-right pr-4">
                           <div className="flex items-center justify-end gap-1">
                             <Button 
                               variant="ghost" 
@@ -692,10 +698,8 @@ export default function TeachersPage() {
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
-                        ) : (
-                          <span className="text-[11px] text-slate-400 font-medium italic">Read-Only</span>
-                        )}
-                      </TableCell>
+                        </TableCell>
+                      )}
                     </TableRow>
                   )
                 })

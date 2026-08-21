@@ -179,9 +179,9 @@ export default function StudentsPage() {
   const subRole = (session?.user as any)?.subRole || ''
   const subRole2 = (session?.user as any)?.subRole2 || ''
   const subRole3 = (session?.user as any)?.subRole3 || ''
-  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
-  const isSuperadmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
-  const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH'
+  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole2) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole3)
+  const isSuperadmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole2) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole3)
+  const isKepalaSekolah = [userRole, subRole, subRole2, subRole3].includes('KEPALA_SEKOLAH')
   const isFinance = ['SUPERADMIN', 'ADMIN_IT', 'KEUANGAN'].includes(userRole) || [subRole, subRole2, subRole3].includes('KEUANGAN')
 
   const [open, setOpen] = useState(false)
@@ -2273,13 +2273,13 @@ export default function StudentsPage() {
                 <TableHead>Program</TableHead>
                 <TableHead>Jalur Pendaftaran</TableHead>
                 <TableHead>Kelas</TableHead>
-                <TableHead className="text-right pr-6">Aksi</TableHead>
+                {isSuperOrAdmin && <TableHead className="text-right pr-6">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-10">
+                  <TableCell colSpan={isSuperOrAdmin ? 9 : 7} className="text-center py-10">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
                       Memuat data...
@@ -2288,7 +2288,7 @@ export default function StudentsPage() {
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-10 text-slate-500">
+                  <TableCell colSpan={isSuperOrAdmin ? 9 : 7} className="text-center py-10 text-slate-500">
                     Belum ada data siswa untuk kriteria ini.
                   </TableCell>
                 </TableRow>
@@ -2349,16 +2349,18 @@ export default function StudentsPage() {
                           {item.class?.name || 'Belum ada kelas'}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right pr-6">
-                        <div className="flex justify-end gap-1.5">
-                          <Button variant="ghost" size="icon" title="Kelola / Edit Data Siswa" onClick={() => handleOpenEditDialog(item)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" title="Hapus Siswa" onClick={() => handleDelete(item.id)} disabled={deleteMutation.isPending} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {isSuperOrAdmin && (
+                        <TableCell className="text-right pr-6">
+                          <div className="flex justify-end gap-1.5">
+                            <Button variant="ghost" size="icon" title="Kelola / Edit Data Siswa" onClick={() => handleOpenEditDialog(item)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" title="Hapus Siswa" onClick={() => handleDelete(item.id)} disabled={deleteMutation.isPending} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   )
                 })

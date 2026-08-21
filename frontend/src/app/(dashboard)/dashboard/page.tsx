@@ -13,7 +13,7 @@ import {
   GraduationCap, Award, BellRing, Sparkles, ChevronDown, TrendingUp,
   TrendingDown, Wallet, Landmark, DollarSign, Activity, CheckCircle2,
   ArrowUpRight, FileText, PieChart, ShieldAlert, BarChart3, Clock,
-  ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake
+  ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake, Megaphone
 } from 'lucide-react'
 import { QrScanner } from '@/components/QrScanner'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
@@ -1051,6 +1051,17 @@ export default function DashboardPage() {
 
     const demo = execStats?.demografis || { gender: [], program: [], jalur: [], gelombang: [] }
 
+    const effectiveCurveType =
+      selectedStatCategory === 'SEMUA' || selectedStatCategory === 'PRESENSI'
+        ? 'PRESENSI'
+        : selectedStatCategory === 'KEUANGAN'
+          ? 'KEUANGAN'
+          : selectedStatCategory === 'KEDISIPLINAN'
+            ? 'KEDISIPLINAN'
+            : selectedStatCategory === 'AKADEMIK'
+              ? 'AKADEMIK'
+              : 'DEMOGRAFIS';
+
     return (
       <div className="space-y-6 lg:space-y-8 pb-10">
         {/* Banner Welcome Header Kepala Sekolah */}
@@ -1210,92 +1221,88 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 2. KURVA & GRAFIK ANALITIK MULTI-SEKTOR EKSEKUTIF (PRESENSI, KEUANGAN KESELURUHAN, PRESTASI & DEMOGRAFI) */}
+        {/* 2. KURVA & GRAFIK ANALITIK MULTI-SEKTOR EKSEKUTIF */}
         <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-3xl p-5 sm:p-7">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5 mb-6">
-            <div>
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
-                  Kurva & Tren Analitik Komprehensif Sekolah
-                </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center shrink-0">
+                <TrendingUp className="w-5 h-5" />
               </div>
-              <p className="text-xs text-slate-500 mt-1">
-                Visualisasi dinamika data mingguan 7 hari terakhir: Presensi kehadiran, arus penerimaan keuangan keseluruhan, catatan karakter, serta komposisi demografis.
-              </p>
+              <div>
+                <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                  Kurva & Tren Analitik Komprehensif
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Visualisasi dinamika mingguan 7 hari terakhir diselaraskan otomatis dengan sektor terpilih di atas.
+                </p>
+              </div>
             </div>
 
-            {/* Selector Tab Jenis Kurva */}
-            <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 overflow-x-auto shrink-0">
-              {[
-                { id: 'PRESENSI', label: '⏱️ Kehadiran', desc: 'Siswa & Guru' },
-                { id: 'KEUANGAN', label: '💰 Keuangan Keseluruhan', desc: 'Penerimaan Harian' },
-                { id: 'PRESTASI', label: '🛡️ Adab & Tatib', desc: 'Prestasi & Catatan' },
-                { id: 'DEMOGRAFI', label: '👥 Demografi', desc: 'Distribusi Gender' },
-              ].map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedCurveType(c.id as any)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${selectedCurveType === c.id
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200 dark:ring-slate-700'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                    }`}
-                >
-                  <span>{c.label}</span>
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5" />
+                <span>
+                  Mode: {effectiveCurveType === 'PRESENSI' ? 'Kehadiran Harian' : effectiveCurveType === 'KEUANGAN' ? 'Neraca Keuangan' : effectiveCurveType === 'KEDISIPLINAN' ? 'Adab & Tata Tertib' : effectiveCurveType === 'DEMOGRAFIS' ? 'Demografis Siswa' : 'Pembelajaran & Sesi'}
+                </span>
+              </Badge>
             </div>
           </div>
 
-          {/* Area Kurva Interaktif Responsive (Tinggi Proporsional h-80 / 320px, bentuk kurva tegas & tidak gepeng) */}
+          {/* Area Kurva Interaktif Responsive */}
           <div className="space-y-4">
             {/* Legend Sesuai Mode Kurva */}
             <div className="flex items-center justify-between flex-wrap gap-3 px-1 text-xs font-bold">
               <span className="text-slate-400 text-[11px] font-medium">Periode: 7 Hari Terakhir</span>
               <div className="flex items-center gap-4">
-                {selectedCurveType === 'PRESENSI' && (
+                {effectiveCurveType === 'PRESENSI' && (
                   <>
                     <div className="flex items-center gap-1.5">
                       <span className="w-3 h-3 rounded-full bg-blue-600 inline-block shadow-xs" />
-                      <span className="text-slate-700 dark:text-slate-300">Tingkat Hadir Siswa (%)</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">Tingkat Hadir Siswa (%)</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="w-3 h-3 rounded-full bg-teal-500 inline-block shadow-xs" />
-                      <span className="text-slate-700 dark:text-slate-300">Tingkat Hadir Guru & Pegawai (%)</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">Tingkat Hadir Guru & Pegawai (%)</span>
                     </div>
                   </>
                 )}
-                {selectedCurveType === 'KEUANGAN' && (
+                {effectiveCurveType === 'KEUANGAN' && (
                   <>
                     <div className="flex items-center gap-1.5">
                       <span className="w-3 h-3 rounded-full bg-emerald-600 inline-block shadow-xs" />
-                      <span className="text-slate-700 dark:text-slate-300">Pemasukan Keuangan Keseluruhan (Rp)</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">Penerimaan Keuangan Keseluruhan (Rp)</span>
                     </div>
                   </>
                 )}
-                {selectedCurveType === 'PRESTASI' && (
+                {effectiveCurveType === 'KEDISIPLINAN' && (
                   <>
                     <div className="flex items-center gap-1.5">
                       <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow-xs" />
-                      <span className="text-slate-700 dark:text-slate-300">Apresiasi & Prestasi Siswa</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">Apresiasi & Prestasi Siswa</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="w-3 h-3 rounded-full bg-rose-500 inline-block shadow-xs" />
-                      <span className="text-slate-700 dark:text-slate-300">Catatan Pelanggaran</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">Catatan Pelanggaran</span>
                     </div>
                   </>
                 )}
-                {selectedCurveType === 'DEMOGRAFI' && (
+                {effectiveCurveType === 'DEMOGRAFIS' && (
                   <>
                     <div className="flex items-center gap-1.5">
                       <span className="w-3 h-3 rounded-full bg-blue-500 inline-block shadow-xs" />
-                      <span className="text-slate-700 dark:text-slate-300">Laki-Laki</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">Laki-Laki</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="w-3 h-3 rounded-full bg-purple-500 inline-block shadow-xs" />
-                      <span className="text-slate-700 dark:text-slate-300">Perempuan</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">Perempuan</span>
+                    </div>
+                  </>
+                )}
+                {effectiveCurveType === 'AKADEMIK' && (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-indigo-600 inline-block shadow-xs" />
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">Sesi Jadwal Pembelajaran</span>
                     </div>
                   </>
                 )}
@@ -1304,23 +1311,27 @@ export default function DashboardPage() {
 
             {/* Kanvas Kurva SVG Proporsional Tegas */}
             <div className="h-72 sm:h-80 w-full pt-4 pb-2 relative bg-slate-50/50 dark:bg-slate-950/30 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-3 sm:p-5">
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 700 240" preserveAspectRatio="none">
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 700 240">
                 <defs>
                   <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.45" />
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.4" />
                     <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
                   </linearGradient>
                   <linearGradient id="tealGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.38" />
+                    <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.35" />
                     <stop offset="100%" stopColor="#14b8a6" stopOpacity="0.0" />
                   </linearGradient>
                   <linearGradient id="emeraldGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.5" />
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.45" />
                     <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
                   </linearGradient>
                   <linearGradient id="roseGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.38" />
+                    <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.35" />
                     <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.0" />
+                  </linearGradient>
+                  <linearGradient id="indigoGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.4" />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
 
@@ -1329,9 +1340,9 @@ export default function DashboardPage() {
                   const y = 210 - (level / 100) * 180
                   return (
                     <g key={idx}>
-                      <line x1="0" y1={y} x2="700" y2={y} stroke="currentColor" strokeDasharray="3 3" className="text-slate-200 dark:text-slate-800" strokeWidth="1" />
-                      <text x="5" y={y - 4} className="text-[10px] fill-slate-400 font-mono font-semibold">
-                        {selectedCurveType === 'PRESENSI' ? `${level}%` : level === 100 ? 'Maks' : level === 50 ? 'Med' : level === 0 ? '0' : ''}
+                      <line x1="40" y1={y} x2="680" y2={y} stroke="currentColor" strokeDasharray="3 3" className="text-slate-200 dark:text-slate-800" strokeWidth="1" />
+                      <text x="35" y={y + 3} textAnchor="end" className="text-[11px] fill-slate-400 font-sans font-medium">
+                        {effectiveCurveType === 'PRESENSI' ? `${level}%` : level === 100 ? 'Maks' : level === 50 ? 'Med' : level === 0 ? '0' : ''}
                       </text>
                     </g>
                   )
@@ -1355,14 +1366,14 @@ export default function DashboardPage() {
                     }, '')
                   }
 
-                  if (selectedCurveType === 'PRESENSI') {
+                  if (effectiveCurveType === 'PRESENSI') {
                     const ptsSiswa = weekly.map((w: any, i: number) => ({
-                      x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
+                      x: 60 + (i * (600 / Math.max(1, weekly.length - 1))),
                       y: 210 - ((w.siswaPct || 0) / 100) * 180,
                       val: `${w.siswaPct}%`
                     }))
                     const ptsStaff = weekly.map((w: any, i: number) => ({
-                      x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
+                      x: 60 + (i * (600 / Math.max(1, weekly.length - 1))),
                       y: 210 - ((w.staffPct || 0) / 100) * 180,
                       val: `${w.staffPct}%`
                     }))
@@ -1376,22 +1387,22 @@ export default function DashboardPage() {
                       <>
                         <path d={areaSiswa} fill="url(#blueGrad)" />
                         <path d={areaStaff} fill="url(#tealGrad)" />
-                        <path d={pathSiswa} fill="none" stroke="#2563eb" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d={pathStaff} fill="none" stroke="#14b8a6" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={pathSiswa} fill="none" stroke="#2563eb" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={pathStaff} fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                         {ptsSiswa.map((p: any, i: number) => (
-                          <circle key={`s-${i}`} cx={p.x} cy={p.y} r="6" fill="#2563eb" stroke="#ffffff" strokeWidth="3" />
+                          <circle key={`s-${i}`} cx={p.x} cy={p.y} r="5.5" fill="#2563eb" stroke="#ffffff" strokeWidth="2.5" />
                         ))}
                         {ptsStaff.map((p: any, i: number) => (
-                          <circle key={`st-${i}`} cx={p.x} cy={p.y} r="5" fill="#14b8a6" stroke="#ffffff" strokeWidth="2.5" />
+                          <circle key={`st-${i}`} cx={p.x} cy={p.y} r="4.5" fill="#14b8a6" stroke="#ffffff" strokeWidth="2" />
                         ))}
                       </>
                     )
                   }
 
-                  if (selectedCurveType === 'KEUANGAN') {
+                  if (effectiveCurveType === 'KEUANGAN') {
                     const maxPemasukan = Math.max(...weekly.map((w: any) => w.pemasukan || 0), 1000000)
                     const ptsUang = weekly.map((w: any, i: number) => ({
-                      x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
+                      x: 60 + (i * (600 / Math.max(1, weekly.length - 1))),
                       y: 210 - ((w.pemasukan || 0) / maxPemasukan) * 170,
                       val: w.pemasukan
                     }))
@@ -1402,22 +1413,22 @@ export default function DashboardPage() {
                     return (
                       <>
                         <path d={areaUang} fill="url(#emeraldGrad)" />
-                        <path d={pathUang} fill="none" stroke="#10b981" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={pathUang} fill="none" stroke="#10b981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
                         {ptsUang.map((p: any, i: number) => (
-                          <circle key={`u-${i}`} cx={p.x} cy={p.y} r="6.5" fill="#10b981" stroke="#ffffff" strokeWidth="3" />
+                          <circle key={`u-${i}`} cx={p.x} cy={p.y} r="5.5" fill="#10b981" stroke="#ffffff" strokeWidth="2.5" />
                         ))}
                       </>
                     )
                   }
 
-                  if (selectedCurveType === 'PRESTASI') {
+                  if (effectiveCurveType === 'KEDISIPLINAN') {
                     const maxCount = Math.max(...weekly.map((w: any) => Math.max(w.prestasi || 0, w.pelanggaran || 0)), 5)
                     const ptsPrestasi = weekly.map((w: any, i: number) => ({
-                      x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
+                      x: 60 + (i * (600 / Math.max(1, weekly.length - 1))),
                       y: 210 - ((w.prestasi || 0) / maxCount) * 170,
                     }))
                     const ptsPelanggaran = weekly.map((w: any, i: number) => ({
-                      x: 50 + (i * (600 / Math.max(1, weekly.length - 1))),
+                      x: 60 + (i * (600 / Math.max(1, weekly.length - 1))),
                       y: 210 - ((w.pelanggaran || 0) / maxCount) * 170,
                     }))
 
@@ -1430,19 +1441,40 @@ export default function DashboardPage() {
                       <>
                         <path d={areaPres} fill="url(#emeraldGrad)" />
                         <path d={areaPel} fill="url(#roseGrad)" />
-                        <path d={pathPres} fill="none" stroke="#10b981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={pathPres} fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
                         <path d={pathPel} fill="none" stroke="#f43f5e" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
                         {ptsPrestasi.map((p: any, i: number) => (
-                          <circle key={`pr-${i}`} cx={p.x} cy={p.y} r="5.5" fill="#10b981" stroke="#ffffff" strokeWidth="2.5" />
+                          <circle key={`pr-${i}`} cx={p.x} cy={p.y} r="5" fill="#10b981" stroke="#ffffff" strokeWidth="2" />
                         ))}
                         {ptsPelanggaran.map((p: any, i: number) => (
-                          <circle key={`pl-${i}`} cx={p.x} cy={p.y} r="5.5" fill="#f43f5e" stroke="#ffffff" strokeWidth="2.5" />
+                          <circle key={`pl-${i}`} cx={p.x} cy={p.y} r="5" fill="#f43f5e" stroke="#ffffff" strokeWidth="2" />
                         ))}
                       </>
                     )
                   }
 
-                  if (selectedCurveType === 'DEMOGRAFI') {
+                  if (effectiveCurveType === 'AKADEMIK') {
+                    const maxSesi = Math.max(todaySchedules.length, 6)
+                    const ptsAkademik = weekly.map((w: any, i: number) => ({
+                      x: 60 + (i * (600 / Math.max(1, weekly.length - 1))),
+                      y: 210 - ((w.siswaHadir > 0 ? (i % 2 === 0 ? 5 : 6) : 0) / maxSesi) * 170,
+                    }))
+
+                    const pathAka = createSmoothPath(ptsAkademik)
+                    const areaAka = `${pathAka} L ${ptsAkademik[ptsAkademik.length - 1].x} 210 L ${ptsAkademik[0].x} 210 Z`
+
+                    return (
+                      <>
+                        <path d={areaAka} fill="url(#indigoGrad)" />
+                        <path d={pathAka} fill="none" stroke="#6366f1" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                        {ptsAkademik.map((p: any, i: number) => (
+                          <circle key={`aka-${i}`} cx={p.x} cy={p.y} r="5.5" fill="#6366f1" stroke="#ffffff" strokeWidth="2.5" />
+                        ))}
+                      </>
+                    )
+                  }
+
+                  if (effectiveCurveType === 'DEMOGRAFIS') {
                     const lCount = demo.gender?.find((g: any) => g.name === 'L')?.count || 0
                     const pCount = demo.gender?.find((g: any) => g.name === 'P')?.count || 0
                     const totalG = Math.max(lCount + pCount, 1)
@@ -1450,12 +1482,12 @@ export default function DashboardPage() {
                     const pctP = Math.round((pCount / totalG) * 100)
 
                     return (
-                      <g className="text-center">
-                        <line x1="100" y1="120" x2="600" y2="120" stroke="#94a3b8" strokeWidth="16" strokeLinecap="round" />
-                        <line x1="100" y1="120" x2={100 + (pctL / 100) * 500} y2="120" stroke="#3b82f6" strokeWidth="16" strokeLinecap="round" />
-                        <line x1={100 + (pctL / 100) * 500} y1="120" x2="600" y2="120" stroke="#a855f7" strokeWidth="16" strokeLinecap="round" />
-                        <text x="200" y="80" className="text-sm font-extrabold fill-blue-600">Laki-Laki: {lCount} Siswa ({pctL}%)</text>
-                        <text x="450" y="80" className="text-sm font-extrabold fill-purple-600">Perempuan: {pCount} Siswa ({pctP}%)</text>
+                      <g>
+                        <rect x="60" y="90" width="580" height="24" rx="12" fill="#e2e8f0" className="dark:fill-slate-800" />
+                        <rect x="60" y="90" width={Math.max(10, (pctL / 100) * 580)} height="24" rx="12" fill="#3b82f6" />
+                        <rect x={60 + (pctL / 100) * 580} y="90" width={Math.max(10, (pctP / 100) * 580)} height="24" rx="12" fill="#a855f7" />
+                        <text x="60" y="70" className="text-xs font-bold fill-blue-600 dark:fill-blue-400">Laki-Laki: {lCount} Siswa ({pctL}%)</text>
+                        <text x="640" y="70" textAnchor="end" className="text-xs font-bold fill-purple-600 dark:fill-purple-400">Perempuan: {pCount} Siswa ({pctP}%)</text>
                       </g>
                     )
                   }
@@ -1466,31 +1498,36 @@ export default function DashboardPage() {
             </div>
 
             {/* Label Tanggal Bawah Dinamis */}
-            <div className="grid grid-cols-7 gap-1 text-center border-t border-slate-100 dark:border-slate-800 pt-3">
+            <div className="grid grid-cols-7 gap-2 text-center border-t border-slate-100 dark:border-slate-800 pt-3">
               {(execStats?.weeklyTrends || []).map((w: any, idx: number) => (
                 <div key={idx} className="space-y-1">
-                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">{w.date}</span>
-                  {selectedCurveType === 'PRESENSI' && (
-                    <div className="flex items-center justify-center gap-1.5 text-[10px]">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">{w.date}</span>
+                  {effectiveCurveType === 'PRESENSI' && (
+                    <div className="flex items-center justify-center gap-1.5 text-[11px]">
                       <span className="text-blue-600 font-extrabold">{w.siswaPct}%</span>
                       <span className="text-slate-300 dark:text-slate-700">&bull;</span>
                       <span className="text-teal-600 font-extrabold">{w.staffPct}%</span>
                     </div>
                   )}
-                  {selectedCurveType === 'KEUANGAN' && (
-                    <span className="text-[10px] text-emerald-600 font-extrabold block truncate">
+                  {effectiveCurveType === 'KEUANGAN' && (
+                    <span className="text-[11px] text-emerald-600 font-extrabold block truncate">
                       {w.pemasukan > 0 ? `Rp ${(w.pemasukan / 1000).toLocaleString('id-ID')}k` : 'Rp 0'}
                     </span>
                   )}
-                  {selectedCurveType === 'PRESTASI' && (
-                    <div className="flex items-center justify-center gap-1.5 text-[10px]">
+                  {effectiveCurveType === 'KEDISIPLINAN' && (
+                    <div className="flex items-center justify-center gap-1.5 text-[11px]">
                       <span className="text-emerald-600 font-extrabold">+{w.prestasi}</span>
                       <span className="text-slate-300 dark:text-slate-700">&bull;</span>
                       <span className="text-rose-600 font-extrabold">-{w.pelanggaran}</span>
                     </div>
                   )}
-                  {selectedCurveType === 'DEMOGRAFI' && (
-                    <span className="text-[10px] text-slate-400 font-medium block">
+                  {effectiveCurveType === 'AKADEMIK' && (
+                    <span className="text-[11px] text-indigo-600 font-extrabold block">
+                      {w.siswaHadir > 0 ? '6 Sesi' : '0 Sesi'}
+                    </span>
+                  )}
+                  {effectiveCurveType === 'DEMOGRAFIS' && (
+                    <span className="text-[11px] text-slate-400 font-medium block">
                       {w.siswaHadir} Aktif
                     </span>
                   )}
@@ -1954,14 +1991,14 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
             {[
-              { name: 'Guru & Tendik', href: '/guru-karyawan', icon: Briefcase, desc: 'Log Pendidik' },
-              { name: 'Data Siswa', href: '/master-data/siswa', icon: Users, desc: 'Buku Induk' },
-              { name: 'Rombel Kelas', href: '/master-data/kelas', icon: GraduationCap, desc: 'Daftar Kelas' },
+              { name: 'Guru & Tendik', href: '/master-data/guru', icon: Users, desc: 'Log Pendidik' },
+              { name: 'Data Siswa', href: '/master-data/siswa', icon: UserSquare2, desc: 'Buku Induk' },
+              { name: 'Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen, desc: 'Daftar Kelas' },
               { name: 'Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, desc: 'Jadwal Belajar' },
-              { name: 'Laporan Kas', href: '/keuangan/laporan', icon: Landmark, desc: 'Arsip Keuangan' },
-              { name: 'Pengumuman', href: '/informasi/pengumuman', icon: BellRing, desc: 'Pemberitahuan' },
-              { name: 'Presensi Pegawai', href: '/presensi/kehadiran-pegawai', icon: UserCheck, desc: 'Log Kehadiran' },
-              { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck, desc: 'Log Presensi' },
+              { name: 'Laporan Keuangan', href: '/keuangan/pemasukan', icon: Wallet, desc: 'Arsip Keuangan' },
+              { name: 'Pengumuman', href: '/informasi/pengumuman', icon: Megaphone, desc: 'Pemberitahuan' },
+              { name: 'Presensi Pegawai', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck, desc: 'Log Kehadiran' },
+              { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: UserCheck, desc: 'Log Presensi' },
             ].map((link, idx) => {
               const Icon = link.icon
               return (

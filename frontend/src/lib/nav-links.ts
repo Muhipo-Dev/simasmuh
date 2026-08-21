@@ -87,7 +87,7 @@ export const kepalaSekolahLinks = [
   { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: UserCheck },
   { name: 'Jurnal Pegawai', href: '/presensi/jurnal-karyawan', icon: BookOpen },
   { name: 'Izin Presensi', href: '/presensi/izin-keluar', icon: DoorOpen },
-  { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: Wallet },
+  { name: 'Laporan Keuangan', href: '/keuangan/pemasukan', icon: Wallet },
   { name: 'Guru & Tendik', href: '/master-data/guru', icon: Users },
   { name: 'Data Siswa', href: '/master-data/siswa', icon: UserSquare2 },
   { name: 'Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen },

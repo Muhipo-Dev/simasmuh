@@ -97,36 +97,24 @@ export class FinanceCalculationService {
       throw new Error('Siswa tidak ditemukan');
     }
 
-    // Base DPP amount by grade level
+    // Check Setting table defaultDpp
+    const setting = await this.prisma.setting.findFirst();
+    const systemDefaultDpp = setting?.defaultDpp && setting.defaultDpp > 0 ? setting.defaultDpp : 1500000;
+
+    // Base DPP amount by grade level (if grade 10, 11, 12)
     const gradeBaseRates: Record<number, number> = {
-      10: 2000000, // Kelas 10
-      11: 1500000, // Kelas 11
-      12: 1000000, // Kelas 12
+      10: systemDefaultDpp > 0 ? Math.round(systemDefaultDpp * 1.33) : 2000000,
+      11: systemDefaultDpp,
+      12: systemDefaultDpp > 0 ? Math.round(systemDefaultDpp * 0.67) : 1000000,
     };
 
-    const baseDPP = gradeBaseRates[student.class.gradeLevel] || 1500000;
-
-    // Program-specific adjustments
-    const programMultipliers: Record<string, number> = {
-      kader: 1.0,
-      reguler: 1.0,
-      tahfidz: 1.2,
-      olahraga: 1.1,
-      MIC: 2.5, // Muhipo Internasional Class
-      enterpreneur: 1.3,
-      'seni budaya': 1.1,
-      'soshum saintek': 1.5,
-      inklusi: 0.7,
-    };
-
-    const multiplier = programMultipliers[student.program || 'reguler'] || 1.0;
-    const dppAmount = Math.round(baseDPP * multiplier);
+    const baseDPP = (student.class && gradeBaseRates[student.class.gradeLevel]) || systemDefaultDpp;
 
     this.logger.log(
-      `DPP calculated for student ${studentId} (Grade ${student.class.gradeLevel}, ${student.program}): ${dppAmount}`,
+      `DPP calculated for student ${studentId} (Grade ${student.class?.gradeLevel}, ${student.program}): ${baseDPP}`,
     );
 
-    return dppAmount;
+    return baseDPP;
   }
 
   // ============================================================
@@ -161,34 +149,39 @@ export class FinanceCalculationService {
 
     let beasiswaPercentage = 0;
 
-    // Apply discount based on type
-    switch (beasiswaType) {
+    // Apply discount based on type or student profile
+    switch (beasiswaType?.toUpperCase()) {
+      case 'SPP':
+        beasiswaPercentage = student.beasiswaSppPct || student.beasiswaPercentage || 0;
+        break;
+      case 'DPP':
+        beasiswaPercentage = student.beasiswaDppPct || student.beasiswaPercentage || 0;
+        break;
+      case 'SERAGAM':
+        beasiswaPercentage = student.beasiswaSeragamPct || student.beasiswaPercentage || 0;
+        break;
       case 'AKADEMIK':
-        // Academic achievement discount (e.g., top ranking students)
         beasiswaPercentage = 25;
         break;
       case 'SAUDARA':
-        // Sibling discount
         beasiswaPercentage = 15;
         break;
       case 'BEASISWA':
-        // Full/partial scholarship
-        beasiswaPercentage = 50;
+        beasiswaPercentage = student.beasiswaPercentage || 50;
         break;
       case 'INKLUSI':
-        // Inclusion program discount
-        if (student.program === 'inklusi') {
+        if (student.program?.toLowerCase() === 'inklusi') {
           beasiswaPercentage = 30;
         }
         break;
       default:
-        beasiswaPercentage = 0;
+        beasiswaPercentage = student.beasiswaPercentage || 0;
     }
 
     const beasiswaAmount = Math.round(
       originalAmount * (beasiswaPercentage / 100),
     );
-    const finalAmount = originalAmount - beasiswaAmount;
+    const finalAmount = Math.max(0, originalAmount - beasiswaAmount);
 
     this.logger.log(
       `Beasiswa calculated for student ${studentId}: ${beasiswaPercentage}% (${beasiswaAmount})`,
@@ -344,15 +337,28 @@ export class FinanceCalculationService {
     ].filter(Boolean);
     const roleAllowance = (roles.length - 1) * 300000; // 300k per additional role
 
+    // Matched Dana Bantuan / Insentif Pegawai
+    const danaBantuans = await this.prisma.danaBantuan.findMany({
+      where: { kategori: 'PEGAWAI', isSynced: true },
+    });
+    const bantuanNominal = danaBantuans
+      .filter(
+        (b) =>
+          !b.penerima ||
+          b.penerima.toLowerCase().includes(user.name.toLowerCase()) ||
+          user.name.toLowerCase().includes(b.penerima.toLowerCase()),
+      )
+      .reduce((sum, b) => sum + b.nominal, 0);
+
     // Calculate total salary
-    const totalSalary = baseSalary + attendanceBonus + roleAllowance;
+    const totalSalary = baseSalary + attendanceBonus + roleAllowance + bantuanNominal;
 
     // Deductions (e.g., BPJS, tax, etc.)
     const deductions = Math.round(totalSalary * 0.05); // 5% for social security/tax
     const netSalary = totalSalary - deductions;
 
     this.logger.log(
-      `Salary calculated for ${user.name}: Base=${baseSalary}, Attendance=${attendanceBonus}, Role=${roleAllowance}, Net=${netSalary}`,
+      `Salary calculated for ${user.name}: Base=${baseSalary}, Attendance=${attendanceBonus}, Role=${roleAllowance}, Bantuan=${bantuanNominal}, Net=${netSalary}`,
     );
 
     return {
@@ -422,7 +428,7 @@ export class FinanceCalculationService {
     paidCount: number;
   }> {
     const where: any = {
-      status: 'LUNAS',
+      status: { in: ['LUNAS', 'ANGSURAN'] },
       year,
     };
 
@@ -432,15 +438,19 @@ export class FinanceCalculationService {
 
     const paidTagihans = await this.prisma.tagihan.findMany({
       where,
-      select: { type: true, amount: true },
+      select: { type: true, amount: true, amountPaid: true, status: true },
     });
 
-    const totalRevenue = paidTagihans.reduce((sum, t) => sum + t.amount, 0);
+    const totalRevenue = paidTagihans.reduce(
+      (sum, t) => sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
+      0,
+    );
     const paidCount = paidTagihans.length;
 
     const byType: Record<string, number> = {};
     paidTagihans.forEach((t) => {
-      byType[t.type] = (byType[t.type] || 0) + t.amount;
+      const nominal = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0);
+      byType[t.type] = (byType[t.type] || 0) + nominal;
     });
 
     return {
@@ -538,12 +548,15 @@ export class FinanceCalculationService {
     const tagihans = await this.prisma.tagihan.findMany({
       where: {
         studentId,
-        status: 'BELUM_LUNAS',
+        status: { in: ['BELUM_LUNAS', 'ANGSURAN'] },
       },
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
     });
 
-    const totalOutstanding = tagihans.reduce((sum, t) => sum + t.amount, 0);
+    const totalOutstanding = tagihans.reduce(
+      (sum, t) => sum + Math.max(0, t.amount - (t.amountPaid || 0)),
+      0,
+    );
     const billCount = tagihans.length;
 
     const now = new Date();

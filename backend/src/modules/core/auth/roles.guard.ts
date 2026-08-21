@@ -120,6 +120,21 @@ export class RolesGuard implements CanActivate {
       );
     }
 
+    // Headmaster (KEPALA_SEKOLAH) supervisory permissions (read-only reports & bills)
+    if (
+      user.role === UserRole.KEPALA_SEKOLAH ||
+      user.subRole === SubRole.KEPALA_SEKOLAH ||
+      user.subRole2 === SubRole.KEPALA_SEKOLAH ||
+      user.subRole3 === SubRole.KEPALA_SEKOLAH
+    ) {
+      permissions.push(
+        PaymentPermission.VIEW_ALL_BILLS,
+        PaymentPermission.VIEW_FINANCIAL_REPORTS,
+        PaymentPermission.VIEW_OWN_BILLS,
+        PaymentPermission.VIEW_OWN_PAYMENT_HISTORY,
+      );
+    }
+
     // Teacher/Staff general permissions
     if (user.role === UserRole.GURU || user.role === UserRole.KARYAWAN) {
       // Teachers/Staff can view their own payment info if they are also students in some cases

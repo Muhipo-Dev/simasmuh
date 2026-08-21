@@ -2148,16 +2148,18 @@ function TabTagihan() {
             <Table>
               <TableHeader className="bg-slate-100/70 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 font-bold">
                 <TableRow>
-                  <TableHead className="w-10 text-center px-3 py-3 whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={toggleSelectAll}
-                      className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
-                      title={isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua Siswa'}
-                    >
-                      {isAllSelected ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4" />}
-                    </button>
-                  </TableHead>
+                  {!isKepalaSekolah && (
+                    <TableHead className="w-10 text-center px-3 py-3 whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={toggleSelectAll}
+                        className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
+                        title={isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua Siswa'}
+                      >
+                        {isAllSelected ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4" />}
+                      </button>
+                    </TableHead>
+                  )}
                   <TableHead className="w-12 text-center whitespace-nowrap">No</TableHead>
                   <TableHead className="whitespace-nowrap">Nama Siswa</TableHead>
                   <TableHead className="text-center whitespace-nowrap">Status Tagihan</TableHead>
@@ -2169,14 +2171,14 @@ function TabTagihan() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-16">
+                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-16">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
                       <p className="text-slate-500 text-sm">Memuat data...</p>
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-16 text-slate-400">
+                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-16 text-slate-400">
                       {search || filterKelas ? 'Tidak ditemukan.' : 'Belum ada data siswa.'}
                     </TableCell>
                   </TableRow>
@@ -2184,15 +2186,17 @@ function TabTagihan() {
                   const isChecked = selectedStudentIds.includes(s.id);
                   return (
                     <TableRow key={s.id} className={`transition-colors ${isChecked ? 'bg-blue-50/50 dark:bg-blue-950/20' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/50'}`}>
-                      <TableCell className="text-center px-3 py-3 whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => toggleSelectStudent(s.id)}
-                          className="p-1 rounded-md text-slate-400 hover:text-blue-600 transition-colors"
-                        >
-                          {isChecked ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4" />}
-                        </button>
-                      </TableCell>
+                      {!isKepalaSekolah && (
+                        <TableCell className="text-center px-3 py-3 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => toggleSelectStudent(s.id)}
+                            className="p-1 rounded-md text-slate-400 hover:text-blue-600 transition-colors"
+                          >
+                            {isChecked ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4" />}
+                          </button>
+                        </TableCell>
+                      )}
                       <TableCell className="text-center text-slate-400 font-medium text-sm whitespace-nowrap">{i + 1}</TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div className="flex items-center gap-2.5">
@@ -2224,14 +2228,16 @@ function TabTagihan() {
                           <Button size="sm" variant="outline"
                             className="border-blue-300 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-xs gap-1.5 h-8 rounded-xl font-bold"
                             onClick={() => openModal(s)}>
-                            <Receipt className="w-3.5 h-3.5" /> Kelola
+                            <Receipt className="w-3.5 h-3.5" /> {isKepalaSekolah ? 'Lihat Detail' : 'Kelola'}
                           </Button>
-                          <Button size="sm" variant="outline"
-                            title="Reset Tagihan Siswa (Otorisasi Password)"
-                            className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 text-xs gap-1 h-8 rounded-xl"
-                            onClick={() => openResetModal([s.id])}>
-                            <RotateCcw className="w-3.5 h-3.5" /> Reset
-                          </Button>
+                          {!isKepalaSekolah && (
+                            <Button size="sm" variant="outline"
+                              title="Reset Tagihan Siswa (Otorisasi Password)"
+                              className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 text-xs gap-1 h-8 rounded-xl"
+                              onClick={() => openResetModal([s.id])}>
+                              <RotateCcw className="w-3.5 h-3.5" /> Reset
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -3352,7 +3358,9 @@ export default function KeuanganMasukPage() {
   const { data: session } = useSession()
   const userRole = (session?.user as any)?.role || ''
   const userSubRole = (session?.user as any)?.subRole || ''
-  const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || userSubRole === 'KEPALA_SEKOLAH'
+  const userSubRole2 = (session?.user as any)?.subRole2 || ''
+  const userSubRole3 = (session?.user as any)?.subRole3 || ''
+  const isKepalaSekolah = [userRole, userSubRole, userSubRole2, userSubRole3].includes('KEPALA_SEKOLAH')
   const [activeTab, setActiveTab] = useState('tagihan')
 
   return (

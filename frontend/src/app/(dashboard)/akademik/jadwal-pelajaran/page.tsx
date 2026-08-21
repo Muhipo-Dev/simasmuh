@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Calendar, BookOpen, Users, Clock, User, CheckCircle2, Plus, Pencil, Trash2, Upload, FileCode, Sparkles } from 'lucide-react'
+import { Loader2, Calendar, BookOpen, Users, Clock, User, CheckCircle2, Plus, Pencil, Trash2, Upload, FileCode, Sparkles, ShieldCheck } from 'lucide-react'
 import { parseAscTimetableXml } from '@/utils/ascParser'
 
 const DAYS_MAP = [
@@ -43,7 +43,7 @@ export default function JadwalPelajaranPage() {
   const subRole3 = (session?.user as any)?.subRole3
 
   const isSuperAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(role) || ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole || '') || ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole2 || '') || ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole3 || '')
-  const isKepalaSekolah = role === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH'
+  const isKepalaSekolah = [role, subRole, subRole2, subRole3].includes('KEPALA_SEKOLAH')
 
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
@@ -363,6 +363,14 @@ export default function JadwalPelajaranPage() {
                 : 'Daftar jadwal pelajaran mingguan yang ditetapkan oleh Kurikulum sekolah dan tersinkronisasi secara real-time.'}
             </p>
           </div>
+
+          {/* Mode Supervisi untuk Kepala Sekolah */}
+          {isKepalaSekolah && !isSuperAdmin && (
+            <div className="px-4 py-2 rounded-2xl bg-amber-400/20 backdrop-blur-md border border-amber-300/40 text-amber-200 text-xs sm:text-sm font-bold flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-amber-300" />
+              <span>Mode Supervisi (Read-Only)</span>
+            </div>
+          )}
 
           {/* Akses Cepat Tombol Superadmin: Import aSc Timetables & Tambah Manual */}
           {isSuperAdmin && (

@@ -38,8 +38,10 @@ export default function ClassesPage() {
   const { data: session } = useSession()
   const userRole = (session?.user as any)?.role || ''
   const subRole = (session?.user as any)?.subRole || ''
-  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
-  const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH'
+  const subRole2 = (session?.user as any)?.subRole2 || ''
+  const subRole3 = (session?.user as any)?.subRole3 || ''
+  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole2) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole3)
+  const isKepalaSekolah = [userRole, subRole, subRole2, subRole3].includes('KEPALA_SEKOLAH')
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -622,33 +624,35 @@ export default function ClassesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12 text-center">
-                  <input 
-                    type="checkbox"
-                    checked={isAllSelected}
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 cursor-pointer accent-blue-600"
-                    title="Pilih Semua"
-                  />
-                </TableHead>
+                {isSuperOrAdmin && (
+                  <TableHead className="w-12 text-center">
+                    <input 
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 cursor-pointer accent-blue-600"
+                      title="Pilih Semua"
+                    />
+                  </TableHead>
+                )}
                 <TableHead>Nama Kelas</TableHead>
                 <TableHead>Tingkat</TableHead>
                 <TableHead>Wali Kelas</TableHead>
                 <TableHead>Jumlah Siswa</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                {isSuperOrAdmin && <TableHead className="text-right">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={isSuperOrAdmin ? 6 : 4} className="text-center py-8 text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Memuat data...
                   </TableCell>
                 </TableRow>
               ) : filterDataBySearch(classes, searchQuery)?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={isSuperOrAdmin ? 6 : 4} className="text-center py-8 text-slate-500">
                     {searchQuery ? 'Tidak ada data kelas yang sesuai dengan pencarian.' : 'Belum ada data kelas.'}
                   </TableCell>
                 </TableRow>
@@ -657,14 +661,16 @@ export default function ClassesPage() {
                   const isSelected = selectedIds.includes(item.id)
                   return (
                     <TableRow key={item.id} className={isSelected ? 'bg-blue-50/80 dark:bg-blue-950/40' : ''}>
-                      <TableCell className="text-center">
-                        <input 
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleSelectOne(item.id)}
-                          className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 cursor-pointer accent-blue-600"
-                        />
-                      </TableCell>
+                      {isSuperOrAdmin && (
+                        <TableCell className="text-center">
+                          <input 
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleSelectOne(item.id)}
+                            className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 cursor-pointer accent-blue-600"
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="font-semibold text-slate-900 dark:text-white">{item.name}</TableCell>
                       <TableCell>Kelas {item.gradeLevel}</TableCell>
                       <TableCell className="font-medium text-slate-700 dark:text-slate-350">
@@ -673,8 +679,8 @@ export default function ClassesPage() {
                         )}
                       </TableCell>
                       <TableCell>{item._count?.students || 0} Siswa</TableCell>
-                      <TableCell className="text-right">
-                        {isSuperOrAdmin ? (
+                      {isSuperOrAdmin && (
+                        <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button 
                               variant="ghost" 
@@ -718,10 +724,8 @@ export default function ClassesPage() {
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
-                        ) : (
-                          <span className="text-[11px] text-slate-400 font-medium italic">Read-Only</span>
-                        )}
-                      </TableCell>
+                        </TableCell>
+                      )}
                     </TableRow>
                   )
                 })

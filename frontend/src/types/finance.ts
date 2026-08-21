@@ -1,4 +1,15 @@
-export type ProgramType = 'Reguler' | 'Kader' | 'Olahraga' | 'CI';
+export type ProgramType =
+  | 'Reguler'
+  | 'Kader'
+  | 'Tahfidz'
+  | 'Olahraga'
+  | 'CI'
+  | 'MIC'
+  | 'Enterpreneur'
+  | 'Seni Budaya'
+  | 'Soshum Saintek'
+  | 'Inklusi'
+  | string;
 
 export type ModifierType = 'percentage' | 'fixed';
 
@@ -14,6 +25,9 @@ export interface Student {
   id: string;
   name: string;
   program: ProgramType;
+  beasiswaSppPct?: number;
+  beasiswaDppPct?: number;
+  beasiswaPercentage?: number;
   modifiers?: Modifier[];
 }
 

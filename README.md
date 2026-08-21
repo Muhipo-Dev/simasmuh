@@ -29,6 +29,19 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-21 (v1.5.4 - Sinkronisasi & Penyelarasan Algoritma Keuangan, Audit Integritas Data, dan Redesain Kurva Analitik Terpadu):**
+  * **Sinkronisasi Algoritma & Logika Perhitungan Keuangan Sekolah (Backend & Frontend):**
+    * Penyelarasan algoritma kalkulasi tarif SPP dan DPP berbasis basis data dinamis (`ProgramConfig` & `Setting`) pada modul [finance-calculation.service.ts](file:///d:/simasmuh/backend/src/modules/finance/finance-calculation/finance-calculation.service.ts) dan [finance.service.ts](file:///d:/simasmuh/backend/src/modules/finance/finance/finance.service.ts).
+    * Penyesuaian kalkulasi tagihan massal, DPP per angkatan, dan *cron* SPP bulanan otomatis agar memperhitungkan tarif per program serta diskon beasiswa spesifik siswa (`beasiswaSppPct`, `beasiswaDppPct`, `beasiswaSeragamPct`).
+    * Perbaikan algoritma perhitungan pendapatan, rekapitulasi, dan LPJ arus kas agar menghitung penerimaan riil bertahap/angsuran (`amountPaid`) dan sisa piutang tertagih (`amount - amountPaid`) secara presisi.
+    * Penyelarasan modul penggajian pegawai (`calculateMonthlySalary`) yang mengintegrasikan insentif `DanaBantuan` tersinkronisasi serta potongan jaminan sosial/pajak 5%.
+    * Pembaruan engine kalkulasi penagihan frontend [billing-engine.ts](file:///d:/simasmuh/frontend/src/lib/billing-engine.ts) dan tipe data [finance.ts](file:///d:/simasmuh/frontend/src/types/finance.ts) agar kompatibel dengan seluruh ragam peminatan dan konfigurasi sistem.
+  * **Audit Integritas Data Keuangan Database:**
+    * Verifikasi konsistensi seluruh 24 baris data tagihan terhadap relasi transaksi pembayaran (`payments`), validasi status tagihan (`LUNAS`, `ANGSURAN`, `BELUM_LUNAS`), dan memastikan kelengkapan 11 master data peminatan tanpa ada data yang terhapus atau berubah.
+  * **Redesain & Optimalisasi Kurva Tren Analitik Dashboard:**
+    * Menghilangkan duplikasi tombol tab ganda dan menyinkronkan visualisasi kurva grafik mingguan secara otomatis langsung dari tombol tab navigasi filter sektor di atas.
+    * Mengoptimalkan rendering kanvas kurva SVG proporsional dan memperbaiki tipografi label sumbu X/Y (menghilangkan deformasi/teks lonjong gepeng) untuk tampilan yang tajam dan responsif di semua resolusi layar.
+
 * **2026-08-21 (v1.5.3 - Modul Penilaian Adab, Etika, Ibadah, Tata Tertib & Bimbingan Konseling (BK) Terintegrasi):**
   * **Sistem Penilaian Karakter, Adab & Buku Saku Digital Terintegrasi:**
     * Penambahan model `CharacterAssessment` di database Prisma & PostgreSQL dengan kategori `ADAB_ETIKA`, `IBADAH`, `KEDISIPLINAN`, `PRESTASI_PENGHARGAAN`, dan `PELANGGARAN`.

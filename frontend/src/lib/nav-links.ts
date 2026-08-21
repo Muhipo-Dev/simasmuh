@@ -97,8 +97,15 @@ export const kepalaSekolahLinks = [
 
 export const superAdminOnlyPaths = [
   '/master-data/pengguna', '/master-data/wali-murid', '/master-data/mata-pelajaran',
-  '/master-data/siswa', '/master-data/kelas', '/master-data/guru', '/pengaturan/sistem', '/presensi/manajemen-qr', '/presensi/camera',
+  '/pengaturan/sistem', '/presensi/manajemen-qr', '/presensi/camera',
   '/fitur/persuratan', '/fitur/buku-tamu', '/fitur/inventaris'
+]
+
+// Path yang bisa diakses KEPALA_SEKOLAH dalam mode supervisi (read-only)
+export const supervisorAccessPaths = [
+  '/master-data/siswa', '/master-data/kelas', '/master-data/guru',
+  '/akademik/jadwal-pelajaran', '/keuangan/laporan', '/informasi/pengumuman',
+  '/presensi/kehadiran-pegawai', '/presensi/kehadiran-siswa'
 ]
 
 export function getRoleLinks(role: string, subRole?: string, subRole2?: string, subRole3?: string) {

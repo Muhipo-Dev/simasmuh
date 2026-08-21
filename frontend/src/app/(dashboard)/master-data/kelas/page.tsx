@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, Trash2, FileSpreadsheet, Pencil, CheckSquare, Edit3 } from 'lucide-react'
+import { Plus, Loader2, Trash2, FileSpreadsheet, Pencil, CheckSquare, Edit3, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -34,6 +35,11 @@ type Class = {
 }
 
 export default function ClassesPage() {
+  const { data: session } = useSession()
+  const userRole = (session?.user as any)?.role || ''
+  const subRole = (session?.user as any)?.subRole || ''
+  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
+  const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH'
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -356,33 +362,41 @@ export default function ClassesPage() {
           <p className="text-slate-500 dark:text-slate-400 mt-1">Kelola data kelas dan rombel untuk tahun pelajaran aktif ({activeAcademicYear}).</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="border-green-600 text-green-700 hover:bg-green-50"
-            onClick={() => {
-              setImportProgress(prev => ({ ...prev, status: 'idle' }))
-              setImportDialogOpen(true)
-            }}
-          >
-            <FileSpreadsheet className="w-4 h-4 mr-2" />
-            Import Excel
-          </Button>
+          {isKepalaSekolah && (
+            <div className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4" /> Mode Supervisi (Read-Only)
+            </div>
+          )}
 
-          {/* Dialog Tambah/Edit Kelas */}
-          <Dialog open={open} onOpenChange={(val) => {
-            setOpen(val)
-            if (!val) {
-              setIsEdit(false)
-              setEditId('')
-              setFormData({ name: '', gradeLevel: '10', academicYear: activeAcademicYear, homeroomTeacherId: '' })
-            }
-          }}>
-            <DialogTrigger render={
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Tambah Kelas
+          {isSuperOrAdmin && (
+            <>
+              <Button
+                variant="outline"
+                className="border-green-600 text-green-700 hover:bg-green-50"
+                onClick={() => {
+                  setImportProgress(prev => ({ ...prev, status: 'idle' }))
+                  setImportDialogOpen(true)
+                }}
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Import Excel
               </Button>
-            } />
+
+              {/* Dialog Tambah/Edit Kelas */}
+              <Dialog open={open} onOpenChange={(val) => {
+                setOpen(val)
+                if (!val) {
+                  setIsEdit(false)
+                  setEditId('')
+                  setFormData({ name: '', gradeLevel: '10', academicYear: activeAcademicYear, homeroomTeacherId: '' })
+                }
+              }}>
+                <DialogTrigger render={
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Tambah Kelas
+                  </Button>
+                } />
             <DialogContent className="sm:max-w-[425px]">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
@@ -458,8 +472,10 @@ export default function ClassesPage() {
               </form>
             </DialogContent>
           </Dialog>
+          </>
+          )}
 
-          {/* Dialog Bulk Edit Serentak */}
+          {/* Dialog Bulk Edit Serentak — selalu tersedia untuk admin */}
           <Dialog open={bulkEditOpen} onOpenChange={setBulkEditOpen}>
             <DialogContent className="sm:max-w-[450px]">
               <form onSubmit={handleBulkEditSubmit}>
@@ -658,49 +674,53 @@ export default function ClassesPage() {
                       </TableCell>
                       <TableCell>{item._count?.students || 0} Siswa</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            onClick={() => {
-                              setIsEdit(true)
-                              setEditId(item.id)
-                              setFormData({
-                                name: item.name,
-                                gradeLevel: item.gradeLevel.toString(),
-                                academicYear: item.academicYear || activeAcademicYear,
-                                homeroomTeacherId: item.homeroomTeacherId || ''
-                              })
-                              setOpen(true)
-                            }}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => {
-                              confirmDelete({
-                                title: 'Hapus Kelas?',
-                                text: 'Apakah Anda yakin ingin menghapus kelas ini?',
-                                onConfirm: async () => {
-                                  await deleteMutation.mutateAsync(item.id)
-                                  Swal.fire({
-                                    title: 'Berhasil!',
-                                    text: 'Kelas berhasil dihapus!',
-                                    icon: 'success',
-                                    timer: 1500,
-                                    showConfirmButton: false,
-                                  })
-                                }
-                              })
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        {isSuperOrAdmin ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => {
+                                setIsEdit(true)
+                                setEditId(item.id)
+                                setFormData({
+                                  name: item.name,
+                                  gradeLevel: item.gradeLevel.toString(),
+                                  academicYear: item.academicYear || activeAcademicYear,
+                                  homeroomTeacherId: item.homeroomTeacherId || ''
+                                })
+                                setOpen(true)
+                              }}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => {
+                                confirmDelete({
+                                  title: 'Hapus Kelas?',
+                                  text: 'Apakah Anda yakin ingin menghapus kelas ini?',
+                                  onConfirm: async () => {
+                                    await deleteMutation.mutateAsync(item.id)
+                                    Swal.fire({
+                                      title: 'Berhasil!',
+                                      text: 'Kelas berhasil dihapus!',
+                                      icon: 'success',
+                                      timer: 1500,
+                                      showConfirmButton: false,
+                                    })
+                                  }
+                                })
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 font-medium italic">Read-Only</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   )

@@ -181,6 +181,7 @@ export default function StudentsPage() {
   const subRole3 = (session?.user as any)?.subRole3 || ''
   const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
   const isSuperadmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
+  const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH'
   const isFinance = ['SUPERADMIN', 'ADMIN_IT', 'KEUANGAN'].includes(userRole) || [subRole, subRole2, subRole3].includes('KEUANGAN')
 
   const [open, setOpen] = useState(false)
@@ -1033,20 +1034,30 @@ export default function StudentsPage() {
             </Button>
           )}
 
-          <Button variant="outline" className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
-            onClick={() => {
-              setImportProgress(prev => ({ ...prev, status: 'idle' }))
-              setImportDialogOpen(true)
-            }}
-          >
-            <FileSpreadsheet className="w-4 h-4 mr-2" />
-            Import Excel
-          </Button>
+          {isKepalaSekolah && (
+            <div className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5">
+              <span>🔍</span> Mode Supervisi (Read-Only)
+            </div>
+          )}
 
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleOpenAddDialog}>
-            <Plus className="w-4 h-4 mr-2" />
-            Tambah Siswa
-          </Button>
+          {isSuperOrAdmin && (
+            <>
+              <Button variant="outline" className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+                onClick={() => {
+                  setImportProgress(prev => ({ ...prev, status: 'idle' }))
+                  setImportDialogOpen(true)
+                }}
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Import Excel
+              </Button>
+
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleOpenAddDialog}>
+                <Plus className="w-4 h-4 mr-2" />
+                Tambah Siswa
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

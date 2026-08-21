@@ -2,6 +2,7 @@
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 
 import { useState, useRef } from 'react'
+import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -10,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Loader2, Trash2, FileSpreadsheet, Pencil, CheckSquare, Edit3 } from 'lucide-react'
+import { Plus, Loader2, Trash2, FileSpreadsheet, Pencil, CheckSquare, Edit3, ShieldCheck } from 'lucide-react'
 import { ImportProgressDialog, ImportProgressState } from '@/components/ImportProgressDialog'
 import Swal from 'sweetalert2'
 import { confirmDelete } from '@/lib/swal-helper'
@@ -42,6 +43,11 @@ type Teacher = {
 }
 
 export default function TeachersPage() {
+  const { data: session } = useSession()
+  const userRole = (session?.user as any)?.role || ''
+  const subRole = (session?.user as any)?.subRole || ''
+  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole)
+  const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH'
   const authenticatedFetch = useAuthenticatedFetch();
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -330,26 +336,36 @@ export default function TeachersPage() {
         </div>
         
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
-            onClick={() => {
-              setImportProgress(prev => ({ ...prev, status: 'idle' }))
-              setImportDialogOpen(true)
-            }}
-          >
-            <FileSpreadsheet className="w-4 h-4 mr-2" />
-            Import Excel
-          </Button>
+          {isKepalaSekolah && (
+            <div className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4" /> Mode Supervisi (Read-Only)
+            </div>
+          )}
 
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => {
-            setIsEdit(false)
-            setFormData({ nip: '', name: '', username: '', email: '', phone: '', password: '' })
-            setOpen(true)
-          }}>
-            <Plus className="w-4 h-4 mr-2" />
-            Tambah Guru
-          </Button>
+          {isSuperOrAdmin && (
+            <>
+              <Button
+                variant="outline"
+                className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+                onClick={() => {
+                  setImportProgress(prev => ({ ...prev, status: 'idle' }))
+                  setImportDialogOpen(true)
+                }}
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Import Excel
+              </Button>
+
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => {
+                setIsEdit(false)
+                setFormData({ nip: '', name: '', username: '', email: '', phone: '', password: '' })
+                setOpen(true)
+              }}>
+                <Plus className="w-4 h-4 mr-2" />
+                Tambah Guru
+              </Button>
+            </>
+          )}
           <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent>
             <form onSubmit={handleSubmit}>
@@ -630,51 +646,55 @@ export default function TeachersPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right pr-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50"
-                            onClick={() => {
-                              setIsEdit(true)
-                              setEditId(item.id)
-                              setFormData({
-                                nip: item.nip || '',
-                                name: item.user?.name || '',
-                                username: item.user?.username || '',
-                                email: item.user?.email || '',
-                                phone: item.phone || '',
-                                password: ''
-                              })
-                              setOpen(true)
-                            }}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
-                            onClick={() => {
-                              confirmDelete({
-                                title: 'Hapus Guru?',
-                                text: 'Apakah Anda yakin ingin menghapus guru ini?',
-                                onConfirm: async () => {
-                                  await deleteMutation.mutateAsync(item.id)
-                                  Swal.fire({
-                                    title: 'Berhasil!',
-                                    text: 'Guru berhasil dihapus!',
-                                    icon: 'success',
-                                    timer: 1500,
-                                    showConfirmButton: false,
-                                  })
-                                }
-                              })
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        {isSuperOrAdmin ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50"
+                              onClick={() => {
+                                setIsEdit(true)
+                                setEditId(item.id)
+                                setFormData({
+                                  nip: item.nip || '',
+                                  name: item.user?.name || '',
+                                  username: item.user?.username || '',
+                                  email: item.user?.email || '',
+                                  phone: item.phone || '',
+                                  password: ''
+                                })
+                                setOpen(true)
+                              }}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                confirmDelete({
+                                  title: 'Hapus Guru?',
+                                  text: 'Apakah Anda yakin ingin menghapus guru ini?',
+                                  onConfirm: async () => {
+                                    await deleteMutation.mutateAsync(item.id)
+                                    Swal.fire({
+                                      title: 'Berhasil!',
+                                      text: 'Guru berhasil dihapus!',
+                                      icon: 'success',
+                                      timer: 1500,
+                                      showConfirmButton: false,
+                                    })
+                                  }
+                                })
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 font-medium italic">Read-Only</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   )

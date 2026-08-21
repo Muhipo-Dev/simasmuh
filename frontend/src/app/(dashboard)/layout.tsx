@@ -11,7 +11,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { AppNavbar, AppFooter, AppSidebar } from '@/components/layout'
-import { superAdminOnlyPaths, getRoleLinks } from '@/lib/nav-links'
+import { superAdminOnlyPaths, supervisorAccessPaths, getRoleLinks } from '@/lib/nav-links'
 import { useRealtimeServerClock } from '@/lib/time-sync'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -40,6 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   })
 
   const isSuperAdminOnly = superAdminOnlyPaths.some(path => pathname.startsWith(path))
+  const isSupervisorPath = supervisorAccessPaths.some(path => pathname.startsWith(path))
   const isAccountManagement = pathname.startsWith('/master-data/pengguna')
   const isFinancePage = pathname.startsWith('/keuangan/') && !pathname.startsWith('/keuangan/laporan')
   const isAnnouncementsOnly = pathname.startsWith('/informasi/pengumuman')
@@ -61,16 +62,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const u = session.user as any
       const roles = [u?.role, u?.subRole, u?.subRole2, u?.subRole3].filter(Boolean)
       const hasSuperAdmin = roles.includes('ADMIN_IT') || roles.includes('SUPERADMIN')
+      const hasKepalaSekolah = roles.includes('KEPALA_SEKOLAH')
       const hasBauAccess = hasSuperAdmin || roles.includes('ADMIN_TU') || roles.includes('BAU') || roles.includes('TATA_USAHA')
-      const hasFinanceAccess = hasSuperAdmin || roles.includes('KEUANGAN')
-      const hasAdminWeb = hasSuperAdmin || roles.includes('ADMIN_WEB')
+      const hasFinanceAccess = hasSuperAdmin || hasKepalaSekolah || roles.includes('KEUANGAN')
+      const hasAdminWeb = hasSuperAdmin || hasKepalaSekolah || roles.includes('ADMIN_WEB')
+
+      // supervisor paths dapat diakses KEPALA_SEKOLAH (read-only) — jangan redirect
+      if (isSupervisorPath && (hasSuperAdmin || hasBauAccess || hasKepalaSekolah)) return
 
       if (isAccountManagement && !hasSuperAdmin) router.push('/dashboard')
       else if (isFinancePage && !hasFinanceAccess) router.push('/dashboard')
       else if (isSuperAdminOnly && !hasBauAccess) router.push('/dashboard')
       else if ((isAnnouncementsOnly || isBannerManagerOnly) && !hasAdminWeb) router.push('/dashboard')
     }
-  }, [session, isSuperAdminOnly, isAccountManagement, isFinancePage, isAnnouncementsOnly, isBannerManagerOnly, router])
+  }, [session, isSuperAdminOnly, isSupervisorPath, isAccountManagement, isFinancePage, isAnnouncementsOnly, isBannerManagerOnly, router])
 
   if (status === 'loading') {
     return (

@@ -9,13 +9,14 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "SIMASMUH",
-    template: "%s | SIMASMUH",
+    default: "System by. Muhipo Dev",
+    template: "%s | System by. Muhipo Dev",
   },
   description: "Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo",
   icons: {
     icon: [
       { url: "/pic_logo.png", type: "image/png" },
+      { url: "/favicon.ico" }
     ],
     shortcut: "/pic_logo.png",
     apple: "/pic_logo.png",

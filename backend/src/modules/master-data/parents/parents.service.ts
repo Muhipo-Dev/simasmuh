@@ -622,6 +622,18 @@ export class ParentsService {
                         },
                       },
                     },
+                    characterAssessments: {
+                      orderBy: { date: 'desc' },
+                      include: {
+                        evaluator: {
+                          select: {
+                            name: true,
+                            role: true,
+                            subRole: true,
+                          },
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -646,6 +658,27 @@ export class ParentsService {
         0
       );
 
+      const assessments = st.characterAssessments || [];
+      let totalPointsDelta = 0;
+      let totalPelanggaran = 0;
+      let totalPrestasi = 0;
+      let amalanIbadahCount = 0;
+
+      assessments.forEach((item: any) => {
+        totalPointsDelta += (item.points || 0);
+        if (item.category === 'PELANGGARAN' || item.type === 'NEGATIF') {
+          totalPelanggaran++;
+        } else if (item.category === 'PRESTASI_PENGHARGAAN' || item.type === 'POSITIF') {
+          totalPrestasi++;
+        } else if (item.category === 'IBADAH') {
+          amalanIbadahCount++;
+        }
+      });
+
+      const kedisiplinanScore = Math.max(0, Math.min(100, 100 + totalPointsDelta));
+      const ibadahScore = amalanIbadahCount >= 5 ? 'A (Sangat Baik)' : amalanIbadahCount >= 2 ? 'B (Aktif)' : 'B (Baik)';
+      const perilakuScore = totalPelanggaran === 0 ? 'A (Terpuji)' : totalPelanggaran <= 2 ? 'B (Baik)' : 'C (Perlu Pembinaan)';
+
       return {
         id: st.id,
         nis: st.nis,
@@ -666,15 +699,19 @@ export class ParentsService {
         tagihans: allTagihans,
         unpaidTagihans,
         totalUnpaid,
-        // Fitur Etika, Tata Tertib & Ibadah (Views only)
+        // Fitur Etika, Tata Tertib & Ibadah (Live Data Terintegrasi)
         etikaTataTertib: {
-          status: 'COMING_SOON',
-          kedisiplinanScore: 100,
-          ibadahScore: 'A (Sangat Baik)',
-          perilakuScore: 'A (Terpuji)',
-          totalPelanggaran: 0,
-          catatanKarakter: 'Siswa menunjukkan sikap yang santun, aktif mengikuti sholat berjamaah, dan disiplin waktu di madrasah.',
+          status: 'ACTIVE',
+          kedisiplinanScore,
+          ibadahScore,
+          perilakuScore,
+          totalPelanggaran,
+          totalPrestasi,
+          catatanKarakter: assessments.length > 0 
+            ? assessments[0].description || assessments[0].title 
+            : 'Siswa menunjukkan sikap yang santun, aktif mengikuti sholat berjamaah, dan disiplin waktu di madrasah.',
           timTatibContact: 'Tim Ketertiban & BP/BK Madrasah',
+          assessments,
         },
         // Fitur E-Rapor (Views only / Download Coming Soon)
         eRapor: {

@@ -35,6 +35,7 @@ export enum PaymentPermission {
 export enum UserRole {
   ADMIN_IT = 'ADMIN_IT',
   SUPERADMIN = 'SUPERADMIN',
+  KEPALA_SEKOLAH = 'KEPALA_SEKOLAH',
   ADMIN_TU = 'ADMIN_TU',
   BAU = 'BAU',
   TATA_USAHA = 'TATA_USAHA',
@@ -47,6 +48,7 @@ export enum UserRole {
 
 // Sub roles
 export enum SubRole {
+  KEPALA_SEKOLAH = 'KEPALA_SEKOLAH',
   ADMIN_TU = 'ADMIN_TU',
   TATA_USAHA = 'TATA_USAHA',
   BAU = 'BAU',

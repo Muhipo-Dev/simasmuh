@@ -4,11 +4,13 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { 
   ShieldCheck, Award, HeartHandshake, Sparkles, CheckCircle2, 
-  AlertTriangle, BookOpen, Clock, Users, FileText, Info
+  AlertTriangle, BookOpen, Clock, Users, FileText, Info, ShieldAlert,
+  Calendar, Check, UserCheck
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 
 export default function EtikaTatibPage() {
@@ -31,6 +33,8 @@ export default function EtikaTatibPage() {
 
   const students = dashboardData?.students || []
   const currentStudent = students[selectedChildIndex] || students[0]
+  const etika = currentStudent?.etikaTataTertib || {}
+  const assessmentHistory = etika.assessments || []
 
   return (
     <div className="space-y-6">
@@ -40,14 +44,14 @@ export default function EtikaTatibPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
               <ShieldCheck className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-              Penilaian Etika & Tata Tertib
+              Buku Saku Adab, Ibadah & Tata Tertib Siswa
             </h1>
-            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 text-xs font-bold px-2.5 py-0.5">
-              Coming Soon
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 text-xs font-bold px-2.5 py-0.5">
+              Live Terintegrasi
             </Badge>
           </div>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-            Monitoring rekam jejak kedisiplinan, etika kesantunan, dan amalan ibadah siswa secara langsung (View Only).
+            Monitoring rekam jejak kedisiplinan, etika kesantunan, dan amalan ibadah siswa secara langsung (Terkoneksi Tim Tatib, BK, Wali Kelas & Kesiswaan).
           </p>
         </div>
 
@@ -74,7 +78,7 @@ export default function EtikaTatibPage() {
         )}
       </div>
 
-      {/* Banner Integrasi Tim Tatatertib */}
+      {/* Banner Integrasi Tim Tatatertib & BK */}
       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
@@ -83,12 +87,12 @@ export default function EtikaTatibPage() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs uppercase font-extrabold tracking-wider bg-white/25 px-2 py-0.5 rounded text-white">
-                Terkoneksi Subrole Tim Tatib
+                Terkoneksi Tim Tatib & BK
               </span>
-              <span className="text-xs text-emerald-100 font-medium">BP/BK & Kedisiplinan Madrasah</span>
+              <span className="text-xs text-emerald-100 font-medium">Buku Saku Digital & Notifikasi WhatsApp</span>
             </div>
             <h3 className="text-base sm:text-lg font-extrabold text-white mt-1">
-              Sistem Buku Saku Kedisiplinan & Penilaian Karakter Islami
+              Evaluasi Karakter Islami, Kedisiplinan & Perkembangan Siswa
             </h3>
           </div>
         </div>
@@ -98,18 +102,21 @@ export default function EtikaTatibPage() {
         </div>
       </div>
 
-      {/* Grid Nilai & Statistika Karakter */}
+      {/* Grid Nilai & Statistika Karakter Live */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-emerald-100 dark:border-emerald-950/60 bg-gradient-to-br from-emerald-50/40 via-white to-white dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900">
+        <Card className="border-emerald-100 dark:border-emerald-950/60 bg-gradient-to-br from-emerald-50/40 via-white to-white dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900 shadow-xs">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Poin Kedisiplinan</p>
               <div className="flex items-baseline gap-2 mt-1">
-                <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">100</h3>
+                <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">
+                  {etika.kedisiplinanScore ?? 100}
+                </h3>
                 <span className="text-xs font-semibold text-slate-500">/ 100 Poin Maksimal</span>
               </div>
               <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Sangat Disiplin (Tanpa Pelanggaran)
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {etika.kedisiplinanScore >= 90 ? 'Sangat Disiplin & Tertib' : etika.kedisiplinanScore >= 75 ? 'Cukup Disiplin' : 'Perlu Pembinaan'}
               </p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600">
@@ -118,16 +125,18 @@ export default function EtikaTatibPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-teal-100 dark:border-teal-950/60 bg-gradient-to-br from-teal-50/40 via-white to-white dark:from-teal-950/20 dark:via-slate-900 dark:to-slate-900">
+        <Card className="border-teal-100 dark:border-teal-950/60 bg-gradient-to-br from-teal-50/40 via-white to-white dark:from-teal-950/20 dark:via-slate-900 dark:to-slate-900 shadow-xs">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-teal-700 dark:text-teal-400 uppercase tracking-wider">Amalan & Sholat Berjamaah</p>
               <div className="flex items-baseline gap-2 mt-1">
-                <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">A</h3>
-                <span className="text-xs font-semibold text-slate-500">(Sangat Baik)</span>
+                <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">
+                  {etika.ibadahScore || 'A'}
+                </h3>
+                <span className="text-xs font-semibold text-slate-500">(Aktif Beribadah)</span>
               </div>
               <p className="text-xs text-teal-600 dark:text-teal-400 font-semibold mt-1 flex items-center gap-1">
-                <HeartHandshake className="w-3.5 h-3.5" /> Aktif Sholat Dzuhur & Dhuha
+                <HeartHandshake className="w-3.5 h-3.5" /> Terdata Sholat Dzuhur & Dhuha
               </p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center text-teal-600">
@@ -136,12 +145,14 @@ export default function EtikaTatibPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-cyan-100 dark:border-cyan-950/60 bg-gradient-to-br from-cyan-50/40 via-white to-white dark:from-cyan-950/20 dark:via-slate-900 dark:to-slate-900">
+        <Card className="border-cyan-100 dark:border-cyan-950/60 bg-gradient-to-br from-cyan-50/40 via-white to-white dark:from-cyan-950/20 dark:via-slate-900 dark:to-slate-900 shadow-xs">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-cyan-700 dark:text-cyan-400 uppercase tracking-wider">Etika & Kesantunan</p>
+              <p className="text-xs font-bold text-cyan-700 dark:text-cyan-400 uppercase tracking-wider">Adab & Kesantunan</p>
               <div className="flex items-baseline gap-2 mt-1">
-                <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">A</h3>
+                <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">
+                  {etika.perilakuScore || 'A'}
+                </h3>
                 <span className="text-xs font-semibold text-slate-500">(Terpuji)</span>
               </div>
               <p className="text-xs text-cyan-600 dark:text-cyan-400 font-semibold mt-1 flex items-center gap-1">
@@ -155,40 +166,96 @@ export default function EtikaTatibPage() {
         </Card>
       </div>
 
-      {/* Catatan Pembina / Tim Tatib */}
-      <Card className="border-slate-200 dark:border-slate-800">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
+      {/* Riwayat Catatan Evaluasi Karakter Realtime */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden rounded-2xl">
+        <CardHeader className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800">
+          <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
             <FileText className="w-5 h-5 text-emerald-600" />
-            Catatan Pembinaan Karakter Siswa (Tim Ketertiban & Wali Kelas)
+            Riwayat Catatan Pembinaan, Ibadah & Pelanggaran Siswa
           </CardTitle>
-          <CardDescription>
-            Rekapitulasi evaluasi sikap dan perkembangan kepribadian peserta didik selama semester berjalan.
+          <CardDescription className="text-xs">
+            Daftar catatan evaluasi yang diinput oleh Wali Kelas, Tim Ketertiban Madrasah, dan Guru BK/BP.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                Catatan Wali Kelas & Tim Ketertiban:
-              </span>
-              <span className="text-xs text-slate-400">Semester Ganjil 2026/2027</span>
-            </div>
-            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-              &quot;Siswa menunjukkan kepribadian yang sangat santun, berakhlakul karimah, aktif mengikuti sholat berjamaah tepat waktu, berbusana rapi sesuai syariat madrasah, dan memiliki interaksi yang rukun dengan sesama siswa.&quot;
-            </p>
-          </div>
 
-          <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 flex items-start gap-3">
-            <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-900 dark:text-amber-200 space-y-1">
-              <p className="font-bold">Informasi Fitur Lengkap (Coming Soon):</p>
-              <p>
-                Modul input poin pelanggaran, kartu kredit poin reward/penghargaan, dan log presensi sholat digital saat ini sedang disiapkan untuk dapat diinput langsung oleh pengguna ber-subrole <strong>Tim Tatatertib</strong> dan dapat dipantau langsung oleh Wali Murid & Siswa secara real-time.
+        <CardContent className="p-0">
+          {assessmentHistory.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm space-y-2">
+              <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+              <p className="font-semibold text-slate-700 dark:text-slate-300">
+                Alhamdulillah, belum ada catatan pelanggaran tata tertib tercatat.
+              </p>
+              <p className="text-xs text-slate-400">
+                Siswa memiliki rekam jejak kedisiplinan dan amalan ibadah yang sangat baik.
               </p>
             </div>
-          </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-50 dark:bg-slate-900/60">
+                  <TableRow>
+                    <TableHead className="w-12 text-center text-xs font-bold">No</TableHead>
+                    <TableHead className="text-xs font-bold">Tanggal</TableHead>
+                    <TableHead className="text-xs font-bold">Kategori & Poin</TableHead>
+                    <TableHead className="text-xs font-bold">Peristiwa / Evaluasi</TableHead>
+                    <TableHead className="text-xs font-bold">Tindak Lanjut</TableHead>
+                    <TableHead className="text-xs font-bold">Penilai / Pembina</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {assessmentHistory.map((item: any, idx: number) => {
+                    const isNeg = item.points < 0 || item.category === 'PELANGGARAN' || item.type === 'NEGATIF'
+                    return (
+                      <TableRow key={item.id || idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 text-xs">
+                        <TableCell className="text-center text-slate-400 font-medium">{idx + 1}</TableCell>
+                        <TableCell className="font-medium whitespace-nowrap text-slate-600 dark:text-slate-300">
+                          {new Date(item.date).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] font-bold uppercase tracking-wider ${
+                                isNeg
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300'
+                                  : item.category === 'IBADAH'
+                                  ? 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300'
+                              }`}
+                            >
+                              {item.category?.replace('_', ' ')}
+                            </Badge>
+                            <span className={`font-bold text-xs ${isNeg ? 'text-rose-600' : 'text-emerald-600'}`}>
+                              {item.points > 0 ? `+${item.points}` : item.points}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-[300px]">
+                          <p className="font-bold text-slate-800 dark:text-slate-100">{item.title}</p>
+                          <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{item.description || '-'}</p>
+                        </TableCell>
+                        <TableCell className="max-w-[200px]">
+                          <span className="text-slate-600 dark:text-slate-300">{item.actionTaken || 'Dipantau berkala'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 block">
+                            {item.evaluator?.name || 'Tim Pembina'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 uppercase">
+                            {item.evaluator?.subRole || item.evaluator?.role || 'TATIB/BK'}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

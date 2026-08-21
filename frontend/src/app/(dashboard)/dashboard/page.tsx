@@ -7,7 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Users, UserSquare2, CalendarDays, ClipboardCheck, QrCode, Loader2, Briefcase, BookOpen, UserCheck, Receipt, CreditCard, AlertTriangle, GraduationCap, Award, BellRing, Sparkles, ChevronDown } from 'lucide-react'
+import { 
+  Users, UserSquare2, CalendarDays, ClipboardCheck, QrCode, Loader2, 
+  Briefcase, BookOpen, UserCheck, Receipt, CreditCard, AlertTriangle, 
+  GraduationCap, Award, BellRing, Sparkles, ChevronDown, TrendingUp, 
+  TrendingDown, Wallet, Landmark, DollarSign, Activity, CheckCircle2, 
+  ArrowUpRight, FileText, PieChart, ShieldAlert, BarChart3, Clock,
+  ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake
+} from 'lucide-react'
 import { QrScanner } from '@/components/QrScanner'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import Link from 'next/link'
@@ -99,6 +106,7 @@ export default function DashboardPage() {
   })
 
   const [selectedChildIdx, setSelectedChildIdx] = useState(0)
+  const [selectedStatCategory, setSelectedStatCategory] = useState<string>('SEMUA')
 
   // Query untuk tagihan siswa (khusus siswa)
   const { data: studentTagihans } = useQuery<{
@@ -115,6 +123,14 @@ export default function DashboardPage() {
     queryKey: ['parent-my-dashboard'],
     queryFn: () => authenticatedQuery('/api-backend/parents/my-dashboard'),
     enabled: role === 'WALI_MURID' || role === 'PARENT' || role === 'ORANG_TUA'
+  })
+
+  // Query Khusus Dashboard Eksekutif & Statistika Lengkap Kepala Sekolah
+  const isKepalaSekolah = role === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH' || subRole2 === 'KEPALA_SEKOLAH' || subRole3 === 'KEPALA_SEKOLAH'
+  const { data: execStats, isLoading: loadingExecStats } = useQuery<any>({
+    queryKey: ['executive-statistics'],
+    queryFn: () => authenticatedQuery('/api-backend/settings/executive-statistics'),
+    enabled: isKepalaSekolah || role === 'SUPERADMIN' || role === 'ADMIN_IT'
   })
 
   const isLoading = loadingStudents || loadingClasses || loadingSchedules || loadingAttendances || loadingAnnouncements || (role !== 'SISWA' && (loadingUsers || loadingSubjects || loadingStaffAttendances))
@@ -788,44 +804,52 @@ export default function DashboardPage() {
 
         {/* Bagian Atas: Ringkasan Etika & Tata Tertib Siswa bersanding dengan Jadwal Pelajaran */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full items-stretch">
-          {/* Card Penilaian Etika & Tatib (View Only - Coming Soon) */}
+          {/* Card Penilaian Etika & Tatib (Live Terintegrasi) */}
           <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl flex flex-col justify-between overflow-hidden">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                   <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  Penilaian Etika & Tata Tertib Siswa
+                  Buku Saku Adab, Ibadah & Tata Tertib Siswa
                 </CardTitle>
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 text-[10px] font-bold">
-                  Coming Soon
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 text-[10px] font-bold">
+                  Live Terintegrasi
                 </Badge>
               </div>
               <CardDescription className="text-xs mt-0.5 text-slate-500 dark:text-slate-400 font-medium">
-                Monitoring kedisiplinan dan amalan ibadah {activeStudent?.name || 'siswa'} (Terkoneksi Tim Tatib & BK)
+                Monitoring kedisiplinan dan amalan ibadah {activeStudent?.name || 'siswa'} (Terkoneksi Tim Tatib, BK & Wali Kelas)
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-5 space-y-3 flex-1 flex flex-col justify-between">
               <div className="grid grid-cols-3 gap-2">
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-center">
                   <span className="text-[10px] font-bold text-slate-400 block uppercase">Poin Tatib</span>
-                  <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">100 / 100</span>
-                  <span className="text-[10px] text-emerald-600 block mt-0.5 font-semibold">Tertib & Taat</span>
+                  <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                    {activeStudent?.etikaTataTertib?.kedisiplinanScore ?? 100} / 100
+                  </span>
+                  <span className="text-[10px] text-emerald-600 block mt-0.5 font-semibold">
+                    {(activeStudent?.etikaTataTertib?.kedisiplinanScore ?? 100) >= 90 ? 'Tertib & Taat' : 'Perlu Pembinaan'}
+                  </span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-center">
                   <span className="text-[10px] font-bold text-slate-400 block uppercase">Amalan Ibadah</span>
-                  <span className="text-xl font-extrabold text-teal-600 dark:text-teal-400">A (Sangat Baik)</span>
+                  <span className="text-xl font-extrabold text-teal-600 dark:text-teal-400">
+                    {activeStudent?.etikaTataTertib?.ibadahScore || 'A (Sangat Baik)'}
+                  </span>
                   <span className="text-[10px] text-teal-600 block mt-0.5 font-semibold">Sholat Berjamaah</span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-center">
                   <span className="text-[10px] font-bold text-slate-400 block uppercase">Etika Kesopanan</span>
-                  <span className="text-xl font-extrabold text-cyan-600 dark:text-cyan-400">A (Terpuji)</span>
+                  <span className="text-xl font-extrabold text-cyan-600 dark:text-cyan-400">
+                    {activeStudent?.etikaTataTertib?.perilakuScore || 'A (Terpuji)'}
+                  </span>
                   <span className="text-[10px] text-cyan-600 block mt-0.5 font-semibold">Santun & Rukun</span>
                 </div>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
-                <p className="font-semibold text-slate-900 dark:text-white mb-1">Catatan Karakter Wali Kelas:</p>
+                <p className="font-semibold text-slate-900 dark:text-white mb-1">Catatan Karakter Terakhir:</p>
                 <p className="italic leading-relaxed">
-                  &quot;Ananda {activeStudent?.name || 'Siswa'} senantiasa menjaga adab, mematuhi peraturan madrasah, dan aktif dalam sholat berjamaah.&quot;
+                  &quot;{activeStudent?.etikaTataTertib?.catatanKarakter || `Ananda ${activeStudent?.name || 'Siswa'} senantiasa menjaga adab, mematuhi peraturan madrasah, dan aktif dalam sholat berjamaah.`}&quot;
                 </p>
               </div>
               <div className="flex justify-end pt-1">
@@ -1005,6 +1029,604 @@ export default function DashboardPage() {
           onClose={() => setShowPaymentPopup(false)}
           studentId={activeStudent?.id}
         />
+      </div>
+    )
+  }
+
+  // ============================================================
+  // DASHBOARD KEPALA SEKOLAH (STATISTIKA PENUH APLIKASI SIMASMUH)
+  // ============================================================
+  if (role === 'KEPALA_SEKOLAH') {
+    const ov = execStats?.overview || {}
+    const pr = execStats?.presensi || {}
+    const fin = execStats?.keuangan || {}
+    const dist = execStats?.studentDistribution || []
+    const announcementsList = execStats?.recentAnnouncements || announcements || []
+    const systemLogs = execStats?.recentLogs || []
+
+    const formatCurrency = (amount: number) =>
+      new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0
+      }).format(amount || 0)
+
+    const demo = execStats?.demografis || { gender: [], program: [], jalur: [], gelombang: [] }
+
+    return (
+      <div className="space-y-6 lg:space-y-8 pb-10">
+        {/* Banner Welcome Header Kepala Sekolah */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-orange-600 to-slate-900 p-6 sm:p-8 text-white shadow-xl border border-white/10">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-amber-400/20 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 rounded-full bg-orange-500/20 blur-3xl pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-extrabold backdrop-blur-md border border-white/20 uppercase tracking-wider flex items-center gap-1.5 shadow-inner">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                  Portal Statistika Eksekutif
+                </span>
+                <span className="text-xs text-amber-100 font-semibold bg-amber-500/30 px-2.5 py-0.5 rounded-full">
+                  Executive Real-Time Monitor
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+                Statistika Penuh SIMASMUH
+              </h1>
+              <p className="text-amber-100 text-sm sm:text-base font-medium max-w-2xl">
+                Selamat bertugas, <strong className="text-white font-bold">{(session?.user as any)?.name || 'Kepala Sekolah'}</strong>. Akses analitik komprehensif, rekapitulasi data, serta pilihan statistika khusus seluruh sektor SIMASMUH.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="px-4 py-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold text-xs sm:text-sm">
+                Mode: Eksekutif (Statistika & Analisis Penuh)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* PILIHAN STATISTIKA KHUSUS (TAB NAVIGATION FILTER) */}
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-2 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto shadow-xs">
+          {[
+            { id: 'SEMUA', label: '📊 Semua Statistika', desc: 'Ringkasan Penuh' },
+            { id: 'DEMOGRAFIS', label: '👥 Siswa & Demografis', desc: 'Gender, Jalur & Program' },
+            { id: 'PRESENSI', label: '⏱️ Presensi & Kehadiran', desc: 'Siswa, Guru & Karyawan' },
+            { id: 'KEDISIPLINAN', label: '🛡️ Adab & Tata Tertib', desc: 'Pelanggaran, Ibadah & BK' },
+            { id: 'KEUANGAN', label: '💰 Neraca & Keuangan', desc: 'Kas, Tagihan & Realisasi' },
+            { id: 'AKADEMIK', label: '📚 Akademik & Pembelajaran', desc: 'Rombel, Jurnal & Sesi' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedStatCategory(tab.id)}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex flex-col items-start ${
+                selectedStatCategory === tab.id
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className={`text-[10px] font-normal ${selectedStatCategory === tab.id ? 'text-amber-100' : 'text-slate-400'}`}>
+                {tab.desc}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* 1. KARTU RINGKASAN POPULASI & MASTER DATA (Ditampilkan pada SEMUA atau DEMOGRAFIS) */}
+        {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'DEMOGRAFIS') && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                Statistik Populasi & Ekosistem Sekolah
+              </h2>
+              <span className="text-xs text-slate-500 font-medium">Total Akun Terdata</span>
+            </div>
+
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+              <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs p-4 rounded-2xl flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Siswa</span>
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Users className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{ov.totalSiswa ?? students?.length ?? 0}</span>
+                  <span className="text-[11px] text-slate-400 block">Siswa Aktif</span>
+                </div>
+              </Card>
+
+              <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs p-4 rounded-2xl flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Guru</span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Briefcase className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{ov.totalGuru ?? 0}</span>
+                  <span className="text-[11px] text-slate-400 block">Tenaga Pendidik</span>
+                </div>
+              </Card>
+
+              <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs p-4 rounded-2xl flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Pegawai / BAU</span>
+                  <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                    <UserCheck className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{ov.totalPegawai ?? totalPegawai}</span>
+                  <span className="text-[11px] text-slate-400 block">Staf & Karyawan</span>
+                </div>
+              </Card>
+
+              <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs p-4 rounded-2xl flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Wali Murid</span>
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <GraduationCap className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{ov.totalWaliMurid ?? 0}</span>
+                  <span className="text-[11px] text-slate-400 block">Akun Terhubung</span>
+                </div>
+              </Card>
+
+              <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs p-4 rounded-2xl flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Rombel / Kelas</span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <UserSquare2 className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{ov.totalKelas ?? classes?.length ?? 0}</span>
+                  <span className="text-[11px] text-slate-400 block">Rombongan Belajar</span>
+                </div>
+              </Card>
+
+              <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs p-4 rounded-2xl flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Mata Pelajaran</span>
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{ov.totalMapel ?? 0}</span>
+                  <span className="text-[11px] text-slate-400 block">Kurikulum Aktif</span>
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* STATISTIKA KHUSUS DEMOGRAFIS SISWA */}
+        {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'DEMOGRAFIS') && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Gender */}
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
+              <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Komposisi Gender Siswa</span>
+              <div className="space-y-2">
+                {demo.gender?.map((g: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">{g.name === 'L' ? 'Laki-Laki' : g.name === 'P' ? 'Perempuan' : g.name}</span>
+                    <span className="font-black text-slate-900 dark:text-white">{g.count} Siswa</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Program */}
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
+              <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Distribusi Program Belajar</span>
+              <div className="space-y-2">
+                {demo.program?.map((p: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">{p.name}</span>
+                    <span className="font-black text-slate-900 dark:text-white">{p.count} Siswa</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Jalur Pendaftaran */}
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
+              <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Jalur Pendaftaran</span>
+              <div className="space-y-2">
+                {demo.jalur?.map((j: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">{j.name}</span>
+                    <span className="font-black text-slate-900 dark:text-white">{j.count} Siswa</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Gelombang */}
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-4">
+              <span className="text-xs font-extrabold uppercase text-slate-500 block mb-3">Gelombang Masuk</span>
+              <div className="space-y-2">
+                {demo.gelombang?.map((g: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">{g.name}</span>
+                    <span className="font-black text-slate-900 dark:text-white">{g.count} Siswa</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* 2. STATISTIK PRESENSI & KEHADIRAN */}
+        {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'PRESENSI') && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* Presensi Siswa Card */}
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <ClipboardCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Presensi Siswa Hari Ini</h3>
+                  </div>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-bold text-xs">
+                    {pr.student?.percentage ?? 0}% Hadir
+                  </Badge>
+                </div>
+
+                <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                  <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900">
+                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 block uppercase">Hadir</span>
+                    <span className="text-xl font-extrabold text-emerald-800 dark:text-emerald-200">{pr.student?.hadir ?? 0}</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900">
+                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 block uppercase">Sakit</span>
+                    <span className="text-xl font-extrabold text-amber-800 dark:text-amber-200">{pr.student?.sakit ?? 0}</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900">
+                    <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 block uppercase">Izin</span>
+                    <span className="text-xl font-extrabold text-indigo-800 dark:text-indigo-200">{pr.student?.izin ?? 0}</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900">
+                    <span className="text-[10px] font-bold text-rose-700 dark:text-rose-300 block uppercase">Alpha</span>
+                    <span className="text-xl font-extrabold text-rose-800 dark:text-rose-200">{pr.student?.alpha ?? 0}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs text-slate-500">
+                <span>Total Siswa Terdaftar: <strong>{pr.student?.totalSiswa ?? students?.length ?? 0}</strong></span>
+                <span className="text-slate-400">Presensi Terkini</span>
+              </div>
+            </Card>
+
+            {/* Presensi Pegawai & Guru Card */}
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                    <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Presensi Guru & Pegawai</h3>
+                  </div>
+                  <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 font-bold text-xs">
+                    {pr.staff?.percentage ?? staffAttendancePercentage}% Hadir
+                  </Badge>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 text-center">
+                  <div className="p-3.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-100 dark:border-teal-900">
+                    <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 block uppercase">Pegawai Hadir</span>
+                    <span className="text-2xl font-extrabold text-teal-800 dark:text-teal-200">{pr.staff?.hadir ?? hadirStaffCount}</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 block uppercase">Total Tenaga Kerja</span>
+                    <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{pr.staff?.totalPegawai ?? totalPegawai}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs text-slate-500">
+                <span>Jadwal Hari Ini: <strong>{todaySchedules.length} Sesi</strong></span>
+                <span className="text-slate-400">Monitoring Kehadiran</span>
+              </div>
+            </Card>
+
+            {/* Pengawasan Tugas Tertunda */}
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Antrean Menunggu Tindakan</h3>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/70 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Receipt className="w-4 h-4 text-amber-600" />
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Verifikasi Bukti Transfer</p>
+                        <p className="text-[11px] text-slate-500">Menunggu pengecekan bendahara</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-amber-600 text-white font-extrabold">{ov.unverifiedPaymentProofs ?? 0}</Badge>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/70 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <DoorOpen className="w-4 h-4 text-blue-600" />
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Pengajuan Izin Keluar</p>
+                        <p className="text-[11px] text-slate-500">Izin dinas/pribadi guru & karyawan</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-blue-600 text-white font-extrabold">{ov.izinKeluarPending ?? 0}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end items-center text-xs">
+                <span className="text-slate-400 italic">Terpantau otomatis</span>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* 2.5 STATISTIKA ADAB, TATA TERTIB & BK */}
+        {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'KEDISIPLINAN') && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-5 border-l-4 border-l-rose-500 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Pelanggaran Siswa</span>
+                  <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 flex items-center justify-center">
+                    <ShieldAlert className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl sm:text-3xl font-black text-rose-600">{ov.totalPelanggaranSiswa ?? 0}</span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">Catatan Tata Tertib</span>
+                </div>
+              </div>
+              <div className="mt-4 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between text-[11px] text-slate-500">
+                <span>Tim Tatib Madrasah</span>
+                <span className="font-semibold text-rose-600">Dipantau</span>
+              </div>
+            </Card>
+
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-5 border-l-4 border-l-emerald-500 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Prestasi & Teladan</span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center">
+                    <Award className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl sm:text-3xl font-black text-emerald-600">{ov.totalPrestasiSiswa ?? 0}</span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">Apresiasi Karakter</span>
+                </div>
+              </div>
+              <div className="mt-4 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between text-[11px] text-slate-500">
+                <span>Reward & Point +</span>
+                <span className="font-semibold text-emerald-600">Teladan</span>
+              </div>
+            </Card>
+
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-5 border-l-4 border-l-cyan-500 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Amalan Ibadah</span>
+                  <div className="w-8 h-8 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 flex items-center justify-center">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl sm:text-3xl font-black text-cyan-600">{ov.totalIbadahSiswa ?? 0}</span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">Sholat & Kedisiplinan Agama</span>
+                </div>
+              </div>
+              <div className="mt-4 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between text-[11px] text-slate-500">
+                <span>Sholat Berjamaah</span>
+                <span className="font-semibold text-cyan-600">Aktif</span>
+              </div>
+            </Card>
+
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl p-5 border-l-4 border-l-purple-500 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Evaluasi Karakter</span>
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 flex items-center justify-center">
+                    <HeartHandshake className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl sm:text-3xl font-black text-purple-600">{ov.totalKarakterAssessments ?? 0}</span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">Total Rekam Bimbingan</span>
+                </div>
+              </div>
+              <div className="mt-4 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between text-[11px] text-slate-500">
+                <span>Integrasi BK & Tatib</span>
+                <span className="font-semibold text-purple-600">Realtime</span>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* 3. STATISTIKA KEUANGAN SEKOLAH SECARA MENYELURUH */}
+        {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'KEUANGAN') && (
+          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-3xl p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
+              <div>
+                <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Landmark className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  Neraca & Ringkasan Keuangan Sekolah
+                </h2>
+                <p className="text-xs text-slate-500">Statistik akumulatif penerimaan SPP, DPP, bantuan operasional, dan pengeluaran</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Saldo Bersih */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-transparent border border-emerald-200 dark:border-emerald-800/50">
+                <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase">
+                  <span>Saldo Kas Sekolah</span>
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <div className="mt-2 text-2xl lg:text-3xl font-black text-emerald-800 dark:text-emerald-200">
+                  {formatCurrency(fin.saldoKasSekolah ?? 0)}
+                </div>
+                <span className="text-[11px] text-slate-500 mt-1 block">Arus kas bersih aktif</span>
+              </div>
+
+              {/* Total Pemasukan Lunas */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-transparent border border-blue-200 dark:border-blue-800/50">
+                <div className="flex items-center justify-between text-blue-700 dark:text-blue-400 text-xs font-bold uppercase">
+                  <span>Total Pemasukan (Lunas)</span>
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div className="mt-2 text-2xl lg:text-3xl font-black text-blue-800 dark:text-blue-200">
+                  {formatCurrency(fin.totalPemasukanLunas ?? 0)}
+                </div>
+                <span className="text-[11px] text-slate-500 mt-1 block">Akumulasi penerimaan siswa</span>
+              </div>
+
+              {/* Total Piutang Siswa */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent border border-amber-200 dark:border-amber-800/50">
+                <div className="flex items-center justify-between text-amber-700 dark:text-amber-400 text-xs font-bold uppercase">
+                  <span>Sisa Piutang Siswa</span>
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <div className="mt-2 text-2xl lg:text-3xl font-black text-amber-800 dark:text-amber-200">
+                  {formatCurrency(fin.totalPiutangSiswa ?? 0)}
+                </div>
+                <span className="text-[11px] text-slate-500 mt-1 block">Tagihan belum tertagih</span>
+              </div>
+
+              {/* Total Pengeluaran */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-500/15 via-red-500/10 to-transparent border border-rose-200 dark:border-rose-800/50">
+                <div className="flex items-center justify-between text-rose-700 dark:text-rose-400 text-xs font-bold uppercase">
+                  <span>Total Pengeluaran</span>
+                  <TrendingDown className="w-4 h-4" />
+                </div>
+                <div className="mt-2 text-2xl lg:text-3xl font-black text-rose-800 dark:text-rose-200">
+                  {formatCurrency(fin.totalPengeluaran ?? 0)}
+                </div>
+                <span className="text-[11px] text-slate-500 mt-1 block">Operasional & belanja modal</span>
+              </div>
+            </div>
+
+            {/* Rincian Pos Tagihan & Kategori */}
+            {fin.tagihanByType && Object.keys(fin.tagihanByType).length > 0 && (
+              <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
+                <h4 className="text-xs font-extrabold uppercase text-slate-500 mb-3 tracking-wider">
+                  Realisasi Pembayaran Berdasarkan Pos Tagihan
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {Object.entries(fin.tagihanByType).map(([type, val]: [string, any]) => {
+                    const pct = val.total > 0 ? Math.round((val.lunas / val.total) * 100) : 0
+                    return (
+                      <div key={type} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700">
+                        <div className="flex justify-between items-center">
+                          <span className="font-extrabold text-xs text-slate-800 dark:text-white uppercase">{type}</span>
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded">
+                            {pct}%
+                          </span>
+                        </div>
+                        <div className="mt-2 text-xs font-bold text-slate-900 dark:text-white">
+                          {formatCurrency(val.lunas)}
+                        </div>
+                        <span className="text-[10px] text-slate-400 block">dari {formatCurrency(val.total)}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* 4. STATISTIK AKADEMIK, ROMBEL & PEMBELAJARAN */}
+        {(selectedStatCategory === 'SEMUA' || selectedStatCategory === 'AKADEMIK') && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Metrik Pembelajaran */}
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-3xl p-5 sm:p-6 flex flex-col justify-between">
+              <div>
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white mb-3 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <BookOpen className="w-5 h-5 text-indigo-600" />
+                  Aktivitas Pembelajaran
+                </h3>
+
+                <div className="space-y-3 mt-4">
+                  <div className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 flex justify-between items-center">
+                    <div>
+                      <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200 block">Jurnal Mengajar Guru</span>
+                      <span className="text-[10px] text-slate-400">Total catatan KBM guru</span>
+                    </div>
+                    <span className="text-xl font-black text-indigo-700 dark:text-indigo-300">{ov.totalJurnalMengajar ?? 0}</span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900 flex justify-between items-center">
+                    <div>
+                      <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 block">Jurnal Wali Kelas</span>
+                      <span className="text-[10px] text-slate-400">Bimbingan siswa & kelas</span>
+                    </div>
+                    <span className="text-xl font-black text-emerald-700 dark:text-emerald-300">{ov.totalJurnalWaliKelas ?? 0}</span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900 flex justify-between items-center">
+                    <div>
+                      <span className="text-xs font-bold text-amber-900 dark:text-amber-200 block">Jadwal Sesi Pelajaran</span>
+                      <span className="text-[10px] text-slate-400">Total jadwal KBM aktif</span>
+                    </div>
+                    <span className="text-xl font-black text-amber-700 dark:text-amber-300">{ov.totalJadwal ?? 0}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Distribusi Siswa per Kelas */}
+            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-3xl p-5 sm:p-6 lg:col-span-2">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-indigo-600" />
+                  Distribusi Komposisi Jumlah Siswa per Rombel / Kelas
+                </h3>
+                <span className="text-xs text-slate-500 font-medium">
+                  Total: <strong>{dist.reduce((sum: number, item: any) => sum + (item.count || 0), 0)} Siswa</strong> dalam <strong>{dist.length} Rombel</strong>
+                </span>
+              </div>
+
+              {dist.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 text-sm">Belum ada data kelas terdaftar</div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto pr-1">
+                  {dist.map((item: any, idx: number) => (
+                    <div key={idx} className="p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/60 flex flex-col justify-between hover:border-indigo-300 transition-colors">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{item.className}</span>
+                      <div className="mt-2 flex items-baseline justify-between">
+                        <span className="text-xl font-black text-slate-900 dark:text-white">{item.count}</span>
+                        <span className="text-[11px] text-slate-400 font-medium">Siswa</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {/* 5. INFORMASI & PENGUMUMAN SEKOLAH */}
+        <div className="w-full">
+          {renderAnnouncements()}
+        </div>
       </div>
     )
   }

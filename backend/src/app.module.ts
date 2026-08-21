@@ -31,6 +31,7 @@ import { PaymentProofsModule } from './modules/finance/payment-proofs/payment-pr
 import { NotificationsModule } from './modules/communication/notifications/notifications.module';
 import { WhatsAppModule } from './modules/communication/whatsapp/whatsapp.module';
 import { FaceAttendanceModule } from './modules/attendance/face-attendance/face-attendance.module';
+import { CharacterAssessmentsModule } from './modules/academic/character-assessments/character-assessments.module';
 import { SystemLogModule } from './modules/core/system-log/system-log.module';
 import { WaitingRoomModule } from './modules/core/waiting-room/waiting-room.module';
 import { WaitingRoomMiddleware } from './modules/core/waiting-room/waiting-room.middleware';
@@ -94,6 +95,7 @@ import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
     NotificationsModule,
     WhatsAppModule,
     FaceAttendanceModule,
+    CharacterAssessmentsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -17,6 +17,7 @@ export const superadminLinks = [
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'QR Layar (Publik)', href: '/presensi/manajemen-qr', icon: QrCode },
   { name: 'Presensi Camera AI', href: '/presensi/camera', icon: Camera },
+  { name: 'Izin Presensi', href: '/presensi/izin-keluar', icon: DoorOpen },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
   { name: 'Kelola Notifikasi', href: '/pengaturan/notifikasi', icon: BellRing },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
@@ -31,6 +32,7 @@ export const bauLinks = [
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'QR Layar (Publik)', href: '/presensi/manajemen-qr', icon: QrCode },
+  { name: 'Izin Presensi', href: '/presensi/izin-keluar', icon: DoorOpen },
   { name: 'Buku Tamu (BAU)', href: '/fitur/buku-tamu', icon: Contact },
   { name: 'Arsip & Persuratan', href: '/fitur/persuratan', icon: Mail },
   { name: 'Inventaris & Aset', href: '/fitur/inventaris', icon: Package },
@@ -45,13 +47,14 @@ export const guruLinks = [
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Jadwal', href: '/akademik/jadwal-mengajar', icon: CalendarDays },
   { name: 'Jurnal Mengajar', href: '/akademik/jurnal-mengajar', icon: BookOpen },
-  { name: 'Izin', href: '/presensi/izin-keluar', icon: DoorOpen },
+  { name: 'Izin Presensi', href: '/presensi/izin-keluar', icon: DoorOpen },
 ]
 
 export const siswaLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Scan QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
+  { name: 'Izin Presensi', href: '/presensi/izin-keluar', icon: DoorOpen },
   { name: 'Jadwal', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Keuangan', href: '/keuangan/laporan', icon: Wallet },
   { name: 'Etika & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck },
@@ -61,6 +64,7 @@ export const siswaLinks = [
 export const waliMuridLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
+  { name: 'Izin Presensi Siswa', href: '/presensi/izin-keluar', icon: DoorOpen },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Tagihan & SPP', href: '/keuangan/laporan', icon: Wallet },
   { name: 'Etika & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck },
@@ -76,9 +80,14 @@ export const pegawaiLinks = [
   { name: 'Izin', href: '/presensi/izin-keluar', icon: DoorOpen },
 ]
 
+export const kepalaSekolahLinks = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+]
+
 export const superAdminOnlyPaths = [
   '/master-data/pengguna', '/master-data/wali-murid', '/master-data/mata-pelajaran',
-  '/master-data/siswa', '/master-data/kelas', '/master-data/guru', '/pengaturan/sistem', '/presensi/manajemen-qr', '/presensi/camera'
+  '/master-data/siswa', '/master-data/kelas', '/master-data/guru', '/pengaturan/sistem', '/presensi/manajemen-qr', '/presensi/camera',
+  '/fitur/persuratan', '/fitur/buku-tamu', '/fitur/inventaris'
 ]
 
 export function getRoleLinks(role: string, subRole?: string, subRole2?: string, subRole3?: string) {
@@ -95,6 +104,8 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
   // Set base links by main role
   if (role === 'SUPERADMIN' || role === 'ADMIN_IT') {
     addLinks(superadminLinks)
+  } else if (role === 'KEPALA_SEKOLAH') {
+    addLinks(kepalaSekolahLinks)
   } else if (role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA') {
     addLinks(bauLinks)
   } else if (role === 'GURU') {
@@ -182,6 +193,8 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
       addLinks([
         { name: 'Persuratan', href: '/fitur/persuratan', icon: Mail }
       ])
+    } else if (roleName === 'KEPALA_SEKOLAH') {
+      addLinks(kepalaSekolahLinks)
     } else if (roleName === 'ADMIN_IT' || roleName === 'SUPERADMIN') {
       addLinks(superadminLinks)
     }

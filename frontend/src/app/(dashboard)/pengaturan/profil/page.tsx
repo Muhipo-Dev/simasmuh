@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Camera, Loader2, CheckCircle2, User, MapPin, Mail, Shield, Pencil, X, 
   GraduationCap, Award, Key, Lock, AlertCircle, Laptop, Clock, Globe, ShieldCheck, RefreshCw,
-  Smartphone, Monitor, Calendar, LogOut, ShieldAlert, Sparkles, LogOut as DisconnectIcon
+  Smartphone, Monitor, Calendar, LogOut, ShieldAlert, Sparkles, LogOut as DisconnectIcon, Trash2
 } from 'lucide-react'
+import Swal from 'sweetalert2'
 
 import { compressImageFile } from '@/utils/imageCompressor'
 
@@ -219,6 +220,79 @@ export default function ProfilePage() {
       setTimeout(() => setUnlinkMsg(''), 4000)
     }
   })
+
+  const clearAllLogsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await authenticatedFetch(`/api-backend/users/${userId}/unlink-logs`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Gagal menghapus riwayat pemutusan sesi')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unlink-logs', userId] })
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil Dihapus',
+        text: 'Semua riwayat pemutusan sesi telah dibersihkan.',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal', err.message || 'Gagal menghapus riwayat', 'error')
+    }
+  })
+
+  const deleteSingleLogMutation = useMutation({
+    mutationFn: async (logId: string) => {
+      const res = await authenticatedFetch(`/api-backend/users/${userId}/unlink-logs/${logId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Gagal menghapus log riwayat')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unlink-logs', userId] })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal', err.message || 'Gagal menghapus catatan', 'error')
+    }
+  })
+
+  const handleClearAllLogs = () => {
+    Swal.fire({
+      title: 'Hapus Semua Riwayat?',
+      text: 'Seluruh catatan riwayat pemutusan sesi perangkat akan dihapus secara permanen.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Hapus Semua',
+      cancelButtonText: 'Batal',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        clearAllLogsMutation.mutate()
+      }
+    })
+  }
+
+  const handleDeleteSingleLog = (logId: string) => {
+    Swal.fire({
+      title: 'Hapus Log Ini?',
+      text: 'Catatan pemutusan sesi ini akan dihapus.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Hapus',
+      cancelButtonText: 'Batal',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        deleteSingleLogMutation.mutate(logId)
+      }
+    })
+  }
 
   useEffect(() => {
     if (profile) {
@@ -895,13 +969,29 @@ export default function ProfilePage() {
           ) : (
             /* TAB RIWAYAT LOG PEMUTUSAN SESI & AUDIT */
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
                 <div className="flex items-center gap-2">
                   <DisconnectIcon className="w-4 h-4 text-red-500" />
                   <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
                     Log Riwayat Pemutusan Sesi ({unlinkLogs?.length || 0})
                   </h4>
                 </div>
+                {unlinkLogs && unlinkLogs.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearAllLogs}
+                    disabled={clearAllLogsMutation.isPending}
+                    className="h-8 px-2.5 text-xs text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-all self-end sm:self-auto gap-1.5 font-semibold"
+                  >
+                    {clearAllLogsMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>Bersihkan Semua Log</span>
+                  </Button>
+                )}
               </div>
 
               {isUnlinkLogsLoading ? (
@@ -928,7 +1018,7 @@ export default function ProfilePage() {
                     return (
                       <div
                         key={log.id || idx}
-                        className="p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors text-xs"
+                        className="p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors text-xs group"
                       >
                         <div className="flex items-start gap-3">
                           <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5 border border-red-200 dark:border-red-900/60">
@@ -957,15 +1047,30 @@ export default function ProfilePage() {
                           </div>
                         </div>
 
-                        <div className="flex flex-col sm:items-end text-[11px] text-slate-500 dark:text-slate-400 shrink-0 pl-12 md:pl-0">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                            {fullDate}
-                          </span>
-                          <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px] flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            Pukul {timeStr} WIB
-                          </span>
+                        <div className="flex items-center justify-between md:justify-end gap-3 pl-12 md:pl-0">
+                          <div className="flex flex-col sm:items-end text-[11px] text-slate-500 dark:text-slate-400 shrink-0">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                              {fullDate}
+                            </span>
+                            <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px] flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              Pukul {timeStr} WIB
+                            </span>
+                          </div>
+                          
+                          {log.id && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSingleLog(log.id)}
+                              disabled={deleteSingleLogMutation.isPending}
+                              title="Hapus log riwayat ini"
+                              aria-label="Hapus log"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-all opacity-80 md:opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     )

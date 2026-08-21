@@ -368,13 +368,13 @@ export class DailyAttendancesService {
 
         if (izin) {
           const rentangIzin = izin.estimasiKembali
-            ? `${izin.waktuKeluar}-${izin.estimasiKembali}`
+            ? `${izin.waktuKeluar} - ${izin.estimasiKembali}`
             : `sejak ${izin.waktuKeluar}`;
 
-          if (keterangan === '-') {
-            keterangan = `Izin Keluar (${rentangIzin}): ${izin.alasan}`;
+          if (keterangan === '-' || keterangan === 'IZIN') {
+            keterangan = `Izin (${rentangIzin}): ${izin.alasan}`;
           } else {
-            keterangan += ` | Izin Keluar (${rentangIzin}): ${izin.alasan}`;
+            keterangan += ` | Izin (${rentangIzin}): ${izin.alasan}`;
           }
         }
 

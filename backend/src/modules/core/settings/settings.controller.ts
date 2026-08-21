@@ -78,9 +78,16 @@ export class SettingsController {
     return this.settingsService.getStats();
   }
 
+  @Get('executive-statistics')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, 'KEPALA_SEKOLAH', UserRole.KEUANGAN, UserRole.ADMIN_TU, UserRole.BAU)
+  getExecutiveStatistics() {
+    return this.settingsService.getExecutiveStatistics();
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, 'KEPALA_SEKOLAH')
   getSettings() {
     return this.settingsService.getSettings();
   }

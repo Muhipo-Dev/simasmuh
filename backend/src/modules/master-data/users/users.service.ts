@@ -369,7 +369,7 @@ export class UsersService {
       orderBy: {
         createdAt: 'desc',
       },
-      take: 20,
+      take: 50,
       select: {
         id: true,
         action: true,
@@ -381,6 +381,29 @@ export class UsersService {
         createdAt: true,
       },
     });
+  }
+
+  async deleteUnlinkLogs(userId: string) {
+    await this.prisma.systemLog.deleteMany({
+      where: {
+        userId,
+        category: 'AUTH',
+        action: {
+          in: ['UNLINK_SESSION', 'UNLINK_ALL_SESSIONS', 'LOGOUT_SESSION'],
+        },
+      },
+    });
+    return { success: true, message: 'Semua riwayat pemutusan sesi berhasil dihapus.' };
+  }
+
+  async deleteSingleUnlinkLog(userId: string, logId: string) {
+    await this.prisma.systemLog.deleteMany({
+      where: {
+        id: logId,
+        userId,
+      },
+    });
+    return { success: true, message: 'Log riwayat berhasil dihapus.' };
   }
 
   async updateProfile(id: string, data: any) {

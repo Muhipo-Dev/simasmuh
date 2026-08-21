@@ -34,7 +34,7 @@ export class IzinKeluarController {
     }
   }
 
-  // Ajukan izin (semua pegawai/guru)
+  // Ajukan izin (Siswa, Pegawai, Guru, Wali Murid)
   @Post()
   create(
     @Headers('authorization') auth: string,
@@ -44,6 +44,7 @@ export class IzinKeluarController {
       waktuKeluar: string;
       estimasiKembali?: string;
       alasan: string;
+      targetUserId?: string;
     },
   ) {
     const user = this.getUserFromToken(auth);
@@ -51,7 +52,7 @@ export class IzinKeluarController {
     return this.izinKeluarService.create(user.userId, body);
   }
 
-  // Lihat izin saya sendiri
+  // Lihat izin saya sendiri (atau anak saya jika wali murid)
   @Get('my')
   findMy(@Headers('authorization') auth: string) {
     const user = this.getUserFromToken(auth);
@@ -59,10 +60,13 @@ export class IzinKeluarController {
     return this.izinKeluarService.findMy(user.userId);
   }
 
-  // Admin/Superadmin: lihat semua izin
+  // Admin/Superadmin/Guru: lihat semua izin (bisa difilter SISWA vs PEGAWAI)
   @Get()
-  findAll(@Query('date') date?: string) {
-    return this.izinKeluarService.findAll(date);
+  findAll(
+    @Query('date') date?: string,
+    @Query('category') category?: 'SISWA' | 'PEGAWAI' | 'ALL',
+  ) {
+    return this.izinKeluarService.findAll(date, category);
   }
 
   // Setujui izin
@@ -85,3 +89,4 @@ export class IzinKeluarController {
     return this.izinKeluarService.remove(id, user.userId, user.role);
   }
 }
+

@@ -4,6 +4,36 @@ Semua catatan perubahan dan pembaruan sistem SIMASMUH didokumentasikan di berkas
 
 ---
 
+## [2026-08-21] - v1.5.3: Modul Penilaian Adab, Etika, Ibadah, Tata Tertib & Bimbingan Konseling (BK) Terintegrasi
+
+### 🚀 Fitur Baru & Peningkatan Utama
+
+#### 1. Sistem Penilaian Karakter, Adab & Buku Saku Digital Terintegrasi
+- **Model Basis Data `CharacterAssessment`**:
+  - Pencatatan terstruktur: Kategori (`ADAB_ETIKA`, `IBADAH`, `KEDISIPLINAN`, `PRESTASI_PENGHARGAAN`, `PELANGGARAN`), Tipe (`POSITIF`, `NEGATIF`, `RUTIN`, `CATATAN_KONSELING`), Delta Poin, Evaluator, Tindak Lanjut, dan Status Pembinaan.
+  - Terintegrasi penuh dengan akun siswa (`Student`), akun guru penilai (`User`: Wali Kelas, Tim Tatib, Guru BK, Kesiswaan), dan relasi orang tua (`ParentStudent`).
+- **Layanan Backend & Endpoint REST API (`CharacterAssessmentsModule`)**:
+  - `GET /character-assessments`: Pencarian & filter multi-parameter (kategori, kelas, rentang tanggal).
+  - `GET /character-assessments/dashboard-stats`: Statistik agregat harian & mingguan untuk dashboard Tatib & BK.
+  - `GET /character-assessments/student/:studentId/summary`: Akumulasi skor kedisiplinan (100 Poin), predikat ibadah sholat, dan riwayat bimbingan individual siswa.
+  - `POST /character-assessments`, `PUT /character-assessments/:id`, `DELETE /character-assessments/:id`.
+
+#### 2. Standar Notifikasi Ganda (In-App Notification & WhatsApp Otomatis)
+- Setiap pencatatan evaluasi karakter, pelanggaran tata tertib, atau apresiasi prestasi otomatis mengirimkan notifikasi ganda:
+  - Notifikasi langsung ke akun siswa dan wali murid di aplikasi (In-App Notification).
+  - Pesan resmi otomatis melalui WhatsApp Gateway ke nomor orang tua/wali murid dan siswa dengan format detail nama, NIS, kelas, kategori, poin, dan tindak lanjut pembinaan.
+
+#### 3. Panel Interaktif Pengelolaan Tatib & BK (`InteractiveCharacterAssessmentManagement`)
+- Antarmuka manajemen terintegrasi di halaman sub-role **Ketertiban** (`/fitur/ketertiban`) dan **BK/BP** (`/fitur/bk-bp`):
+  - Kartu ringkasan total pelanggaran, prestasi teladan, amalan ibadah sholat, dan sesi konseling BK.
+  - Filter pencarian cepat, seleksi kelas, dialog input evaluasi dengan preset poin otomatis, serta fitur ekspor laporan ke format Excel (`.xlsx`).
+
+#### 4. Integrasi Dashboard Siswa, Wali Murid & Eksekutif Kepala Sekolah
+- **Dashboard Siswa & Wali Murid**: Kartu Buku Saku Adab & Tatib di Dashboard Utama dan Halaman Rinci (`/akademik/etika-tatib`) menampilkan skor kedisiplinan live, predikat ibadah, catatan wali kelas, dan daftar riwayat pembinaan secara realtime.
+- **Dashboard Eksekutif Kepala Sekolah**: Penambahan tab filter **Adab & Tata Tertib** serta metrik monitoring pelanggaran, prestasi teladan, ibadah sholat, dan total evaluasi karakter terintegrasi pada overview eksekutif.
+
+---
+
 ## [2026-08-21] - v1.5.2: Server Time Synchronization (UTC+7 / Asia/Jakarta) & Supabase Log Decommissioning
 
 ### 🚀 Fitur Baru & Peningkatan Utama

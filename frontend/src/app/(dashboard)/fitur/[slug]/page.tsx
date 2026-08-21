@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
+import { InteractiveCharacterAssessmentManagement } from '@/components/academic/InteractiveCharacterAssessmentManagement'
 
 type GuestEntry = {
   id: string
@@ -747,6 +748,11 @@ export default function FiturSubRolePage() {
       {/* Render Interaktif khusus Buku Tamu */}
       {slug === 'buku-tamu' && (
         <InteractiveGuestBook />
+      )}
+
+      {/* Render Interaktif khusus Ketertiban & BP/BK */}
+      {(slug === 'ketertiban' || slug === 'bk-bp') && (
+        <InteractiveCharacterAssessmentManagement defaultCategory={slug === 'ketertiban' ? 'PELANGGARAN' : 'ALL'} />
       )}
 
       {/* Grid Status Modul Terencana */}

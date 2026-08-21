@@ -1162,11 +1162,17 @@ export default function FaceAttendanceCameraPage() {
 
                 {/* Footer Controls - Clean Information Only */}
                 <div className="p-2.5 sm:p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-400">
-                  <div className="flex items-center gap-2 truncate">
-                    <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span className="truncate">Lokasi Kamera: <strong className="text-slate-200">{currentConfig?.location || 'Gerbang Depan Sekolah'}</strong></span>
+                  <div className="flex items-center gap-3 truncate">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="truncate">Biometrik AI : <strong className="text-slate-200">FaceNet & MTCNN</strong></span>
+                    </div>
+                    <span className="hidden sm:inline text-slate-600">•</span>
+                    <span className="hidden md:inline truncate text-slate-400">
+                      Lokasi: <strong className="text-slate-300 font-medium">{currentConfig?.location || 'Gerbang Depan'}</strong>
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
                       <span className={`w-1.5 h-1.5 rounded-full ${serviceStatus?.is_running ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                       {serviceStatus?.is_running ? 'Stream Aktif' : 'Standby'}

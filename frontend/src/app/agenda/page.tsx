@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Calendar, LogIn, Menu, MapPin, Phone, Mail, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { PublicNavbar, AppFooter } from '@/components/layout';
 
 interface Announcement {
   id: string;
@@ -57,64 +57,9 @@ export default async function AgendaPage() {
   const email = settings?.email || 'info@smamuhipo.sch.id'
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Navbar */}
-      <nav className="h-20 bg-white flex items-center justify-between px-6 lg:px-12 shadow-sm relative z-20">
-        <div className="flex items-center gap-3">
-          <Link href="/">
-            <Image
-              src="/pic_logo.png"
-              alt="Logo"
-              width={150}
-              height={50}
-              className="object-contain h-12 w-auto"
-            />
-          </Link>
-        </div>
-        <div className="hidden lg:flex items-center gap-8">
-          <Link href="/" className="text-slate-600 hover:text-[#2B50A1] font-medium transition-colors">Beranda</Link>
-          <Link href="/profil" className="text-slate-600 hover:text-[#2B50A1] font-medium transition-colors">Profil</Link>
-          <Link href="/tentang" className="text-slate-600 hover:text-[#2B50A1] font-medium transition-colors">Tentang</Link>
-          <Link href="/berita" className="text-slate-600 hover:text-[#2B50A1] font-medium transition-colors">Berita</Link>
-
-          <div className="flex items-center gap-3 border-l border-slate-200 pl-8">
-            <Link href="/login" className="bg-[#2B50A1] hover:bg-[#1f3c7a] text-white px-6 py-2.5 rounded-full font-medium flex items-center transition-colors shadow-sm">
-              <LogIn className="w-4 h-4 mr-2" />
-              Login SIMASMUH
-            </Link>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        <div className="lg:hidden">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="bg-[#2B50A1] hover:bg-[#1f3c7a] text-white rounded-md w-12 h-12 p-0 flex items-center justify-center">
-              <Menu className="h-6 w-6" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 mt-2 bg-white p-2">
-              <DropdownMenuItem>
-                <Link href="/" className="w-full cursor-pointer py-3 px-4 text-base rounded-md">Beranda</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Link href="/profil" className="w-full cursor-pointer py-3 px-4 text-base rounded-md">Profil</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Link href="/tentang" className="w-full cursor-pointer py-3 px-4 text-base rounded-md">Tentang</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Link href="/berita" className="w-full cursor-pointer py-3 px-4 text-base rounded-md">Berita</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="my-2" />
-              <DropdownMenuItem>
-                <Link href="/login" className="w-full cursor-pointer py-3 px-4 text-base font-semibold text-white bg-[#2B50A1] hover:bg-[#1f3c7a] rounded-md flex items-center justify-center">
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Login SIMASMUH
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-100 transition-colors duration-300">
+      {/* Navbar Induk Terpadu */}
+      <PublicNavbar academicYear={settings?.academicYear} semester={settings?.semester} />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col py-12 px-6 lg:px-20 bg-slate-50">
@@ -225,19 +170,8 @@ export default async function AgendaPage() {
         </div>
       </footer>
 
-      {/* Always-on-top Sticky/Fixed Copyright Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-950/90 text-slate-300 backdrop-blur-xl border-t border-slate-800/80 py-3.5 pb-6 sm:pb-7 px-6 lg:px-20 shadow-[0_-6px_20px_rgba(0,0,0,0.4)] transition-all duration-300">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-xs sm:text-sm font-semibold tracking-wide">
-          <p className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-            Copyright &copy; 2026 - Muhipo Dev
-          </p>
-          <div className="flex gap-6 text-xs text-slate-400">
-            <Link href="#" className="hover:text-white hover:underline transition-all">Kebijakan Privasi</Link>
-            <Link href="#" className="hover:text-white hover:underline transition-all">Syarat &amp; Ketentuan</Link>
-          </div>
-        </div>
-      </div>
+      {/* Copyright Bar */}
+      <AppFooter />
     </div>
   );
 }

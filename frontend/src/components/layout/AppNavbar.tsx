@@ -36,8 +36,8 @@ interface AppNavbarProps {
 }
 
 export function AppNavbar({
-  subtitle = 'SMA Muhammadiyah 1 Ponorogo',
-  hideSubtitleOnMobile = true,
+  subtitle = 'Sistem Informasi Manajemen Sekolah',
+  hideSubtitleOnMobile = false,
   logoHref = '/',
   actions,
   children,
@@ -48,26 +48,26 @@ export function AppNavbar({
     <header
       className={`h-14 sm:h-16 lg:h-20 flex items-center justify-between px-3 sm:px-6 lg:px-12 sticky top-0 z-40 shadow-xs transition-colors duration-300 bg-slate-950/80 dark:bg-slate-950/90 border-b border-white/10 text-white backdrop-blur-xl shrink-0 w-full overflow-hidden ${className}`}
     >
-      {/* SISI KIRI: Logo SIMASMUH */}
+      {/* SISI KIRI: Logo & Identitas SIMASMUH */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        <Link href={logoHref} className="flex items-center gap-2 sm:gap-2.5 group">
+        <Link href={logoHref} className="flex items-center gap-2.5 sm:gap-3 group">
           <div className="p-1 sm:p-1.5 rounded-xl border shadow-2xs transition-transform group-hover:scale-105 shrink-0 bg-white/15 border-white/20 backdrop-blur-md">
             <NextImage
               src="/pic_logo.png"
               alt="Logo SIMASMUH"
-              width={34}
-              height={34}
-              className="h-6 sm:h-7 lg:h-9 w-auto object-contain"
+              width={38}
+              height={38}
+              className="h-7 sm:h-8 lg:h-10 w-auto object-contain"
               priority
             />
           </div>
-          <div className="flex flex-col">
-            <span className="font-black text-xs sm:text-base lg:text-lg tracking-tight leading-tight text-white">
+          <div className="flex flex-col justify-center">
+            <span className="font-black text-base sm:text-lg lg:text-xl tracking-tight leading-none text-blue-500 dark:text-blue-400">
               SIMASMUH
             </span>
             {subtitle && (
               <span
-                className={`text-[9px] sm:text-[10px] font-medium leading-none text-blue-200/90 ${
+                className={`text-[10px] sm:text-xs font-normal leading-tight text-slate-300 dark:text-slate-400 mt-0.5 ${
                   hideSubtitleOnMobile ? 'hidden sm:inline' : 'inline'
                 }`}
               >

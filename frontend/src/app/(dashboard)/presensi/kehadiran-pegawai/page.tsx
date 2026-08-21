@@ -301,7 +301,7 @@ export default function LogKehadiranPegawaiPage() {
             <div className="p-2.5 sm:p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-400">
               <div className="flex items-center gap-2 truncate">
                 <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="truncate">Sistem Biometrik AI: <strong className="text-slate-200">FaceNet Inception-V1</strong></span>
+                <span className="truncate">Biometrik AI : <strong className="text-slate-200">FaceNet & MTCNN</strong></span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">

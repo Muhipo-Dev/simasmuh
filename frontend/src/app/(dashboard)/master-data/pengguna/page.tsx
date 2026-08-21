@@ -30,6 +30,7 @@ type User = {
 
 const SUB_ROLE_OPTIONS = [
   { value: 'NONE', label: 'Tanpa Sub Role' },
+  { value: 'KEPALA_SEKOLAH', label: 'Kepala Sekolah' },
   { value: 'ADMIN_TU', label: 'BAU (Badan Administrasi Umum)' },
   { value: 'GURU', label: 'Guru' },
   { value: 'PEGAWAI', label: 'Pegawai / Karyawan' },
@@ -50,6 +51,7 @@ const SUB_ROLE_OPTIONS = [
 ]
 
 const SUB_ROLE_LABELS: Record<string, string> = {
+  KEPALA_SEKOLAH: 'Kepala Sekolah',
   ADMIN_TU: 'BAU (Badan Administrasi Umum)',
   TATA_USAHA: 'BAU (Badan Administrasi Umum)',
   GURU: 'Guru',

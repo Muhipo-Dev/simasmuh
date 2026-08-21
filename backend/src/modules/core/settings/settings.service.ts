@@ -142,6 +142,251 @@ export class SettingsService {
     };
   }
 
+  async getExecutiveStatistics() {
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+    const [
+      totalSiswa,
+      totalGuru,
+      totalPegawai,
+      totalWaliMurid,
+      totalKelas,
+      totalMapel,
+      todayStudentAttendance,
+      todayStaffAttendance,
+      izinKeluarPending,
+      unverifiedPaymentProofs,
+      allTagihans,
+      allPengeluarans,
+      allDanaBantuans,
+      recentAnnouncements,
+      recentLogs,
+      studentsByClass,
+      classesList,
+      studentsGender,
+      studentsProgram,
+      studentsJalur,
+      studentsGelombang,
+      totalJurnalMengajar,
+      totalJurnalWaliKelas,
+      totalJadwal,
+      totalKarakterAssessments,
+      totalPelanggaranSiswa,
+      totalPrestasiSiswa,
+      totalIbadahSiswa
+    ] = await Promise.all([
+      this.prisma.student.count(),
+      this.prisma.teacherProfile.count(),
+      this.prisma.user.count({
+        where: {
+          role: { notIn: ['SISWA', 'WALI_MURID', 'ORANG_TUA', 'PARENT'] }
+        }
+      }),
+      this.prisma.parentProfile.count(),
+      this.prisma.class.count(),
+      this.prisma.subject.count(),
+      this.prisma.attendance.findMany({
+        where: {
+          date: { gte: startOfToday, lte: endOfToday }
+        },
+        select: { status: true }
+      }),
+      this.prisma.dailyAttendance.findMany({
+        where: {
+          date: { gte: startOfToday, lte: endOfToday }
+        },
+        select: { status: true }
+      }),
+      this.prisma.izinKeluar.count({
+        where: { status: 'MENUNGGU' }
+      }),
+      this.prisma.paymentProof.count({
+        where: { status: 'MENUNGGU_VERIFIKASI' }
+      }),
+      this.prisma.tagihan.findMany({
+        select: {
+          type: true,
+          amount: true,
+          amountPaid: true,
+          status: true,
+        }
+      }),
+      this.prisma.pengeluaran.findMany({
+        select: {
+          category: true,
+          amount: true,
+        }
+      }),
+      this.prisma.danaBantuan.findMany({
+        select: {
+          kategori: true,
+          nominal: true,
+          status: true,
+        }
+      }),
+      this.prisma.announcement.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: { author: { select: { name: true } } }
+      }),
+      this.prisma.systemLog.findMany({
+        take: 8,
+        orderBy: { createdAt: 'desc' }
+      }),
+      this.prisma.student.groupBy({
+        by: ['classId'],
+        _count: { id: true }
+      }),
+      this.prisma.class.findMany({
+        select: { id: true, name: true, gradeLevel: true }
+      }),
+      this.prisma.student.groupBy({
+        by: ['gender'],
+        _count: { id: true }
+      }),
+      this.prisma.student.groupBy({
+        by: ['program'],
+        _count: { id: true }
+      }),
+      this.prisma.student.groupBy({
+        by: ['jalurPendaftaran'],
+        _count: { id: true }
+      }),
+      this.prisma.student.groupBy({
+        by: ['gelombang'],
+        _count: { id: true }
+      }),
+      this.prisma.teachingJournal.count(),
+      this.prisma.homeroomJournal.count(),
+      this.prisma.schedule.count(),
+      this.prisma.characterAssessment.count(),
+      this.prisma.characterAssessment.count({
+        where: { OR: [{ category: 'PELANGGARAN' }, { type: 'NEGATIF' }] },
+      }),
+      this.prisma.characterAssessment.count({
+        where: { OR: [{ category: 'PRESTASI_PENGHARGAAN' }, { type: 'POSITIF' }] },
+      }),
+      this.prisma.characterAssessment.count({
+        where: { category: 'IBADAH' },
+      }),
+    ]);
+
+    // Presensi Siswa Hari Ini
+    const studentHadir = todayStudentAttendance.filter(a => a.status === 'HADIR').length;
+    const studentSakit = todayStudentAttendance.filter(a => a.status === 'SAKIT').length;
+    const studentIzin = todayStudentAttendance.filter(a => a.status === 'IZIN').length;
+    const studentAlpha = todayStudentAttendance.filter(a => a.status === 'ALPHA' || a.status === 'ALPA').length;
+    const studentAttendancePct = totalSiswa > 0 ? Math.min(100, Math.round((studentHadir / totalSiswa) * 100)) : 0;
+
+    // Presensi Pegawai & Guru Hari Ini
+    const staffHadir = todayStaffAttendance.filter(a => a.status === 'HADIR').length;
+    const staffAttendancePct = totalPegawai > 0 ? Math.min(100, Math.round((staffHadir / totalPegawai) * 100)) : 0;
+
+    // Ringkasan Keuangan
+    let totalTagihanKotor = 0;
+    let totalPemasukanLunas = 0;
+    let totalPiutangSiswa = 0;
+    const tagihanByType: Record<string, { total: number; lunas: number; sisa: number }> = {};
+
+    allTagihans.forEach((t) => {
+      totalTagihanKotor += t.amount;
+      const lunasAmt = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0);
+      totalPemasukanLunas += lunasAmt;
+      const sisa = Math.max(0, t.amount - lunasAmt);
+      totalPiutangSiswa += sisa;
+
+      if (!tagihanByType[t.type]) {
+        tagihanByType[t.type] = { total: 0, lunas: 0, sisa: 0 };
+      }
+      tagihanByType[t.type].total += t.amount;
+      tagihanByType[t.type].lunas += lunasAmt;
+      tagihanByType[t.type].sisa += sisa;
+    });
+
+    let totalPengeluaran = 0;
+    const pengeluaranByCategory: Record<string, number> = {};
+    allPengeluarans.forEach((p) => {
+      totalPengeluaran += p.amount;
+      pengeluaranByCategory[p.category] = (pengeluaranByCategory[p.category] || 0) + p.amount;
+    });
+
+    const totalDanaBantuan = allDanaBantuans
+      .filter(d => d.status === 'DISETUJUI')
+      .reduce((sum, d) => sum + d.nominal, 0);
+
+    const saldoKasSekolah = totalPemasukanLunas - totalPengeluaran;
+
+    // Komposisi Siswa per Kelas
+    const classMap = new Map(classesList.map(c => [c.id, c.name]));
+    const studentDistribution = studentsByClass.map(s => ({
+      classId: s.classId,
+      className: classMap.get(s.classId) || 'Tanpa Kelas',
+      count: s._count.id,
+    })).sort((a, b) => b.count - a.count);
+
+    return {
+      overview: {
+        totalSiswa,
+        totalGuru,
+        totalPegawai,
+        totalWaliMurid,
+        totalKelas,
+        totalMapel,
+        totalJurnalMengajar,
+        totalJurnalWaliKelas,
+        totalJadwal,
+        izinKeluarPending,
+        unverifiedPaymentProofs,
+        totalKarakterAssessments,
+        totalPelanggaranSiswa,
+        totalPrestasiSiswa,
+        totalIbadahSiswa,
+      },
+      karakterTatib: {
+        totalAssessments: totalKarakterAssessments,
+        totalPelanggaran: totalPelanggaranSiswa,
+        totalPrestasi: totalPrestasiSiswa,
+        totalIbadah: totalIbadahSiswa,
+      },
+      demografis: {
+        gender: studentsGender.map(g => ({ name: g.gender || 'Tidak Terdata', count: g._count.id })),
+        program: studentsProgram.map(p => ({ name: p.program || 'Reguler', count: p._count.id })),
+        jalur: studentsJalur.map(j => ({ name: j.jalurPendaftaran || 'Mandiri', count: j._count.id })),
+        gelombang: studentsGelombang.map(g => ({ name: g.gelombang || 'Gelombang 1', count: g._count.id })),
+      },
+      presensi: {
+        student: {
+          totalSiswa,
+          hadir: studentHadir,
+          sakit: studentSakit,
+          izin: studentIzin,
+          alpha: studentAlpha,
+          percentage: studentAttendancePct,
+        },
+        staff: {
+          totalPegawai,
+          hadir: staffHadir,
+          percentage: staffAttendancePct,
+        }
+      },
+      keuangan: {
+        totalTagihanKotor,
+        totalPemasukanLunas,
+        totalPiutangSiswa,
+        totalPengeluaran,
+        totalDanaBantuan,
+        saldoKasSekolah,
+        tagihanByType,
+        pengeluaranByCategory,
+      },
+      studentDistribution,
+      recentAnnouncements,
+      recentLogs,
+    };
+  }
+
   async getQrPublicToken() {
     let settings: any = await this.prisma.setting.findFirst();
     if (!settings) {

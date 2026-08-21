@@ -180,20 +180,22 @@ export default function ErrorPageContainer({
 
       {/* Top Navbar Header */}
       <header className="w-full h-14 sm:h-16 px-3 sm:px-6 md:px-8 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex items-center justify-between z-20 sticky top-0 shadow-xs">
-        <Link href="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
-          <NextImage
-            src="/pic_logo.png"
-            alt="Logo SIMASMUH"
-            width={110}
-            height={40}
-            className="h-7 sm:h-8 md:h-9 w-auto object-contain transition-transform group-hover:scale-105"
-            priority
-          />
-          <div className="flex flex-col">
-            <span className="font-black text-sm sm:text-base md:text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+        <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
+          <div className="p-1 sm:p-1.5 rounded-xl border shadow-2xs transition-transform group-hover:scale-105 shrink-0 bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700">
+            <NextImage
+              src="/pic_logo.png"
+              alt="Logo SIMASMUH"
+              width={38}
+              height={38}
+              className="h-7 sm:h-8 md:h-9 w-auto object-contain"
+              priority
+            />
+          </div>
+          <div className="flex flex-col justify-center">
+            <span className="font-black text-base sm:text-lg md:text-xl tracking-tight leading-none text-blue-600 dark:text-blue-400">
               SIMASMUH
             </span>
-            <span className="hidden sm:block text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 -mt-1 font-medium truncate max-w-[180px] sm:max-w-none">
+            <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-normal leading-tight mt-0.5">
               Sistem Informasi Manajemen Sekolah
             </span>
           </div>

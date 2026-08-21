@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { PublicNavbar, AppFooter } from '@/components/layout'
 import {
   ClipboardCheck,
   Search,
@@ -230,34 +231,8 @@ export default function PresensiPegawaiPage() {
       </div>
       <div className="fixed inset-0 bg-slate-100/80 dark:bg-slate-950/85 backdrop-blur-[3px] -z-20" />
 
-      {/* Navbar Atas */}
-      <nav className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-8 h-16 sm:h-20 flex items-center justify-between shadow-xs">
-        <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group">
-          <NextImage src="/pic_logo.png" alt="Logo SIMASMUH" width={100} height={40} className="h-8 sm:h-10 w-auto object-contain transition-transform group-hover:scale-105" />
-          <div>
-            <span className="font-extrabold text-base sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 block">
-              SIMASMUH
-            </span>
-            <span className="text-[10px] sm:text-xs text-slate-500 font-semibold block -mt-0.5">Portal Presensi Real-Time</span>
-          </div>
-        </Link>
-        <div className="flex items-center gap-2 sm:gap-4">
-          {academicYear && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs">
-              <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-              <span>TA: {academicYear}</span>
-              {semester && <span className="hidden sm:inline font-medium text-[11px]">({semester})</span>}
-            </div>
-          )}
-          <Link href="/login">
-            <Button variant="outline" className="h-10 sm:h-11 px-3 sm:px-4 text-xs sm:text-sm font-bold border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all shadow-xs flex items-center gap-1.5">
-              <ArrowLeft className="w-4 h-4 text-slate-600 dark:text-slate-300 shrink-0" />
-              <span>Kembali ke Login</span>
-            </Button>
-          </Link>
-          <ThemeToggle />
-        </div>
-      </nav>
+      {/* Navbar Induk Terpadu */}
+      <PublicNavbar academicYear={academicYear} semester={semester} />
 
       {/* Konten Utama */}
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-5 md:p-6 lg:p-8 space-y-6 sm:space-y-8 transition-all duration-200">
@@ -488,7 +463,7 @@ export default function PresensiPegawaiPage() {
                     <div className="p-2.5 sm:p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-400">
                       <div className="flex items-center gap-2 truncate">
                         <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span className="truncate">Sistem Biometrik AI: <strong className="text-slate-200">FaceNet (512-D) MTCNN</strong></span>
+                        <span className="truncate">Biometrik AI : <strong className="text-slate-200">FaceNet & MTCNN</strong></span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
@@ -848,11 +823,7 @@ export default function PresensiPegawaiPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800/80 py-6 text-center mt-auto">
-        <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
-          Copyright &copy; 2026 - Muhipo Dev
-        </p>
-      </footer>
+      <AppFooter />
     </div>
   )
 }

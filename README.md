@@ -29,6 +29,19 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-21 (v1.5.3 - Modul Penilaian Adab, Etika, Ibadah, Tata Tertib & Bimbingan Konseling (BK) Terintegrasi):**
+  * **Sistem Penilaian Karakter, Adab & Buku Saku Digital Terintegrasi:**
+    * Penambahan model `CharacterAssessment` di database Prisma & PostgreSQL dengan kategori `ADAB_ETIKA`, `IBADAH`, `KEDISIPLINAN`, `PRESTASI_PENGHARGAAN`, dan `PELANGGARAN`.
+    * Penyediaan REST API komprehensif (`CharacterAssessmentsModule`) untuk pencatatan evaluasi siswa oleh Wali Kelas, Tim Ketertiban, Guru BK/BP, dan Kesiswaan.
+    * Kalkulasi otomatis skor kedisiplinan (basis 100 Poin), predikat amalan ibadah sholat, etika kesantunan, dan riwayat bimbingan individual siswa.
+  * **Standar Notifikasi Ganda (In-App Notification & WhatsApp Gateway Otomatis):**
+    * Notifikasi langsung ke akun siswa dan wali murid di aplikasi (In-App Notification) serta pesan resmi WhatsApp otomatis ke nomor aktif orang tua/wali murid saat ada catatan prestasi atau pelanggaran tata tertib baru.
+  * **Panel Interaktif Pengelolaan Tatib & BK (`InteractiveCharacterAssessmentManagement`):**
+    * Antarmuka input data cepat, filter per kelas/kategori, visualisasi ringkasan kartu statistik, dan ekspor data laporan rekapitulasi ke berkas Excel (`.xlsx`) di menu **Ketertiban** (`/fitur/ketertiban`) dan **BK/BP** (`/fitur/bk-bp`).
+  * **Integrasi Dashboard Siswa, Wali Murid & Eksekutif Kepala Sekolah:**
+    * Visualisasi status live buku saku adab di Dashboard Siswa/Wali Murid dan halaman khusus **Buku Saku Adab & Tatib** (`/akademik/etika-tatib`).
+    * Penambahan tab filter **Adab & Tata Tertib** serta ringkasan metrik pelanggaran, prestasi teladan, dan amalan ibadah siswa pada Dashboard Eksekutif Kepala Sekolah.
+
 * **2026-08-21 (v1.5.2 - Sinkronisasi Algoritma Tanggal & Waktu UTC+7 Server-Centric, NTP-Style Live Clock Calibration & Decommissioning Log Supabase):**
   * **Sinkronisasi Algoritma Tanggal & Waktu Sistem Terpusat (UTC+7 / Asia/Jakarta / Bangkok):**
     * Inisialisasi global timezone proses NodeJS ke `Asia/Jakarta` (`process.env.TZ = 'Asia/Jakarta'`) pada bootstrap utama NestJS (`main.ts`).

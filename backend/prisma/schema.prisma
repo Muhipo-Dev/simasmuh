@@ -32,6 +32,7 @@ model User {
   pengeluarans      Pengeluaran[]
   danaBantuans      DanaBantuan[]
   staffJournals     StaffJournal[]
+  characterAssessments CharacterAssessment[]
   student           Student?
   teacherProfile    TeacherProfile?
   parentProfile     ParentProfile?
@@ -136,6 +137,7 @@ model Student {
   user               User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
   tagihans           Tagihan[]
   virtualAccountTransactions VirtualAccountTransaction[]
+  characterAssessments CharacterAssessment[]
 
   @@index([classId])
 }
@@ -535,3 +537,29 @@ model CompressedLogArchive {
   @@index([createdAt])
   @@index([bucketName])
 }
+
+model CharacterAssessment {
+  id              String    @id @default(uuid())
+  studentId       String
+  evaluatorId     String
+  category        String    // ADAB_ETIKA, IBADAH, KEDISIPLINAN, PRESTASI_PENGHARGAAN, PELANGGARAN
+  type            String    // POSITIF, NEGATIF, RUTIN, CATATAN_KONSELING
+  title           String
+  description     String?
+  points          Int       @default(0)
+  date            DateTime  @default(now())
+  actionTaken     String?
+  status          String    @default("SELESAI") // MENUNGGU, DALAM_PEMBINAAN, SELESAI
+  notifyParent    Boolean   @default(true)
+  student         Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  evaluator       User      @relation(fields: [evaluatorId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([studentId])
+  @@index([evaluatorId])
+  @@index([category])
+  @@index([type])
+  @@index([date])
+}
+

@@ -8,10 +8,17 @@ import WaitingRoomProvider from "@/components/waiting-room/WaitingRoomProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SIMASMUH - Sistem Informasi Manajemen",
-  description: "Administrasi Mengajar Guru dan Manajemen Sekolah",
+  title: {
+    default: "SIMASMUH",
+    template: "%s | SIMASMUH",
+  },
+  description: "Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo",
   icons: {
-    icon: "/pic_logo.png",
+    icon: [
+      { url: "/pic_logo.png", type: "image/png" },
+    ],
+    shortcut: "/pic_logo.png",
+    apple: "/pic_logo.png",
   },
 };
 

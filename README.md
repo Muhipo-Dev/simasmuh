@@ -39,6 +39,9 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
     * Optimalisasi konfigurasi kamera face attendance biometrik dan live clock synchronization.
   * **Penyelarasan Hak Akses & Navigasi Admin TU (Tata Usaha):**
     * Penyesuaian hak akses RBAC dan visibilitas tautan navigasi di `nav-links.ts` serta `AppSidebar.tsx` untuk peran `ADMIN_TU` agar mencakup manajemen data kesiswaan, kepegawaian, etika, dan presensi secara proporsional.
+  * **Penyelarasan Identitas Title Bar & Favicon Aplikasi Web:**
+    * Mengubah judul default title bar web desktop & tablet menjadi **SIMASMUH** (`layout.tsx` & `page.tsx`).
+    * Konfigurasi logo gabungan resmi sekolah & aplikasi (`/pic_logo.png`) sebagai favicon title bar, shortcut icon, dan apple-touch-icon.
   * **Penyempurnaan Antarmuka Master Data & Profil Pengguna:**
     * Perbaikan tampilan form master data pengguna dan siswa dengan integrasi validasi nomor WhatsApp aktif serta standarisasi badge role.
   * **Penyajian Multi-Kurva & Multi-Metrik Analitik Per Sektor Terpilih:**

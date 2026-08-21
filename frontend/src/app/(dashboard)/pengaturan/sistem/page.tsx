@@ -353,11 +353,20 @@ export default function SettingsPage() {
         <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl rounded-2xl overflow-hidden">
           <form onSubmit={handleSubmit}>
             <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-extrabold">
-                <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                Identitas Sekolah
-              </CardTitle>
-              <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">Informasi ini akan ditampilkan pada kop surat dan laporan.</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-extrabold">
+                  <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  Identitas Sekolah & Media Sistem
+                </CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    SUPERADMIN & ADMIN
+                  </span>
+                </div>
+              </div>
+              <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">
+                Informasi identitas, logo resmi, wallpaper master, dan kontak sekolah untuk seluruh ekosistem SIMASMUH.
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="space-y-4">
@@ -387,7 +396,7 @@ export default function SettingsPage() {
                     <Label htmlFor="backgroundMaster" className="font-bold text-slate-900 dark:text-slate-100 text-xs">
                       Wallpaper Background Master (Gedung Sekolah / Ekosistem)
                     </Label>
-                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">Sumber Terpadu Multi-Halaman</span>
+                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">Khusus Superadmin & Admin</span>
                   </div>
                   <div className="flex items-center gap-4 mt-2">
                     {formData.backgroundUrl ? (

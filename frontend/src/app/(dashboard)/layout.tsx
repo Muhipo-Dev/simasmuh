@@ -31,7 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     retry: false,
   })
 
-  const { data: systemSettings } = useQuery<{ academicYear?: string; semester?: string; logoUrl?: string | null }>({
+  const { data: systemSettings } = useQuery<{ academicYear?: string; semester?: string; logoUrl?: string | null; backgroundUrl?: string | null }>({
     queryKey: ['system-settings'],
     queryFn: () => authenticatedQuery('/api-backend/settings'),
     staleTime: 1000 * 30, // 30 detik agar selalu sinkron dengan pengaturan superadmin

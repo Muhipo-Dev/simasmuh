@@ -709,8 +709,8 @@ export class ParentsService {
           totalPrestasi,
           catatanKarakter: assessments.length > 0 
             ? assessments[0].description || assessments[0].title 
-            : 'Siswa menunjukkan sikap yang santun, aktif mengikuti sholat berjamaah, dan disiplin waktu di madrasah.',
-          timTatibContact: 'Tim Ketertiban & BP/BK Madrasah',
+            : 'Siswa menunjukkan sikap yang santun, aktif mengikuti sholat berjamaah, dan disiplin waktu di sekolah.',
+          timTatibContact: 'Tim Ketertiban & BP/BK Sekolah',
           assessments,
         },
         // Fitur E-Rapor (Views only / Download Coming Soon)

@@ -549,7 +549,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
             <div className="sm:col-span-2 space-y-1.5">
               <Label className="text-xs font-bold">Judul / Peristiwa *</Label>
               <Input
-                placeholder="Misal: Terlambat Masuk Madrasah / Teladan Sholat Berjamaah / Seragam Tidak Lengkap"
+                placeholder="Misal: Terlambat Masuk Sekolah / Teladan Sholat Berjamaah / Seragam Tidak Lengkap"
                 value={formState.title}
                 onChange={(e) => setFormState({ ...formState, title: e.target.value })}
                 className="h-10 text-xs rounded-xl"

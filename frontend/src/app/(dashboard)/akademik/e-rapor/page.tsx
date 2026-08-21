@@ -55,7 +55,7 @@ export default function ERaporPage() {
     },
     {
       title: 'Tanda Tangan Digital Kepala Sekolah',
-      desc: 'Mendukung validasi dokumen rapor digital dengan QR verifikasi dan ttd resmi Kepala Madrasah.',
+      desc: 'Mendukung validasi dokumen rapor digital dengan QR verifikasi dan ttd resmi Kepala Sekolah.',
       icon: Award,
       color: 'from-purple-500 to-pink-600'
     }
@@ -112,7 +112,7 @@ export default function ERaporPage() {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-purple-500/20 backdrop-blur-md border border-purple-400/30 text-purple-200 text-xs font-bold uppercase tracking-wider">
               <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Modul E-Rapor Digital Madrasah</span>
+              <span>Modul E-Rapor Digital Sekolah</span>
             </div>
             <span className="text-xs bg-white/20 px-3 py-1 rounded-full backdrop-blur-md font-medium">
               Tahun Ajaran 2026/2027
@@ -184,13 +184,15 @@ export default function ERaporPage() {
         </Card>
       </div>
 
-      {/* Grid Fitur E-Rapor */}
+      {/* Informasi Rencana Fitur */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-            <Clock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            Fitur Utama E-Rapor Digital Madrasah
-          </h2>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              Fitur Utama E-Rapor Digital Sekolah
+            </h2>
+          </div>
           <span className="text-xs font-semibold text-slate-500">Tahap Akhir Integrasi Penilaian</span>
         </div>
 

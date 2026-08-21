@@ -174,7 +174,7 @@ export default function EtikaTatibPage() {
             Riwayat Catatan Pembinaan, Ibadah & Pelanggaran Siswa
           </CardTitle>
           <CardDescription className="text-xs">
-            Daftar catatan evaluasi yang diinput oleh Wali Kelas, Tim Ketertiban Madrasah, dan Guru BK/BP.
+            Daftar catatan evaluasi yang diinput oleh Wali Kelas, Tim Ketertiban Sekolah, dan Guru BK/BP.
           </CardDescription>
         </CardHeader>
 

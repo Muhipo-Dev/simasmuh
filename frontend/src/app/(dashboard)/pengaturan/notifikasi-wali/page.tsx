@@ -147,7 +147,7 @@ export default function NotifikasiWaliPage() {
                 Notifikasi Presensi Kepulangan Siswa
               </Label>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Menerima pesan WhatsApp konfirmasi saat jam kepulangan siswa dari madrasah.
+                Menerima pesan WhatsApp konfirmasi saat jam kepulangan siswa dari sekolah.
               </p>
             </div>
             <Switch
@@ -181,7 +181,7 @@ export default function NotifikasiWaliPage() {
                 Notifikasi Bukti Pembayaran & Kuitansi Lunas
               </Label>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Konfirmasi saat pembayaran transfer atau Virtual Account berhasil diverifikasi oleh bendahara madrasah.
+                Konfirmasi saat pembayaran transfer atau Virtual Account berhasil diverifikasi oleh bendahara sekolah.
               </p>
             </div>
             <Switch
@@ -198,7 +198,7 @@ export default function NotifikasiWaliPage() {
                 Pengumuman Resmi & Agenda Sekolah
               </Label>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Informasi agenda pertemuan wali murid, kalender akademik, dan surat edaran resmi madrasah.
+                Informasi agenda pertemuan wali murid, kalender akademik, dan surat edaran resmi sekolah.
               </p>
             </div>
             <Switch

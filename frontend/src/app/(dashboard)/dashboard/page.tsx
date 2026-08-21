@@ -849,7 +849,7 @@ export default function DashboardPage() {
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
                 <p className="font-semibold text-slate-900 dark:text-white mb-1">Catatan Karakter Terakhir:</p>
                 <p className="italic leading-relaxed">
-                  &quot;{activeStudent?.etikaTataTertib?.catatanKarakter || `Ananda ${activeStudent?.name || 'Siswa'} senantiasa menjaga adab, mematuhi peraturan madrasah, dan aktif dalam sholat berjamaah.`}&quot;
+                  &quot;{activeStudent?.etikaTataTertib?.catatanKarakter || `Ananda ${activeStudent?.name || 'Siswa'} senantiasa menjaga adab, mematuhi peraturan sekolah, dan aktif dalam sholat berjamaah.`}&quot;
                 </p>
               </div>
               <div className="flex justify-end pt-1">
@@ -1396,7 +1396,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="mt-4 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between text-[11px] text-slate-500">
-                <span>Tim Tatib Madrasah</span>
+                <span>Tim Tatib Sekolah</span>
                 <span className="font-semibold text-rose-600">Dipantau</span>
               </div>
             </Card>

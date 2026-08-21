@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowRight, BookOpen, Globe, Cpu, Briefcase, Music, Microscope,
   Sparkles, CheckCircle2, Dumbbell, Heart, Moon, GraduationCap
@@ -215,36 +216,89 @@ export default function ProgramUnggulanSection() {
     },
   ]
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.1,
+      },
+    },
+  }
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 25, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 260,
+        damping: 20,
+      },
+    },
+  }
+
   return (
-    <section className="pt-16 sm:pt-20 pb-16 md:pb-24 px-4 sm:px-8 lg:px-12 bg-transparent transition-colors duration-300">
+    <section className="pt-16 sm:pt-20 pb-16 md:pb-24 px-4 sm:px-8 lg:px-12 bg-transparent transition-colors duration-300 relative overflow-hidden">
+      {/* Decorative ambient background glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-3/4 max-w-4xl h-72 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 blur-3xl -z-10 pointer-events-none rounded-full" />
+
       <div className="max-w-screen-xl mx-auto">
-        <div className="text-center mb-10 sm:mb-14 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-100/80 dark:bg-blue-950/80 border border-blue-200/80 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-extrabold shadow-xs backdrop-blur-md">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="text-center mb-10 sm:mb-14 space-y-3"
+        >
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-100/80 dark:bg-blue-950/80 border border-blue-200/80 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-extrabold shadow-sm backdrop-blur-md transition-transform hover:scale-105">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-spin" style={{ animationDuration: '6s' }} />
             Keunggulan Pendidikan SMA MUHIPO
           </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight drop-shadow-xs">
             Program Unggulan
           </h2>
-          <p className="text-slate-600 dark:text-slate-300 max-w-xl mx-auto text-base sm:text-lg text-center">
+          <p className="text-slate-600 dark:text-slate-300 max-w-xl mx-auto text-base sm:text-lg text-center font-medium">
             Berbagai program pendidikan terbaik untuk mencetak generasi yang cerdas, mandiri, berprestasi, dan mendunia.
           </p>
-        </div>
+        </motion.div>
 
-        {/* Grid: 2 col mobile → 3 col md → 5 col lg (2 rows × 5) */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
+        {/* Animated Staggered Grid: 2 col mobile → 3 col md → 5 col lg */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-40px' }}
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5"
+        >
           {programs.map((prog) => {
             const IconComp = prog.icon
             return (
-              <div
+              <motion.div
                 key={prog.id}
-                className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-xs border border-white/40 dark:border-white/10 hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-700/60 transition-all duration-300 group flex flex-col justify-between min-h-[220px]"
+                variants={cardVariants}
+                whileHover={{
+                  y: -6,
+                  scale: 1.02,
+                  transition: { duration: 0.25, ease: 'easeOut' }
+                }}
+                whileTap={{ scale: 0.98 }}
+                className="relative bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-2xl border border-white/50 dark:border-white/10 hover:border-blue-400/60 dark:hover:border-blue-500/50 transition-colors duration-300 group flex flex-col justify-between min-h-[230px] overflow-hidden"
               >
-                <div>
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-3 sm:mb-4 transition-colors ${prog.iconBg}`}>
-                    <IconComp className="w-5 h-5 sm:w-6 sm:h-6" />
+                {/* Glowing border highlight on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-indigo-500/0 to-blue-500/5 dark:to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                {/* Top shine line */}
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-400/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                <div className="relative z-10">
+                  <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-3 sm:mb-4 transition-all duration-300 group-hover:scale-110 group-hover:shadow-md ${prog.iconBg}`}>
+                    <IconComp className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 group-hover:rotate-6" />
                   </div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-1.5 leading-snug">
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white mb-1.5 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {prog.title}
                   </h3>
                   <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm leading-relaxed line-clamp-4 font-medium">
@@ -255,14 +309,15 @@ export default function ProgramUnggulanSection() {
                 <button
                   type="button"
                   onClick={() => setSelectedProgram(prog)}
-                  className={`mt-3 font-bold text-xs sm:text-sm flex items-center gap-1 transition-colors cursor-pointer ${prog.buttonText}`}
+                  className={`mt-4 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer relative z-10 group/btn ${prog.buttonText}`}
                 >
-                  Selengkapnya <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                  <span>Selengkapnya</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover/btn:translate-x-1.5" />
                 </button>
-              </div>
+              </motion.div>
             )
           })}
-        </div>
+        </motion.div>
       </div>
 
       {/* Program Detail Modal */}

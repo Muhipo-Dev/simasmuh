@@ -61,6 +61,8 @@ const authOptions = {
               subRole: user.user.subRole,
               subRole2: user.user.subRole2,
               subRole3: user.user.subRole3,
+              subRole4: user.user.subRole4,
+              subRole5: user.user.subRole5,
               token: user.access_token
             }
           }
@@ -83,6 +85,8 @@ const authOptions = {
         token.subRole = (user as any).subRole;
         token.subRole2 = (user as any).subRole2;
         token.subRole3 = (user as any).subRole3;
+        token.subRole4 = (user as any).subRole4;
+        token.subRole5 = (user as any).subRole5;
         token.accessToken = (user as any).token;
       }
       return token;
@@ -97,6 +101,8 @@ const authOptions = {
         ;(session.user as any).subRole = (token as any).subRole
         ;(session.user as any).subRole2 = (token as any).subRole2
         ;(session.user as any).subRole3 = (token as any).subRole3
+        ;(session.user as any).subRole4 = (token as any).subRole4
+        ;(session.user as any).subRole5 = (token as any).subRole5
         ;(session as any).accessToken = (token as any).accessToken
 
         // Verifikasi apakah token masih aktif dan belum di-unlink oleh superadmin/user

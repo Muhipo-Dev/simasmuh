@@ -79,6 +79,8 @@ export class CharacterAssessmentsService {
               subRole: true,
               subRole2: true,
               subRole3: true,
+              subRole4: true,
+              subRole5: true,
             },
           },
         },

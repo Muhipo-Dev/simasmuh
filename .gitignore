@@ -31,4 +31,5 @@ venv/
 services/whatsapp-gateway/auth_session/
 services/whatsapp-gateway/dist/
 storage/compressed-logs/
-
+.unlighthouse/
+frontend/.unlighthouse/

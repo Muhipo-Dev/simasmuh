@@ -72,6 +72,70 @@ export class IzinKeluarService {
       },
     });
 
+    // Notifikasi otomatis: Jika diterbitkan Dispensasi oleh TU/Sekolah untuk siswa
+    const isDispensasi = finalAlasan.includes('[IZIN DISPENSASI]') || finalAlasan.includes('[DISPENSASI') || data.tipeIzin === 'DISPENSASI';
+    if (isDispensasi) {
+      // 1. Notifikasi In-App ke Kepala Sekolah untuk persetujuan eksekutif
+      const kepalaSekolahList = await this.prisma.user.findMany({
+        where: {
+          OR: [
+            { role: 'KEPALA_SEKOLAH' },
+            { subRole: 'KEPALA_SEKOLAH' },
+            { subRole2: 'KEPALA_SEKOLAH' },
+            { subRole3: 'KEPALA_SEKOLAH' },
+            { subRole4: 'KEPALA_SEKOLAH' },
+            { subRole5: 'KEPALA_SEKOLAH' },
+          ],
+        },
+        select: { id: true, phone: true, name: true },
+      });
+
+      const studentName = izin.user?.name || 'Siswa';
+      const className = izin.user?.student?.class?.name || '-';
+
+      for (const ks of kepalaSekolahList) {
+        // Buat In-App Notification untuk approval di Dashboard
+        await this.prisma.notification.create({
+          data: {
+            userId: ks.id,
+            title: 'Permohonan Persetujuan Dispensasi Siswa',
+            message: `Surat dispensasi resmi untuk ${studentName} (Kelas ${className}) telah diterbitkan Tata Usaha dan membutuhkan persetujuan Kepala Sekolah.`,
+            type: 'DISPENSASI',
+            isRead: false,
+          },
+        }).catch(() => {});
+      }
+
+      // 2. Kirim Notifikasi WhatsApp & In-App ke Siswa & Wali Murid bahwa surat dispensasi telah diajukan
+      if (izin.user) {
+        const studentPhone = izin.user.phone || izin.user.student?.phone;
+        const parentPhone = izin.user.student?.parentPhone;
+
+        const notifMsg = `*Surat Dispensasi Resmi Siswa - SIMASMUH*\n\nDispensasi resmi atas nama *${studentName}* (Kelas ${className}) telah diterbitkan Tata Usaha untuk kegiatan *${data.alasan}* pada tanggal *${data.date}* (${data.waktuKeluar} - ${data.estimasiKembali || 'Selesai'}). Saat ini menunggu persetujuan akhir Kepala Sekolah.`;
+
+        if (studentPhone) {
+          this.whatsAppService.sendDirectMessage({
+            to: studentPhone,
+            recipientName: studentName,
+            recipientRole: 'SISWA',
+            category: 'IZIN',
+            title: 'Pengajuan Dispensasi Siswa',
+            message: notifMsg,
+          }).catch(() => {});
+        }
+        if (parentPhone && parentPhone !== studentPhone) {
+          this.whatsAppService.sendDirectMessage({
+            to: parentPhone,
+            recipientName: `Wali dari ${studentName}`,
+            recipientRole: 'WALI_MURID',
+            category: 'IZIN',
+            title: 'Pengajuan Dispensasi Siswa',
+            message: notifMsg,
+          }).catch(() => {});
+        }
+      }
+    }
+
     return izin;
   }
 

@@ -531,6 +531,7 @@ export class ParentsService {
               include: {
                 student: {
                   include: {
+                    user: true,
                     class: {
                       include: {
                         homeroomTeacher: {
@@ -555,6 +556,7 @@ export class ParentsService {
 
     return user.parentProfile.students.map((ps) => ({
       id: ps.student.id,
+      userId: ps.student.userId || ps.student.user?.id || ps.student.id,
       nis: ps.student.nis,
       nisn: ps.student.nisn,
       name: ps.student.name,
@@ -565,6 +567,16 @@ export class ParentsService {
       gradeLevel: ps.student.class?.gradeLevel,
       homeroomTeacherName: ps.student.class?.homeroomTeacher?.user?.name || ps.student.class?.homeroomTeacher?.nip || '-',
       relation: ps.relation || 'ORANG_TUA',
+      student: {
+        id: ps.student.id,
+        userId: ps.student.userId || ps.student.user?.id || ps.student.id,
+        nis: ps.student.nis,
+        nisn: ps.student.nisn,
+        name: ps.student.name,
+        class: {
+          name: ps.student.class?.name || '-',
+        },
+      },
     }));
   }
 

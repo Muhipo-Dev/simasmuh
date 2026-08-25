@@ -52,7 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (session && pathname) {
       const u = session.user as any
-      const roles = [u?.role, u?.subRole, u?.subRole2, u?.subRole3].filter(Boolean) as string[]
+      const roles = [u?.role, u?.subRole, u?.subRole2, u?.subRole3, u?.subRole4, u?.subRole5].filter(Boolean) as string[]
 
       // Cek ketat otorisasi rute
       const allowed = isPathAllowedForRoles(pathname, roles)
@@ -86,10 +86,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const subRole = (session.user as { subRole?: string })?.subRole
   const subRole2 = (session.user as { subRole2?: string })?.subRole2
   const subRole3 = (session.user as { subRole3?: string })?.subRole3
+  const subRole4 = (session.user as { subRole4?: string })?.subRole4
+  const subRole5 = (session.user as { subRole5?: string })?.subRole5
   
-  const displayRole = [role, subRole, subRole2, subRole3].filter(Boolean).join(' | ')
+  const displayRole = [role, subRole, subRole2, subRole3, subRole4, subRole5].filter(Boolean).join(' | ')
   
-  const currentLinks = getRoleLinks(role, subRole, subRole2, subRole3)
+  const currentLinks = getRoleLinks(role, subRole, subRole2, subRole3, subRole4, subRole5)
   const isDashboardPage = pathname === '/dashboard'
   const hideSidebar = isDashboardPage
 
@@ -210,11 +212,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-end justify-around h-16 px-1 relative pb-1">
             {(() => {
               const dashLink = currentLinks.find(l => l.href === '/dashboard') || { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }
-              const qrLink = currentLinks.find(l => l.href === '/presensi/scan-qr') || { name: 'Scan QR', href: '/presensi/scan-qr', icon: QrCode }
-              
               const otherLinks = currentLinks.filter(l => l.href !== '/dashboard' && l.href !== '/presensi/scan-qr')
-              const leftLink = otherLinks[0]
-              const rightLink = otherLinks[1]
+              const leftLink1 = otherLinks[0]
+              const centerLink = otherLinks[1]
+              const rightLink1 = otherLinks[2]
 
               const renderNavButton = (link: any, isCenter: boolean = false) => {
                 if (!link) return <div className="flex-1" key={Math.random()} />
@@ -259,9 +260,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               return (
                 <>
                   {renderNavButton(dashLink)}
-                  {renderNavButton(leftLink)}
-                  {qrLink ? renderNavButton(qrLink, true) : <div className="flex-1" />}
-                  {renderNavButton(rightLink)}
+                  {renderNavButton(leftLink1)}
+                  {centerLink ? renderNavButton(centerLink, true) : <div className="flex-1" />}
+                  {renderNavButton(rightLink1)}
                   <button
                     onClick={() => setIsMobileMenuOpen(true)}
                     className="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 min-w-0 transition-colors active:scale-95 text-slate-400 hover:text-white"

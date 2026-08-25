@@ -598,6 +598,10 @@ if [ -n "$1" ]; then
             start_apps "Production"
             exit 0
             ;;
+        *audit*|*lighthouse*|*unlighthouse*)
+            (cd "$FRONTEND_DIR" && npm run audit)
+            exit 0
+            ;;
     esac
 fi
 

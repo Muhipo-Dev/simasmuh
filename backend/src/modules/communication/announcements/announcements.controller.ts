@@ -48,8 +48,10 @@ export class AnnouncementsController {
     @Query('subRole') subRole?: string,
     @Query('subRole2') subRole2?: string,
     @Query('subRole3') subRole3?: string,
+    @Query('subRole4') subRole4?: string,
+    @Query('subRole5') subRole5?: string,
   ) {
-    const roles = [role, subRole, subRole2, subRole3].filter(Boolean);
+    const roles = [role, subRole, subRole2, subRole3, subRole4, subRole5].filter(Boolean);
     if (roles.includes('ADMIN_IT') || roles.includes('ADMIN_WEB') || roles.includes('SUPERADMIN')) {
       return this.announcementsService.findAll();
     } else if (roles.includes('SISWA')) {

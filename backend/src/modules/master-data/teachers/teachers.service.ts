@@ -15,6 +15,8 @@ export class TeachersService {
             { subRole: 'GURU' },
             { subRole2: 'GURU' },
             { subRole3: 'GURU' },
+            { subRole4: 'GURU' },
+            { subRole5: 'GURU' },
           ],
         },
       },

@@ -41,28 +41,28 @@ export class SettingsController {
 
   @Get('program-configs')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR')
   getAllProgramConfigs() {
     return this.programConfigService.getAllPrograms();
   }
 
   @Post('program-configs')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR')
   createProgramConfig(@Body() body: any) {
     return this.programConfigService.createProgram(body);
   }
 
   @Put('program-configs/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR')
   updateProgramConfig(@Param('id') id: string, @Body() body: any) {
     return this.programConfigService.updateProgram(id, body);
   }
 
   @Delete('program-configs/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR')
   deleteProgramConfig(@Param('id') id: string) {
     return this.programConfigService.deleteProgram(id);
   }
@@ -80,21 +80,21 @@ export class SettingsController {
 
   @Get('executive-statistics')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, 'KEPALA_SEKOLAH', UserRole.KEUANGAN, UserRole.ADMIN_TU, UserRole.BAU)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, 'KEPALA_SEKOLAH', UserRole.KEUANGAN, 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', UserRole.ADMIN_TU, UserRole.BAU)
   getExecutiveStatistics() {
     return this.settingsService.getExecutiveStatistics();
   }
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, 'KEPALA_SEKOLAH', UserRole.ADMIN_TU, UserRole.BAU, UserRole.TATA_USAHA, SubRole.ADMIN_TU, SubRole.BAU)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'KEPALA_SEKOLAH', UserRole.ADMIN_TU, UserRole.BAU, UserRole.TATA_USAHA, SubRole.ADMIN_TU, SubRole.BAU)
   getSettings() {
     return this.settingsService.getSettings();
   }
 
   @Put()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, UserRole.ADMIN_TU, UserRole.BAU, UserRole.TATA_USAHA, SubRole.ADMIN_TU, SubRole.BAU)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', UserRole.ADMIN_TU, UserRole.BAU, UserRole.TATA_USAHA, SubRole.ADMIN_TU, SubRole.BAU)
   upsertSettings(@Body() data: any) {
     return this.settingsService.upsertSettings(data);
   }
@@ -107,7 +107,7 @@ export class SettingsController {
 
   @Put('bank-account')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.KEUANGAN, SubRole.KEUANGAN, 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR')
   updateBankAccount(@Body() data: any) {
     return this.settingsService.updateBankAccount(data);
   }

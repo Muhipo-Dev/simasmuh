@@ -11,8 +11,8 @@ import ProgramUnggulanSection from '@/components/home/ProgramUnggulanSection';
 import { getPublicApiUrl } from '@/lib/api-config';
 
 export const metadata: Metadata = {
-  title: "System by. Muhipo Dev",
-  description: "Portal Resmi SMA Muhammadiyah 1 Ponorogo - Cerdas, Mandiri, Berprestasi, Mendunia.",
+  title: "SIMASMUH by. Muhipo Dev",
+  description: "Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo",
 };
 
 async function getSettings() {

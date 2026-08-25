@@ -74,6 +74,8 @@ export class NotificationsGateway
       if (payload.subRole) client.join(`role:${payload.subRole}`);
       if (payload.subRole2) client.join(`role:${payload.subRole2}`);
       if (payload.subRole3) client.join(`role:${payload.subRole3}`);
+      if (payload.subRole4) client.join(`role:${payload.subRole4}`);
+      if (payload.subRole5) client.join(`role:${payload.subRole5}`);
 
       this.logger.log(`User ${client.userId} connected to notifications`);
 

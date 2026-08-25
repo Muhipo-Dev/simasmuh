@@ -12,6 +12,7 @@ import {
   Req,
   Res,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { FinanceService } from './finance.service';
@@ -35,9 +36,17 @@ export class FinanceController {
   @Get('payroll-summary')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   getPayrollSummary(
+    @Req() req: any,
     @Query('year') year: string,
     @Query('month') month: string,
   ) {
+    const userSubRoles = [req.user?.subRole, req.user?.subRole2, req.user?.subRole3, req.user?.subRole4, req.user?.subRole5, req.user?.role];
+    const isKeuanganStaff = userSubRoles.some(r => ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r));
+
+    if (!isKeuanganStaff) {
+      throw new ForbiddenException('Akses ditolak. Penggajian pegawai hanya dapat diakses oleh bagian Keuangan / Superadmin.');
+    }
+
     return this.financeService.getPayrollSummary(
       parseInt(year, 10),
       parseInt(month, 10),
@@ -305,5 +314,53 @@ export class FinanceController {
     );
     res.send(buffer);
   }
+
+  // ============================================================
+  // VIRTUAL ACCOUNT (BNI) ENDPOINTS
+  // ============================================================
+  @Get('virtual-accounts')
+  @RequirePermissions(PaymentPermission.VIEW_ALL_BILLS)
+  getVirtualAccounts(
+    @Query('classId') classId?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.financeService.getVirtualAccounts(classId, search);
+  }
+
+  @Post('virtual-accounts/import')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  importVirtualAccounts(
+    @Body() items: { nis: string; virtualAccount: string; name?: string }[],
+  ) {
+    return this.financeService.importVirtualAccounts(items);
+  }
+
+  @Patch('virtual-accounts/:studentId')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  updateStudentVirtualAccount(
+    @Param('studentId') studentId: string,
+    @Body('virtualAccount') virtualAccount: string | null,
+  ) {
+    return this.financeService.updateStudentVirtualAccount(
+      studentId,
+      virtualAccount,
+    );
+  }
+
+  @Get('virtual-accounts/export-template')
+  @RequirePermissions(PaymentPermission.VIEW_ALL_BILLS)
+  async exportVirtualAccountTemplate(@Res() res: Response) {
+    const buffer = await this.financeService.generateVirtualAccountTemplate();
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=template_import_virtual_account_siswa.xlsx',
+    );
+    res.send(buffer);
+  }
 }
+
 

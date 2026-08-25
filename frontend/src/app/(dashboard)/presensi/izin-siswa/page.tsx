@@ -67,27 +67,33 @@ export function IzinSiswaManagement() {
 
   const isSuperAdmin = user?.role === 'SUPERADMIN' || user?.role === 'ADMIN_IT' || user?.subRole === 'SUPERADMIN'
   const isBau = user?.role === 'ADMIN_TU' || user?.role === 'BAU' || user?.role === 'TATA_USAHA' || user?.subRole === 'BAU' || user?.subRole === 'ADMIN_TU'
-  const isGuru = user?.role === 'GURU' || user?.subRole === 'GURU' || user?.subRole === 'WALI_KELAS'
+  const isWaliKelas = user?.subRole === 'WALI_KELAS' || user?.role === 'WALI_KELAS'
+  const isGuru = user?.role === 'GURU' || user?.subRole === 'GURU' || isWaliKelas
   const isTatib = user?.role === 'KETERTIBAN' || user?.subRole === 'KETERTIBAN' || user?.subRole2 === 'KETERTIBAN' || user?.subRole3 === 'KETERTIBAN'
   const isWaliMurid = user?.role === 'WALI_MURID' || user?.role === 'ORANG_TUA' || user?.role === 'PARENT'
   const isSiswa = user?.role === 'SISWA'
   
-  const canManageAll = isSuperAdmin || isBau || isGuru || isTatib
+  // Ketertiban (TATIB) memverifikasi semua izin siswa
+  // Wali Kelas memverifikasi izin siswa di kelasnya & lihat log
+  // TU tidak memiliki akses ke modul ini
+  // Kepala Sekolah & Siswa & Wali Murid hanya lihat log absensi masing-masing
+  const canManageAll = isSuperAdmin || isTatib || isWaliKelas
+  // Pengaju Izin Siswa: Khusus Wali Murid (Role Ketertiban tidak mengajukan izin, tetapi memverifikasi)
+  const canCreate = isWaliMurid
 
   const [myIzin, setMyIzin] = useState<IzinSiswaItem[]>([])
   const [allIzin, setAllIzin] = useState<IzinSiswaItem[]>([])
   const [myStudents, setMyStudents] = useState<any[]>([])
-  const [allStudentsList, setAllStudentsList] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [activeTab, setActiveTab] = useState<'my' | 'all'>('my')
+  const [activeTab, setActiveTab] = useState<'my' | 'all'>('all')
   const [filterDate, setFilterDate] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // Form State
-  const [jenisIzin, setJenisIzin] = useState<'SAKIT' | 'KEGIATAN' | 'DISPENSASI' | 'KELUARGA' | 'LAINNYA'>('SAKIT')
+  // Form State (Khusus Izin Siswa: Sakit & Keperluan Keluarga)
+  const [jenisIzin, setJenisIzin] = useState<'SAKIT' | 'KELUARGA'>('SAKIT')
   const [lampiranBase64, setLampiranBase64] = useState<string>('')
   const [lampiranFileName, setLampiranFileName] = useState<string>('')
   const [uploadingImage, setUploadingImage] = useState(false)
@@ -108,38 +114,36 @@ export function IzinSiswaManagement() {
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
-    waktuKeluar: '07:00',
-    estimasiKembali: '15:30',
+    endDate: new Date().toISOString().split('T')[0],
     alasan: '',
     targetUserId: '',
   })
-
-  useEffect(() => {
-    if (isTatib || isSuperAdmin) {
-      setJenisIzin('DISPENSASI')
-    } else {
-      setJenisIzin('SAKIT')
-    }
-  }, [isTatib, isSuperAdmin])
 
   const fetchData = async () => {
     setLoading(true)
     try {
       const [myRes, allRes, studentsRes] = await Promise.all([
         authenticatedFetch('/api-backend/izin-keluar/my'),
+        // Tatib & Wali Kelas fetch semua izin siswa; Siswa/WaliMurid/KepSek hanya via /my
         canManageAll ? authenticatedFetch(`/api-backend/izin-keluar?${filterDate ? `date=${filterDate}&` : ''}category=SISWA`) : Promise.resolve(null),
-        isWaliMurid ? authenticatedFetch('/api-backend/parents/my-students') : (canManageAll ? authenticatedFetch('/api-backend/students') : Promise.resolve(null)),
+        isWaliMurid ? authenticatedFetch('/api-backend/parents/my-students') : Promise.resolve(null),
       ])
 
       if (myRes?.ok) {
         const myData = await myRes.json()
-        const filtered = Array.isArray(myData) ? myData.filter((i: any) => i.user?.role === 'SISWA' || isWaliMurid) : []
+        const filtered = Array.isArray(myData) ? myData.filter((i: any) => {
+          const notDisp = !i.alasan?.includes('[IZIN DISPENSASI]') && !i.alasan?.includes('[DISPENSASI')
+          return notDisp && (i.user?.role === 'SISWA' || isWaliMurid)
+        }) : []
         setMyIzin(filtered)
       }
 
       if (allRes?.ok) {
         const allData = await allRes.json()
-        setAllIzin(Array.isArray(allData) ? allData : [])
+        const filteredAll = Array.isArray(allData) ? allData.filter((i: any) => {
+          return !i.alasan?.includes('[IZIN DISPENSASI]') && !i.alasan?.includes('[DISPENSASI')
+        }) : []
+        setAllIzin(filteredAll)
       }
 
       if (studentsRes?.ok) {
@@ -147,10 +151,9 @@ export function IzinSiswaManagement() {
         if (isWaliMurid) {
           setMyStudents(Array.isArray(stdData) ? stdData : [])
           if (stdData.length > 0 && !form.targetUserId) {
-            setForm(prev => ({ ...prev, targetUserId: stdData[0]?.student?.userId || '' }))
+            const firstUid = stdData[0]?.userId || stdData[0]?.student?.userId || stdData[0]?.id || ''
+            setForm(prev => ({ ...prev, targetUserId: firstUid }))
           }
-        } else {
-          setAllStudentsList(Array.isArray(stdData) ? stdData : [])
         }
       }
     } catch (e) {
@@ -184,18 +187,13 @@ export function IzinSiswaManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.waktuKeluar || !form.alasan || !form.date) {
-      setMsg({ type: 'error', text: 'Tanggal, Waktu, dan Alasan wajib diisi!' })
+    if (!form.alasan || !form.date) {
+      setMsg({ type: 'error', text: 'Tanggal dan Alasan wajib diisi!' })
       return
     }
 
-    if (isWaliMurid && !form.targetUserId) {
+    if (!form.targetUserId) {
       setMsg({ type: 'error', text: 'Pilih siswa/anak yang diajukan izin!' })
-      return
-    }
-
-    if ((jenisIzin === 'DISPENSASI' || isTatib) && !form.targetUserId) {
-      setMsg({ type: 'error', text: 'Pilih siswa penerima surat dispensasi!' })
       return
     }
 
@@ -205,9 +203,7 @@ export function IzinSiswaManagement() {
         title: 'Bukti Lampiran Wajib Disertakan',
         text: jenisIzin === 'SAKIT' 
           ? 'Mohon lampirkan foto Surat Keterangan Sakit dari Dokter/Klinik/Puskesmas.' 
-          : jenisIzin === 'DISPENSASI' 
-          ? 'Mohon lampirkan Surat Tugas / Surat Dispensasi Resmi atau foto kegiatan lomba.' 
-          : 'Mohon lampirkan foto Surat Keterangan atau Foto Bukti Kegiatan yang sedang berlangsung.',
+          : 'Mohon lampirkan foto Surat Keterangan / Bukti Keperluan Keluarga.',
       })
       return
     }
@@ -230,11 +226,14 @@ export function IzinSiswaManagement() {
         setUploadingImage(false)
       }
 
-      const prefixJenis = `[IZIN ${jenisIzin}] `
+      const isMultiDay = form.endDate && form.endDate !== form.date
+      const rentangPeriodeText = isMultiDay ? ` (Periode: ${form.date} s/d ${form.endDate})` : ''
+      const prefixJenis = `[IZIN ${jenisIzin}]${rentangPeriodeText} `
+      
       const payload: any = {
         date: form.date,
-        waktuKeluar: form.waktuKeluar,
-        estimasiKembali: form.estimasiKembali || undefined,
+        waktuKeluar: '07:00',
+        estimasiKembali: isMultiDay ? `s/d ${form.endDate}` : '15:30',
         alasan: `${prefixJenis}${form.alasan}`,
         lampiranUrl: uploadedFileUrl || undefined,
         tipeIzin: jenisIzin,
@@ -255,12 +254,12 @@ export function IzinSiswaManagement() {
           timer: 2500,
           showConfirmButton: false,
         })
+        const todayStr = new Date().toISOString().split('T')[0]
         setForm({
-          date: new Date().toISOString().split('T')[0],
-          waktuKeluar: '07:00',
-          estimasiKembali: '15:30',
+          date: todayStr,
+          endDate: todayStr,
           alasan: '',
-          targetUserId: myStudents.length > 0 ? (myStudents[0]?.student?.userId || '') : '',
+          targetUserId: myStudents.length > 0 ? (myStudents[0]?.userId || myStudents[0]?.student?.userId || '') : '',
         })
         setLampiranBase64('')
         setLampiranFileName('')
@@ -268,10 +267,10 @@ export function IzinSiswaManagement() {
         fetchData()
       } else {
         const err = await res.json()
-        setMsg({ type: 'error', text: err.message || 'Gagal mengajukan izin.' })
+        setMsg({ type: 'error', text: err.message || 'Gagal mengajukan izin siswa.' })
       }
-    } catch {
-      setMsg({ type: 'error', text: 'Koneksi error. Silakan coba beberapa saat lagi.' })
+    } catch (e) {
+      setMsg({ type: 'error', text: 'Terjadi kesalahan server saat mengajukan izin.' })
     } finally {
       setSubmitting(false)
       setUploadingImage(false)
@@ -420,14 +419,16 @@ export function IzinSiswaManagement() {
               )}
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium pt-0.5">
+            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium pt-0.5 flex-wrap">
               <span className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
                 <CalendarDays className="w-4 h-4 text-blue-500" />
                 {new Date(izin.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
               <span>•</span>
               <span className="text-emerald-600 dark:text-emerald-400 font-bold font-mono">
-                Waktu: {izin.waktuKeluar} {izin.estimasiKembali ? `s/d ${izin.estimasiKembali}` : ''}
+                {isDispensasi 
+                  ? `Jam: ${izin.waktuKeluar} - ${izin.estimasiKembali || 'Selesai'}` 
+                  : (izin.estimasiKembali?.startsWith('s/d ') ? `Periode: ${new Date(izin.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} ${izin.estimasiKembali}` : 'Izin Penuh 1 Hari')}
               </span>
             </div>
           </div>
@@ -525,21 +526,21 @@ export function IzinSiswaManagement() {
               <ClipboardList className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Sistem Izin Siswa & Dispensasi
+              Sistem Izin Siswa (Wali Murid)
             </h1>
           </div>
           <p className="text-blue-100 mt-2 text-xs sm:text-sm max-w-2xl leading-relaxed">
-            Pengajuan izin sakit & keperluan keluarga siswa oleh Wali Murid serta dispensasi resmi yang diverifikasi langsung oleh Tim Tata Tertib Sekolah.
+            Pengajuan izin sakit dan keperluan keluarga khusus dibuat oleh <strong>Wali Murid</strong> dengan melampirkan surat keterangan. Pencatatan &amp; verifikasi dilakukan oleh <strong>Tim Ketertiban Sekolah (Tatib)</strong>.
           </p>
         </div>
 
-        {!isSiswa && (
+        {canCreate && (
           <Button
             onClick={() => setShowForm(!showForm)}
             className="bg-white text-blue-700 hover:bg-blue-50 font-black rounded-2xl shadow-md transition-all px-5 py-6 flex items-center gap-2 shrink-0 self-start sm:self-center"
           >
             <Plus className="w-5 h-5" />
-            {isTatib ? 'Terbitkan Dispensasi Siswa' : 'Ajukan Izin Siswa'}
+            Ajukan Izin Siswa
           </Button>
         )}
       </div>
@@ -556,114 +557,168 @@ export function IzinSiswaManagement() {
       )}
 
       {/* Formulir Pengajuan Izin Siswa */}
-      {showForm && (
+      {showForm && canCreate && (
         <Card className="border-blue-200 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20 shadow-md rounded-3xl overflow-hidden">
           <CardHeader className="bg-blue-100/60 dark:bg-blue-950/60 border-b border-blue-200 dark:border-blue-900/60 pb-4">
             <CardTitle className="text-blue-900 dark:text-blue-300 flex items-center gap-2.5 text-lg font-bold">
               <Plus className="w-5 h-5 text-blue-600" />
-              {isTatib ? 'Formulir Penerbitan Dispensasi Siswa (Tim Tata Tertib)' : 'Formulir Permohonan Izin Siswa (Wali Murid)'}
+              Formulir Permohonan Izin Siswa (Wali Murid)
             </CardTitle>
             <CardDescription className="text-xs">
-              {isTatib 
-                ? 'Dispensasi khusus untuk kegiatan lomba atau penugasan resmi sekolah yang diverifikasi Tim Ketertiban.' 
-                : 'Izin sakit atau keperluan keluarga wajib menyertakan foto surat keterangan untuk validasi presensi siswa.'}
+              Pernyataan izin ketidakhadiran siswa karena sakit atau keperluan keluarga resmi oleh orang tua/wali murid.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-5 sm:p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Pilihan Siswa */}
-              <div className="space-y-1.5">
-                <Label className="font-bold text-slate-700 dark:text-slate-200 text-sm">
-                  {isWaliMurid ? 'Pilih Anak / Siswa yang Diizinkan:' : 'Pilih Siswa Penerima Dispensasi:'}
-                </Label>
-                <Select value={form.targetUserId} onValueChange={(val) => setForm({ ...form, targetUserId: val || '' })}>
-                  <SelectTrigger className="h-11 rounded-xl bg-white dark:bg-slate-900 font-bold">
-                    <SelectValue placeholder="Pilih Siswa..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isWaliMurid ? myStudents.map((rel: any) => (
-                      <SelectItem key={rel.student?.userId} value={rel.student?.userId || ''}>
-                        {rel.student?.name} - {rel.student?.class?.name} (NIS: {rel.student?.nis})
-                      </SelectItem>
-                    )) : (
-                      allStudentsList.map((std: any) => (
-                        <SelectItem key={std.id} value={std.userId || std.id}>
-                          {std.name} - {std.class?.name || 'Siswa'} (NIS: {std.nis})
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+              {isWaliMurid && myStudents.length === 1 ? (
+                // JIKA HANYA 1 SISWA TERHUBUNG: Tampilkan info siswa langsung tanpa dropdown
+                (() => {
+                  const singleStudent = myStudents[0]
+                  const studentName = singleStudent.name || singleStudent.student?.name || 'Siswa'
+                  const studentClass = singleStudent.className || singleStudent.student?.class?.name || '-'
+                  const studentNis = singleStudent.nis || singleStudent.student?.nis || '-'
+                  return (
+                    <div className="space-y-1.5">
+                      <Label className="font-bold text-slate-700 dark:text-slate-200 text-sm">
+                        Siswa yang Diizinkan:
+                      </Label>
+                      <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-blue-200 dark:border-blue-800 shadow-xs">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow-md shrink-0">
+                            {studentName.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-extrabold text-slate-900 dark:text-white text-sm">
+                              {studentName}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                              Kelas: <strong>{studentClass}</strong> &bull; NIS: <strong>{studentNis}</strong>
+                            </p>
+                          </div>
+                        </div>
+                        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-bold text-xs border border-emerald-300 dark:border-emerald-700">
+                          ✓ Terverifikasi
+                        </Badge>
+                      </div>
+                    </div>
+                  )
+                })()
+              ) : (
+                // JIKA LEBIH DARI 1 SISWA ATAU TIM TATIB / ADMIN: Tampilkan dropdown pilihan dengan nama jelas
+                <div className="space-y-1.5">
+                  <Label className="font-bold text-slate-700 dark:text-slate-200 text-sm">
+                    {isWaliMurid ? 'Pilih Anak / Siswa yang Diizinkan:' : 'Pilih Siswa Penerima Dispensasi:'}
+                  </Label>
+                  <Select 
+                    value={form.targetUserId} 
+                    onValueChange={(val) => setForm({ ...form, targetUserId: val || '' })}
+                  >
+                    <SelectTrigger className="h-12 rounded-2xl bg-white dark:bg-slate-900 font-bold border-2 border-blue-200 dark:border-blue-800 shadow-xs text-left">
+                      <div className="truncate">
+                        {(() => {
+                          const selected = myStudents.find(
+                            (s: any) => (s.userId || s.student?.userId || s.id) === form.targetUserId
+                          )
+                          if (selected) {
+                            const sName = selected.name || selected.student?.name || 'Siswa'
+                            const sClass = selected.className || selected.student?.class?.name || '-'
+                            const sNis = selected.nis || selected.student?.nis || '-'
+                            return `${sName} - Kelas ${sClass} (NIS: ${sNis})`
+                          }
+                          return <span className="text-slate-400 font-normal">Pilih Anak / Siswa...</span>
+                        })()}
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-800 p-1.5 shadow-2xl">
+                      {myStudents.map((rel: any, idx: number) => {
+                        const studentUserId = rel.userId || rel.student?.userId || rel.id || ''
+                        const studentName = rel.name || rel.student?.name || 'Siswa'
+                        const studentClass = rel.className || rel.student?.class?.name || '-'
+                        const studentNis = rel.nis || rel.student?.nis || '-'
+                        return (
+                          <SelectItem key={studentUserId || idx} value={studentUserId} className="rounded-xl py-2.5 px-3 font-semibold text-xs cursor-pointer">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                {idx + 1}
+                              </div>
+                              <div>
+                                <p className="font-extrabold text-slate-900 dark:text-white text-xs">{studentName}</p>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                                  Kelas: {studentClass} &bull; NIS: {studentNis}
+                                </p>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Kategori Izin Siswa */}
               <div className="space-y-1.5">
                 <Label className="font-bold text-slate-700 dark:text-slate-200 text-sm">
                   Jenis Izin Siswa:
                 </Label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {isTatib || isSuperAdmin ? (
-                    <>
-                      <Button
-                        type="button"
-                        variant={jenisIzin === 'DISPENSASI' ? 'default' : 'outline'}
-                        onClick={() => setJenisIzin('DISPENSASI')}
-                        className={`text-xs h-10 rounded-xl font-bold ${jenisIzin === 'DISPENSASI' ? 'bg-purple-600 text-white' : ''}`}
-                      >
-                        🏆 Dispensasi Lomba / Event
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={jenisIzin === 'KEGIATAN' ? 'default' : 'outline'}
-                        onClick={() => setJenisIzin('KEGIATAN')}
-                        className={`text-xs h-10 rounded-xl font-bold ${jenisIzin === 'KEGIATAN' ? 'bg-blue-600 text-white' : ''}`}
-                      >
-                        🎪 Izin Kegiatan Sekolah
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        type="button"
-                        variant={jenisIzin === 'SAKIT' ? 'default' : 'outline'}
-                        onClick={() => setJenisIzin('SAKIT')}
-                        className={`text-xs h-10 rounded-xl font-bold ${jenisIzin === 'SAKIT' ? 'bg-amber-600 text-white' : ''}`}
-                      >
-                        🤒 Izin Sakit
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={jenisIzin === 'KELUARGA' ? 'default' : 'outline'}
-                        onClick={() => setJenisIzin('KELUARGA')}
-                        className={`text-xs h-10 rounded-xl font-bold ${jenisIzin === 'KELUARGA' ? 'bg-indigo-600 text-white' : ''}`}
-                      >
-                        🏡 Keperluan Keluarga
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={jenisIzin === 'KEGIATAN' ? 'default' : 'outline'}
-                        onClick={() => setJenisIzin('KEGIATAN')}
-                        className={`text-xs h-10 rounded-xl font-bold ${jenisIzin === 'KEGIATAN' ? 'bg-blue-600 text-white' : ''}`}
-                      >
-                        🎪 Kegiatan Luar
-                      </Button>
-                    </>
-                  )}
+                <div className="grid grid-cols-2 gap-3 max-w-sm">
+                  <Button
+                    type="button"
+                    variant={jenisIzin === 'SAKIT' ? 'default' : 'outline'}
+                    onClick={() => setJenisIzin('SAKIT')}
+                    className={`text-xs h-10 rounded-xl font-bold ${jenisIzin === 'SAKIT' ? 'bg-amber-600 text-white' : ''}`}
+                  >
+                    🤒 Izin Sakit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={jenisIzin === 'KELUARGA' ? 'default' : 'outline'}
+                    onClick={() => setJenisIzin('KELUARGA')}
+                    className={`text-xs h-10 rounded-xl font-bold ${jenisIzin === 'KELUARGA' ? 'bg-indigo-600 text-white' : ''}`}
+                  >
+                    🏡 Keperluan Keluarga
+                  </Button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Rentang Tanggal Izin Siswa */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="font-bold text-slate-700 dark:text-slate-200 text-sm">Tanggal <span className="text-rose-500">*</span></Label>
-                  <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required className="h-11 rounded-xl bg-white dark:bg-slate-900" />
+                  <Label className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center justify-between">
+                    <span>Dari Tanggal <span className="text-rose-500">*</span></span>
+                    <span className="text-xs text-slate-400 font-normal">Mulai Izin</span>
+                  </Label>
+                  <Input 
+                    type="date" 
+                    value={form.date} 
+                    onChange={(e) => {
+                      const newStart = e.target.value
+                      setForm(prev => ({
+                        ...prev,
+                        date: newStart,
+                        endDate: prev.endDate < newStart ? newStart : prev.endDate
+                      }))
+                    }} 
+                    required 
+                    className="h-11 rounded-xl bg-white dark:bg-slate-900 font-semibold" 
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="font-bold text-slate-700 dark:text-slate-200 text-sm">Jam Mulai <span className="text-rose-500">*</span></Label>
-                  <Input type="time" value={form.waktuKeluar} onChange={(e) => setForm({ ...form, waktuKeluar: e.target.value })} required className="h-11 rounded-xl bg-white dark:bg-slate-900" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="font-bold text-slate-700 dark:text-slate-200 text-sm">Estimasi Selesai / Kembali</Label>
-                  <Input type="time" value={form.estimasiKembali} onChange={(e) => setForm({ ...form, estimasiKembali: e.target.value })} className="h-11 rounded-xl bg-white dark:bg-slate-900" />
+                  <Label className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center justify-between">
+                    <span>Sampai Tanggal <span className="text-rose-500">*</span></span>
+                    <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                      {form.endDate === form.date ? '1 Hari' : `${Math.ceil((new Date(form.endDate).getTime() - new Date(form.date).getTime()) / (1000 * 3600 * 24)) + 1} Hari`}
+                    </span>
+                  </Label>
+                  <Input 
+                    type="date" 
+                    min={form.date}
+                    value={form.endDate} 
+                    onChange={(e) => setForm({ ...form, endDate: e.target.value })} 
+                    required 
+                    className="h-11 rounded-xl bg-white dark:bg-slate-900 font-semibold" 
+                  />
                 </div>
               </div>
 
@@ -686,9 +741,7 @@ export function IzinSiswaManagement() {
                     <UploadCloud className="w-4 h-4 text-blue-600" />
                     {jenisIzin === 'SAKIT' 
                       ? 'Lampiran Foto Surat Keterangan Sakit Dokter / Klinik' 
-                      : jenisIzin === 'DISPENSASI'
-                      ? 'Surat Dispensasi Resmi / Foto Dokumentasi Kegiatan'
-                      : 'Bukti Surat Keterangan / Foto Kegiatan Sedang Berlangsung'} <span className="text-rose-500">*Wajib</span>
+                      : 'Bukti Foto Surat Keterangan / Keperluan Keluarga'} <span className="text-rose-500">*Wajib</span>
                   </span>
                   {lampiranFileName && (
                     <span className="text-xs text-emerald-600 font-semibold">{lampiranFileName}</span>
@@ -740,8 +793,12 @@ export function IzinSiswaManagement() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {canManageAll ? (
           <div className="flex items-center gap-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-2xl w-fit">
-            <Button size="sm" variant={activeTab === 'my' ? 'default' : 'ghost'} onClick={() => setActiveTab('my')} className={`rounded-xl font-extrabold text-xs px-4 h-9 ${activeTab === 'my' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600'}`}>Izin Saya</Button>
-            <Button size="sm" variant={activeTab === 'all' ? 'default' : 'ghost'} onClick={() => setActiveTab('all')} className={`rounded-xl font-extrabold text-xs px-4 h-9 ${activeTab === 'all' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600'}`}>Semua Izin Siswa ({allIzin.length})</Button>
+            {(isWaliMurid || isSiswa) && (
+              <Button size="sm" variant={activeTab === 'my' ? 'default' : 'ghost'} onClick={() => setActiveTab('my')} className={`rounded-xl font-extrabold text-xs px-4 h-9 ${activeTab === 'my' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600'}`}>Izin Saya</Button>
+            )}
+            <Button size="sm" variant={activeTab === 'all' ? 'default' : 'ghost'} onClick={() => setActiveTab('all')} className={`rounded-xl font-extrabold text-xs px-4 h-9 ${activeTab === 'all' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600'}`}>
+              {isTatib ? `Verifikasi Izin Siswa (${allIzin.length})` : `Semua Izin Siswa (${allIzin.length})`}
+            </Button>
           </div>
         ) : (
           <div className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">

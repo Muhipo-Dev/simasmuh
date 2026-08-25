@@ -40,8 +40,9 @@ export default function ClassesPage() {
   const subRole = (session?.user as any)?.subRole || ''
   const subRole2 = (session?.user as any)?.subRole2 || ''
   const subRole3 = (session?.user as any)?.subRole3 || ''
-  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole2) || ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(subRole3)
-  const isKepalaSekolah = [userRole, subRole, subRole2, subRole3].includes('KEPALA_SEKOLAH')
+  const userRolesList = [userRole, subRole, subRole2, subRole3]
+  const isSuperOrAdmin = userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'].includes(r))
+  const isKepalaSekolah = userRolesList.includes('KEPALA_SEKOLAH')
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)

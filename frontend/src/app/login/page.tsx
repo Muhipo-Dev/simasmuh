@@ -29,19 +29,41 @@ export default function LoginPage() {
   const [showGuideMobile, setShowGuideMobile] = useState(false)
   const [helpdeskPhone, setHelpdeskPhone] = useState('088293733330')
   const [backgroundMaster, setBackgroundMaster] = useState('/muhipo-log.jpg')
+  const [logoMaster, setLogoMaster] = useState<string | null>(null)
 
   // Ambil nomor Helpdesk & Wallpaper Master dari Pengaturan Superadmin
   useEffect(() => {
+    // Muat instan dari cache lokal jika tersedia untuk eliminasi flicker
+    try {
+      const cachedBg = localStorage.getItem('simasmuh_bg_master')
+      if (cachedBg) setBackgroundMaster(cachedBg)
+      const cachedLogo = localStorage.getItem('simasmuh_logo_master')
+      if (cachedLogo) setLogoMaster(cachedLogo)
+      const cachedPhone = localStorage.getItem('simasmuh_helpdesk_phone')
+      if (cachedPhone) setHelpdeskPhone(cachedPhone)
+    } catch {}
+
     async function loadPublicSettings() {
       try {
-        const res = await fetch(getPublicApiUrl('/settings/public'))
+        const res = await fetch(getPublicApiUrl('/settings/public'), {
+          headers: {
+            'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+          },
+          cache: 'no-store',
+        })
         if (res.ok) {
           const data = await res.json()
           if (data?.helpdeskPhone) {
             setHelpdeskPhone(data.helpdeskPhone)
+            try { localStorage.setItem('simasmuh_helpdesk_phone', data.helpdeskPhone) } catch {}
           }
           if (data?.backgroundUrl) {
             setBackgroundMaster(data.backgroundUrl)
+            try { localStorage.setItem('simasmuh_bg_master', data.backgroundUrl) } catch {}
+          }
+          if (data?.logoUrl) {
+            setLogoMaster(data.logoUrl)
+            try { localStorage.setItem('simasmuh_logo_master', data.logoUrl) } catch {}
           }
         }
       } catch (err) {
@@ -124,9 +146,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col justify-between relative overflow-x-hidden font-sans selection:bg-blue-600 selection:text-white">
-      {/* Background Wallpaper with Smooth Glass Overlay */}
-      <div className="fixed inset-0 -z-30 w-full h-full overflow-hidden">
-        {backgroundMaster.startsWith('http') || backgroundMaster.startsWith('data:') ? (
+      {/* Background Wallpaper Master with Smooth Glass Overlay */}
+      <div className="fixed inset-0 -z-30 w-full h-full overflow-hidden pointer-events-none">
+        {backgroundMaster && (backgroundMaster.startsWith('http') || backgroundMaster.startsWith('data:')) ? (
           <img
             src={backgroundMaster}
             alt="Latar Belakang SMA MUHIPO"
@@ -134,7 +156,7 @@ export default function LoginPage() {
           />
         ) : (
           <NextImage
-            src={backgroundMaster}
+            src={backgroundMaster || "/muhipo-log.jpg"}
             alt="Latar Belakang SMA MUHIPO"
             fill
             priority
@@ -144,12 +166,13 @@ export default function LoginPage() {
           />
         )}
       </div>
-      <div className="fixed inset-0 bg-slate-950/60 dark:bg-slate-950/75 backdrop-blur-[2px] -z-20" />
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.1),rgba(255,255,255,0))] -z-10" />
+      <div className="fixed inset-0 bg-slate-950/60 dark:bg-slate-950/75 backdrop-blur-[2px] -z-20 pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))] -z-10 pointer-events-none" />
 
       {/* Navbar Atas Terpadu: Kiri Logo, Kanan Presensi View & Theme Switcher */}
       <AppNavbar
         isDarkWallpaper
+        logoUrl={logoMaster}
         actions={
           <>
             <Link

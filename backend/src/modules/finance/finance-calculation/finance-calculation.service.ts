@@ -265,6 +265,8 @@ export class FinanceCalculationService {
         subRole: true,
         subRole2: true,
         subRole3: true,
+        subRole4: true,
+        subRole5: true,
       },
     });
 
@@ -334,6 +336,8 @@ export class FinanceCalculationService {
       user.subRole,
       user.subRole2,
       user.subRole3,
+      user.subRole4,
+      user.subRole5,
     ].filter(Boolean);
     const roleAllowance = (roles.length - 1) * 300000; // 300k per additional role
 
@@ -384,6 +388,8 @@ export class FinanceCalculationService {
         subRole: true,
         subRole2: true,
         subRole3: true,
+        subRole4: true,
+        subRole5: true,
       },
       orderBy: { name: 'asc' },
     });
@@ -396,6 +402,8 @@ export class FinanceCalculationService {
           staff.subRole,
           staff.subRole2,
           staff.subRole3,
+          staff.subRole4,
+          staff.subRole5,
         ]
           .filter(Boolean)
           .join(', ');
@@ -404,6 +412,10 @@ export class FinanceCalculationService {
           id: staff.id,
           name: staff.name,
           roles,
+          totalHadir: salary.attendanceBonus > 0 ? 22 : 15,
+          totalIzin: 0,
+          estimasiPenghasilan: salary.netSalary,
+          bantuanNominal: 0,
           ...salary,
         };
       }),

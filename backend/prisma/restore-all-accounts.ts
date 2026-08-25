@@ -14,7 +14,9 @@ async function main() {
 
   // Password = username untuk semua akun
   const nailarPwd = await bcrypt.hash('nailar', 10);
+  const agungPwd = await bcrypt.hash('agung', 10);
   const ervinaPwd = await bcrypt.hash('ervina', 10);
+  const yuliPwd = await bcrypt.hash('yuli', 10);
   const mulyaniPwd = await bcrypt.hash('mulyani', 10);
   const safriPwd = await bcrypt.hash('safri', 10);
   const manchuPwd = await bcrypt.hash('manchu', 10);
@@ -27,24 +29,62 @@ async function main() {
   });
   console.log('✅ nailar (SUPERADMIN) →', nailar.username);
 
-  // 2. Ervina — GURU + subRole KEUANGAN
+  // 2. Agung — GURU + subRole KEUANGAN_ALL (Akses Penuh Keuangan & Master Data)
+  let agung = await prisma.user.findUnique({ where: { username: 'agung' }, include: { teacherProfile: true } });
+  if (!agung) {
+    agung = await prisma.user.create({
+      data: {
+        username: 'agung', email: 'agung@sekolah.com', name: 'Agung Tribowo, S.E. (Kepala Keuangan)',
+        password: agungPwd, role: 'GURU', subRole: 'KEUANGAN_ALL', subRole2: 'NONE',
+        teacherProfile: { create: { nip: '198505052010011002', phone: '088293733330' } },
+      },
+      include: { teacherProfile: true },
+    });
+  } else {
+    await prisma.user.update({
+      where: { username: 'agung' },
+      data: { name: 'Agung Tribowo, S.E. (Kepala Keuangan)', role: 'GURU', subRole: 'KEUANGAN_ALL', subRole2: 'NONE', password: agungPwd, email: 'agung@sekolah.com' },
+    });
+  }
+  console.log('✅ agung (KEUANGAN_ALL) →', agung.username);
+
+  // 3. Ervina — GURU + subRole KEUANGAN_MASUK (Keuangan Masuk & Master Data)
   let ervina = await prisma.user.findUnique({ where: { username: 'ervina' }, include: { teacherProfile: true } });
   if (!ervina) {
     ervina = await prisma.user.create({
       data: {
-        username: 'ervina', email: 'ervina@sekolah.com', name: 'Ervina (Keuangan)',
-        password: ervinaPwd, role: 'GURU', subRole: 'KEUANGAN',
-        teacherProfile: { create: { nip: '198505052010019991', phone: '081987654321' } },
+        username: 'ervina', email: 'ervina@sekolah.com', name: 'Ervina Maghdalena, S.Pd. (Keuangan Masuk)',
+        password: ervinaPwd, role: 'GURU', subRole: 'KEUANGAN_MASUK', subRole2: 'NONE',
+        teacherProfile: { create: { nip: '198505052010019991', phone: '088293733330' } },
       },
       include: { teacherProfile: true },
     });
   } else {
     await prisma.user.update({
       where: { username: 'ervina' },
-      data: { name: 'Ervina (Keuangan)', role: 'GURU', subRole: 'KEUANGAN', password: ervinaPwd, email: 'ervina@sekolah.com' },
+      data: { name: 'Ervina Maghdalena, S.Pd. (Keuangan Masuk)', role: 'GURU', subRole: 'KEUANGAN_MASUK', subRole2: 'NONE', password: ervinaPwd, email: 'ervina@sekolah.com' },
     });
   }
-  console.log('✅ ervina (KEUANGAN) →', ervina.username);
+  console.log('✅ ervina (KEUANGAN_MASUK) →', ervina.username);
+
+  // 4. Yuli — KARYAWAN + subRole KEUANGAN_KELUAR (Keuangan Keluar & Master Data)
+  let yuli = await prisma.user.findUnique({ where: { username: 'yuli' }, include: { teacherProfile: true } });
+  if (!yuli) {
+    yuli = await prisma.user.create({
+      data: {
+        username: 'yuli', email: 'yuli@sekolah.com', name: 'Yuli Budi Arsih, A.Md. (Keuangan Keluar)',
+        password: yuliPwd, role: 'KARYAWAN', subRole: 'KEUANGAN_KELUAR', subRole2: 'NONE',
+        teacherProfile: { create: { nip: '199203032018012003', phone: '088293733330' } },
+      },
+      include: { teacherProfile: true },
+    });
+  } else {
+    await prisma.user.update({
+      where: { username: 'yuli' },
+      data: { name: 'Yuli Budi Arsih, A.Md. (Keuangan Keluar)', role: 'KARYAWAN', subRole: 'KEUANGAN_KELUAR', subRole2: 'NONE', password: yuliPwd, email: 'yuli@sekolah.com' },
+    });
+  }
+  console.log('✅ yuli (KEUANGAN_KELUAR) →', yuli.username);
 
   // 3. Mulyani — ADMIN_TU
   let mulyani = await prisma.user.findUnique({ where: { username: 'mulyani' }, include: { teacherProfile: true } });

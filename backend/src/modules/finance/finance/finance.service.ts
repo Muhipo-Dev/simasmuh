@@ -24,7 +24,12 @@ export class FinanceService {
     endDate.setHours(23, 59, 59, 999);
 
     const staffList = await this.prisma.user.findMany({
-      where: { role: { not: 'SISWA' } },
+      where: {
+        OR: [
+          { role: { in: ['GURU', 'PEGAWAI', 'KARYAWAN', 'ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEUANGAN', 'ADMIN_IT', 'SUPERADMIN', 'KEPALA_SEKOLAH', 'ADMIN_WEB'] } },
+          { teacherProfile: { isNot: null } },
+        ],
+      },
       select: {
         id: true,
         name: true,
@@ -32,6 +37,9 @@ export class FinanceService {
         subRole: true,
         subRole2: true,
         subRole3: true,
+        subRole4: true,
+        subRole5: true,
+        teacherProfile: { select: { nip: true } },
       },
       orderBy: { name: 'asc' },
     });
@@ -48,6 +56,36 @@ export class FinanceService {
       where: { kategori: 'PEGAWAI', isSynced: true },
     });
 
+    const baseSalaries: Record<string, number> = {
+      SUPERADMIN: 5000000,
+      ADMIN_IT: 4500000,
+      ADMIN_WEB: 4000000,
+      GURU: 3500000,
+      GURU_TAHFIDZ: 3800000,
+      KEPALA_SEKOLAH: 7000000,
+      WAKIL_KEPALA_SEKOLAH: 6000000,
+      BK_BP: 3500000,
+      WALI_KELAS: 3600000,
+      KURIKULUM: 4500000,
+      KESISWAAN: 4000000,
+      SARANA_PRASARANA: 3500000,
+      KEUANGAN: 4500000,
+      KEUANGAN_MASUK: 4500000,
+      KEUANGAN_KELUAR: 4500000,
+      KEUANGAN_ALL: 5500000,
+      ADMIN_TU: 4000000,
+      BAU: 4000000,
+      TATA_USAHA: 4000000,
+      SDM_KEPEGAWAIAN: 4000000,
+      KEPEGAWAIAN: 4000000,
+      PEGAWAI: 3000000,
+      KARYAWAN: 3000000,
+      KEBERSIHAN: 2500000,
+      KEAMANAN: 2800000,
+      PEMBINA_EKSTRA: 3200000,
+      PUSTAKAWAN: 3000000,
+    };
+
     return staffList.map((staff) => {
       const staffAttendances = attendances.filter((a) => a.userId === staff.id);
       const uniqueIzinDates = new Set(
@@ -55,21 +93,28 @@ export class FinanceService {
           .filter((i) => i.userId === staff.id)
           .map((i) => i.date.toISOString().split('T')[0]),
       );
-      const roles = [staff.role, staff.subRole, staff.subRole2, staff.subRole3]
-        .filter(Boolean)
-        .join(', ');
+      const rolesList = [staff.role, staff.subRole, staff.subRole2, staff.subRole3, staff.subRole4, staff.subRole5].filter(Boolean);
+      const roles = rolesList.join(', ');
+
+      const baseSalary = baseSalaries[staff.role] || baseSalaries[staff.subRole || ''] || 3000000;
+      const roleAllowance = (rolesList.length - 1) * 300000;
+      const harianRate = 50000;
+      const totalHadir = staffAttendances.length;
+      const totalHadirBonus = totalHadir * harianRate;
 
       const matchedBantuan = danaBantuans
         .filter((b) => !b.penerima || b.penerima.toLowerCase().includes(staff.name.toLowerCase()) || staff.name.toLowerCase().includes(b.penerima.toLowerCase()))
         .reduce((sum, b) => sum + b.nominal, 0);
 
+      const totalPenghasilan = baseSalary + roleAllowance + totalHadirBonus + matchedBantuan;
+
       return {
         id: staff.id,
         name: staff.name,
         roles,
-        totalHadir: staffAttendances.length,
+        totalHadir,
         totalIzin: uniqueIzinDates.size,
-        estimasiPenghasilan: matchedBantuan,
+        estimasiPenghasilan: totalPenghasilan,
         bantuanNominal: matchedBantuan,
       };
     });
@@ -2024,5 +2069,305 @@ export class FinanceService {
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
   }
+
+  // ============================================================
+  // VIRTUAL ACCOUNT (BNI) MANAGEMENT & IMPORT
+  // ============================================================
+
+  /** Get list of students with their Virtual Account numbers & active tagihan calculation */
+  async getVirtualAccounts(classId?: string, search?: string) {
+    const where: any = {};
+
+    if (classId) {
+      where.classId = classId;
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim();
+      where.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { nis: { contains: q, mode: 'insensitive' } },
+        { nisn: { contains: q, mode: 'insensitive' } },
+        { virtualAccount: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    const studentsData = await (this.prisma.student as any).findMany({
+      where,
+      select: {
+        id: true,
+        nis: true,
+        nisn: true,
+        name: true,
+        gender: true,
+        virtualAccount: true,
+        class: {
+          select: {
+            id: true,
+            name: true,
+            gradeLevel: true,
+          },
+        },
+        tagihans: {
+          select: {
+            amount: true,
+            amountPaid: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: [
+        { class: { gradeLevel: 'asc' } },
+        { class: { name: 'asc' } },
+        { name: 'asc' },
+      ],
+    });
+
+    let totalNominalVaActive = 0;
+    let totalUnpaidNominal = 0;
+
+    const students = studentsData.map((s: any) => {
+      const tagihans = s.tagihans || [];
+      const totalTagihan = tagihans.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+      const totalLunas = tagihans.reduce((sum: number, t: any) => {
+        if (t.status === 'LUNAS') return sum + (t.amount || 0);
+        return sum + (t.amountPaid || 0);
+      }, 0);
+      const sisaTagihan = Math.max(0, totalTagihan - totalLunas);
+
+      totalUnpaidNominal += sisaTagihan;
+      if (s.virtualAccount) {
+        totalNominalVaActive += sisaTagihan;
+      }
+
+      return {
+        id: s.id,
+        nis: s.nis,
+        nisn: s.nisn,
+        name: s.name,
+        gender: s.gender,
+        virtualAccount: s.virtualAccount,
+        class: s.class,
+        totalTagihan,
+        totalLunas,
+        sisaTagihan,
+        tagihanCount: tagihans.length,
+        statusTagihan: tagihans.length === 0 ? 'TANPA_TAGIHAN' : sisaTagihan === 0 ? 'LUNAS' : 'ADA_TAGIHAN',
+      };
+    });
+
+    const totalStudents = students.length;
+    const countWithVa = students.filter((s: any) => !!s.virtualAccount).length;
+    const countWithoutVa = totalStudents - countWithVa;
+
+    return {
+      stats: {
+        totalStudents,
+        countWithVa,
+        countWithoutVa,
+        totalNominalVaActive,
+        totalUnpaidNominal,
+      },
+      students,
+    };
+  }
+
+  /** Import Virtual Account in mass using NIS as relation key with strict deduplication */
+  async importVirtualAccounts(
+    items: { nis: string; virtualAccount: string; name?: string }[],
+  ) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      throw new BadRequestException('Data import tidak boleh kosong');
+    }
+
+    let successCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+    const errors: { nis: string; name?: string; reason: string }[] = [];
+
+    // Pre-fetch all students by NIS to make processing fast and efficient
+    const allNisList = items
+      .map((i) => (i.nis ? String(i.nis).trim() : ''))
+      .filter((n) => n.length > 0);
+
+    const existingStudents = await (this.prisma.student as any).findMany({
+      where: {
+        nis: { in: allNisList },
+      },
+      select: {
+        id: true,
+        nis: true,
+        name: true,
+        virtualAccount: true,
+      },
+    });
+
+    const studentMap = new Map<string, any>();
+    existingStudents.forEach((s: any) => {
+      studentMap.set(s.nis, s);
+    });
+
+    for (const item of items) {
+      const cleanNis = item.nis ? String(item.nis).trim() : '';
+      const cleanVa = item.virtualAccount ? String(item.virtualAccount).trim() : '';
+
+      if (!cleanNis) {
+        failedCount++;
+        errors.push({
+          nis: '-',
+          name: item.name,
+          reason: 'NIS tidak valid / kosong',
+        });
+        continue;
+      }
+
+      if (!cleanVa) {
+        failedCount++;
+        errors.push({
+          nis: cleanNis,
+          name: item.name,
+          reason: 'Kode Virtual Account tidak boleh kosong',
+        });
+        continue;
+      }
+
+      const student = studentMap.get(cleanNis);
+      if (!student) {
+        failedCount++;
+        errors.push({
+          nis: cleanNis,
+          name: item.name,
+          reason: `Siswa dengan NIS ${cleanNis} tidak ditemukan di database`,
+        });
+        continue;
+      }
+
+      // PREVENT DUPLICATION / UNNEEDED DB WRITES:
+      // Jika nomor VA di database sudah ADA dan SAMA PERSIS dengan file import, lewati (SKIP).
+      if (student.virtualAccount === cleanVa) {
+        skippedCount++;
+        continue;
+      }
+
+      try {
+        const isUpdate = !!student.virtualAccount;
+        await (this.prisma.student as any).update({
+          where: { id: student.id },
+          data: { virtualAccount: cleanVa },
+        });
+
+        if (isUpdate) {
+          updatedCount++;
+        } else {
+          successCount++;
+        }
+      } catch (err: any) {
+        failedCount++;
+        errors.push({
+          nis: cleanNis,
+          name: student.name || item.name,
+          reason: err.message || 'Gagal menyimpan Virtual Account',
+        });
+      }
+    }
+
+    return {
+      message: `Import selesai. ${successCount} baru, ${updatedCount} diperbarui, ${skippedCount} dilewati (identik), ${failedCount} gagal.`,
+      summary: {
+        total: items.length,
+        successCount,
+        updatedCount,
+        skippedCount,
+        failedCount,
+      },
+      errors,
+    };
+  }
+
+  /** Update or clear Virtual Account for a single student */
+  async updateStudentVirtualAccount(studentId: string, virtualAccount: string | null) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+    });
+    if (!student) throw new NotFoundException('Siswa tidak ditemukan');
+
+    const cleanVa = virtualAccount && virtualAccount.trim() ? virtualAccount.trim() : null;
+
+    const updated = await (this.prisma.student as any).update({
+      where: { id: studentId },
+      data: { virtualAccount: cleanVa },
+      select: {
+        id: true,
+        nis: true,
+        name: true,
+        virtualAccount: true,
+      },
+    });
+
+    return {
+      message: cleanVa
+        ? 'Nomor Virtual Account berhasil diperbarui'
+        : 'Nomor Virtual Account berhasil dihapus',
+      student: updated,
+    };
+  }
+
+  /** Generate Excel template for Virtual Account import */
+  async generateVirtualAccountTemplate() {
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Template VA Siswa');
+
+    worksheet.columns = [
+      { header: 'NIS', key: 'nis', width: 18 },
+      { header: 'Nama Siswa', key: 'name', width: 32 },
+      { header: 'Kode Virtual Account', key: 'virtualAccount', width: 25 },
+      { header: 'Bank', key: 'bank', width: 12 },
+    ];
+
+    // Style Header Row
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: '005E36' }, // Hijau Khas Muhammadiyah
+    };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    // Pre-populate template with ALL active master students from database (TU/Superadmin)
+    const masterStudents = await (this.prisma.student as any).findMany({
+      select: {
+        nis: true,
+        name: true,
+        virtualAccount: true,
+        class: { select: { name: true } },
+      },
+      orderBy: [{ class: { name: 'asc' } }, { name: 'asc' }],
+    });
+
+    if (masterStudents.length > 0) {
+      masterStudents.forEach((s: any) => {
+        worksheet.addRow({
+          nis: s.nis || '',
+          name: s.name || '',
+          virtualAccount: s.virtualAccount || '',
+          bank: 'BNI',
+        });
+      });
+    } else {
+      worksheet.addRow({
+        nis: '12345',
+        name: 'Contoh Siswa A',
+        virtualAccount: '988880012345',
+        bank: 'BNI',
+      });
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
 }
+
 

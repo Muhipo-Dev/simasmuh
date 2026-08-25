@@ -367,14 +367,37 @@ export class DailyAttendancesService {
         }
 
         if (izin) {
-          const rentangIzin = izin.estimasiKembali
-            ? `${izin.waktuKeluar} - ${izin.estimasiKembali}`
-            : `sejak ${izin.waktuKeluar}`;
+          // Parse tipe izin & bersihkan string alasan dari tag internal
+          const rawAlasan = izin.alasan || '';
+          const isDisp = rawAlasan.includes('[IZIN DISPENSASI]') || rawAlasan.includes('[DISPENSASI');
+          const isSakit = rawAlasan.includes('[IZIN SAKIT]');
+          const isKeluarga = rawAlasan.includes('[IZIN KELUARGA]');
+
+          const cleanAlasan = rawAlasan
+            .replace(/\[IZIN [^\]]+\]\s*/g, '')
+            .replace(/\[DISPENSASI[^\]]*\]\s*/g, '')
+            .replace(/\n?\[LAMPIRAN_SURAT\]:[^\n]*/g, '')
+            .trim();
+
+          let labelKategori = 'Izin Resmi';
+          if (isDisp) {
+            labelKategori = 'Dispensasi Resmi Sekolah';
+          } else if (isSakit) {
+            labelKategori = 'Izin Sakit (Wali Murid)';
+          } else if (isKeluarga) {
+            labelKategori = 'Izin Keperluan Keluarga';
+          }
+
+          const rentangIzin = isDisp
+            ? `(Jam: ${izin.waktuKeluar} - ${izin.estimasiKembali || 'Selesai'})`
+            : (izin.estimasiKembali?.startsWith('s/d ') ? `(${izin.estimasiKembali})` : '(1 Hari)');
+
+          const detailIzin = `${labelKategori} ${rentangIzin}: ${cleanAlasan}`;
 
           if (keterangan === '-' || keterangan === 'IZIN') {
-            keterangan = `Izin (${rentangIzin}): ${izin.alasan}`;
+            keterangan = detailIzin;
           } else {
-            keterangan += ` | Izin (${rentangIzin}): ${izin.alasan}`;
+            keterangan += ` | ${detailIzin}`;
           }
         }
 

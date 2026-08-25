@@ -28,3 +28,6 @@
    - **Kredensial Login**: Username wali murid adalah nomor telepon aktif WhatsApp, dan kata sandi awalnya adalah NIS dari siswa yang terhubung.
    - **Sinkronisasi Nama**: Nama lengkap wali murid tersinkronisasi dari biodata orang tua siswa (nama ayah/ibu/wali) atau dapat disesuaikan manual oleh superadmin.
    - **Notifikasi & Laporan**: Nomor telepon wali murid digunakan sebagai tujuan resmi pengiriman notifikasi WhatsApp otomatis untuk presensi harian, update status perkembangan siswa, dan tagihan keuangan sekolah.
+9. **Standar Mutlak Penamaan Ringkas & Responsive Layout (Mobile, Tablet, Desktop)**:
+   - **Judul & Deskripsi Ringkas**: Seluruh judul fitur, modul, tab, kolom tabel, dan deskripsi wajib menggunakan bahasa yang singkat, padat, lugas, profesional, serta bebas dari kata-kata panjang atau embel-embel berlebihan yang tidak perlu.
+   - **Efisiensi & Responsivitas Layout**: Seluruh tata letak halaman (Desktop, Tablet, Mobile) wajib diatur secara presisi hemat ruang layar (compact & padat). Gunakan grid/flex responsif (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3/4`), batasi lebar kolom perihal/keterangan dengan `truncate` / `line-clamp`, serta sederhanakan tombol aksi pada tabel/card menggunakan icon/button ringkas agar nyaman digunakan di semua ukuran layar.

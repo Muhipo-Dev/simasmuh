@@ -102,18 +102,23 @@ export default function KeuanganKeluarPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Keuangan Keluar</h1>
-          <p className="text-slate-500 mt-1">Kelola data pengeluaran dan arus kas keluar sekolah</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-rose-600 to-red-600 rounded-xl flex items-center justify-center shadow-xs shrink-0">
+              <Receipt className="w-5 h-5 text-white" />
+            </div>
+            Keuangan Keluar
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Pencatatan & pengolahan arus kas pengeluaran sekolah (Pengguna: Yuli / Agung)</p>
         </div>
         {!isKepalaSekolah ? (
-          <Button onClick={() => setModalOpen(true)} className="bg-rose-600 hover:bg-rose-700 text-white gap-2">
+          <Button onClick={() => setModalOpen(true)} className="bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs rounded-xl gap-2 w-full sm:w-auto text-xs sm:text-sm">
             <PlusCircle className="w-4 h-4" /> Catat Pengeluaran
           </Button>
         ) : (
-          <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-1.5">
+          <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-1.5 w-max">
             🔍 Mode Supervisi (Read-Only)
           </div>
         )}

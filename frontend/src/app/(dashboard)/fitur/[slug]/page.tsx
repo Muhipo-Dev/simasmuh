@@ -24,6 +24,9 @@ import Swal from 'sweetalert2'
 import { InteractiveCharacterAssessmentManagement } from '@/components/academic/InteractiveCharacterAssessmentManagement'
 import { CutiPegawaiManagement } from '@/app/(dashboard)/presensi/cuti/page'
 import { IzinSiswaManagement } from '@/app/(dashboard)/presensi/izin-siswa/page'
+import { PersuratanManagement } from '@/components/tu/PersuratanManagement'
+import { InventarisManagement } from '@/components/tu/InventarisManagement'
+import { KepegawaianManagement } from '@/components/tu/KepegawaianManagement'
 
 type GuestEntry = {
   id: string
@@ -50,166 +53,171 @@ type FeatureConfig = {
   modules: { title: string; desc: string; status: 'SEGERA_HADIR' | 'DALAM_PENGEMBANGAN' | 'TAHAP_DESAIN' }[]
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  SEGERA_HADIR: 'Segera Siap Digunakan',
+  DALAM_PENGEMBANGAN: 'Dalam Penyempurnaan',
+  TAHAP_DESAIN: 'Rancangan Fitur Baru'
+}
+
 const FEATURE_MAP: Record<string, FeatureConfig> = {
   'buku-tamu': {
-    title: 'Buku Tamu & Kunjungan',
-    roleName: 'Tata Usaha (Badan Administrasi Umum)',
-    category: 'Badan Administrasi Umum & Relasi Publik',
+    title: 'Buku Tamu',
+    roleName: 'Tata Usaha',
+    category: 'Administrasi & Humas',
     icon: Contact,
     gradient: 'from-blue-600 via-indigo-600 to-purple-600',
     badgeColor: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20 dark:bg-indigo-400/10 dark:text-indigo-400',
-    description: 'Modul pengelolaan & registrasi kedatangan tamu sekolah (Tamu Studi Tiru, Pejabat/Dinas, Alumni Pengurusan Ijazah/Legalisir, dan Vendor/Umum).',
+    description: 'Modul registrasi & pendataan kedatangan tamu sekolah.',
     modules: [
-      { title: 'Tamu Studi Tiru & Studi Banding', desc: 'Pendataan rombongan studi banding dari sekolah/lembaga lain beserta fasilitas pelayanannya.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Tamu Pejabat & Kunjungan Dinas', desc: 'Registrasi tamu dinas kementerian, majelis dikdasmen, pemda, dan kepolisian.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Tamu Alumni & Pengurusan Ijazah / Legalisir', desc: 'Layanan alumni untuk verifikasi kelulusan, penyerahan ijazah, dan legalisir transkrip.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Tamu General / Vendor & Penawaran', desc: 'Catatan log kunjungan vendor perorangan, penawaran kerjasama, dan tamu umum.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Studi Tiru', desc: 'Pendataan rombongan kunjungan studi banding.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Kunjungan Dinas', desc: 'Registrasi tamu dinas dan instansi.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Layanan Alumni', desc: 'Pengurusan ijazah dan legalisir alumni.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Tamu Umum & Vendor', desc: 'Log kunjungan vendor dan tamu umum.', status: 'DALAM_PENGEMBANGAN' },
     ]
   },
   inventaris: {
-    title: 'Inventaris & Aset Sekolah (Tata Usaha)',
-    roleName: 'ADMIN TATA USAHA (Badan Administrasi Umum)',
-    category: 'Sarana Prasarana & Aset',
+    title: 'Inventaris & Aset',
+    roleName: 'Tata Usaha',
+    category: 'Sarana Prasarana',
     icon: Package,
     gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
     badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
-    description: 'Modul pendataan sarana prasarana sekolah, registrasi kode inventaris, audit kondisi fisik barang (Baik, Rusak Ringan, Rusak Berat), dan penanggung jawab lokasi.',
+    description: 'Modul pendataan sarana prasarana, kode inventaris, dan audit kondisi barang.',
     modules: [
-      { title: 'Pendataan Kode Aset & Barcode', desc: 'Pencatatan inventaris barang masuk, spesifikasi, dan pelabelan kode unik.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Audit Kondisi & Kerusakan Barang', desc: 'Monitoring berkas ketersediaan barang dan tingkat kerusakan untuk perbaikan/penghapusan.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Penanggung Jawab Ruangan & Unit Work', desc: 'Penetapan PJ ruangan laboratorium, kantor, ruang kelas, dan fasilitas umum.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Stock Opname & Laporan Aset Periodik', desc: 'Rekapitulasi total nilai aset sekolah dan barang inventaris aktif.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Kode Aset & Barcode', desc: 'Pencatatan barang, foto fisik, dan pelabelan kode unik.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Audit Kondisi Barang', desc: 'Monitoring ketersediaan dan kondisi fisik aset.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Laporan Aset', desc: 'Rekapitulasi total nilai dan barang inventaris.', status: 'DALAM_PENGEMBANGAN' },
     ]
   },
   ekstrakulikuler: {
-    title: 'Pembina Ekstrakulikuler',
-    roleName: 'PEMBINA EKSTRAKULIKULER',
-    category: 'Pengembangan Siswa & Bakat',
+    title: 'Ekstrakulikuler',
+    roleName: 'Pembina Ekskul',
+    category: 'Pengembangan Siswa',
     icon: Award,
     gradient: 'from-amber-500 via-orange-500 to-amber-600',
     badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400',
-    description: 'Modul khusus untuk Pembina Ekstrakulikuler dalam mengelola pendaftaran anggota, jadwal latihan harian, absensi keaktifan, dan pencatatan raihan prestasi siswa.',
+    description: 'Modul pendaftaran anggota, jadwal latihan, presensi keaktifan, dan prestasi siswa.',
     modules: [
-      { title: 'Pendaftaran & Data Anggota Ekskul', desc: 'Pendataan siswa yang bergabung beserta pilihan ekskul utama & pilihan.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Jadwal & Presensi Keaktifan', desc: 'Pencatatan absensi peserta ekskul dan rekap kehadiran periodik.', status: 'SEGERA_HADIR' },
-      { title: 'Rekapitulasi Prestasi & Piagam', desc: 'Input pencapaian kejuaraan, sertifikat, dan piagam tingkat daerah hingga nasional.', status: 'TAHAP_DESAIN' },
-      { title: 'Laporan Kegiatan Pembina', desc: 'Penyusunan jurnal kegiatan ekskul dan evaluasi perkembangan minat siswa.', status: 'SEGERA_HADIR' },
+      { title: 'Data Anggota', desc: 'Pendataan anggota dan pilihan ekskul siswa.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Jadwal & Presensi', desc: 'Pencatatan absensi peserta ekskul.', status: 'SEGERA_HADIR' },
+      { title: 'Rekap Prestasi', desc: 'Pencatatan kejuaraan dan piagam siswa.', status: 'TAHAP_DESAIN' },
+      { title: 'Laporan Kegiatan', desc: 'Jurnal kegiatan dan evaluasi perkembangan.', status: 'SEGERA_HADIR' },
     ]
   },
   ketertiban: {
-    title: 'Tim Ketertiban & Kedisiplinan',
-    roleName: 'KETERTIBAN',
-    category: 'Kesiswaan & Tata Tertib',
+    title: 'Ketertiban & Kedisiplinan',
+    roleName: 'Ketertiban',
+    category: 'Kesiswaan',
     icon: ShieldAlert,
     gradient: 'from-rose-600 via-red-600 to-pink-600',
     badgeColor: 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:bg-rose-400/10 dark:text-rose-400',
-    description: 'Modul pemantauan kedisiplinan siswa, rekapitulasi poin pelanggaran & apresiasi, penerbitan surat teguran/SP, serta koordinasi otomatis dengan BK/BP.',
+    description: 'Modul pemantauan kedisiplinan siswa, rekap poin pelanggaran, dan surat peringatan.',
     modules: [
-      { title: 'Pencatatan Poin Kedisiplinan', desc: 'Input cepat pelanggaran atau apresiasi siswa secara terstruktur.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Rekapitulasi & Level Pelanggaran', desc: 'Klasifikasi poin siswa ringan, sedang, hingga berat secara otomatis.', status: 'SEGERA_HADIR' },
-      { title: 'Generator Surat Peringatan (SP)', desc: 'Cetak dan terbitkan Surat Peringatan 1, 2, 3 sesuai ambang batas poin.', status: 'TAHAP_DESAIN' },
-      { title: 'Notifikasi Otomatis Wali & Orang Tua', desc: 'Kirim notifikasi langsung saat terdapat catatan kedisiplinan baru.', status: 'SEGERA_HADIR' },
+      { title: 'Poin Kedisiplinan', desc: 'Pencatatan pelanggaran atau apresiasi siswa.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Rekap Pelanggaran', desc: 'Klasifikasi level pelanggaran siswa.', status: 'SEGERA_HADIR' },
+      { title: 'Surat Peringatan', desc: 'Cetak dan terbit Surat Peringatan (SP).', status: 'TAHAP_DESAIN' },
+      { title: 'Notifikasi Wali', desc: 'Notifikasi otomatis ke wali murid.', status: 'SEGERA_HADIR' },
     ]
   },
   kebersihan: {
-    title: 'Manajemen Kebersihan Lingkungan',
-    roleName: 'KEBERSIHAN',
-    category: 'Sarana Prasarana & Lingkungan',
+    title: 'Manajemen Kebersihan',
+    roleName: 'Kebersihan',
+    category: 'Sarana Prasarana',
     icon: Sparkles,
     gradient: 'from-emerald-500 via-teal-600 to-cyan-600',
     badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
-    description: 'Modul pengawasan kebersihan area sekolah, penugasan tim piket kebersihan lingkungan, inspeksi berkala ruang kelas & fasilitas umum.',
+    description: 'Modul pengawasan kebersihan area sekolah, inspeksi kelas, dan fasilitas umum.',
     modules: [
-      { title: 'Jadwal Inspeksi Area & Kelas', desc: 'Penjadwalan verifikasi kebersihan gedung, kelas, dan fasilitas umum.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Penilaian Kerapian & Kebersihan', desc: 'Sistem scoring harian kebersihan kelas untuk lomba atau evaluasi bulanan.', status: 'TAHAP_DESAIN' },
-      { title: 'Laporan Kerusakan & Pembersihan Extra', desc: 'Pengajuan kebutuhan alat kebersihan atau perbaikan area yang kotor.', status: 'SEGERA_HADIR' },
+      { title: 'Jadwal Inspeksi', desc: 'Penjadwalan kebersihan gedung dan kelas.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Penilaian Kebersihan', desc: 'Scoring harian kebersihan kelas.', status: 'TAHAP_DESAIN' },
+      { title: 'Laporan Kerusakan', desc: 'Pengajuan alat kebersihan dan pembersihan.', status: 'SEGERA_HADIR' },
     ]
   },
   keamanan: {
-    title: 'Pos Keamanan Sekolah',
-    roleName: 'KEAMANAN',
-    category: 'Keamanan & Pengawasan Kampus',
+    title: 'Pos Keamanan',
+    roleName: 'Keamanan',
+    category: 'Keamanan Sekolah',
     icon: ShieldCheck,
     gradient: 'from-blue-600 via-indigo-600 to-slate-700',
     badgeColor: 'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-400/10 dark:text-blue-400',
-    description: 'Modul buku tamu digital, pencatatan log keluar-masuk kendaraan/tamu, pengawasan izin keluar siswa & staf di gerbang utama, serta catatan insiden.',
+    description: 'Modul buku tamu digital, pengawasan gerbang, izin keluar, dan log insiden.',
     modules: [
-      { title: 'Buku Tamu Digital & Scan ID', desc: 'Registrasi tamu masuk sekolah beserta verifikasi identitas & keperluan.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Verifikasi Scan QR Surat Izin Keluar', desc: 'Validasi satpam untuk siswa atau guru yang keluar lingkungan sekolah.', status: 'TAHAP_DESAIN' },
-      { title: 'Log Parkir & Stiker Kendaraan', desc: 'Pendataan plat nomor kendaraan guru, staf, dan orang tua murid.', status: 'SEGERA_HADIR' },
-      { title: 'Catatan Insiden Security', desc: 'Laporan mingguan keamanan dan kejadian darurat di area sekolah.', status: 'SEGERA_HADIR' },
+      { title: 'Buku Tamu Digital', desc: 'Registrasi tamu dan verifikasi identitas.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Scan Izin Keluar', desc: 'Validasi QR surat izin keluar siswa/guru.', status: 'TAHAP_DESAIN' },
+      { title: 'Log Parkir', desc: 'Pendataan kendaraan di area sekolah.', status: 'SEGERA_HADIR' },
+      { title: 'Laporan Insiden', desc: 'Catatan insiden keamanan sekolah.', status: 'SEGERA_HADIR' },
     ]
   },
   kepegawaian: {
-    title: 'Kepegawaian & SDM Sekolah (HRD)',
-    roleName: 'KEPEGAWAIAN / HRD',
-    category: 'Manajemen SDM & Karir',
+    title: 'Kepegawaian (HRD)',
+    roleName: 'Kepegawaian',
+    category: 'Manajemen SDM',
     icon: UserCheck,
     gradient: 'from-violet-600 via-purple-600 to-indigo-700',
     badgeColor: 'bg-violet-500/10 text-violet-600 border-violet-500/20 dark:bg-violet-400/10 dark:text-violet-400',
-    description: 'Modul data induk pegawai, rekrutmen & seleksi calon pegawai baru (HRD), pengajuan SK kepegawaian & NIP/NBM, penilaian kinerja staf, dan pengarsipan berkas kepegawaian.',
+    description: 'Modul data pegawai, rekrutmen, pengajuan SK, dan pengarsipan berkas kepegawaian.',
     modules: [
-      { title: 'Rekrutmen & Seleksi Calon Pegawai Baru', desc: 'Pengelolaan berkas lamaran, seleksi administrasi, wawancara, dan penerimaan HRD.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Database Induk & Berkas HRD Pegawai', desc: 'Penyimpanan arsip digital SK, ijazah, sertifikat, dan NIP/NBM.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Manajemen Cuti & Izin Kerja', desc: 'Sistem pengajuan cuti tahunan, sakit, atau dinas luar secara digital.', status: 'TAHAP_DESAIN' },
-      { title: 'Evaluasi Kinerja Pegawai (PKP)', desc: 'Penilaian berkala untuk performa kerja pendidik dan tenaga kependidikan.', status: 'SEGERA_HADIR' },
+      { title: 'Rekrutmen Pegawai', desc: 'Pengelolaan berkas pelamar dan penerimaan.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Database Pegawai', desc: 'Penyimpanan arsip SK, ijazah, dan NIP/NBM.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Cuti & Izin Kerja', desc: 'Pengajuan cuti dan izin kerja digital.', status: 'TAHAP_DESAIN' },
+      { title: 'Evaluasi Kinerja', desc: 'Penilaian kinerja pendidik & tenaga kependidikan.', status: 'SEGERA_HADIR' },
     ]
   },
   'bk-bp': {
-    title: 'Bimbingan & Konseling (BK/BP)',
-    roleName: 'BK / BP',
-    category: 'Layanan Bimbingan Siswa',
+    title: 'Bimbingan Konseling (BK)',
+    roleName: 'Guru BK',
+    category: 'Layanan Siswa',
     icon: HeartHandshake,
     gradient: 'from-pink-500 via-purple-600 to-rose-600',
     badgeColor: 'bg-pink-500/10 text-pink-600 border-pink-500/20 dark:bg-pink-400/10 dark:text-pink-400',
-    description: 'Modul konseling akademik & pribadi siswa, pencatatan riwayat bimbingan, jadwal pertemuan tatap muka, serta konsultasi karir & perguruan tinggi.',
+    description: 'Modul konseling akademik & pribadi siswa, jadwal pertemuan, dan bimbingan karir.',
     modules: [
-      { title: 'Rekam Konseling & Case History', desc: 'Catatan rahasia sesi bimbingan konseling pribadi & akademik siswa.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Konseling Karir & Pemetaan PTN/PTS', desc: 'Bimbingan minat studi lanjut, hasil SNMPTN/SNBP, dan rekomendasi jurusan.', status: 'TAHAP_DESAIN' },
-      { title: 'Home Visit & Pertemuan Orang Tua', desc: 'Jadwal kunjungan rumah dan notulensi pertemuan konseling dengan wali murid.', status: 'SEGERA_HADIR' },
+      { title: 'Rekam Konseling', desc: 'Catatan sesi bimbingan konseling siswa.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Konseling Karir', desc: 'Bimbingan minat studi dan perguruan tinggi.', status: 'TAHAP_DESAIN' },
+      { title: 'Home Visit', desc: 'Kunjungan rumah dan konseling orang tua.', status: 'SEGERA_HADIR' },
     ]
   },
   perpustakaan: {
-    title: 'Sistem Informasi Perpustakaan',
-    roleName: 'PUSTAKAWAN',
-    category: 'Literasi & Sirkulasi Buku',
+    title: 'Perpustakaan',
+    roleName: 'Pustakawan',
+    category: 'Literasi & Buku',
     icon: Library,
     gradient: 'from-cyan-600 via-blue-600 to-teal-700',
     badgeColor: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20 dark:bg-cyan-400/10 dark:text-cyan-400',
-    description: 'Modul manajemen katalog buku digital, sirkulasi peminjaman & pengembalian buku barcode, kalkulasi denda keterlambatan, dan rekap statistik membaca.',
+    description: 'Modul katalog buku digital, sirkulasi peminjaman, dan rekap statistik membaca.',
     modules: [
-      { title: 'Katalog Buku Digital (OPAC)', desc: 'Pencarian koleksi buku, ketersediaan stok, dan lokasi rak secara online.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Sirkulasi Peminjaman & Pengembalian', desc: 'Transaksi cepat peminjaman buku menggunakan scan NIS/NIP barcode.', status: 'TAHAP_DESAIN' },
-      { title: 'Statistik Pengunjung & Kartu Anggota', desc: 'Grafik minat baca harian siswa dan pembuat kartu perpustakaan digital.', status: 'SEGERA_HADIR' },
+      { title: 'Katalog Buku', desc: 'Pencarian koleksi buku dan lokasi rak.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Sirkulasi Buku', desc: 'Peminjaman dan pengembalian buku barcode.', status: 'TAHAP_DESAIN' },
+      { title: 'Statistik Pengunjung', desc: 'Grafik minat baca dan kartu perpustakaan.', status: 'SEGERA_HADIR' },
     ]
   },
   tahfidz: {
-    title: 'Monitoring Guru Tahfidz',
-    roleName: 'GURU TAHFIDZ',
-    category: 'Keislaman & Program Tahfidz',
+    title: 'Tahfidz Al-Qur\'an',
+    roleName: 'Guru Tahfidz',
+    category: 'Keislaman',
     icon: BookMarked,
     gradient: 'from-emerald-600 via-teal-600 to-green-700',
     badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
-    description: 'Modul rekap setoran hafalan Al-Qur\'an harian siswa, evaluasi kelancaran & tajwid, target juz, serta mutabaah hafalan yang terintegrasi.',
+    description: 'Modul rekap setoran hafalan harian, evaluasi tajwid, dan progress juz siswa.',
     modules: [
-      { title: 'Jurnal Setoran Hafalan Harian', desc: 'Input juz, surat, dan ayat setoran harian siswa beserta catatannya.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Penilaian Tajwid, Makhraj & Fashohah', desc: 'Penilaian kriteria standar mutu hafalan Al-Qur\'an.', status: 'TAHAP_DESAIN' },
-      { title: 'Kartu Prestasi Tahfidz & Progress Juz', desc: 'Grafik pencapaian target hafalan siswa menuju kelulusan.', status: 'SEGERA_HADIR' },
+      { title: 'Setoran Harian', desc: 'Input juz, surat, dan ayat setoran siswa.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Penilaian Tajwid', desc: 'Evaluasi kelancaran dan tajwid hafalan.', status: 'TAHAP_DESAIN' },
+      { title: 'Progress Hafalan', desc: 'Grafik pencapaian target hafalan siswa.', status: 'SEGERA_HADIR' },
     ]
   },
   persuratan: {
-    title: 'Persuratan & Tata Usaha (E-Surat Tata Usaha)',
-    roleName: 'PERSURATAN / TATA USAHA',
-    category: 'Administrasi & Disposisi Digital',
+    title: 'Persuratan & E-Archive',
+    roleName: 'Tata Usaha',
+    category: 'Administrasi Sekolah',
     icon: Mail,
     gradient: 'from-amber-600 via-yellow-600 to-orange-600',
     badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400',
-    description: 'Modul pembuat surat resmi sekolah, penomoran surat otomatis, pendataan surat masuk & keluar, pengarsipan digital, serta disposisi pimpinan.',
+    description: 'Modul pembuat surat resmi, penomoran otomatis, surat masuk/keluar, dan arsip digital.',
     modules: [
-      { title: 'Penomoran Surat Masuk & Keluar Otomatis', desc: 'Sistem penomoran otomatis terstandar untuk semua jenis dokumen sekolah.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Template Surat Resmi & Legalisir Ijazah', desc: 'Generator surat keterangan aktif, rekomendasi, legalisir ijazah alumni, dan panggilan.', status: 'TAHAP_DESAIN' },
-      { title: 'Disposisi Digital Kepala Sekolah / Tata Usaha', desc: 'Alur penerusan surat masuk ke unit kerja terkait secara realtime.', status: 'SEGERA_HADIR' },
-      { title: 'E-Archive & Pengarsipan Digital', desc: 'Penyimpanan arsip dokumen penting sekolah dengan indexing pencarian cepat.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Surat Keluar', desc: 'Penomoran otomatis terstandar surat sekolah.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Template Surat', desc: 'Generator surat keterangan dan rekomendasi.', status: 'TAHAP_DESAIN' },
+      { title: 'Disposisi Digital', desc: 'Alur penerusan surat masuk ke unit kerja.', status: 'SEGERA_HADIR' },
+      { title: 'E-Archive', desc: 'Penyimpanan arsip dokumen penting sekolah.', status: 'DALAM_PENGEMBANGAN' },
     ]
   }
 }
@@ -714,137 +722,127 @@ export default function FiturSubRolePage() {
         </Badge>
       </div>
 
-      {/* Hero Banner Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-6 sm:p-10 shadow-2xl border border-slate-800">
-        <div className={`absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-gradient-to-br ${config.gradient} opacity-20 blur-3xl rounded-full pointer-events-none`} />
-        
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-4 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-amber-300">
-              <Sparkle className="w-3.5 h-3.5 animate-pulse text-amber-400" />
-              <span>Modul Layanan Administrasi & Tata Usaha</span>
-            </div>
-            
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
-              {config.title}
-            </h1>
-            
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-              {config.description}
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center justify-center self-center bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shrink-0 min-w-[200px] text-center shadow-inner">
-            <div className={`p-4 rounded-2xl bg-gradient-to-br ${config.gradient} shadow-lg mb-3`}>
-              <IconComponent className="w-10 h-10 text-white" />
-            </div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status Modul</span>
-            <span className="text-sm font-extrabold text-emerald-400 mt-1 flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              Aktif Siap Pakai
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Render Interaktif khusus Buku Tamu */}
-      {slug === 'buku-tamu' && (
-        <InteractiveGuestBook />
-      )}
-
-      {/* Render Interaktif khusus Kepegawaian: Manajemen & Verifikasi Cuti Pegawai */}
-      {slug === 'kepegawaian' && (
-        <div className="space-y-6">
-          <div className="bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/60 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="font-extrabold text-purple-950 dark:text-purple-200 text-base flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-purple-600" />
-                Pusat Verifikasi Izin Cuti & HRD Kepegawaian
-              </h3>
-              <p className="text-xs sm:text-sm text-purple-800/80 dark:text-purple-300/80 mt-0.5">
-                Kelola permohonan cuti tahunan, cuti sakit, melahirkan, dan ibadah pegawai serta persetujuan resmi SDM.
+      {/* Hero Banner Section (Hanya untuk fitur lain selain persuratan, kepegawaian & inventaris yang sudah memiliki panel antarmuka lengkap) */}
+      {slug !== 'persuratan' && slug !== 'kepegawaian' && slug !== 'inventaris' && (
+        <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-6 sm:p-10 shadow-2xl border border-slate-800">
+          <div className={`absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-gradient-to-br ${config.gradient} opacity-20 blur-3xl rounded-full pointer-events-none`} />
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="space-y-4 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-amber-300">
+                <Sparkle className="w-3.5 h-3.5 animate-pulse text-amber-400" />
+                <span>Layanan Administrasi & Tata Usaha</span>
+              </div>
+              
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+                {config.title}
+              </h1>
+              
+              <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+                {config.description}
               </p>
             </div>
-            <Link href="/presensi/cuti">
-              <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shrink-0">
-                Buka Halaman Penuh Cuti
-              </Button>
-            </Link>
-          </div>
-          <CutiPegawaiManagement />
-        </div>
-      )}
 
-      {/* Render Interaktif khusus Ketertiban & BP/BK: Manajemen Poin Kedisiplinan & Pelanggaran */}
-      {(slug === 'ketertiban' || slug === 'bk-bp') && (
-        <div className="space-y-6">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-rose-600" />
-                Pencatatan Poin Pelanggaran & Apresiasi Kedisiplinan Siswa
-              </h3>
+            <div className="flex flex-col items-center justify-center self-center bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shrink-0 min-w-[200px] text-center shadow-inner">
+              <div className={`p-4 rounded-2xl bg-gradient-to-br ${config.gradient} shadow-lg mb-3`}>
+                <IconComponent className="w-10 h-10 text-white" />
+              </div>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status Fitur</span>
+              <span className="text-sm font-extrabold text-emerald-400 mt-1 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                Aktif Siap Pakai
+              </span>
             </div>
-            <InteractiveCharacterAssessmentManagement defaultCategory={slug === 'ketertiban' ? 'PELANGGARAN' : 'ALL'} />
           </div>
         </div>
       )}
 
-      {/* Grid Status Modul Terencana */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              Rencana Modul Fitur Integrasi Tata Usaha
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-              Daftar spesifikasi sub-fitur yang terintegrasi penuh untuk operasional Badan Administrasi Umum & Tata Usaha.
-            </p>
-          </div>
-        </div>
+      {/* Render Interaktif khusus Persuratan, Kepegawaian & Inventaris (Tampilan Penuh) */}
+      {slug === 'persuratan' ? (
+        <PersuratanManagement />
+      ) : slug === 'kepegawaian' ? (
+        <KepegawaianManagement />
+      ) : slug === 'inventaris' ? (
+        <InventarisManagement />
+      ) : (
+        <>
+          {/* Render Interaktif khusus Buku Tamu */}
+          {slug === 'buku-tamu' && (
+            <InteractiveGuestBook />
+          )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {config.modules.map((mod, idx) => (
-            <Card key={idx} className="border-slate-200 dark:border-slate-800 hover:border-blue-500/40 transition-all duration-200 shadow-xs hover:shadow-md dark:bg-slate-900/80 backdrop-blur-xs">
-              <CardHeader className="p-5 pb-2 flex flex-row items-start justify-between space-y-0">
-                <div className="space-y-1">
-                  <span className="text-xs font-mono text-slate-400">#0{idx + 1}</span>
-                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
-                    {mod.title}
-                  </CardTitle>
+          {/* Render Interaktif khusus Ketertiban & BP/BK: Manajemen Poin Kedisiplinan & Pelanggaran */}
+          {(slug === 'ketertiban' || slug === 'bk-bp') && (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-rose-600" />
+                    Pencatatan Poin Pelanggaran & Apresiasi Kedisiplinan Siswa
+                  </h3>
                 </div>
-                <Badge variant="secondary" className="text-[10px] uppercase tracking-wider font-semibold bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300">
-                  Siap Digunakan
-                </Badge>
-              </CardHeader>
-              <CardContent className="p-5 pt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                {mod.desc}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+                <InteractiveCharacterAssessmentManagement defaultCategory={slug === 'ketertiban' ? 'PELANGGARAN' : 'ALL'} />
+              </div>
+            </div>
+          )}
 
-      {/* Info Banner Box */}
-      <Card className="border-blue-200 dark:border-blue-900/50 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 p-6 rounded-2xl">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h3 className="font-bold text-slate-900 dark:text-white text-base">
-              Akses Penuh Tata Usaha (Badan Administrasi Umum)
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-              Role Admin Tata Usaha / BAU memiliki hak akses pengelolaan setara Superadmin dengan fitur tambahan buku tamu, persuratan, inventaris aset, kepegawaian HRD, dan pencatatan keuangan.
-            </p>
+          {/* Grid Status Modul Terencana */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  Rencana Modul Fitur Integrasi Tata Usaha
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                  Daftar spesifikasi sub-fitur yang terintegrasi penuh untuk operasional Badan Administrasi Umum & Tata Usaha.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {config.modules.map((mod, idx) => (
+                <Card key={idx} className="border-slate-200 dark:border-slate-800 hover:border-blue-500/40 transition-all duration-200 shadow-xs hover:shadow-md dark:bg-slate-900/80 backdrop-blur-xs">
+                  <CardHeader className="p-5 pb-2 flex flex-row items-start justify-between space-y-0">
+                    <div className="space-y-1">
+                      <span className="text-xs font-mono text-slate-400">#0{idx + 1}</span>
+                      <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                        {mod.title}
+                      </CardTitle>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] uppercase tracking-wider font-semibold bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300">
+                      Siap Digunakan
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="p-5 pt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {mod.desc}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-          <Link href="/dashboard">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 shadow-sm gap-2">
-              <span>Kembali ke Dashboard</span>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </Link>
-        </div>
-      </Card>
+
+          {/* Info Banner Box */}
+          <Card className="border-blue-200 dark:border-blue-900/50 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 p-6 rounded-2xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  Akses Penuh Tata Usaha (Badan Administrasi Umum)
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                  Role Admin Tata Usaha / BAU memiliki hak akses pengelolaan setara Superadmin dengan fitur tambahan buku tamu, persuratan, inventaris aset, kepegawaian HRD, dan pencatatan keuangan.
+                </p>
+              </div>
+              <Link href="/dashboard">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 shadow-sm gap-2">
+                  <span>Kembali ke Dashboard</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </>
+      )}
     </div>
   )
 }

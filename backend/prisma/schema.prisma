@@ -21,6 +21,8 @@ model User {
   subRole           String?
   subRole2          String?
   subRole3          String?
+  subRole4          String?
+  subRole5          String?
   nipNbm            String?
   announcements     Announcement[]
   dailyAttendances  DailyAttendance[]
@@ -107,6 +109,8 @@ model Class {
   homeroomTeacher   TeacherProfile? @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
   schedules         Schedule[]
   students          Student[]
+
+  @@unique([name, gradeLevel, academicYear])
 }
 
 model Student {
@@ -135,11 +139,13 @@ model Student {
   parentRelations    ParentStudent[]
   class              Class          @relation(fields: [classId], references: [id])
   user               User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  virtualAccount     String?
   tagihans           Tagihan[]
   virtualAccountTransactions VirtualAccountTransaction[]
   characterAssessments CharacterAssessment[]
 
   @@index([classId])
+  @@index([virtualAccount])
 }
 
 model Subject {
@@ -163,6 +169,8 @@ model Schedule {
   subject          Subject           @relation(fields: [subjectId], references: [id])
   teacher          TeacherProfile    @relation(fields: [teacherId], references: [id])
   teachingJournals TeachingJournal[]
+
+  @@unique([classId, subjectId, dayOfWeek, startTime])
 }
 
 model Attendance {
@@ -177,6 +185,8 @@ model Attendance {
   updatedAt  DateTime @updatedAt
   schedule   Schedule @relation(fields: [scheduleId], references: [id])
   student    Student  @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, scheduleId, date])
 }
 
 model DailyAttendance {
@@ -202,6 +212,8 @@ model Grade {
   semester  Int
   student   Student @relation(fields: [studentId], references: [id])
   subject   Subject @relation(fields: [subjectId], references: [id])
+
+  @@unique([studentId, subjectId, type, semester])
 }
 
 model TeachingJournal {
@@ -214,6 +226,8 @@ model TeachingJournal {
   photoUrl   String?
   schedule   Schedule       @relation(fields: [scheduleId], references: [id])
   teacher    TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  @@unique([scheduleId, teacherId, date])
 }
 
 model HomeroomJournal {
@@ -223,6 +237,8 @@ model HomeroomJournal {
   actionTaken String?
   teacherId   String
   teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  @@unique([teacherId, date])
 }
 
 model Setting {
@@ -278,6 +294,8 @@ model StaffJournal {
   updatedAt DateTime @updatedAt
   evidence  String?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, activity])
 }
 
 model IzinKeluar {
@@ -333,6 +351,7 @@ model Tagihan {
   student       Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
   virtualAccountTransactions VirtualAccountTransaction[]
 
+  @@unique([studentId, type, year, month])
   @@index([studentId, status])
   @@index([year, month, status])
   @@index([type])

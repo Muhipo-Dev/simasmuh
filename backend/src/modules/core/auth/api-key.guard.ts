@@ -26,7 +26,12 @@ export class ApiKeyGuard implements CanActivate {
       (apiKey && validApiKeys.includes(apiKey)) ||
       (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) ||
       request.url.startsWith('/announcements/public') ||
+      request.url.startsWith('/settings/public') ||
+      request.url.startsWith('/settings/server-time') ||
+      request.url.startsWith('/settings/time-sync') ||
       request.url.startsWith('/uploads/') ||
+      request.url.startsWith('/waiting-room') ||
+      request.url.startsWith('/auth/login') ||
       request.url === '/'
     ) {
       return true;

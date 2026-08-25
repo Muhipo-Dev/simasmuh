@@ -55,12 +55,16 @@ export class PaymentNotificationsService {
         maximumFractionDigits: 0,
       }).format(tagihan.amount);
 
+      const vaInfo = tagihan.student.virtualAccount
+        ? ` | VA BNI: ${tagihan.student.virtualAccount}`
+        : '';
+
       await this.notificationsService.createNotification({
         userId: tagihan.student.user.id,
         senderId: createdBy,
         type: NotificationType.TAGIHAN_CREATED,
         title: 'Tagihan Baru Dibuat',
-        message: `Tagihan ${tagihan.type} sebesar ${amount} telah dibuat. Jatuh tempo: ${dueDate}`,
+        message: `Tagihan ${tagihan.type} sebesar ${amount} telah dibuat. Jatuh tempo: ${dueDate}${vaInfo}`,
         data: {
           tagihanId: tagihan.id,
           studentId: tagihan.studentId,
@@ -69,6 +73,7 @@ export class PaymentNotificationsService {
           dueDate: tagihan.dueDate,
           month: tagihan.month,
           year: tagihan.year,
+          virtualAccount: tagihan.student.virtualAccount || null,
         },
         priority: NotificationPriority.NORMAL,
         channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
@@ -566,10 +571,13 @@ export class PaymentNotificationsService {
     return this.prisma.user.findMany({
       where: {
         OR: [
-          { subRole: 'KEUANGAN' },
-          { subRole2: 'KEUANGAN' },
-          { subRole3: 'KEUANGAN' },
+          { subRole: { in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'] } },
+          { subRole2: { in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'] } },
+          { subRole3: { in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'] } },
+          { subRole4: { in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'] } },
+          { subRole5: { in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'] } },
           { role: 'ADMIN_IT' },
+          { role: 'SUPERADMIN' },
         ],
       },
     });

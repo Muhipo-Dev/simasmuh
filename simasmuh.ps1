@@ -1062,7 +1062,8 @@ function Start-TestingSuite {
         Write-Host "  |  [2] Jalankan Backend E2E Tests         |" -ForegroundColor White
         Write-Host "  |  [3] Jalankan Coverage Report           |" -ForegroundColor White
         Write-Host "  |  [4] Jalankan Frontend Linter           |" -ForegroundColor White
-        Write-Host "  |  [5] Diagnostik Status & Koneksi        |" -ForegroundColor White
+        Write-Host "  |  [5] Audit Performa & SEO (Unlighthouse)|" -ForegroundColor Cyan
+        Write-Host "  |  [6] Diagnostik Status & Koneksi        |" -ForegroundColor White
         Write-Host "  |  [0] Kembali ke Menu Utama              |" -ForegroundColor White
         Write-Host "  +=========================================+" -ForegroundColor Yellow
         Write-Host ""
@@ -1090,6 +1091,15 @@ function Start-TestingSuite {
                 Read-Host "  Tekan ENTER untuk kembali"
             }
             "5" {
+                Write-Status "Menjalankan Audit Performa, Aksesibilitas, Best Practice & SEO (Unlighthouse)..." "Cyan"
+                $fRunning = Test-PortListening 3000
+                if (-not $fRunning) {
+                    Write-Info "Frontend port 3000 belum aktif. Menjalankan unlighthouse terhadap http://localhost:3000 (pastikan Next.js aktif)..."
+                }
+                Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run audit" -NoNewWindow -Wait
+                Read-Host "  Tekan ENTER untuk kembali"
+            }
+            "6" {
                 Write-Banner
                 Write-Status "Diagnostik Lengkap SIMASMUH..." "Cyan"
                 $dbConnected = Test-DatabaseConnection
@@ -1146,6 +1156,9 @@ if ($Mode -ne "") {
         "*nonaktif*"     { Stop-Apps }
         "*test-unit*"    { Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm run test" -NoNewWindow -Wait }
         "*test-e2e*"     { Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm run test:e2e" -NoNewWindow -Wait }
+        "*audit*"        { Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run audit" -NoNewWindow -Wait }
+        "*lighthouse*"   { Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run audit" -NoNewWindow -Wait }
+        "*unlighthouse*" { Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run audit" -NoNewWindow -Wait }
         "*setup*"        { Start-EnvironmentSetup }
         default {
             Write-Err "Mode '$Mode' tidak dikenal. Mengakses Menu Utama..."

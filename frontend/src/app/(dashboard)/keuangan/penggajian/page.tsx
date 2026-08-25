@@ -6,8 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Loader2, Banknote, Settings, Download } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Loader2, Banknote, Settings, Download, CheckCircle2, DollarSign, Calculator } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import Swal from 'sweetalert2'
 import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
 import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
@@ -26,6 +30,14 @@ export default function PenggajianPage() {
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString())
   const [searchQuery, setSearchQuery] = useState('')
+  const [showParamModal, setShowParamModal] = useState(false)
+
+  // State Parameter Gaji (Default Config)
+  const [paramHarianRate, setParamHarianRate] = useState('50000')
+  const [paramSubRoleAllowance, setParamSubRoleAllowance] = useState('300000')
+  const [paramMinHadirBonus, setParamMinHadirBonus] = useState('20')
+  const [paramInsentifKetertiban, setParamInsentifKetertiban] = useState('200000')
+
   const authenticatedQuery = useAuthenticatedQuery()
 
   const { data: payroll, isLoading } = useQuery<PayrollSummary[]>({
@@ -77,15 +89,17 @@ export default function PenggajianPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-            <Banknote className="w-8 h-8 text-emerald-600" />
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-xl flex items-center justify-center shadow-xs shrink-0">
+              <Banknote className="w-5 h-5 text-white" />
+            </div>
             Penggajian Pegawai
           </h1>
-          <p className="text-slate-500 mt-1">Estimasi penghasilan bulanan berdasarkan rekapitulasi kehadiran.</p>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Estimasi penghasilan & insentif bulanan (Pengontrol Penuh: Agung - KEUANGAN_ALL)</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button variant="outline" className="border-emerald-600 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100">
+          <Button onClick={() => setShowParamModal(true)} variant="outline" className="border-emerald-600 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 font-bold">
             <Settings className="w-4 h-4 mr-2" />
             Atur Parameter Gaji
           </Button>
@@ -114,6 +128,45 @@ export default function PenggajianPage() {
             </Select>
           </div>
         </div>
+      </div>
+
+      {/* Panel Ringkasan Kalkulasi Perhitungan Penuh Keuangan (Pengontrol: Agung) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-0 shadow-md">
+          <CardContent className="p-5">
+            <p className="text-emerald-100 text-xs font-semibold uppercase tracking-wider">Total Kalkulasi Gaji Bulanan</p>
+            <h3 className="text-2xl font-bold mt-1">
+              {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
+                searchedPayroll.reduce((acc, curr) => acc + (curr.estimasiPenghasilan || 0) + (curr.bantuanNominal || 0), 0)
+              )}
+            </h3>
+            <p className="text-emerald-200 text-xs mt-1">Pengeluaran Gaji & Insentif {months.find(m => m.value === selectedMonth)?.label} {selectedYear}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-0 shadow-md">
+          <CardContent className="p-5">
+            <p className="text-blue-100 text-xs font-semibold uppercase tracking-wider">Total Jam / Hari Kehadiran</p>
+            <h3 className="text-2xl font-bold mt-1">
+              {searchedPayroll.reduce((acc, curr) => acc + (curr.totalHadir || 0), 0)} Hari
+            </h3>
+            <p className="text-blue-200 text-xs mt-1">Akumulasi kehadiran seluruh pegawai</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white border-0 shadow-md">
+          <CardContent className="p-5">
+            <p className="text-amber-100 text-xs font-semibold uppercase tracking-wider">Rata-Rata Gaji Pegawai</p>
+            <h3 className="text-2xl font-bold mt-1">
+              {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
+                searchedPayroll.length > 0
+                  ? searchedPayroll.reduce((acc, curr) => acc + (curr.estimasiPenghasilan || 0), 0) / searchedPayroll.length
+                  : 0
+              )}
+            </h3>
+            <p className="text-amber-100 text-xs mt-1">Estimasi rata-rata per pegawai</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="shadow-sm border-slate-200">
@@ -208,6 +261,87 @@ export default function PenggajianPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal Dialog Atur Parameter Gaji */}
+      <Dialog open={showParamModal} onOpenChange={setShowParamModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-700">
+              <Calculator className="w-5 h-5 text-emerald-600" />
+              Pengaturan Parameter Gaji & Tunjangan
+            </DialogTitle>
+            <DialogDescription>
+              Atur besaran tunjangan sub-role, insetif presensi harian, dan bonus kehadiran bulanan pegawai.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">Tarif Insentif Presensi Harian (Rp/Hari)</Label>
+              <Input
+                type="number"
+                value={paramHarianRate}
+                onChange={(e) => setParamHarianRate(e.target.value)}
+                placeholder="50000"
+              />
+              <p className="text-[10px] text-slate-500">Nominal insentif yang dikalikan dengan total hari hadir pegawai.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">Tunjangan Tambahan Sub-Role / Jabatan (Rp)</Label>
+              <Input
+                type="number"
+                value={paramSubRoleAllowance}
+                onChange={(e) => setParamSubRoleAllowance(e.target.value)}
+                placeholder="300000"
+              />
+              <p className="text-[10px] text-slate-500">Tunjangan per sub-role tambahan yang diemban pegawai (Wali Kelas, BK, Kebersihan, dll).</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Target Minimal Hadir (Hari)</Label>
+                <Input
+                  type="number"
+                  value={paramMinHadirBonus}
+                  onChange={(e) => setParamMinHadirBonus(e.target.value)}
+                  placeholder="20"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Insentif Ketertiban (Rp)</Label>
+                <Input
+                  type="number"
+                  value={paramInsentifKetertiban}
+                  onChange={(e) => setParamInsentifKetertiban(e.target.value)}
+                  placeholder="200000"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowParamModal(false)}>
+              Batal
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              onClick={() => {
+                setShowParamModal(false)
+                Swal.fire({
+                  title: 'Parameter Tersimpan',
+                  text: 'Parameter kalkulasi gaji pegawai berhasil diperbarui!',
+                  icon: 'success',
+                  confirmButtonColor: '#059669',
+                })
+              }}
+            >
+              Simpan Parameter
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

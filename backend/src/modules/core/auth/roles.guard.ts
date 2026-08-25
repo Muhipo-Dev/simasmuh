@@ -62,7 +62,9 @@ export class RolesGuard implements CanActivate {
         user.role === role ||
         user.subRole === role ||
         user.subRole2 === role ||
-        user.subRole3 === role,
+        user.subRole3 === role ||
+        user.subRole4 === role ||
+        user.subRole5 === role,
     );
   }
 
@@ -101,31 +103,51 @@ export class RolesGuard implements CanActivate {
       );
     }
 
-    // Finance (Keuangan) permissions
-    if (
-      user.role === UserRole.KEUANGAN ||
-      user.subRole === SubRole.KEUANGAN ||
-      user.subRole2 === SubRole.KEUANGAN ||
-      user.subRole3 === SubRole.KEUANGAN
-    ) {
-      permissions.push(
-        PaymentPermission.VIEW_ALL_BILLS,
-        PaymentPermission.CREATE_BILLS,
-        PaymentPermission.UPDATE_BILLS,
-        PaymentPermission.DELETE_BILLS,
-        PaymentPermission.VERIFY_PAYMENTS,
-        PaymentPermission.VIEW_FINANCIAL_REPORTS,
-        PaymentPermission.GENERATE_MASS_BILLS,
-        PaymentPermission.BULK_OPERATIONS,
-      );
+    // Finance (Keuangan) permissions granular setup
+    const userSubRoles = [user.subRole, user.subRole2, user.subRole3, user.subRole4, user.subRole5, user.role];
+    const isKeuanganMasuk = userSubRoles.includes('KEUANGAN_MASUK');
+    const isKeuanganKeluar = userSubRoles.includes('KEUANGAN_KELUAR');
+    const isKeuanganAll = userSubRoles.includes('KEUANGAN_ALL') || user.role === 'SUPERADMIN' || user.role === 'ADMIN_IT';
+    const isGeneralKeuangan = user.role === UserRole.KEUANGAN || userSubRoles.includes(SubRole.KEUANGAN);
+
+    if (isGeneralKeuangan) {
+      if (isKeuanganAll) {
+        permissions.push(
+          PaymentPermission.VIEW_ALL_BILLS,
+          PaymentPermission.CREATE_BILLS,
+          PaymentPermission.UPDATE_BILLS,
+          PaymentPermission.DELETE_BILLS,
+          PaymentPermission.VERIFY_PAYMENTS,
+          PaymentPermission.VIEW_FINANCIAL_REPORTS,
+          PaymentPermission.GENERATE_MASS_BILLS,
+          PaymentPermission.BULK_OPERATIONS,
+        );
+      } else {
+        if (isKeuanganMasuk) {
+          permissions.push(
+            PaymentPermission.VIEW_ALL_BILLS,
+            PaymentPermission.CREATE_BILLS,
+            PaymentPermission.UPDATE_BILLS,
+            PaymentPermission.VERIFY_PAYMENTS,
+            PaymentPermission.GENERATE_MASS_BILLS,
+            PaymentPermission.BULK_OPERATIONS,
+          );
+        }
+        if (isKeuanganKeluar) {
+          permissions.push(
+            PaymentPermission.VIEW_FINANCIAL_REPORTS,
+            PaymentPermission.CREATE_BILLS,
+            PaymentPermission.UPDATE_BILLS,
+            PaymentPermission.DELETE_BILLS,
+          );
+        }
+      }
     }
 
     // Headmaster (KEPALA_SEKOLAH) supervisory permissions (read-only reports & bills)
     if (
       user.role === UserRole.KEPALA_SEKOLAH ||
-      user.subRole === SubRole.KEPALA_SEKOLAH ||
-      user.subRole2 === SubRole.KEPALA_SEKOLAH ||
-      user.subRole3 === SubRole.KEPALA_SEKOLAH
+      userSubRoles.includes(SubRole.KEPALA_SEKOLAH)
     ) {
       permissions.push(
         PaymentPermission.VIEW_ALL_BILLS,

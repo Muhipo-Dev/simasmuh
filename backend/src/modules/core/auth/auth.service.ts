@@ -154,6 +154,8 @@ export class AuthService {
       subRole: user.subRole,
       subRole2: user.subRole2,
       subRole3: user.subRole3,
+      subRole4: user.subRole4,
+      subRole5: user.subRole5,
     };
     const token = this.jwtService.sign(payload);
 
@@ -182,6 +184,8 @@ export class AuthService {
         subRole: user.subRole,
         subRole2: user.subRole2,
         subRole3: user.subRole3,
+        subRole4: user.subRole4,
+        subRole5: user.subRole5,
       },
     };
   }

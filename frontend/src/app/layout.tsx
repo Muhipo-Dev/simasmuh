@@ -9,8 +9,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "System by. Muhipo Dev",
-    template: "%s | System by. Muhipo Dev",
+    default: "SIMASMUH by. Muhipo Dev",
+    template: "%s | SIMASMUH by. Muhipo Dev",
   },
   description: "Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo",
   icons: {

@@ -110,14 +110,24 @@ export class ClassesService {
       const user = teacher.user;
 
       if (isHomeroom) {
-        // Jika belum memiliki subRole WALI_KELAS, pasang pada subRole / subRole2 / subRole3 yang kosong atau set subRole
-        if (user.subRole !== 'WALI_KELAS' && user.subRole2 !== 'WALI_KELAS' && user.subRole3 !== 'WALI_KELAS') {
+        // Jika belum memiliki subRole WALI_KELAS, pasang pada subRole / subRole2 / subRole3 / subRole4 / subRole5 yang kosong
+        if (
+          user.subRole !== 'WALI_KELAS' &&
+          user.subRole2 !== 'WALI_KELAS' &&
+          user.subRole3 !== 'WALI_KELAS' &&
+          user.subRole4 !== 'WALI_KELAS' &&
+          user.subRole5 !== 'WALI_KELAS'
+        ) {
           if (!user.subRole) {
             await this.prisma.user.update({ where: { id: user.id }, data: { subRole: 'WALI_KELAS' } });
           } else if (!user.subRole2) {
             await this.prisma.user.update({ where: { id: user.id }, data: { subRole2: 'WALI_KELAS' } });
           } else if (!user.subRole3) {
             await this.prisma.user.update({ where: { id: user.id }, data: { subRole3: 'WALI_KELAS' } });
+          } else if (!user.subRole4) {
+            await this.prisma.user.update({ where: { id: user.id }, data: { subRole4: 'WALI_KELAS' } });
+          } else if (!user.subRole5) {
+            await this.prisma.user.update({ where: { id: user.id }, data: { subRole5: 'WALI_KELAS' } });
           }
         }
       } else {
@@ -126,6 +136,8 @@ export class ClassesService {
         if (user.subRole === 'WALI_KELAS') updateData.subRole = null;
         if (user.subRole2 === 'WALI_KELAS') updateData.subRole2 = null;
         if (user.subRole3 === 'WALI_KELAS') updateData.subRole3 = null;
+        if (user.subRole4 === 'WALI_KELAS') updateData.subRole4 = null;
+        if (user.subRole5 === 'WALI_KELAS') updateData.subRole5 = null;
         if (Object.keys(updateData).length > 0) {
           await this.prisma.user.update({ where: { id: user.id }, data: updateData });
         }

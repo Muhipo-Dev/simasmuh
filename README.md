@@ -29,6 +29,27 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-25 (v1.6.1 - Perbaikan Laporan Keuangan, Perombakan Sistem Role Akun, Refaktorisasi Navigasi & Penyempurnaan RLS):**
+  * **Perbaikan & Optimalisasi Fitur Laporan Keuangan (`/keuangan/laporan`):**
+    * Perbaikan penanganan status pembayaran, perhitungan saldo kas, dan sinkronisasi laporan pemasukan/pengeluaran riil sekolah.
+    * Penyesuaian kalkulasi rincian sisa piutang tertagih serta validasi histori pembayaran siswa dan penggajian pegawai.
+  * **Perombakan Sistem Role & Manajemen Hak Akses Akun (`RolesGuard` & RBAC):**
+    * Refaktorisasi dan perataan hak akses pengguna pada backend NestJS (`roles.guard.ts`, `roles.decorator.ts`, `jwt.strategy.ts`) dan frontend Next.js (`nav-links.ts`).
+    * Penyelarasan visibilitas menu navigasi untuk role Superadmin, Admin TU, Ketertiban, BK/BP, Guru, Karyawan, Siswa, dan Wali Murid.
+    * Perbaikan isu akses modul master data pengguna (`/master-data/pengguna`) dan proteksi rute sensitif.
+  * **Refaktorisasi Navigasi Modul Izin & Ketertiban:**
+    * Mengeliminasi duplikasi modul izin dengan memfokuskan alur izin siswa pada `/presensi/izin-siswa` dan menyelaraskan navigasi Ketertiban vs Wali Kelas.
+  * **Restorasi & Proteksi Akun Pengguna:**
+    * Script pemulihan akun `restore-all-accounts.ts` tanpa mengganggu atau mereset data eksisting di basis data PostgreSQL/Supabase.
+
+* **2026-08-24 (v1.6.0 - Peningkatan Manajemen Presensi Kehadiran Siswa, Dispensasi & Penataan UI Master Data):**
+  * **Modul Presensi Kehadiran Siswa & Dispensasi Terpadu:**
+    * Penambahan dan penyempurnaan antarmuka Manajemen Presensi Kehadiran Siswa (`/presensi/kehadiran-siswa`) dan Dispensasi Siswa (`/presensi/dispensasi`).
+    * Dukungan notifikasi ganda instan (In-App Notification & WhatsApp Gateway `088293733330`) untuk setiap pencatatan ketidakhadiran, izin, dan dispensasi siswa ke nomor wali murid.
+  * **Penyempurnaan Master Data & Responsivitas Layout:**
+    * Optimasi tata letak ringkas (*compact UI*) dan responsif pada halaman Master Data Guru, Siswa, Kelas, dan Pengguna.
+    * Penguatan validasi input nomor telepon WhatsApp pada form biodata pengguna dan penyesuaian filter pencarian.
+
 * **2026-08-21 (v1.5.6 - Penguatan Keamanan RLS Database, Verifikasi Izin Keluar & Cuti, dan Aksesibilitas Terpadu Navigasi Admin TU):**
   * **Proteksi Row Level Security (RLS) & Kebijakan Keamanan Database Menyeluruh:**
     * Menerapkan kebijakan Row Level Security (RLS) pada seluruh tabel publik PostgreSQL SIMASMUH (presensi, transaksi keuangan, log sistem, etika/tatib, master data) dengan bypass aman terkendali untuk service role backend dan superadmin.

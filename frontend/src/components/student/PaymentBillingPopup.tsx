@@ -596,13 +596,50 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId, s
                       </div>
                     </div>
                     
+                    {/* Virtual Account BNI Siswa */}
+                    {studentInfo?.virtualAccount && (
+                      <>
+                        <Separator className="bg-emerald-200/60 dark:bg-emerald-800/60" />
+                        <div className="pt-2">
+                          <p className="font-bold text-emerald-900 dark:text-emerald-300 mb-2.5 flex items-center gap-2 uppercase tracking-wide text-xs">
+                            <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            Virtual Account BNI Siswa:
+                          </p>
+                          <div className="space-y-2 bg-gradient-to-r from-emerald-900 to-teal-900 text-white p-3.5 rounded-xl border border-emerald-500/40 shadow-sm">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[11px] font-semibold text-emerald-200 uppercase tracking-wider">Mitra Bank BNI</span>
+                              <span className="text-[10px] font-black bg-orange-500 text-white px-2 py-0.5 rounded-md">
+                                BNI VA
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center bg-black/20 p-2 rounded-lg border border-white/10">
+                              <span className="font-mono font-black text-emerald-100 text-lg tracking-widest">
+                                {studentInfo.virtualAccount}
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => copyToClipboard(studentInfo.virtualAccount)}
+                                className="h-7 px-2 text-xs font-bold text-emerald-300 hover:text-white hover:bg-emerald-700/50 rounded-lg gap-1"
+                              >
+                                <Copy className="w-3.5 h-3.5" /> Salin VA
+                              </Button>
+                            </div>
+                            <p className="text-[10px] text-emerald-200/80 italic">
+                              Transfer langsung melalui ATM, BNI Mobile Banking, atau Bank lain ke nomor VA di atas.
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
                     {bankAccount && (bankAccount.bankName || bankAccount.bankNumber) && (
                       <>
                         <Separator className="bg-amber-200/60" />
                         <div className="pt-2">
                           <p className="font-bold text-amber-900 mb-3 flex items-center gap-2 uppercase tracking-wide text-xs">
                             <Building2 className="w-4 h-4" />
-                            Transfer ke Rekening Berikut:
+                            Rekening Utama Sekolah:
                           </p>
                           <div className="space-y-3 text-sm bg-white/40 p-3 rounded-xl border border-amber-100">
                             <div className="flex justify-between items-center border-b border-amber-100/50 pb-2">

@@ -55,8 +55,18 @@ export function CutiPegawaiManagement() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isSuperAdmin = user?.role === 'SUPERADMIN' || user?.role === 'ADMIN_IT' || user?.subRole === 'SUPERADMIN'
-  const isSdm = user?.role === 'KEPEGAWAIAN' || user?.subRole === 'KEPEGAWAIAN' || user?.subRole2 === 'KEPEGAWAIAN' || user?.subRole3 === 'KEPEGAWAIAN' || user?.role === 'ADMIN_TU' || user?.role === 'BAU'
-  const canManageAll = isSuperAdmin || isSdm
+  const isBau = user?.role === 'ADMIN_TU' || user?.role === 'BAU' || user?.role === 'TATA_USAHA' || user?.subRole === 'BAU' || user?.subRole === 'ADMIN_TU'
+  const isKepalaSekolah = user?.role === 'KEPALA_SEKOLAH'
+  const isGuru = user?.role === 'GURU' || user?.subRole === 'GURU'
+  const isPegawai = user?.role === 'PEGAWAI' || user?.role === 'KARYAWAN'
+
+  // Hanya bagian SDM (KEPEGAWAIAN subRole di TU) yang dapat verifikasi & approve cuti
+  const isSdm = user?.subRole === 'KEPEGAWAIAN' || user?.subRole2 === 'KEPEGAWAIAN' || user?.subRole3 === 'KEPEGAWAIAN' || user?.role === 'KEPEGAWAIAN'
+  const canManageAll = isSuperAdmin && false || isSdm // Superadmin TIDAK bisa verifikasi, hanya SDM TU
+  // Kepala Sekolah hanya supervisi statistik (lihat semua, tanpa aksi)
+  const canViewAll = isSdm || isKepalaSekolah
+  // Semua pegawai/guru/karyawan dapat mengajukan cuti (bukan kepala sekolah)
+  const canSubmit = !isKepalaSekolah && !isSdm || isSuperAdmin
 
   const [myCuti, setMyCuti] = useState<CutiPegawaiItem[]>([])
   const [allCuti, setAllCuti] = useState<CutiPegawaiItem[]>([])
@@ -96,18 +106,18 @@ export function CutiPegawaiManagement() {
     try {
       const [myRes, allRes] = await Promise.all([
         authenticatedFetch('/api-backend/izin-keluar/my'),
-        canManageAll ? authenticatedFetch(`/api-backend/izin-keluar?${filterDate ? `date=${filterDate}&` : ''}category=PEGAWAI`) : Promise.resolve(null),
+        canViewAll ? authenticatedFetch(`/api-backend/izin-keluar?${filterDate ? `date=${filterDate}&` : ''}category=PEGAWAI`) : Promise.resolve(null),
       ])
 
       if (myRes?.ok) {
         const myData = await myRes.json()
-        const filtered = Array.isArray(myData) ? myData.filter((i: any) => i.alasan?.includes('[CUTI_SDM]') || i.alasan?.includes('[CUTI')) : []
+        const filtered = Array.isArray(myData) ? myData.filter((i: any) => i.alasan?.includes('[CUTI]') || i.alasan?.includes('[CUTI_SDM]')) : []
         setMyCuti(filtered)
       }
 
       if (allRes?.ok) {
         const allData = await allRes.json()
-        const filtered = Array.isArray(allData) ? allData.filter((i: any) => i.alasan?.includes('[CUTI_SDM]') || i.alasan?.includes('[CUTI')) : []
+        const filtered = Array.isArray(allData) ? allData.filter((i: any) => i.alasan?.includes('[CUTI]') || i.alasan?.includes('[CUTI_SDM]')) : []
         setAllCuti(filtered)
       }
     } catch (e) {
@@ -164,7 +174,7 @@ export function CutiPegawaiManagement() {
         setUploadingImage(false)
       }
 
-      const prefixCuti = `[CUTI_SDM - ${jenisCuti.replace('_', ' ')}] Periode: ${tglMulai} s/d ${tglSelesai}\n`
+      const prefixCuti = `[CUTI - ${jenisCuti.replace('_', ' ')}] Periode: ${tglMulai} s/d ${tglSelesai}\n`
       const payload: any = {
         date: tglMulai,
         waktuKeluar: '07:00',
@@ -184,7 +194,7 @@ export function CutiPegawaiManagement() {
         Swal.fire({
           icon: 'success',
           title: 'Permohonan Cuti Terkirim',
-          text: 'Permohonan cuti Anda telah diteruskan ke Bagian Kepegawaian & SDM (HRD) untuk proses verifikasi dan persetujuan.',
+          text: 'Permohonan cuti Anda telah diteruskan ke Kepala Sekolah & Tata Usaha untuk diverifikasi dan disetujui.',
           timer: 3000,
           showConfirmButton: false,
         })
@@ -211,7 +221,7 @@ export function CutiPegawaiManagement() {
       type,
       cuti,
       catatan: type === 'APPROVE' 
-        ? 'Disetujui dan diverifikasi oleh Bagian Kepegawaian & SDM (HRD).' 
+        ? 'Disetujui oleh pihak sekolah.' 
         : 'Mohon maaf, permohonan cuti belum dapat disetujui.',
       loading: false,
     })
@@ -234,7 +244,7 @@ export function CutiPegawaiManagement() {
       if (res.ok) {
         Swal.fire({
           icon: 'success',
-          title: actionDialog.type === 'APPROVE' ? 'Cuti Disetujui SDM' : 'Cuti Ditolak',
+          title: actionDialog.type === 'APPROVE' ? 'Cuti Disetujui' : 'Cuti Ditolak',
           text: `Status cuti pegawai berhasil diperbarui dan notifikasi WhatsApp telah dikirimkan.`,
           timer: 2000,
           showConfirmButton: false,
@@ -323,15 +333,15 @@ export function CutiPegawaiManagement() {
           <div className="flex items-center gap-2">
             {cuti.status === 'DISETUJUI' ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Disetujui SDM
+                <CheckCircle2 className="w-3.5 h-3.5" /> Disetujui
               </span>
             ) : cuti.status === 'DITOLAK' ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shadow-2xs">
-                <XCircle className="w-3.5 h-3.5" /> Ditolak SDM
+                <XCircle className="w-3.5 h-3.5" /> Ditolak
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-2xs">
-                <Clock className="w-3.5 h-3.5" /> Menunggu Verifikasi SDM
+                <Clock className="w-3.5 h-3.5" /> Menunggu Verifikasi
               </span>
             )}
           </div>
@@ -364,7 +374,7 @@ export function CutiPegawaiManagement() {
         {cuti.catatanAdmin && (
           <div className="bg-purple-50/70 dark:bg-purple-950/40 rounded-xl p-3 border border-purple-100 dark:border-purple-900/60">
             <p className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5" /> Catatan Verifikasi SDM / Kepegawaian:
+              <ShieldCheck className="w-3.5 h-3.5" /> Catatan Verifikasi:
             </p>
             <p className="text-xs text-purple-800 dark:text-purple-200 font-medium">
               {cuti.catatanAdmin}
@@ -427,17 +437,19 @@ export function CutiPegawaiManagement() {
             </h1>
           </div>
           <p className="text-purple-100 mt-2 text-xs sm:text-sm max-w-2xl leading-relaxed">
-            Pengajuan cuti tahunan, cuti sakit, cuti melahirkan, atau cuti ibadah yang diverifikasi langsung oleh Tim Kepegawaian & SDM (HRD) Sekolah.
+            Pengajuan cuti tahunan, sakit, melahirkan, atau ibadah untuk seluruh Guru, Karyawan &amp; Pegawai. Diverifikasi &amp; disetujui oleh <strong>Bagian SDM (KEPEGAWAIAN)</strong> Tata Usaha Sekolah.
           </p>
         </div>
 
-        <Button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-white text-purple-700 hover:bg-purple-50 font-black rounded-2xl shadow-md transition-all px-5 py-6 flex items-center gap-2 shrink-0 self-start sm:self-center"
-        >
-          <Plus className="w-5 h-5" />
-          Ajukan Izin Cuti
-        </Button>
+        {canSubmit && (
+          <Button
+            onClick={() => setShowForm(!showForm)}
+            className="bg-white text-purple-700 hover:bg-purple-50 font-black rounded-2xl shadow-md transition-all px-5 py-6 flex items-center gap-2 shrink-0 self-start sm:self-center"
+          >
+            <Plus className="w-5 h-5" />
+            Ajukan Izin Cuti
+          </Button>
+        )}
       </div>
 
       {msg && (
@@ -451,14 +463,14 @@ export function CutiPegawaiManagement() {
       )}
 
       {/* Formulir Permohonan Cuti */}
-      {showForm && (
+      {showForm && canSubmit && (
         <Card className="border-purple-200 dark:border-purple-900/60 bg-purple-50/40 dark:bg-purple-950/20 shadow-md rounded-3xl overflow-hidden">
           <CardHeader className="bg-purple-100/60 dark:bg-purple-950/60 border-b border-purple-200 dark:border-purple-900/60 pb-4">
             <CardTitle className="text-purple-900 dark:text-purple-300 flex items-center gap-2.5 text-lg font-bold">
               <CalendarDays className="w-5 h-5 text-purple-600" /> Formulir Pengajuan Izin Cuti
             </CardTitle>
             <CardDescription className="text-xs">
-              Permohonan akan diverifikasi oleh Bagian Kepegawaian & SDM (HRD) sesuai hak cuti pegawai.
+              Permohonan akan diverifikasi oleh Bagian SDM (KEPEGAWAIAN) di Tata Usaha sekolah.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-5 sm:p-6">
@@ -564,10 +576,12 @@ export function CutiPegawaiManagement() {
 
       {/* Tab Switcher & Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {canManageAll ? (
+        {canViewAll ? (
           <div className="flex items-center gap-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-2xl w-fit">
-            <Button size="sm" variant={activeTab === 'my' ? 'default' : 'ghost'} onClick={() => setActiveTab('my')} className={`rounded-xl font-extrabold text-xs px-4 h-9 ${activeTab === 'my' ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-600'}`}>Cuti Saya</Button>
-            <Button size="sm" variant={activeTab === 'all' ? 'default' : 'ghost'} onClick={() => setActiveTab('all')} className={`rounded-xl font-extrabold text-xs px-4 h-9 ${activeTab === 'all' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600'}`}>Verifikasi SDM ({allCuti.length})</Button>
+            {canSubmit && <Button size="sm" variant={activeTab === 'my' ? 'default' : 'ghost'} onClick={() => setActiveTab('my')} className={`rounded-xl font-extrabold text-xs px-4 h-9 ${activeTab === 'my' ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-600'}`}>Cuti Saya</Button>}
+            <Button size="sm" variant={activeTab === 'all' ? 'default' : 'ghost'} onClick={() => setActiveTab('all')} className={`rounded-xl font-extrabold text-xs px-4 h-9 ${activeTab === 'all' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600'}`}>
+              {canManageAll ? `Verifikasi Cuti (${allCuti.length})` : `Supervisi Cuti (${allCuti.length})`}
+            </Button>
           </div>
         ) : (
           <div className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
@@ -576,7 +590,7 @@ export function CutiPegawaiManagement() {
           </div>
         )}
 
-        {canManageAll && activeTab === 'all' && (
+        {canViewAll && activeTab === 'all' && (
           <div className="flex items-center gap-2">
             <Input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="h-9 rounded-xl w-36 text-xs bg-white dark:bg-slate-900" />
           </div>
@@ -612,16 +626,16 @@ export function CutiPegawaiManagement() {
       <Dialog open={actionDialog.open} onOpenChange={(open) => !actionDialog.loading && setActionDialog(prev => ({ ...prev, open }))}>
         <DialogContent className="rounded-3xl max-w-lg">
           <DialogHeader>
-            <DialogTitle>{actionDialog.type === 'APPROVE' ? 'Setujui Permohonan Cuti (SDM)' : 'Tolak Permohonan Cuti'}</DialogTitle>
+            <DialogTitle>{actionDialog.type === 'APPROVE' ? 'Setujui Permohonan Cuti' : 'Tolak Permohonan Cuti'}</DialogTitle>
             <DialogDescription>
-              Keputusan verifikasi cuti akan dikonfirmasikan langsung ke pegawai terkait melalui notifikasi resmi.
+              Keputusan akan dikonfirmasikan ke pegawai terkait melalui notifikasi resmi.
             </DialogDescription>
           </DialogHeader>
           <Textarea 
             value={actionDialog.catatan} 
             onChange={(e) => setActionDialog(prev => ({ ...prev, catatan: e.target.value }))} 
             className="rounded-xl" 
-            placeholder="Catatan verifikasi SDM..." 
+            placeholder="Catatan verifikasi..." 
           />
           <DialogFooter>
             <Button onClick={handleConfirmAction} className={actionDialog.type === 'APPROVE' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}>

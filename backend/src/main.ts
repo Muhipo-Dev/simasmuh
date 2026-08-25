@@ -5,6 +5,7 @@ import { json, urlencoded } from 'express';
 import compression from 'compression';
 import helmet from 'helmet';
 import { initializeSystemTimezone } from './modules/core/utils/timezone.util';
+import { PrismaClientExceptionFilter } from './modules/core/filters/prisma-exception.filter';
 
 // Set zona waktu seragam UTC+7 (Asia/Jakarta / Bangkok)
 initializeSystemTimezone();
@@ -40,6 +41,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  // Global Exception Filter untuk menolak data duplikat (Prisma P2002)
+  app.useGlobalFilters(new PrismaClientExceptionFilter());
 
   // Secure CORS Whitelist
   app.enableCors({

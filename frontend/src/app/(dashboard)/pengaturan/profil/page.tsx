@@ -528,6 +528,16 @@ export default function ProfilePage() {
                       {roleLabels[profile?.subRole3] || profile?.subRole3}
                     </span>
                   )}
+                  {profile?.subRole4 && (
+                    <span className="inline-block text-sm px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-100 font-medium">
+                      {roleLabels[profile?.subRole4] || profile?.subRole4}
+                    </span>
+                  )}
+                  {profile?.subRole5 && (
+                    <span className="inline-block text-sm px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100 font-medium">
+                      {roleLabels[profile?.subRole5] || profile?.subRole5}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

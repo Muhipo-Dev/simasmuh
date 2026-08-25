@@ -14,7 +14,7 @@ export class UsersService {
     return this.prisma.user.findMany({
       where: {
         role: {
-          not: 'SISWA',
+          notIn: ['SISWA', 'WALI_MURID', 'ORANG_TUA', 'PARENT'],
         },
       },
       select: {
@@ -28,6 +28,8 @@ export class UsersService {
         subRole: true,
         subRole2: true,
         subRole3: true,
+        subRole4: true,
+        subRole5: true,
         createdAt: true,
         teacherProfile: true,
         parentProfile: {
@@ -66,6 +68,36 @@ export class UsersService {
         throw new BadRequestException(
           'NIP / NBM sudah terdaftar pada akun lain',
         );
+    }
+
+    // Validasi Keamanan Tunggal (Single Role) Kepala Sekolah
+    const isAssigningKepalaSekolah = 
+      data.role === 'KEPALA_SEKOLAH' || 
+      data.subRole === 'KEPALA_SEKOLAH' || 
+      data.subRole2 === 'KEPALA_SEKOLAH' || 
+      data.subRole3 === 'KEPALA_SEKOLAH' ||
+      data.subRole4 === 'KEPALA_SEKOLAH' ||
+      data.subRole5 === 'KEPALA_SEKOLAH';
+
+    if (isAssigningKepalaSekolah) {
+      const existingKepsek = await this.prisma.user.findFirst({
+        where: {
+          OR: [
+            { role: 'KEPALA_SEKOLAH' },
+            { subRole: 'KEPALA_SEKOLAH' },
+            { subRole2: 'KEPALA_SEKOLAH' },
+            { subRole3: 'KEPALA_SEKOLAH' },
+            { subRole4: 'KEPALA_SEKOLAH' },
+            { subRole5: 'KEPALA_SEKOLAH' },
+          ],
+        },
+      });
+
+      if (existingKepsek) {
+        throw new BadRequestException(
+          `Jabatan Kepala Sekolah saat ini masih diemban oleh "${existingKepsek.name}" (${existingKepsek.username}). Demi keamanan E-Sign dan aturan sistem, ubah/kosongkan role Kepala Sekolah pada akun lama terlebih dahulu sebelum menugaskannya ke akun baru.`,
+        );
+      }
     }
 
     const existingUsername = await this.prisma.user.findFirst({
@@ -108,10 +140,14 @@ export class UsersService {
         subRole: data.subRole || null,
         subRole2: data.subRole2 || null,
         subRole3: data.subRole3 || null,
+        subRole4: data.subRole4 || null,
+        subRole5: data.subRole5 || null,
         ...(data.role === 'GURU' ||
         data.subRole === 'GURU' ||
         data.subRole2 === 'GURU' ||
-        data.subRole3 === 'GURU'
+        data.subRole3 === 'GURU' ||
+        data.subRole4 === 'GURU' ||
+        data.subRole5 === 'GURU'
           ? {
               teacherProfile: {
                 create: {
@@ -133,6 +169,8 @@ export class UsersService {
         subRole: true,
         subRole2: true,
         subRole3: true,
+        subRole4: true,
+        subRole5: true,
       },
     });
   }
@@ -144,7 +182,40 @@ export class UsersService {
       subRole: data.subRole || null,
       subRole2: data.subRole2 || null,
       subRole3: data.subRole3 || null,
+      subRole4: data.subRole4 || null,
+      subRole5: data.subRole5 || null,
     };
+
+    // Validasi Keamanan Tunggal (Single Role) Kepala Sekolah pada Update
+    const isAssigningKepalaSekolah = 
+      data.role === 'KEPALA_SEKOLAH' || 
+      data.subRole === 'KEPALA_SEKOLAH' || 
+      data.subRole2 === 'KEPALA_SEKOLAH' || 
+      data.subRole3 === 'KEPALA_SEKOLAH' ||
+      data.subRole4 === 'KEPALA_SEKOLAH' ||
+      data.subRole5 === 'KEPALA_SEKOLAH';
+
+    if (isAssigningKepalaSekolah) {
+      const existingKepsek = await this.prisma.user.findFirst({
+        where: {
+          NOT: { id },
+          OR: [
+            { role: 'KEPALA_SEKOLAH' },
+            { subRole: 'KEPALA_SEKOLAH' },
+            { subRole2: 'KEPALA_SEKOLAH' },
+            { subRole3: 'KEPALA_SEKOLAH' },
+            { subRole4: 'KEPALA_SEKOLAH' },
+            { subRole5: 'KEPALA_SEKOLAH' },
+          ],
+        },
+      });
+
+      if (existingKepsek) {
+        throw new BadRequestException(
+          `Jabatan Kepala Sekolah saat ini masih diemban oleh "${existingKepsek.name}" (${existingKepsek.username}). Demi keamanan E-Sign dan integritas persuratan resmi, ubah/kosongkan role Kepala Sekolah pada akun lama terlebih dahulu sebelum menugaskannya ke akun baru.`,
+        );
+      }
+    }
 
     if (data.phone !== undefined) {
       updateData.phone = data.phone && data.phone.trim() !== '' ? data.phone.trim() : '088293733330';
@@ -209,7 +280,9 @@ export class UsersService {
       data.role === 'GURU' ||
       data.subRole === 'GURU' ||
       data.subRole2 === 'GURU' ||
-      data.subRole3 === 'GURU'
+      data.subRole3 === 'GURU' ||
+      data.subRole4 === 'GURU' ||
+      data.subRole5 === 'GURU'
     ) {
       const existingProfile = await this.prisma.teacherProfile.findUnique({
         where: { userId: id },
@@ -237,6 +310,8 @@ export class UsersService {
         subRole: true,
         subRole2: true,
         subRole3: true,
+        subRole4: true,
+        subRole5: true,
         avatarUrl: true,
       },
     });
@@ -273,6 +348,8 @@ export class UsersService {
         subRole: true,
         subRole2: true,
         subRole3: true,
+        subRole4: true,
+        subRole5: true,
         avatarUrl: true,
         address: true,
         teacherProfile: {

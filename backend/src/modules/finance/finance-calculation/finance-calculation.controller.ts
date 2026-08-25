@@ -6,6 +6,8 @@ import {
   Param,
   Body,
   UseGuards,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FinanceCalculationService } from './finance-calculation.service';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
@@ -114,9 +116,17 @@ export class FinanceCalculationController {
   @Get('payroll-summary')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   async getPayrollSummary(
+    @Req() req: any,
     @Query('year') year: string,
     @Query('month') month: string,
   ) {
+    const userSubRoles = [req.user?.subRole, req.user?.subRole2, req.user?.subRole3, req.user?.subRole4, req.user?.subRole5, req.user?.role];
+    const isKeuanganStaff = userSubRoles.some(r => ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r));
+
+    if (!isKeuanganStaff) {
+      throw new ForbiddenException('Akses ditolak. Penggajian pegawai hanya dapat diakses oleh bagian Keuangan / Superadmin.');
+    }
+
     return this.financeCalculationService.calculatePayrollSummary(
       parseInt(year, 10),
       month ? parseInt(month, 10) : new Date().getMonth() + 1,
@@ -130,9 +140,15 @@ export class FinanceCalculationController {
   @Get('revenue')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   async calculateRevenue(
+    @Req() req: any,
     @Query('year') year: string,
     @Query('month') month?: string,
   ) {
+    const userSubRoles = [req.user?.subRole, req.user?.subRole2, req.user?.subRole3, req.user?.subRole4, req.user?.subRole5, req.user?.role];
+    const isKeuanganStaff = userSubRoles.some(r => ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r));
+    if (!isKeuanganStaff) {
+      throw new ForbiddenException('Akses ditolak. Kalkulasi keuangan hanya dikontrol oleh bagian Keuangan / Superadmin.');
+    }
     return this.financeCalculationService.calculateTotalRevenue(
       parseInt(year, 10),
       month ? parseInt(month, 10) : undefined,
@@ -142,9 +158,15 @@ export class FinanceCalculationController {
   @Get('expenses')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   async calculateExpenses(
+    @Req() req: any,
     @Query('year') year: string,
     @Query('month') month?: string,
   ) {
+    const userSubRoles = [req.user?.subRole, req.user?.subRole2, req.user?.subRole3, req.user?.subRole4, req.user?.subRole5, req.user?.role];
+    const isKeuanganStaff = userSubRoles.some(r => ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r));
+    if (!isKeuanganStaff) {
+      throw new ForbiddenException('Akses ditolak. Kalkulasi pengeluaran hanya dikontrol oleh bagian Keuangan / Superadmin.');
+    }
     return this.financeCalculationService.calculateTotalExpenses(
       parseInt(year, 10),
       month ? parseInt(month, 10) : undefined,
@@ -154,9 +176,15 @@ export class FinanceCalculationController {
   @Get('balance')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   async calculateBalance(
+    @Req() req: any,
     @Query('year') year: string,
     @Query('month') month?: string,
   ) {
+    const userSubRoles = [req.user?.subRole, req.user?.subRole2, req.user?.subRole3, req.user?.subRole4, req.user?.subRole5, req.user?.role];
+    const isKeuanganStaff = userSubRoles.some(r => ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r));
+    if (!isKeuanganStaff) {
+      throw new ForbiddenException('Akses ditolak. Kalkulasi neraca/saldo akhir hanya dikontrol oleh bagian Keuangan / Superadmin.');
+    }
     return this.financeCalculationService.calculateFinancialBalance(
       parseInt(year, 10),
       month ? parseInt(month, 10) : undefined,

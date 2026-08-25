@@ -3367,13 +3367,13 @@ export default function KeuanganMasukPage() {
     <KeuanganRoleContext.Provider value={{ isKepalaSekolah }}>
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-xs shrink-0">
             <Wallet className="w-5 h-5 text-white" />
           </div>
           Keuangan Masuk
         </h1>
-        <p className="text-slate-500 mt-1 ml-0.5">Kelola tagihan, rekapitulasi, dan pendataan dana bantuan sekolah</p>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1 ml-0.5">Pembuatan tagihan, verifikasi pembayaran, rekapitulasi & dana bantuan (Pengguna: Ervina / Agung)</p>
       </div>
 
       <div className="border-b border-slate-200">

@@ -25,6 +25,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         subRole: true,
         subRole2: true,
         subRole3: true,
+        subRole4: true,
+        subRole5: true,
         student: true,
         teacherProfile: true,
       },

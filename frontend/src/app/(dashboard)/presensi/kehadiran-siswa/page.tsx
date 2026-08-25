@@ -253,7 +253,23 @@ export default function LogPresensiSiswaPage() {
                       </TableCell>
                       <TableCell className="text-slate-600 dark:text-slate-300">
                         {log.keterangan !== '-' ? (
-                          <span className="text-sm font-medium">{log.keterangan}</span>
+                          <div className="space-y-1">
+                            {log.keterangan.includes('Dispensasi Resmi') ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                🏆 {log.keterangan}
+                              </span>
+                            ) : log.keterangan.includes('Izin Sakit') ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                🤒 {log.keterangan}
+                              </span>
+                            ) : log.keterangan.includes('Izin Keperluan Keluarga') || log.keterangan.includes('Izin') ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                🏡 {log.keterangan}
+                              </span>
+                            ) : (
+                              <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{log.keterangan}</span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-sm text-slate-400 italic">Tidak ada catatan</span>
                         )}

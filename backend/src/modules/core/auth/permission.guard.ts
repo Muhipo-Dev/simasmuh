@@ -20,12 +20,18 @@ export class StudentOwnershipGuard implements CanActivate {
     }
 
     // Admin IT, SUPERADMIN, and Finance can access all student data
+    const isFinance =
+      user.role === 'KEUANGAN' ||
+      ['KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'].includes(user.subRole) ||
+      ['KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'].includes(user.subRole2) ||
+      ['KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'].includes(user.subRole3) ||
+      ['KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'].includes(user.subRole4) ||
+      ['KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'].includes(user.subRole5);
+
     if (
       user.role === 'ADMIN_IT' ||
       user.role === 'SUPERADMIN' ||
-      user.subRole === 'KEUANGAN' ||
-      user.subRole2 === 'KEUANGAN' ||
-      user.subRole3 === 'KEUANGAN'
+      isFinance
     ) {
       return true;
     }
@@ -62,12 +68,18 @@ export class PaymentProofOwnershipGuard implements CanActivate {
     }
 
     // Admin IT, SUPERADMIN, and Finance can access all payment proofs
+    const isFinance =
+      user.role === 'KEUANGAN' ||
+      ['KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'].includes(user.subRole) ||
+      ['KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'].includes(user.subRole2) ||
+      ['KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'].includes(user.subRole3) ||
+      ['KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'].includes(user.subRole4) ||
+      ['KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'].includes(user.subRole5);
+
     if (
       user.role === 'ADMIN_IT' ||
       user.role === 'SUPERADMIN' ||
-      user.subRole === 'KEUANGAN' ||
-      user.subRole2 === 'KEUANGAN' ||
-      user.subRole3 === 'KEUANGAN'
+      isFinance
     ) {
       return true;
     }
@@ -100,18 +112,9 @@ export class FinanceOperationGuard implements CanActivate {
     }
 
     // Admin IT, SUPERADMIN, ADMIN_TU, BAU, and Finance staff can perform financial operations
-    const hasFinanceAccess =
-      user.role === 'ADMIN_IT' ||
-      user.role === 'SUPERADMIN' ||
-      user.role === 'ADMIN_TU' ||
-      user.role === 'BAU' ||
-      user.role === 'TATA_USAHA' ||
-      user.subRole === 'KEUANGAN' ||
-      user.subRole === 'ADMIN_TU' ||
-      user.subRole === 'BAU' ||
-      user.subRole === 'TATA_USAHA' ||
-      user.subRole2 === 'KEUANGAN' ||
-      user.subRole3 === 'KEUANGAN';
+    const userSubRoles = [user.role, user.subRole, user.subRole2, user.subRole3, user.subRole4, user.subRole5];
+    const allowedFinanceRoles = ['ADMIN_IT', 'SUPERADMIN', 'ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'];
+    const hasFinanceAccess = userSubRoles.some(r => allowedFinanceRoles.includes(r));
 
     if (!hasFinanceAccess) {
       throw new ForbiddenException(
@@ -134,12 +137,9 @@ export class SuperadminGuard implements CanActivate {
       );
     }
 
-    const allowedRoles = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'KEUANGAN', 'BAU', 'TATA_USAHA'];
-    const hasAccess =
-      allowedRoles.includes(user.role) ||
-      allowedRoles.includes(user.subRole) ||
-      allowedRoles.includes(user.subRole2) ||
-      allowedRoles.includes(user.subRole3);
+    const allowedRoles = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'KEUANGAN', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'BAU', 'TATA_USAHA'];
+    const userSubRoles = [user.role, user.subRole, user.subRole2, user.subRole3, user.subRole4, user.subRole5];
+    const hasAccess = userSubRoles.some(r => allowedRoles.includes(r));
 
     if (!hasAccess) {
       throw new ForbiddenException(

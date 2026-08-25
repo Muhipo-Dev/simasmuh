@@ -42,7 +42,12 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
   * **Restorasi & Proteksi Akun Pengguna:**
     * Script pemulihan akun `restore-all-accounts.ts` tanpa mengganggu atau mereset data eksisting di basis data PostgreSQL/Supabase.
 
-* **2026-08-24 (v1.6.0 - Peningkatan Manajemen Presensi Kehadiran Siswa, Dispensasi & Penataan UI Master Data):**
+* **2026-08-24 (v1.6.0 - Fitur Tata Usaha, E-Sign Digital, Manajemen Presensi Kehadiran Siswa, Dispensasi & Penataan UI Master Data):**
+  * **Integrasi Fitur Tata Usaha (TU) Terpadu:**
+    * Implementasi modul Persuratan (`PersuratanManagement`), Kepegawaian (`KepegawaianManagement`), dan Inventaris/Sarpras (`InventarisManagement`) untuk efisiensi tata kelola operasional Admin TU.
+    * Manajemen penomoran surat otomatis, arsip surat masuk/keluar, pelacakan inventaris barang sekolah, dan pendataan kepegawaian.
+  * **Integrasi Fitur E-Sign / Tanda Tangan Digital:**
+    * Penambahan modul E-Sign digital berbasis verifikasi QR-Code & Hash Kriptografi untuk otentikasi dokumen resmi sekolah (Surat Keterangan, Izin, dan Berkas Akademik).
   * **Modul Presensi Kehadiran Siswa & Dispensasi Terpadu:**
     * Penambahan dan penyempurnaan antarmuka Manajemen Presensi Kehadiran Siswa (`/presensi/kehadiran-siswa`) dan Dispensasi Siswa (`/presensi/dispensasi`).
     * Dukungan notifikasi ganda instan (In-App Notification & WhatsApp Gateway `088293733330`) untuk setiap pencatatan ketidakhadiran, izin, dan dispensasi siswa ke nomor wali murid.

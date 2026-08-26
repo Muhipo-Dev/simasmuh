@@ -1047,12 +1047,6 @@ export default function StudentsPage() {
             </Button>
           )}
 
-          {isKepalaSekolah && (
-            <div className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5">
-              <span>🔍</span> Mode Supervisi (Read-Only)
-            </div>
-          )}
-
           {isSuperOrAdmin && (
             <>
               <Button variant="outline" className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"

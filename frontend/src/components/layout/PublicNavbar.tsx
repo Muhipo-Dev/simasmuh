@@ -29,6 +29,7 @@ const navItems = [
   { label: 'Tentang', href: '/tentang' },
   { label: 'Berita', href: '/berita' },
   { label: 'Presensi', href: '/presensi-view' },
+  { label: 'Cek E-Sign', href: '/verifikasi-ttd' },
 ]
 
 export function PublicNavbar({

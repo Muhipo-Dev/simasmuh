@@ -39,6 +39,11 @@ export class FinanceController {
     @Req() req: any,
     @Query('year') year: string,
     @Query('month') month: string,
+    @Query('harianRate') harianRate?: string,
+    @Query('subRoleAllowance') subRoleAllowance?: string,
+    @Query('minHadirBonus') minHadirBonus?: string,
+    @Query('insentifKetertiban') insentifKetertiban?: string,
+    @Query('tunjanganMakan') tunjanganMakan?: string,
   ) {
     const userSubRoles = [req.user?.subRole, req.user?.subRole2, req.user?.subRole3, req.user?.subRole4, req.user?.subRole5, req.user?.role];
     const isKeuanganStaff = userSubRoles.some(r => ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r));
@@ -50,6 +55,11 @@ export class FinanceController {
     return this.financeService.getPayrollSummary(
       parseInt(year, 10),
       parseInt(month, 10),
+      harianRate ? parseInt(harianRate, 10) : undefined,
+      subRoleAllowance ? parseInt(subRoleAllowance, 10) : undefined,
+      minHadirBonus ? parseInt(minHadirBonus, 10) : undefined,
+      insentifKetertiban ? parseInt(insentifKetertiban, 10) : undefined,
+      tunjanganMakan ? parseInt(tunjanganMakan, 10) : undefined,
     );
   }
 
@@ -219,7 +229,7 @@ export class FinanceController {
   // PENGELUARAN (Expenses)
   // ============================================================
   @Get('pengeluaran')
-  @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
+  @RequirePermissions(PaymentPermission.VIEW_EXPENSES)
   getPengeluaran(@Query('year') year?: string, @Query('month') month?: string) {
     return this.financeService.getPengeluaran(
       year ? parseInt(year, 10) : undefined,
@@ -243,7 +253,7 @@ export class FinanceController {
   // LPJ (Laporan Pertanggung Jawaban)
   // ============================================================
   @Get('lpj')
-  @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
+  @RequirePermissions(PaymentPermission.VIEW_EXPENSES)
   getLpj(@Query('year') year: string, @Query('month') month?: string) {
     return this.financeService.getLpj(
       year ? parseInt(year, 10) : new Date().getFullYear(),

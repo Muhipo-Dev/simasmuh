@@ -43,8 +43,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if ((session as any)?.error === 'SessionExpired') {
         router.push('/login?expired=1')
       } else {
-        const callbackParam = pathname && pathname !== '/login' ? `?callbackUrl=${encodeURIComponent(pathname)}` : ''
-        router.push(`/login${callbackParam}`)
+        router.push('/login')
       }
     }
   }, [status, session, pathname, router])
@@ -89,7 +88,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const subRole4 = (session.user as { subRole4?: string })?.subRole4
   const subRole5 = (session.user as { subRole5?: string })?.subRole5
   
-  const displayRole = [role, subRole, subRole2, subRole3, subRole4, subRole5].filter(Boolean).join(' | ')
+  const displayRole = role
   
   const currentLinks = getRoleLinks(role, subRole, subRole2, subRole3, subRole4, subRole5)
   const isDashboardPage = pathname === '/dashboard'
@@ -207,33 +206,51 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </div>
 
-        {/* Mobile Bottom Navigation Bar (Glassmorphic Gelap Selaras) */}
-        <nav className="fixed bottom-0 inset-x-0 lg:hidden z-40 bg-slate-950/90 dark:bg-slate-950/95 backdrop-blur-2xl border-t border-white/10 text-white safe-area-inset-bottom shadow-2xl">
-          <div className="flex items-end justify-around h-16 px-1 relative pb-1">
-            {(() => {
-              const dashLink = currentLinks.find(l => l.href === '/dashboard') || { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }
-              const otherLinks = currentLinks.filter(l => l.href !== '/dashboard' && l.href !== '/presensi/scan-qr')
-              const leftLink1 = otherLinks[0]
-              const centerLink = otherLinks[1]
-              const rightLink1 = otherLinks[2]
+        {/* Mobile Bottom Navigation Bar (Glassmorphic Gelap Selaras) - Otomatis tersembunyi jika sedang di halaman Dashboard */}
+        {!isDashboardPage && (
+          <nav className="fixed bottom-0 inset-x-0 lg:hidden z-40 bg-slate-950/90 dark:bg-slate-950/95 backdrop-blur-2xl border-t border-white/10 text-white safe-area-inset-bottom shadow-2xl">
+            <div className="flex items-end justify-around h-16 px-1 relative pb-1">
+              {(() => {
+                const dashLink = currentLinks.find(l => l.href === '/dashboard') || { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }
+                const otherLinks = currentLinks.filter(l => l.href !== '/dashboard' && l.href !== '/presensi/scan-qr')
+                const left1 = otherLinks[0]
+                const left2 = otherLinks[1]
+                const right1 = otherLinks[2]
 
-              const renderNavButton = (link: any, isCenter: boolean = false) => {
-                if (!link) return <div className="flex-1" key={Math.random()} />
-                const Icon = link.icon
-                const isActive = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(`${link.href}/`))
-                
-                if (isCenter) {
+                const renderNavButton = (link: any, isCenter: boolean = false) => {
+                  if (!link) return <div className="flex-1" key={Math.random()} />
+                  const Icon = link.icon
+                  const isActive = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(`${link.href}/`))
+                  
+                  if (isCenter) {
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="relative -top-5 flex flex-col items-center justify-center gap-1 z-50 flex-1 px-1 min-w-0 group"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <div className={`flex items-center justify-center w-14 h-14 rounded-full shadow-xl border-[4px] border-slate-950 transition-all duration-300 active:scale-95 ${isActive ? 'bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-blue-500/40' : 'bg-gradient-to-tr from-blue-700 to-indigo-600 shadow-indigo-900/50'}`}>
+                          <Icon className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+                        </div>
+                        <span className={`text-[10px] font-extrabold tracking-wide ${isActive ? 'text-blue-300' : 'text-slate-200'}`}>
+                          {link.name}
+                        </span>
+                      </Link>
+                    )
+                  }
+
                   return (
                     <Link
                       key={link.href}
                       href={link.href}
-                      className="relative -top-5 flex flex-col items-center justify-center gap-1 z-50 flex-1 px-1 min-w-0"
+                      className={`flex flex-col items-center justify-center gap-0.5 flex-1 px-1 min-w-0 transition-colors active:scale-95 ${isActive ? 'text-blue-300' : 'text-slate-400 hover:text-white'}`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
-                      <div className={`flex items-center justify-center w-14 h-14 rounded-full shadow-lg border-[4px] border-slate-950 transition-transform active:scale-95 ${isActive ? 'bg-blue-600' : 'bg-blue-700'}`}>
-                        <Icon className="w-6 h-6 text-white" />
+                      <div className={`relative flex items-center justify-center w-10 h-8 rounded-full mb-0.5 transition-all duration-300 ${isActive ? 'bg-blue-600/30 border border-blue-400/30' : 'bg-transparent'}`}>
+                        <Icon className={`w-5 h-5 ${isActive ? 'scale-110 text-blue-300' : 'scale-100 text-slate-400'}`} />
                       </div>
-                      <span className={`text-[10px] font-bold tracking-wide ${isActive ? 'text-blue-300' : 'text-slate-300'}`}>
+                      <span className="text-[10px] font-medium tracking-wide truncate w-full text-center">
                         {link.name}
                       </span>
                     </Link>
@@ -241,47 +258,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 }
 
                 return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`flex flex-col items-center justify-center gap-0.5 flex-1 px-1 min-w-0 transition-colors active:scale-95 ${isActive ? 'text-blue-300' : 'text-slate-400 hover:text-white'}`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <div className={`relative flex items-center justify-center w-10 h-8 rounded-full mb-0.5 transition-all duration-300 ${isActive ? 'bg-blue-600/30 border border-blue-400/30' : 'bg-transparent'}`}>
-                      <Icon className={`w-5 h-5 ${isActive ? 'scale-110 text-blue-300' : 'scale-100 text-slate-400'}`} />
-                    </div>
-                    <span className="text-[10px] font-medium tracking-wide truncate w-full text-center">
-                      {link.name}
-                    </span>
-                  </Link>
+                  <>
+                    {renderNavButton(left1)}
+                    {renderNavButton(left2)}
+                    {renderNavButton(dashLink, true)}
+                    {renderNavButton(right1)}
+                    <button
+                      onClick={() => setIsMobileMenuOpen(true)}
+                      className="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 min-w-0 transition-colors active:scale-95 text-slate-400 hover:text-white"
+                    >
+                      <div className="relative flex items-center justify-center w-10 h-8 rounded-full mb-0.5 transition-all duration-300 bg-transparent">
+                        <Menu className="w-5 h-5 scale-100" />
+                      </div>
+                      <span className="text-[10px] font-medium tracking-wide truncate w-full text-center">
+                        Lainnya
+                      </span>
+                    </button>
+                  </>
                 )
-              }
-
-              return (
-                <>
-                  {renderNavButton(dashLink)}
-                  {renderNavButton(leftLink1)}
-                  {centerLink ? renderNavButton(centerLink, true) : <div className="flex-1" />}
-                  {renderNavButton(rightLink1)}
-                  <button
-                    onClick={() => setIsMobileMenuOpen(true)}
-                    className="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 min-w-0 transition-colors active:scale-95 text-slate-400 hover:text-white"
-                  >
-                    <div className="relative flex items-center justify-center w-10 h-8 rounded-full mb-0.5 transition-all duration-300 bg-transparent">
-                      <Menu className="w-5 h-5 scale-100" />
-                    </div>
-                    <span className="text-[10px] font-medium tracking-wide truncate w-full text-center">
-                      Lainnya
-                    </span>
-                  </button>
-                </>
-              )
-            })()}
-          </div>
-          <div className="h-safe-bottom bg-slate-950" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
-        </nav>
-
-        {/* Footer Induk Bersatu */}
+              })()}
+            </div>
+            <div className="h-safe-bottom bg-slate-950" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
+          </nav>
+        )}    {/* Footer Induk Bersatu */}
         <AppFooter className="hidden lg:flex" />
       </main>
     </div>

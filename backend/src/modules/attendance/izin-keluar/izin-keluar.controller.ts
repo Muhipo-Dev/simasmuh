@@ -83,6 +83,12 @@ export class IzinKeluarController {
     return this.izinKeluarService.reject(id, catatan);
   }
 
+  // Endpoint Publik: Verifikasi Tanda Tangan Digital ber-QR Code
+  @Get('verify/:token')
+  verifyESign(@Param('token') token: string) {
+    return this.izinKeluarService.verifyESignToken(token);
+  }
+
   // Hapus izin
   @Delete(':id')
   remove(@Param('id') id: string, @Headers('authorization') auth: string) {

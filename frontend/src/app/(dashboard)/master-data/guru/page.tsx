@@ -339,12 +339,6 @@ export default function TeachersPage() {
         </div>
         
         <div className="flex gap-2">
-          {isKepalaSekolah && (
-            <div className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4" /> Mode Supervisi (Read-Only)
-            </div>
-          )}
-
           {isSuperOrAdmin && (
             <>
               <Button

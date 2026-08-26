@@ -677,13 +677,16 @@ export class ParentsService {
       let amalanIbadahCount = 0;
 
       assessments.forEach((item: any) => {
-        totalPointsDelta += (item.points || 0);
-        if (item.category === 'PELANGGARAN' || item.type === 'NEGATIF') {
-          totalPelanggaran++;
-        } else if (item.category === 'PRESTASI_PENGHARGAAN' || item.type === 'POSITIF') {
-          totalPrestasi++;
-        } else if (item.category === 'IBADAH') {
-          amalanIbadahCount++;
+        const isVerified = item.status === 'SELESAI' || item.status === 'TERVERIFIKASI' || item.status === 'DALAM_PEMBINAAN';
+        if (isVerified) {
+          totalPointsDelta += (item.points || 0);
+          if (item.category === 'PELANGGARAN' || item.type === 'NEGATIF') {
+            totalPelanggaran++;
+          } else if (item.category === 'PRESTASI_PENGHARGAAN' || item.type === 'POSITIF') {
+            totalPrestasi++;
+          } else if (item.category === 'IBADAH') {
+            amalanIbadahCount++;
+          }
         }
       });
 

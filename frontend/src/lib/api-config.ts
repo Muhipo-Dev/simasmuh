@@ -3,7 +3,7 @@
  * Dynamic backend URL resolution that adapts to client hostname, IP address, domain, or environment variables.
  */
 
-export function getBackendUrl(): string {
+export function getBackendUrl(req?: any): string {
   // If running in browser (Client-Side)
   if (typeof window !== 'undefined') {
     if (process.env.NEXT_PUBLIC_API_URL) {
@@ -20,7 +20,8 @@ export function getBackendUrl(): string {
     return `${protocol}//${hostname}:${port}`
   }
 
-  // Running on Next.js Server (RSC / Server Side / Route Handlers)
+  // Running on Next.js Server (RSC / Server Side Route Handlers / NextAuth)
+  // Always use local loopback to directly talk to backend process without network hops
   return (
     process.env.BACKEND_URL ||
     process.env.NEXT_PUBLIC_API_URL ||

@@ -29,6 +29,21 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-26 (v1.7.0 - Sistem Tata Usaha Terpadu, Persuratan & E-Sign Digital, Buku Tamu Digital, Penguatan Poin Kedisiplinan & Penyelarasan Layout):**
+  * **Modul Tata Usaha & Persuratan Terpadu (`PersuratanManagement`):**
+    * Penambahan sistem pengelolaan persuratan masuk/keluar, penomoran otomatis, klasifikasi kategori arsip dinamis, verifikasi dialog hapus surat, dan tata letak preview cetak surat resmi.
+  * **Sistem Tanda Tangan Elektronik (E-Sign) & Verifikasi Publik QR-Code:**
+    * Implementasi fitur E-Sign berbasis QR Code dan hashing kriptografi dokumen, perbaikan persistensi status verifikasi tanda tangan digital, serta penyediaan rute verifikasi publik (`/verifikasi-ttd`).
+  * **Buku Tamu Digital Publik & Manajemen Tamu Sekolah (`GuestBookManagement`):**
+    * Penambahan modul Buku Tamu Publik (`/buku-tamu`) dan dashboard manajemen buku tamu TU untuk pencatatan kunjungan kedinasan, wali murid, serta tamu umum.
+  * **Sistem Poin Kedisiplinan & Bimbingan Konseling Interaktif (`InteractiveCharacterAssessmentManagement`):**
+    * Peningkatan fitur pencatatan kedisiplinan, amalan ibadah, apresiasi prestasi, dan poin pelanggaran siswa secara real-time.
+    * Sinkronisasi data etika tata tertib dengan dashboard wali kelas, ketertiban, dan dashboard wali murid.
+  * **Penyempurnaan Navigasi, Responsivitas Layout & Standar Ringkas:**
+    * Optimasi tata letak responsive compact di seluruh modul Master Data, Akademik, Keuangan, dan Presensi.
+    * Penyelarasan role & hak akses (`RolesGuard`) serta adaptasi dynamic network routing.
+
+
 * **2026-08-25 (v1.6.1 - Perbaikan Laporan Keuangan, Perombakan Sistem Role Akun, Refaktorisasi Navigasi & Penyempurnaan RLS):**
   * **Perbaikan & Optimalisasi Fitur Laporan Keuangan (`/keuangan/laporan`):**
     * Perbaikan penanganan status pembayaran, perhitungan saldo kas, dan sinkronisasi laporan pemasukan/pengeluaran riil sekolah.

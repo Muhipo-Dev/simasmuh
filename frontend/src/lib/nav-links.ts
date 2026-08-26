@@ -87,8 +87,8 @@ export const pegawaiLinks = [
 
 export const kepalaSekolahLinks = [
   { name: 'Dashboard Eksekutif', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'E-Sign Persuratan', href: '/fitur/persuratan', icon: FileCheck },
   { name: 'Presensi Pegawai', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
-  { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: UserCheck },
   { name: 'Jurnal Pegawai', href: '/presensi/jurnal-karyawan', icon: BookOpen },
   { name: 'Izin Keluar Pegawai', href: '/presensi/izin-keluar', icon: DoorOpen },
   { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award },
@@ -99,6 +99,31 @@ export const kepalaSekolahLinks = [
   { name: 'Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Pengumuman', href: '/informasi/pengumuman', icon: Megaphone },
 ]
+
+export const keuanganAllLinks = [
+  { name: 'Dashboard Keuangan', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Keuangan Masuk', href: '/keuangan/pemasukan', icon: Wallet },
+  { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt },
+  { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote },
+  { name: 'Virtual Account BNI', href: '/keuangan/virtual-account', icon: Database },
+  { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings },
+  { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText },
+]
+
+export const keuanganMasukLinks = [
+  { name: 'Dashboard Keuangan', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Keuangan Masuk', href: '/keuangan/pemasukan', icon: Wallet },
+  { name: 'Virtual Account BNI', href: '/keuangan/virtual-account', icon: Database },
+  { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings },
+  { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText },
+]
+
+export const keuanganKeluarLinks = [
+  { name: 'Dashboard Keuangan', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt },
+  { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText },
+]
+
 
 // Pengecekan Hak Akses Rute Ketat Berdasarkan Role & Sub-Role
 export function isPathAllowedForRoles(pathname: string, roles: string[]): boolean {
@@ -129,9 +154,9 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   const isGuruTahfidz = roles.includes('GURU_TAHFIDZ')
   const isPersuratan = roles.includes('PERSURATAN')
 
-  // 1. Modul Manajemen Akun & Pengaturan Sistem
+  // 1. Modul Manajemen Akun & Pengaturan Sistem — HANYA Admin TU / BAU & Superadmin
   if (pathname.startsWith('/master-data/pengguna')) {
-    return isBau || isKeuanganAll
+    return isBau
   }
   if (pathname.startsWith('/pengaturan/sistem') || pathname.startsWith('/presensi/manajemen-qr') || pathname.startsWith('/presensi/camera')) {
     return isBau || isKepalaSekolah
@@ -139,13 +164,13 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
 
   // 2. Modul Keuangan
   if (pathname.startsWith('/keuangan/')) {
-    // Keuangan Masuk, Tagihan, VA, Pengaturan Biaya
+    // Keuangan Masuk (Hanya Keuangan Masuk, Keuangan All, BAU, Superadmin)
     if (pathname.startsWith('/keuangan/pemasukan') || pathname.startsWith('/keuangan/virtual-account') || pathname.startsWith('/keuangan/pengaturan') || pathname.startsWith('/keuangan/verifikasi-pembayaran')) {
-      return isKeuanganAll || isKeuanganMasuk || isBau || isKepalaSekolah
+      return isKeuanganAll || isKeuanganMasuk || isBau
     }
-    // Keuangan Keluar
+    // Keuangan Keluar (Hanya Keuangan Keluar, Keuangan All, BAU, Superadmin)
     if (pathname.startsWith('/keuangan/pengeluaran') || pathname.startsWith('/keuangan/lpj')) {
-      return isKeuanganAll || isKeuanganKeluar || isBau || isKepalaSekolah
+      return isKeuanganAll || isKeuanganKeluar || isBau
     }
     // Penggajian Pegawai — HANYA Keuangan All, Superadmin, Admin IT, Kepala Sekolah, BAU
     if (pathname.startsWith('/keuangan/penggajian')) {
@@ -158,18 +183,18 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar || isBau || isKepalaSekolah
   }
 
-  // 3. Modul Master Data Siswa, Guru, Kelas, Mapel
+  // 3. Modul Master Data Siswa, Guru, Kelas, Mapel — HANYA Admin TU (BAU), Superadmin & Kepala Sekolah/Guru/Wali Kelas
   if (pathname.startsWith('/master-data/siswa')) {
-    return isBau || isKepalaSekolah || isGuru || isWaliKelas || isKeuanganAll || isKeuanganMasuk
+    return isBau || isKepalaSekolah || isGuru || isWaliKelas
   }
   if (pathname.startsWith('/master-data/guru')) {
-    return isBau || isKepalaSekolah || isKeuanganAll || isKeuanganKeluar
+    return isBau || isKepalaSekolah
   }
   if (pathname.startsWith('/master-data/kelas') || pathname.startsWith('/master-data/mata-pelajaran')) {
-    return isBau || isKepalaSekolah || isKeuanganAll
+    return isBau || isKepalaSekolah
   }
   if (pathname.startsWith('/master-data/wali-murid')) {
-    return isBau || isKeuanganAll || isKeuanganMasuk
+    return isBau
   }
 
   // 4. Modul Akademik
@@ -224,7 +249,7 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     if (slug === 'persuratan') return isPersuratan || isBau || isKepalaSekolah
     if (slug === 'inventaris') return isBau || isKepalaSekolah
     if (slug === 'kepegawaian') return isSdm || isBau || isKepalaSekolah
-    if (slug === 'ketertiban') return isTatib || isBau || isKepalaSekolah
+    if (slug === 'ketertiban') return isTatib || isGuru || isWaliKelas || isBau || isKepalaSekolah
     if (slug === 'bk-bp') return isBk || isBau || isKepalaSekolah
     if (slug === 'perpustakaan') return isPustakawan || isBau || isKepalaSekolah
     if (slug === 'tahfidz') return isGuruTahfidz || isBau || isKepalaSekolah
@@ -281,6 +306,12 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
     addLinks(waliMuridLinks)
   } else if (role === 'PEGAWAI' || role === 'KARYAWAN') {
     addLinks(pegawaiLinks)
+  } else if (role === 'KEUANGAN_ALL' || role === 'SUPERVISOR_KEUANGAN') {
+    addLinks(keuanganAllLinks)
+  } else if (role === 'KEUANGAN_MASUK') {
+    addLinks(keuanganMasukLinks)
+  } else if (role === 'KEUANGAN_KELUAR') {
+    addLinks(keuanganKeluarLinks)
   } else {
     // Default fallback
     addLinks([
@@ -300,31 +331,12 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
         { name: 'Izin Siswa & Dispensasi', href: '/presensi/izin-siswa', icon: UserCheck },
         { name: 'Jurnal Kelas', href: '/akademik/jurnal-wali-kelas', icon: BookOpen },
       ])
-    } else if (roleName === 'KEUANGAN_ALL') {
-      addLinks([
-        { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote },
-        { name: 'Keuangan Masuk', href: '/keuangan/pemasukan', icon: Wallet },
-        { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt },
-        { name: 'Virtual Account BNI', href: '/keuangan/virtual-account', icon: Database },
-        { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings },
-        { name: 'Data Siswa', href: '/master-data/siswa', icon: UserSquare2 },
-        { name: 'Data Guru & Pegawai', href: '/master-data/guru', icon: Users },
-        { name: 'Data Wali Murid', href: '/master-data/wali-murid', icon: Users },
-        { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
-      ])
+    } else if (roleName === 'KEUANGAN_ALL' || roleName === 'SUPERVISOR_KEUANGAN') {
+      addLinks(keuanganAllLinks)
     } else if (roleName === 'KEUANGAN_MASUK') {
-      addLinks([
-        { name: 'Keuangan Masuk', href: '/keuangan/pemasukan', icon: Wallet },
-        { name: 'Virtual Account BNI', href: '/keuangan/virtual-account', icon: Database },
-        { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings },
-        { name: 'Data Siswa', href: '/master-data/siswa', icon: UserSquare2 },
-        { name: 'Data Wali Murid', href: '/master-data/wali-murid', icon: Users },
-      ])
+      addLinks(keuanganMasukLinks)
     } else if (roleName === 'KEUANGAN_KELUAR') {
-      addLinks([
-        { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt },
-        { name: 'Data Guru & Pegawai', href: '/master-data/guru', icon: Users },
-      ])
+      addLinks(keuanganKeluarLinks)
     } else if (roleName === 'PEGAWAI' || roleName === 'KARYAWAN') {
       addLinks([
         { name: 'Jurnal Karyawan', href: '/presensi/jurnal-karyawan', icon: BookOpen },
@@ -334,6 +346,7 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
       addLinks([
         { name: 'Jadwal Mengajar', href: '/akademik/jadwal-mengajar', icon: CalendarDays },
         { name: 'Jurnal Mengajar', href: '/akademik/jurnal-mengajar', icon: BookOpen },
+        { name: 'Poin Kedisiplinan Siswa', href: '/fitur/ketertiban', icon: ShieldAlert },
         { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen },
       ])
     } else if (roleName === 'ADMIN_WEB') {
@@ -348,7 +361,7 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
     } else if (roleName === 'KETERTIBAN') {
       addLinks([
         { name: 'Izin Siswa', href: '/presensi/izin-siswa', icon: ClipboardCheck },
-        { name: 'Poin Kedisiplinan Siswa', href: '/fitur/ketertiban', icon: ShieldAlert },
+        { name: 'Catatan Pembinaan', href: '/fitur/ketertiban', icon: ShieldAlert },
       ])
     } else if (roleName === 'KEBERSIHAN') {
       addLinks([

@@ -16,6 +16,10 @@ Dokumen ini berisi aturan mutlak, ruang lingkup, dan pedoman utama dalam pengemb
 * **Koneksi & Sinkronisasi:** Sinkronisasi antara Frontend, Backend, dan Supabase adalah prioritas utama. Validasi data dan tipe data harus diperhatikan agar tidak terjadi error pada database atau kontroler saat ada penambahan fitur.
 * **Struktur File & Folder:** File dan folder aplikasi harus terus dirapikan dan ditata ulang secara berkala jika ada penambahan fitur besar. Jika ada pemindahan folder, pastikan route dan dependensi di dalam file fitur diperbarui secara otomatis.
 * **Controller yang Kokoh:** Arsitektur controller dan pengarahan sistem (routing) harus dirancang dengan sangat matang untuk mengantisipasi penambahan fitur yang rumit, terutama fitur logika perhitungan keuangan/penggajian.
+* **Pengaturan Rute Mutlak Dinamis & Adaptif (Adaptive Network Routing Standard):**
+  * Seluruh pengarahan rute (Routing), resolusi Backend URL (`getBackendUrl()`), NextAuth Callback Redirect, dan Next.js Dynamic Origins (`next.config.ts`) **WAJIB bersifat dinamis dan adaptif 100%**.
+  * Aplikasi mutlak **TIDAK BOLEH** terikat atau ter-redirect paksa (*hardcoded*) ke satu IP lokal tertentu maupun domain tunnel eksternal tertentu (seperti `simasmuh.razagopo.my.id`).
+  * Sistem harus otomatis mendeteksi dan menyesuaikan rute sesuai protokol (`http/https`), hostname (IP Server Lokal/LAN/Wi-Fi/Public IP/Domain), dan port tempat aplikasi diakses dari perangkat pengguna mana pun.
 
 ## 3. Ruang Lingkup Fitur
 ### Manajemen Data Inti

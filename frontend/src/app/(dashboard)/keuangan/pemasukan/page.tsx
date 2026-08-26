@@ -2077,11 +2077,7 @@ function TabTagihan() {
           </Select>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
-          {isKepalaSekolah ? (
-            <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-1.5">
-              🔍 Mode Supervisi (Read-Only)
-            </div>
-          ) : (
+          {!isKepalaSekolah && (
             <>
               <Button onClick={() => setCashModalOpen(true)}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm">
@@ -3373,7 +3369,7 @@ export default function KeuanganMasukPage() {
           </div>
           Keuangan Masuk
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1 ml-0.5">Pembuatan tagihan, verifikasi pembayaran, rekapitulasi & dana bantuan (Pengguna: Ervina / Agung)</p>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1 ml-0.5">Pembuatan tagihan, verifikasi pembayaran, rekapitulasi & dana bantuan sekolah</p>
       </div>
 
       <div className="border-b border-slate-200">

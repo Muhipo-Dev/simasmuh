@@ -17,7 +17,7 @@ const authOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         try {
-          const backendUrl = getBackendUrl();
+          const backendUrl = getBackendUrl(req);
           
           let endpoint = '/auth/login';
           let bodyPayload: any = {
@@ -129,11 +129,14 @@ const authOptions = {
       return session
     },
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      // If url is relative path, keep relative path
+      if (url.startsWith('/')) return url;
       try {
-        if (new URL(url).origin === baseUrl) return url;
+        const targetUrl = new URL(url);
+        // Allow redirect if same origin or same pathname
+        return `${targetUrl.pathname}${targetUrl.search}`;
       } catch {}
-      return `${baseUrl}/dashboard`;
+      return '/dashboard';
     }
   },
   pages: {

@@ -71,7 +71,7 @@ export function AppSidebar({
         </div>
 
         {/* Sidebar Menu Items */}
-        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+        <div className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5 custom-scrollbar">
           {links.map((link) => {
             const Icon = link.icon
             const isActive =
@@ -81,14 +81,14 @@ export function AppSidebar({
             return (
               <Link key={link.href} href={link.href} onClick={onClose}>
                 <div
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 text-xs sm:text-sm font-semibold ${
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all duration-200 text-xs sm:text-sm font-semibold ${
                     isActive
                       ? 'bg-blue-600/30 text-blue-200 border border-blue-400/30 backdrop-blur-md shadow-inner'
                       : 'text-slate-300/80 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   <Icon
-                    className={`w-4.5 h-4.5 shrink-0 ${
+                    className={`w-4 h-4 shrink-0 ${
                       isActive
                         ? 'text-blue-300'
                         : 'text-slate-400 group-hover:text-white'

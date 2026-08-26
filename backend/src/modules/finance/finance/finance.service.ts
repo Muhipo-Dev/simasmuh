@@ -18,17 +18,28 @@ export class FinanceService {
   // ============================================================
   // PAYROLL SUMMARY (existing feature)
   // ============================================================
-  async getPayrollSummary(year: number, month: number) {
+  async getPayrollSummary(
+    year: number,
+    month: number,
+    harianRateParam?: number,
+    subRoleAllowanceParam?: number,
+    minHadirBonusParam?: number,
+    insentifKetertibanParam?: number,
+    tunjanganMakanParam?: number,
+  ) {
+    const harianRate = harianRateParam && !isNaN(harianRateParam) ? harianRateParam : 50000;
+    const subRoleAllowance = subRoleAllowanceParam && !isNaN(subRoleAllowanceParam) ? subRoleAllowanceParam : 300000;
+    const minHadirBonus = minHadirBonusParam && !isNaN(minHadirBonusParam) ? minHadirBonusParam : 20;
+    const insentifKetertiban = insentifKetertibanParam && !isNaN(insentifKetertibanParam) ? insentifKetertibanParam : 200000;
+    const tunjanganMakanRate = tunjanganMakanParam && !isNaN(tunjanganMakanParam) ? tunjanganMakanParam : 15000;
+
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     endDate.setHours(23, 59, 59, 999);
 
     const staffList = await this.prisma.user.findMany({
       where: {
-        OR: [
-          { role: { in: ['GURU', 'PEGAWAI', 'KARYAWAN', 'ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEUANGAN', 'ADMIN_IT', 'SUPERADMIN', 'KEPALA_SEKOLAH', 'ADMIN_WEB'] } },
-          { teacherProfile: { isNot: null } },
-        ],
+        role: { not: 'SISWA' },
       },
       select: {
         id: true,
@@ -97,16 +108,17 @@ export class FinanceService {
       const roles = rolesList.join(', ');
 
       const baseSalary = baseSalaries[staff.role] || baseSalaries[staff.subRole || ''] || 3000000;
-      const roleAllowance = (rolesList.length - 1) * 300000;
-      const harianRate = 50000;
+      const roleAllowance = Math.max(0, rolesList.length - 1) * subRoleAllowance;
       const totalHadir = staffAttendances.length;
       const totalHadirBonus = totalHadir * harianRate;
+      const bonusKetertiban = totalHadir >= minHadirBonus ? insentifKetertiban : 0;
+      const totalTunjanganMakan = totalHadir * tunjanganMakanRate;
 
       const matchedBantuan = danaBantuans
         .filter((b) => !b.penerima || b.penerima.toLowerCase().includes(staff.name.toLowerCase()) || staff.name.toLowerCase().includes(b.penerima.toLowerCase()))
         .reduce((sum, b) => sum + b.nominal, 0);
 
-      const totalPenghasilan = baseSalary + roleAllowance + totalHadirBonus + matchedBantuan;
+      const totalPenghasilan = baseSalary + roleAllowance + totalHadirBonus + bonusKetertiban + totalTunjanganMakan + matchedBantuan;
 
       return {
         id: staff.id,
@@ -114,6 +126,7 @@ export class FinanceService {
         roles,
         totalHadir,
         totalIzin: uniqueIzinDates.size,
+        tunjanganMakan: totalTunjanganMakan,
         estimasiPenghasilan: totalPenghasilan,
         bantuanNominal: matchedBantuan,
       };

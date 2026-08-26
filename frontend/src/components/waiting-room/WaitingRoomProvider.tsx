@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { ShieldAlert, Users, Clock, Loader2, Sparkles } from "lucide-react";
+import { getPublicApiUrl } from "@/lib/api-config";
 
 interface QueueStatus {
   token: string;
@@ -21,8 +22,7 @@ export default function WaitingRoomProvider({ children }: { children: React.Reac
 
     const checkStatus = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-        const res = await fetch(`${apiUrl}/waiting-room/status?token=${encodeURIComponent(token)}`);
+        const res = await fetch(getPublicApiUrl(`/waiting-room/status?token=${encodeURIComponent(token)}`));
         
         if (res.ok) {
           const data: QueueStatus = await res.json();

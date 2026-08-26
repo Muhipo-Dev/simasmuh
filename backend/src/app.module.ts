@@ -32,7 +32,11 @@ import { NotificationsModule } from './modules/communication/notifications/notif
 import { WhatsAppModule } from './modules/communication/whatsapp/whatsapp.module';
 import { FaceAttendanceModule } from './modules/attendance/face-attendance/face-attendance.module';
 import { CharacterAssessmentsModule } from './modules/academic/character-assessments/character-assessments.module';
+import { GuestBookModule } from './modules/tu/guest-book/guest-book.module';
+import { SuratKeluarModule } from './modules/tu/surat-keluar/surat-keluar.module';
+import { SuratMasukModule } from './modules/tu/surat-masuk/surat-masuk.module';
 import { SystemLogModule } from './modules/core/system-log/system-log.module';
+
 import { WaitingRoomModule } from './modules/core/waiting-room/waiting-room.module';
 import { WaitingRoomMiddleware } from './modules/core/waiting-room/waiting-room.middleware';
 import { APP_GUARD } from '@nestjs/core';
@@ -96,6 +100,9 @@ import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
     WhatsAppModule,
     FaceAttendanceModule,
     CharacterAssessmentsModule,
+    GuestBookModule,
+    SuratKeluarModule,
+    SuratMasukModule,
   ],
   controllers: [AppController],
   providers: [

@@ -101,14 +101,13 @@ export default function LoginPage() {
     }
   }, [])
 
-  // Jika sudah dalam keadaan login aktif yang valid (bukan setelah expired), arahkan dinamis ke halaman tujuan / dashboard
+  // Jika sudah dalam keadaan login aktif yang valid (bukan setelah expired), arahkan langsung ke /dashboard
   useEffect(() => {
     if (status === 'authenticated' && session?.user && (session as any)?.error !== 'SessionExpired') {
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search)
         if (params.get('expired') !== '1') {
-          const target = getSafeCallbackUrl()
-          router.replace(target)
+          router.replace('/dashboard')
         }
       }
     }
@@ -121,20 +120,14 @@ export default function LoginPage() {
 
     try {
       const result = await signIn('credentials', {
-        redirect: false,
+        redirect: true,
+        callbackUrl: '/dashboard',
         email,
         password,
       })
 
       if (result?.error) {
         setError('Username atau kata sandi tidak sesuai.')
-      } else if (result?.ok) {
-        setLoading('Mengalihkan...')
-        const targetUrl = getSafeCallbackUrl()
-        window.location.href = targetUrl
-        return
-      } else {
-        setError('Gagal masuk. Silakan coba lagi.')
       }
     } catch (err) {
       console.error(err)

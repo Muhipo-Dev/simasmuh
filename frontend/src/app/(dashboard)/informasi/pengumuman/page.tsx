@@ -189,15 +189,11 @@ export default function AnnouncementsPage() {
           <p className="text-slate-500 mt-1">Kelola berita untuk halaman utama dan informasi internal sekolah.</p>
         </div>
         
-        {!isKepalaSekolah ? (
+        {!isKepalaSekolah && (
           <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all" onClick={() => setOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Tulis Pengumuman
           </Button>
-        ) : (
-          <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-1.5">
-            🔍 Mode Supervisi (Read-Only)
-          </div>
         )}
         <Dialog open={open} onOpenChange={(val) => {
           setOpen(val);

@@ -22,6 +22,7 @@ export enum PaymentPermission {
   DELETE_BILLS = 'payment:delete_bills',
   VERIFY_PAYMENTS = 'payment:verify_payments',
   VIEW_FINANCIAL_REPORTS = 'payment:view_reports',
+  VIEW_EXPENSES = 'payment:view_expenses',
   GENERATE_MASS_BILLS = 'payment:generate_mass_bills',
   BULK_OPERATIONS = 'payment:bulk_operations',
 
@@ -43,6 +44,10 @@ export enum UserRole {
   SISWA = 'SISWA',
   KARYAWAN = 'KARYAWAN',
   KEUANGAN = 'KEUANGAN',
+  KEUANGAN_MASUK = 'KEUANGAN_MASUK',
+  KEUANGAN_KELUAR = 'KEUANGAN_KELUAR',
+  KEUANGAN_ALL = 'KEUANGAN_ALL',
+  SUPERVISOR_KEUANGAN = 'SUPERVISOR_KEUANGAN',
   ADMIN_WEB = 'ADMIN_WEB',
 }
 

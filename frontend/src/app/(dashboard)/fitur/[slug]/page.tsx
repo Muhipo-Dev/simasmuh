@@ -27,6 +27,7 @@ import { IzinSiswaManagement } from '@/app/(dashboard)/presensi/izin-siswa/page'
 import { PersuratanManagement } from '@/components/tu/PersuratanManagement'
 import { InventarisManagement } from '@/components/tu/InventarisManagement'
 import { KepegawaianManagement } from '@/components/tu/KepegawaianManagement'
+import { GuestBookManagement } from '@/components/tu/GuestBookManagement'
 
 type GuestEntry = {
   id: string
@@ -105,18 +106,18 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
     ]
   },
   ketertiban: {
-    title: 'Ketertiban & Kedisiplinan',
+    title: 'Catatan Pembinaan & Poin Kedisiplinan',
     roleName: 'Ketertiban',
-    category: 'Kesiswaan',
+    category: 'Kesiswaan & Kedisiplinan',
     icon: ShieldAlert,
     gradient: 'from-rose-600 via-red-600 to-pink-600',
     badgeColor: 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:bg-rose-400/10 dark:text-rose-400',
-    description: 'Modul pemantauan kedisiplinan siswa, rekap poin pelanggaran, dan surat peringatan.',
+    description: 'Modul pencatatan poin kedisiplinan oleh guru serta verifikasi & penetapan catatan pembinaan oleh bagian ketertiban.',
     modules: [
-      { title: 'Poin Kedisiplinan', desc: 'Pencatatan pelanggaran atau apresiasi siswa.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Rekap Pelanggaran', desc: 'Klasifikasi level pelanggaran siswa.', status: 'SEGERA_HADIR' },
-      { title: 'Surat Peringatan', desc: 'Cetak dan terbit Surat Peringatan (SP).', status: 'TAHAP_DESAIN' },
-      { title: 'Notifikasi Wali', desc: 'Notifikasi otomatis ke wali murid.', status: 'SEGERA_HADIR' },
+      { title: 'Catatan Pembinaan', desc: 'Verifikasi & persetujuan catatan kedisiplinan guru.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Poin Kedisiplinan Siswa', desc: 'Pencatatan pelanggaran & teladan oleh seluruh guru.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Penerapan Skor Siswa', desc: 'Penetapan resmi skor ketertiban siswa ke buku saku.', status: 'SEGERA_HADIR' },
+      { title: 'Notifikasi Otomatis Wali', desc: 'Kirim notifikasi in-app & WhatsApp resmi ke wali murid.', status: 'SEGERA_HADIR' },
     ]
   },
   kebersihan: {
@@ -716,14 +717,10 @@ export default function FiturSubRolePage() {
           <ArrowLeft className="w-4 h-4" />
           <span>Kembali</span>
         </Button>
-
-        <Badge variant="outline" className={`px-3 py-1 font-semibold text-xs rounded-full border ${config.badgeColor}`}>
-          Sub-Role: {config.roleName}
-        </Badge>
       </div>
 
-      {/* Hero Banner Section (Hanya untuk fitur lain selain persuratan, kepegawaian & inventaris yang sudah memiliki panel antarmuka lengkap) */}
-      {slug !== 'persuratan' && slug !== 'kepegawaian' && slug !== 'inventaris' && (
+      {/* Hero Banner Section (Hanya untuk fitur lain selain persuratan, kepegawaian, inventaris, buku-tamu, ketertiban & bk-bp yang sudah memiliki panel antarmuka lengkap) */}
+      {slug !== 'persuratan' && slug !== 'kepegawaian' && slug !== 'inventaris' && slug !== 'buku-tamu' && slug !== 'ketertiban' && slug !== 'bk-bp' && (
         <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-6 sm:p-10 shadow-2xl border border-slate-800">
           <div className={`absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-gradient-to-br ${config.gradient} opacity-20 blur-3xl rounded-full pointer-events-none`} />
           
@@ -731,7 +728,7 @@ export default function FiturSubRolePage() {
             <div className="space-y-4 max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-amber-300">
                 <Sparkle className="w-3.5 h-3.5 animate-pulse text-amber-400" />
-                <span>Layanan Administrasi & Tata Usaha</span>
+                <span>Layanan Kesiswaan & Kedisiplinan Sekolah</span>
               </div>
               
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
@@ -757,45 +754,29 @@ export default function FiturSubRolePage() {
         </div>
       )}
 
-      {/* Render Interaktif khusus Persuratan, Kepegawaian & Inventaris (Tampilan Penuh) */}
+      {/* Render Interaktif khusus Persuratan, Kepegawaian, Inventaris, Buku Tamu, Ketertiban & BK/BP */}
       {slug === 'persuratan' ? (
         <PersuratanManagement />
       ) : slug === 'kepegawaian' ? (
         <KepegawaianManagement />
       ) : slug === 'inventaris' ? (
         <InventarisManagement />
+      ) : slug === 'buku-tamu' ? (
+        <GuestBookManagement />
+      ) : slug === 'ketertiban' || slug === 'bk-bp' ? (
+        <InteractiveCharacterAssessmentManagement defaultCategory={slug === 'ketertiban' ? 'ALL' : 'ALL'} />
       ) : (
         <>
-          {/* Render Interaktif khusus Buku Tamu */}
-          {slug === 'buku-tamu' && (
-            <InteractiveGuestBook />
-          )}
-
-          {/* Render Interaktif khusus Ketertiban & BP/BK: Manajemen Poin Kedisiplinan & Pelanggaran */}
-          {(slug === 'ketertiban' || slug === 'bk-bp') && (
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-rose-600" />
-                    Pencatatan Poin Pelanggaran & Apresiasi Kedisiplinan Siswa
-                  </h3>
-                </div>
-                <InteractiveCharacterAssessmentManagement defaultCategory={slug === 'ketertiban' ? 'PELANGGARAN' : 'ALL'} />
-              </div>
-            </div>
-          )}
-
           {/* Grid Status Modul Terencana */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  Rencana Modul Fitur Integrasi Tata Usaha
+                  Rencana Modul Fitur {config.title}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                  Daftar spesifikasi sub-fitur yang terintegrasi penuh untuk operasional Badan Administrasi Umum & Tata Usaha.
+                  Daftar spesifikasi sub-fitur yang terintegrasi untuk mendukung operasional {config.category}.
                 </p>
               </div>
             </div>
@@ -827,10 +808,10 @@ export default function FiturSubRolePage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                  Akses Penuh Tata Usaha (Badan Administrasi Umum)
+                  Akses Modul Terintegrasi
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-                  Role Admin Tata Usaha / BAU memiliki hak akses pengelolaan setara Superadmin dengan fitur tambahan buku tamu, persuratan, inventaris aset, kepegawaian HRD, dan pencatatan keuangan.
+                  Modul ini tersinkronisasi realtime dengan ekosistem aplikasi SIMASMUH SMA Muhammadiyah 1 Ponorogo.
                 </p>
               </div>
               <Link href="/dashboard">

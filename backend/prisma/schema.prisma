@@ -299,17 +299,23 @@ model StaffJournal {
 }
 
 model IzinKeluar {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   date            DateTime
   waktuKeluar     String
   estimasiKembali String?
   alasan          String
-  status          String   @default("MENUNGGU")
+  status          String    @default("MENUNGGU")
   catatanAdmin    String?
   userId          String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eSignToken      String?
+  eSignSignedAt   DateTime?
+  eSignSignedBy   String?
+  eSignHash       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eSignToken])
 }
 
 model Payment {
@@ -584,4 +590,110 @@ model CharacterAssessment {
   @@index([type])
   @@index([date])
 }
+
+model GuestBook {
+  id          String   @id @default(uuid())
+  namaTamu    String
+  instansi    String
+  kategori    String   @default("STUDI_TIRU") // STUDI_TIRU, PEJABAT, ALUMNI_IJAZAH, VENDOR_UMUM, ORANG_TUA, LAINNYA
+  tujuan      String
+  dituju      String   @default("Tata Usaha")
+  kontak      String?
+  tanggal     DateTime @default(now())
+  waktu       String?
+  status      String   @default("TIBA") // TIBA, PROSES, SELESAI
+  catatan     String?
+  qrCodeToken String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([kategori])
+  @@index([status])
+  @@index([tanggal])
+  @@index([createdAt])
+}
+
+model SuratKeluar {
+  id               String    @id @default(uuid())
+  nomorSurat       String
+  nomorAgenda      String?
+  tujuanPenerima   String
+  instansiPenerima String?
+  perihal          String
+  tanggalSurat     DateTime  @default(now())
+  jenisSurat       String    @default("SURAT_KETERANGAN")
+  penandatangan    String    @default("Kepala Sekolah")
+  status           String    @default("DRAF") // DRAF, MENUNGGU_TTD, DISETUJUI, PERLU_REVISI, TERKIRIM, DIARSIPKAN
+  catatan          String?
+  catatanRevisi    String?
+  eSignToken       String?   @unique // Token 3 huruf + 4 angka e.g. MHP8492
+  eSignSignedAt    DateTime?
+  signerName       String?
+  signerNbm        String?
+  signatureImage   String?   // Base64 / URL spesimen coretan tanda tangan asli Kepala Sekolah per token
+  fileUrl          String?
+  templateData     Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([eSignToken])
+  @@index([status])
+  @@index([jenisSurat])
+  @@index([createdAt])
+}
+
+model SuratMasuk {
+  id               String          @id @default(uuid())
+  nomorAgenda      String          // e.g. 266.d
+  nomorSurat       String          // e.g. 400.3/2067/101.6.19/2026
+  pengirim         String?
+  instansi         String          // Asal Surat, e.g. Cabang Dinas Pendidikan Wilayah Ponorogo
+  perihal          String          // e.g. Jatim Cybersecurity Competitron (JCC) bagi Pelajar SMA dan SMK
+  tanggalSurat     DateTime        @default(now())
+  tanggalDiterima  DateTime        @default(now())
+  sifat            String          @default("RUTIN") // RAHASIA, PENTING, RUTIN
+  kategori         String          @default("DINAS_DIKNAS") // DINAS_DIKNAS, MAJELIS_DIKDASMEN, KEMENAG, KERJASAMA, UNDANGAN, UMUM
+  fileUrl          String?         // Dokumen surat asli yang diunggah
+  ringkasan        String?
+  statusDisposisi  String          @default("BELUM_DISPOSISI") // BELUM_DISPOSISI, MENUNGGU_VERIFIKASI, DISPOSISI_DISETUJUI, DITOLAK
+  statusTahapan    String          @default("DITERIMA") // DITERIMA, DISAMPAIKAN, PENGECEKAN, PENYELESAIAN
+  disposisi        SuratDisposisi?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([nomorAgenda])
+  @@index([nomorSurat])
+  @@index([sifat])
+  @@index([statusDisposisi])
+  @@index([createdAt])
+}
+
+model SuratDisposisi {
+  id               String      @id @default(uuid())
+  suratMasukId     String      @unique
+  suratMasuk       SuratMasuk  @relation(fields: [suratMasukId], references: [id], onDelete: Cascade)
+  nomorAgenda      String?     // Synchronized with SuratMasuk
+  sifat            String      @default("RUTIN") // RAHASIA, PENTING, RUTIN
+  statusTahapan    String      @default("DITERIMA") // DITERIMA, DISAMPAIKAN, PENGECEKAN, PENYELESAIAN
+  tanggalDiterima  DateTime    @default(now())
+  instruksi        Json        // Array selected checkboxes, e.g. ["Arsip", "Ditindak Lanjuti", ...]
+  diteruskanKepada Json        // Object/Array e.g. { targets: ["Wakasek Kurikulum"], guruNama: "M. Raza", bagianNama: "", stafNama: "" }
+  catatan          String?
+  statusEsign      String      @default("MENUNGGU_VERIFIKASI") // MENUNGGU_VERIFIKASI, DISETUJUI, DITOLAK
+  eSignToken       String?     @unique // e.g. DSP8492
+  eSignSignedAt    DateTime?
+  signerName       String?     // Sugeng Riadi, M.Pd.
+  signerNbm        String?     // NBM. 974.501
+  signatureImage   String?     // Base64 / URL spesimen coretan tanda tangan asli Kepala Sekolah per token
+  catatanPenolak   String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([eSignToken])
+  @@index([statusEsign])
+  @@index([createdAt])
+}
+
+
+
 

@@ -12,11 +12,6 @@ export class UsersService {
 
   async findAll() {
     return this.prisma.user.findMany({
-      where: {
-        role: {
-          notIn: ['SISWA', 'WALI_MURID', 'ORANG_TUA', 'PARENT'],
-        },
-      },
       select: {
         id: true,
         name: true,
@@ -32,6 +27,11 @@ export class UsersService {
         subRole5: true,
         createdAt: true,
         teacherProfile: true,
+        student: {
+          include: {
+            class: true,
+          },
+        },
         parentProfile: {
           include: {
             students: {
@@ -46,6 +46,7 @@ export class UsersService {
           },
         },
       },
+      orderBy: { name: 'asc' },
     });
   }
 

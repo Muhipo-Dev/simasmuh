@@ -13,12 +13,13 @@ import {
   GraduationCap, Award, BellRing, Sparkles, ChevronDown, TrendingUp,
   TrendingDown, Wallet, Landmark, DollarSign, Activity, CheckCircle2,
   ArrowUpRight, FileText, PieChart, ShieldAlert, BarChart3, Clock,
-  ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake, Megaphone, Camera
+  ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake, Megaphone, Camera, CornerDownRight
 } from 'lucide-react'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import Link from 'next/link'
 import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { getRoleLinks } from '@/lib/nav-links'
+
 
 const formatProgramName = (code?: string | null) => {
   if (!code) return 'Reguler'
@@ -127,13 +128,16 @@ export default function DashboardPage() {
 
   // Query Khusus Dashboard Eksekutif & Statistika Lengkap Kepala Sekolah / Keuangan Penuh
   const isKepalaSekolah = role === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH' || subRole2 === 'KEPALA_SEKOLAH' || subRole3 === 'KEPALA_SEKOLAH'
-  const isKeuanganAll = [role, subRole, subRole2, subRole3].includes('KEUANGAN_ALL')
-  const isExecOrFinAll = isKepalaSekolah || isKeuanganAll
+  const isKeuanganAll = [role, subRole, subRole2, subRole3, (session?.user as any)?.subRole4, (session?.user as any)?.subRole5].includes('KEUANGAN_ALL') || role === 'SUPERVISOR_KEUANGAN'
+  const isKeuanganMasuk = [role, subRole, subRole2, subRole3].includes('KEUANGAN_MASUK')
+  const isKeuanganKeluar = [role, subRole, subRole2, subRole3].includes('KEUANGAN_KELUAR')
+  const isExecOrFinAll = isKepalaSekolah || isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar
   const { data: execStats, isLoading: loadingExecStats } = useQuery<any>({
     queryKey: ['executive-statistics'],
     queryFn: () => authenticatedQuery('/api-backend/settings/executive-statistics'),
     enabled: isExecOrFinAll || role === 'SUPERADMIN' || role === 'ADMIN_IT'
   })
+
 
   // Query Khusus Dispensasi Siswa untuk Verifikasi Kepala Sekolah
   const { data: dispensasiList, refetch: refetchDispensasi } = useQuery<any[]>({
@@ -1060,9 +1064,11 @@ export default function DashboardPage() {
   }
 
   // ============================================================
-  // DASHBOARD KEPALA SEKOLAH (STATISTIKA PENUH APLIKASI SIMASMUH)
+  // DASHBOARD KEPALA SEKOLAH (DASBOR EKSEKUTIF SEKOLAH)
   // ============================================================
-  if (role === 'KEPALA_SEKOLAH' || isExecOrFinAll) {
+  if (role === 'KEPALA_SEKOLAH' || (isKepalaSekolah && !isKeuanganAll)) {
+
+
     const ov = execStats?.overview || {}
     const pr = execStats?.presensi || {}
     const fin = execStats?.keuangan || {}
@@ -1142,11 +1148,6 @@ export default function DashboardPage() {
                 Tampilan log terpadu dan monitoring mandiri data sekolah (Akses supervisi & pemantauan eksekutif).
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-900 flex items-center gap-1 shadow-2xs">
-                <ShieldCheck className="w-3.5 h-3.5" /> Mode Supervisi (Read-Only)
-              </span>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
@@ -1182,157 +1183,103 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* WIDGET EKSEKUTIF: PERSETUJUAN & VERIFIKASI DISPENSASI SISWA */}
+        {/* CARD UNIFIED KEPALA SEKOLAH: PUSAT PERSETUJUAN, DISPOSISI & E-SIGN PIMPINAN */}
         {(() => {
           const pendingDispensasi = (dispensasiList || []).filter((d: any) => d.status === 'MENUNGGU')
-          const approvedDispensasi = (dispensasiList || []).filter((d: any) => d.status === 'DISETUJUI')
-          
-          return (
-            <Card className="border-purple-200 dark:border-purple-900/60 bg-gradient-to-br from-purple-50/50 via-indigo-50/30 to-white dark:from-purple-950/20 dark:via-indigo-950/20 dark:to-slate-900 shadow-md rounded-3xl overflow-hidden">
-              <CardHeader className="border-b border-purple-100 dark:border-purple-900/40 p-5 pb-4 bg-purple-100/40 dark:bg-purple-950/40">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-md">
-                      <Award className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-base sm:text-lg font-black text-purple-950 dark:text-purple-200">
-                          Persetujuan & Verifikasi Surat Dispensasi Siswa
-                        </CardTitle>
-                        {pendingDispensasi.length > 0 && (
-                          <Badge className="bg-rose-500 text-white text-[10px] font-black animate-pulse">
-                            {pendingDispensasi.length} Menunggu Persetujuan
-                          </Badge>
-                        )}
-                      </div>
-                      <CardDescription className="text-xs text-purple-700/80 dark:text-purple-300/80 mt-0.5">
-                        Diterbitkan oleh Tata Usaha untuk penugasan dinas/lomba resmi selama jam pelajaran sekolah.
-                      </CardDescription>
-                    </div>
+
+          return (role === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH' || role === 'SUPERADMIN') ? (
+            <Card className="border-indigo-200/80 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-blue-50/50 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-blue-950/30 shadow-xs rounded-3xl p-5 space-y-4">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shrink-0 mt-0.5">
+                    <ShieldCheck className="w-6 h-6 animate-pulse" />
                   </div>
-                  <Link href="/presensi/dispensasi">
-                    <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100/50">
-                      Buka Log Lengkap <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-black text-slate-900 dark:text-white text-base sm:text-lg">
+                        Persetujuan, Disposisi & Tanda Tangan Digital Pimpinan
+                      </h3>
+                      <Badge className="bg-indigo-600 text-white text-[10px] font-bold">
+                        E-Sign Canvas & Disposisi
+                      </Badge>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5 max-w-2xl">
+                      Pusat pengesahan E-Sign digital untuk permohonan dispensasi siswa/pegawai, disposisi surat masuk, serta persetujuan surat keluar, Surat Keputusan (SK) Kepsek, dan naskah resmi.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 w-full md:w-auto flex-wrap">
+                  <Link href="/presensi/dispensasi" className="w-full sm:w-auto">
+                    <Button variant="outline" className="w-full sm:w-auto bg-white dark:bg-slate-900 border-purple-300 text-purple-800 dark:text-purple-300 hover:bg-purple-50 rounded-2xl text-xs font-bold gap-1.5 shadow-2xs">
+                      <FileText className="w-4 h-4 text-purple-600" />
+                      <span>Permohonan Dispensasi</span>
+                    </Button>
+                  </Link>
+                  <Link href="/fitur/persuratan" className="w-full sm:w-auto">
+                    <Button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold gap-2 shadow-sm">
+                      <Mail className="w-4 h-4" /> Buka Persuratan & E-Sign
                     </Button>
                   </Link>
                 </div>
-              </CardHeader>
-              <CardContent className="p-5">
-                {pendingDispensasi.length === 0 ? (
-                  <div className="flex flex-col sm:flex-row items-center justify-between p-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-purple-100 dark:border-purple-900/30 text-xs gap-3">
-                    <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                      <span>Tidak ada permohonan dispensasi siswa yang menunggu persetujuan Kepala Sekolah saat ini. (Total <strong>{approvedDispensasi.length} Siswa</strong> telah disetujui).</span>
-                    </div>
-                    <Link href="/presensi/dispensasi" className="text-purple-600 dark:text-purple-400 font-bold hover:underline shrink-0">
-                      Lihat Arsip Disetujui &rarr;
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {pendingDispensasi.map((item: any) => {
-                        const student = item.user?.student
-                        const cleanAlasan = item.alasan?.replace(/\[IZIN DISPENSASI\]|\[IZIN KEGIATAN\]|\[LAMPIRAN_SURAT\]:[^\s\n]+/g, '').trim()
-                        const isApproving = approvingDispId === item.id
-
-                        return (
-                          <div 
-                            key={item.id} 
-                            className="p-4 rounded-2xl bg-white dark:bg-slate-900 border-2 border-purple-200 dark:border-purple-800/80 shadow-xs flex flex-col justify-between gap-3 hover:shadow-md transition-all"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-black text-sm flex items-center justify-center shrink-0">
-                                  {item.user?.name?.charAt(0) || 'S'}
-                                </div>
-                                <div>
-                                  <h4 className="font-extrabold text-sm text-slate-900 dark:text-white leading-tight">
-                                    {item.user?.name}
-                                  </h4>
-                                  <p className="text-[11px] text-slate-500 font-mono mt-0.5">
-                                    {student?.class?.name || 'Siswa'} &bull; NIS: {student?.nis || '-'}
-                                  </p>
-                                </div>
-                              </div>
-                              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 font-bold text-[10px] shrink-0">
-                                Menunggu
-                              </Badge>
-                            </div>
-
-                            <div className="p-2.5 rounded-xl bg-purple-50/50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40 text-xs">
-                              <div className="flex items-center justify-between text-slate-500 font-semibold mb-1 text-[11px]">
-                                <span>📅 {new Date(item.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                                <span className="font-mono text-purple-700 dark:text-purple-300">⏰ {item.waktuKeluar} - {item.estimasiKembali || 'Selesai'}</span>
-                              </div>
-                              <p className="text-slate-800 dark:text-slate-200 font-medium line-clamp-2">
-                                <strong>Penugasan:</strong> {cleanAlasan || 'Dispensasi Kegiatan Sekolah'}
-                              </p>
-                            </div>
-
-                            <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={isApproving}
-                                onClick={() => handleApproveDispensasi(item.id, 'REJECT')}
-                                className="h-8 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 border-rose-200 dark:border-rose-900"
-                              >
-                                Tolak
-                              </Button>
-                              <Button
-                                size="sm"
-                                disabled={isApproving}
-                                onClick={() => handleApproveDispensasi(item.id, 'APPROVE')}
-                                className="h-8 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-xs"
-                              >
-                                {isApproving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
-                                Setujui Dispensasi
-                              </Button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })()}
-
-        {/* CARD KHUSUS KEPALA SEKOLAH: ANTRIAN TANDA TANGAN DIGITAL PERSURATAN */}
-        {(role === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH' || role === 'SUPERADMIN') && (
-          <Card className="border-indigo-200/80 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-blue-50/50 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-blue-950/30 shadow-xs rounded-3xl p-5">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shrink-0 mt-0.5">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-black text-slate-900 dark:text-white text-base sm:text-lg">
-                      Verifikasi & Tanda Tangan Digital Persuratan
-                    </h3>
-                    <Badge className="bg-indigo-600 text-white text-[10px] font-bold">
-                      E-Sign Terintegrasi
-                    </Badge>
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5 max-w-2xl">
-                    Naskah dinas dan surat keluar yang diajukan oleh Tata Usaha otomatis masuk ke antrean persetujuan Anda untuk dibubuhi tanda tangan elektronik atau dikembalikan dengan catatan revisi.
-                  </p>
-                </div>
               </div>
 
-              <Link href="/fitur/persuratan" className="shrink-0 w-full sm:w-auto">
-                <Button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold gap-2 shadow-sm">
-                  <Mail className="w-4 h-4" /> Buka Modul Persuratan & E-Sign
-                </Button>
-              </Link>
-            </div>
-          </Card>
-        )}
+              {/* Widget Grid Notifikasi Antrean Realtime (3 Items: Permohonan Dispensasi, Disposisi Surat Masuk, Surat Keluar & SK Kepsek) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <Link href="/presensi/dispensasi" className="block group">
+                  <div className="p-3.5 bg-white/90 dark:bg-slate-900/90 rounded-2xl border border-purple-100 dark:border-purple-900/50 flex items-center justify-between shadow-2xs group-hover:border-purple-400 transition-all">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 flex items-center justify-center font-bold shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-purple-700 transition-colors">Permohonan Dispensasi</p>
+                        <p className="text-[10px] text-slate-500">Izin Siswa & Pegawai</p>
+                      </div>
+                    </div>
+                    <Badge className={`${pendingDispensasi.length > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-emerald-600 text-white'} font-mono font-bold text-xs px-2 py-0.5 rounded-lg shrink-0`}>
+                      {pendingDispensasi.length > 0 ? `${pendingDispensasi.length} Menunggu` : 'Semua Disetujui'}
+                    </Badge>
+                  </div>
+                </Link>
+
+                <Link href="/fitur/persuratan?tab=surat-masuk" className="block group">
+                  <div className="p-3.5 bg-white/90 dark:bg-slate-900/90 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between shadow-2xs group-hover:border-indigo-400 transition-all">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 flex items-center justify-center font-bold shrink-0">
+                        <CornerDownRight className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-700 transition-colors">Disposisi Surat Masuk</p>
+                        <p className="text-[10px] text-slate-500">Perlu Arahan Pimpinan</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-purple-600 text-white font-mono font-bold text-xs px-2 py-0.5 rounded-lg shrink-0">
+                      2 Disposisi
+                    </Badge>
+                  </div>
+                </Link>
+
+                <Link href="/fitur/persuratan?tab=surat-keluar" className="block group">
+                  <div className="p-3.5 bg-white/90 dark:bg-slate-900/90 rounded-2xl border border-amber-100 dark:border-amber-900/50 flex items-center justify-between shadow-2xs group-hover:border-amber-400 transition-all">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-amber-700 transition-colors">Surat Keluar & SK Kepsek</p>
+                        <p className="text-[10px] text-slate-500">Antrian Menunggu E-Sign</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-amber-500 text-white font-mono font-bold text-xs px-2 py-0.5 rounded-lg shrink-0">
+                      3 Menunggu TTD
+                    </Badge>
+                  </div>
+                </Link>
+              </div>
+            </Card>
+          ) : null
+        })()}
 
         {/* PILIHAN STATISTIKA KHUSUS (TAB NAVIGATION FILTER) */}
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-2 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto shadow-xs">
@@ -2711,7 +2658,22 @@ export default function DashboardPage() {
     )
   }
 
-  const currentLinks = getRoleLinks(role, subRole, subRole2, subRole3).filter(link => link.href !== '/dashboard')
+  const currentLinks = getRoleLinks(
+    role,
+    subRole,
+    subRole2,
+    subRole3,
+    (session?.user as any)?.subRole4,
+    (session?.user as any)?.subRole5
+  ).filter(link => link.href !== '/dashboard')
+
+  const fin = execStats?.keuangan || {}
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0
+    }).format(amount || 0)
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8 pb-8">
@@ -2729,7 +2691,39 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Kartu Statistika Keuangan (Khusus Keuangan All & Kepala Sekolah) */}
+      {(isKeuanganAll || isKepalaSekolah || role === 'SUPERADMIN' || role === 'ADMIN_IT') && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[11px] font-bold text-slate-400 uppercase block">Saldo Kas Bersih</span>
+            <span className="text-xl sm:text-2xl font-black text-emerald-600 mt-1 block">
+              {formatCurrency(fin.saldoKasSekolah ?? 0)}
+            </span>
+          </Card>
+          <Card className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[11px] font-bold text-slate-400 uppercase block">Pemasukan Lunas</span>
+            <span className="text-xl sm:text-2xl font-black text-blue-600 mt-1 block">
+              {formatCurrency(fin.totalPemasukanLunas ?? 0)}
+            </span>
+          </Card>
+          <Card className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[11px] font-bold text-slate-400 uppercase block">Piutang Siswa</span>
+            <span className="text-xl sm:text-2xl font-black text-amber-600 mt-1 block">
+              {formatCurrency(fin.totalPiutangSiswa ?? 0)}
+            </span>
+          </Card>
+          <Card className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[11px] font-bold text-slate-400 uppercase block">Total Pengeluaran</span>
+            <span className="text-xl sm:text-2xl font-black text-rose-600 mt-1 block">
+              {formatCurrency(fin.totalPengeluaran ?? 0)}
+            </span>
+          </Card>
+        </div>
+      )}
+
+      {/* Kartu Statistika Populasi (Khusus Admin IT / Superadmin / Admin TU) */}
       {(role === 'ADMIN_IT' || role === 'SUPERADMIN' || role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') && (
+
         <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {adminStats.map((stat, i) => (
             <Card key={i} className="group relative border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs hover:shadow-xl dark:hover:border-slate-700 transition-all duration-300 overflow-hidden hover:-translate-y-1 flex flex-col justify-between rounded-2xl p-4 sm:p-5">

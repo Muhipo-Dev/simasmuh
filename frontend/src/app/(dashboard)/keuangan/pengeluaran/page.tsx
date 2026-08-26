@@ -111,16 +111,12 @@ export default function KeuanganKeluarPage() {
             </div>
             Keuangan Keluar
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">Pencatatan & pengolahan arus kas pengeluaran sekolah (Pengguna: Yuli / Agung)</p>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Pencatatan & pengolahan arus kas pengeluaran operasional sekolah</p>
         </div>
-        {!isKepalaSekolah ? (
+        {!isKepalaSekolah && (
           <Button onClick={() => setModalOpen(true)} className="bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs rounded-xl gap-2 w-full sm:w-auto text-xs sm:text-sm">
             <PlusCircle className="w-4 h-4" /> Catat Pengeluaran
           </Button>
-        ) : (
-          <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-1.5 w-max">
-            🔍 Mode Supervisi (Read-Only)
-          </div>
         )}
       </div>
 

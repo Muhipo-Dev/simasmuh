@@ -107,13 +107,14 @@ export class RolesGuard implements CanActivate {
     const userSubRoles = [user.subRole, user.subRole2, user.subRole3, user.subRole4, user.subRole5, user.role];
     const isKeuanganMasuk = userSubRoles.includes('KEUANGAN_MASUK');
     const isKeuanganKeluar = userSubRoles.includes('KEUANGAN_KELUAR');
-    const isKeuanganAll = userSubRoles.includes('KEUANGAN_ALL') || user.role === 'SUPERADMIN' || user.role === 'ADMIN_IT';
-    const isGeneralKeuangan = user.role === UserRole.KEUANGAN || userSubRoles.includes(SubRole.KEUANGAN);
+    const isKeuanganAll = userSubRoles.includes('KEUANGAN_ALL') || userSubRoles.includes('SUPERVISOR_KEUANGAN') || user.role === 'SUPERADMIN' || user.role === 'ADMIN_IT';
+    const isGeneralKeuangan = isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar || user.role === UserRole.KEUANGAN || userSubRoles.includes(SubRole.KEUANGAN);
 
     if (isGeneralKeuangan) {
       if (isKeuanganAll) {
         permissions.push(
           PaymentPermission.VIEW_ALL_BILLS,
+          PaymentPermission.VIEW_EXPENSES,
           PaymentPermission.CREATE_BILLS,
           PaymentPermission.UPDATE_BILLS,
           PaymentPermission.DELETE_BILLS,
@@ -135,6 +136,7 @@ export class RolesGuard implements CanActivate {
         }
         if (isKeuanganKeluar) {
           permissions.push(
+            PaymentPermission.VIEW_EXPENSES,
             PaymentPermission.VIEW_FINANCIAL_REPORTS,
             PaymentPermission.CREATE_BILLS,
             PaymentPermission.UPDATE_BILLS,
@@ -143,6 +145,7 @@ export class RolesGuard implements CanActivate {
         }
       }
     }
+
 
     // Headmaster (KEPALA_SEKOLAH) supervisory permissions (read-only reports & bills)
     if (
@@ -154,6 +157,22 @@ export class RolesGuard implements CanActivate {
         PaymentPermission.VIEW_FINANCIAL_REPORTS,
         PaymentPermission.VIEW_OWN_BILLS,
         PaymentPermission.VIEW_OWN_PAYMENT_HISTORY,
+      );
+    }
+
+    // Admin TU (BAU) permissions
+    const isBau = userSubRoles.includes('ADMIN_TU') || userSubRoles.includes('BAU') || userSubRoles.includes('TATA_USAHA');
+    if (isBau) {
+      permissions.push(
+        PaymentPermission.VIEW_ALL_BILLS,
+        PaymentPermission.VIEW_EXPENSES,
+        PaymentPermission.CREATE_BILLS,
+        PaymentPermission.UPDATE_BILLS,
+        PaymentPermission.DELETE_BILLS,
+        PaymentPermission.VERIFY_PAYMENTS,
+        PaymentPermission.VIEW_FINANCIAL_REPORTS,
+        PaymentPermission.GENERATE_MASS_BILLS,
+        PaymentPermission.BULK_OPERATIONS,
       );
     }
 

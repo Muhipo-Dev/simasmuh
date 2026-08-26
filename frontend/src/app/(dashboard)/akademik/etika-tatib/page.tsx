@@ -209,11 +209,16 @@ export default function EtikaTatibPage() {
                     <TableHead className="text-xs font-bold">Peristiwa / Evaluasi</TableHead>
                     <TableHead className="text-xs font-bold">Tindak Lanjut</TableHead>
                     <TableHead className="text-xs font-bold">Penilai / Pembina</TableHead>
+                    <TableHead className="text-xs font-bold text-center">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {assessmentHistory.map((item: any, idx: number) => {
                     const isNeg = item.points < 0 || item.category === 'PELANGGARAN' || item.type === 'NEGATIF'
+                    const isVerified = item.status === 'SELESAI' || item.status === 'TERVERIFIKASI'
+                    const isPending = item.status === 'MENUNGGU' || item.status === 'MENUNGGU_VERIFIKASI'
+                    const isRejected = item.status === 'DITOLAK'
+
                     return (
                       <TableRow key={item.id || idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 text-xs">
                         <TableCell className="text-center text-slate-400 font-medium">{idx + 1}</TableCell>
@@ -243,11 +248,11 @@ export default function EtikaTatibPage() {
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-[300px]">
+                        <TableCell className="max-w-[280px]">
                           <p className="font-bold text-slate-800 dark:text-slate-100">{item.title}</p>
                           <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{item.description || '-'}</p>
                         </TableCell>
-                        <TableCell className="max-w-[200px]">
+                        <TableCell className="max-w-[180px]">
                           <span className="text-slate-600 dark:text-slate-300">{item.actionTaken || 'Dipantau berkala'}</span>
                         </TableCell>
                         <TableCell>
@@ -255,8 +260,27 @@ export default function EtikaTatibPage() {
                             {item.evaluator?.name || 'Tim Pembina'}
                           </span>
                           <span className="text-[10px] text-slate-400 uppercase">
-                            {item.evaluator?.subRole || item.evaluator?.role || 'TATIB/BK'}
+                            {item.evaluator?.subRole || item.evaluator?.role || 'GURU / TATIB'}
                           </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {isVerified ? (
+                            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300 text-[10px] font-bold">
+                              Diterapkan
+                            </Badge>
+                          ) : isPending ? (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] font-bold">
+                              Verifikasi Tatib
+                            </Badge>
+                          ) : isRejected ? (
+                            <Badge variant="destructive" className="text-[10px] font-bold">
+                              Ditolak
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">
+                              {item.status}
+                            </Badge>
+                          )}
                         </TableCell>
                       </TableRow>
                     )

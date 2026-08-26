@@ -326,6 +326,39 @@ export default function DispensasiPage() {
     }
   }
 
+  const handleResetAllDispensasi = async () => {
+    if (allDispensasi.length === 0) {
+      Swal.fire('Informasi', 'Tidak ada data dispensasi untuk direset.', 'info')
+      return
+    }
+
+    const confirm = await Swal.fire({
+      title: 'Reset Semua Data Dispensasi?',
+      text: `Apakah Anda yakin ingin menghapus seluruh (${allDispensasi.length}) rekaman data dispensasi? Aksi ini tidak dapat dibatalkan.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Reset Semua',
+      cancelButtonText: 'Batal'
+    })
+    if (!confirm.isConfirmed) return
+
+    try {
+      setLoading(true)
+      await Promise.all(
+        allDispensasi.map(item =>
+          authenticatedFetch(`/api-backend/izin-keluar/${item.id}`, { method: 'DELETE' })
+        )
+      )
+      Swal.fire('Berhasil Direset', 'Seluruh data dispensasi telah berhasil dikosongkan.', 'success')
+      fetchData()
+    } catch {
+      Swal.fire('Gagal', 'Terjadi kesalahan saat mereset data dispensasi.', 'error')
+      setLoading(false)
+    }
+  }
+
   const parseAlasan = (raw: string) => {
     const lampiranMatch = raw.match(/\[LAMPIRAN_SURAT\]:\s*([^\s\n]+)/)
     const lampiranUrl = lampiranMatch ? lampiranMatch[1] : null
@@ -360,13 +393,25 @@ export default function DispensasiPage() {
         </div>
 
         {canPublish && (
-          <Button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-white text-purple-800 hover:bg-purple-50 font-black rounded-2xl shadow-md transition-all px-5 py-6 flex items-center gap-2 shrink-0 self-start sm:self-center"
-          >
-            <Plus className="w-5 h-5" />
-            Terbitkan Dispensasi
-          </Button>
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+            {allDispensasi.length > 0 && (
+              <Button
+                onClick={handleResetAllDispensasi}
+                variant="outline"
+                className="bg-white/10 hover:bg-rose-600 hover:text-white border-white/20 text-white font-bold rounded-2xl shadow-md transition-all px-4 py-6 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                Reset Data
+              </Button>
+            )}
+            <Button
+              onClick={() => setShowForm(!showForm)}
+              className="bg-white text-purple-800 hover:bg-purple-50 font-black rounded-2xl shadow-md transition-all px-5 py-6 flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Terbitkan Dispensasi
+            </Button>
+          </div>
         )}
       </div>
 

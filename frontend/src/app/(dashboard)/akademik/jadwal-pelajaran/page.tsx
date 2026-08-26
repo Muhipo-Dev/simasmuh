@@ -364,14 +364,6 @@ export default function JadwalPelajaranPage() {
             </p>
           </div>
 
-          {/* Mode Supervisi untuk Kepala Sekolah */}
-          {isKepalaSekolah && !isSuperAdmin && (
-            <div className="px-4 py-2 rounded-2xl bg-amber-400/20 backdrop-blur-md border border-amber-300/40 text-amber-200 text-xs sm:text-sm font-bold flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-amber-300" />
-              <span>Mode Supervisi (Read-Only)</span>
-            </div>
-          )}
-
           {/* Akses Cepat Tombol Superadmin: Import aSc Timetables & Tambah Manual */}
           {isSuperAdmin && (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">

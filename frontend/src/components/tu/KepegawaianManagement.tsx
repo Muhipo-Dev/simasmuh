@@ -452,7 +452,7 @@ export function KepegawaianManagement() {
               <Badge className="bg-purple-500/20 text-purple-200 border-purple-400/30 text-[11px]">
                 SDM & HRD Terintegrasi
               </Badge>
-              <span className="text-xs text-purple-300">Badan Administrasi Umum (BAU)</span>
+              <span className="text-xs text-purple-300">Bagian Tata Usaha</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
               Pusat Layanan & Manajemen Kepegawaian

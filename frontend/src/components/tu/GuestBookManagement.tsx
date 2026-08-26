@@ -50,7 +50,7 @@ export function GuestBookManagement() {
     instansi: '',
     kategori: 'STUDI_TIRU' as GuestEntry['kategori'],
     tujuan: '',
-    dituju: 'Tata Usaha / BAU',
+    dituju: 'Tata Usaha',
     kontak: '',
     catatan: ''
   })
@@ -144,32 +144,375 @@ export function GuestBookManagement() {
     const printWindow = window.open('', '_blank')
     if (!printWindow) return
 
+    const fullQrUrl = qrUrl || (typeof window !== 'undefined' ? `${window.location.origin}/buku-tamu` : 'http://localhost:3000/buku-tamu')
+
     printWindow.document.write(`
       <!DOCTYPE html>
-      <html>
+      <html lang="id">
         <head>
-          <title>Cetak QR Buku Tamu - SIMASMUH</title>
+          <meta charset="utf-8" />
+          <title>Buku Tamu Digital - SMA Muhammadiyah 1 Ponorogo</title>
           <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 40px; }
-            .badge-card { border: 3px solid #2563eb; border-radius: 20px; padding: 30px; max-width: 400px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-            h2 { color: #1e3a8a; margin-bottom: 5px; font-size: 22px; }
-            p { color: #475569; font-size: 13px; margin-top: 5px; }
-            .qr-box { margin: 25px 0; display: flex; justify-content: center; }
-            .footer { font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; pt: 10px; margin-top: 20px; }
+            @page {
+              size: A4 portrait;
+              margin: 8mm;
+            }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+              background-color: #f1f5f9;
+              color: #0f172a;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              padding: 10px;
+            }
+            /* Pembungkus Halaman A4 & Panduan Potong A6 */
+            .cut-wrapper {
+              position: relative;
+              padding: 4px;
+              border: 1.5px dashed #64748b;
+              border-radius: 20px;
+              background: #ffffff;
+              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            }
+            .cut-label {
+              position: absolute;
+              top: -11px;
+              left: 24px;
+              background: #ffffff;
+              padding: 0 10px;
+              font-size: 10px;
+              color: #475569;
+              font-weight: 700;
+              letter-spacing: 0.5px;
+            }
+            /* Kartu Display Standee A6 (105mm x 148mm) */
+            .standee-container {
+              width: 105mm;
+              height: 148mm;
+              background: #ffffff;
+              border: 2px solid #1e3a8a;
+              border-radius: 16px;
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              position: relative;
+            }
+            /* Header Kop Sekolah */
+            .header-banner {
+              background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%);
+              padding: 10px 14px 8px;
+              color: #ffffff;
+              text-align: center;
+              position: relative;
+              border-bottom: 3.5px solid #f59e0b;
+            }
+            .kop-wrapper {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 10px;
+            }
+            .logo-img {
+              width: 36px;
+              height: 36px;
+              object-fit: contain;
+              filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+            }
+            .kop-text {
+              flex: 1;
+              text-align: center;
+            }
+            .kop-instansi {
+              font-size: 7.5px;
+              font-weight: 700;
+              letter-spacing: 0.8px;
+              text-transform: uppercase;
+              color: #93c5fd;
+              line-height: 1.25;
+              margin-bottom: 1.5px;
+            }
+            .kop-sekolah {
+              font-size: 12.5px;
+              font-weight: 900;
+              letter-spacing: 0.5px;
+              color: #ffffff;
+              text-transform: uppercase;
+              line-height: 1.15;
+            }
+            .kop-tagline {
+              font-size: 7.5px;
+              color: #e2e8f0;
+              margin-top: 1.5px;
+              font-weight: 500;
+            }
+
+            /* Content Body */
+            .standee-body {
+              padding: 12px 14px 10px;
+              text-align: center;
+              background: #ffffff;
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              align-items: center;
+              gap: 8px;
+            }
+            
+            /* Bagian Atas: Judul & Greeting */
+            .intro-section {
+              width: 100%;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 5px;
+            }
+            .main-heading {
+              font-size: 19px;
+              font-weight: 900;
+              color: #1e3a8a;
+              letter-spacing: 0.8px;
+              text-transform: uppercase;
+              line-height: 1.1;
+              border-bottom: 2px solid #e2e8f0;
+              padding-bottom: 3px;
+              width: 100%;
+            }
+            .greeting-text {
+              font-size: 10px;
+              color: #334155;
+              line-height: 1.4;
+              width: 100%;
+            }
+            .greeting-text .welcome {
+              font-weight: 800;
+              color: #0f172a;
+              font-size: 11px;
+              display: block;
+            }
+            .greeting-text .instruction {
+              font-weight: 500;
+              color: #475569;
+              display: block;
+              margin-top: 2px;
+            }
+
+            /* Bagian Tengah: QR Box Frame */
+            .qr-section {
+              width: 100%;
+              display: flex;
+              justify-content: center;
+            }
+            .qr-frame {
+              padding: 9px 12px 7px;
+              background: #ffffff;
+              border: 2.5px solid #2563eb;
+              border-radius: 16px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              box-shadow: 0 6px 18px rgba(37, 99, 235, 0.12);
+              width: 90%;
+              max-width: 230px;
+            }
+            .qr-frame svg {
+              display: block;
+              width: 162px !important;
+              height: 162px !important;
+            }
+            .scan-callout {
+              margin-top: 6px;
+              background: #1e3a8a;
+              color: #ffffff;
+              font-size: 9px;
+              font-weight: 800;
+              letter-spacing: 0.8px;
+              padding: 3.5px 12px;
+              border-radius: 5px;
+              text-transform: uppercase;
+              width: 100%;
+              text-align: center;
+            }
+
+            /* Bagian Bawah: Guide Bar */
+            .instruction-section {
+              width: 100%;
+            }
+            .guide-card {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              background: #f8fafc;
+              border: 1px solid #cbd5e1;
+              border-radius: 10px;
+              padding: 6px 10px;
+              width: 100%;
+              gap: 6px;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            }
+            .guide-item {
+              flex: 1;
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              text-align: left;
+            }
+            .guide-item + .guide-item {
+              border-left: 1px solid #cbd5e1;
+              padding-left: 8px;
+            }
+            .guide-badge {
+              width: 19px;
+              height: 19px;
+              background: #2563eb;
+              color: #ffffff;
+              font-size: 10px;
+              font-weight: 900;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+            }
+            .guide-text {
+              line-height: 1.2;
+            }
+            .guide-title {
+              font-size: 9px;
+              font-weight: 800;
+              color: #1e293b;
+            }
+            .guide-sub {
+              font-size: 7.5px;
+              font-weight: 500;
+              color: #64748b;
+            }
+
+            /* Footer */
+            .standee-footer {
+              background: #0f172a;
+              color: #cbd5e1;
+              padding: 6px 14px;
+              font-size: 8px;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              border-top: 1px solid #1e293b;
+            }
+            .footer-left {
+              font-weight: 700;
+              color: #f1f5f9;
+            }
+            .footer-right {
+              color: #94a3b8;
+              font-size: 7.5px;
+              font-weight: 600;
+            }
+
+            @media print {
+              body {
+                background: #ffffff;
+                padding: 0;
+              }
+              .cut-wrapper {
+                margin: 0 auto;
+                border: 1.5px dashed #94a3b8;
+                box-shadow: none;
+              }
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
           </style>
         </head>
         <body>
-          <div class="badge-card">
-            <h2>BUKU TAMU DIGITAL</h2>
-            <p>SMA MUHAMMADIYAH 1 PONOROGO</p>
-            <div class="qr-box">
-              ${qrRef.current?.innerHTML || ''}
+          <div class="cut-wrapper">
+            <div class="cut-label">✂ Garis Panduan Potong Ukuran A6 (105 x 148 mm)</div>
+            
+            <div class="standee-container">
+              <!-- Header Banner Kop -->
+              <div class="header-banner">
+                <div class="kop-wrapper">
+                  <img class="logo-img" src="/muhammadiyah-logo-40493.png" alt="Logo Majelis Dikdasmen" onerror="this.style.display='none'" />
+                  <div class="kop-text">
+                    <div class="kop-instansi">Majelis Dikdasmen & PNF PWM Jawa Timur</div>
+                    <div class="kop-sekolah">SMA Muhammadiyah 1 Ponorogo</div>
+                    <div class="kop-tagline">Jl. Batoro Katong No. 6B Ponorogo | Telp. (0352) 481521</div>
+                  </div>
+                  <img class="logo-img" src="/pic_logo.png" alt="Logo Sekolah" onerror="this.style.display='none'" />
+                </div>
+              </div>
+
+              <!-- Body Isi -->
+              <div class="standee-body">
+                <!-- Bagian 1: Judul & Informasi Sambutan -->
+                <div class="intro-section">
+                  <h1 class="main-heading">BUKU TAMU DIGITAL</h1>
+                  <div class="greeting-text">
+                    <span class="welcome">Selamat datang di SMA Muhammadiyah 1 Ponorogo,</span>
+                    <span class="instruction">Bapak/Ibu tamu dimohon untuk dapat memindai QR code di bawah ini, untuk mengisi formulir registrasi kedatangan.</span>
+                  </div>
+                </div>
+
+                <!-- Bagian 2: QR Code Frame -->
+                <div class="qr-section">
+                  <div class="qr-frame">
+                    ${qrRef.current?.innerHTML || ''}
+                    <div class="scan-callout">Pindai dengan Kamera HP</div>
+                  </div>
+                </div>
+
+                <!-- Bagian 3: Instruksi 3 Langkah -->
+                <div class="instruction-section">
+                  <div class="guide-card">
+                    <div class="guide-item">
+                      <div class="guide-badge">1</div>
+                      <div class="guide-text">
+                        <div class="guide-title">Scan QR Code</div>
+                        <div class="guide-sub">Buka kamera HP</div>
+                      </div>
+                    </div>
+                    <div class="guide-item">
+                      <div class="guide-badge">2</div>
+                      <div class="guide-text">
+                        <div class="guide-title">Isi Identitas</div>
+                        <div class="guide-sub">Nama & instansi</div>
+                      </div>
+                    </div>
+                    <div class="guide-item">
+                      <div class="guide-badge">3</div>
+                      <div class="guide-text">
+                        <div class="guide-title">Kirim Form</div>
+                        <div class="guide-sub">Tercatat di sistem</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="standee-footer">
+                <div class="footer-left">SIMASMUH — SMA Muhammadiyah 1 Ponorogo</div>
+                <div class="footer-right">&copy; ${new Date().getFullYear()}</div>
+              </div>
             </div>
-            <p style="font-weight: bold; color: #2563eb;">Pindai (Scan) QR Code Ini untuk Mengisi Formulir Kedatangan Tamu</p>
-            <div class="footer">SIMASMUH &copy; ${new Date().getFullYear()}</div>
           </div>
+
           <script>
-            window.onload = function() { window.print(); window.close(); }
+            window.onload = function() { 
+              setTimeout(function() {
+                window.print(); 
+                window.close();
+              }, 350);
+            }
           </script>
         </body>
       </html>
@@ -199,7 +542,7 @@ export function GuestBookManagement() {
           instansi: '',
           kategori: 'STUDI_TIRU',
           tujuan: '',
-          dituju: 'Tata Usaha / BAU',
+          dituju: 'Tata Usaha',
           kontak: '',
           catatan: ''
         })
@@ -304,7 +647,7 @@ export function GuestBookManagement() {
             </div>
             <h2 className="text-2xl font-bold tracking-tight text-white flex items-center justify-center md:justify-start gap-2">
               <Contact className="w-7 h-7 text-blue-400" />
-              <span>Buku Tamu Digital Tata Usaha (BAU)</span>
+              <span>Buku Tamu Digital Tata Usaha</span>
             </h2>
             <p className="text-slate-300 text-xs sm:text-sm max-w-xl">
               Gunakan QR Code di samping untuk ditempatkan pada Meja Resepsionis / Front Desk. Tamu dapat memindai QR code ini untuk mengisi formulir kedatangan secara mandiri.

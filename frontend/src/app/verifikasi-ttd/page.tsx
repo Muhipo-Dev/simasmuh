@@ -515,7 +515,7 @@ export default function VerifikasiTtdPage() {
                       <Building2 className="w-4 h-4 text-blue-400" />
                       Diterbitkan Oleh
                     </span>
-                    <p className="text-base font-bold text-white">Bagian Tata Usaha (BAU) SIMASMUH</p>
+                    <p className="text-base font-bold text-white">Bagian Tata Usaha SIMASMUH</p>
                     <p className="text-xs text-slate-400 mt-0.5">Instansi: {verifiedResult.sekolah.name}</p>
                     <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-slate-300">
                       <span className="text-slate-500">Kode Token:</span>

@@ -23,7 +23,7 @@ export default function PublicGuestBookPage() {
     instansi: '',
     kategori: 'STUDI_TIRU',
     tujuan: '',
-    dituju: 'Tata Usaha / BAU',
+    dituju: 'Tata Usaha',
     kontak: '',
     catatan: '',
   })
@@ -84,7 +84,7 @@ export default function PublicGuestBookPage() {
       instansi: '',
       kategori: 'STUDI_TIRU',
       tujuan: '',
-      dituju: 'Tata Usaha / BAU',
+      dituju: 'Tata Usaha',
       kontak: '',
       catatan: '',
     })
@@ -101,14 +101,14 @@ export default function PublicGuestBookPage() {
       <header className="max-w-3xl w-full mx-auto text-center space-y-3 z-10 my-4">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold backdrop-blur-md">
           <ShieldCheck className="w-4 h-4 text-blue-400" />
-          <span>Sistem Informasi Manajemen Sekolah Muhammadiyah</span>
+          <span>SMA Muhammadiyah 1 Ponorogo</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white flex items-center justify-center gap-3">
           <Contact className="w-8 h-8 text-blue-400" />
           <span>Buku Tamu Digital</span>
         </h1>
         <p className="text-slate-400 text-sm max-w-md mx-auto">
-          Selamat datang! Mohon mengisi formulir registrasi kedatangan tamu sekolah di di bawah ini.
+          Selamat datang! Mohon mengisi formulir registrasi kedatangan tamu sekolah di bawah ini.
         </p>
       </header>
 
@@ -123,7 +123,7 @@ export default function PublicGuestBookPage() {
               </div>
               <CardTitle className="text-2xl font-bold text-emerald-400">Kedatangan Terregistrasi!</CardTitle>
               <CardDescription className="text-slate-400 text-sm">
-                Data Anda telah dicatat otomatis ke Log Layanan Tata Usaha (BAU).
+                Data Anda telah dicatat otomatis ke Log Layanan Tata Usaha.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-2">

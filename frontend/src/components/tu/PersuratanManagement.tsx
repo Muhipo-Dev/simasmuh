@@ -3147,7 +3147,7 @@ export function PersuratanManagement() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold">Manajemen Persuratan & Agenda Tata Usaha (BAU)</h2>
+                <h2 className="text-base font-bold">Manajemen Persuratan & Agenda Tata Usaha</h2>
               </div>
               <p className="text-xs text-blue-200/80 mt-0.5">
                 Penerbitan surat keluar, penomoran agenda otomatis, pencatatan surat masuk, dan pembuatan lembar disposisi pimpinan.

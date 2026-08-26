@@ -35,9 +35,9 @@ const ROLE_CONFIG: Record<string, { label: string; bg: string; text: string; bor
   SUPERADMIN: { label: 'SUPERADMIN', bg: 'bg-purple-50 dark:bg-purple-950/80', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
   ADMIN_IT: { label: 'ADMIN IT', bg: 'bg-indigo-50 dark:bg-indigo-950/80', text: 'text-indigo-700 dark:text-indigo-300', border: 'border-indigo-200 dark:border-indigo-800' },
   KEPALA_SEKOLAH: { label: 'KEPALA SEKOLAH', bg: 'bg-amber-50 dark:bg-amber-950/80', text: 'text-amber-800 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
-  ADMIN_TU: { label: 'ADMIN TU (BAU)', bg: 'bg-sky-50 dark:bg-sky-950/80', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
-  BAU: { label: 'ADMIN TU (BAU)', bg: 'bg-sky-50 dark:bg-sky-950/80', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
-  TATA_USAHA: { label: 'ADMIN TU (BAU)', bg: 'bg-sky-50 dark:bg-sky-950/80', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  ADMIN_TU: { label: 'ADMIN TU', bg: 'bg-sky-50 dark:bg-sky-950/80', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  BAU: { label: 'ADMIN TU', bg: 'bg-sky-50 dark:bg-sky-950/80', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  TATA_USAHA: { label: 'ADMIN TU', bg: 'bg-sky-50 dark:bg-sky-950/80', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
   GURU: { label: 'GURU', bg: 'bg-emerald-50 dark:bg-emerald-950/80', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
   PEGAWAI: { label: 'PEGAWAI', bg: 'bg-cyan-50 dark:bg-cyan-950/80', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
   KARYAWAN: { label: 'PEGAWAI', bg: 'bg-cyan-50 dark:bg-cyan-950/80', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
@@ -50,7 +50,7 @@ const ROLE_CONFIG: Record<string, { label: string; bg: string; text: string; bor
 
 const SUB_ROLE_OPTIONS = [
   { value: 'NONE', label: '— Tanpa Sub Role —' },
-  { value: 'ADMIN_TU', label: 'Tata Usaha (Badan Administrasi Umum)' },
+  { value: 'ADMIN_TU', label: 'Tata Usaha' },
   { value: 'WALI_KELAS', label: 'Wali Kelas' },
   { value: 'KEUANGAN_MASUK', label: 'Keuangan Masuk (Tagihan & Verifikasi)' },
   { value: 'KEUANGAN_KELUAR', label: 'Keuangan Keluar (Pengeluaran)' },
@@ -73,9 +73,9 @@ const SUB_ROLE_OPTIONS = [
 ]
 
 const SUB_ROLE_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  ADMIN_TU: { label: 'Tata Usaha (BAU)', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
-  TATA_USAHA: { label: 'Tata Usaha (BAU)', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
-  BAU: { label: 'Tata Usaha (BAU)', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  ADMIN_TU: { label: 'Tata Usaha', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  TATA_USAHA: { label: 'Tata Usaha', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
+  BAU: { label: 'Tata Usaha', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
   WALI_KELAS: { label: 'Wali Kelas', bg: 'bg-blue-50/90 dark:bg-blue-950/60', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
   KEUANGAN: { label: 'Keuangan', bg: 'bg-emerald-50/90 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
   KEUANGAN_MASUK: { label: 'Keuangan Masuk', bg: 'bg-blue-50/90 dark:bg-blue-950/60', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },

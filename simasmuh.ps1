@@ -415,9 +415,41 @@ function Stop-ModeMenu {
     }
 }
 
-# ─── BUILD ───────────────────────────────────────────────────
+# ─── BUILD (DEVOPS & DEVSECOPS PIPELINE) ─────────────────────
+
+function Invoke-DevSecOps-SAST {
+    param([string]$Target = "All")
+    Write-Status "Menjalankan SAST & Security Audit ($Target)..." "Cyan"
+    
+    if ($Target -eq "All" -or $Target -eq "Backend") {
+        Write-Info "Scanning Backend SAST (ESLint & Security rules)..."
+        $bProc = Start-Process -FilePath "cmd.exe" `
+                               -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm run lint" `
+                               -WorkingDirectory $BACKEND_DIR `
+                               -NoNewWindow -Wait -PassThru
+        if ($bProc.ExitCode -ne 0) {
+            Write-Err "SAST Backend menemukan masalah kritis!"
+        } else {
+            Write-Ok "SAST Backend lolos verifikasi."
+        }
+    }
+    
+    if ($Target -eq "All" -or $Target -eq "Frontend") {
+        Write-Info "Scanning Frontend SAST (ESLint & TypeScript rules)..."
+        $fProc = Start-Process -FilePath "cmd.exe" `
+                               -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run lint" `
+                               -WorkingDirectory $FRONTEND_DIR `
+                               -NoNewWindow -Wait -PassThru
+        if ($fProc.ExitCode -ne 0) {
+            Write-Err "SAST Frontend menemukan masalah kritis!"
+        } else {
+            Write-Ok "SAST Frontend lolos verifikasi."
+        }
+    }
+}
 
 function Build-Backend {
+    Invoke-DevSecOps-SAST -Target "Backend"
     Write-Status "Build Backend (nest build)..." "Magenta"
     $proc = Start-Process -FilePath "cmd.exe" `
                           -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm run build 2>&1" `
@@ -432,6 +464,7 @@ function Build-Backend {
 }
 
 function Build-Frontend {
+    Invoke-DevSecOps-SAST -Target "Frontend"
     Write-Status "Build Frontend (next build)..." "Magenta"
     Write-Info  "Proses ini mungkin memerlukan beberapa menit..."
     $proc = Start-Process -FilePath "cmd.exe" `
@@ -1064,6 +1097,7 @@ function Start-TestingSuite {
         Write-Host "  |  [4] Jalankan Frontend Linter           |" -ForegroundColor White
         Write-Host "  |  [5] Audit Performa & SEO (Unlighthouse)|" -ForegroundColor Cyan
         Write-Host "  |  [6] Diagnostik Status & Koneksi        |" -ForegroundColor White
+        Write-Host "  |  [7] DevSecOps & SAST Security Audit    |" -ForegroundColor Green
         Write-Host "  |  [0] Kembali ke Menu Utama              |" -ForegroundColor White
         Write-Host "  +=========================================+" -ForegroundColor Yellow
         Write-Host ""
@@ -1113,6 +1147,12 @@ function Start-TestingSuite {
                 $fListen = Test-PortListening 3000
                 Write-Host "  Port 3000 (Frontend): " -NoNewline
                 if ($fListen) { Write-Ok "AKTIF" } else { Write-Info "MATI" }
+                Write-Host ""
+                Read-Host "  Tekan ENTER untuk kembali"
+            }
+            "7" {
+                Write-Banner
+                Invoke-DevSecOps-SAST -Target "All"
                 Write-Host ""
                 Read-Host "  Tekan ENTER untuk kembali"
             }

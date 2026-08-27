@@ -605,6 +605,15 @@ if [ -n "$1" ]; then
     esac
 fi
 
+invoke_devsecops_sast() {
+    write_status "Menjalankan SAST & Security Audit (ESLint Static Analysis)..."
+    echo "Scanning Backend SAST..."
+    (cd "$BACKEND_DIR" && npm run lint) || write_info "SAST Backend selesai dengan catatan."
+    echo "Scanning Frontend SAST..."
+    (cd "$FRONTEND_DIR" && npm run lint) || write_info "SAST Frontend selesai dengan catatan."
+    write_ok "Audit SAST selesai."
+}
+
 # ─── MAIN MENU ────────────────────────────────────────────────
 while true; do
     write_banner
@@ -620,13 +629,14 @@ while true; do
     echo "  |  [5] Mulai Aplikasi (Mode Staging)      |"
     echo "  |  [6] Mulai Aplikasi (Mode Fallback)     |"
     echo "  |  [7] Restart Aplikasi                   |"
-    echo "  |  [8] Rebuild & Restart (Full)           |"
+    echo "  |  [8] Rebuild & Restart (DevSecOps SAST) |"
     echo "  |  [9] Stop Aplikasi                      |"
-    echo "  |  [10] Build Aplikasi                    |"
+    echo "  |  [10] Build Aplikasi (dengan SAST Scan) |"
     echo "  |  [11] Lihat Log Server                  |"
     echo "  |  [12] Setup File .env                   |"
     echo "  |  [13] Install Dependencies              |"
     echo -e "  |  ${C_GREEN}[14] Setup Lingkungan Baru / Server${C_RESET}    |"
+    echo "  |  [15] DevSecOps & SAST Security Audit   |"
     echo "  |  [0] Keluar dari Script                 |"
     echo -e "${C_CYAN}  +=========================================+${C_RESET}"
     echo ""
@@ -641,13 +651,14 @@ while true; do
         5)  start_apps "Staging"; read -rp "  Tekan ENTER untuk kembali" ;;
         6)  start_apps "Fallback"; read -rp "  Tekan ENTER untuk kembali" ;;
         7)  stop_apps; sleep 1; start_apps "Production"; read -rp "  Tekan ENTER untuk kembali" ;;
-        8)  stop_apps; (cd "$BACKEND_DIR" && npm run build); (cd "$FRONTEND_DIR" && npm run build); start_apps "Production"; read -rp "  Tekan ENTER untuk kembali" ;;
+        8)  stop_apps; invoke_devsecops_sast; (cd "$BACKEND_DIR" && npm run build); (cd "$FRONTEND_DIR" && npm run build); start_apps "Production"; read -rp "  Tekan ENTER untuk kembali" ;;
         9)  stop_apps; read -rp "  Tekan ENTER untuk kembali" ;;
-        10) (cd "$BACKEND_DIR" && npm run build); (cd "$FRONTEND_DIR" && npm run build); read -rp "  Tekan ENTER untuk kembali" ;;
+        10) invoke_devsecops_sast; (cd "$BACKEND_DIR" && npm run build); (cd "$FRONTEND_DIR" && npm run build); read -rp "  Tekan ENTER untuk kembali" ;;
         11) show_logs; read -rp "  Tekan ENTER untuk kembali" ;;
         12) start_setup_env; read -rp "  Tekan ENTER untuk kembali" ;;
         13) start_install_dependencies; read -rp "  Tekan ENTER untuk kembali" ;;
         14) start_environment_setup; read -rp "  Tekan ENTER untuk kembali" ;;
+        15) invoke_devsecops_sast; read -rp "  Tekan ENTER untuk kembali" ;;
         0)  echo "Sampai jumpa!"; break ;;
         *)  write_err "Pilihan tidak valid."; sleep 1 ;;
     esac

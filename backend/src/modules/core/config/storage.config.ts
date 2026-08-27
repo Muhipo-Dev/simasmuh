@@ -50,7 +50,10 @@ export function initStorageDirectories(): void {
       }
     });
   } catch (err: any) {
-    console.error('Failed to initialize storage directories:', err?.message || err);
+    console.error(
+      'Failed to initialize storage directories:',
+      err?.message || err,
+    );
   }
 }
 

@@ -49,7 +49,9 @@ export function getTimeStringUtc7(date: Date = new Date()): string {
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
-  }).format(date).replace(/\./g, ':');
+  })
+    .format(date)
+    .replace(/\./g, ':');
 }
 
 /**
@@ -121,10 +123,15 @@ export function formatDateTimeIndonesia(date: Date | string): string {
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
-  }).format(target).replace(/\./g, ':');
+  })
+    .format(target)
+    .replace(/\./g, ':');
 }
 
-export function getOffsetMinutesForTimezone(tz: string, date: Date = new Date()): number {
+export function getOffsetMinutesForTimezone(
+  tz: string,
+  date: Date = new Date(),
+): number {
   try {
     const dStr = date.toLocaleString('en-US', { timeZone: tz });
     const localDate = new Date(dStr);
@@ -146,7 +153,10 @@ export function formatUtcOffsetString(minutes: number): string {
 /**
  * Mendapatkan informasi lengkap waktu dan konfigurasi server
  */
-export function getServerTimeInfo(locationName: string = 'Ponorogo, Jawa Timur', tz: string = DEFAULT_TIMEZONE): ServerTimeInfo {
+export function getServerTimeInfo(
+  locationName: string = 'Ponorogo, Jawa Timur',
+  tz: string = DEFAULT_TIMEZONE,
+): ServerTimeInfo {
   const now = new Date();
   const effectiveTz = tz || DEFAULT_TIMEZONE;
   const offsetMinutes = getOffsetMinutesForTimezone(effectiveTz, now);
@@ -163,7 +173,9 @@ export function getServerTimeInfo(locationName: string = 'Ponorogo, Jawa Timur',
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
-    }).format(now).replace(/\./g, ':');
+    })
+      .format(now)
+      .replace(/\./g, ':');
 
     dateString = new Intl.DateTimeFormat('id-ID', {
       timeZone: effectiveTz,
@@ -182,7 +194,9 @@ export function getServerTimeInfo(locationName: string = 'Ponorogo, Jawa Timur',
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
-    }).format(now).replace(/\./g, ':');
+    })
+      .format(now)
+      .replace(/\./g, ':');
   } catch {
     // fallback to default wib
   }

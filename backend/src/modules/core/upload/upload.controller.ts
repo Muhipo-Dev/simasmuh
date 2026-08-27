@@ -21,7 +21,10 @@ export class UploadController {
     if (!data.image) {
       return { error: 'No image provided' };
     }
-    const url = await this.uploadService.saveBase64Image(data.image, data.folder);
+    const url = await this.uploadService.saveBase64Image(
+      data.image,
+      data.folder,
+    );
     return { url };
   }
 

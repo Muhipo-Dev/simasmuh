@@ -36,11 +36,13 @@ import { GuestBookModule } from './modules/tu/guest-book/guest-book.module';
 import { SuratKeluarModule } from './modules/tu/surat-keluar/surat-keluar.module';
 import { SuratMasukModule } from './modules/tu/surat-masuk/surat-masuk.module';
 import { SystemLogModule } from './modules/core/system-log/system-log.module';
-
 import { WaitingRoomModule } from './modules/core/waiting-room/waiting-room.module';
 import { WaitingRoomMiddleware } from './modules/core/waiting-room/waiting-room.middleware';
+import { SqlInjectionSanitizerMiddleware } from './modules/core/middlewares/sql-injection-sanitizer.middleware';
 import { APP_GUARD } from '@nestjs/core';
 import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
+
+import { AdaptiveThrottlerGuard } from './modules/core/guards/adaptive-throttler.guard';
 
 @Module({
   imports: [
@@ -50,17 +52,19 @@ import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
       delimiter: '.',
       maxListeners: 20,
     }),
-    // 🛡️ Global Rate Limiter: Proteksi serangan Brute-force & DDoS (100 req per 60 detik default)
+    // 🛡️ Global Rate Limiter: Proteksi serangan Brute-force & DDoS
+    // - Luar Jaringan/Internet: 20 req/detik (burst) & 100 req/menit
+    // - Lokal Jaringan/LAN: 5x lebih besar (100 req/detik & 500 req/menit)
     ThrottlerModule.forRoot([
       {
         name: 'short',
         ttl: 1000,
-        limit: 20, // max 20 req/detik (burst protection)
+        limit: 20, // Internet: 20 req/dtk | Lokal: 100 req/dtk
       },
       {
         name: 'medium',
         ttl: 60000,
-        limit: 120, // max 120 req/menit
+        limit: 100, // Internet: 100 req/menit | Lokal: 500 req/menit
       },
     ]),
     // ⚡ In-Memory Cache Global: Caching respon database untuk performa tinggi
@@ -109,7 +113,7 @@ import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
     AppService,
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard, // Aktifkan Throttler Guard secara global
+      useClass: AdaptiveThrottlerGuard, // Aktifkan Adaptive Throttler Guard (LAN vs Internet)
     },
     {
       provide: APP_GUARD,
@@ -119,7 +123,10 @@ import { ApiKeyGuard } from './modules/core/auth/api-key.guard';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // Terapkan Waiting Room Middleware ke seluruh traffic rute
-    consumer.apply(WaitingRoomMiddleware).forRoutes('*');
+    // 1. Terapkan Proteksi Sanitasi SQL Injection
+    // 2. Terapkan Waiting Room & DDoS Surge Control
+    consumer
+      .apply(SqlInjectionSanitizerMiddleware, WaitingRoomMiddleware)
+      .forRoutes('*');
   }
 }

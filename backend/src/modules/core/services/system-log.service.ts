@@ -2,7 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface CreateLogDto {
-  category: 'AUTH' | 'PRESENSI' | 'KEUANGAN' | 'WHATSAPP' | 'AKADEMIK' | 'SISTEM' | 'SECURITY';
+  category:
+    | 'AUTH'
+    | 'PRESENSI'
+    | 'KEUANGAN'
+    | 'WHATSAPP'
+    | 'AKADEMIK'
+    | 'SISTEM'
+    | 'SECURITY';
   level?: 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL';
   action: string;
   message: string;
@@ -31,7 +38,11 @@ export class SystemLogService {
           level: dto.level || 'INFO',
           action: dto.action,
           message: dto.message,
-          details: dto.details ? (typeof dto.details === 'object' ? dto.details : { raw: dto.details }) : undefined,
+          details: dto.details
+            ? typeof dto.details === 'object'
+              ? dto.details
+              : { raw: dto.details }
+            : undefined,
           ipAddress: dto.ipAddress,
           userAgent: dto.userAgent,
           userId: dto.userId,

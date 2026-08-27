@@ -8,13 +8,19 @@ export class WaitingRoomController {
 
   @Get('status')
   getStatus(@Query('token') token: string, @Req() req: Request) {
-    const ip = req.ip || req.headers['x-forwarded-for']?.toString() || req.socket.remoteAddress;
+    const ip =
+      req.ip ||
+      req.headers['x-forwarded-for']?.toString() ||
+      req.socket.remoteAddress;
     return this.waitingRoomService.getOrCreateQueue(token, ip);
   }
 
   @Post('heartbeat')
   heartbeat(@Body() body: { token?: string }, @Req() req: Request) {
-    const ip = req.ip || req.headers['x-forwarded-for']?.toString() || req.socket.remoteAddress;
+    const ip =
+      req.ip ||
+      req.headers['x-forwarded-for']?.toString() ||
+      req.socket.remoteAddress;
     return this.waitingRoomService.getOrCreateQueue(body.token, ip);
   }
 
@@ -24,7 +30,18 @@ export class WaitingRoomController {
   }
 
   @Post('admin/config')
-  updateConfig(@Body() body: { maxCapacity?: number; maxRps?: number; forceEnabled?: boolean }) {
-    return this.waitingRoomService.setCapacity(body.maxCapacity, body.maxRps, body.forceEnabled);
+  updateConfig(
+    @Body()
+    body: {
+      maxCapacity?: number;
+      maxRps?: number;
+      forceEnabled?: boolean;
+    },
+  ) {
+    return this.waitingRoomService.setCapacity(
+      body.maxCapacity,
+      body.maxRps,
+      body.forceEnabled,
+    );
   }
 }

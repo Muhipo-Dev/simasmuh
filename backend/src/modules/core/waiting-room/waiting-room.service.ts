@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
+import * as os from 'os';
 
 interface QueueSlot {
   token: string;
@@ -57,19 +58,31 @@ export class WaitingRoomService {
     }
 
     // Bersihkan antrean yang abandoned (tidak refresh status > 30 detik)
-    this.waitingQueue = this.waitingQueue.filter((slot) => now - slot.lastActive < 35000);
+    this.waitingQueue = this.waitingQueue.filter(
+      (slot) => now - slot.lastActive < 35000,
+    );
 
     // Admit pengguna antrean terdepan jika kuota slot aktif masih tersedia
     const availableSlots = this.maxConcurrentActive - this.activeTokens.size;
-    if (availableSlots > 0 && this.waitingQueue.length > 0 && !this.isTrafficCritical()) {
-      const toAdmitCount = Math.min(availableSlots, Math.ceil(this.maxConcurrentActive * 0.1), this.waitingQueue.length);
+    if (
+      availableSlots > 0 &&
+      this.waitingQueue.length > 0 &&
+      !this.isTrafficCritical()
+    ) {
+      const toAdmitCount = Math.min(
+        availableSlots,
+        Math.ceil(this.maxConcurrentActive * 0.1),
+        this.waitingQueue.length,
+      );
       for (let i = 0; i < toAdmitCount; i++) {
         const nextUser = this.waitingQueue.shift();
         if (nextUser) {
           nextUser.admittedAt = now;
           nextUser.lastActive = now;
           this.activeTokens.set(nextUser.token, nextUser);
-          this.logger.log(`🚪 [Waiting Room] User ${nextUser.token.slice(0, 8)} diizinkan masuk ke sistem (Sisa antrean: ${this.waitingQueue.length})`);
+          this.logger.log(
+            `🚪 [Waiting Room] User ${nextUser.token.slice(0, 8)} diizinkan masuk ke sistem (Sisa antrean: ${this.waitingQueue.length})`,
+          );
         }
       }
     }
@@ -80,7 +93,30 @@ export class WaitingRoomService {
   }
 
   public isTrafficCritical(): boolean {
-    return this.forceEnabled || this.currentRps > this.maxRpsThreshold || this.activeTokens.size >= this.maxConcurrentActive;
+    if (this.forceEnabled) return true;
+
+    // 1. Cek RPS (Request Per Detik)
+    if (this.currentRps > this.maxRpsThreshold) return true;
+
+    // 2. Cek Jumlah Token Pengguna Aktif Serentak
+    if (this.activeTokens.size >= this.maxConcurrentActive) return true;
+
+    // 3. AUTO-DETEKSI BEBAN HARDWARE NYATA (RAM & System Memory)
+    try {
+      const totalMem = os.totalmem();
+      const freeMem = os.freemem();
+      const usedMem = totalMem - freeMem;
+      const memUsagePercent = (usedMem / totalMem) * 100;
+
+      // Jika RAM sistem yang terpakai melebihi 85%, aktifkan otomatis Mode Ruang Tunggu
+      if (memUsagePercent >= 85) {
+        return true;
+      }
+    } catch {
+      // ignore
+    }
+
+    return false;
   }
 
   public isAdmitted(token?: string): boolean {
@@ -93,7 +129,16 @@ export class WaitingRoomService {
     return false;
   }
 
-  public getOrCreateQueue(token?: string, ip?: string): { token: string; status: 'ADMITTED' | 'QUEUED'; position: number; totalWaiting: number; estimatedWaitSeconds: number } {
+  public getOrCreateQueue(
+    token?: string,
+    ip?: string,
+  ): {
+    token: string;
+    status: 'ADMITTED' | 'QUEUED';
+    position: number;
+    totalWaiting: number;
+    estimatedWaitSeconds: number;
+  } {
     const now = Date.now();
 
     // 1. Cek apakah sudah admitted
@@ -129,7 +174,9 @@ export class WaitingRoomService {
     }
 
     // 3. Sistem sedang lonjakan beban / antrean penuh -> Masukkan ke Waiting Queue
-    let existingIndex = token ? this.waitingQueue.findIndex((s) => s.token === token) : -1;
+    let existingIndex = token
+      ? this.waitingQueue.findIndex((s) => s.token === token)
+      : -1;
     let slotToken = token;
 
     if (existingIndex >= 0) {

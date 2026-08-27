@@ -23,7 +23,9 @@ export class WaitingRoomMiddleware implements NestMiddleware {
       return next();
     }
 
-    const clientToken = (req.headers['x-waiting-room-token'] as string) || (req.query['wr_token'] as string);
+    const clientToken =
+      (req.headers['x-waiting-room-token'] as string) ||
+      (req.query['wr_token'] as string);
 
     // Jika server sedang kondisi lonjakan traffic kritis dan token belum di-admit
     if (this.waitingRoomService.isTrafficCritical()) {
@@ -32,7 +34,8 @@ export class WaitingRoomMiddleware implements NestMiddleware {
         return res.status(429).json({
           statusCode: 429,
           error: 'Waiting Room Required',
-          message: 'Lalu lintas server sedang sangat padat. Anda dialihkan ke ruang tunggu antrean.',
+          message:
+            'Lalu lintas server sedang sangat padat. Anda dialihkan ke ruang tunggu antrean.',
           redirectWaitingRoom: true,
         });
       }

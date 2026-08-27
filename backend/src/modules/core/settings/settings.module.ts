@@ -9,4 +9,3 @@ import { ProgramConfigService } from './program-config.service';
   exports: [ProgramConfigService],
 })
 export class SettingsModule {}
-

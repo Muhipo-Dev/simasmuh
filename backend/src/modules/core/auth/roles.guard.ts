@@ -82,10 +82,7 @@ export class RolesGuard implements CanActivate {
     const permissions: string[] = [];
 
     // Admin IT and SUPERADMIN have all permissions
-    if (
-      user.role === UserRole.ADMIN_IT ||
-      user.role === 'SUPERADMIN'
-    ) {
+    if (user.role === UserRole.ADMIN_IT || user.role === 'SUPERADMIN') {
       return Object.values(PaymentPermission);
     }
 
@@ -104,11 +101,27 @@ export class RolesGuard implements CanActivate {
     }
 
     // Finance (Keuangan) permissions granular setup
-    const userSubRoles = [user.subRole, user.subRole2, user.subRole3, user.subRole4, user.subRole5, user.role];
+    const userSubRoles = [
+      user.subRole,
+      user.subRole2,
+      user.subRole3,
+      user.subRole4,
+      user.subRole5,
+      user.role,
+    ];
     const isKeuanganMasuk = userSubRoles.includes('KEUANGAN_MASUK');
     const isKeuanganKeluar = userSubRoles.includes('KEUANGAN_KELUAR');
-    const isKeuanganAll = userSubRoles.includes('KEUANGAN_ALL') || userSubRoles.includes('SUPERVISOR_KEUANGAN') || user.role === 'SUPERADMIN' || user.role === 'ADMIN_IT';
-    const isGeneralKeuangan = isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar || user.role === UserRole.KEUANGAN || userSubRoles.includes(SubRole.KEUANGAN);
+    const isKeuanganAll =
+      userSubRoles.includes('KEUANGAN_ALL') ||
+      userSubRoles.includes('SUPERVISOR_KEUANGAN') ||
+      user.role === 'SUPERADMIN' ||
+      user.role === 'ADMIN_IT';
+    const isGeneralKeuangan =
+      isKeuanganAll ||
+      isKeuanganMasuk ||
+      isKeuanganKeluar ||
+      user.role === UserRole.KEUANGAN ||
+      userSubRoles.includes(SubRole.KEUANGAN);
 
     if (isGeneralKeuangan) {
       if (isKeuanganAll) {
@@ -146,7 +159,6 @@ export class RolesGuard implements CanActivate {
       }
     }
 
-
     // Headmaster (KEPALA_SEKOLAH) supervisory permissions (read-only reports & bills)
     if (
       user.role === UserRole.KEPALA_SEKOLAH ||
@@ -161,7 +173,10 @@ export class RolesGuard implements CanActivate {
     }
 
     // Admin TU (BAU) permissions
-    const isBau = userSubRoles.includes('ADMIN_TU') || userSubRoles.includes('BAU') || userSubRoles.includes('TATA_USAHA');
+    const isBau =
+      userSubRoles.includes('ADMIN_TU') ||
+      userSubRoles.includes('BAU') ||
+      userSubRoles.includes('TATA_USAHA');
     if (isBau) {
       permissions.push(
         PaymentPermission.VIEW_ALL_BILLS,

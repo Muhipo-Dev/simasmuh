@@ -24,13 +24,16 @@ export class ApiKeyGuard implements CanActivate {
 
     if (
       (apiKey && validApiKeys.includes(apiKey)) ||
-      (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) ||
+      (authHeader &&
+        typeof authHeader === 'string' &&
+        authHeader.startsWith('Bearer ')) ||
       request.url.startsWith('/announcements/public') ||
       request.url.startsWith('/settings/public') ||
       request.url.startsWith('/settings/server-time') ||
       request.url.startsWith('/settings/time-sync') ||
       request.url.startsWith('/uploads/') ||
       request.url.startsWith('/waiting-room') ||
+      request.url.startsWith('/guest-book/public') ||
       request.url.startsWith('/auth/login') ||
       request.url === '/'
     ) {

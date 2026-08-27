@@ -6,7 +6,10 @@ import { STORAGE_DIRS, STORAGE_ROOT } from '../config/storage.config';
 
 @Injectable()
 export class UploadService {
-  async saveBase64Image(base64Str: string, folder?: 'thumbnails' | 'profiles' | 'journals' | string): Promise<string> {
+  async saveBase64Image(
+    base64Str: string,
+    folder?: 'thumbnails' | 'profiles' | 'journals' | string,
+  ): Promise<string> {
     const matches = base64Str.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
       throw new Error('Invalid input string');
@@ -20,7 +23,7 @@ export class UploadService {
 
     const buffer = Buffer.from(matches[2], 'base64');
     const filename = `${uuidv4()}-${Date.now()}.${extension}`;
-    
+
     // Tentukan direktori penyimpanan target
     let targetDir = STORAGE_ROOT;
     let urlPrefix = '/uploads';
@@ -94,10 +97,7 @@ export class UploadService {
   async deleteCarouselImage(filename: string): Promise<boolean> {
     // Only allow deleting files in carousel dir
     const safeFilename = path.basename(filename);
-    const filePath = path.join(
-      STORAGE_DIRS.carousel,
-      safeFilename,
-    );
+    const filePath = path.join(STORAGE_DIRS.carousel, safeFilename);
 
     if (fs.existsSync(filePath)) {
       await fs.promises.unlink(filePath);

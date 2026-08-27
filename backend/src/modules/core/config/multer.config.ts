@@ -8,7 +8,6 @@ import { STORAGE_DIRS } from './storage.config';
 
 const tempDir = STORAGE_DIRS.temp;
 
-
 export const multerConfig = {
   storage: diskStorage({
     destination: (req: Request, file: Express.Multer.File, cb) => {
@@ -105,7 +104,12 @@ export const paymentProofMulterConfig = {
   },
   fileFilter: (req: Request, file: Express.Multer.File, cb) => {
     // Payment proofs should be images or PDFs only
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    const allowedMimes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/pdf',
+    ];
 
     if (!allowedMimes.includes(file.mimetype)) {
       return cb(

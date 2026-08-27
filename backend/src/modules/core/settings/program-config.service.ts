@@ -18,14 +18,62 @@ export interface UpdateProgramConfigDto {
 }
 
 const DEFAULT_PROGRAMS = [
-  { code: 'tahfidz', name: 'Tahfidz', defaultSpp: 360000, defaultBeasiswa: 0, description: 'Program Hifdzil Qur\'an' },
-  { code: 'saintek', name: 'SAINSOS', defaultSpp: 450000, defaultBeasiswa: 0, description: 'Program Sains & Sosial (SAINSOS)' },
-  { code: 'olahraga', name: 'Olahraga', defaultSpp: 330000, defaultBeasiswa: 0, description: 'Program Bakat Olahraga' },
-  { code: 'MIC', name: 'Muhipo Internasional Class', defaultSpp: 600000, defaultBeasiswa: 0, description: 'Muhipo Internasional Class (MIC)' },
-  { code: 'seni budaya', name: 'Seni Budaya', defaultSpp: 330000, defaultBeasiswa: 0, description: 'Program Seni & Kesenian' },
-  { code: 'ai', name: 'Artificial Intelligence', defaultSpp: 500000, defaultBeasiswa: 0, description: 'Program Artificial Intelligence (AI)' },
-  { code: 'inklusi', name: 'Inklusi', defaultSpp: 240000, defaultBeasiswa: 0, description: 'Program Pendampingan Inklusi' },
-  { code: 'enterpreneur', name: 'Enterpreneur', defaultSpp: 390000, defaultBeasiswa: 0, description: 'Program Kewirausahaan (Enterpreneur)' },
+  {
+    code: 'tahfidz',
+    name: 'Tahfidz',
+    defaultSpp: 360000,
+    defaultBeasiswa: 0,
+    description: "Program Hifdzil Qur'an",
+  },
+  {
+    code: 'saintek',
+    name: 'SAINSOS',
+    defaultSpp: 450000,
+    defaultBeasiswa: 0,
+    description: 'Program Sains & Sosial (SAINSOS)',
+  },
+  {
+    code: 'olahraga',
+    name: 'Olahraga',
+    defaultSpp: 330000,
+    defaultBeasiswa: 0,
+    description: 'Program Bakat Olahraga',
+  },
+  {
+    code: 'MIC',
+    name: 'Muhipo Internasional Class',
+    defaultSpp: 600000,
+    defaultBeasiswa: 0,
+    description: 'Muhipo Internasional Class (MIC)',
+  },
+  {
+    code: 'seni budaya',
+    name: 'Seni Budaya',
+    defaultSpp: 330000,
+    defaultBeasiswa: 0,
+    description: 'Program Seni & Kesenian',
+  },
+  {
+    code: 'ai',
+    name: 'Artificial Intelligence',
+    defaultSpp: 500000,
+    defaultBeasiswa: 0,
+    description: 'Program Artificial Intelligence (AI)',
+  },
+  {
+    code: 'inklusi',
+    name: 'Inklusi',
+    defaultSpp: 240000,
+    defaultBeasiswa: 0,
+    description: 'Program Pendampingan Inklusi',
+  },
+  {
+    code: 'enterpreneur',
+    name: 'Enterpreneur',
+    defaultSpp: 390000,
+    defaultBeasiswa: 0,
+    description: 'Program Kewirausahaan (Enterpreneur)',
+  },
 ];
 
 @Injectable()
@@ -80,7 +128,9 @@ export class ProgramConfigService implements OnModuleInit {
   }
 
   async updateProgram(id: string, dto: UpdateProgramConfigDto) {
-    const existing = await this.prisma.programConfig.findUnique({ where: { id } });
+    const existing = await this.prisma.programConfig.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new Error('Program tidak ditemukan.');
     }
@@ -90,15 +140,21 @@ export class ProgramConfigService implements OnModuleInit {
       data: {
         ...(dto.code !== undefined && { code: dto.code.trim() }),
         ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.defaultSpp !== undefined && { defaultSpp: Number(dto.defaultSpp) }),
-        ...(dto.defaultBeasiswa !== undefined && { defaultBeasiswa: Number(dto.defaultBeasiswa) }),
+        ...(dto.defaultSpp !== undefined && {
+          defaultSpp: Number(dto.defaultSpp),
+        }),
+        ...(dto.defaultBeasiswa !== undefined && {
+          defaultBeasiswa: Number(dto.defaultBeasiswa),
+        }),
         ...(dto.description !== undefined && { description: dto.description }),
       },
     });
   }
 
   async deleteProgram(id: string) {
-    const existing = await this.prisma.programConfig.findUnique({ where: { id } });
+    const existing = await this.prisma.programConfig.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new Error('Program tidak ditemukan.');
     }

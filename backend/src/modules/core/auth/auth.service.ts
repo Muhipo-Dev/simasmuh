@@ -16,7 +16,12 @@ export class AuthService {
     private systemLogService: SystemLogService,
   ) {}
 
-  async login(emailOrUsername: string, password: string, ipAddress?: string, userAgent?: string) {
+  async login(
+    emailOrUsername: string,
+    password: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
     const user = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -54,7 +59,9 @@ export class AuthService {
         ipAddress,
         userAgent,
       });
-      throw new UnauthorizedException('Email, username, nomor HP, atau NIP/NIS salah');
+      throw new UnauthorizedException(
+        'Email, username, nomor HP, atau NIP/NIS salah',
+      );
     }
 
     // Support both hashed and plain passwords (for dev seeded data)
@@ -79,14 +86,18 @@ export class AuthService {
     }
 
     // Provide robust fallback for WALI_MURID who might type NIS/NISN of connected students
-    if (!isValid && user.role === 'WALI_MURID' && user.parentProfile?.students) {
+    if (
+      !isValid &&
+      user.role === 'WALI_MURID' &&
+      user.parentProfile?.students
+    ) {
       const studentNisMatches = user.parentProfile.students.some(
         (ps) =>
           ps.student &&
           (password === ps.student.nis ||
             password === ps.student.nisn ||
             password === user.phone ||
-            password === user.username)
+            password === user.username),
       );
       if (studentNisMatches) {
         isValid = true;
@@ -114,7 +125,11 @@ export class AuthService {
     let devBrowser = 'Browser';
 
     if (userAgent) {
-      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) {
+      if (
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          userAgent,
+        )
+      ) {
         devType = 'Ponsel / Tablet';
       }
       if (/Windows/i.test(userAgent)) devOs = 'Windows';
@@ -125,7 +140,8 @@ export class AuthService {
 
       if (/Edg/i.test(userAgent)) devBrowser = 'Microsoft Edge';
       else if (/Chrome/i.test(userAgent)) devBrowser = 'Google Chrome';
-      else if (/Safari/i.test(userAgent) && !/Chrome/i.test(userAgent)) devBrowser = 'Safari';
+      else if (/Safari/i.test(userAgent) && !/Chrome/i.test(userAgent))
+        devBrowser = 'Safari';
       else if (/Firefox/i.test(userAgent)) devBrowser = 'Mozilla Firefox';
     }
 
@@ -190,11 +206,18 @@ export class AuthService {
     };
   }
 
-  async logoutSession(userId: string, sessionId?: string, ipAddress?: string, userAgent?: string) {
+  async logoutSession(
+    userId: string,
+    sessionId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
     if (sessionId) {
-      const session = await this.prisma.userSession.findUnique({ where: { id: sessionId } });
+      const session = await this.prisma.userSession.findUnique({
+        where: { id: sessionId },
+      });
       await this.prisma.userSession.updateMany({
         where: { id: sessionId, userId },
         data: { isActive: false },
@@ -236,7 +259,9 @@ export class AuthService {
       });
     }
 
-    return { success: true, message: 'Sesi perangkat berhasil dikeluarkan / diakhiri.' };
+    return {
+      success: true,
+      message: 'Sesi perangkat berhasil dikeluarkan / diakhiri.',
+    };
   }
 }
-

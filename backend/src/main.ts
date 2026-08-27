@@ -14,7 +14,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
 
   // Enable trust proxy for reverse proxies, Cloudflare, ngrok, localtunnel, etc.
-  const expressApp = app.getHttpAdapter().getInstance() as any;
+  const expressApp = app.getHttpAdapter().getInstance();
   if (expressApp && typeof expressApp.set === 'function') {
     expressApp.set('trust proxy', true);
   }
@@ -49,7 +49,10 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin, callback) => {
       // Izinkan request tanpa origin (mobile apps, server-to-server, curl) atau localhost
-      if (!origin || /^http:\/\/(localhost|127\.0.0\.1)(:[0-9]+)?$/.test(origin)) {
+      if (
+        !origin ||
+        /^http:\/\/(localhost|127\.0.0\.1)(:[0-9]+)?$/.test(origin)
+      ) {
         callback(null, true);
       } else {
         callback(null, true); // Mendukung multi-domain lokal/sekolah
@@ -57,7 +60,12 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-Requested-With'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-api-key',
+      'X-Requested-With',
+    ],
   });
 
   // Tingkatkan limit payload untuk upload data yang lebih besar (hingga 50mb)

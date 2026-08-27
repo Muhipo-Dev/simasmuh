@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
@@ -23,17 +27,15 @@ export class SuratKeluarService {
 
     const surat = await this.prisma.suratKeluar.findFirst({
       where: {
-        OR: [
-          { eSignToken: cleanToken },
-          { id: cleanToken },
-        ],
+        OR: [{ eSignToken: cleanToken }, { id: cleanToken }],
       },
     });
 
     if (!surat) {
       return {
         valid: false,
-        message: 'Tanda Tangan Digital / Surat Keluar Resmi tidak ditemukan dalam basis data SIMASMUH.',
+        message:
+          'Tanda Tangan Digital / Surat Keluar Resmi tidak ditemukan dalam basis data SIMASMUH.',
       };
     }
 
@@ -41,12 +43,17 @@ export class SuratKeluarService {
 
     return {
       valid: true,
-      message: '✓ TERVERIFIKASI RESMI ASLI - Tanda Tangan Digital Surat Keluar Sah & Terhubung Basis Data SIMASMUH',
+      message:
+        '✓ TERVERIFIKASI RESMI ASLI - Tanda Tangan Digital Surat Keluar Sah & Terhubung Basis Data SIMASMUH',
       data: {
         id: surat.id,
         eSignToken: surat.eSignToken || cleanToken,
         eSignSignedAt: surat.eSignSignedAt || surat.updatedAt,
-        eSignSignedBy: surat.signerName || surat.penandatangan || setting?.principalName || 'Kepala Sekolah SIMASMUH',
+        eSignSignedBy:
+          surat.signerName ||
+          surat.penandatangan ||
+          setting?.principalName ||
+          'Kepala Sekolah SIMASMUH',
         signatureImage: surat.signatureImage || null,
         eSignHash: `SHA256-SURAT-KELUAR-${surat.id.slice(0, 8).toUpperCase()}-OK`,
         status: surat.status,
@@ -67,8 +74,14 @@ export class SuratKeluarService {
           phone: setting?.phone || '088293733330',
           email: setting?.email || 'info@smam1ponorogo.sch.id',
           logoUrl: setting?.logoUrl || '/muhipo-log.jpg',
-          principalName: surat.signerName || setting?.principalName || 'Kepala Sekolah SIMASMUH',
-          principalNip: surat.signerNbm || setting?.principalNip || 'NIP/NBM. 19780512 200501 1 003',
+          principalName:
+            surat.signerName ||
+            setting?.principalName ||
+            'Kepala Sekolah SIMASMUH',
+          principalNip:
+            surat.signerNbm ||
+            setting?.principalNip ||
+            'NIP/NBM. 19780512 200501 1 003',
         },
       },
     };
@@ -82,7 +95,9 @@ export class SuratKeluarService {
         tujuanPenerima: dto.tujuanPenerima,
         instansiPenerima: dto.instansiPenerima || null,
         perihal: dto.perihal,
-        tanggalSurat: dto.tanggalSurat ? new Date(dto.tanggalSurat) : new Date(),
+        tanggalSurat: dto.tanggalSurat
+          ? new Date(dto.tanggalSurat)
+          : new Date(),
         jenisSurat: dto.jenisSurat || 'SURAT_KETERANGAN',
         penandatangan: dto.penandatangan || 'Kepala Sekolah',
         status: dto.status || 'DRAF',
@@ -110,7 +125,11 @@ export class SuratKeluarService {
     };
   }
 
-  async findAll(query: { search?: string; status?: string; jenisSurat?: string }) {
+  async findAll(query: {
+    search?: string;
+    status?: string;
+    jenisSurat?: string;
+  }) {
     const { search, status, jenisSurat } = query;
     const where: any = {};
 
@@ -146,13 +165,17 @@ export class SuratKeluarService {
   async findOne(id: string) {
     const surat = await this.prisma.suratKeluar.findUnique({ where: { id } });
     if (!surat) {
-      throw new NotFoundException(`Dokumen Surat Keluar ID ${id} tidak ditemukan.`);
+      throw new NotFoundException(
+        `Dokumen Surat Keluar ID ${id} tidak ditemukan.`,
+      );
     }
     return { success: true, data: surat };
   }
 
   async update(id: string, dto: UpdateSuratKeluarDto) {
-    const existing = await this.prisma.suratKeluar.findUnique({ where: { id } });
+    const existing = await this.prisma.suratKeluar.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new NotFoundException(`Dokumen Surat Keluar tidak ditemukan.`);
     }
@@ -161,22 +184,39 @@ export class SuratKeluarService {
       where: { id },
       data: {
         nomorSurat: dto.nomorSurat || existing.nomorSurat,
-        nomorAgenda: dto.nomorAgenda !== undefined ? dto.nomorAgenda : existing.nomorAgenda,
+        nomorAgenda:
+          dto.nomorAgenda !== undefined
+            ? dto.nomorAgenda
+            : existing.nomorAgenda,
         tujuanPenerima: dto.tujuanPenerima || existing.tujuanPenerima,
-        instansiPenerima: dto.instansiPenerima !== undefined ? dto.instansiPenerima : existing.instansiPenerima,
+        instansiPenerima:
+          dto.instansiPenerima !== undefined
+            ? dto.instansiPenerima
+            : existing.instansiPenerima,
         perihal: dto.perihal || existing.perihal,
         jenisSurat: dto.jenisSurat || existing.jenisSurat,
         penandatangan: dto.penandatangan || existing.penandatangan,
         status: dto.status || existing.status,
         catatan: dto.catatan !== undefined ? dto.catatan : existing.catatan,
-        catatanRevisi: dto.catatanRevisi !== undefined ? dto.catatanRevisi : existing.catatanRevisi,
+        catatanRevisi:
+          dto.catatanRevisi !== undefined
+            ? dto.catatanRevisi
+            : existing.catatanRevisi,
         eSignToken: dto.eSignToken || existing.eSignToken,
-        eSignSignedAt: dto.eSignSignedAt ? new Date(dto.eSignSignedAt) : existing.eSignSignedAt,
-        signerName: dto.signerName !== undefined ? dto.signerName : existing.signerName,
-        signerNbm: dto.signerNbm !== undefined ? dto.signerNbm : existing.signerNbm,
-        signatureImage: dto.signatureImage || dto.signatureDataUrl || existing.signatureImage,
+        eSignSignedAt: dto.eSignSignedAt
+          ? new Date(dto.eSignSignedAt)
+          : existing.eSignSignedAt,
+        signerName:
+          dto.signerName !== undefined ? dto.signerName : existing.signerName,
+        signerNbm:
+          dto.signerNbm !== undefined ? dto.signerNbm : existing.signerNbm,
+        signatureImage:
+          dto.signatureImage || dto.signatureDataUrl || existing.signatureImage,
         fileUrl: dto.fileUrl !== undefined ? dto.fileUrl : existing.fileUrl,
-        templateData: dto.templateData !== undefined ? dto.templateData : (existing.templateData as any),
+        templateData:
+          dto.templateData !== undefined
+            ? dto.templateData
+            : (existing.templateData as any),
       },
     });
 
@@ -196,7 +236,9 @@ export class SuratKeluarService {
   }
 
   async remove(id: string, password?: string, userId?: string) {
-    const existing = await this.prisma.suratKeluar.findUnique({ where: { id } });
+    const existing = await this.prisma.suratKeluar.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new NotFoundException(`Dokumen Surat Keluar tidak ditemukan.`);
     }
@@ -208,7 +250,9 @@ export class SuratKeluarService {
           ? await bcrypt.compare(password, user.password)
           : user.password === password;
         if (!isMatch) {
-          throw new UnauthorizedException('Kata sandi keamanan yang Anda masukkan salah.');
+          throw new UnauthorizedException(
+            'Kata sandi keamanan yang Anda masukkan salah.',
+          );
         }
       }
     }

@@ -51,7 +51,12 @@ export class ClassesService {
   }
 
   async createBulk(
-    dataArray: { name: string; gradeLevel: number; academicYear: string; homeroomTeacherId?: string }[],
+    dataArray: {
+      name: string;
+      gradeLevel: number;
+      academicYear: string;
+      homeroomTeacherId?: string;
+    }[],
   ) {
     const results = await this.prisma.$transaction(
       dataArray.map((data) => this.prisma.class.create({ data })),
@@ -66,7 +71,12 @@ export class ClassesService {
 
   async update(
     id: string,
-    data: { name?: string; gradeLevel?: number; academicYear?: string; homeroomTeacherId?: string },
+    data: {
+      name?: string;
+      gradeLevel?: number;
+      academicYear?: string;
+      homeroomTeacherId?: string;
+    },
   ) {
     const oldClass = await this.prisma.class.findUnique({ where: { id } });
     const updated = await this.prisma.class.update({
@@ -74,7 +84,10 @@ export class ClassesService {
       data,
     });
 
-    if (oldClass?.homeroomTeacherId && oldClass.homeroomTeacherId !== data.homeroomTeacherId) {
+    if (
+      oldClass?.homeroomTeacherId &&
+      oldClass.homeroomTeacherId !== data.homeroomTeacherId
+    ) {
       await this.syncTeacherHomeroomSubRole(oldClass.homeroomTeacherId);
     }
     if (data.homeroomTeacherId) {
@@ -119,15 +132,30 @@ export class ClassesService {
           user.subRole5 !== 'WALI_KELAS'
         ) {
           if (!user.subRole) {
-            await this.prisma.user.update({ where: { id: user.id }, data: { subRole: 'WALI_KELAS' } });
+            await this.prisma.user.update({
+              where: { id: user.id },
+              data: { subRole: 'WALI_KELAS' },
+            });
           } else if (!user.subRole2) {
-            await this.prisma.user.update({ where: { id: user.id }, data: { subRole2: 'WALI_KELAS' } });
+            await this.prisma.user.update({
+              where: { id: user.id },
+              data: { subRole2: 'WALI_KELAS' },
+            });
           } else if (!user.subRole3) {
-            await this.prisma.user.update({ where: { id: user.id }, data: { subRole3: 'WALI_KELAS' } });
+            await this.prisma.user.update({
+              where: { id: user.id },
+              data: { subRole3: 'WALI_KELAS' },
+            });
           } else if (!user.subRole4) {
-            await this.prisma.user.update({ where: { id: user.id }, data: { subRole4: 'WALI_KELAS' } });
+            await this.prisma.user.update({
+              where: { id: user.id },
+              data: { subRole4: 'WALI_KELAS' },
+            });
           } else if (!user.subRole5) {
-            await this.prisma.user.update({ where: { id: user.id }, data: { subRole5: 'WALI_KELAS' } });
+            await this.prisma.user.update({
+              where: { id: user.id },
+              data: { subRole5: 'WALI_KELAS' },
+            });
           }
         }
       } else {
@@ -139,7 +167,10 @@ export class ClassesService {
         if (user.subRole4 === 'WALI_KELAS') updateData.subRole4 = null;
         if (user.subRole5 === 'WALI_KELAS') updateData.subRole5 = null;
         if (Object.keys(updateData).length > 0) {
-          await this.prisma.user.update({ where: { id: user.id }, data: updateData });
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data: updateData,
+          });
         }
       }
     } catch (e) {

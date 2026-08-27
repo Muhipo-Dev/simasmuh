@@ -88,17 +88,23 @@ export class DailyAttendancesService {
 
       // Kirim Notifikasi WhatsApp Otomatis
       if (user) {
-        this.whatsAppService.sendAttendanceNotification({
-          studentOrUserName: user.name,
-          role: user.role,
-          phone: user.phone || user.teacherProfile?.phone || user.student?.phone || undefined,
-          parentPhone: user.student?.parentPhone || undefined,
-          className: user.student?.class?.name || undefined,
-          scanType: 'MASUK',
-          time: timeString,
-          date: dateFormatted,
-          method: 'Scan QR Code SIMASMUH',
-        }).catch(() => {});
+        this.whatsAppService
+          .sendAttendanceNotification({
+            studentOrUserName: user.name,
+            role: user.role,
+            phone:
+              user.phone ||
+              user.teacherProfile?.phone ||
+              user.student?.phone ||
+              undefined,
+            parentPhone: user.student?.parentPhone || undefined,
+            className: user.student?.class?.name || undefined,
+            scanType: 'MASUK',
+            time: timeString,
+            date: dateFormatted,
+            method: 'Scan QR Code SIMASMUH',
+          })
+          .catch(() => {});
       }
 
       return {
@@ -136,17 +142,23 @@ export class DailyAttendancesService {
 
     // Kirim Notifikasi WhatsApp Otomatis
     if (user) {
-      this.whatsAppService.sendAttendanceNotification({
-        studentOrUserName: user.name,
-        role: user.role,
-        phone: user.phone || user.teacherProfile?.phone || user.student?.phone || undefined,
-        parentPhone: user.student?.parentPhone || undefined,
-        className: user.student?.class?.name || undefined,
-        scanType: 'PULANG',
-        time: timeString,
-        date: dateFormatted,
-        method: 'Scan QR Code SIMASMUH',
-      }).catch(() => {});
+      this.whatsAppService
+        .sendAttendanceNotification({
+          studentOrUserName: user.name,
+          role: user.role,
+          phone:
+            user.phone ||
+            user.teacherProfile?.phone ||
+            user.student?.phone ||
+            undefined,
+          parentPhone: user.student?.parentPhone || undefined,
+          className: user.student?.class?.name || undefined,
+          scanType: 'PULANG',
+          time: timeString,
+          date: dateFormatted,
+          method: 'Scan QR Code SIMASMUH',
+        })
+        .catch(() => {});
     }
 
     return {
@@ -303,7 +315,10 @@ export class DailyAttendancesService {
       },
     });
 
-    if (parentUser?.role === 'WALI_MURID' || parentUser?.parentProfile?.students?.length) {
+    if (
+      parentUser?.role === 'WALI_MURID' ||
+      parentUser?.parentProfile?.students?.length
+    ) {
       const firstStudent = parentUser?.parentProfile?.students?.[0]?.student;
       if (firstStudent?.userId) {
         targetUserId = firstStudent.userId;
@@ -369,7 +384,9 @@ export class DailyAttendancesService {
         if (izin) {
           // Parse tipe izin & bersihkan string alasan dari tag internal
           const rawAlasan = izin.alasan || '';
-          const isDisp = rawAlasan.includes('[IZIN DISPENSASI]') || rawAlasan.includes('[DISPENSASI');
+          const isDisp =
+            rawAlasan.includes('[IZIN DISPENSASI]') ||
+            rawAlasan.includes('[DISPENSASI');
           const isSakit = rawAlasan.includes('[IZIN SAKIT]');
           const isKeluarga = rawAlasan.includes('[IZIN KELUARGA]');
 
@@ -390,7 +407,9 @@ export class DailyAttendancesService {
 
           const rentangIzin = isDisp
             ? `(Jam: ${izin.waktuKeluar} - ${izin.estimasiKembali || 'Selesai'})`
-            : (izin.estimasiKembali?.startsWith('s/d ') ? `(${izin.estimasiKembali})` : '(1 Hari)');
+            : izin.estimasiKembali?.startsWith('s/d ')
+              ? `(${izin.estimasiKembali})`
+              : '(1 Hari)';
 
           const detailIzin = `${labelKategori} ${rentangIzin}: ${cleanAlasan}`;
 

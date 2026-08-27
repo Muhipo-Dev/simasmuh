@@ -571,11 +571,31 @@ export class PaymentNotificationsService {
     return this.prisma.user.findMany({
       where: {
         OR: [
-          { subRole: { in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'] } },
-          { subRole2: { in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'] } },
-          { subRole3: { in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'] } },
-          { subRole4: { in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'] } },
-          { subRole5: { in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'] } },
+          {
+            subRole: {
+              in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'],
+            },
+          },
+          {
+            subRole2: {
+              in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'],
+            },
+          },
+          {
+            subRole3: {
+              in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'],
+            },
+          },
+          {
+            subRole4: {
+              in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'],
+            },
+          },
+          {
+            subRole5: {
+              in: ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR'],
+            },
+          },
           { role: 'ADMIN_IT' },
           { role: 'SUPERADMIN' },
         ],

@@ -1,5 +1,18 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { FaceAttendanceService, FaceCameraConfig } from './face-attendance.service';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  FaceAttendanceService,
+  FaceCameraConfig,
+} from './face-attendance.service';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
 import { RolesGuard } from '../../core/auth/roles.guard';
 import { Roles, UserRole, SubRole } from '../../core/auth/roles.decorator';
@@ -107,7 +120,10 @@ export class FaceAttendanceController {
     SubRole.ADMIN_TU,
     SubRole.BAU,
   )
-  deleteSingleLogPost(@Param('id') id: string, @Body('resetDb') resetDb?: boolean) {
+  deleteSingleLogPost(
+    @Param('id') id: string,
+    @Body('resetDb') resetDb?: boolean,
+  ) {
     return this.faceAttendanceService.deleteSingleLog(id, resetDb !== false);
   }
 

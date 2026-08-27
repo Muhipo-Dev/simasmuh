@@ -24,7 +24,7 @@ export class GuestBookService {
 
   async createPublic(dto: CreateGuestBookDto) {
     const waktu = dto.waktu || this.getWibTimeString();
-    
+
     const guest = await this.prisma.guestBook.create({
       data: {
         namaTamu: dto.namaTamu,
@@ -57,7 +57,8 @@ export class GuestBookService {
 
     // 2. Notifikasi WhatsApp ke Petugas TU / Log WA
     try {
-      const waMessage = `🔔 *NOTIFIKASI TAMU BARU (BUKU TAMU SIMASMUH)* 🔔\n\n` +
+      const waMessage =
+        `🔔 *NOTIFIKASI TAMU BARU (BUKU TAMU SIMASMUH)* 🔔\n\n` +
         `👤 *Nama*: ${guest.namaTamu}\n` +
         `🏢 *Instansi/Asal*: ${guest.instansi}\n` +
         `🏷️ *Kategori*: ${guest.kategori}\n` +
@@ -72,7 +73,7 @@ export class GuestBookService {
         message: waMessage,
         category: 'INFORMASI',
         recipientName: guest.namaTamu,
-        title: 'Registrasi Buku Tamu',
+        title: 'Pencatatan Buku Tamu',
       });
     } catch (err) {
       // Non-blocking error logging
@@ -80,7 +81,7 @@ export class GuestBookService {
 
     return {
       success: true,
-      message: 'Registrasi kedatangan tamu berhasil dicatat.',
+      message: 'Data kunjungan tamu berhasil dicatat.',
       data: guest,
     };
   }
@@ -126,7 +127,15 @@ export class GuestBookService {
     page?: number;
     limit?: number;
   }) {
-    const { search, kategori, status, startDate, endDate, page = 1, limit = 50 } = query;
+    const {
+      search,
+      kategori,
+      status,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 50,
+    } = query;
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
 
@@ -211,7 +220,11 @@ export class GuestBookService {
       level: 'INFO',
       action: 'GUEST_BOOK_STATUS_UPDATED',
       message: `Status tamu "${updated.namaTamu}" diubah menjadi ${updated.status}.`,
-      details: { guestId: id, oldStatus: existing.status, newStatus: updated.status },
+      details: {
+        guestId: id,
+        oldStatus: existing.status,
+        newStatus: updated.status,
+      },
     });
 
     return {

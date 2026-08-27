@@ -97,4 +97,3 @@ export class IzinKeluarController {
     return this.izinKeluarService.remove(id, user.userId, user.role);
   }
 }
-

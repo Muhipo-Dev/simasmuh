@@ -8,7 +8,8 @@ export interface SendWhatsAppDto {
   message: string;
   recipientName?: string;
   recipientRole?: string;
-  category?: 'ABSENSI' | 'TAGIHAN' | 'PEMBAYARAN' | 'INFORMASI' | 'SISTEM' | 'IZIN';
+  category?:
+    'ABSENSI' | 'TAGIHAN' | 'PEMBAYARAN' | 'INFORMASI' | 'SISTEM' | 'IZIN';
   title?: string;
 }
 
@@ -45,7 +46,10 @@ export class WhatsAppService {
     try {
       const setting = await this.prisma.setting.findFirst();
       return {
-        senderNumber: setting?.whatsappSenderNumber || process.env.WHATSAPP_SENDER_NUMBER || WhatsAppService.DEFAULT_SENDER_NUMBER,
+        senderNumber:
+          setting?.whatsappSenderNumber ||
+          process.env.WHATSAPP_SENDER_NUMBER ||
+          WhatsAppService.DEFAULT_SENDER_NUMBER,
         apiUrl: setting?.whatsappApiUrl || process.env.WHATSAPP_API_URL || null,
         apiKey: setting?.whatsappApiKey || process.env.WHATSAPP_API_KEY || null,
         schoolName: setting?.schoolName || 'SMA Muhammadiyah 1 Ponorogo',
@@ -63,13 +67,22 @@ export class WhatsAppService {
   /**
    * Kirim pesan WhatsApp langsung
    */
-  async sendDirectMessage(data: SendWhatsAppDto): Promise<{ success: boolean; logId?: string; status: string; error?: string }> {
+  async sendDirectMessage(data: SendWhatsAppDto): Promise<{
+    success: boolean;
+    logId?: string;
+    status: string;
+    error?: string;
+  }> {
     const rawTo = data.to;
     const normalizedPhone = this.normalizePhoneNumber(rawTo);
 
     if (!normalizedPhone || normalizedPhone.length < 8) {
       this.logger.warn(`Nomor WhatsApp tujuan tidak valid: ${rawTo}`);
-      return { success: false, status: 'FAILED', error: 'Nomor tujuan tidak valid' };
+      return {
+        success: false,
+        status: 'FAILED',
+        error: 'Nomor tujuan tidak valid',
+      };
     }
 
     const config = await this.getWhatsAppConfig();
@@ -84,7 +97,7 @@ export class WhatsAppService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': config.apiKey,
+            Authorization: config.apiKey,
           },
           body: JSON.stringify({
             target: normalizedPhone,
@@ -99,19 +112,27 @@ export class WhatsAppService {
           throw new Error(`HTTP ${response.status}: ${errText}`);
         }
         status = 'SENT';
-        this.logger.log(`✅ [WhatsApp Sent API] to ${normalizedPhone} (${data.recipientName || 'User'}): ${data.title || category}`);
+        this.logger.log(
+          `✅ [WhatsApp Sent API] to ${normalizedPhone} (${data.recipientName || 'User'}): ${data.title || category}`,
+        );
       } else {
         // Mode Simulasi / Gateway Local Development
         status = 'SIMULATED';
-        this.logger.log(`📱 [WhatsApp Gateway System (${config.senderNumber}) -> ${normalizedPhone}]`);
-        this.logger.log(`   Penerima: ${data.recipientName || 'User'} [${data.recipientRole || '-'}]`);
+        this.logger.log(
+          `📱 [WhatsApp Gateway System (${config.senderNumber}) -> ${normalizedPhone}]`,
+        );
+        this.logger.log(
+          `   Penerima: ${data.recipientName || 'User'} [${data.recipientRole || '-'}]`,
+        );
         this.logger.log(`   Kategori: [${category}] ${data.title || ''}`);
         this.logger.log(`   Pesan:\n${data.message}`);
       }
     } catch (error: any) {
       status = 'FAILED';
       errorMessage = error?.message || 'Gagal mengirim pesan WhatsApp';
-      this.logger.error(`❌ [WhatsApp Gateway Error] to ${normalizedPhone}: ${errorMessage}`);
+      this.logger.error(
+        `❌ [WhatsApp Gateway Error] to ${normalizedPhone}: ${errorMessage}`,
+      );
     }
 
     // Catat riwayat pengiriman ke tabel WhatsAppLog
@@ -146,10 +167,21 @@ export class WhatsAppService {
         },
       });
 
-      return { success: status === 'SENT' || status === 'SIMULATED', logId: log.id, status, error: errorMessage || undefined };
+      return {
+        success: status === 'SENT' || status === 'SIMULATED',
+        logId: log.id,
+        status,
+        error: errorMessage || undefined,
+      };
     } catch (dbError: any) {
-      this.logger.error(`Gagal mencatat log WhatsApp ke DB: ${dbError.message}`);
-      return { success: status === 'SENT' || status === 'SIMULATED', status, error: errorMessage || undefined };
+      this.logger.error(
+        `Gagal mencatat log WhatsApp ke DB: ${dbError.message}`,
+      );
+      return {
+        success: status === 'SENT' || status === 'SIMULATED',
+        status,
+        error: errorMessage || undefined,
+      };
     }
   }
 
@@ -169,7 +201,12 @@ export class WhatsAppService {
     method?: string; // QR / Face Recognition / Manual
   }) {
     const config = await this.getWhatsAppConfig();
-    const emojiStatus = params.scanType === 'MASUK' ? '🟢' : params.scanType === 'PULANG' ? '🔵' : '🟡';
+    const emojiStatus =
+      params.scanType === 'MASUK'
+        ? '🟢'
+        : params.scanType === 'PULANG'
+          ? '🔵'
+          : '🟡';
 
     const message = `*PRESENSI KEHADIRAN - ${config.schoolName.toUpperCase()}*
 ${emojiStatus} Status: *PRESENSI ${params.scanType}*
@@ -183,8 +220,10 @@ ${params.notes ? `Catatan: ${params.notes}\n` : ''}
 Pesan ini dikirim secara otomatis oleh SIMASMUH sebagai rekaman data kehadiran resmi sekolah.`;
 
     const phonesToSend = new Set<string>();
-    if (params.phone && params.phone.trim() !== '') phonesToSend.add(params.phone.trim());
-    if (params.parentPhone && params.parentPhone.trim() !== '') phonesToSend.add(params.parentPhone.trim());
+    if (params.phone && params.phone.trim() !== '')
+      phonesToSend.add(params.phone.trim());
+    if (params.parentPhone && params.parentPhone.trim() !== '')
+      phonesToSend.add(params.parentPhone.trim());
 
     // Eksekusi pengiriman notifikasi secara Asynchronous di background tanpa menahan respon HTTP presensi
     Promise.allSettled(
@@ -199,7 +238,9 @@ Pesan ini dikirim secara otomatis oleh SIMASMUH sebagai rekaman data kehadiran r
         }),
       ),
     ).catch((err) => {
-      this.logger.error(`Error in async attendance notification delivery: ${err?.message}`);
+      this.logger.error(
+        `Error in async attendance notification delivery: ${err?.message}`,
+      );
     });
   }
 
@@ -217,7 +258,11 @@ Pesan ini dikirim secara otomatis oleh SIMASMUH sebagai rekaman data kehadiran r
     bankInfo?: string;
   }) {
     const config = await this.getWhatsAppConfig();
-    const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(params.amount);
+    const formattedAmount = new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0,
+    }).format(params.amount);
 
     const message = `*PEMBERITAHUAN TAGIHAN KEUANGAN - ${config.schoolName.toUpperCase()}*
 💳 Rincian Tagihan Siswa:
@@ -231,10 +276,13 @@ ${params.bankInfo ? `Informasi Rekening: ${params.bankInfo}\n` : ''}
 Mohon abaikan jika Anda telah menyelesaikan pembayaran tagihan ini.`;
 
     const phonesToSend = new Set<string>();
-    if (params.phone && params.phone.trim() !== '') phonesToSend.add(params.phone.trim());
-    if (params.parentPhone && params.parentPhone.trim() !== '') phonesToSend.add(params.parentPhone.trim());
+    if (params.phone && params.phone.trim() !== '')
+      phonesToSend.add(params.phone.trim());
+    if (params.parentPhone && params.parentPhone.trim() !== '')
+      phonesToSend.add(params.parentPhone.trim());
 
-    if (phonesToSend.size === 0) phonesToSend.add(WhatsAppService.DEFAULT_SENDER_NUMBER);
+    if (phonesToSend.size === 0)
+      phonesToSend.add(WhatsAppService.DEFAULT_SENDER_NUMBER);
 
     for (const phone of phonesToSend) {
       await this.sendDirectMessage({
@@ -262,8 +310,12 @@ Mohon abaikan jika Anda telah menyelesaikan pembayaran tagihan ini.`;
     parentPhone?: string;
   }) {
     const config = await this.getWhatsAppConfig();
-    const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(params.amount);
-    
+    const formattedAmount = new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0,
+    }).format(params.amount);
+
     let statusText = 'DITERIMA (LUNAS)';
     let emoji = '✅';
     if (params.status === 'DITOLAK') {
@@ -284,10 +336,13 @@ ${params.notes ? `Catatan Petugas: ${params.notes}\n` : ''}
 Terima kasih atas partisipasi dan kepedulian Anda dalam administrasi pendidikan di ${config.schoolName}.`;
 
     const phonesToSend = new Set<string>();
-    if (params.phone && params.phone.trim() !== '') phonesToSend.add(params.phone.trim());
-    if (params.parentPhone && params.parentPhone.trim() !== '') phonesToSend.add(params.parentPhone.trim());
+    if (params.phone && params.phone.trim() !== '')
+      phonesToSend.add(params.phone.trim());
+    if (params.parentPhone && params.parentPhone.trim() !== '')
+      phonesToSend.add(params.parentPhone.trim());
 
-    if (phonesToSend.size === 0) phonesToSend.add(WhatsAppService.DEFAULT_SENDER_NUMBER);
+    if (phonesToSend.size === 0)
+      phonesToSend.add(WhatsAppService.DEFAULT_SENDER_NUMBER);
 
     for (const phone of phonesToSend) {
       await this.sendDirectMessage({
@@ -380,7 +435,12 @@ Diterbitkan oleh: *${params.authorName || 'Pihak Sekolah'}*`;
 
       if (!user) return;
 
-      const phone = user.phone || user.teacherProfile?.phone || user.student?.phone || user.student?.parentPhone || WhatsAppService.DEFAULT_SENDER_NUMBER;
+      const phone =
+        user.phone ||
+        user.teacherProfile?.phone ||
+        user.student?.phone ||
+        user.student?.parentPhone ||
+        WhatsAppService.DEFAULT_SENDER_NUMBER;
 
       const config = await this.getWhatsAppConfig();
       const message = `*NOTIFIKASI SIMASMUH - ${config.schoolName.toUpperCase()}*
@@ -400,7 +460,9 @@ Silakan cek portal aplikasi SIMASMUH untuk melihat detail aktivitas ini.`;
         message,
       });
     } catch (e: any) {
-      this.logger.error(`Error mirroring notification to WhatsApp: ${e?.message}`);
+      this.logger.error(
+        `Error mirroring notification to WhatsApp: ${e?.message}`,
+      );
     }
   }
 
@@ -417,19 +479,28 @@ Silakan cek portal aplikasi SIMASMUH untuk melihat detail aktivitas ini.`;
       });
       if (!student) return;
 
-      const tagihan = event.tagihanId ? await this.prisma.tagihan.findUnique({ where: { id: event.tagihanId } }) : null;
+      const tagihan = event.tagihanId
+        ? await this.prisma.tagihan.findUnique({
+            where: { id: event.tagihanId },
+          })
+        : null;
 
       await this.sendTagihanNotification({
         studentName: student.name,
         className: student.class?.name,
-        tagihanType: tagihan?.type || event.bulkData?.tagihanType || 'Tagihan Sekolah',
+        tagihanType:
+          tagihan?.type || event.bulkData?.tagihanType || 'Tagihan Sekolah',
         amount: tagihan?.amount || event.bulkData?.amount || 0,
-        dueDate: tagihan?.dueDate ? tagihan.dueDate.toLocaleDateString('id-ID') : undefined,
+        dueDate: tagihan?.dueDate
+          ? tagihan.dueDate.toLocaleDateString('id-ID')
+          : undefined,
         phone: student.phone || undefined,
         parentPhone: student.parentPhone || undefined,
       });
     } catch (e: any) {
-      this.logger.error(`Error handling tagihan WhatsApp notification: ${e?.message}`);
+      this.logger.error(
+        `Error handling tagihan WhatsApp notification: ${e?.message}`,
+      );
     }
   }
 
@@ -459,7 +530,9 @@ Silakan cek portal aplikasi SIMASMUH untuk melihat detail aktivitas ini.`;
         parentPhone: proof.student.parentPhone || undefined,
       });
     } catch (e: any) {
-      this.logger.error(`Error handling payment verified WhatsApp notification: ${e?.message}`);
+      this.logger.error(
+        `Error handling payment verified WhatsApp notification: ${e?.message}`,
+      );
     }
   }
 
@@ -469,7 +542,9 @@ Silakan cek portal aplikasi SIMASMUH untuk melihat detail aktivitas ini.`;
   async getGatewayStatus() {
     const config = await this.getWhatsAppConfig();
     try {
-      const gatewayBaseUrl = config.apiUrl ? config.apiUrl.replace(/\/api\/send\/?$/i, '') : 'http://localhost:3002';
+      const gatewayBaseUrl = config.apiUrl
+        ? config.apiUrl.replace(/\/api\/send\/?$/i, '')
+        : 'http://localhost:3002';
       const res = await fetch(`${gatewayBaseUrl}/api/status`, {
         headers: {
           ...(config.apiKey ? { 'x-api-key': config.apiKey } : {}),
@@ -510,9 +585,15 @@ Silakan cek portal aplikasi SIMASMUH untuk melihat detail aktivitas ini.`;
       return this.prisma.setting.update({
         where: { id: setting.id },
         data: {
-          ...(data.whatsappSenderNumber !== undefined ? { whatsappSenderNumber: data.whatsappSenderNumber } : {}),
-          ...(data.whatsappApiUrl !== undefined ? { whatsappApiUrl: data.whatsappApiUrl } : {}),
-          ...(data.whatsappApiKey !== undefined ? { whatsappApiKey: data.whatsappApiKey } : {}),
+          ...(data.whatsappSenderNumber !== undefined
+            ? { whatsappSenderNumber: data.whatsappSenderNumber }
+            : {}),
+          ...(data.whatsappApiUrl !== undefined
+            ? { whatsappApiUrl: data.whatsappApiUrl }
+            : {}),
+          ...(data.whatsappApiKey !== undefined
+            ? { whatsappApiKey: data.whatsappApiKey }
+            : {}),
         },
       });
     }
@@ -537,8 +618,17 @@ Pesan ini dikirim secara terpusat oleh Administrator SIMASMUH.`;
 
     const phonesToSend = new Map<string, { name: string; role: string }>();
 
-    if (params.target === 'SEMUA' || params.target === 'GURU' || params.target === 'PEGAWAI') {
-      const targetRoles = params.target === 'SEMUA' ? ['SUPERADMIN', 'ADMIN', 'GURU', 'PEGAWAI', 'SISWA'] : params.target === 'GURU' ? ['GURU'] : ['PEGAWAI'];
+    if (
+      params.target === 'SEMUA' ||
+      params.target === 'GURU' ||
+      params.target === 'PEGAWAI'
+    ) {
+      const targetRoles =
+        params.target === 'SEMUA'
+          ? ['SUPERADMIN', 'ADMIN', 'GURU', 'PEGAWAI', 'SISWA']
+          : params.target === 'GURU'
+            ? ['GURU']
+            : ['PEGAWAI'];
       const users = await this.prisma.user.findMany({
         where: { role: { in: targetRoles }, phone: { not: null } },
         select: { phone: true, name: true, role: true },
@@ -550,7 +640,11 @@ Pesan ini dikirim secara terpusat oleh Administrator SIMASMUH.`;
       }
     }
 
-    if (params.target === 'SEMUA' || params.target === 'SISWA' || params.target === 'ORANG_TUA') {
+    if (
+      params.target === 'SEMUA' ||
+      params.target === 'SISWA' ||
+      params.target === 'ORANG_TUA'
+    ) {
       const students = await this.prisma.student.findMany({
         select: { name: true, phone: true, parentPhone: true },
       });
@@ -562,7 +656,10 @@ Pesan ini dikirim secara terpusat oleh Administrator SIMASMUH.`;
         }
         if (params.target === 'SEMUA' || params.target === 'ORANG_TUA') {
           if (s.parentPhone && s.parentPhone.trim() !== '') {
-            phonesToSend.set(s.parentPhone.trim(), { name: `Wali dari ${s.name}`, role: 'ORANG_TUA' });
+            phonesToSend.set(s.parentPhone.trim(), {
+              name: `Wali dari ${s.name}`,
+              role: 'ORANG_TUA',
+            });
           }
         }
       }

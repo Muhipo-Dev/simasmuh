@@ -51,13 +51,35 @@ export class AnnouncementsController {
     @Query('subRole4') subRole4?: string,
     @Query('subRole5') subRole5?: string,
   ) {
-    const roles = [role, subRole, subRole2, subRole3, subRole4, subRole5].filter(Boolean);
-    if (roles.includes('ADMIN_IT') || roles.includes('ADMIN_WEB') || roles.includes('SUPERADMIN')) {
+    const roles = [
+      role,
+      subRole,
+      subRole2,
+      subRole3,
+      subRole4,
+      subRole5,
+    ].filter(Boolean);
+    if (
+      roles.includes('ADMIN_IT') ||
+      roles.includes('ADMIN_WEB') ||
+      roles.includes('SUPERADMIN')
+    ) {
       return this.announcementsService.findAll();
     } else if (roles.includes('SISWA')) {
-      return this.announcementsService.findAll(['ALL', 'SEMUA', 'INTERNAL', 'SISWA']);
+      return this.announcementsService.findAll([
+        'ALL',
+        'SEMUA',
+        'INTERNAL',
+        'SISWA',
+      ]);
     } else if (roles.length > 0) {
-      return this.announcementsService.findAll(['ALL', 'SEMUA', 'INTERNAL', 'GURU', 'WALI_MURID']);
+      return this.announcementsService.findAll([
+        'ALL',
+        'SEMUA',
+        'INTERNAL',
+        'GURU',
+        'WALI_MURID',
+      ]);
     }
     return this.announcementsService.findAll(['ALL', 'SEMUA', 'PUBLIC']);
   }

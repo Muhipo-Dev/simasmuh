@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 
@@ -128,7 +132,9 @@ export class ParentsService {
   }) {
     const rawPhone = (data.phone || '').trim();
     if (!rawPhone) {
-      throw new BadRequestException('Nomor telepon wali murid wajib diisi sebagai nomor WhatsApp dan username login');
+      throw new BadRequestException(
+        'Nomor telepon wali murid wajib diisi sebagai nomor WhatsApp dan username login',
+      );
     }
 
     const username = rawPhone;
@@ -141,7 +147,9 @@ export class ParentsService {
     });
 
     if (existingUser) {
-      throw new BadRequestException(`Pengguna atau nomor WhatsApp ${rawPhone} sudah terdaftar di sistem`);
+      throw new BadRequestException(
+        `Pengguna atau nomor WhatsApp ${rawPhone} sudah terdaftar di sistem`,
+      );
     }
 
     // Cari siswa yang akan dihubungkan
@@ -162,12 +170,17 @@ export class ParentsService {
     }
 
     if (targetStudents.length === 0) {
-      throw new BadRequestException('Wajib menghubungkan minimal satu siswa (berdasarkan NIS/NISN atau pilihan siswa)');
+      throw new BadRequestException(
+        'Wajib menghubungkan minimal satu siswa (berdasarkan NIS/NISN atau pilihan siswa)',
+      );
     }
 
     // Password default adalah NIS dari siswa pertama
     const defaultPassword = targetStudents[0]?.nis || rawPhone;
-    const plainPassword = data.password && data.password.trim() !== '' ? data.password.trim() : defaultPassword;
+    const plainPassword =
+      data.password && data.password.trim() !== ''
+        ? data.password.trim()
+        : defaultPassword;
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     // Buat User, ParentProfile, dan ParentStudent relasi
@@ -176,7 +189,8 @@ export class ParentsService {
         name: data.name.trim(),
         username,
         phone: rawPhone,
-        email: data.email && data.email.trim() !== '' ? data.email.trim() : null,
+        email:
+          data.email && data.email.trim() !== '' ? data.email.trim() : null,
         password: hashedPassword,
         role: 'WALI_MURID',
         address: data.address || null,
@@ -224,16 +238,19 @@ export class ParentsService {
     return user;
   }
 
-  async update(id: string, data: {
-    name?: string;
-    phone?: string;
-    email?: string;
-    password?: string;
-    studentIds?: string[];
-    relation?: string;
-    occupation?: string;
-    address?: string;
-  }) {
+  async update(
+    id: string,
+    data: {
+      name?: string;
+      phone?: string;
+      email?: string;
+      password?: string;
+      studentIds?: string[];
+      relation?: string;
+      occupation?: string;
+      address?: string;
+    },
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: { parentProfile: true },
@@ -260,14 +277,17 @@ export class ParentsService {
         },
       });
       if (existing) {
-        throw new BadRequestException(`Nomor WhatsApp/Username ${rawPhone} sudah digunakan akun lain`);
+        throw new BadRequestException(
+          `Nomor WhatsApp/Username ${rawPhone} sudah digunakan akun lain`,
+        );
       }
       updateData.phone = rawPhone;
       updateData.username = rawPhone;
     }
 
     if (data.email !== undefined) {
-      updateData.email = data.email && data.email.trim() !== '' ? data.email.trim() : null;
+      updateData.email =
+        data.email && data.email.trim() !== '' ? data.email.trim() : null;
     }
 
     if (data.password && data.password.trim() !== '') {
@@ -373,17 +393,15 @@ export class ParentsService {
           },
         },
       },
-      orderBy: [
-        { class: { name: 'asc' } },
-        { name: 'asc' },
-      ],
+      orderBy: [{ class: { name: 'asc' } }, { name: 'asc' }],
     });
 
     return students.map((s) => {
       let bioDataObj: any = {};
       try {
         if (s.bioData) {
-          bioDataObj = typeof s.bioData === 'string' ? JSON.parse(s.bioData) : s.bioData;
+          bioDataObj =
+            typeof s.bioData === 'string' ? JSON.parse(s.bioData) : s.bioData;
         }
       } catch {}
 
@@ -394,8 +412,17 @@ export class ParentsService {
         name: s.name,
         className: s.class?.name || '-',
         gradeLevel: s.class?.gradeLevel,
-        parentPhone: s.parentPhone || bioDataObj.noHpAyah || bioDataObj.noHpIbu || bioDataObj.noHpWali || null,
-        parentName: bioDataObj.namaAyah || bioDataObj.namaIbu || bioDataObj.namaWali || null,
+        parentPhone:
+          s.parentPhone ||
+          bioDataObj.noHpAyah ||
+          bioDataObj.noHpIbu ||
+          bioDataObj.noHpWali ||
+          null,
+        parentName:
+          bioDataObj.namaAyah ||
+          bioDataObj.namaIbu ||
+          bioDataObj.namaWali ||
+          null,
         hasParentAccount: s.parentRelations.length > 0,
         linkedParents: s.parentRelations.map((pr) => ({
           parentUserId: pr.parent.user.id,
@@ -421,17 +448,28 @@ export class ParentsService {
       let bioDataObj: any = {};
       try {
         if (student.bioData) {
-          bioDataObj = typeof student.bioData === 'string' ? JSON.parse(student.bioData) : student.bioData;
+          bioDataObj =
+            typeof student.bioData === 'string'
+              ? JSON.parse(student.bioData)
+              : student.bioData;
         }
       } catch {}
 
       const phone =
-        (student.parentPhone && student.parentPhone.trim() !== '' && student.parentPhone !== '088293733330'
+        (student.parentPhone &&
+        student.parentPhone.trim() !== '' &&
+        student.parentPhone !== '088293733330'
           ? student.parentPhone.trim()
           : null) ||
-        (bioDataObj.noHpAyah && bioDataObj.noHpAyah.trim() !== '' ? bioDataObj.noHpAyah.trim() : null) ||
-        (bioDataObj.noHpIbu && bioDataObj.noHpIbu.trim() !== '' ? bioDataObj.noHpIbu.trim() : null) ||
-        (bioDataObj.noHpWali && bioDataObj.noHpWali.trim() !== '' ? bioDataObj.noHpWali.trim() : null);
+        (bioDataObj.noHpAyah && bioDataObj.noHpAyah.trim() !== ''
+          ? bioDataObj.noHpAyah.trim()
+          : null) ||
+        (bioDataObj.noHpIbu && bioDataObj.noHpIbu.trim() !== ''
+          ? bioDataObj.noHpIbu.trim()
+          : null) ||
+        (bioDataObj.noHpWali && bioDataObj.noHpWali.trim() !== ''
+          ? bioDataObj.noHpWali.trim()
+          : null);
 
       if (!phone) {
         skippedCount++;
@@ -565,7 +603,10 @@ export class ParentsService {
       classId: ps.student.classId,
       className: ps.student.class?.name || '-',
       gradeLevel: ps.student.class?.gradeLevel,
-      homeroomTeacherName: ps.student.class?.homeroomTeacher?.user?.name || ps.student.class?.homeroomTeacher?.nip || '-',
+      homeroomTeacherName:
+        ps.student.class?.homeroomTeacher?.user?.name ||
+        ps.student.class?.homeroomTeacher?.nip ||
+        '-',
       relation: ps.relation || 'ORANG_TUA',
       student: {
         id: ps.student.id,
@@ -606,10 +647,7 @@ export class ParentsService {
                               },
                             },
                           },
-                          orderBy: [
-                            { dayOfWeek: 'asc' },
-                            { startTime: 'asc' },
-                          ],
+                          orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
                         },
                       },
                     },
@@ -663,11 +701,11 @@ export class ParentsService {
       const st = ps.student;
       const allTagihans = st.tagihans || [];
       const unpaidTagihans = allTagihans.filter(
-        (t) => t.status === 'BELUM_LUNAS' || t.status === 'ANGSURAN'
+        (t) => t.status === 'BELUM_LUNAS' || t.status === 'ANGSURAN',
       );
       const totalUnpaid = unpaidTagihans.reduce(
         (sum, t) => sum + Math.max(0, t.amount - (t.amountPaid || 0)),
-        0
+        0,
       );
 
       const assessments = st.characterAssessments || [];
@@ -677,12 +715,18 @@ export class ParentsService {
       let amalanIbadahCount = 0;
 
       assessments.forEach((item: any) => {
-        const isVerified = item.status === 'SELESAI' || item.status === 'TERVERIFIKASI' || item.status === 'DALAM_PEMBINAAN';
+        const isVerified =
+          item.status === 'SELESAI' ||
+          item.status === 'TERVERIFIKASI' ||
+          item.status === 'DALAM_PEMBINAAN';
         if (isVerified) {
-          totalPointsDelta += (item.points || 0);
+          totalPointsDelta += item.points || 0;
           if (item.category === 'PELANGGARAN' || item.type === 'NEGATIF') {
             totalPelanggaran++;
-          } else if (item.category === 'PRESTASI_PENGHARGAAN' || item.type === 'POSITIF') {
+          } else if (
+            item.category === 'PRESTASI_PENGHARGAAN' ||
+            item.type === 'POSITIF'
+          ) {
             totalPrestasi++;
           } else if (item.category === 'IBADAH') {
             amalanIbadahCount++;
@@ -690,9 +734,22 @@ export class ParentsService {
         }
       });
 
-      const kedisiplinanScore = Math.max(0, Math.min(100, 100 + totalPointsDelta));
-      const ibadahScore = amalanIbadahCount >= 5 ? 'A (Sangat Baik)' : amalanIbadahCount >= 2 ? 'B (Aktif)' : 'B (Baik)';
-      const perilakuScore = totalPelanggaran === 0 ? 'A (Terpuji)' : totalPelanggaran <= 2 ? 'B (Baik)' : 'C (Perlu Pembinaan)';
+      const kedisiplinanScore = Math.max(
+        0,
+        Math.min(100, 100 + totalPointsDelta),
+      );
+      const ibadahScore =
+        amalanIbadahCount >= 5
+          ? 'A (Sangat Baik)'
+          : amalanIbadahCount >= 2
+            ? 'B (Aktif)'
+            : 'B (Baik)';
+      const perilakuScore =
+        totalPelanggaran === 0
+          ? 'A (Terpuji)'
+          : totalPelanggaran <= 2
+            ? 'B (Baik)'
+            : 'C (Perlu Pembinaan)';
 
       return {
         id: st.id,
@@ -722,9 +779,10 @@ export class ParentsService {
           perilakuScore,
           totalPelanggaran,
           totalPrestasi,
-          catatanKarakter: assessments.length > 0 
-            ? assessments[0].description || assessments[0].title 
-            : 'Siswa menunjukkan sikap yang santun, aktif mengikuti sholat berjamaah, dan disiplin waktu di sekolah.',
+          catatanKarakter:
+            assessments.length > 0
+              ? assessments[0].description || assessments[0].title
+              : 'Siswa menunjukkan sikap yang santun, aktif mengikuti sholat berjamaah, dan disiplin waktu di sekolah.',
           timTatibContact: 'Tim Ketertiban & BP/BK Sekolah',
           assessments,
         },

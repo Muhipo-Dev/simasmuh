@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  UnauthorizedException,
+  Logger,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
@@ -27,11 +33,24 @@ export class FinanceService {
     insentifKetertibanParam?: number,
     tunjanganMakanParam?: number,
   ) {
-    const harianRate = harianRateParam && !isNaN(harianRateParam) ? harianRateParam : 50000;
-    const subRoleAllowance = subRoleAllowanceParam && !isNaN(subRoleAllowanceParam) ? subRoleAllowanceParam : 300000;
-    const minHadirBonus = minHadirBonusParam && !isNaN(minHadirBonusParam) ? minHadirBonusParam : 20;
-    const insentifKetertiban = insentifKetertibanParam && !isNaN(insentifKetertibanParam) ? insentifKetertibanParam : 200000;
-    const tunjanganMakanRate = tunjanganMakanParam && !isNaN(tunjanganMakanParam) ? tunjanganMakanParam : 15000;
+    const harianRate =
+      harianRateParam && !isNaN(harianRateParam) ? harianRateParam : 50000;
+    const subRoleAllowance =
+      subRoleAllowanceParam && !isNaN(subRoleAllowanceParam)
+        ? subRoleAllowanceParam
+        : 300000;
+    const minHadirBonus =
+      minHadirBonusParam && !isNaN(minHadirBonusParam)
+        ? minHadirBonusParam
+        : 20;
+    const insentifKetertiban =
+      insentifKetertibanParam && !isNaN(insentifKetertibanParam)
+        ? insentifKetertibanParam
+        : 200000;
+    const tunjanganMakanRate =
+      tunjanganMakanParam && !isNaN(tunjanganMakanParam)
+        ? tunjanganMakanParam
+        : 15000;
 
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
@@ -104,21 +123,44 @@ export class FinanceService {
           .filter((i) => i.userId === staff.id)
           .map((i) => i.date.toISOString().split('T')[0]),
       );
-      const rolesList = [staff.role, staff.subRole, staff.subRole2, staff.subRole3, staff.subRole4, staff.subRole5].filter(Boolean);
+      const rolesList = [
+        staff.role,
+        staff.subRole,
+        staff.subRole2,
+        staff.subRole3,
+        staff.subRole4,
+        staff.subRole5,
+      ].filter(Boolean);
       const roles = rolesList.join(', ');
 
-      const baseSalary = baseSalaries[staff.role] || baseSalaries[staff.subRole || ''] || 3000000;
-      const roleAllowance = Math.max(0, rolesList.length - 1) * subRoleAllowance;
+      const baseSalary =
+        baseSalaries[staff.role] ||
+        baseSalaries[staff.subRole || ''] ||
+        3000000;
+      const roleAllowance =
+        Math.max(0, rolesList.length - 1) * subRoleAllowance;
       const totalHadir = staffAttendances.length;
       const totalHadirBonus = totalHadir * harianRate;
-      const bonusKetertiban = totalHadir >= minHadirBonus ? insentifKetertiban : 0;
+      const bonusKetertiban =
+        totalHadir >= minHadirBonus ? insentifKetertiban : 0;
       const totalTunjanganMakan = totalHadir * tunjanganMakanRate;
 
       const matchedBantuan = danaBantuans
-        .filter((b) => !b.penerima || b.penerima.toLowerCase().includes(staff.name.toLowerCase()) || staff.name.toLowerCase().includes(b.penerima.toLowerCase()))
+        .filter(
+          (b) =>
+            !b.penerima ||
+            b.penerima.toLowerCase().includes(staff.name.toLowerCase()) ||
+            staff.name.toLowerCase().includes(b.penerima.toLowerCase()),
+        )
         .reduce((sum, b) => sum + b.nominal, 0);
 
-      const totalPenghasilan = baseSalary + roleAllowance + totalHadirBonus + bonusKetertiban + totalTunjanganMakan + matchedBantuan;
+      const totalPenghasilan =
+        baseSalary +
+        roleAllowance +
+        totalHadirBonus +
+        bonusKetertiban +
+        totalTunjanganMakan +
+        matchedBantuan;
 
       return {
         id: staff.id,
@@ -153,8 +195,15 @@ export class FinanceService {
 
     return students.map((s) => {
       const tagihansList = s.tagihans || [];
-      const totalTagihan = tagihansList.reduce((sum: number, t: any) => sum + t.amount, 0);
-      const totalLunas = tagihansList.reduce((sum: number, t: any) => sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)), 0);
+      const totalTagihan = tagihansList.reduce(
+        (sum: number, t: any) => sum + t.amount,
+        0,
+      );
+      const totalLunas = tagihansList.reduce(
+        (sum: number, t: any) =>
+          sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
+        0,
+      );
       const sisaTagihan = Math.max(0, totalTagihan - totalLunas);
       const belumLunasCount = tagihansList.filter(
         (t: any) => t.status !== 'LUNAS',
@@ -179,7 +228,9 @@ export class FinanceService {
         sppLunasCount: sppTagihan.length,
         tagihanCount: tagihansList.length,
         beasiswaPercentage: s.beasiswaPercentage || 0,
-        beasiswaReason: s.beasiswaReason || (s.beasiswaPercentage > 0 ? 'Beasiswa Default Siswa' : null),
+        beasiswaReason:
+          s.beasiswaReason ||
+          (s.beasiswaPercentage > 0 ? 'Beasiswa Default Siswa' : null),
         beasiswaSeragamPct: s.beasiswaSeragamPct || 0,
         beasiswaSppPct: s.beasiswaSppPct || 0,
         beasiswaDppPct: s.beasiswaDppPct || 0,
@@ -227,7 +278,7 @@ export class FinanceService {
         } catch {}
       }
 
-      let cleanNotes = (t.notes || '')
+      const cleanNotes = (t.notes || '')
         .replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '')
         .replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '')
         .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
@@ -301,7 +352,11 @@ export class FinanceService {
       const effectiveReason =
         s.beasiswaReason ||
         (effectivePct > 0 ? 'Beasiswa Default Siswa' : null);
-      await this.syncStudentBeasiswaToBills(studentId, effectivePct, effectiveReason);
+      await this.syncStudentBeasiswaToBills(
+        studentId,
+        effectivePct,
+        effectiveReason,
+      );
     }
 
     const student = await this.prisma.student.findUnique({
@@ -363,7 +418,7 @@ export class FinanceService {
     });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
-    let originalAmount = dto.amount;
+    const originalAmount = dto.amount;
     let finalAmount = dto.amount;
     let notes = dto.notes ?? null;
 
@@ -371,15 +426,18 @@ export class FinanceService {
     const effectivePct =
       dto.beasiswaPercentage !== undefined && dto.beasiswaPercentage > 0
         ? dto.beasiswaPercentage
-        : (student.beasiswaPercentage || 0);
+        : student.beasiswaPercentage || 0;
 
     const effectiveReason =
       dto.beasiswaPercentage !== undefined && dto.beasiswaPercentage > 0
         ? dto.beasiswaReason
-        : (student.beasiswaReason || (effectivePct > 0 ? 'Beasiswa Default Siswa' : null));
+        : student.beasiswaReason ||
+          (effectivePct > 0 ? 'Beasiswa Default Siswa' : null);
 
     if (effectivePct > 0) {
-      const validPct = [25, 50, 75, 100].includes(effectivePct) ? effectivePct : 0;
+      const validPct = [25, 50, 75, 100].includes(effectivePct)
+        ? effectivePct
+        : 0;
       if (validPct > 0) {
         const beasiswaAmount = Math.round(originalAmount * (validPct / 100));
         finalAmount = originalAmount - beasiswaAmount;
@@ -432,7 +490,9 @@ export class FinanceService {
       beasiswaReason?: string;
     },
   ) {
-    const existing = await this.prisma.tagihan.findUnique({ where: { id: tagihanId } });
+    const existing = await this.prisma.tagihan.findUnique({
+      where: { id: tagihanId },
+    });
     if (!existing) throw new NotFoundException('Tagihan tidak ditemukan');
 
     let baseAmount = dto.amount !== undefined ? dto.amount : existing.amount;
@@ -445,13 +505,19 @@ export class FinanceService {
       } catch {}
     }
 
-    let cleanNotes = (dto.notes !== undefined ? dto.notes : existing.notes) || '';
-    cleanNotes = cleanNotes.replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '').replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '').trim();
+    let cleanNotes =
+      (dto.notes !== undefined ? dto.notes : existing.notes) || '';
+    cleanNotes = cleanNotes
+      .replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '')
+      .replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '')
+      .trim();
 
     let finalAmount = baseAmount;
     if (dto.beasiswaPercentage !== undefined) {
       if (dto.beasiswaPercentage > 0) {
-        const validPct = [25, 50, 75, 100].includes(dto.beasiswaPercentage) ? dto.beasiswaPercentage : 0;
+        const validPct = [25, 50, 75, 100].includes(dto.beasiswaPercentage)
+          ? dto.beasiswaPercentage
+          : 0;
         if (validPct > 0) {
           const beasiswaAmount = Math.round(baseAmount * (validPct / 100));
           finalAmount = baseAmount - beasiswaAmount;
@@ -525,10 +591,16 @@ export class FinanceService {
 
     // Check if discount/beasiswa is applied during cash payment
     if (dto?.beasiswaPercentage && dto.beasiswaPercentage > 0) {
-      const validPct = [25, 50, 75, 100].includes(dto.beasiswaPercentage) ? dto.beasiswaPercentage : 0;
+      const validPct = [25, 50, 75, 100].includes(dto.beasiswaPercentage)
+        ? dto.beasiswaPercentage
+        : 0;
       if (validPct > 0) {
-        const beasiswaMatch = tagihan.notes?.match(/BEASISWA_INFO:\s*(\{.*?\})/);
-        const discountMatch = tagihan.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
+        const beasiswaMatch = tagihan.notes?.match(
+          /BEASISWA_INFO:\s*(\{.*?\})/,
+        );
+        const discountMatch = tagihan.notes?.match(
+          /DISCOUNT_INFO:\s*(\{.*?\})/,
+        );
         let orig = baseAmount;
         if (beasiswaMatch) {
           try {
@@ -554,7 +626,8 @@ export class FinanceService {
       }
     }
 
-    const currentPaid = (tagihan.amountPaid ?? (tagihan.status === 'LUNAS' ? baseAmount : 0)) as number;
+    const currentPaid = (tagihan.amountPaid ??
+      (tagihan.status === 'LUNAS' ? baseAmount : 0)) as number;
     const remainingAmount = Math.max(0, baseAmount - currentPaid);
 
     if (remainingAmount <= 0) {
@@ -571,7 +644,9 @@ export class FinanceService {
     }
 
     if (payAmount <= 0) {
-      throw new BadRequestException('Nominal pembayaran harus lebih besar dari 0');
+      throw new BadRequestException(
+        'Nominal pembayaran harus lebih besar dari 0',
+      );
     }
 
     if (payAmount > remainingAmount) {
@@ -583,7 +658,11 @@ export class FinanceService {
     const newAmountPaid = currentPaid + payAmount;
     const sisaKurangBayar = Math.max(0, baseAmount - newAmountPaid);
     const isLunas = newAmountPaid >= baseAmount;
-    const newStatus = isLunas ? 'LUNAS' : newAmountPaid > 0 ? 'ANGSURAN' : 'BELUM_LUNAS';
+    const newStatus = isLunas
+      ? 'LUNAS'
+      : newAmountPaid > 0
+        ? 'ANGSURAN'
+        : 'BELUM_LUNAS';
 
     const defaultPaymentNotes = isLunas
       ? 'Pembayaran Lunas Kasir Keuangan'
@@ -660,12 +739,16 @@ export class FinanceService {
     });
 
     if (!user || !user.password) {
-      throw new UnauthorizedException('Pengguna tidak ditemukan atau tidak valid');
+      throw new UnauthorizedException(
+        'Pengguna tidak ditemukan atau tidak valid',
+      );
     }
 
     const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) {
-      throw new UnauthorizedException('Password otorisasi tidak valid! Verifikasi gagal.');
+      throw new UnauthorizedException(
+        'Password otorisasi tidak valid! Verifikasi gagal.',
+      );
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -708,15 +791,23 @@ export class FinanceService {
   }) {
     const students = await this.prisma.student.findMany({
       where: { classId: dto.classId },
-      select: { id: true, program: true, beasiswaPercentage: true, beasiswaReason: true },
+      select: {
+        id: true,
+        program: true,
+        beasiswaPercentage: true,
+        beasiswaReason: true,
+      },
     });
     if (!students.length)
       throw new NotFoundException('Tidak ada siswa di kelas ini');
 
     const originalAmount = dto.amount;
-    const hasBulkBeasiswa = dto.beasiswaPercentage !== undefined && dto.beasiswaPercentage > 0;
+    const hasBulkBeasiswa =
+      dto.beasiswaPercentage !== undefined && dto.beasiswaPercentage > 0;
     const bulkValidPct = hasBulkBeasiswa
-      ? [25, 50, 75, 100].includes(dto.beasiswaPercentage!) ? dto.beasiswaPercentage! : 0
+      ? [25, 50, 75, 100].includes(dto.beasiswaPercentage!)
+        ? dto.beasiswaPercentage!
+        : 0
       : 0;
 
     const records = students.map((s) => {
@@ -725,14 +816,17 @@ export class FinanceService {
 
       const effectivePct = hasBulkBeasiswa
         ? bulkValidPct
-        : (s.beasiswaPercentage || 0);
+        : s.beasiswaPercentage || 0;
 
       const effectiveReason = hasBulkBeasiswa
         ? dto.beasiswaReason
-        : (s.beasiswaReason || (effectivePct > 0 ? 'Beasiswa Default Siswa' : null));
+        : s.beasiswaReason ||
+          (effectivePct > 0 ? 'Beasiswa Default Siswa' : null);
 
       if (effectivePct > 0) {
-        const validPct = [25, 50, 75, 100].includes(effectivePct) ? effectivePct : 0;
+        const validPct = [25, 50, 75, 100].includes(effectivePct)
+          ? effectivePct
+          : 0;
         if (validPct > 0) {
           const beasiswaAmount = Math.round(originalAmount * (validPct / 100));
           finalAmount = originalAmount - beasiswaAmount;
@@ -826,11 +920,13 @@ export class FinanceService {
       // SERVER-SIDE CALCULATION: Fetch default SPP from ProgramConfig table
       let sppAmount = dto.amount;
       if (student.program) {
-        const progConfig = await this.prisma.programConfig.findUnique({
-          where: { code: student.program },
-        }) || await this.prisma.programConfig.findFirst({
-          where: { code: { equals: student.program, mode: 'insensitive' } },
-        });
+        const progConfig =
+          (await this.prisma.programConfig.findUnique({
+            where: { code: student.program },
+          })) ||
+          (await this.prisma.programConfig.findFirst({
+            where: { code: { equals: student.program, mode: 'insensitive' } },
+          }));
 
         if (progConfig && progConfig.defaultSpp > 0) {
           sppAmount = progConfig.defaultSpp;
@@ -841,7 +937,9 @@ export class FinanceService {
       // Calculate scholarship discount if student has beasiswaSppPct set
       let finalAmount = calculatedAmount;
       const pct = student.beasiswaSppPct || 0;
-      let notes = dto.notes || `SPP ${dto.month}/${dto.year} - Program: ${student.program || 'reguler'}`;
+      let notes =
+        dto.notes ||
+        `SPP ${dto.month}/${dto.year} - Program: ${student.program || 'reguler'}`;
       let status = 'BELUM_LUNAS';
       let paidDate: Date | null = null;
 
@@ -929,7 +1027,10 @@ export class FinanceService {
 
     // Fetch default DPP from Setting or ProgramConfig
     const setting = await this.prisma.setting.findFirst();
-    const systemDefaultDpp = setting?.defaultDpp && setting.defaultDpp > 0 ? setting.defaultDpp : 1500000;
+    const systemDefaultDpp =
+      setting?.defaultDpp && setting.defaultDpp > 0
+        ? setting.defaultDpp
+        : 1500000;
 
     for (const student of students) {
       // Check if DPP already exists for this student
@@ -952,15 +1053,18 @@ export class FinanceService {
       }
 
       // Base DPP from setting/dto
-      let studentBaseDpp = dto.baseAmount || systemDefaultDpp;
+      const studentBaseDpp = dto.baseAmount || systemDefaultDpp;
 
       // SERVER-SIDE CALCULATION: Apply student default beasiswa if set
       let finalAmount = studentBaseDpp;
-      const beasiswaPercentage = student.beasiswaDppPct || student.beasiswaPercentage || 0;
+      const beasiswaPercentage =
+        student.beasiswaDppPct || student.beasiswaPercentage || 0;
       let beasiswaAmount = 0;
 
       if (beasiswaPercentage > 0) {
-        beasiswaAmount = Math.round(studentBaseDpp * (beasiswaPercentage / 100));
+        beasiswaAmount = Math.round(
+          studentBaseDpp * (beasiswaPercentage / 100),
+        );
         finalAmount = Math.max(0, studentBaseDpp - beasiswaAmount);
       }
 
@@ -1068,7 +1172,7 @@ export class FinanceService {
     const finalAmount = originalAmount - beasiswaAmount;
 
     // Clean existing beasiswa/discount info from notes
-    let cleanNotes = (tagihan.notes || '')
+    const cleanNotes = (tagihan.notes || '')
       .replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '')
       .replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '')
       .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
@@ -1121,7 +1225,9 @@ export class FinanceService {
     const beasiswaMatch = tagihan.notes?.match(/BEASISWA_INFO:\s*(\{.*?\})/);
     const discountMatch = tagihan.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/);
     if (!beasiswaMatch && !discountMatch) {
-      throw new Error('Tagihan ini tidak memiliki diskon/beasiswa yang dapat dihapus');
+      throw new Error(
+        'Tagihan ini tidak memiliki diskon/beasiswa yang dapat dihapus',
+      );
     }
 
     let originalAmount = tagihan.amount;
@@ -1212,7 +1318,16 @@ export class FinanceService {
   // ============================================================
   async getRecapitulasi(year: number, month?: number) {
     // Dynamic distinct types or standard types
-    const types = ['SPP', 'DPP', 'INFAQ', 'AKADEMIK', 'SEKOLAH', 'SERAGAM', 'UKS', 'UKA'];
+    const types = [
+      'SPP',
+      'DPP',
+      'INFAQ',
+      'AKADEMIK',
+      'SEKOLAH',
+      'SERAGAM',
+      'UKS',
+      'UKA',
+    ];
 
     // Tagihan LUNAS / ANGSURAN tahunan
     const yearlyPaid = await this.prisma.tagihan.findMany({
@@ -1236,13 +1351,27 @@ export class FinanceService {
 
     // Tren bulanan (penerimaan tagihan per bulan dalam setahun)
     const trendPaid = await this.prisma.tagihan.findMany({
-      where: { year, status: { in: ['LUNAS', 'ANGSURAN'] }, NOT: { month: null } },
+      where: {
+        year,
+        status: { in: ['LUNAS', 'ANGSURAN'] },
+        NOT: { month: null },
+      },
       select: { month: true, amount: true, amountPaid: true, status: true },
     });
 
-    const buildSummary = (items: { type: string; amount: number; amountPaid?: number | null; status?: string }[], isUnpaid = false) =>
+    const buildSummary = (
+      items: {
+        type: string;
+        amount: number;
+        amountPaid?: number | null;
+        status?: string;
+      }[],
+      isUnpaid = false,
+    ) =>
       types.map((t) => {
-        const filtered = items.filter((p) => p.type.toUpperCase() === t.toUpperCase());
+        const filtered = items.filter(
+          (p) => p.type.toUpperCase() === t.toUpperCase(),
+        );
         const total = filtered.reduce((s, p) => {
           if (isUnpaid) {
             return s + Math.max(0, p.amount - (p.amountPaid || 0));
@@ -1260,7 +1389,10 @@ export class FinanceService {
       const m = i + 1;
       const total = trendPaid
         .filter((p) => p.month === m)
-        .reduce((s, p) => s + (p.amountPaid || (p.status === 'LUNAS' ? p.amount : 0)), 0);
+        .reduce(
+          (s, p) => s + (p.amountPaid || (p.status === 'LUNAS' ? p.amount : 0)),
+          0,
+        );
       return { month: m, total };
     });
 
@@ -1346,10 +1478,7 @@ export class FinanceService {
     if (!student) {
       student = await this.prisma.student.findFirst({
         where: {
-          OR: [
-            { userId: userId },
-            ...(userId ? [{ id: userId }] : []),
-          ],
+          OR: [{ userId: userId }, ...(userId ? [{ id: userId }] : [])],
         },
         include: {
           class: { select: { name: true } },
@@ -1431,7 +1560,9 @@ export class FinanceService {
                     class: { select: { name: true } },
                     tagihans: {
                       orderBy: { createdAt: 'desc' },
-                      include: { payments: { orderBy: { paymentDate: 'desc' } } },
+                      include: {
+                        payments: { orderBy: { paymentDate: 'desc' } },
+                      },
                     },
                   },
                 },
@@ -1669,7 +1800,13 @@ export class FinanceService {
     // 1. Ambil semua Pemasukan (Tagihan Lunas & Angsuran)
     const tagihans = await this.prisma.tagihan.findMany({
       where: whereTagihan,
-      select: { type: true, amount: true, amountPaid: true, status: true, paidDate: true },
+      select: {
+        type: true,
+        amount: true,
+        amountPaid: true,
+        status: true,
+        paidDate: true,
+      },
     });
 
     // 2. Ambil semua Pengeluaran
@@ -1728,7 +1865,12 @@ export class FinanceService {
   // ============================================================
   // DANA BANTUAN (Grants / Aid Funds)
   // ============================================================
-  async getDanaBantuan(year?: number, month?: number, kategori?: string, status?: string) {
+  async getDanaBantuan(
+    year?: number,
+    month?: number,
+    kategori?: string,
+    status?: string,
+  ) {
     const where: any = {};
     if (year) {
       if (month) {
@@ -1779,7 +1921,9 @@ export class FinanceService {
   }
 
   async updateDanaBantuan(id: string, data: any) {
-    const existing = await this.prisma.danaBantuan.findUnique({ where: { id } });
+    const existing = await this.prisma.danaBantuan.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new NotFoundException('Data bantuan tidak ditemukan');
     }
@@ -1787,15 +1931,26 @@ export class FinanceService {
     return this.prisma.danaBantuan.update({
       where: { id },
       data: {
-        namaBantuan: data.namaBantuan !== undefined ? data.namaBantuan : existing.namaBantuan,
-        kategori: data.kategori !== undefined ? data.kategori : existing.kategori,
-        sumberDana: data.sumberDana !== undefined ? data.sumberDana : existing.sumberDana,
-        nominal: data.nominal !== undefined ? parseFloat(data.nominal) : existing.nominal,
-        penerima: data.penerima !== undefined ? data.penerima : existing.penerima,
+        namaBantuan:
+          data.namaBantuan !== undefined
+            ? data.namaBantuan
+            : existing.namaBantuan,
+        kategori:
+          data.kategori !== undefined ? data.kategori : existing.kategori,
+        sumberDana:
+          data.sumberDana !== undefined ? data.sumberDana : existing.sumberDana,
+        nominal:
+          data.nominal !== undefined
+            ? parseFloat(data.nominal)
+            : existing.nominal,
+        penerima:
+          data.penerima !== undefined ? data.penerima : existing.penerima,
         tanggal: data.tanggal ? new Date(data.tanggal) : existing.tanggal,
         status: data.status !== undefined ? data.status : existing.status,
-        keterangan: data.keterangan !== undefined ? data.keterangan : existing.keterangan,
-        targetSync: data.targetSync !== undefined ? data.targetSync : existing.targetSync,
+        keterangan:
+          data.keterangan !== undefined ? data.keterangan : existing.keterangan,
+        targetSync:
+          data.targetSync !== undefined ? data.targetSync : existing.targetSync,
       },
     });
   }
@@ -1806,7 +1961,11 @@ export class FinanceService {
     });
   }
 
-  async syncDanaBantuan(id: string, targetSync: string | undefined, userId: string) {
+  async syncDanaBantuan(
+    id: string,
+    targetSync: string | undefined,
+    userId: string,
+  ) {
     const dana = await this.prisma.danaBantuan.findUnique({ where: { id } });
     if (!dana) {
       throw new NotFoundException('Data bantuan tidak ditemukan');
@@ -1816,12 +1975,22 @@ export class FinanceService {
     let syncedRefId: string | null = null;
 
     if (syncTarget === 'KEUANGAN_KELUAR' || syncTarget === 'PENGGAJIAN') {
-      const expCategory = syncTarget === 'PENGGAJIAN' ? 'PENGGAJIAN' : (dana.kategori === 'OPERASIONAL' ? 'OPERASIONAL' : 'BANTUAN');
-      const titlePrefix = syncTarget === 'PENGGAJIAN' ? '[Insentif/Bantuan Gaji]' : '[Dana Bantuan]';
+      const expCategory =
+        syncTarget === 'PENGGAJIAN'
+          ? 'PENGGAJIAN'
+          : dana.kategori === 'OPERASIONAL'
+            ? 'OPERASIONAL'
+            : 'BANTUAN';
+      const titlePrefix =
+        syncTarget === 'PENGGAJIAN'
+          ? '[Insentif/Bantuan Gaji]'
+          : '[Dana Bantuan]';
       const createdExp = await this.prisma.pengeluaran.create({
         data: {
           title: `${titlePrefix} ${dana.namaBantuan}${dana.penerima ? ' - ' + dana.penerima : ''}`,
-          description: dana.keterangan || `Sinkronisasi Bantuan ${dana.sumberDana} (${dana.kategori})`,
+          description:
+            dana.keterangan ||
+            `Sinkronisasi Bantuan ${dana.sumberDana} (${dana.kategori})`,
           amount: dana.nominal,
           category: expCategory,
           date: dana.tanggal,
@@ -1884,9 +2053,21 @@ export class FinanceService {
     worksheet.addRow([]);
 
     // Information Box: Kelas & Wali Kelas
-    const waliKelasName = (cls.homeroomTeacher as any)?.user?.name || (cls.homeroomTeacher as any)?.name || 'Belum Ditentukan';
-    
-    const infoRow1 = worksheet.addRow(['  KELAS', '', `: ${cls.name}`, '', '', 'WALI KELAS', '', `: ${waliKelasName}`]);
+    const waliKelasName =
+      (cls.homeroomTeacher as any)?.user?.name ||
+      (cls.homeroomTeacher as any)?.name ||
+      'Belum Ditentukan';
+
+    const infoRow1 = worksheet.addRow([
+      '  KELAS',
+      '',
+      `: ${cls.name}`,
+      '',
+      '',
+      'WALI KELAS',
+      '',
+      `: ${waliKelasName}`,
+    ]);
     infoRow1.eachCell((cell) => {
       cell.font = { name: 'Arial', size: 11, bold: true };
     });
@@ -1895,7 +2076,16 @@ export class FinanceService {
     worksheet.mergeCells(`F${infoRow1.number}:G${infoRow1.number}`);
     worksheet.mergeCells(`H${infoRow1.number}:J${infoRow1.number}`);
 
-    const infoRow2 = worksheet.addRow(['  JUMLAH SISWA', '', `: ${cls.students.length} Siswa`, '', '', 'STATUS CETAK', '', ': DOKUMEN RESMI KELAS']);
+    const infoRow2 = worksheet.addRow([
+      '  JUMLAH SISWA',
+      '',
+      `: ${cls.students.length} Siswa`,
+      '',
+      '',
+      'STATUS CETAK',
+      '',
+      ': DOKUMEN RESMI KELAS',
+    ]);
     infoRow2.eachCell((cell) => {
       cell.font = { name: 'Arial', size: 10, italic: true };
     });
@@ -1921,7 +2111,12 @@ export class FinanceService {
     ];
     const headerRow = worksheet.addRow(headers);
     headerRow.eachCell((cell) => {
-      cell.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFF' } };
+      cell.font = {
+        name: 'Arial',
+        size: 11,
+        bold: true,
+        color: { argb: 'FFFFFF' },
+      };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
@@ -1936,7 +2131,20 @@ export class FinanceService {
       };
     });
 
-    const monthNamesShort = ['JUL', 'AGT', 'SEP', 'OKT', 'NOV', 'DES', 'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN'];
+    const monthNamesShort = [
+      'JUL',
+      'AGT',
+      'SEP',
+      'OKT',
+      'NOV',
+      'DES',
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MEI',
+      'JUN',
+    ];
 
     let rowIndex = 1;
     let grandTotalSpp = 0;
@@ -1948,7 +2156,9 @@ export class FinanceService {
     let totalFrekuensi = 0;
 
     for (const student of cls.students) {
-      const sppTagihans = student.tagihans.filter((t) => t.type === 'SPP' && t.status === 'LUNAS');
+      const sppTagihans = student.tagihans.filter(
+        (t) => t.type === 'SPP' && t.status === 'LUNAS',
+      );
       const frekuensi = sppTagihans.length;
       totalFrekuensi += frekuensi;
 
@@ -1962,32 +2172,56 @@ export class FinanceService {
         if (monthsPaid.length === 1) {
           bulanStr = monthNamesShort[monthsPaid[0] - 1] || `${monthsPaid[0]}`;
         } else if (monthsPaid.length > 1) {
-          const firstMonth = monthNamesShort[monthsPaid[0] - 1] || `${monthsPaid[0]}`;
-          const lastMonth = monthNamesShort[monthsPaid[monthsPaid.length - 1] - 1] || `${monthsPaid[monthsPaid.length - 1]}`;
+          const firstMonth =
+            monthNamesShort[monthsPaid[0] - 1] || `${monthsPaid[0]}`;
+          const lastMonth =
+            monthNamesShort[monthsPaid[monthsPaid.length - 1] - 1] ||
+            `${monthsPaid[monthsPaid.length - 1]}`;
           bulanStr = `${firstMonth}-${lastMonth}`;
         }
       }
 
-      const totalSppPaid = sppTagihans.reduce((sum, t) => sum + (t.amountPaid || t.amount), 0);
+      const totalSppPaid = sppTagihans.reduce(
+        (sum, t) => sum + (t.amountPaid || t.amount),
+        0,
+      );
 
       const nonDppTagihans = student.tagihans.filter(
-        (t) => !['SPP', 'DPP', 'UKS', 'UIS', 'UAK'].includes(t.type.toUpperCase()),
+        (t) =>
+          !['SPP', 'DPP', 'UKS', 'UIS', 'UAK'].includes(t.type.toUpperCase()),
       );
-      const tagKelasNonDpp = nonDppTagihans.reduce((sum, t) => sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)), 0);
+      const tagKelasNonDpp = nonDppTagihans.reduce(
+        (sum, t) =>
+          sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
+        0,
+      );
 
       const uksPaid = student.tagihans
         .filter((t) => t.type.toUpperCase() === 'UKS')
-        .reduce((sum, t) => sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)), 0);
+        .reduce(
+          (sum, t) =>
+            sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
+          0,
+        );
 
       const uisPaid = student.tagihans
         .filter((t) => ['UIS', 'UAK', 'UIS/UAK'].includes(t.type.toUpperCase()))
-        .reduce((sum, t) => sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)), 0);
+        .reduce(
+          (sum, t) =>
+            sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
+          0,
+        );
 
       const dppPaid = student.tagihans
         .filter((t) => t.type.toUpperCase() === 'DPP')
-        .reduce((sum, t) => sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)), 0);
+        .reduce(
+          (sum, t) =>
+            sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
+          0,
+        );
 
-      const rowTotal = totalSppPaid + tagKelasNonDpp + uksPaid + uisPaid + dppPaid;
+      const rowTotal =
+        totalSppPaid + tagKelasNonDpp + uksPaid + uisPaid + dppPaid;
 
       grandTotalSpp += totalSppPaid;
       grandTotalNonDpp += tagKelasNonDpp;
@@ -2067,7 +2301,7 @@ export class FinanceService {
 
     // Adjust Column Widths
     worksheet.columns = [
-      { width: 6 },  // No
+      { width: 6 }, // No
       { width: 28 }, // Nama
       { width: 16 }, // Frekuensi/Bulan
       { width: 16 }, // Bulan
@@ -2141,7 +2375,10 @@ export class FinanceService {
 
     const students = studentsData.map((s: any) => {
       const tagihans = s.tagihans || [];
-      const totalTagihan = tagihans.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+      const totalTagihan = tagihans.reduce(
+        (sum: number, t: any) => sum + (t.amount || 0),
+        0,
+      );
       const totalLunas = tagihans.reduce((sum: number, t: any) => {
         if (t.status === 'LUNAS') return sum + (t.amount || 0);
         return sum + (t.amountPaid || 0);
@@ -2165,7 +2402,12 @@ export class FinanceService {
         totalLunas,
         sisaTagihan,
         tagihanCount: tagihans.length,
-        statusTagihan: tagihans.length === 0 ? 'TANPA_TAGIHAN' : sisaTagihan === 0 ? 'LUNAS' : 'ADA_TAGIHAN',
+        statusTagihan:
+          tagihans.length === 0
+            ? 'TANPA_TAGIHAN'
+            : sisaTagihan === 0
+              ? 'LUNAS'
+              : 'ADA_TAGIHAN',
       };
     });
 
@@ -2223,7 +2465,9 @@ export class FinanceService {
 
     for (const item of items) {
       const cleanNis = item.nis ? String(item.nis).trim() : '';
-      const cleanVa = item.virtualAccount ? String(item.virtualAccount).trim() : '';
+      const cleanVa = item.virtualAccount
+        ? String(item.virtualAccount).trim()
+        : '';
 
       if (!cleanNis) {
         failedCount++;
@@ -2299,13 +2543,17 @@ export class FinanceService {
   }
 
   /** Update or clear Virtual Account for a single student */
-  async updateStudentVirtualAccount(studentId: string, virtualAccount: string | null) {
+  async updateStudentVirtualAccount(
+    studentId: string,
+    virtualAccount: string | null,
+  ) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
-    const cleanVa = virtualAccount && virtualAccount.trim() ? virtualAccount.trim() : null;
+    const cleanVa =
+      virtualAccount && virtualAccount.trim() ? virtualAccount.trim() : null;
 
     const updated = await (this.prisma.student as any).update({
       where: { id: studentId },
@@ -2341,7 +2589,12 @@ export class FinanceService {
 
     // Style Header Row
     const headerRow = worksheet.getRow(1);
-    headerRow.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFF' } };
+    headerRow.font = {
+      name: 'Arial',
+      size: 11,
+      bold: true,
+      color: { argb: 'FFFFFF' },
+    };
     headerRow.fill = {
       type: 'pattern',
       pattern: 'solid',
@@ -2382,5 +2635,3 @@ export class FinanceService {
     return Buffer.from(buffer);
   }
 }
-
-

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
@@ -22,15 +26,14 @@ export class SuratMasukService {
   async verifyToken(token: string) {
     const cleanToken = token ? token.trim().toUpperCase() : '';
     if (!cleanToken) {
-      throw new NotFoundException('Token verifikasi disposisi tidak boleh kosong.');
+      throw new NotFoundException(
+        'Token verifikasi disposisi tidak boleh kosong.',
+      );
     }
 
     const disposisi = await this.prisma.suratDisposisi.findFirst({
       where: {
-        OR: [
-          { eSignToken: cleanToken },
-          { id: cleanToken },
-        ],
+        OR: [{ eSignToken: cleanToken }, { id: cleanToken }],
       },
       include: {
         suratMasuk: true,
@@ -42,28 +45,36 @@ export class SuratMasukService {
     if (!disposisi) {
       return {
         valid: false,
-        message: 'Tanda Tangan Digital / Lembar Disposisi tidak ditemukan dalam basis data SIMASMUH.',
+        message:
+          'Tanda Tangan Digital / Lembar Disposisi tidak ditemukan dalam basis data SIMASMUH.',
       };
     }
 
     return {
       valid: true,
-      message: '✓ TERVERIFIKASI RESMI ASLI - Tanda Tangan Digital Lembar Disposisi Surat Masuk Sah & Terhubung Basis Data SIMASMUH',
+      message:
+        '✓ TERVERIFIKASI RESMI ASLI - Tanda Tangan Digital Lembar Disposisi Surat Masuk Sah & Terhubung Basis Data SIMASMUH',
       data: {
         id: disposisi.id,
         eSignToken: disposisi.eSignToken || cleanToken,
         eSignSignedAt: disposisi.eSignSignedAt || disposisi.updatedAt,
-        eSignSignedBy: disposisi.signerName || setting?.principalName || 'Kepala Sekolah (Sugeng Riadi, M.Pd.)',
+        eSignSignedBy:
+          disposisi.signerName ||
+          setting?.principalName ||
+          'Kepala Sekolah (Sugeng Riadi, M.Pd.)',
         signatureImage: disposisi.signatureImage || null,
         eSignHash: `SHA256-DISPOSISI-${disposisi.id.slice(0, 8).toUpperCase()}-OK`,
         status: disposisi.statusEsign,
         date: disposisi.suratMasuk?.tanggalSurat || disposisi.tanggalDiterima,
-        nomorAgenda: disposisi.nomorAgenda || disposisi.suratMasuk?.nomorAgenda || '-',
+        nomorAgenda:
+          disposisi.nomorAgenda || disposisi.suratMasuk?.nomorAgenda || '-',
         nomorSurat: disposisi.suratMasuk?.nomorSurat || '-',
         perihal: disposisi.suratMasuk?.perihal || '-',
         instansi: disposisi.suratMasuk?.instansi || '-',
         alasan: `Disposisi Surat Masuk: ${disposisi.suratMasuk?.perihal} (Agenda: ${disposisi.nomorAgenda || disposisi.suratMasuk?.nomorAgenda})`,
-        catatanAdmin: disposisi.catatan || 'Lembar Disposisi Resmi Terverifikasi Sistem SIMASMUH',
+        catatanAdmin:
+          disposisi.catatan ||
+          'Lembar Disposisi Resmi Terverifikasi Sistem SIMASMUH',
         instruksi: disposisi.instruksi,
         diteruskanKepada: disposisi.diteruskanKepada,
         pemohon: {
@@ -79,8 +90,12 @@ export class SuratMasukService {
           phone: setting?.phone || '088293733330',
           email: setting?.email || 'info@smam1ponorogo.sch.id',
           logoUrl: '/muhipo-log.jpg',
-          principalName: disposisi.signerName || setting?.principalName || 'Sugeng Riadi, M.Pd.',
-          principalNip: disposisi.signerNbm || setting?.principalNip || 'NBM. 974.501',
+          principalName:
+            disposisi.signerName ||
+            setting?.principalName ||
+            'Sugeng Riadi, M.Pd.',
+          principalNip:
+            disposisi.signerNbm || setting?.principalNip || 'NBM. 974.501',
         },
       },
     };
@@ -94,8 +109,12 @@ export class SuratMasukService {
         pengirim: dto.pengirim || null,
         instansi: dto.instansi,
         perihal: dto.perihal,
-        tanggalSurat: dto.tanggalSurat ? new Date(dto.tanggalSurat) : new Date(),
-        tanggalDiterima: dto.tanggalDiterima ? new Date(dto.tanggalDiterima) : new Date(),
+        tanggalSurat: dto.tanggalSurat
+          ? new Date(dto.tanggalSurat)
+          : new Date(),
+        tanggalDiterima: dto.tanggalDiterima
+          ? new Date(dto.tanggalDiterima)
+          : new Date(),
         sifat: dto.sifat || 'RUTIN',
         kategori: dto.kategori || 'DINAS_DIKNAS',
         fileUrl: dto.fileUrl || null,
@@ -122,7 +141,11 @@ export class SuratMasukService {
     };
   }
 
-  async findAll(query: { search?: string; sifat?: string; statusDisposisi?: string }) {
+  async findAll(query: {
+    search?: string;
+    sifat?: string;
+    statusDisposisi?: string;
+  }) {
     const { search, sifat, statusDisposisi } = query;
     const where: any = {};
 
@@ -180,12 +203,17 @@ export class SuratMasukService {
         pengirim: dto.pengirim !== undefined ? dto.pengirim : existing.pengirim,
         instansi: dto.instansi || existing.instansi,
         perihal: dto.perihal || existing.perihal,
-        tanggalSurat: dto.tanggalSurat ? new Date(dto.tanggalSurat) : existing.tanggalSurat,
-        tanggalDiterima: dto.tanggalDiterima ? new Date(dto.tanggalDiterima) : existing.tanggalDiterima,
+        tanggalSurat: dto.tanggalSurat
+          ? new Date(dto.tanggalSurat)
+          : existing.tanggalSurat,
+        tanggalDiterima: dto.tanggalDiterima
+          ? new Date(dto.tanggalDiterima)
+          : existing.tanggalDiterima,
         sifat: dto.sifat || existing.sifat,
         kategori: dto.kategori || existing.kategori,
         fileUrl: dto.fileUrl !== undefined ? dto.fileUrl : existing.fileUrl,
-        ringkasan: dto.ringkasan !== undefined ? dto.ringkasan : existing.ringkasan,
+        ringkasan:
+          dto.ringkasan !== undefined ? dto.ringkasan : existing.ringkasan,
         statusTahapan: dto.statusTahapan || existing.statusTahapan,
       },
       include: { disposisi: true },
@@ -211,7 +239,9 @@ export class SuratMasukService {
           ? await bcrypt.compare(password, user.password)
           : user.password === password;
         if (!isMatch) {
-          throw new UnauthorizedException('Kata sandi keamanan yang Anda masukkan salah.');
+          throw new UnauthorizedException(
+            'Kata sandi keamanan yang Anda masukkan salah.',
+          );
         }
       }
     }
@@ -228,7 +258,10 @@ export class SuratMasukService {
       // Ignore log error
     }
 
-    return { success: true, message: 'Surat Masuk beserta Disposisi berhasil dihapus.' };
+    return {
+      success: true,
+      message: 'Surat Masuk beserta Disposisi berhasil dihapus.',
+    };
   }
 
   /**
@@ -250,7 +283,9 @@ export class SuratMasukService {
         nomorAgenda: dto.nomorAgenda || surat.nomorAgenda,
         sifat: dto.sifat || surat.sifat,
         statusTahapan: dto.statusTahapan || 'DITERIMA',
-        tanggalDiterima: dto.tanggalDiterima ? new Date(dto.tanggalDiterima) : surat.tanggalDiterima,
+        tanggalDiterima: dto.tanggalDiterima
+          ? new Date(dto.tanggalDiterima)
+          : surat.tanggalDiterima,
         instruksi: dto.instruksi || [],
         diteruskanKepada: dto.diteruskanKepada || {},
         catatan: dto.catatan || null,
@@ -260,7 +295,9 @@ export class SuratMasukService {
         nomorAgenda: dto.nomorAgenda || surat.nomorAgenda,
         sifat: dto.sifat || surat.sifat,
         statusTahapan: dto.statusTahapan || 'DITERIMA',
-        tanggalDiterima: dto.tanggalDiterima ? new Date(dto.tanggalDiterima) : surat.tanggalDiterima,
+        tanggalDiterima: dto.tanggalDiterima
+          ? new Date(dto.tanggalDiterima)
+          : surat.tanggalDiterima,
         instruksi: dto.instruksi || [],
         diteruskanKepada: dto.diteruskanKepada || {},
         catatan: dto.catatan || null,
@@ -291,7 +328,8 @@ export class SuratMasukService {
 
     return {
       success: true,
-      message: 'Lembar Disposisi berhasil disimpan dan diajukan ke Kepala Sekolah untuk E-Sign.',
+      message:
+        'Lembar Disposisi berhasil disimpan dan diajukan ke Kepala Sekolah untuk E-Sign.',
       data: disposisi,
     };
   }
@@ -299,16 +337,22 @@ export class SuratMasukService {
   /**
    * Helper Pengiriman Notifikasi WhatsApp Otomatis ke Penerima Disposisi
    */
-  private async sendDisposisiNotifications(disposisi: any, surat: any, signerName: string) {
+  private async sendDisposisiNotifications(
+    disposisi: any,
+    surat: any,
+    signerName: string,
+  ) {
     try {
       const diteruskan = disposisi.diteruskanKepada || {};
-      const targets: string[] = Array.isArray(diteruskan.targets) ? diteruskan.targets : [];
+      const targets: string[] = Array.isArray(diteruskan.targets)
+        ? diteruskan.targets
+        : [];
       const recipientNames: string[] = [];
 
       if (diteruskan.guruNama) recipientNames.push(diteruskan.guruNama);
       if (diteruskan.bagianNama) recipientNames.push(diteruskan.bagianNama);
       if (diteruskan.stafNama) recipientNames.push(diteruskan.stafNama);
-      
+
       // Gabungkan target unit & nama individu
       const allTargetLabels = [...targets, ...recipientNames].filter(Boolean);
       if (allTargetLabels.length === 0) return;
@@ -326,7 +370,7 @@ export class SuratMasukService {
         take: 3,
       });
 
-      const messageContent = 
+      const messageContent =
         `📌 *PENDELEGAIAN DISPOSISI SURAT MASUK*\n\n` +
         `Assalamu'alaikum Wr. Wb.\n` +
         `Yth. Bapak/Ibu (${recipientStr}), Anda menerima pendelegasian tindak lanjut Surat Masuk resmi yang telah diverifikasi & di-E-Sign oleh Kepala Sekolah (${signerName}).\n\n` +
@@ -382,7 +426,8 @@ export class SuratMasukService {
         where: { id: disposisiId },
         data: {
           statusEsign: 'DITOLAK',
-          catatanPenolak: dto.catatanPenolak || 'Disposisi ditolak oleh Kepala Sekolah',
+          catatanPenolak:
+            dto.catatanPenolak || 'Disposisi ditolak oleh Kepala Sekolah',
         },
       });
 
@@ -434,9 +479,15 @@ export class SuratMasukService {
     });
 
     // Otomatis Kirim Notifikasi WhatsApp ke Pihak Diberi Kuasa / Diteruskan Kepada
-    const instruksiArr = Array.isArray(disposisi.instruksi) ? disposisi.instruksi : [];
+    const instruksiArr = Array.isArray(disposisi.instruksi)
+      ? disposisi.instruksi
+      : [];
     if (instruksiArr.includes('Ditindak Lanjuti') || instruksiArr.length > 0) {
-      await this.sendDisposisiNotifications(updated, disposisi.suratMasuk, signerName);
+      await this.sendDisposisiNotifications(
+        updated,
+        disposisi.suratMasuk,
+        signerName,
+      );
     }
 
     try {
@@ -451,7 +502,8 @@ export class SuratMasukService {
 
     return {
       success: true,
-      message: '✓ Lembar Disposisi berhasil diverifikasi, di-E-Sign, & Notifikasi Otomatis dikirim ke Pihak Terkait.',
+      message:
+        '✓ Lembar Disposisi berhasil diverifikasi, di-E-Sign, & Notifikasi Otomatis dikirim ke Pihak Terkait.',
       data: updated,
     };
   }

@@ -40,13 +40,15 @@ export class IzinKeluarService {
     // Ambil info user untuk menentukan apakah pemohon adalah Pegawai/Guru atau Siswa
     const targetUserRecord = await this.prisma.user.findUnique({
       where: { id: finalUserId },
-      select: { role: true, subRole: true, name: true, phone: true }
+      select: { role: true, subRole: true, name: true, phone: true },
     });
 
     const isPegawai = targetUserRecord && targetUserRecord.role !== 'SISWA';
     // Ketentuan Izin Keluar Pegawai: Langsung tercatat otomatis (DISETUJUI) tanpa verifikasi manual
     const initialStatus = isPegawai ? 'DISETUJUI' : 'MENUNGGU';
-    const autoCatatan = isPegawai ? 'Izin keluar pegawai tercatat otomatis di sistem.' : null;
+    const autoCatatan = isPegawai
+      ? 'Izin keluar pegawai tercatat otomatis di sistem.'
+      : null;
 
     const izin = await this.prisma.izinKeluar.create({
       data: {
@@ -66,7 +68,17 @@ export class IzinKeluarService {
             role: true,
             subRole: true,
             phone: true,
-            student: { select: { id: true, name: true, nis: true, nisn: true, phone: true, parentPhone: true, class: { select: { name: true } } } },
+            student: {
+              select: {
+                id: true,
+                name: true,
+                nis: true,
+                nisn: true,
+                phone: true,
+                parentPhone: true,
+                class: { select: { name: true } },
+              },
+            },
             teacherProfile: { select: { phone: true, nip: true } },
           },
         },
@@ -74,7 +86,10 @@ export class IzinKeluarService {
     });
 
     // Notifikasi otomatis: Jika diterbitkan Dispensasi oleh TU/Sekolah untuk siswa
-    const isDispensasi = finalAlasan.includes('[IZIN DISPENSASI]') || finalAlasan.includes('[DISPENSASI') || data.tipeIzin === 'DISPENSASI';
+    const isDispensasi =
+      finalAlasan.includes('[IZIN DISPENSASI]') ||
+      finalAlasan.includes('[DISPENSASI') ||
+      data.tipeIzin === 'DISPENSASI';
     if (isDispensasi) {
       // 1. Notifikasi In-App ke Kepala Sekolah untuk persetujuan eksekutif
       const kepalaSekolahList = await this.prisma.user.findMany({
@@ -96,15 +111,17 @@ export class IzinKeluarService {
 
       for (const ks of kepalaSekolahList) {
         // Buat In-App Notification untuk approval di Dashboard
-        await this.prisma.notification.create({
-          data: {
-            userId: ks.id,
-            title: 'Permohonan Persetujuan Dispensasi Siswa',
-            message: `Surat dispensasi resmi untuk ${studentName} (Kelas ${className}) telah diterbitkan Tata Usaha dan membutuhkan persetujuan Kepala Sekolah.`,
-            type: 'DISPENSASI',
-            isRead: false,
-          },
-        }).catch(() => {});
+        await this.prisma.notification
+          .create({
+            data: {
+              userId: ks.id,
+              title: 'Permohonan Persetujuan Dispensasi Siswa',
+              message: `Surat dispensasi resmi untuk ${studentName} (Kelas ${className}) telah diterbitkan Tata Usaha dan membutuhkan persetujuan Kepala Sekolah.`,
+              type: 'DISPENSASI',
+              isRead: false,
+            },
+          })
+          .catch(() => {});
       }
 
       // 2. Kirim Notifikasi WhatsApp & In-App ke Siswa & Wali Murid bahwa surat dispensasi telah diajukan
@@ -115,24 +132,28 @@ export class IzinKeluarService {
         const notifMsg = `*Surat Dispensasi Resmi Siswa - SIMASMUH*\n\nDispensasi resmi atas nama *${studentName}* (Kelas ${className}) telah diterbitkan Tata Usaha untuk kegiatan *${data.alasan}* pada tanggal *${data.date}* (${data.waktuKeluar} - ${data.estimasiKembali || 'Selesai'}). Saat ini menunggu persetujuan akhir Kepala Sekolah.`;
 
         if (studentPhone) {
-          this.whatsAppService.sendDirectMessage({
-            to: studentPhone,
-            recipientName: studentName,
-            recipientRole: 'SISWA',
-            category: 'IZIN',
-            title: 'Pengajuan Dispensasi Siswa',
-            message: notifMsg,
-          }).catch(() => {});
+          this.whatsAppService
+            .sendDirectMessage({
+              to: studentPhone,
+              recipientName: studentName,
+              recipientRole: 'SISWA',
+              category: 'IZIN',
+              title: 'Pengajuan Dispensasi Siswa',
+              message: notifMsg,
+            })
+            .catch(() => {});
         }
         if (parentPhone && parentPhone !== studentPhone) {
-          this.whatsAppService.sendDirectMessage({
-            to: parentPhone,
-            recipientName: `Wali dari ${studentName}`,
-            recipientRole: 'WALI_MURID',
-            category: 'IZIN',
-            title: 'Pengajuan Dispensasi Siswa',
-            message: notifMsg,
-          }).catch(() => {});
+          this.whatsAppService
+            .sendDirectMessage({
+              to: parentPhone,
+              recipientName: `Wali dari ${studentName}`,
+              recipientRole: 'WALI_MURID',
+              category: 'IZIN',
+              title: 'Pengajuan Dispensasi Siswa',
+              message: notifMsg,
+            })
+            .catch(() => {});
         }
       }
     }
@@ -178,7 +199,13 @@ export class IzinKeluarService {
             name: true,
             role: true,
             subRole: true,
-            student: { select: { name: true, nis: true, class: { select: { name: true } } } },
+            student: {
+              select: {
+                name: true,
+                nis: true,
+                class: { select: { name: true } },
+              },
+            },
           },
         },
       },
@@ -261,14 +288,18 @@ export class IzinKeluarService {
     const tokenRandom = crypto.randomBytes(4).toString('hex').toUpperCase();
     const eSignToken = izin.eSignToken || `DS-2026-${tokenRandom}`;
     const eSignSignedAt = new Date();
-    const principalName = signerName || setting?.principalName || 'Kepala Sekolah SIMASMUH';
+    const principalName =
+      signerName || setting?.principalName || 'Kepala Sekolah SIMASMUH';
     const rawContentToHash = `${izin.id}|${izin.userId}|${izin.alasan}|${eSignToken}|${eSignSignedAt.toISOString()}`;
-    const eSignHash = crypto.createHash('sha256').update(rawContentToHash).digest('hex');
+    const eSignHash = crypto
+      .createHash('sha256')
+      .update(rawContentToHash)
+      .digest('hex');
 
     const updated = await this.prisma.izinKeluar.update({
       where: { id },
-      data: { 
-        status: 'DISETUJUI', 
+      data: {
+        status: 'DISETUJUI',
         catatanAdmin: catatanAdmin || null,
         eSignToken,
         eSignSignedAt,
@@ -331,7 +362,11 @@ export class IzinKeluarService {
         .sendAttendanceNotification({
           studentOrUserName: targetUser.name,
           role: targetUser.role,
-          phone: targetUser.phone || targetUser.teacherProfile?.phone || targetUser.student?.phone || undefined,
+          phone:
+            targetUser.phone ||
+            targetUser.teacherProfile?.phone ||
+            targetUser.student?.phone ||
+            undefined,
           parentPhone: targetUser.student?.parentPhone || undefined,
           className: targetUser.student?.class?.name || undefined,
           scanType: 'IZIN',
@@ -470,10 +505,7 @@ export class IzinKeluarService {
 
     const izin = await this.prisma.izinKeluar.findFirst({
       where: {
-        OR: [
-          { eSignToken: cleanToken },
-          { id: cleanToken },
-        ],
+        OR: [{ eSignToken: cleanToken }, { id: cleanToken }],
       },
       include: {
         user: {
@@ -505,7 +537,8 @@ export class IzinKeluarService {
     if (!izin) {
       return {
         valid: false,
-        message: 'Tanda Tangan Digital Surat Izin Keluar tidak ditemukan dalam basis data SIMASMUH.',
+        message:
+          'Tanda Tangan Digital Surat Izin Keluar tidak ditemukan dalam basis data SIMASMUH.',
       };
     }
 
@@ -513,12 +546,17 @@ export class IzinKeluarService {
 
     return {
       valid: true,
-      message: '✓ TERVERIFIKASI RESMI ASLI - Tanda Tangan Digital Sah & Terhubung Basis Data SIMASMUH',
+      message:
+        '✓ TERVERIFIKASI RESMI ASLI - Tanda Tangan Digital Sah & Terhubung Basis Data SIMASMUH',
       data: {
         id: izin.id,
-        eSignToken: izin.eSignToken || `DS-2026-${izin.id.slice(0, 8).toUpperCase()}`,
+        eSignToken:
+          izin.eSignToken || `DS-2026-${izin.id.slice(0, 8).toUpperCase()}`,
         eSignSignedAt: izin.eSignSignedAt || izin.updatedAt,
-        eSignSignedBy: izin.eSignSignedBy || setting?.principalName || 'Kepala Sekolah SIMASMUH',
+        eSignSignedBy:
+          izin.eSignSignedBy ||
+          setting?.principalName ||
+          'Kepala Sekolah SIMASMUH',
         eSignHash: izin.eSignHash || 'SHA256-VERIFIED-DATABASE-OK',
         status: izin.status,
         date: izin.date,
@@ -540,7 +578,8 @@ export class IzinKeluarService {
           email: setting?.email || 'info@smam1ponorogo.sch.id',
           logoUrl: setting?.logoUrl || '/muhipo-log.jpg',
           principalName: setting?.principalName || 'Kepala Sekolah SIMASMUH',
-          principalNip: setting?.principalNip || 'NIP/NBM. 19780512 200501 1 003',
+          principalNip:
+            setting?.principalNip || 'NIP/NBM. 19780512 200501 1 003',
         },
       },
     };

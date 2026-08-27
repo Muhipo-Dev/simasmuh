@@ -173,15 +173,17 @@ export class PaymentProofsService {
       // Log the file upload activity
       await this.logFileActivity(userId, 'UPLOAD', proof.id, fileMetadata);
 
-      this.systemLogService.log({
-        category: 'KEUANGAN',
-        level: 'INFO',
-        action: 'PAYMENT_PROOF_UPLOADED',
-        message: `Bukti transfer diunggah: Siswa '${proof.student.name}' (Rp ${amount.toLocaleString('id-ID')})`,
-        userId,
-        userName: proof.student.name,
-        details: { proofId: proof.id, amount, tagihanId },
-      }).catch(() => {});
+      this.systemLogService
+        .log({
+          category: 'KEUANGAN',
+          level: 'INFO',
+          action: 'PAYMENT_PROOF_UPLOADED',
+          message: `Bukti transfer diunggah: Siswa '${proof.student.name}' (Rp ${amount.toLocaleString('id-ID')})`,
+          userId,
+          userName: proof.student.name,
+          details: { proofId: proof.id, amount, tagihanId },
+        })
+        .catch(() => {});
 
       return proof;
     } catch (error) {
@@ -438,10 +440,17 @@ export class PaymentProofsService {
           });
 
           if (currentTagihan) {
-            const currentPaid = (currentTagihan.amountPaid ?? (currentTagihan.status === 'LUNAS' ? currentTagihan.amount : 0)) as number;
+            const currentPaid = (currentTagihan.amountPaid ??
+              (currentTagihan.status === 'LUNAS'
+                ? currentTagihan.amount
+                : 0)) as number;
             const newAmountPaid = currentPaid + proof.amount;
             const isLunas = newAmountPaid >= currentTagihan.amount;
-            const newStatus = isLunas ? 'LUNAS' : newAmountPaid > 0 ? 'ANGSURAN' : 'BELUM_LUNAS';
+            const newStatus = isLunas
+              ? 'LUNAS'
+              : newAmountPaid > 0
+                ? 'ANGSURAN'
+                : 'BELUM_LUNAS';
 
             await (tx.tagihan as any).update({
               where: { id: proof.tagihanId },
@@ -460,11 +469,15 @@ export class PaymentProofsService {
                 amount: proof.amount,
                 month: currentTagihan.month,
                 year: currentTagihan.year,
-                notes: proof.notes || `Bukti Pembayaran Verifikasi (${proof.status})`,
+                notes:
+                  proof.notes ||
+                  `Bukti Pembayaran Verifikasi (${proof.status})`,
               },
             });
 
-            this.logger.log(`Tagihan ${proof.tagihanId} updated with amountPaid: ${newAmountPaid}, status: ${newStatus}`);
+            this.logger.log(
+              `Tagihan ${proof.tagihanId} updated with amountPaid: ${newAmountPaid}, status: ${newStatus}`,
+            );
           }
         } else if (status === 'DITOLAK' && proof.tagihanId) {
           this.logger.log(
@@ -494,16 +507,23 @@ export class PaymentProofsService {
         // Don't fail the whole operation for event emission failure
       }
 
-      this.systemLogService.log({
-        category: 'KEUANGAN',
-        level: status === 'DIVERIFIKASI' ? 'INFO' : 'WARN',
-        action: `PAYMENT_PROOF_${status}`,
-        message: `Bukti transfer ${status.toLowerCase()} oleh '${verifier.name}' untuk siswa '${updatedProof.student.name}' (Rp ${updatedProof.amount.toLocaleString('id-ID')})`,
-        userId: verifiedBy,
-        userName: verifier.name,
-        userRole: verifier.role,
-        details: { proofId: updatedProof.id, status, amount: updatedProof.amount, studentId: updatedProof.studentId },
-      }).catch(() => {});
+      this.systemLogService
+        .log({
+          category: 'KEUANGAN',
+          level: status === 'DIVERIFIKASI' ? 'INFO' : 'WARN',
+          action: `PAYMENT_PROOF_${status}`,
+          message: `Bukti transfer ${status.toLowerCase()} oleh '${verifier.name}' untuk siswa '${updatedProof.student.name}' (Rp ${updatedProof.amount.toLocaleString('id-ID')})`,
+          userId: verifiedBy,
+          userName: verifier.name,
+          userRole: verifier.role,
+          details: {
+            proofId: updatedProof.id,
+            status,
+            amount: updatedProof.amount,
+            studentId: updatedProof.studentId,
+          },
+        })
+        .catch(() => {});
 
       return updatedProof;
     } catch (error) {

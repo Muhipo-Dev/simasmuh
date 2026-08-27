@@ -24,7 +24,11 @@ export class FinanceCalculationService {
    * Calculate SPP amount based on student's program
    * Different programs may have different SPP rates
    */
-  async calculateSPPAmount(studentId: string, _month: number, _year: number): Promise<number> {
+  async calculateSPPAmount(
+    studentId: string,
+    _month: number,
+    _year: number,
+  ): Promise<number> {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
       select: { program: true },
@@ -36,11 +40,13 @@ export class FinanceCalculationService {
 
     let sppAmount = 300000;
     if (student.program) {
-      const progConfig = await this.prisma.programConfig.findUnique({
-        where: { code: student.program },
-      }) || await this.prisma.programConfig.findFirst({
-        where: { code: { equals: student.program, mode: 'insensitive' } },
-      });
+      const progConfig =
+        (await this.prisma.programConfig.findUnique({
+          where: { code: student.program },
+        })) ||
+        (await this.prisma.programConfig.findFirst({
+          where: { code: { equals: student.program, mode: 'insensitive' } },
+        }));
 
       if (progConfig && progConfig.defaultSpp > 0) {
         sppAmount = progConfig.defaultSpp;
@@ -99,7 +105,10 @@ export class FinanceCalculationService {
 
     // Check Setting table defaultDpp
     const setting = await this.prisma.setting.findFirst();
-    const systemDefaultDpp = setting?.defaultDpp && setting.defaultDpp > 0 ? setting.defaultDpp : 1500000;
+    const systemDefaultDpp =
+      setting?.defaultDpp && setting.defaultDpp > 0
+        ? setting.defaultDpp
+        : 1500000;
 
     // Base DPP amount by grade level (if grade 10, 11, 12)
     const gradeBaseRates: Record<number, number> = {
@@ -108,7 +117,9 @@ export class FinanceCalculationService {
       12: systemDefaultDpp > 0 ? Math.round(systemDefaultDpp * 0.67) : 1000000,
     };
 
-    const baseDPP = (student.class && gradeBaseRates[student.class.gradeLevel]) || systemDefaultDpp;
+    const baseDPP =
+      (student.class && gradeBaseRates[student.class.gradeLevel]) ||
+      systemDefaultDpp;
 
     this.logger.log(
       `DPP calculated for student ${studentId} (Grade ${student.class?.gradeLevel}, ${student.program}): ${baseDPP}`,
@@ -152,13 +163,16 @@ export class FinanceCalculationService {
     // Apply discount based on type or student profile
     switch (beasiswaType?.toUpperCase()) {
       case 'SPP':
-        beasiswaPercentage = student.beasiswaSppPct || student.beasiswaPercentage || 0;
+        beasiswaPercentage =
+          student.beasiswaSppPct || student.beasiswaPercentage || 0;
         break;
       case 'DPP':
-        beasiswaPercentage = student.beasiswaDppPct || student.beasiswaPercentage || 0;
+        beasiswaPercentage =
+          student.beasiswaDppPct || student.beasiswaPercentage || 0;
         break;
       case 'SERAGAM':
-        beasiswaPercentage = student.beasiswaSeragamPct || student.beasiswaPercentage || 0;
+        beasiswaPercentage =
+          student.beasiswaSeragamPct || student.beasiswaPercentage || 0;
         break;
       case 'AKADEMIK':
         beasiswaPercentage = 25;
@@ -355,7 +369,8 @@ export class FinanceCalculationService {
       .reduce((sum, b) => sum + b.nominal, 0);
 
     // Calculate total salary
-    const totalSalary = baseSalary + attendanceBonus + roleAllowance + bantuanNominal;
+    const totalSalary =
+      baseSalary + attendanceBonus + roleAllowance + bantuanNominal;
 
     // Deductions (e.g., BPJS, tax, etc.)
     const deductions = Math.round(totalSalary * 0.05); // 5% for social security/tax

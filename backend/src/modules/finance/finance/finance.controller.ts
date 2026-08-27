@@ -45,11 +45,29 @@ export class FinanceController {
     @Query('insentifKetertiban') insentifKetertiban?: string,
     @Query('tunjanganMakan') tunjanganMakan?: string,
   ) {
-    const userSubRoles = [req.user?.subRole, req.user?.subRole2, req.user?.subRole3, req.user?.subRole4, req.user?.subRole5, req.user?.role];
-    const isKeuanganStaff = userSubRoles.some(r => ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r));
+    const userSubRoles = [
+      req.user?.subRole,
+      req.user?.subRole2,
+      req.user?.subRole3,
+      req.user?.subRole4,
+      req.user?.subRole5,
+      req.user?.role,
+    ];
+    const isKeuanganStaff = userSubRoles.some((r) =>
+      [
+        'KEUANGAN_ALL',
+        'KEUANGAN_MASUK',
+        'KEUANGAN_KELUAR',
+        'SUPERADMIN',
+        'ADMIN_IT',
+        'KEPALA_SEKOLAH',
+      ].includes(r),
+    );
 
     if (!isKeuanganStaff) {
-      throw new ForbiddenException('Akses ditolak. Penggajian pegawai hanya dapat diakses oleh bagian Keuangan / Superadmin.');
+      throw new ForbiddenException(
+        'Akses ditolak. Penggajian pegawai hanya dapat diakses oleh bagian Keuangan / Superadmin.',
+      );
     }
 
     return this.financeService.getPayrollSummary(
@@ -372,5 +390,3 @@ export class FinanceController {
     res.send(buffer);
   }
 }
-
-

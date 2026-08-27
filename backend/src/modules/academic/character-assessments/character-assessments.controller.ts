@@ -13,7 +13,10 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
 import { IsOptional, IsEnum, IsString } from 'class-validator';
-import { CharacterAssessmentsService, CreateAssessmentDto } from './character-assessments.service';
+import {
+  CharacterAssessmentsService,
+  CreateAssessmentDto,
+} from './character-assessments.service';
 
 class VerifyAssessmentDto {
   @IsOptional()
@@ -38,7 +41,9 @@ class ResetPointsDto {
 @Controller('character-assessments')
 @UseGuards(JwtAuthGuard)
 export class CharacterAssessmentsController {
-  constructor(private readonly assessmentsService: CharacterAssessmentsService) {}
+  constructor(
+    private readonly assessmentsService: CharacterAssessmentsService,
+  ) {}
 
   @Get()
   async findAll(@Query() query: any) {
@@ -56,7 +61,9 @@ export class CharacterAssessmentsController {
   }
 
   @Get('students-summary')
-  async getStudentsSummary(@Query() query: { classId?: string; search?: string }) {
+  async getStudentsSummary(
+    @Query() query: { classId?: string; search?: string },
+  ) {
     return this.assessmentsService.getStudentsSummary(query);
   }
 
@@ -107,7 +114,11 @@ export class CharacterAssessmentsController {
     if (!userId) {
       throw new BadRequestException('Pengguna tidak valid');
     }
-    return this.assessmentsService.resetStudentPoints(studentId, userId, body.reason);
+    return this.assessmentsService.resetStudentPoints(
+      studentId,
+      userId,
+      body.reason,
+    );
   }
 
   @Delete(':id')
@@ -116,4 +127,3 @@ export class CharacterAssessmentsController {
     return this.assessmentsService.remove(id, userId);
   }
 }
-

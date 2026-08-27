@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsOptional, IsArray, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  IsObject,
+} from 'class-validator';
 
 export class CreateDisposisiDto {
   @IsString()

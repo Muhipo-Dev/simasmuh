@@ -100,6 +100,9 @@ export class SuratMasukController {
     @Param('id') id: string,
     @Body() updateDisposisiDto: UpdateDisposisiDto,
   ) {
-    return this.suratMasukService.approveOrRejectDisposisi(id, updateDisposisiDto);
+    return this.suratMasukService.approveOrRejectDisposisi(
+      id,
+      updateDisposisiDto,
+    );
   }
 }

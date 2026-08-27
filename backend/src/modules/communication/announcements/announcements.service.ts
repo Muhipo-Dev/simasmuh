@@ -38,14 +38,18 @@ export class AnnouncementsService {
     });
 
     // Kirim Notifikasi Siaran Berita / Pengumuman via WhatsApp
-    this.whatsAppService.sendAnnouncementBroadcast({
-      title: created.title,
-      content: created.content,
-      authorName: created.author?.name,
-      target: created.target,
-      type: created.type,
-      eventDate: created.eventDate ? created.eventDate.toLocaleDateString('id-ID') : undefined,
-    }).catch(() => {});
+    this.whatsAppService
+      .sendAnnouncementBroadcast({
+        title: created.title,
+        content: created.content,
+        authorName: created.author?.name,
+        target: created.target,
+        type: created.type,
+        eventDate: created.eventDate
+          ? created.eventDate.toLocaleDateString('id-ID')
+          : undefined,
+      })
+      .catch(() => {});
 
     return created;
   }

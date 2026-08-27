@@ -1,4 +1,10 @@
-import { Injectable, Logger, BadRequestException, NotFoundException, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import * as fs from 'fs';
@@ -43,10 +49,21 @@ import { SystemLogService } from '../../core/services/system-log.service';
 @Injectable()
 export class FaceAttendanceService implements OnModuleInit {
   private readonly logger = new Logger(FaceAttendanceService.name);
-  private readonly configPath = join(STORAGE_ROOT, 'face-attendance-config.json');
-  private readonly legacyConfigPath = join(process.cwd(), 'storage', 'face-attendance-config.json');
+  private readonly configPath = join(
+    STORAGE_ROOT,
+    'face-attendance-config.json',
+  );
+  private readonly legacyConfigPath = join(
+    process.cwd(),
+    'storage',
+    'face-attendance-config.json',
+  );
   private readonly logsPath = join(STORAGE_ROOT, 'face-attendance-logs.json');
-  private readonly legacyLogsPath = join(process.cwd(), 'storage', 'face-attendance-logs.json');
+  private readonly legacyLogsPath = join(
+    process.cwd(),
+    'storage',
+    'face-attendance-logs.json',
+  );
   private recentLogs: FaceDetectionLog[] = [];
   private readonly maxLogs = 50;
 
@@ -78,7 +95,10 @@ export class FaceAttendanceService implements OnModuleInit {
         }
       }
     } catch (err) {
-      this.logger.error('Gagal memuat face-attendance-logs.json dari penyimpanan', err);
+      this.logger.error(
+        'Gagal memuat face-attendance-logs.json dari penyimpanan',
+        err,
+      );
     }
   }
 
@@ -98,9 +118,14 @@ export class FaceAttendanceService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      this.logger.log('Face Attendance AI Service berada dalam mode Standby (On-Demand). Layanan akan aktif saat dihidupkan melalui panel Presensi Camera AI.');
+      this.logger.log(
+        'Face Attendance AI Service berada dalam mode Standby (On-Demand). Layanan akan aktif saat dihidupkan melalui panel Presensi Camera AI.',
+      );
     } catch (err) {
-      this.logger.error('Gagal memeriksa status awal AI Microservice pada onModuleInit', err);
+      this.logger.error(
+        'Gagal memeriksa status awal AI Microservice pada onModuleInit',
+        err,
+      );
     }
   }
 
@@ -109,7 +134,7 @@ export class FaceAttendanceService implements OnModuleInit {
       if (!existsSync(STORAGE_ROOT)) {
         mkdirSync(STORAGE_ROOT, { recursive: true });
       }
-      
+
       // Jika config belum ada di STORAGE_ROOT tapi ada di legacy path, salin ke STORAGE_ROOT
       if (!existsSync(this.configPath) && existsSync(this.legacyConfigPath)) {
         const legacyData = readFileSync(this.legacyConfigPath, 'utf8');
@@ -135,7 +160,10 @@ export class FaceAttendanceService implements OnModuleInit {
         this.saveConfigFile(defaultConfig);
       }
     } catch (err) {
-      this.logger.error('Failed to initialize face attendance config file', err);
+      this.logger.error(
+        'Failed to initialize face attendance config file',
+        err,
+      );
     }
   }
 
@@ -149,7 +177,10 @@ export class FaceAttendanceService implements OnModuleInit {
         writeFileSync(this.legacyConfigPath, configStr, 'utf8');
       } catch {}
     } catch (err) {
-      this.logger.error('Gagal menulis file konfigurasi face-attendance-config.json', err);
+      this.logger.error(
+        'Gagal menulis file konfigurasi face-attendance-config.json',
+        err,
+      );
     }
   }
 
@@ -192,7 +223,9 @@ export class FaceAttendanceService implements OnModuleInit {
     };
   }
 
-  async updateConfig(data: Partial<FaceCameraConfig>): Promise<FaceCameraConfig> {
+  async updateConfig(
+    data: Partial<FaceCameraConfig>,
+  ): Promise<FaceCameraConfig> {
     const current = this.getConfig();
     const updated: FaceCameraConfig = {
       ...current,
@@ -204,11 +237,15 @@ export class FaceAttendanceService implements OnModuleInit {
 
       if (data.isActive === true) {
         this.startAiWorker().catch((err) => {
-          this.logger.warn(`Gagal memulai AI worker setelah updateConfig: ${err?.message || err}`);
+          this.logger.warn(
+            `Gagal memulai AI worker setelah updateConfig: ${err?.message || err}`,
+          );
         });
       } else if (data.isActive === false) {
         this.stopAiWorker().catch((err) => {
-          this.logger.warn(`Gagal menghentikan AI worker setelah updateConfig: ${err?.message || err}`);
+          this.logger.warn(
+            `Gagal menghentikan AI worker setelah updateConfig: ${err?.message || err}`,
+          );
         });
       } else {
         // Auto trigger reload/restart on python AI worker if active
@@ -299,7 +336,8 @@ export class FaceAttendanceService implements OnModuleInit {
         subRole: u.subRole,
         avatarUrl: u.avatarUrl,
         localPath,
-        identifier: u.student?.nis || u.nipNbm || u.teacherProfile?.nip || u.username,
+        identifier:
+          u.student?.nis || u.nipNbm || u.teacherProfile?.nip || u.username,
         className: u.student?.class?.name || null,
         hasPhoto: Boolean(u.avatarUrl && u.avatarUrl.trim().length > 0),
       };
@@ -307,15 +345,26 @@ export class FaceAttendanceService implements OnModuleInit {
 
     const students = dataset.filter((d) => d.role === 'SISWA');
     const teachers = dataset.filter((d) => d.role === 'GURU');
-    const staff = dataset.filter((d) => d.role !== 'SISWA' && d.role !== 'GURU');
+    const staff = dataset.filter(
+      (d) => d.role !== 'SISWA' && d.role !== 'GURU',
+    );
 
     return {
       totalUsers: dataset.length,
       usersWithPhoto: dataset.filter((d) => d.hasPhoto).length,
       breakdown: {
-        students: { total: students.length, withPhoto: students.filter((s) => s.hasPhoto).length },
-        teachers: { total: teachers.length, withPhoto: teachers.filter((t) => t.hasPhoto).length },
-        staff: { total: staff.length, withPhoto: staff.filter((st) => st.hasPhoto).length },
+        students: {
+          total: students.length,
+          withPhoto: students.filter((s) => s.hasPhoto).length,
+        },
+        teachers: {
+          total: teachers.length,
+          withPhoto: teachers.filter((t) => t.hasPhoto).length,
+        },
+        staff: {
+          total: staff.length,
+          withPhoto: staff.filter((st) => st.hasPhoto).length,
+        },
       },
       dataset,
     };
@@ -381,17 +430,28 @@ export class FaceAttendanceService implements OnModuleInit {
       message = `Presensi Masuk berhasil dicatat pukul ${timeString}`;
 
       // Kirim Notifikasi WhatsApp Otomatis
-      this.whatsAppService.sendAttendanceNotification({
-        studentOrUserName: user.name,
-        role: user.role,
-        phone: user.phone || user.teacherProfile?.phone || user.student?.phone || undefined,
-        parentPhone: user.student?.parentPhone || undefined,
-        className: user.student?.class?.name || undefined,
-        scanType: 'MASUK',
-        time: timeString,
-        date: today.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-        method: 'Face Recognition AI Camera',
-      }).catch(() => {});
+      this.whatsAppService
+        .sendAttendanceNotification({
+          studentOrUserName: user.name,
+          role: user.role,
+          phone:
+            user.phone ||
+            user.teacherProfile?.phone ||
+            user.student?.phone ||
+            undefined,
+          parentPhone: user.student?.parentPhone || undefined,
+          className: user.student?.class?.name || undefined,
+          scanType: 'MASUK',
+          time: timeString,
+          date: today.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }),
+          method: 'Face Recognition AI Camera',
+        })
+        .catch(() => {});
     } else if (!existing.checkOutTime) {
       // Check cooldown time between in and out
       if (existing.checkInTime) {
@@ -408,17 +468,28 @@ export class FaceAttendanceService implements OnModuleInit {
           message = `Presensi Pulang berhasil dicatat pukul ${timeString}`;
 
           // Kirim Notifikasi WhatsApp Otomatis
-          this.whatsAppService.sendAttendanceNotification({
-            studentOrUserName: user.name,
-            role: user.role,
-            phone: user.phone || user.teacherProfile?.phone || user.student?.phone || undefined,
-            parentPhone: user.student?.parentPhone || undefined,
-            className: user.student?.class?.name || undefined,
-            scanType: 'PULANG',
-            time: timeString,
-            date: today.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-            method: 'Face Recognition AI Camera',
-          }).catch(() => {});
+          this.whatsAppService
+            .sendAttendanceNotification({
+              studentOrUserName: user.name,
+              role: user.role,
+              phone:
+                user.phone ||
+                user.teacherProfile?.phone ||
+                user.student?.phone ||
+                undefined,
+              parentPhone: user.student?.parentPhone || undefined,
+              className: user.student?.class?.name || undefined,
+              scanType: 'PULANG',
+              time: timeString,
+              date: today.toLocaleDateString('id-ID', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              }),
+              method: 'Face Recognition AI Camera',
+            })
+            .catch(() => {});
         } else {
           scanType = 'SUDAH_LENGKAP';
           message = `Sudah tercatat masuk pada ${existing.checkInTime}. Cooldown ${config.cooldownMinutes} menit sebelum absen pulang.`;
@@ -432,17 +503,28 @@ export class FaceAttendanceService implements OnModuleInit {
         message = `Presensi Pulang berhasil dicatat pukul ${timeString}`;
 
         // Kirim Notifikasi WhatsApp Otomatis
-        this.whatsAppService.sendAttendanceNotification({
-          studentOrUserName: user.name,
-          role: user.role,
-          phone: user.phone || user.teacherProfile?.phone || user.student?.phone || undefined,
-          parentPhone: user.student?.parentPhone || undefined,
-          className: user.student?.class?.name || undefined,
-          scanType: 'PULANG',
-          time: timeString,
-          date: today.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-          method: 'Face Recognition AI Camera',
-        }).catch(() => {});
+        this.whatsAppService
+          .sendAttendanceNotification({
+            studentOrUserName: user.name,
+            role: user.role,
+            phone:
+              user.phone ||
+              user.teacherProfile?.phone ||
+              user.student?.phone ||
+              undefined,
+            parentPhone: user.student?.parentPhone || undefined,
+            className: user.student?.class?.name || undefined,
+            scanType: 'PULANG',
+            time: timeString,
+            date: today.toLocaleDateString('id-ID', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            method: 'Face Recognition AI Camera',
+          })
+          .catch(() => {});
       }
     } else {
       scanType = 'SUDAH_LENGKAP';
@@ -454,10 +536,16 @@ export class FaceAttendanceService implements OnModuleInit {
       timestamp: timeString,
       userId: user.id,
       userName: user.name,
-      userRole: user.role + (user.student?.class ? ` (${user.student.class.name})` : ''),
+      userRole:
+        user.role +
+        (user.student?.class ? ` (${user.student.class.name})` : ''),
       avatarUrl: user.avatarUrl,
       snapshotUrl: payload.snapshot || null,
-      identifier: user.student?.nis || user.nipNbm || user.teacherProfile?.nip || user.username,
+      identifier:
+        user.student?.nis ||
+        user.nipNbm ||
+        user.teacherProfile?.nip ||
+        user.username,
       confidence: Math.round(payload.confidence * 100) / 100,
       scanType,
       message,
@@ -471,21 +559,23 @@ export class FaceAttendanceService implements OnModuleInit {
     this.saveLogsFile();
 
     // Rekam ke Log Sistem untuk pengarsipan terkompresi di Supabase
-    this.systemLogService.log({
-      category: 'PRESENSI',
-      level: 'INFO',
-      action: `FACE_SCAN_${scanType}`,
-      message: `Presensi Wajah AI: ${user.name} (${user.role}) - ${scanType} [Akurasi: ${logEntry.confidence}]`,
-      userId: user.id,
-      userName: user.name,
-      userRole: user.role,
-      details: {
-        scanType,
-        confidence: logEntry.confidence,
-        cameraName: logEntry.cameraName,
-        time: timeString,
-      },
-    }).catch(() => {});
+    this.systemLogService
+      .log({
+        category: 'PRESENSI',
+        level: 'INFO',
+        action: `FACE_SCAN_${scanType}`,
+        message: `Presensi Wajah AI: ${user.name} (${user.role}) - ${scanType} [Akurasi: ${logEntry.confidence}]`,
+        userId: user.id,
+        userName: user.name,
+        userRole: user.role,
+        details: {
+          scanType,
+          confidence: logEntry.confidence,
+          cameraName: logEntry.cameraName,
+          time: timeString,
+        },
+      })
+      .catch(() => {});
 
     return {
       success: true,
@@ -538,7 +628,10 @@ export class FaceAttendanceService implements OnModuleInit {
           });
         }
       } catch (err) {
-        this.logger.error(`Gagal mereset data presensi pengguna ${log.userId} di database`, err);
+        this.logger.error(
+          `Gagal mereset data presensi pengguna ${log.userId} di database`,
+          err,
+        );
       }
 
       // Reset timer cooldown deteksi di AI microservice agar pengguna dapat langsung terdeteksi ulang
@@ -559,7 +652,8 @@ export class FaceAttendanceService implements OnModuleInit {
 
     return {
       success: true,
-      message: 'Log scan dan status presensi pengguna berhasil dihapus serta direset dari basis data.',
+      message:
+        'Log scan dan status presensi pengguna berhasil dihapus serta direset dari basis data.',
     };
   }
 
@@ -613,7 +707,10 @@ export class FaceAttendanceService implements OnModuleInit {
 
   async getAiServiceStatus() {
     try {
-      const endpoints = ['http://127.0.0.1:8089/status', 'http://localhost:8089/status'];
+      const endpoints = [
+        'http://127.0.0.1:8089/status',
+        'http://localhost:8089/status',
+      ];
       for (const url of endpoints) {
         try {
           const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
@@ -644,8 +741,10 @@ export class FaceAttendanceService implements OnModuleInit {
 
     // 3. If offline, spawn Python process automatically
     if (!isOnline) {
-      this.logger.log('Microservice Python AI offline, mencoba meluncurkan python main.py...');
-      
+      this.logger.log(
+        'Microservice Python AI offline, mencoba meluncurkan python main.py...',
+      );
+
       const possibleDirs = [
         path.resolve(process.cwd(), '../services/face-attendance'),
         path.resolve(process.cwd(), 'services/face-attendance'),
@@ -653,16 +752,33 @@ export class FaceAttendanceService implements OnModuleInit {
         'd:/simasmuh/services/face-attendance',
       ];
 
-      let targetDir = possibleDirs.find((dir) => fs.existsSync(path.join(dir, 'main.py')));
+      const targetDir = possibleDirs.find((dir) =>
+        fs.existsSync(path.join(dir, 'main.py')),
+      );
 
       if (targetDir) {
         try {
           // Prioritas 1: Gunakan executable GPU dari .venv-gpu jika tersedia
-          const venvGpuWindows = path.join(targetDir, '.venv-gpu', 'Scripts', 'python.exe');
-          const venvWindows = path.join(targetDir, '.venv', 'Scripts', 'python.exe');
-          const venvGpuLinux = path.join(targetDir, '.venv-gpu', 'bin', 'python');
+          const venvGpuWindows = path.join(
+            targetDir,
+            '.venv-gpu',
+            'Scripts',
+            'python.exe',
+          );
+          const venvWindows = path.join(
+            targetDir,
+            '.venv',
+            'Scripts',
+            'python.exe',
+          );
+          const venvGpuLinux = path.join(
+            targetDir,
+            '.venv-gpu',
+            'bin',
+            'python',
+          );
           const venvLinux = path.join(targetDir, '.venv', 'bin', 'python');
-          
+
           let pyCmd = 'python';
           if (fs.existsSync(venvGpuWindows)) {
             pyCmd = venvGpuWindows;
@@ -693,14 +809,19 @@ export class FaceAttendanceService implements OnModuleInit {
             }
           }
         } catch (spawnErr: any) {
-          this.logger.error(`Gagal meluncurkan proses python: ${spawnErr?.message || spawnErr}`);
+          this.logger.error(
+            `Gagal meluncurkan proses python: ${spawnErr?.message || spawnErr}`,
+          );
         }
       }
     }
 
     // 4. Trigger stream start
     try {
-      const startUrls = ['http://127.0.0.1:8089/stream/start', 'http://localhost:8089/stream/start'];
+      const startUrls = [
+        'http://127.0.0.1:8089/stream/start',
+        'http://localhost:8089/stream/start',
+      ];
       for (const url of startUrls) {
         try {
           const res = await fetch(url, {
@@ -713,11 +834,17 @@ export class FaceAttendanceService implements OnModuleInit {
         } catch {}
       }
       if (isOnline) {
-        return { success: true, message: 'AI Service aktif di port 8089 (Stream Siap)' };
+        return {
+          success: true,
+          message: 'AI Service aktif di port 8089 (Stream Siap)',
+        };
       }
     } catch (err) {
       if (isOnline) {
-        return { success: true, message: 'AI Service aktif di port 8089 (Stream Ingesting)' };
+        return {
+          success: true,
+          message: 'AI Service aktif di port 8089 (Stream Ingesting)',
+        };
       }
     }
 
@@ -725,7 +852,9 @@ export class FaceAttendanceService implements OnModuleInit {
       return { success: true, message: 'AI Microservice FaceNet aktif' };
     }
 
-    throw new BadRequestException('Microservice AI Python di port 8089 sedang memuat model FaceNet. Silakan klik kembali tombol Nyalakan dalam beberapa detik.');
+    throw new BadRequestException(
+      'Microservice AI Python di port 8089 sedang memuat model FaceNet. Silakan klik kembali tombol Nyalakan dalam beberapa detik.',
+    );
   }
 
   async stopAiWorker() {
@@ -742,7 +871,7 @@ export class FaceAttendanceService implements OnModuleInit {
         'http://127.0.0.1:8089/terminate',
         'http://localhost:8089/terminate',
         'http://127.0.0.1:8089/stream/stop',
-        'http://localhost:8089/stream/stop'
+        'http://localhost:8089/stream/stop',
       ];
       for (const ep of endpoints) {
         try {
@@ -751,7 +880,11 @@ export class FaceAttendanceService implements OnModuleInit {
             signal: AbortSignal.timeout(3000),
           });
           if (res.ok) {
-            return { success: true, message: 'AI FaceNet dinonaktifkan (Resource RAM & CPU dibebaskan)' };
+            return {
+              success: true,
+              message:
+                'AI FaceNet dinonaktifkan (Resource RAM & CPU dibebaskan)',
+            };
           }
         } catch {}
       }
@@ -763,7 +896,10 @@ export class FaceAttendanceService implements OnModuleInit {
 
   async syncProfiles() {
     try {
-      const endpoints = ['http://127.0.0.1:8089/sync-profiles', 'http://localhost:8089/sync-profiles'];
+      const endpoints = [
+        'http://127.0.0.1:8089/sync-profiles',
+        'http://localhost:8089/sync-profiles',
+      ];
       for (const url of endpoints) {
         try {
           const res = await fetch(url, {
@@ -832,12 +968,21 @@ export class FaceAttendanceService implements OnModuleInit {
         userId: user.id,
         name: user.name || '',
         role: user.role || 'SISWA',
-        identifier: user.identifier || user.student?.nis || user.nipNbm || user.teacherProfile?.nip || user.username || user.id,
+        identifier:
+          user.identifier ||
+          user.student?.nis ||
+          user.nipNbm ||
+          user.teacherProfile?.nip ||
+          user.username ||
+          user.id,
         avatarUrl: user.avatarUrl || null,
         localPath,
       };
 
-      const endpoints = ['http://127.0.0.1:8089/sync-user', 'http://localhost:8089/sync-user'];
+      const endpoints = [
+        'http://127.0.0.1:8089/sync-user',
+        'http://localhost:8089/sync-user',
+      ];
       for (const ep of endpoints) {
         try {
           const res = await fetch(ep, {
@@ -854,7 +999,10 @@ export class FaceAttendanceService implements OnModuleInit {
     } catch (err) {
       this.logger.error('Failed to sync single user to FaceNet', err);
     }
-    return { success: false, message: 'Microservice AI offline atau tidak merespons.' };
+    return {
+      success: false,
+      message: 'Microservice AI offline atau tidak merespons.',
+    };
   }
 
   async scanFrame(imageBase64: string) {

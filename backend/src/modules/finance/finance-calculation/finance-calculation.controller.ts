@@ -120,11 +120,29 @@ export class FinanceCalculationController {
     @Query('year') year: string,
     @Query('month') month: string,
   ) {
-    const userSubRoles = [req.user?.subRole, req.user?.subRole2, req.user?.subRole3, req.user?.subRole4, req.user?.subRole5, req.user?.role];
-    const isKeuanganStaff = userSubRoles.some(r => ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r));
+    const userSubRoles = [
+      req.user?.subRole,
+      req.user?.subRole2,
+      req.user?.subRole3,
+      req.user?.subRole4,
+      req.user?.subRole5,
+      req.user?.role,
+    ];
+    const isKeuanganStaff = userSubRoles.some((r) =>
+      [
+        'KEUANGAN_ALL',
+        'KEUANGAN_MASUK',
+        'KEUANGAN_KELUAR',
+        'SUPERADMIN',
+        'ADMIN_IT',
+        'KEPALA_SEKOLAH',
+      ].includes(r),
+    );
 
     if (!isKeuanganStaff) {
-      throw new ForbiddenException('Akses ditolak. Penggajian pegawai hanya dapat diakses oleh bagian Keuangan / Superadmin.');
+      throw new ForbiddenException(
+        'Akses ditolak. Penggajian pegawai hanya dapat diakses oleh bagian Keuangan / Superadmin.',
+      );
     }
 
     return this.financeCalculationService.calculatePayrollSummary(
@@ -144,10 +162,28 @@ export class FinanceCalculationController {
     @Query('year') year: string,
     @Query('month') month?: string,
   ) {
-    const userSubRoles = [req.user?.subRole, req.user?.subRole2, req.user?.subRole3, req.user?.subRole4, req.user?.subRole5, req.user?.role];
-    const isKeuanganStaff = userSubRoles.some(r => ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r));
+    const userSubRoles = [
+      req.user?.subRole,
+      req.user?.subRole2,
+      req.user?.subRole3,
+      req.user?.subRole4,
+      req.user?.subRole5,
+      req.user?.role,
+    ];
+    const isKeuanganStaff = userSubRoles.some((r) =>
+      [
+        'KEUANGAN_ALL',
+        'KEUANGAN_MASUK',
+        'KEUANGAN_KELUAR',
+        'SUPERADMIN',
+        'ADMIN_IT',
+        'KEPALA_SEKOLAH',
+      ].includes(r),
+    );
     if (!isKeuanganStaff) {
-      throw new ForbiddenException('Akses ditolak. Kalkulasi keuangan hanya dikontrol oleh bagian Keuangan / Superadmin.');
+      throw new ForbiddenException(
+        'Akses ditolak. Kalkulasi keuangan hanya dikontrol oleh bagian Keuangan / Superadmin.',
+      );
     }
     return this.financeCalculationService.calculateTotalRevenue(
       parseInt(year, 10),
@@ -162,10 +198,28 @@ export class FinanceCalculationController {
     @Query('year') year: string,
     @Query('month') month?: string,
   ) {
-    const userSubRoles = [req.user?.subRole, req.user?.subRole2, req.user?.subRole3, req.user?.subRole4, req.user?.subRole5, req.user?.role];
-    const isKeuanganStaff = userSubRoles.some(r => ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r));
+    const userSubRoles = [
+      req.user?.subRole,
+      req.user?.subRole2,
+      req.user?.subRole3,
+      req.user?.subRole4,
+      req.user?.subRole5,
+      req.user?.role,
+    ];
+    const isKeuanganStaff = userSubRoles.some((r) =>
+      [
+        'KEUANGAN_ALL',
+        'KEUANGAN_MASUK',
+        'KEUANGAN_KELUAR',
+        'SUPERADMIN',
+        'ADMIN_IT',
+        'KEPALA_SEKOLAH',
+      ].includes(r),
+    );
     if (!isKeuanganStaff) {
-      throw new ForbiddenException('Akses ditolak. Kalkulasi pengeluaran hanya dikontrol oleh bagian Keuangan / Superadmin.');
+      throw new ForbiddenException(
+        'Akses ditolak. Kalkulasi pengeluaran hanya dikontrol oleh bagian Keuangan / Superadmin.',
+      );
     }
     return this.financeCalculationService.calculateTotalExpenses(
       parseInt(year, 10),
@@ -180,10 +234,28 @@ export class FinanceCalculationController {
     @Query('year') year: string,
     @Query('month') month?: string,
   ) {
-    const userSubRoles = [req.user?.subRole, req.user?.subRole2, req.user?.subRole3, req.user?.subRole4, req.user?.subRole5, req.user?.role];
-    const isKeuanganStaff = userSubRoles.some(r => ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r));
+    const userSubRoles = [
+      req.user?.subRole,
+      req.user?.subRole2,
+      req.user?.subRole3,
+      req.user?.subRole4,
+      req.user?.subRole5,
+      req.user?.role,
+    ];
+    const isKeuanganStaff = userSubRoles.some((r) =>
+      [
+        'KEUANGAN_ALL',
+        'KEUANGAN_MASUK',
+        'KEUANGAN_KELUAR',
+        'SUPERADMIN',
+        'ADMIN_IT',
+        'KEPALA_SEKOLAH',
+      ].includes(r),
+    );
     if (!isKeuanganStaff) {
-      throw new ForbiddenException('Akses ditolak. Kalkulasi neraca/saldo akhir hanya dikontrol oleh bagian Keuangan / Superadmin.');
+      throw new ForbiddenException(
+        'Akses ditolak. Kalkulasi neraca/saldo akhir hanya dikontrol oleh bagian Keuangan / Superadmin.',
+      );
     }
     return this.financeCalculationService.calculateFinancialBalance(
       parseInt(year, 10),

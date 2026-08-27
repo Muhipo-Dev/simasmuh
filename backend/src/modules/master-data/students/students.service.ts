@@ -68,7 +68,11 @@ export class StudentsService {
             gelombang: data.gelombang || 'Gelombang 1',
             jalurPendaftaran: data.jalurPendaftaran || 'Mandiri',
             program: data.program || null,
-            bioData: data.bioData ? (typeof data.bioData === 'string' ? data.bioData : JSON.stringify(data.bioData)) : null,
+            bioData: data.bioData
+              ? typeof data.bioData === 'string'
+                ? data.bioData
+                : JSON.stringify(data.bioData)
+              : null,
           } as any,
         },
       },
@@ -107,7 +111,14 @@ export class StudentsService {
                   name: data.name,
                   gender: data.gender,
                   classId: data.classId,
-                  ...(data.bioData ? { bioData: typeof data.bioData === 'string' ? data.bioData : JSON.stringify(data.bioData) } : {}),
+                  ...(data.bioData
+                    ? {
+                        bioData:
+                          typeof data.bioData === 'string'
+                            ? data.bioData
+                            : JSON.stringify(data.bioData),
+                      }
+                    : {}),
                   // CATATAN: program TIDAK diupdate pada upsert agar tidak override
                   // label program yang sudah diset manual oleh SUPERADMIN.
                   // Program dari Excel hanya berlaku saat CREATE pertama kali.
@@ -118,7 +129,14 @@ export class StudentsService {
                   name: data.name,
                   gender: data.gender,
                   classId: data.classId,
-                  ...(data.bioData ? { bioData: typeof data.bioData === 'string' ? data.bioData : JSON.stringify(data.bioData) } : {}),
+                  ...(data.bioData
+                    ? {
+                        bioData:
+                          typeof data.bioData === 'string'
+                            ? data.bioData
+                            : JSON.stringify(data.bioData),
+                      }
+                    : {}),
                   // program dari Excel disimpan saat CREATE pertama kali saja
                   ...(data.program ? { program: data.program } : {}),
                 },
@@ -137,7 +155,14 @@ export class StudentsService {
                 name: data.name,
                 gender: data.gender,
                 classId: data.classId,
-                ...(data.bioData ? { bioData: typeof data.bioData === 'string' ? data.bioData : JSON.stringify(data.bioData) } : {}),
+                ...(data.bioData
+                  ? {
+                      bioData:
+                        typeof data.bioData === 'string'
+                          ? data.bioData
+                          : JSON.stringify(data.bioData),
+                    }
+                  : {}),
                 ...(data.program ? { program: data.program } : {}),
               },
             },
@@ -164,9 +189,16 @@ export class StudentsService {
         nis: data.nis,
         name: data.name,
         gender: data.gender,
-        ...(data.bioData !== undefined && { bioData: typeof data.bioData === 'string' ? data.bioData : JSON.stringify(data.bioData) }),
+        ...(data.bioData !== undefined && {
+          bioData:
+            typeof data.bioData === 'string'
+              ? data.bioData
+              : JSON.stringify(data.bioData),
+        }),
         ...(data.gelombang !== undefined && { gelombang: data.gelombang }),
-        ...(data.jalurPendaftaran !== undefined && { jalurPendaftaran: data.jalurPendaftaran }),
+        ...(data.jalurPendaftaran !== undefined && {
+          jalurPendaftaran: data.jalurPendaftaran,
+        }),
         ...(data.program !== undefined && { program: data.program }),
         ...(data.beasiswaPercentage !== undefined && {
           beasiswaPercentage: data.beasiswaPercentage,
@@ -174,9 +206,15 @@ export class StudentsService {
         ...(data.beasiswaReason !== undefined && {
           beasiswaReason: data.beasiswaReason,
         }),
-        ...(data.beasiswaSeragamPct !== undefined && { beasiswaSeragamPct: Number(data.beasiswaSeragamPct) }),
-        ...(data.beasiswaSppPct !== undefined && { beasiswaSppPct: Number(data.beasiswaSppPct) }),
-        ...(data.beasiswaDppPct !== undefined && { beasiswaDppPct: Number(data.beasiswaDppPct) }),
+        ...(data.beasiswaSeragamPct !== undefined && {
+          beasiswaSeragamPct: Number(data.beasiswaSeragamPct),
+        }),
+        ...(data.beasiswaSppPct !== undefined && {
+          beasiswaSppPct: Number(data.beasiswaSppPct),
+        }),
+        ...(data.beasiswaDppPct !== undefined && {
+          beasiswaDppPct: Number(data.beasiswaDppPct),
+        }),
         ...(data.classId && { class: { connect: { id: data.classId } } }),
         ...(student.userId && {
           user: {
@@ -191,7 +229,10 @@ export class StudentsService {
       include: { user: true, class: true },
     });
 
-    if (data.beasiswaPercentage !== undefined || data.beasiswaReason !== undefined) {
+    if (
+      data.beasiswaPercentage !== undefined ||
+      data.beasiswaReason !== undefined
+    ) {
       await this.syncStudentBeasiswaToBills(
         id,
         updated.beasiswaPercentage,
@@ -202,18 +243,49 @@ export class StudentsService {
     return updated;
   }
 
-  async updateBeasiswaKeuangan(id: string, dto: { beasiswaSeragamPct?: number; beasiswaSppPct?: number; beasiswaDppPct?: number; beasiswaPercentage?: number; beasiswaReason?: string }) {
+  async updateBeasiswaKeuangan(
+    id: string,
+    dto: {
+      beasiswaSeragamPct?: number;
+      beasiswaSppPct?: number;
+      beasiswaDppPct?: number;
+      beasiswaPercentage?: number;
+      beasiswaReason?: string;
+    },
+  ) {
     const student = await this.prisma.student.findUnique({ where: { id } });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
     const updated = await (this.prisma.student as any).update({
       where: { id },
       data: {
-        ...(dto.beasiswaSeragamPct !== undefined && { beasiswaSeragamPct: Math.min(100, Math.max(0, Number(dto.beasiswaSeragamPct))) }),
-        ...(dto.beasiswaSppPct !== undefined && { beasiswaSppPct: Math.min(100, Math.max(0, Number(dto.beasiswaSppPct))) }),
-        ...(dto.beasiswaDppPct !== undefined && { beasiswaDppPct: Math.min(100, Math.max(0, Number(dto.beasiswaDppPct))) }),
-        ...(dto.beasiswaPercentage !== undefined && { beasiswaPercentage: Math.min(100, Math.max(0, Number(dto.beasiswaPercentage))) }),
-        ...(dto.beasiswaReason !== undefined && { beasiswaReason: dto.beasiswaReason }),
+        ...(dto.beasiswaSeragamPct !== undefined && {
+          beasiswaSeragamPct: Math.min(
+            100,
+            Math.max(0, Number(dto.beasiswaSeragamPct)),
+          ),
+        }),
+        ...(dto.beasiswaSppPct !== undefined && {
+          beasiswaSppPct: Math.min(
+            100,
+            Math.max(0, Number(dto.beasiswaSppPct)),
+          ),
+        }),
+        ...(dto.beasiswaDppPct !== undefined && {
+          beasiswaDppPct: Math.min(
+            100,
+            Math.max(0, Number(dto.beasiswaDppPct)),
+          ),
+        }),
+        ...(dto.beasiswaPercentage !== undefined && {
+          beasiswaPercentage: Math.min(
+            100,
+            Math.max(0, Number(dto.beasiswaPercentage)),
+          ),
+        }),
+        ...(dto.beasiswaReason !== undefined && {
+          beasiswaReason: dto.beasiswaReason,
+        }),
       },
       include: { class: true, user: true },
     });
@@ -258,17 +330,24 @@ export class StudentsService {
         });
       }
       if (!progConfig) {
-        throw new Error(`Program '${program}' tidak ditemukan pada konfigurasi program.`);
+        throw new Error(
+          `Program '${program}' tidak ditemukan pada konfigurasi program.`,
+        );
       }
     }
 
-    const student: any = await this.prisma.student.findUnique({ where: { id } });
+    const student: any = await this.prisma.student.findUnique({
+      where: { id },
+    });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
     // Auto set beasiswa from program default if no custom beasiswa was set for student
     let autoBeasiswaPct = student.beasiswaPercentage;
     let autoBeasiswaReason = student.beasiswaReason;
-    if (progConfig && (!student.beasiswaPercentage || student.beasiswaPercentage === 0)) {
+    if (
+      progConfig &&
+      (!student.beasiswaPercentage || student.beasiswaPercentage === 0)
+    ) {
       if (progConfig.defaultBeasiswa > 0) {
         autoBeasiswaPct = progConfig.defaultBeasiswa;
         autoBeasiswaReason = `Default Beasiswa Program ${progConfig.name}`;
@@ -293,7 +372,6 @@ export class StudentsService {
 
     return updated;
   }
-
 
   /**
    * Update beasiswa default siswa oleh bagian keuangan/superadmin dan sinkronisasi ke tagihan
@@ -373,7 +451,7 @@ export class StudentsService {
       }
 
       // Bersihkan string DISCOUNT_INFO dan BEASISWA_INFO dari notes
-      let cleanNotes = (t.notes || '')
+      const cleanNotes = (t.notes || '')
         .replace(/\s*\|\s*BEASISWA_INFO:\s*\{.*?\}/g, '')
         .replace(/^BEASISWA_INFO:\s*\{.*?\}/g, '')
         .replace(/\s*\|\s*DISCOUNT_INFO:\s*\{.*?\}/g, '')
@@ -578,8 +656,7 @@ export class StudentsService {
       },
       {
         column: 'Kelas',
-        description:
-          'Nama kelas sesuai dengan kelas yang ada di sistem',
+        description: 'Nama kelas sesuai dengan kelas yang ada di sistem',
         example: 'X IPA 1',
       },
       {

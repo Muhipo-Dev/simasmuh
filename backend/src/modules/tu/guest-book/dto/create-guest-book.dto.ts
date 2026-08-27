@@ -11,7 +11,14 @@ export class CreateGuestBookDto {
 
   @IsString()
   @IsOptional()
-  @IsIn(['STUDI_TIRU', 'PEJABAT', 'ALUMNI_IJAZAH', 'VENDOR_UMUM', 'ORANG_TUA', 'LAINNYA'])
+  @IsIn([
+    'STUDI_TIRU',
+    'PEJABAT',
+    'ALUMNI_IJAZAH',
+    'VENDOR_UMUM',
+    'ORANG_TUA',
+    'LAINNYA',
+  ])
   kategori?: string;
 
   @IsString()

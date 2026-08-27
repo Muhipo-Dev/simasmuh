@@ -1,5 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { IsString, IsOptional, IsEnum, IsNumber, IsBoolean } from 'class-validator';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsNumber,
+  IsBoolean,
+} from 'class-validator';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
 import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
@@ -12,8 +23,19 @@ export class CreateAssessmentDto {
   @IsString()
   studentId: string;
 
-  @IsEnum(['ADAB_ETIKA', 'IBADAH', 'KEDISIPLINAN', 'PRESTASI_PENGHARGAAN', 'PELANGGARAN'])
-  category: 'ADAB_ETIKA' | 'IBADAH' | 'KEDISIPLINAN' | 'PRESTASI_PENGHARGAAN' | 'PELANGGARAN';
+  @IsEnum([
+    'ADAB_ETIKA',
+    'IBADAH',
+    'KEDISIPLINAN',
+    'PRESTASI_PENGHARGAAN',
+    'PELANGGARAN',
+  ])
+  category:
+    | 'ADAB_ETIKA'
+    | 'IBADAH'
+    | 'KEDISIPLINAN'
+    | 'PRESTASI_PENGHARGAAN'
+    | 'PELANGGARAN';
 
   @IsEnum(['POSITIF', 'NEGATIF', 'RUTIN', 'CATATAN_KONSELING'])
   type: 'POSITIF' | 'NEGATIF' | 'RUTIN' | 'CATATAN_KONSELING';
@@ -160,7 +182,9 @@ export class CharacterAssessmentsService {
     });
 
     if (!assessment) {
-      throw new NotFoundException('Data penilaian adab & ketertiban tidak ditemukan');
+      throw new NotFoundException(
+        'Data penilaian adab & ketertiban tidak ditemukan',
+      );
     }
 
     return assessment;
@@ -201,7 +225,10 @@ export class CharacterAssessmentsService {
     let pendingVerificationCount = 0;
 
     assessments.forEach((item) => {
-      const isVerified = item.status === 'SELESAI' || item.status === 'TERVERIFIKASI' || item.status === 'DALAM_PEMBINAAN';
+      const isVerified =
+        item.status === 'SELESAI' ||
+        item.status === 'TERVERIFIKASI' ||
+        item.status === 'DALAM_PEMBINAAN';
       if (item.status === 'MENUNGGU' || item.status === 'MENUNGGU_VERIFIKASI') {
         pendingVerificationCount++;
       }
@@ -210,7 +237,10 @@ export class CharacterAssessmentsService {
         totalPointsDelta += item.points;
         if (item.category === 'PELANGGARAN' || item.type === 'NEGATIF') {
           totalPelanggaran++;
-        } else if (item.category === 'PRESTASI_PENGHARGAAN' || (item.points > 0 && item.type === 'POSITIF')) {
+        } else if (
+          item.category === 'PRESTASI_PENGHARGAAN' ||
+          (item.points > 0 && item.type === 'POSITIF')
+        ) {
           totalPrestasi++;
         } else if (item.category === 'IBADAH') {
           amalanIbadahCount++;
@@ -222,17 +252,32 @@ export class CharacterAssessmentsService {
       }
     });
 
-    const kedisiplinanScore = Math.max(0, Math.min(100, 100 + totalPointsDelta));
-    
+    const kedisiplinanScore = Math.max(
+      0,
+      Math.min(100, 100 + totalPointsDelta),
+    );
+
     // Predikat Kedisiplinan
     let kedisiplinanPredikat = 'A (Sangat Baik / Teladan)';
-    if (kedisiplinanScore < 60) kedisiplinanPredikat = 'D (Perlu Pembinaan Khusus)';
-    else if (kedisiplinanScore < 75) kedisiplinanPredikat = 'C (Cukup / Peringatan)';
+    if (kedisiplinanScore < 60)
+      kedisiplinanPredikat = 'D (Perlu Pembinaan Khusus)';
+    else if (kedisiplinanScore < 75)
+      kedisiplinanPredikat = 'C (Cukup / Peringatan)';
     else if (kedisiplinanScore < 90) kedisiplinanPredikat = 'B (Baik)';
 
     // Predikat Ibadah & Etika
-    const ibadahScore = amalanIbadahCount >= 5 ? 'A (Sangat Rajin)' : amalanIbadahCount >= 2 ? 'B (Aktif)' : 'B (Baik)';
-    const perilakuScore = totalPelanggaran === 0 ? 'A (Terpuji & Santun)' : totalPelanggaran <= 2 ? 'B (Baik)' : 'C (Perlu Pembinaan)';
+    const ibadahScore =
+      amalanIbadahCount >= 5
+        ? 'A (Sangat Rajin)'
+        : amalanIbadahCount >= 2
+          ? 'B (Aktif)'
+          : 'B (Baik)';
+    const perilakuScore =
+      totalPelanggaran === 0
+        ? 'A (Terpuji & Santun)'
+        : totalPelanggaran <= 2
+          ? 'B (Baik)'
+          : 'C (Perlu Pembinaan)';
 
     return {
       student,
@@ -251,8 +296,23 @@ export class CharacterAssessmentsService {
 
   async getDashboardStatistics() {
     const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      0,
+      0,
+      0,
+    );
+    const endOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
 
     const [
       totalAssessments,
@@ -271,21 +331,21 @@ export class CharacterAssessmentsService {
         where: { date: { gte: startOfToday, lte: endOfToday } },
       }),
       this.prisma.characterAssessment.count({
-        where: { 
+        where: {
           OR: [{ category: 'PELANGGARAN' }, { type: 'NEGATIF' }],
-          status: { in: ['SELESAI', 'TERVERIFIKASI', 'DALAM_PEMBINAAN'] }
+          status: { in: ['SELESAI', 'TERVERIFIKASI', 'DALAM_PEMBINAAN'] },
         },
       }),
       this.prisma.characterAssessment.count({
-        where: { 
+        where: {
           OR: [{ category: 'PRESTASI_PENGHARGAAN' }, { type: 'POSITIF' }],
-          status: { in: ['SELESAI', 'TERVERIFIKASI', 'DALAM_PEMBINAAN'] }
+          status: { in: ['SELESAI', 'TERVERIFIKASI', 'DALAM_PEMBINAAN'] },
         },
       }),
       this.prisma.characterAssessment.count({
-        where: { 
+        where: {
           category: 'IBADAH',
-          status: { in: ['SELESAI', 'TERVERIFIKASI', 'DALAM_PEMBINAAN'] }
+          status: { in: ['SELESAI', 'TERVERIFIKASI', 'DALAM_PEMBINAAN'] },
         },
       }),
       this.prisma.characterAssessment.count({
@@ -317,9 +377,9 @@ export class CharacterAssessmentsService {
         _count: { id: true },
       }),
       this.prisma.characterAssessment.findMany({
-        where: { 
+        where: {
           OR: [{ category: 'PELANGGARAN' }, { type: 'NEGATIF' }],
-          status: { in: ['SELESAI', 'TERVERIFIKASI', 'DALAM_PEMBINAAN'] }
+          status: { in: ['SELESAI', 'TERVERIFIKASI', 'DALAM_PEMBINAAN'] },
         },
         select: {
           student: {
@@ -337,7 +397,10 @@ export class CharacterAssessmentsService {
     ]);
 
     // Grouping pelanggaran per kelas
-    const classPelanggaranMap: Record<string, { className: string; count: number }> = {};
+    const classPelanggaranMap: Record<
+      string,
+      { className: string; count: number }
+    > = {};
     classesWithIssues.forEach((item) => {
       const cls = item.student?.class;
       if (cls) {
@@ -405,16 +468,23 @@ export class CharacterAssessmentsService {
     ].filter(Boolean);
 
     const isKetertibanOrAdmin = userRoles.some((r) =>
-      ['SUPERADMIN', 'ADMIN_IT', 'KETERTIBAN', 'KEPALA_SEKOLAH', 'BAU', 'ADMIN_TU'].includes(r || '')
+      [
+        'SUPERADMIN',
+        'ADMIN_IT',
+        'KETERTIBAN',
+        'KEPALA_SEKOLAH',
+        'BAU',
+        'ADMIN_TU',
+      ].includes(r || ''),
     );
 
     // Jika diinput oleh Guru umum, status awal adalah MENUNGGU (menunggu verifikasi Petugas Ketertiban)
     // Jika diinput langsung oleh Petugas Ketertiban / Superadmin, status langsung SELESAI / TERVERIFIKASI
-    const finalStatus = dto.status 
-      ? dto.status 
-      : isKetertibanOrAdmin 
-      ? 'SELESAI' 
-      : 'MENUNGGU';
+    const finalStatus = dto.status
+      ? dto.status
+      : isKetertibanOrAdmin
+        ? 'SELESAI'
+        : 'MENUNGGU';
 
     const points = Number(dto.points) || 0;
 
@@ -450,8 +520,18 @@ export class CharacterAssessmentsService {
     });
 
     // Jika langsung terverifikasi (oleh Tatib/Admin), kirim notifikasi in-app & WA ke Siswa & Orang Tua
-    if (finalStatus === 'SELESAI' || finalStatus === 'TERVERIFIKASI' || finalStatus === 'DALAM_PEMBINAAN') {
-      await this.sendAssessmentNotifications(assessment, student, evaluator, points, dto);
+    if (
+      finalStatus === 'SELESAI' ||
+      finalStatus === 'TERVERIFIKASI' ||
+      finalStatus === 'DALAM_PEMBINAAN'
+    ) {
+      await this.sendAssessmentNotifications(
+        assessment,
+        student,
+        evaluator,
+        points,
+        dto,
+      );
     } else {
       // Jika status MENUNGGU (input guru), kirim notifikasi ke tim Ketertiban
       try {
@@ -514,7 +594,11 @@ export class CharacterAssessmentsService {
   async verifyAssessment(
     id: string,
     verifierId: string,
-    body: { status?: 'TERVERIFIKASI' | 'DITOLAK' | 'DALAM_PEMBINAAN'; actionTaken?: string; note?: string }
+    body: {
+      status?: 'TERVERIFIKASI' | 'DITOLAK' | 'DALAM_PEMBINAAN';
+      actionTaken?: string;
+      note?: string;
+    },
   ) {
     const existing = await this.prisma.characterAssessment.findUnique({
       where: { id },
@@ -554,14 +638,21 @@ export class CharacterAssessmentsService {
     });
 
     const statusTarget = body.status || 'TERVERIFIKASI';
-    const actionTakenTarget = body.actionTaken || existing.actionTaken || (statusTarget === 'DITOLAK' ? 'Ditolak Petugas Ketertiban' : 'Diverifikasi & Diterapkan oleh Bagian Ketertiban');
+    const actionTakenTarget =
+      body.actionTaken ||
+      existing.actionTaken ||
+      (statusTarget === 'DITOLAK'
+        ? 'Ditolak Petugas Ketertiban'
+        : 'Diverifikasi & Diterapkan oleh Bagian Ketertiban');
 
     const updated = await this.prisma.characterAssessment.update({
       where: { id },
       data: {
         status: statusTarget,
         actionTaken: actionTakenTarget,
-        description: body.note ? `${existing.description || ''}\n[Catatan Pembina]: ${body.note}`.trim() : existing.description,
+        description: body.note
+          ? `${existing.description || ''}\n[Catatan Pembina]: ${body.note}`.trim()
+          : existing.description,
       },
       include: {
         student: {
@@ -581,7 +672,10 @@ export class CharacterAssessmentsService {
     });
 
     // Jika disetujui/diverifikasi, kirim notifikasi ke Siswa & Orang Tua/Wali
-    if (statusTarget === 'TERVERIFIKASI' || statusTarget === 'DALAM_PEMBINAAN') {
+    if (
+      statusTarget === 'TERVERIFIKASI' ||
+      statusTarget === 'DALAM_PEMBINAAN'
+    ) {
       await this.sendAssessmentNotifications(
         updated,
         existing.student,
@@ -593,7 +687,7 @@ export class CharacterAssessmentsService {
           description: existing.description || '',
           actionTaken: actionTakenTarget,
           notifyParent: existing.notifyParent,
-        }
+        },
       );
     }
 
@@ -639,10 +733,13 @@ export class CharacterAssessmentsService {
     student: any,
     evaluator: any,
     points: number,
-    dto: any
+    dto: any,
   ) {
     try {
-      const notifCategory = (dto.category || assessment.category || '').replace('_', ' ');
+      const notifCategory = (dto.category || assessment.category || '').replace(
+        '_',
+        ' ',
+      );
       const notifTitle = `Catatan ${notifCategory}: ${dto.title || assessment.title}`;
       const notifMessage = `Siswa: ${student.name} (${student.class?.name || '-'}). ${dto.description || dto.title}. Poin: ${points > 0 ? '+' : ''}${points}. Diverifikasi & Diterapkan Bagian Ketertiban.`;
 
@@ -656,7 +753,11 @@ export class CharacterAssessmentsService {
             title: notifTitle,
             message: notifMessage,
             priority: dto.category === 'PELANGGARAN' ? 'HIGH' : 'NORMAL',
-            data: { assessmentId: assessment.id, category: dto.category, points },
+            data: {
+              assessmentId: assessment.id,
+              category: dto.category,
+              points,
+            },
           },
         });
       }
@@ -672,7 +773,11 @@ export class CharacterAssessmentsService {
               title: notifTitle,
               message: notifMessage,
               priority: dto.category === 'PELANGGARAN' ? 'HIGH' : 'NORMAL',
-              data: { assessmentId: assessment.id, studentId: student.id, category: dto.category },
+              data: {
+                assessmentId: assessment.id,
+                studentId: student.id,
+                category: dto.category,
+              },
             },
           });
         }
@@ -694,8 +799,7 @@ export class CharacterAssessmentsService {
         }
 
         for (const phone of waTargets) {
-          const waMessage = 
-`🔔 *PEMBERITAHUAN CATATAN SISWA & TATA TERTIB*
+          const waMessage = `🔔 *PEMBERITAHUAN CATATAN SISWA & TATA TERTIB*
 *SIMASMUH - SMA Muhammadiyah 1 Ponorogo*
 ----------------------------------------
 👤 *Nama Siswa:* ${student.name}
@@ -722,12 +826,16 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
         }
       }
     } catch (err: any) {
-      this.logger.error(`Gagal mengirim notifikasi adab & tatib: ${err.message}`);
+      this.logger.error(
+        `Gagal mengirim notifikasi adab & tatib: ${err.message}`,
+      );
     }
   }
 
   async update(id: string, dto: Partial<CreateAssessmentDto>, userId: string) {
-    const existing = await this.prisma.characterAssessment.findUnique({ where: { id } });
+    const existing = await this.prisma.characterAssessment.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new NotFoundException('Data penilaian tidak ditemukan');
     }
@@ -815,8 +923,14 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
       let pendingVerificationCount = 0;
 
       assessments.forEach((item) => {
-        const isVerified = item.status === 'SELESAI' || item.status === 'TERVERIFIKASI' || item.status === 'DALAM_PEMBINAAN';
-        if (item.status === 'MENUNGGU' || item.status === 'MENUNGGU_VERIFIKASI') {
+        const isVerified =
+          item.status === 'SELESAI' ||
+          item.status === 'TERVERIFIKASI' ||
+          item.status === 'DALAM_PEMBINAAN';
+        if (
+          item.status === 'MENUNGGU' ||
+          item.status === 'MENUNGGU_VERIFIKASI'
+        ) {
           pendingVerificationCount++;
         }
 
@@ -824,7 +938,10 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
           totalPointsDelta += item.points;
           if (item.category === 'PELANGGARAN' || item.type === 'NEGATIF') {
             totalPelanggaran++;
-          } else if (item.category === 'PRESTASI_PENGHARGAAN' || (item.points > 0 && item.type === 'POSITIF')) {
+          } else if (
+            item.category === 'PRESTASI_PENGHARGAAN' ||
+            (item.points > 0 && item.type === 'POSITIF')
+          ) {
             totalPrestasi++;
           } else if (item.category === 'IBADAH') {
             amalanIbadahCount++;
@@ -838,8 +955,14 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
         }
       });
 
-      const ketertibanScore = Math.max(0, Math.min(100, 100 + totalPointsDelta));
-      const adabScore = Math.max(0, Math.min(100, 100 - (totalPelanggaran * 5) + (adabEtikaCount * 5)));
+      const ketertibanScore = Math.max(
+        0,
+        Math.min(100, 100 + totalPointsDelta),
+      );
+      const adabScore = Math.max(
+        0,
+        Math.min(100, 100 - totalPelanggaran * 5 + adabEtikaCount * 5),
+      );
 
       return {
         id: st.id,
@@ -889,7 +1012,9 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
         category: 'KEDISIPLINAN',
         type: 'POSITIF',
         title: 'Pemutihan / Reset Poin Kedisiplinan Siswa',
-        description: reason || 'Poin ketertiban dan kedisiplinan siswa di-reset kembali ke 100 poin oleh Tim Ketertiban.',
+        description:
+          reason ||
+          'Poin ketertiban dan kedisiplinan siswa di-reset kembali ke 100 poin oleh Tim Ketertiban.',
         points: deltaToReset,
         status: 'SELESAI',
         actionTaken: 'Pemutihan Poin Kedisiplinan',
@@ -913,7 +1038,9 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
   }
 
   async remove(id: string, userId: string) {
-    const existing = await this.prisma.characterAssessment.findUnique({ where: { id } });
+    const existing = await this.prisma.characterAssessment.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new NotFoundException('Data penilaian tidak ditemukan');
     }
@@ -930,4 +1057,3 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
     return { message: 'Data penilaian berhasil dihapus' };
   }
 }
-

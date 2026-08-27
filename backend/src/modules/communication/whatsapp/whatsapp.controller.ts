@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { WhatsAppService } from './whatsapp.service';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
 import { RolesGuard } from '../../core/auth/roles.guard';
@@ -10,13 +20,29 @@ export class WhatsAppController {
   constructor(private readonly whatsAppService: WhatsAppService) {}
 
   @Get('status')
-  @Roles('SUPERADMIN', 'ADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'BENDAHARA', 'KEPALA_SEKOLAH')
+  @Roles(
+    'SUPERADMIN',
+    'ADMIN',
+    'ADMIN_IT',
+    'ADMIN_TU',
+    'BAU',
+    'BENDAHARA',
+    'KEPALA_SEKOLAH',
+  )
   async getStatus() {
     return this.whatsAppService.getGatewayStatus();
   }
 
   @Get('config')
-  @Roles('SUPERADMIN', 'ADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'BENDAHARA', 'KEPALA_SEKOLAH')
+  @Roles(
+    'SUPERADMIN',
+    'ADMIN',
+    'ADMIN_IT',
+    'ADMIN_TU',
+    'BAU',
+    'BENDAHARA',
+    'KEPALA_SEKOLAH',
+  )
   async getConfig() {
     return this.whatsAppService.getWhatsAppConfig();
   }
@@ -24,7 +50,8 @@ export class WhatsAppController {
   @Put('config')
   @Roles('SUPERADMIN', 'ADMIN', 'ADMIN_IT', 'ADMIN_TU')
   async updateConfig(
-    @Body() body: {
+    @Body()
+    body: {
       whatsappSenderNumber?: string;
       whatsappApiUrl?: string;
       whatsappApiKey?: string;
@@ -34,7 +61,15 @@ export class WhatsAppController {
   }
 
   @Get('logs')
-  @Roles('SUPERADMIN', 'ADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'BENDAHARA', 'KEPALA_SEKOLAH')
+  @Roles(
+    'SUPERADMIN',
+    'ADMIN',
+    'ADMIN_IT',
+    'ADMIN_TU',
+    'BAU',
+    'BENDAHARA',
+    'KEPALA_SEKOLAH',
+  )
   async getLogs(
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
@@ -56,7 +91,8 @@ export class WhatsAppController {
   ) {
     return this.whatsAppService.sendDirectMessage({
       to: body.to,
-      message: body.message || 'Ini adalah uji coba notifikasi WhatsApp SIMASMUH.',
+      message:
+        body.message || 'Ini adalah uji coba notifikasi WhatsApp SIMASMUH.',
       recipientName: body.recipientName || 'Uji Coba Pengguna',
       category: 'SISTEM',
       title: 'Uji Coba Notifikasi WhatsApp',
@@ -66,7 +102,8 @@ export class WhatsAppController {
   @Post('broadcast')
   @Roles('SUPERADMIN', 'ADMIN', 'ADMIN_IT', 'ADMIN_TU')
   async broadcastMessage(
-    @Body() body: {
+    @Body()
+    body: {
       target: 'SEMUA' | 'GURU' | 'SISWA' | 'ORANG_TUA' | 'PEGAWAI';
       title: string;
       message: string;

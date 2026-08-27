@@ -6,8 +6,13 @@ import {
   Delete,
   Body,
   Param,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
+import { RolesGuard } from '../../core/auth/roles.guard';
+import { Roles, UserRole } from '../../core/auth/roles.decorator';
 
 @Controller('users')
 export class UsersController {
@@ -34,13 +39,67 @@ export class UsersController {
   }
 
   @Delete(':id/unlink-logs/:logId')
-  deleteSingleUnlinkLog(@Param('id') id: string, @Param('logId') logId: string) {
+  deleteSingleUnlinkLog(
+    @Param('id') id: string,
+    @Param('logId') logId: string,
+  ) {
     return this.usersService.deleteSingleUnlinkLog(id, logId);
   }
 
   @Post(':id/unlink-session')
   unlinkSession(@Param('id') id: string, @Body('sessionId') sessionId: string) {
     return this.usersService.unlinkSession(id, sessionId);
+  }
+
+  @Get('all-active-sessions')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
+  getSupervisorAllSessions() {
+    return this.usersService.getAllActiveSessions();
+  }
+
+  @Post('terminate-all-sessions')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
+  terminateAllSessions(
+    @Body('excludeCurrentSessionId') excludeCurrentSessionId: string,
+    @Request() req: any,
+  ) {
+    return this.usersService.terminateAllSessions(
+      req.user?.id,
+      excludeCurrentSessionId || req.user?.sessionId,
+    );
+  }
+
+  @Post('terminate-session/:sessionId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
+  terminateSession(@Param('sessionId') sessionId: string, @Request() req: any) {
+    return this.usersService.terminateSession(sessionId, req.user?.id);
+  }
+
+  @Delete('session/:sessionId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
+  deleteSingleSession(
+    @Param('sessionId') sessionId: string,
+    @Request() req: any,
+  ) {
+    return this.usersService.deleteSingleSession(sessionId, req.user?.id);
+  }
+
+  @Delete(':id/all-sessions')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
+  deleteUserSessions(@Param('id') id: string, @Request() req: any) {
+    return this.usersService.deleteUserSessions(id, req.user?.id);
+  }
+
+  @Post(':id/send-reset-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
+  sendPasswordResetLink(@Param('id') id: string, @Request() req: any) {
+    return this.usersService.sendPasswordResetLink(id, req.user);
   }
 
   @Put(':id/profile')

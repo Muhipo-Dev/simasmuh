@@ -29,6 +29,26 @@ Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah platfor
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-27 (v1.8.0 - DevSecOps CI Pipeline, Penguatan Keamanan Sistem & Sanitasi Injeksi, Monitoring Real-time Dashboard Superadmin, Standar Notifikasi WhatsApp & Penyempurnaan Skrip Multi-Platform):**
+  * **DevSecOps Pipeline & SAST Audit Otomatis (`.github/workflows/devsecops.yml`):**
+    * Penambahan workflow GitHub Actions DevSecOps terintegrasi untuk audit kerentanan dependensi (`npm audit`), analisis statis SAST dengan ESLint & TypeScript rules, serta validasi kompilasi build frontend dan backend.
+  * **Penguatan Keamanan Core Backend, Sanitasi Injeksi & Adaptive Rate Limiting:**
+    * Implementasi middleware `SqlInjectionSanitizerMiddleware` untuk memblokir pola SQL injection berbahaya secara proaktif pada parameter request.
+    * Implementasi guard `AdaptiveThrottlerGuard` dan utilitas ekstraksi IP adaptif (`client-ip.util.ts`) guna melindungi endpoint sensitif dari serangan brute force dan DDoS.
+    * Penguatan verifikasi izin `PermissionGuard`, otentikasi JWT `JwtStrategy`, dan `RolesGuard`.
+  * **Dashboard Superadmin Real-time & Telemetri Sesi Pengguna (`/dashboard`):**
+    * Integrasi panel pemantauan performa server real-time (CPU/RAM telemetry, uptime, live clock sync).
+    * Manajemen dan inspeksi sesi pengguna aktif (Live Online/Offline indicator, terminasi paksa sesi jarak jauh, dan pembersihan riwayat sesi aman).
+    * Penyelarasan indikator AI dan status kesehatan infrastruktur database.
+  * **Optimalisasi Buku Tamu Digital & Presensi Publik:**
+    * Perbaikan antarmuka Buku Tamu Publik (`/buku-tamu`) dan `GuestBookManagement` dengan integrasi form yang lebih responsif dan validasi kontak WhatsApp.
+    * Pembersihan modul dispensasi mandiri yang tidak relevan serta pemfokusan pada alur persetujuan Izin Siswa.
+  * **Standarisasi Notifikasi WhatsApp & Fallback Nomor Telepon:**
+    * Sinkronisasi layanan notifikasi WhatsApp (`088293733330`) untuk seluruh modul komunikasi, keuangan, presensi, dan penilaian karakter.
+    * Skrip otomatis `populate-dummy-phones.ts` untuk melengkapi nomor fallback WhatsApp pada data pengguna eksisting.
+  * **Penyempurnaan Skrip Peluncur Multi-Platform (`simasmuh.ps1` & `jalankan_simasmuh.sh`):**
+    * Peningkatan keandalan manajemen proses, penanganan port tetap (3000, 3001, 51212, 54323), dan deteksi kesiapan layanan pada Windows PowerShell maupun Linux Bash.
+
 * **2026-08-26 (v1.7.0 - Sistem Tata Usaha Terpadu, Persuratan & E-Sign Digital, Buku Tamu Digital, Penguatan Poin Kedisiplinan & Penyelarasan Layout):**
   * **Modul Tata Usaha & Persuratan Terpadu (`PersuratanManagement`):**
     * Penambahan sistem pengelolaan persuratan masuk/keluar, penomoran otomatis, klasifikasi kategori arsip dinamis, verifikasi dialog hapus surat, dan tata letak preview cetak surat resmi.

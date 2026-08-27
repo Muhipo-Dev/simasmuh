@@ -77,8 +77,8 @@ export default function DispensasiPage() {
 
   // Tata Usaha (BAU/TU) menerbitkan dispensasi
   // Kepala Sekolah langsung approve/reject tanpa melalui Tim Ketertiban
-  const canPublish = isSuperAdmin || isBau
-  const canManage = isSuperAdmin || isKepalaSekolah
+  const canPublish = isBau
+  const canManage = isKepalaSekolah
 
   const [allDispensasi, setAllDispensasi] = useState<DispensasiItem[]>([])
   const [allStudentsList, setAllStudentsList] = useState<any[]>([])

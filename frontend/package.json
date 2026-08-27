@@ -7,7 +7,7 @@
     "clean": "node -e \"try { require('fs').rmSync('.next/cache', { recursive: true, force: true }); console.log('Cleaned .next/cache'); } catch(e){}\"",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
-    "lint": "eslint",
+    "lint": "eslint --quiet",
     "audit": "unlighthouse --site http://localhost:3000",
     "audit:desktop": "unlighthouse --site http://localhost:3000 --desktop",
     "audit:ci": "unlighthouse --site http://localhost:3000 --build-static",

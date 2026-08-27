@@ -13,11 +13,13 @@ import {
   GraduationCap, Award, BellRing, Sparkles, ChevronDown, TrendingUp,
   TrendingDown, Wallet, Landmark, DollarSign, Activity, CheckCircle2,
   ArrowUpRight, FileText, PieChart, ShieldAlert, BarChart3, Clock,
-  ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake, Megaphone, Camera, CornerDownRight
+  ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake, Megaphone, Camera, CornerDownRight,
+  Server, Cpu, HardDrive, Zap, Network, RefreshCw, Radio, Terminal, Laptop, Globe, Check, Key, Send, LogOut, Lock, Eye, Monitor, Smartphone, X, Search, Trash2
 } from 'lucide-react'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import Link from 'next/link'
-import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
+import Swal from 'sweetalert2'
+import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { getRoleLinks } from '@/lib/nav-links'
 
 
@@ -137,6 +139,386 @@ export default function DashboardPage() {
     queryFn: () => authenticatedQuery('/api-backend/settings/executive-statistics'),
     enabled: isExecOrFinAll || role === 'SUPERADMIN' || role === 'ADMIN_IT'
   })
+
+  // Query Khusus Supervisor Task Manager & Real-Time Runtime Metrik (Superadmin & Admin IT)
+  const isSuperadminRole = role === 'SUPERADMIN' || role === 'ADMIN_IT' || subRole === 'SUPERADMIN' || subRole === 'ADMIN_IT'
+  const { data: supervisorData, isLoading: loadingSupervisor, refetch: refetchSupervisor, isRefetching: refetchingSupervisor } = useQuery<any>({
+    queryKey: ['system-supervisor-metrics'],
+    queryFn: () => authenticatedQuery('/api-backend/settings/supervisor-metrics'),
+    enabled: isSuperadminRole,
+    refetchInterval: 5000 // Auto refresh realtime setiap 5 detik
+  })
+
+  // State untuk Real Live Speed Test & Ping Benchmark (Client PC/IP -> Server SIMASMUH)
+  const [speedTesting, setSpeedTesting] = useState(false)
+  const [speedTestStep, setSpeedTestStep] = useState<string>('')
+  const [speedTestResult, setSpeedTestResult] = useState<{
+    downloadSpeed: string
+    uploadSpeed: string
+    ping: number
+    jitter: number
+    clientIp: string
+    ispName?: string
+    serverHost: string
+    timestamp: string
+  } | null>(null)
+
+  const handleRunSpeedTest = async () => {
+    try {
+      setSpeedTesting(true)
+      setSpeedTestStep('Mendeteksi IP & ISP Pengakses...')
+
+      // 1. PING & JITTER BENCHMARK (Client browser -> Server SIMASMUH endpoint)
+      const pings: number[] = []
+      let detectedClientIp = supervisorData?.runtime?.clientIp || '127.0.0.1'
+      let detectedServerHost = window.location.host || supervisorData?.runtime?.serverHost || 'localhost:3000'
+      let detectedIsp = ''
+
+      // Deteksi IP Klien / Jaringan ISP Pengguna Aktif Langsung dari Browser
+      try {
+        const ipifyPromise = fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(2500) })
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null)
+        const ipInfoPromise = fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(2500) })
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null)
+
+        const [ipifyRes, ipInfoRes] = await Promise.all([ipifyPromise, ipInfoPromise])
+        if (ipInfoRes?.ip) {
+          detectedClientIp = ipInfoRes.ip
+          if (ipInfoRes.org || ipInfoRes.isp) {
+            detectedIsp = `${ipInfoRes.org || ipInfoRes.isp}${ipInfoRes.city ? ` (${ipInfoRes.city})` : ''}`
+          }
+        } else if (ipifyRes?.ip) {
+          detectedClientIp = ipifyRes.ip
+        }
+      } catch {
+        // Fallback ke deteksi IP backend
+      }
+
+      setSpeedTestStep('Mengukur Latensi & Jitter...')
+      for (let i = 0; i < 3; i++) {
+        const t0 = performance.now()
+        const res = await fetch(`/api-backend/settings/network-benchmark/ping?t=${Date.now()}`, { cache: 'no-store' })
+        const t1 = performance.now()
+        pings.push(Math.round(t1 - t0))
+        if (res.ok) {
+          const pingData = await res.json()
+          if ((!detectedClientIp || detectedClientIp === '127.0.0.1') && pingData.clientIp && pingData.clientIp !== '127.0.0.1') {
+            detectedClientIp = pingData.clientIp
+          }
+          if (pingData.serverHost) detectedServerHost = pingData.serverHost
+        }
+      }
+
+      // Jika masih localhost di jaringan local / Wi-Fi, tampilkan informasi host/jaringan lokal
+      if (!detectedClientIp || detectedClientIp === '127.0.0.1') {
+        detectedClientIp = window.location.hostname || '127.0.0.1 (Local Host / LAN)'
+      }
+
+      const avgPing = Math.round(pings.reduce((a, b) => a + b, 0) / pings.length)
+      const jitter = Math.max(0, Math.round(Math.max(...pings) - Math.min(...pings)))
+
+      // 2. DOWNLOAD SPEED BENCHMARK (Mengunduh chunk data nyata dari backend SIMASMUH)
+      setSpeedTestStep('Menguji Throughput Unduh (Download)...')
+      const dlStart = performance.now()
+      const dlRes = await fetch(`/api-backend/settings/network-benchmark/download?size=1536&_t=${Date.now()}`, { cache: 'no-store' })
+      const dlData = await dlRes.json()
+      const dlEnd = performance.now()
+      const dlDurationSec = (dlEnd - dlStart) / 1000
+      const dlBytes = dlData?.sizeBytes || (1536 * 1024)
+      const dlBps = (dlBytes * 8) / Math.max(0.01, dlDurationSec)
+      const dlMbps = (dlBps / (1024 * 1024)).toFixed(1)
+
+      // 3. UPLOAD SPEED BENCHMARK (Mengunggah payload data nyata ke backend SIMASMUH)
+      setSpeedTestStep('Menguji Throughput Unggah (Upload)...')
+      const dummyPayload = 'X'.repeat(768 * 1024) // 768 KB payload
+      const ulStart = performance.now()
+      await fetch('/api-backend/settings/network-benchmark/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: dummyPayload, sizeBytes: 768 * 1024 }),
+        cache: 'no-store'
+      })
+      const ulEnd = performance.now()
+      const ulDurationSec = (ulEnd - ulStart) / 1000
+      const ulBytes = 768 * 1024
+      const ulBps = (ulBytes * 8) / Math.max(0.01, ulDurationSec)
+      const ulMbps = (ulBps / (1024 * 1024)).toFixed(1)
+
+      setSpeedTestResult({
+        downloadSpeed: `${dlMbps} Mbps`,
+        uploadSpeed: `${ulMbps} Mbps`,
+        ping: Math.max(1, avgPing),
+        jitter,
+        clientIp: detectedClientIp,
+        ispName: detectedIsp,
+        serverHost: detectedServerHost,
+        timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      })
+      refetchSupervisor()
+    } catch (err) {
+      console.error('Error running real network speedtest:', err)
+    } finally {
+      setSpeedTesting(false)
+      setSpeedTestStep('')
+    }
+  }
+
+  const authenticatedFetch = useAuthenticatedFetch()
+  const [terminatingSessionId, setTerminatingSessionId] = useState<string | null>(null)
+  const [resettingUserId, setResettingUserId] = useState<string | null>(null)
+  const [viewingUserSessions, setViewingUserSessions] = useState<any | null>(null)
+  const [showAllSessionsModal, setShowAllSessionsModal] = useState<boolean>(false)
+  const [searchSessionQuery, setSearchSessionQuery] = useState<string>('')
+
+  // Query Semua Sesi Pengguna untuk Modal "Lihat Semua Sesi"
+  const { data: allUserSessionsData, isLoading: loadingAllSessions, refetch: refetchAllSessions } = useQuery<any[]>({
+    queryKey: ['supervisor-all-active-sessions'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/users/all-active-sessions')
+      if (!res.ok) throw new Error('Gagal memuat semua sesi')
+      return res.json()
+    },
+    enabled: showAllSessionsModal && isSuperadminRole,
+    refetchInterval: showAllSessionsModal ? 5000 : false, // Auto refresh setiap 5 detik saat modal terbuka
+  })
+
+  // Handler Supervisor: Putus & Akhiri Sesi Pengguna Tertentu
+  const handleTerminateSession = async (sessionItem: any) => {
+    const result = await Swal.fire({
+      title: 'Putus Sesi Pengguna?',
+      html: `Apakah Anda yakin ingin memutuskan dan mengeluarkan sesi <strong>${sessionItem.name}</strong> (@${sessionItem.username}) pada perangkat <code>${sessionItem.device}</code>?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, Putus Sesi',
+      cancelButtonText: 'Batal'
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      setTerminatingSessionId(sessionItem.id)
+      const res = await authenticatedFetch(`/api-backend/users/terminate-session/${sessionItem.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Gagal memutuskan sesi')
+
+      Swal.fire({
+        title: 'Sesi Berhasil Diakhiri!',
+        text: data.message,
+        icon: 'success',
+        timer: 2500,
+        showConfirmButton: false,
+      })
+      refetchSupervisor()
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Gagal Memutuskan Sesi',
+        text: err?.message || 'Terjadi kesalahan sistem.',
+        icon: 'error',
+      })
+    } finally {
+      setTerminatingSessionId(null)
+    }
+  }
+
+  const [terminatingAll, setTerminatingAll] = useState<boolean>(false)
+
+  // Handler Supervisor: Putus & Akhiri Semua Sesi Pengguna Sekaligus
+  const handleTerminateAllSessions = async () => {
+    const result = await Swal.fire({
+      title: 'Akhiri Semua Sesi Pengguna?',
+      html: 'Tindakan ini akan <strong>mengeluarkan (force logout) seluruh sesi login pengguna</strong> yang sedang aktif di sistem SIMASMUH (kecuali sesi Anda saat ini). Lanjutkan?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Akhiri Semua Sesi',
+      cancelButtonText: 'Batal'
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      setTerminatingAll(true)
+      const res = await authenticatedFetch('/api-backend/users/terminate-all-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Gagal mengakhiri semua sesi')
+
+      Swal.fire({
+        title: 'Semua Sesi Berhasil Diakhiri!',
+        text: data.message,
+        icon: 'success',
+        timer: 3000,
+        showConfirmButton: false,
+      })
+      refetchSupervisor()
+      if (showAllSessionsModal) {
+        refetchAllSessions()
+      }
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Gagal Memutuskan Semua Sesi',
+        text: err?.message || 'Terjadi kesalahan sistem.',
+        icon: 'error',
+      })
+    } finally {
+      setTerminatingAll(false)
+    }
+  }
+
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
+
+  // Handler Superadmin: Hapus Permanen Riwayat Sesi Tertentu dari Database
+  const handleDeleteSingleSession = async (sessionItem: any) => {
+    const result = await Swal.fire({
+      title: 'Hapus Riwayat Sesi?',
+      html: `Hapus permanen riwayat sesi perangkat <code>${sessionItem.device || 'Perangkat'}</code> milik <strong>${sessionItem.name || 'Pengguna'}</strong> dari database?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#475569',
+      confirmButtonText: 'Ya, Hapus Data',
+      cancelButtonText: 'Batal'
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      setDeletingSessionId(sessionItem.id)
+      const res = await authenticatedFetch(`/api-backend/users/session/${sessionItem.id}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Gagal menghapus riwayat sesi')
+
+      Swal.fire({
+        title: 'Riwayat Sesi Dihapus!',
+        text: data.message,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+      refetchSupervisor()
+      if (showAllSessionsModal) {
+        refetchAllSessions()
+      }
+      if (viewingUserSessions) {
+        setViewingUserSessions((prev: any) => {
+          if (!prev) return null
+          const updated = prev.sessions.filter((s: any) => s.id !== sessionItem.id)
+          if (updated.length === 0) return null
+          return { ...prev, sessions: updated }
+        })
+      }
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Gagal Menghapus',
+        text: err?.message || 'Terjadi kesalahan sistem.',
+        icon: 'error',
+      })
+    } finally {
+      setDeletingSessionId(null)
+    }
+  }
+
+  // Handler Superadmin: Hapus Seluruh Riwayat Sesi Pengguna Tertentu dari Database
+  const handleDeleteUserSessions = async (userSessionItem: any) => {
+    const result = await Swal.fire({
+      title: 'Hapus Semua Sesi Pengguna?',
+      html: `Hapus seluruh data riwayat sesi perangkat milik <strong>${userSessionItem.name}</strong> (@${userSessionItem.username}) secara permanen dari database?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#475569',
+      confirmButtonText: 'Ya, Hapus Semua',
+      cancelButtonText: 'Batal'
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      setDeletingSessionId(userSessionItem.userId)
+      const res = await authenticatedFetch(`/api-backend/users/${userSessionItem.userId}/all-sessions`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Gagal menghapus seluruh sesi')
+
+      Swal.fire({
+        title: 'Semua Sesi Dihapus!',
+        text: data.message,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+      refetchSupervisor()
+      if (showAllSessionsModal) {
+        refetchAllSessions()
+      }
+      if (viewingUserSessions?.userId === userSessionItem.userId) {
+        setViewingUserSessions(null)
+      }
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Gagal Menghapus',
+        text: err?.message || 'Terjadi kesalahan sistem.',
+        icon: 'error',
+      })
+    } finally {
+      setDeletingSessionId(null)
+    }
+  }
+
+  // Handler Supervisor: Kirim Link Reset Password Resmi via WhatsApp (SOP Troubleshooting)
+  const handleSendResetPassword = async (sessionItem: any) => {
+    const result = await Swal.fire({
+      title: 'Kirim Link Reset Password?',
+      html: `SOP Bantuan Troubleshooting:<br/>Kirimkan tautan reset password resmi langsung ke nomor WhatsApp <strong>${sessionItem.name}</strong> (@${sessionItem.username})?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#4f46e5',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Kirim Link WhatsApp',
+      cancelButtonText: 'Batal'
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      setResettingUserId(sessionItem.userId)
+      const res = await authenticatedFetch(`/api-backend/users/${sessionItem.userId}/send-reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Gagal mengirim link reset')
+
+      Swal.fire({
+        title: 'Link Reset Terkirim!',
+        html: `Tautan pemulihan sandi berhasil digenerate dan dikirim via WhatsApp ke <strong>${data.recipientName}</strong> (${data.targetPhone}).<br/><br/><small class="text-slate-500 font-mono text-[11px] block mt-1 break-all bg-slate-100 dark:bg-slate-800 p-2 rounded">${window.location.origin}${data.resetUrl}</small>`,
+        icon: 'success',
+      })
+      refetchSupervisor()
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Gagal Mengirim Link',
+        text: err?.message || 'Terjadi kesalahan saat memproses link reset.',
+        icon: 'error',
+      })
+    } finally {
+      setResettingUserId(null)
+    }
+  }
 
 
   // Query Khusus Dispensasi Siswa untuk Verifikasi Kepala Sekolah
@@ -1187,7 +1569,7 @@ export default function DashboardPage() {
         {(() => {
           const pendingDispensasi = (dispensasiList || []).filter((d: any) => d.status === 'MENUNGGU')
 
-          return (role === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH' || role === 'SUPERADMIN') ? (
+          return (role === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH') ? (
             <Card className="border-indigo-200/80 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-blue-50/50 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-blue-950/30 shadow-xs rounded-3xl p-5 space-y-4">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex items-start gap-3.5">
@@ -2677,22 +3059,34 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8 pb-8">
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-slate-800 p-5 sm:p-6 lg:p-8 rounded-2xl text-white shadow-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">Dashboard Utama</h1>
-          <p className="text-blue-100 text-sm sm:text-base mt-1 font-medium">
-            Selamat datang, {(session?.user as any)?.name || 'Pengguna'}.
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 p-5 sm:p-6 lg:p-7 rounded-3xl text-white shadow-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2.5 py-0.5 rounded-full font-extrabold border border-indigo-500/30 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse inline-block" />
+              {isSuperadminRole ? 'Pusat Kontrol Superadmin & Infrastruktur' : 'Dashboard Utama'}
+            </span>
+            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px]">
+              Real-time Active
+            </Badge>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            {isSuperadminRole ? 'Dasbor Utama Superadmin' : 'Dashboard Utama'}
+          </h1>
+          <p className="text-slate-300 text-xs sm:text-sm mt-1 font-medium">
+            Selamat datang, <strong className="text-white">{(session?.user as any)?.name || 'Superadmin'}</strong>. Monitoring seluruh subsistem, layanan port, dan aktivitas pengguna secara live.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="px-3.5 py-1.5 rounded-xl bg-white/10 dark:bg-slate-900/50 backdrop-blur-md border border-white/20 text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-inner">
+        <div className="flex flex-wrap items-center gap-2 relative z-10">
+          <span className="px-3.5 py-1.5 rounded-xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-inner flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
             {(role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') ? 'Tata Usaha (Badan Administrasi Umum)' : role} {subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' ? `• ${subRole}` : ''}
           </span>
         </div>
       </div>
 
-      {/* Kartu Statistika Keuangan (Khusus Keuangan All & Kepala Sekolah) */}
-      {(isKeuanganAll || isKepalaSekolah || role === 'SUPERADMIN' || role === 'ADMIN_IT') && (
+      {/* Kartu Statistika Keuangan (Khusus Keuangan All & Kepala Sekolah - Superadmin Khusus Runtime & Sistem) */}
+      {(isKeuanganAll || isKepalaSekolah) && role !== 'SUPERADMIN' && role !== 'ADMIN_IT' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
             <span className="text-[11px] font-bold text-slate-400 uppercase block">Saldo Kas Bersih</span>
@@ -2721,9 +3115,890 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Kartu Statistika Populasi (Khusus Admin IT / Superadmin / Admin TU) */}
-      {(role === 'ADMIN_IT' || role === 'SUPERADMIN' || role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') && (
+      {/* AREA MENU AKSES CEPAT INDIVIDUAL */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-6 rounded-full bg-blue-600 dark:bg-blue-500" />
+            <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+              Akses Cepat
+            </h2>
+          </div>
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
+            Pintasan menu modul utama
+          </span>
+        </div>
 
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4 md:gap-6">
+          {currentLinks.map((link, idx) => {
+            const Icon = link.icon
+            return (
+              <Link key={idx} href={link.href} className="group">
+                <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-2xs hover:shadow-lg hover:border-blue-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-3.5 sm:p-5 lg:p-7 gap-2.5 sm:gap-4 hover:-translate-y-0.5 rounded-2xl">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md transition-all duration-300 shadow-2xs">
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 transition-colors" />
+                  </div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
+                    {link.name}
+                  </h3>
+                </Card>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* KARTU RUNTIME & MONITORING SISTEM LIVE (KHUSUS SUPERADMIN & ADMIN IT) */}
+      {isSuperadminRole && (
+        <div className="space-y-4">
+          <Card className="border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/90 text-white rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden border">
+            {/* Header Runtime & Monitoring Sistem */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shrink-0">
+                  <Activity className="w-6 h-6 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+                      Runtime & Monitoring Sistem SIMASMUH
+                    </h2>
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[10px] font-mono font-bold flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                      LIVE MONITORING
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Informasi runtime NestJS, PostgreSQL Database, Uptime, Latency, dan Sesi Terkoneksi
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Tools: Speed Test & Manual Refresh */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  onClick={handleRunSpeedTest}
+                  disabled={speedTesting}
+                  size="sm"
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md gap-1.5 h-9 px-3.5"
+                >
+                  <Zap className={`w-3.5 h-3.5 text-amber-300 ${speedTesting ? 'animate-bounce' : ''}`} />
+                  {speedTesting ? 'Mengukur Speed...' : 'Jalankan Speed Test'}
+                </Button>
+                <Button
+                  onClick={() => refetchSupervisor()}
+                  disabled={loadingSupervisor || refetchingSupervisor}
+                  variant="outline"
+                  size="sm"
+                  className="border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl gap-1.5 h-9 px-3"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${refetchingSupervisor ? 'animate-spin' : ''}`} />
+                  <span>Sync</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Grid 4 Kartu Ringkasan Metrik Kunci */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 mt-5">
+              {/* 1. Uptime & SLA */}
+              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-bold uppercase tracking-wider text-[11px]">System Uptime</span>
+                  <Clock className="w-4 h-4 text-cyan-400" />
+                </div>
+                <div className="my-2">
+                  <div className="text-xl sm:text-2xl font-black text-cyan-300 font-mono">
+                    {supervisorData?.runtime?.uptimeHuman || '0j 0m 0d'}
+                  </div>
+                  <span className="text-[11px] text-emerald-400 font-semibold block mt-0.5">
+                    Downtime: {supervisorData?.runtime?.downtimeEstimated || '0.00%'}
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-500 flex justify-between border-t border-slate-800/80 pt-1.5">
+                  <span>Host: {supervisorData?.runtime?.hostname || 'localhost'}</span>
+                  <span>Node {supervisorData?.runtime?.nodeVersion || 'v20'}</span>
+                </div>
+              </div>
+
+              {/* 2. Latency & DB Ping */}
+              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-bold uppercase tracking-wider text-[11px]">Latency & Respon</span>
+                  <Radio className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="my-2">
+                  <div className="text-xl sm:text-2xl font-black text-emerald-400 font-mono flex items-center gap-1.5">
+                    <span>{supervisorData?.performance?.apiLatencyMs ?? 2} ms</span>
+                    <span className="text-xs font-normal text-slate-400">(API)</span>
+                  </div>
+                  <span className="text-[11px] text-slate-300 font-semibold block mt-0.5">
+                    Database Query: <strong className="text-emerald-400">{supervisorData?.performance?.dbLatencyMs ?? 1} ms</strong>
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-500 flex justify-between border-t border-slate-800/80 pt-1.5">
+                  <span>Status DB: {supervisorData?.performance?.dbStatus || 'HEALTHY'}</span>
+                  <span className="text-emerald-400">Aktif</span>
+                </div>
+              </div>
+
+              {/* 3. Memory & RAM Usage */}
+              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-bold uppercase tracking-wider text-[11px]">Node RAM Heap</span>
+                  <HardDrive className="w-4 h-4 text-purple-400" />
+                </div>
+                <div className="my-2">
+                  <div className="text-xl sm:text-2xl font-black text-purple-300 font-mono">
+                    {supervisorData?.performance?.heapUsedMb ?? 0} MB
+                  </div>
+                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
+                    <div
+                      style={{ width: `${Math.min(100, Math.round(((supervisorData?.performance?.heapUsedMb || 1) / (supervisorData?.performance?.heapTotalMb || 100)) * 100))}%` }}
+                      className="bg-purple-500 h-full rounded-full"
+                    />
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-500 flex justify-between border-t border-slate-800/80 pt-1.5">
+                  <span>Total System RAM</span>
+                  <span className="font-mono text-slate-400">{supervisorData?.performance?.totalSystemMemoryGb ?? 0} GB</span>
+                </div>
+              </div>
+
+              {/* 4. Active Sessions & Last Connected */}
+              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-bold uppercase tracking-wider text-[11px]">Koneksi Pengguna</span>
+                  <Users className="w-4 h-4 text-amber-400" />
+                </div>
+                <div className="my-2">
+                  <div className="text-xl sm:text-2xl font-black text-amber-300 font-mono">
+                    {supervisorData?.taskManager?.activeConnectedSessions ?? 1} Sesi Aktif
+                  </div>
+                  <span className="text-[11px] text-slate-400 truncate block mt-0.5">
+                    Terakhir: <strong className="text-slate-200">{supervisorData?.taskManager?.lastUserConnected?.name || 'Superadmin'}</strong>
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-500 flex justify-between border-t border-slate-800/80 pt-1.5">
+                  <span>Total Pengguna: {supervisorData?.taskManager?.totalRegisteredUsers ?? 0}</span>
+                  <span className="text-amber-400 font-semibold">{supervisorData?.taskManager?.lastUserConnected?.role || 'SUPERADMIN'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Panel Status Port 4 Layanan SIMASMUH + Speed Test Realtime Result */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-800/80">
+              {/* Standar 4 Layanan Port SIMASMUH */}
+              <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Server className="w-3.5 h-3.5 text-indigo-400" />
+                    Status Port 4 Layanan Wajib SIMASMUH
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">Real-time Port Guard</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {(supervisorData?.taskManager?.services || [
+                    { name: 'Frontend Next.js Web', port: 3000, status: 'ONLINE', latencyMs: 2 },
+                    { name: 'Backend API NestJS', port: 3001, status: 'ONLINE', latencyMs: 2 },
+                    { name: 'Prisma Studio ORM', port: 51212, status: 'ONLINE', latencyMs: 1 },
+                    { name: 'PostgreSQL DB / Supabase', port: 54322, status: 'ONLINE', latencyMs: 2 },
+                  ]).map((srv: any, idx: number) => (
+                    <div key={idx} className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-slate-200 block truncate max-w-[120px] sm:max-w-none">{srv.name}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">Port :{srv.port} {srv.latencyMs !== undefined ? `(${srv.latencyMs}ms)` : ''}</span>
+                      </div>
+                      <Badge className={
+                        srv.status === 'ONLINE'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px]'
+                          : srv.status === 'READY'
+                          ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px]'
+                          : 'bg-rose-500/20 text-rose-400 border-rose-500/30 text-[10px]'
+                      }>
+                        {srv.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Speed Test & Network Benchmarking Nyata (Client -> Server SIMASMUH) */}
+              <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      Benchmark Jaringan & Speed Test Nyata
+                    </span>
+                    {speedTestResult && (
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        Diuji: {speedTestResult.timestamp}
+                      </span>
+                    )}
+                  </div>
+
+                  {speedTesting ? (
+                    <div className="py-6 flex flex-col items-center justify-center gap-2 border border-slate-800 rounded-xl bg-slate-950/40">
+                      <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+                      <span className="text-xs font-semibold text-slate-200">{speedTestStep || 'Menguji transmisi jaringan...'}</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Uji transfer paket nyata IP Pengakses &rarr; Server Host</span>
+                    </div>
+                  ) : speedTestResult ? (
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                        <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold block">Download</span>
+                          <span className="text-sm sm:text-base lg:text-lg font-black text-cyan-400 font-mono">{speedTestResult.downloadSpeed}</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold block">Upload</span>
+                          <span className="text-sm sm:text-base lg:text-lg font-black text-purple-400 font-mono">{speedTestResult.uploadSpeed}</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold block">Ping Latency</span>
+                          <span className="text-sm sm:text-base lg:text-lg font-black text-emerald-400 font-mono">{speedTestResult.ping} ms</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold block">Jitter</span>
+                          <span className="text-sm sm:text-base lg:text-lg font-black text-amber-400 font-mono">{speedTestResult.jitter} ms</span>
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800/80 text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono">
+                        <div className="flex items-center gap-1.5 text-slate-300 truncate max-w-full sm:max-w-[60%]">
+                          <Laptop className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          <span className="text-slate-500">IP & ISP Klien:</span>
+                          <strong className="text-cyan-300 truncate">
+                            {speedTestResult.clientIp} {speedTestResult.ispName ? `(${speedTestResult.ispName})` : ''}
+                          </strong>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-slate-300 truncate">
+                          <Server className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                          <span className="text-slate-500">Host Server:</span>
+                          <strong className="text-indigo-300">{speedTestResult.serverHost}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-4 text-center border border-dashed border-slate-800 rounded-xl">
+                      <p className="text-xs text-slate-400">
+                        Klik tombol <strong>&quot;Jalankan Speed Test&quot;</strong> di atas untuk menguji throughput unduh, unggah, dan respon latensi dari IP perangkat Anda ke host server SIMASMUH secara nyata.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-between items-center text-[10px] text-slate-500 pt-2 border-t border-slate-800/80 mt-2">
+                  <span>Target: IP Pengakses &harr; Host Server SIMASMUH</span>
+                  <span className="text-indigo-400 font-mono">Real Network Pipeline</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Panel Kemampuan Beban Sistem, Hardware Tersisa & Kapan Menyalakan Mode Ruang Tunggu */}
+            <div className="mt-4 pt-4 border-t border-slate-800/80">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 via-slate-950/80 to-indigo-950/30 border border-slate-800/90">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                      <DoorOpen className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-black text-white flex items-center gap-2">
+                        Kemampuan Load Sistem & Ambang Batas Mode Ruang Tunggu (Waiting Room)
+                      </h4>
+                      <p className="text-[11px] text-slate-400">
+                        Estimasi daya tampung akses pengguna serentak berdasarkan beban & sisa hardware server saat ini
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    {supervisorData?.performance?.loadCapacity?.waitingRoomStatus === 'CRITICAL' ? (
+                      <Badge className="bg-rose-500/20 text-rose-300 border-rose-500/40 text-[10px] animate-pulse">
+                        Wajib Aktifkan Waiting Room
+                      </Badge>
+                    ) : supervisorData?.performance?.loadCapacity?.waitingRoomStatus === 'RECOMMENDED' ? (
+                      <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px]">
+                        Disarankan Nyalakan
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[10px]">
+                        Hardware Aman (Standby)
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mt-3.5">
+                  {/* Estimasi Daya Tampung Akses Pengguna Serentak */}
+                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                      Estimasi Daya Tampung Akses Saat Ini
+                    </span>
+                    <div className="text-xl font-black text-indigo-400 font-mono flex items-baseline gap-1.5">
+                      <span>~{supervisorData?.performance?.loadCapacity?.estimatedMaxUsers ?? 500}</span>
+                      <span className="text-xs text-slate-300 font-normal">Pengguna Serentak</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      Sesi Aktif: <strong className="text-emerald-400">{supervisorData?.performance?.loadCapacity?.activeUsers ?? 1}</strong> &bull; Utilisasi Beban: <strong className="text-amber-400">{supervisorData?.performance?.loadCapacity?.currentLoadPercent ?? 1}%</strong>
+                    </p>
+                  </div>
+
+                  {/* Sisa Kemampuan Hardware Tersisa */}
+                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                      Kapasitas Hardware Tersisa
+                    </span>
+                    <div className="text-xl font-black text-cyan-400 font-mono flex items-baseline gap-1.5">
+                      <span>{supervisorData?.performance?.freeSystemMemoryGb ?? 0} GB Free</span>
+                      <span className="text-xs text-slate-400 font-normal">({supervisorData?.performance?.availableMemoryPercent ?? 0}% RAM Kosong)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      CPU Cores: <strong className="text-slate-200">{supervisorData?.performance?.cpuCount ?? 1} Core ({supervisorData?.performance?.cpuModel?.split(' ')?.[0] || 'CPU'})</strong> &bull; Buffer: <strong className="text-cyan-400">{supervisorData?.performance?.loadCapacity?.remainingHeadroomPercent ?? 99}% Headroom</strong>
+                    </p>
+                  </div>
+
+                  {/* Panduan Kapan Harus Menyalakan Mode Ruang Tunggu */}
+                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                      Indikator Kapan Harus Menyalakan Ruang Tunggu
+                    </span>
+                    <p className="text-[11px] font-medium text-slate-200 leading-snug">
+                      {supervisorData?.performance?.loadCapacity?.waitingRoomAdvice || 'Beban normal. Kapasitas sangat siap menampung akses serentak digitalisasi sekolah.'}
+                    </p>
+                    <div className="text-[9px] text-slate-400 flex items-center gap-2 pt-0.5">
+                      <span>Batas Aman: &lt; 85% Beban</span>
+                      <span>&bull;</span>
+                      <span>Target: Akses Serentak Digitalisasi Sekolah</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabel Ringkas Aktivitas User Terkoneksi Terakhir (Task Manager Session Monitor) */}
+            <div className="mt-4 pt-4 border-t border-slate-800/80">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Laptop className="w-3.5 h-3.5 text-cyan-400" />
+                  Sesi Pengguna Terkoneksi Terakhir (Supervisor Live Log)
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleTerminateAllSessions}
+                    disabled={terminatingAll}
+                    variant="outline"
+                    size="sm"
+                    title="Keluarkan & Akhiri Seluruh Sesi Pengguna Lain yang Sedang Aktif"
+                    className="h-7 px-2.5 text-[11px] font-bold rounded-lg border-rose-500/50 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1.5 shadow-2xs"
+                  >
+                    <LogOut className={`w-3 h-3 text-rose-400 ${terminatingAll ? 'animate-spin' : ''}`} />
+                    <span>Akhiri Semua Sesi</span>
+                  </Button>
+                  <Button
+                    onClick={() => setShowAllSessionsModal(true)}
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/40 font-semibold px-2 h-7 gap-1"
+                  >
+                    <span>Lihat Semua Sesi</span>
+                    <span>&rarr;</span>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                      <th className="py-2 px-3">Nama Pengguna</th>
+                      <th className="py-2 px-3">Peran / Role</th>
+                      <th className="py-2 px-3">Perangkat / Browser</th>
+                      <th className="py-2 px-3">IP Address</th>
+                      <th className="py-2 px-3">Aktivitas Terakhir</th>
+                      <th className="py-2 px-3">Status</th>
+                      <th className="py-2 px-3 text-center">Rincian Perangkat</th>
+                      <th className="py-2 px-3 text-right">Pemutusan Sesi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-sans">
+                    {(supervisorData?.taskManager?.lastActiveSessions || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-4 text-center text-slate-500">
+                          Belum ada catatan riwayat sesi aktif
+                        </td>
+                      </tr>
+                    ) : (
+                      (supervisorData?.taskManager?.lastActiveSessions || []).slice(0, 6).map((s: any, idx: number) => (
+                        <tr key={s.userId || idx} className="hover:bg-slate-900/40">
+                          <td className="py-2.5 px-3 font-bold text-slate-200">
+                            {s.name}
+                            <span className="text-[10px] text-slate-400 block font-normal font-mono">@{s.username || s.userId}</span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                              {s.role}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-300">
+                            {s.device || 'Desktop'}
+                            <span className="text-[10px] text-slate-500 block">{s.browser || 'Browser'} &bull; {s.os || 'OS'}</span>
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-slate-400 text-[11px]">{s.ipAddress}</td>
+                          <td className="py-2.5 px-3 text-slate-300 text-[11px]">
+                            {s.lastActiveAt ? (
+                              <div>
+                                <span className="text-slate-200 font-medium block">
+                                  {new Date(s.lastActiveAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  {new Date(s.lastActiveAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} WIB
+                                </span>
+                              </div>
+                            ) : '-'}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            {s.isLiveOnline ? (
+                              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/30 shadow-xs">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                Online
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded-full border border-slate-700/60">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                                Offline
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Tombol Lihat Sesi Pengguna (Multi-device Pop-up) */}
+                          <td className="py-2.5 px-3 text-center">
+                            <Button
+                              onClick={() => setViewingUserSessions(s)}
+                              size="sm"
+                              variant="outline"
+                              title="Lihat Rincian Sesi & Perangkat Pengguna"
+                              className="h-7 px-2.5 text-[10px] font-bold rounded-lg border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 gap-1 shadow-2xs mx-auto"
+                            >
+                              <Eye className="w-3 h-3 text-cyan-400" />
+                              <span>Lihat Sesi ({s.sessions?.length || 1})</span>
+                            </Button>
+                          </td>
+
+                          {/* Kolom Pemutusan & Penghapusan Sesi */}
+                          <td className="py-2.5 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {s.isActive && (
+                                <Button
+                                  onClick={() => handleTerminateSession({
+                                    id: s.primarySessionId || s.sessions?.[0]?.id,
+                                    name: s.name,
+                                    username: s.username,
+                                    device: s.device,
+                                  })}
+                                  disabled={terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id)}
+                                  size="sm"
+                                  variant="outline"
+                                  title="Akhiri dan Putus Sesi Pengguna"
+                                  className="h-7 px-2 text-[10px] font-bold rounded-lg border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 gap-1 shadow-2xs"
+                                >
+                                  <LogOut className={`w-3 h-3 text-amber-400 ${terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id) ? 'animate-spin' : ''}`} />
+                                  <span>Putus</span>
+                                </Button>
+                              )}
+
+                              <Button
+                                onClick={() => handleDeleteUserSessions(s)}
+                                disabled={deletingSessionId === s.userId}
+                                size="sm"
+                                variant="outline"
+                                title="Hapus Permanen Riwayat Sesi Pengguna Ini dari Database"
+                                className="h-7 px-2 text-[10px] font-bold rounded-lg border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1 shadow-2xs"
+                              >
+                                <Trash2 className={`w-3 h-3 text-rose-400 ${deletingSessionId === s.userId ? 'animate-spin' : ''}`} />
+                                <span>Hapus</span>
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* POP-UP MODAL: LIHAT RINCIAN SELURUH SESI & PERANGKAT PENGGUNA */}
+      {viewingUserSessions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <Card className="w-full max-w-2xl bg-slate-900 border-slate-700 text-white rounded-3xl shadow-2xl overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                  <Laptop className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                    Rincian Sesi Perangkat
+                    <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 text-[10px]">
+                      {viewingUserSessions.sessions?.length || 1} Perangkat
+                    </Badge>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Pengguna: <strong className="text-slate-200">{viewingUserSessions.name}</strong> (@{viewingUserSessions.username}) &bull; Role: <strong className="text-indigo-400">{viewingUserSessions.role}</strong>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => handleDeleteUserSessions(viewingUserSessions)}
+                  disabled={deletingSessionId === viewingUserSessions.userId}
+                  variant="outline"
+                  size="sm"
+                  title="Hapus Seluruh Riwayat Sesi Pengguna Ini dari Database"
+                  className="h-8 px-2.5 text-[11px] font-bold rounded-xl border-rose-500/50 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1.5 shadow-2xs"
+                >
+                  <Trash2 className={`w-3.5 h-3.5 text-rose-400 ${deletingSessionId === viewingUserSessions.userId ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Hapus Semua Sesi</span>
+                </Button>
+                <Button
+                  onClick={() => setViewingUserSessions(null)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-slate-400 hover:text-white rounded-xl h-8 w-8 p-0"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-5 max-h-[60vh] overflow-y-auto space-y-3">
+              {(viewingUserSessions.sessions || []).map((item: any, i: number) => (
+                <div
+                  key={item.id || i}
+                  className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-slate-200">{item.device}</span>
+                      {item.isLiveOnline ? (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Online
+                        </span>
+                      ) : (
+                        <span className="text-[9px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded">
+                          {item.isActive ? 'Offline' : 'Non-aktif'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-400 flex flex-wrap gap-x-3 gap-y-1 font-mono">
+                      <span>IP: {item.ipAddress}</span>
+                      <span>&bull;</span>
+                      <span>{item.browser} &bull; {item.os}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500">
+                      Aktivitas: {item.lastActiveAt ? `${new Date(item.lastActiveAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })} ${new Date(item.lastActiveAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} WIB` : '-'}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    {item.isActive && (
+                      <Button
+                        onClick={async () => {
+                          await handleTerminateSession({
+                            id: item.id,
+                            name: viewingUserSessions.name,
+                            username: viewingUserSessions.username,
+                            device: item.device,
+                          })
+                          setViewingUserSessions(null)
+                        }}
+                        disabled={terminatingSessionId === item.id}
+                        size="sm"
+                        variant="outline"
+                        title="Putus & Keluarkan Sesi Ini"
+                        className="h-7 px-2.5 text-[10px] font-bold rounded-lg border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 gap-1"
+                      >
+                        <LogOut className={`w-3 h-3 text-amber-400 ${terminatingSessionId === item.id ? 'animate-spin' : ''}`} />
+                        <span>Putus</span>
+                      </Button>
+                    )}
+
+                    <Button
+                      onClick={() => handleDeleteSingleSession({
+                        id: item.id,
+                        name: viewingUserSessions.name,
+                        device: item.device,
+                      })}
+                      disabled={deletingSessionId === item.id}
+                      size="sm"
+                      variant="outline"
+                      title="Hapus Permanen Riwayat Sesi Ini dari Database"
+                      className="h-7 px-2.5 text-[10px] font-bold rounded-lg border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1"
+                    >
+                      <Trash2 className={`w-3 h-3 text-rose-400 ${deletingSessionId === item.id ? 'animate-spin' : ''}`} />
+                      <span>Hapus Log</span>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex justify-end">
+              <Button
+                onClick={() => setViewingUserSessions(null)}
+                variant="outline"
+                size="sm"
+                className="text-xs rounded-xl border-slate-700 text-slate-300"
+              >
+                Tutup
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* POP-UP MODAL: LIHAT SEMUA SESI PENGGUNA TERKONEKSI (SUPERVISOR ALL LIVE SESSIONS) */}
+      {showAllSessionsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
+          <Card className="w-full max-w-4xl max-h-[85vh] bg-slate-900 border-slate-700 text-white rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+            {/* Header Modal */}
+            <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                  <Laptop className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                    Semua Sesi Pengguna Terkoneksi
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px]">
+                      {(allUserSessionsData || []).filter(u => u.isLiveOnline).length} Online
+                    </Badge>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Pengawasan seluruh sesi login pengguna aktif & riwayat sesi sistem SIMASMUH
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleTerminateAllSessions}
+                  disabled={terminatingAll}
+                  size="sm"
+                  variant="outline"
+                  title="Keluarkan Semua Sesi Pengguna Lain yang Sedang Aktif"
+                  className="h-8 px-2.5 text-xs font-bold rounded-xl border-rose-500/50 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1.5"
+                >
+                  <LogOut className={`w-3.5 h-3.5 text-rose-400 ${terminatingAll ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Akhiri Semua Sesi</span>
+                </Button>
+                <Button
+                  onClick={() => refetchAllSessions()}
+                  variant="outline"
+                  size="sm"
+                  title="Muat Ulang Sesi"
+                  className="h-8 px-2.5 text-xs rounded-xl border-slate-700 bg-slate-800 text-slate-200"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingAllSessions ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button
+                  onClick={() => setShowAllSessionsModal(false)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-slate-400 hover:text-white rounded-xl h-8 w-8 p-0"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Filter Search */}
+            <div className="p-3 sm:p-4 bg-slate-950/40 border-b border-slate-800/80 shrink-0">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Cari pengguna berdasarkan nama, username, peran, atau IP address..."
+                  value={searchSessionQuery}
+                  onChange={(e) => setSearchSessionQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            {/* Content Table */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingAllSessions ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
+                  <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+                  <span className="text-xs">Memuat daftar semua sesi pengguna...</span>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                        <th className="py-2 px-3">Pengguna</th>
+                        <th className="py-2 px-3">Peran</th>
+                        <th className="py-2 px-3">Perangkat Utama</th>
+                        <th className="py-2 px-3">IP Address</th>
+                        <th className="py-2 px-3">Aktivitas Terakhir</th>
+                        <th className="py-2 px-3">Status</th>
+                        <th className="py-2 px-3 text-center">Perangkat</th>
+                        <th className="py-2 px-3 text-right">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {((allUserSessionsData || []).filter((u: any) => {
+                        if (!searchSessionQuery) return true
+                        const q = searchSessionQuery.toLowerCase()
+                        return (
+                          u.name?.toLowerCase().includes(q) ||
+                          u.username?.toLowerCase().includes(q) ||
+                          u.role?.toLowerCase().includes(q) ||
+                          u.ipAddress?.toLowerCase().includes(q) ||
+                          u.device?.toLowerCase().includes(q)
+                        )
+                      })).length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-8 text-center text-slate-500">
+                            Tidak ditemukan data sesi pengguna yang sesuai
+                          </td>
+                        </tr>
+                      ) : (
+                        (allUserSessionsData || []).filter((u: any) => {
+                          if (!searchSessionQuery) return true
+                          const q = searchSessionQuery.toLowerCase()
+                          return (
+                            u.name?.toLowerCase().includes(q) ||
+                            u.username?.toLowerCase().includes(q) ||
+                            u.role?.toLowerCase().includes(q) ||
+                            u.ipAddress?.toLowerCase().includes(q) ||
+                            u.device?.toLowerCase().includes(q)
+                          )
+                        }).map((s: any, idx: number) => (
+                          <tr key={s.userId || idx} className="hover:bg-slate-950/50">
+                            <td className="py-2.5 px-3 font-bold text-slate-200">
+                              {s.name}
+                              <span className="text-[10px] text-slate-400 block font-normal font-mono">@{s.username || s.userId}</span>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                {s.role}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-300">
+                              {s.device || 'Desktop'}
+                              <span className="text-[10px] text-slate-500 block">{s.browser || 'Browser'} &bull; {s.os || 'OS'}</span>
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-slate-400 text-[11px]">{s.ipAddress}</td>
+                            <td className="py-2.5 px-3 text-slate-300 text-[11px]">
+                              {s.lastActiveAt ? (
+                                <div>
+                                  <span className="text-slate-200 font-medium block">
+                                    {new Date(s.lastActiveAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {new Date(s.lastActiveAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} WIB
+                                  </span>
+                                </div>
+                              ) : '-'}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              {s.isLiveOnline ? (
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/30 shadow-xs">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                  Online
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded-full border border-slate-700/60">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                                  Offline
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <Button
+                                onClick={() => setViewingUserSessions(s)}
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-[10px] font-bold rounded-lg border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 gap-1 mx-auto"
+                              >
+                                <Eye className="w-3 h-3 text-cyan-400" />
+                                <span>{s.sessions?.length || 1} Sesi</span>
+                              </Button>
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {s.isActive && (
+                                  <Button
+                                    onClick={async () => {
+                                      await handleTerminateSession({
+                                        id: s.primarySessionId || s.sessions?.[0]?.id,
+                                        name: s.name,
+                                        username: s.username,
+                                        device: s.device,
+                                      })
+                                      refetchAllSessions()
+                                    }}
+                                    disabled={terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id)}
+                                    size="sm"
+                                    variant="outline"
+                                    title="Putus & Keluarkan Sesi Ini"
+                                    className="h-7 px-2 text-[10px] font-bold rounded-lg border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 gap-1"
+                                  >
+                                    <LogOut className={`w-3 h-3 text-amber-400 ${terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id) ? 'animate-spin' : ''}`} />
+                                    <span>Putus</span>
+                                  </Button>
+                                )}
+
+                                <Button
+                                  onClick={() => handleDeleteUserSessions(s)}
+                                  disabled={deletingSessionId === s.userId}
+                                  size="sm"
+                                  variant="outline"
+                                  title="Hapus Permanen Seluruh Riwayat Sesi Pengguna Ini dari Database"
+                                  className="h-7 px-2 text-[10px] font-bold rounded-lg border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1"
+                                >
+                                  <Trash2 className={`w-3 h-3 text-rose-400 ${deletingSessionId === s.userId ? 'animate-spin' : ''}`} />
+                                  <span>Hapus</span>
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Modal */}
+            <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+              <span>Menampilkan seluruh pengguna terdaftar dengan status sesi login</span>
+              <Button
+                onClick={() => setShowAllSessionsModal(false)}
+                variant="outline"
+                size="sm"
+                className="text-xs rounded-xl border-slate-700 text-slate-300"
+              >
+                Tutup
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Kartu Statistika Populasi (Khusus Admin TU / BAU) */}
+      {(role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') && (
         <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {adminStats.map((stat, i) => (
             <Card key={i} className="group relative border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs hover:shadow-xl dark:hover:border-slate-700 transition-all duration-300 overflow-hidden hover:-translate-y-1 flex flex-col justify-between rounded-2xl p-4 sm:p-5">
@@ -2743,24 +4018,6 @@ export default function DashboardPage() {
           ))}
         </div>
       )}
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
-        {currentLinks.map((link, idx) => {
-          const Icon = link.icon
-          return (
-            <Link key={idx} href={link.href} className="group">
-              <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs hover:shadow-xl hover:border-blue-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-7 gap-3 sm:gap-4 hover:-translate-y-1 rounded-2xl">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md transition-all duration-300 shadow-2xs">
-                  <Icon className="w-6 h-6 sm:w-7 sm:h-7 transition-colors" />
-                </div>
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  {link.name}
-                </h3>
-              </Card>
-            </Link>
-          )
-        })}
-      </div>
 
       <div className="w-full">
         {renderAnnouncements()}

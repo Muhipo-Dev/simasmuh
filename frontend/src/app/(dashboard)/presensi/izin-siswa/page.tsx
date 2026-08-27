@@ -608,7 +608,7 @@ export function IzinSiswaManagement() {
                 // JIKA LEBIH DARI 1 SISWA ATAU TIM TATIB / ADMIN: Tampilkan dropdown pilihan dengan nama jelas
                 <div className="space-y-1.5">
                   <Label className="font-bold text-slate-700 dark:text-slate-200 text-sm">
-                    {isWaliMurid ? 'Pilih Anak / Siswa yang Diizinkan:' : 'Pilih Siswa Penerima Dispensasi:'}
+                    {isWaliMurid ? 'Pilih Anak / Siswa yang Diizinkan:' : 'Pilih Siswa:'}
                   </Label>
                   <Select 
                     value={form.targetUserId} 

@@ -16,8 +16,6 @@ export const superadminLinks = [
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Presensi Camera AI', href: '/presensi/camera', icon: Camera },
-  { name: 'Izin Siswa', href: '/presensi/izin-siswa', icon: ClipboardCheck },
-  { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award },
   { name: 'Izin Keluar Pegawai', href: '/presensi/izin-keluar', icon: DoorOpen },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
   { name: 'Kelola Notifikasi', href: '/pengaturan/notifikasi', icon: BellRing },

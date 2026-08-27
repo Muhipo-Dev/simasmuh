@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
 import { getPublicApiUrl } from '@/lib/api-config'
+import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 
 export type GuestEntry = {
   id: string
@@ -55,6 +56,8 @@ export function GuestBookManagement() {
     catatan: ''
   })
 
+  const authenticatedFetch = useAuthenticatedFetch()
+
   // Set adaptive QR URL on client side
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -67,7 +70,7 @@ export function GuestBookManagement() {
   const fetchGuests = async () => {
     setLoading(true)
     try {
-      const res = await fetch(getPublicApiUrl('/guest-book'))
+      const res = await authenticatedFetch(getPublicApiUrl('/guest-book'))
       if (res.ok) {
         const json = await res.json()
         if (json.data) {
@@ -527,7 +530,7 @@ export function GuestBookManagement() {
     }
 
     try {
-      const res = await fetch(getPublicApiUrl('/guest-book'), {
+      const res = await authenticatedFetch(getPublicApiUrl('/guest-book'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formState)
@@ -564,7 +567,7 @@ export function GuestBookManagement() {
 
   const handleUpdateStatus = async (id: string, newStatus: GuestEntry['status']) => {
     try {
-      const res = await fetch(getPublicApiUrl(`/guest-book/${id}/status`), {
+      const res = await authenticatedFetch(getPublicApiUrl(`/guest-book/${id}/status`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -600,7 +603,7 @@ export function GuestBookManagement() {
 
     if (confirm.isConfirmed) {
       try {
-        const res = await fetch(getPublicApiUrl(`/guest-book/${id}`), {
+        const res = await authenticatedFetch(getPublicApiUrl(`/guest-book/${id}`), {
           method: 'DELETE'
         })
         if (res.ok) {

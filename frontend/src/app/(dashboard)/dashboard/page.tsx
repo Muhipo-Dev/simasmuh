@@ -1056,25 +1056,21 @@ export default function DashboardPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             {parentStudents.length > 1 && (
-              <Select
-                value={selectedChildIdx.toString()}
-                onValueChange={(val) => {
-                  if (val !== null && val !== undefined) {
-                    setSelectedChildIdx(parseInt(val, 10))
-                  }
-                }}
-              >
-                <SelectTrigger className="w-[200px] bg-white text-slate-900 dark:bg-slate-900 dark:text-white font-bold text-xs h-9 rounded-xl border border-indigo-300">
-                  <SelectValue placeholder="Pilih Siswa" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
+              <div className="relative">
+                <select
+                  value={selectedChildIdx}
+                  onChange={(e) => setSelectedChildIdx(parseInt(e.target.value, 10))}
+                  aria-label="Pilih Siswa"
+                  className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white font-bold text-xs h-9 px-3 py-1 pr-8 rounded-xl border border-indigo-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none"
+                >
                   {parentStudents.map((st: any, idx: number) => (
-                    <SelectItem key={st.id || idx} value={idx.toString()} className="text-xs">
+                    <option key={st.id || idx} value={idx}>
                       {st.name} ({st.className})
-                    </SelectItem>
+                    </option>
                   ))}
-                </SelectContent>
-              </Select>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             )}
 
             {activeStudent && (
@@ -1157,31 +1153,37 @@ export default function DashboardPage() {
                 </Link>
               </Card>
 
-              {/* Jadwal Siswa Hari Ini */}
+              {/* Status Kehadiran Siswa */}
               <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-xs rounded-2xl p-4 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">
                     <span className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <CalendarDays className="w-4 h-4 text-indigo-600" />
-                      Jadwal Hari {daysMap[todayDayIndex]}
+                      <ClipboardCheck className="w-4 h-4 text-blue-600" />
+                      Status Presensi & Izin
                     </span>
+                    <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-300">
+                      Harian
+                    </Badge>
                   </div>
-                  <div className="space-y-1.5 max-h-24 overflow-y-auto">
-                    {myClassSchedules.length === 0 ? (
-                      <p className="text-[11px] text-slate-400 text-center py-2">Tidak ada jadwal tercatat</p>
-                    ) : (
-                      myClassSchedules.slice(0, 2).map((sch: any, idx: number) => (
-                        <div key={idx} className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-[11px] flex justify-between">
-                          <span className="font-bold truncate text-slate-800 dark:text-slate-200">{sch.subject?.name}</span>
-                          <span className="font-mono text-slate-500">{sch.startTime}</span>
-                        </div>
-                      ))
-                    )}
+                  <div className="flex items-center justify-around text-center py-1">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Presensi Bulan Ini</span>
+                      <span className="text-xl font-black text-blue-600">
+                        {activeStudent?.attendances?.length || 0} Hari
+                      </span>
+                    </div>
+                    <div className="border-r border-slate-100 dark:border-slate-800 h-8" />
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Izin Sakit / Lain</span>
+                      <span className="text-xl font-black text-amber-600">
+                        0
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <Link href="/akademik/jadwal-pelajaran" className="pt-2">
+                <Link href="/presensi/kehadiran-siswa" className="pt-2">
                   <Button variant="outline" size="sm" className="w-full text-xs font-bold h-7 rounded-lg">
-                    Lihat Jadwal Lengkap &rarr;
+                    Log Presensi Lengkap &rarr;
                   </Button>
                 </Link>
               </Card>

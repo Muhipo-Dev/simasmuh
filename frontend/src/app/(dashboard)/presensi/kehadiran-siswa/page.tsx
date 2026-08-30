@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Loader2, CalendarDays, Download, UserCheck } from 'lucide-react'
+import { Loader2, CalendarDays, Download, UserCheck, ChevronDown } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
@@ -141,26 +141,26 @@ export default function LogPresensiSiswaPage() {
 
         <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
           {effectiveStudentList.length > 0 && (
-            <Select 
-              value={targetUserId} 
-              onValueChange={(val) => { if (val) setSelectedStudentUserId(val) }}
-            >
-              <SelectTrigger className="w-[200px] bg-white dark:bg-slate-900 font-bold text-xs">
-                <SelectValue placeholder="Pilih Siswa" />
-              </SelectTrigger>
-              <SelectContent>
-                {effectiveStudentList.map((item: any) => {
+            <div className="relative">
+              <select 
+                value={targetUserId} 
+                onChange={(e) => { if (e.target.value) setSelectedStudentUserId(e.target.value) }}
+                aria-label="Pilih Siswa"
+                className="w-[220px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold text-xs h-9 px-3 py-1 pr-8 rounded-xl border border-blue-300 dark:border-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none truncate"
+              >
+                {effectiveStudentList.map((item: any, idx: number) => {
                   const sName = item.student?.name || item.name
                   const sNis = item.student?.nis || item.nis
-                  const sUid = item.student?.userId || item.userId
+                  const sUid = item.student?.userId || item.userId || item.id
                   return (
-                    <SelectItem key={item.id || sUid} value={sUid || ''}>
+                    <option key={item.id || sUid || idx} value={sUid || ''}>
                       {sName} {sNis ? `(${sNis})` : ''}
-                    </SelectItem>
+                    </option>
                   )
                 })}
-              </SelectContent>
-            </Select>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           )}
 
           <Select value={selectedMonth} onValueChange={(val) => { if (val) setSelectedMonth(val) }}>

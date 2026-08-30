@@ -15,24 +15,30 @@ interface QueueSlot {
 export class WaitingRoomService {
   private readonly logger = new Logger(WaitingRoomService.name);
 
-  // Parameter Kapasitas & Perlindungan Lonjakan Beban
-  public maxConcurrentActive = 400; // Kapasitas pengguna aktif serentak sebelum waiting room aktif
-  public maxRpsThreshold = 80; // Jika traffic melebihi 80 req/detik, waiting room otomatis aktif
+  // Parameter Kapasitas & Perlindungan Lonjakan Beban (High Capacity)
+  public maxConcurrentActive = 1000; // Kapasitas 1000 pengguna aktif serentak
+  public maxRpsThreshold = 250; // Kuota traffic hingga 250 req/detik
   public tokenTtlMs = 15 * 60 * 1000; // Masa berlaku tiket admit (15 menit)
   public queueTtlMs = 5 * 60 * 1000; // Masa tunggu tiket antrean (5 menit timeout)
   public forceEnabled = false; // Mode darurat aktif manual oleh admin
 
   // State in-memory
-  private activeTokens = new Map<string, QueueSlot>(); // Tiket pengguna yang sedang aktif di dalam sistem
-  private waitingQueue: QueueSlot[] = []; // Antrean pengguna baru yang menunggu giliran
+  private activeTokens = new Map<string, QueueSlot>();
+  private waitingQueue: QueueSlot[] = [];
   private requestCounter = 0;
   private currentRps = 0;
   private lastRpsCheck = Date.now();
 
+  // Metric CPU Tracking
+  private lastCpuUsage = process.cpuUsage();
+  private lastCpuCheck = Date.now();
+  private currentCpuPercent = 0;
+  private currentRamPercent = 0;
+
   private timer: NodeJS.Timeout;
 
   constructor() {
-    // Monitor RPS dan proses otomatis antrean setiap detik
+    // Monitor RPS, CPU & RAM setiap detik
     this.timer = setInterval(() => {
       this.tick();
     }, 1000);
@@ -48,6 +54,28 @@ export class WaitingRoomService {
       this.currentRps = Math.round(this.requestCounter / elapsed);
       this.requestCounter = 0;
       this.lastRpsCheck = now;
+    }
+
+    // Kalkulasi CPU usage persentase Node.js terukur
+    const cpuElapsedMs = now - this.lastCpuCheck;
+    if (cpuElapsedMs >= 1000) {
+      const cpuUsageDiff = process.cpuUsage(this.lastCpuUsage);
+      const totalCpuTimeMs = (cpuUsageDiff.user + cpuUsageDiff.system) / 1000;
+      const numCores = os.cpus().length || 1;
+      this.currentCpuPercent = Math.min(
+        100,
+        Math.round((totalCpuTimeMs / (cpuElapsedMs * numCores)) * 100),
+      );
+      this.lastCpuUsage = process.cpuUsage();
+      this.lastCpuCheck = now;
+    }
+
+    // Kalkulasi RAM Process Heap vs Total Heap
+    try {
+      const mem = process.memoryUsage();
+      this.currentRamPercent = Math.round((mem.heapUsed / mem.heapTotal) * 100);
+    } catch {
+      this.currentRamPercent = 0;
     }
 
     // Bersihkan token aktif yang sudah expired
@@ -71,7 +99,7 @@ export class WaitingRoomService {
     ) {
       const toAdmitCount = Math.min(
         availableSlots,
-        Math.ceil(this.maxConcurrentActive * 0.1),
+        Math.ceil(this.maxConcurrentActive * 0.2),
         this.waitingQueue.length,
       );
       for (let i = 0; i < toAdmitCount; i++) {
@@ -95,25 +123,19 @@ export class WaitingRoomService {
   public isTrafficCritical(): boolean {
     if (this.forceEnabled) return true;
 
-    // 1. Cek RPS (Request Per Detik)
+    // 1. Cek RPS (Request Per Detik) ekstrem (> 250 req/detik)
     if (this.currentRps > this.maxRpsThreshold) return true;
 
-    // 2. Cek Jumlah Token Pengguna Aktif Serentak
+    // 2. Cek Kapasitas Pengguna Aktif Serentak (> 1000 concurrent user)
     if (this.activeTokens.size >= this.maxConcurrentActive) return true;
 
-    // 3. AUTO-DETEKSI BEBAN HARDWARE NYATA (RAM & System Memory)
-    try {
-      const totalMem = os.totalmem();
-      const freeMem = os.freemem();
-      const usedMem = totalMem - freeMem;
-      const memUsagePercent = (usedMem / totalMem) * 100;
+    // 3. HIGH DEMAND OPTIMIZATION (HANYA AKTIF JIKA CPU & RAM > 90%)
+    // Waiting room hanya dipicu bila beban sistem benar-benar jenuh di atas 90%
+    const isCpuOverloaded = this.currentCpuPercent > 90;
+    const isRamOverloaded = this.currentRamPercent > 90;
 
-      // Jika RAM sistem yang terpakai melebihi 85%, aktifkan otomatis Mode Ruang Tunggu
-      if (memUsagePercent >= 85) {
-        return true;
-      }
-    } catch {
-      // ignore
+    if (isCpuOverloaded && isRamOverloaded) {
+      return true;
     }
 
     return false;
@@ -212,6 +234,8 @@ export class WaitingRoomService {
       queuedUsers: this.waitingQueue.length,
       currentRps: this.currentRps,
       rpsThreshold: this.maxRpsThreshold,
+      cpuPercent: this.currentCpuPercent,
+      ramPercent: this.currentRamPercent,
       isTrafficCritical: this.isTrafficCritical(),
       forceEnabled: this.forceEnabled,
     };

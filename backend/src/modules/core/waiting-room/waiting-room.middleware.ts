@@ -9,16 +9,14 @@ export class WaitingRoomMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     this.waitingRoomService.recordRequest();
 
-    const path = req.path || '';
+    const path = req.path || req.url || req.originalUrl || '';
 
     // Kecualikan endpoint public/health/waiting-room/auth login dari pemblokiran middleware
     if (
-      path.startsWith('/waiting-room') ||
-      path.startsWith('/api/v1/waiting-room') ||
-      path.startsWith('/settings/public') ||
-      path.startsWith('/api/v1/settings/public') ||
-      path.startsWith('/uploads') ||
-      path.startsWith('/health')
+      path.includes('/waiting-room') ||
+      path.includes('/settings/public') ||
+      path.includes('/uploads') ||
+      path.includes('/health')
     ) {
       return next();
     }

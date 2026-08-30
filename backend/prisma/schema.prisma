@@ -72,6 +72,7 @@ model TeacherProfile {
   schedules           Schedule[]
   user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   teachingJournals    TeachingJournal[]
+  teacherSubjects     TeacherSubject[]
 }
 
 model ParentProfile {
@@ -149,11 +150,25 @@ model Student {
 }
 
 model Subject {
-  id        String     @id @default(uuid())
-  name      String
-  code      String     @unique
-  grades    Grade[]
-  schedules Schedule[]
+  id              String           @id @default(uuid())
+  name            String
+  code            String           @unique
+  grades          Grade[]
+  schedules       Schedule[]
+  teacherSubjects TeacherSubject[]
+}
+
+model TeacherSubject {
+  id        String         @id @default(uuid())
+  teacherId String
+  subjectId String
+  createdAt DateTime       @default(now())
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject   Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, subjectId])
+  @@index([teacherId])
+  @@index([subjectId])
 }
 
 model Schedule {

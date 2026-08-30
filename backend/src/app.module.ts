@@ -52,19 +52,19 @@ import { AdaptiveThrottlerGuard } from './modules/core/guards/adaptive-throttler
       delimiter: '.',
       maxListeners: 20,
     }),
-    // 🛡️ Global Rate Limiter: Proteksi serangan Brute-force & DDoS
-    // - Luar Jaringan/Internet: 20 req/detik (burst) & 100 req/menit
-    // - Lokal Jaringan/LAN: 5x lebih besar (100 req/detik & 500 req/menit)
+    // 🛡️ Global Rate Limiter: Proteksi longgar & adaptif
+    // - Luar Jaringan/Internet: 60 req/detik (burst) & 300 req/menit
+    // - Lokal Jaringan/LAN: 5x lebih besar (300 req/detik & 1500 req/menit)
     ThrottlerModule.forRoot([
       {
         name: 'short',
         ttl: 1000,
-        limit: 20, // Internet: 20 req/dtk | Lokal: 100 req/dtk
+        limit: 60, // Internet: 60 req/dtk | Lokal: 300 req/dtk
       },
       {
         name: 'medium',
         ttl: 60000,
-        limit: 100, // Internet: 100 req/menit | Lokal: 500 req/menit
+        limit: 300, // Internet: 300 req/menit | Lokal: 1500 req/menit
       },
     ]),
     // ⚡ In-Memory Cache Global: Caching respon database untuk performa tinggi

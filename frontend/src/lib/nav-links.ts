@@ -70,7 +70,6 @@ export const waliMuridLinks = [
   { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
   { name: 'Izin Sakit / Siswa', href: '/presensi/izin-siswa', icon: ClipboardCheck },
   { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award },
-  { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Tagihan & SPP', href: '/keuangan/laporan', icon: Wallet },
   { name: 'Etika & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck },
   { name: 'Notifikasi WA', href: '/pengaturan/notifikasi-wali', icon: BellRing },
@@ -198,7 +197,7 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
 
   // 4. Modul Akademik
   if (pathname.startsWith('/akademik/jadwal-pelajaran')) {
-    return isBau || isKepalaSekolah || isGuru || isSiswa || isWaliMurid
+    return isBau || isKepalaSekolah || isGuru || isSiswa
   }
   if (pathname.startsWith('/akademik/jadwal-mengajar') || pathname.startsWith('/akademik/jurnal-mengajar') || pathname.startsWith('/akademik/penilaian')) {
     return isGuru || isBau || isKepalaSekolah

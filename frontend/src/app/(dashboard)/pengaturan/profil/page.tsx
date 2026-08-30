@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Camera, Loader2, CheckCircle2, User, MapPin, Mail, Shield, Pencil, X, 
   GraduationCap, Award, Key, Lock, AlertCircle, Laptop, Clock, Globe, ShieldCheck, RefreshCw,
-  Smartphone, Monitor, Calendar, LogOut, ShieldAlert, Sparkles, LogOut as DisconnectIcon, Trash2
+  Smartphone, Monitor, Calendar, LogOut, ShieldAlert, Sparkles, LogOut as DisconnectIcon, Trash2, Server, Activity
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 
@@ -1098,68 +1098,98 @@ export default function ProfilePage() {
 
       {/* MODAL SIMULASI WAITING ROOM */}
       {showWaitingRoomDemo && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/95 backdrop-blur-xl p-4 text-white">
-          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 p-8 shadow-2xl shadow-emerald-950/50 text-center">
-            
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/90 backdrop-blur-2xl p-3 sm:p-4 md:p-6 text-white overflow-y-auto">
+          {/* Animated Background Ambience */}
+          <div className="fixed inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] sm:w-[500px] h-[320px] sm:h-[500px] bg-emerald-500/15 rounded-full blur-[100px] animate-pulse" />
+            <div className="absolute bottom-1/4 right-1/4 w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-teal-500/10 rounded-full blur-[90px] animate-pulse delay-700" />
+            <div className="absolute top-1/3 left-1/4 w-[200px] sm:w-[350px] h-[200px] sm:h-[350px] bg-indigo-500/10 rounded-full blur-[80px] animate-pulse delay-1000" />
+          </div>
+
+          <div className="relative w-full max-w-lg overflow-hidden rounded-2xl sm:rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-950/95 p-5 sm:p-7 md:p-8 shadow-2xl shadow-emerald-950/60 backdrop-blur-xl transition-all duration-300">
             {/* Close Button for Demo */}
             <button
               onClick={() => setShowWaitingRoomDemo(false)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition"
+              className="absolute top-4 right-4 p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition cursor-pointer z-10"
               title="Tutup Simulasi"
             >
               <X className="w-4 h-4" />
             </button>
 
-            {/* Animated Halo Glow */}
-            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
-
-            {/* Badge Icon */}
-            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shadow-inner">
-              <ShieldAlert className="h-10 w-10 animate-pulse text-emerald-400" />
+            {/* Header Badge */}
+            <div className="flex items-center justify-between gap-2 mb-4 pr-8">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-sm shadow-emerald-950">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Simulasi Waiting Room
+              </span>
+              <span className="flex items-center gap-1 text-[11px] text-slate-400 font-mono">
+                <Server className="w-3 h-3 text-emerald-400" />
+                Preview Mode
+              </span>
             </div>
 
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 mb-3">
-              <Sparkles className="w-3.5 h-3.5" /> Proteksi Lonjakan Server Aktif
-            </span>
+            {/* Icon & Title */}
+            <div className="text-center mb-5 sm:mb-6">
+              <div className="relative mx-auto mb-3 sm:mb-4 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-400/30 text-emerald-400 shadow-xl shadow-emerald-900/30">
+                <ShieldAlert className="h-8 w-8 sm:h-10 sm:w-10 animate-bounce text-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,0.6)]" />
+              </div>
 
-            <h2 className="text-2xl font-bold tracking-tight text-white mb-2">
-              Ruang Tunggu Antrean
-            </h2>
-            <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-              Lalu lintas pengguna saat ini sedang sangat padat. Demi menjaga kestabilan data & keamanan sistem, Anda ditempatkan di antrean virtual.
-            </p>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-1.5 bg-gradient-to-r from-white via-emerald-100 to-teal-200 bg-clip-text text-transparent">
+                Ruang Tunggu Antrean
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-sm mx-auto leading-relaxed">
+                Lalu lintas pengguna saat ini sedang sangat padat. Demi menjaga kestabilan data & keamanan sistem, Anda ditempatkan di antrean virtual.
+              </p>
+            </div>
 
-            {/* Position & Stats Card */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="rounded-2xl bg-slate-800/60 border border-slate-700/50 p-4">
-                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 mb-1">
+            {/* Cards: Position & Wait Time */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 mb-5 sm:mb-6">
+              <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-800/40 border border-slate-700/60 p-3 sm:p-4 text-center transition hover:border-emerald-500/50">
+                <div className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-medium text-slate-400 mb-1">
                   <User className="w-3.5 h-3.5 text-emerald-400" /> Nomor Antrean
                 </div>
-                <div className="text-3xl font-extrabold text-emerald-400">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-emerald-400 tracking-tight drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]">
                   #{demoPosition}
+                </div>
+                <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">
+                  dari 15 antrean simulasi
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-slate-800/60 border border-slate-700/50 p-4">
-                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 mb-1">
+              <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-800/40 border border-slate-700/60 p-3 sm:p-4 text-center transition hover:border-amber-500/50">
+                <div className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-medium text-slate-400 mb-1">
                   <Clock className="w-3.5 h-3.5 text-amber-400" /> Estimasi Waktu
                 </div>
-                <div className="text-3xl font-extrabold text-amber-300">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-amber-300 tracking-tight drop-shadow-[0_0_8px_rgba(252,211,77,0.4)]">
                   ~{demoWait}s
+                </div>
+                <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">
+                  otomatis masuk giliran
                 </div>
               </div>
             </div>
 
             {/* Progress Animation */}
             <div className="space-y-2 mb-5">
-              <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+              <div className="flex justify-between items-center text-[11px] sm:text-xs text-slate-400">
+                <span className="flex items-center gap-1 font-medium text-emerald-400">
+                  <Activity className="w-3.5 h-3.5 animate-spin" /> Sedang Mengantre
+                </span>
+                <span className="font-mono text-emerald-300 font-semibold">{Math.max(15, 100 - demoPosition * 6)}%</span>
+              </div>
+
+              <div className="h-2.5 sm:h-3 w-full bg-slate-800/80 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
                 <div 
-                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full animate-pulse transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(52,211,153,0.7)]"
                   style={{ width: `${Math.max(15, 100 - demoPosition * 6)}%` }}
                 />
               </div>
-              <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
-                <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
                 Memperbarui posisi antrean secara otomatis...
               </div>
             </div>
@@ -1171,7 +1201,7 @@ export default function ProfilePage() {
                   setDemoPosition((prev) => (prev > 1 ? prev - 1 : 14))
                   setDemoWait((prev) => (prev > 4 ? prev - 3 : 25))
                 }}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-lg shadow-emerald-950/40 active:scale-95"
               >
                 <RefreshCw className="w-3.5 h-3.5" /> Majukan Antrean
               </button>
@@ -1183,8 +1213,8 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            <div className="text-[11px] text-slate-500 border-t border-slate-800 pt-3">
-              Mohon jangan menutup atau merefresh tab ini agar posisi antrean Anda tidak tereset.
+            <div className="text-[10px] sm:text-[11px] text-slate-400 text-center border-t border-slate-800/80 pt-3">
+              🔒 Halaman ini akan otomatis beralih begitu giliran Anda tiba. Mohon tidak menutup tab.
             </div>
           </div>
         </div>

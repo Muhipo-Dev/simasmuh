@@ -22,9 +22,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
     const poolConfig: any = {
       connectionString,
-      max: isRemoteDb ? 20 : 15,
+      max: isRemoteDb ? 30 : 25, // Dioptimasi untuk konkurensi tinggi
+      min: 4, // Menjaga koneksi aktif tetap siap melayani request mendadak
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
+      statement_timeout: 15000, // Cegah slow query memblokir thread pool
       keepAlive: true,
       keepAliveInitialDelayMillis: 10000,
     };

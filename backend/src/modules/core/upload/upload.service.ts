@@ -1,11 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import sharp from 'sharp';
 import { STORAGE_DIRS, STORAGE_ROOT } from '../config/storage.config';
 
 @Injectable()
 export class UploadService {
+  private readonly logger = new Logger(UploadService.name);
+
+  /**
+   * Menyimpan gambar Base64 dengan kompresi otomatis WebP untuk efisiensi penyimpanan & bandwidth
+   */
   async saveBase64Image(
     base64Str: string,
     folder?: 'thumbnails' | 'profiles' | 'journals' | string,
@@ -15,14 +21,8 @@ export class UploadService {
       throw new Error('Invalid input string');
     }
 
-    const type = matches[1];
-    let extension = 'jpg';
-    if (type === 'image/jpeg') extension = 'jpg';
-    if (type === 'image/png') extension = 'png';
-    if (type === 'image/webp') extension = 'webp';
-
     const buffer = Buffer.from(matches[2], 'base64');
-    const filename = `${uuidv4()}-${Date.now()}.${extension}`;
+    const filename = `${uuidv4()}-${Date.now()}.webp`;
 
     // Tentukan direktori penyimpanan target
     let targetDir = STORAGE_ROOT;
@@ -42,7 +42,19 @@ export class UploadService {
     }
 
     const filePath = path.join(targetDir, filename);
-    await fs.promises.writeFile(filePath, buffer);
+
+    try {
+      // Optimasi kompresi WebP dengan mempertahankan kualitas visual tinggi & ukuran file ringan
+      await sharp(buffer)
+        .rotate() // Menyesuaikan orientasi EXIF
+        .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 82, effort: 4 })
+        .toFile(filePath);
+    } catch (sharpError) {
+      // Fallback jika sharp gagal memproses format tertentu
+      this.logger.warn(`Sharp conversion fallback: ${sharpError}`);
+      await fs.promises.writeFile(filePath, buffer);
+    }
 
     return `${urlPrefix}/${filename}`;
   }
@@ -56,14 +68,8 @@ export class UploadService {
       throw new Error('Invalid input string');
     }
 
-    const type = matches[1];
-    let extension = 'jpg';
-    if (type === 'image/jpeg') extension = 'jpg';
-    if (type === 'image/png') extension = 'png';
-    if (type === 'image/webp') extension = 'webp';
-
     const buffer = Buffer.from(matches[2], 'base64');
-    const filename = `banner-${Date.now()}.${extension}`;
+    const filename = `banner-${Date.now()}.webp`;
     const uploadPath = STORAGE_DIRS.carousel;
 
     if (!fs.existsSync(uploadPath)) {
@@ -71,7 +77,16 @@ export class UploadService {
     }
 
     const filePath = path.join(uploadPath, filename);
-    await fs.promises.writeFile(filePath, buffer);
+
+    try {
+      await sharp(buffer)
+        .rotate()
+        .resize({ width: 1920, height: 1080, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 85 })
+        .toFile(filePath);
+    } catch {
+      await fs.promises.writeFile(filePath, buffer);
+    }
 
     return `/uploads/carousel/${filename}`;
   }

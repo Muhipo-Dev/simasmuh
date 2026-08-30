@@ -1108,7 +1108,7 @@ function SchoolExecutiveFinancialReportView() {
 }
 
 // ============================================================
-// MAIN PAGE COMPONENT WITH ROLE ROUTING
+// MAIN PAGE COMPONENT WITH ROLE ROUTING & MULTI-STUDENT SUPPORT
 // ============================================================
 export default function FinanceReportPage() {
   const { data: session } = useSession()
@@ -1127,12 +1127,26 @@ export default function FinanceReportPage() {
     ['KEPALA_SEKOLAH', 'SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'TATA_USAHA'].includes(r)
   )
 
+  const isParent = roles.includes('WALI_MURID') || roles.includes('ORANG_TUA') || roles.includes('PARENT')
+
   const authenticatedQuery = useAuthenticatedQuery()
 
+  // Query daftar siswa jika login sebagai Wali Murid
+  const { data: parentStudents = [] } = useQuery<any[]>({
+    queryKey: ['parent-my-students'],
+    queryFn: () => authenticatedQuery('/api-backend/parents/my-students'),
+    enabled: !!userId && isParent,
+  })
+
+  const [selectedStudentIdx, setSelectedStudentIdx] = useState(0)
+  const currentSelectedStudentId = isParent && parentStudents.length > 0
+    ? (parentStudents[selectedStudentIdx]?.id || parentStudents[0]?.id)
+    : undefined
+
   const { data: student, isLoading } = useQuery<StudentDetail>({
-    queryKey: ['my-all-tagihan'],
-    queryFn: () => authenticatedQuery('/api-backend/finance/my-all-tagihan'),
-    enabled: !!userId && !isStaffOrManagement
+    queryKey: ['my-all-tagihan', currentSelectedStudentId],
+    queryFn: () => authenticatedQuery(`/api-backend/finance/my-all-tagihan${currentSelectedStudentId ? `?studentId=${currentSelectedStudentId}` : ''}`),
+    enabled: !!userId && !isStaffOrManagement && (!isParent || parentStudents.length > 0 || !!userId)
   })
 
   if (isStaffOrManagement) {
@@ -1161,5 +1175,38 @@ export default function FinanceReportPage() {
     )
   }
 
-  return <StudentFinanceView student={student} />
+  return (
+    <div className="space-y-6">
+      {/* Selector Siswa Khusus Wali Murid jika memiliki lebih dari 1 siswa */}
+      {isParent && parentStudents.length > 1 && (
+        <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-slate-900 p-4 sm:p-5 rounded-2xl text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-white/10">
+          <div>
+            <h3 className="font-extrabold text-sm sm:text-base flex items-center gap-2">
+              <Users className="w-4 h-4 text-amber-300" />
+              Pilih Siswa yang Diwalikan
+            </h3>
+            <p className="text-indigo-100 text-xs mt-0.5">
+              Lihat dan pantau riwayat tagihan SPP & pembiayaan sekolah masing-masing siswa
+            </p>
+          </div>
+          <div className="relative">
+            <select
+              value={selectedStudentIdx}
+              onChange={(e) => setSelectedStudentIdx(parseInt(e.target.value, 10))}
+              aria-label="Pilih Siswa"
+              className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white font-bold text-xs h-9 px-3 py-1 pr-8 rounded-xl border border-indigo-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none"
+            >
+              {parentStudents.map((st: any, idx: number) => (
+                <option key={st.id || idx} value={idx}>
+                  {st.name} ({st.className})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      <StudentFinanceView student={student} />
+    </div>
+  )
 }

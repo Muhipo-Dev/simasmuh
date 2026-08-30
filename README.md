@@ -44,6 +44,18 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-30 (v1.9.1 - Relasi Multi-Guru ke Multi-Mata Pelajaran & Manajemen Guru Pengampu di Master Data Mapel):**
+  * **Relasi Many-to-Many Guru & Mata Pelajaran (`TeacherSubject`):**
+    * Penambahan model relasi basis data `TeacherSubject` antara `TeacherProfile` dan `Subject` dengan integritas cascade delete dan proteksi unique index.
+    * Sinkronisasi Prisma schema dan Prisma Client generasi baru tanpa data loss.
+  * **Backend API Master Data Mata Pelajaran & Guru:**
+    * Peningkatan `SubjectsService` dan `SubjectsController` untuk mendukung penambahan, pembaruan, dan bulk update guru pengampu pada setiap mata pelajaran.
+    * Penyelarasan relasi pengampu di `TeachersService` query find.
+  * **Antarmuka Master Data Mata Pelajaran (`/master-data/mata-pelajaran`):**
+    * Tampilan daftar mata pelajaran kini menyertakan badge guru pengampu terdaftar.
+    * Form dialog tambah dan edit dilengkapi fitur *multi-select teacher search & badge selector*.
+    * Fitur *Edit Serentak (Bulk Edit)* kini mendukung penugasan guru pengampu ke banyak mata pelajaran sekaligus.
+
 * **2026-08-30 (v1.9.0 - Redesain Modular Dashboard Superadmin & Komponen Ringkas, Pembersihan Riwayat Sesi Pengguna, Optimasi Virtual Account & Navigasi E-Rapor / Karakter):**
   * **Redesain Arsitektur & Antarmuka Dashboard Superadmin (`/dashboard`):**
     * Modularisasi komponen dashboard ke dalam sub-komponen terisolasi (`UserAccountCard`, `CenterQuickAccessGrid`, `ActivityCalendarWidget`, `NewsArticleListWidget`, `SystemInfoWidget`).

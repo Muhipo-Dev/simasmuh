@@ -21,7 +21,13 @@ import Link from 'next/link'
 import Swal from 'sweetalert2'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { getRoleLinks } from '@/lib/nav-links'
+import { UserAccountCard } from '@/components/dashboard/UserAccountCard'
+import { CenterQuickAccessGrid } from '@/components/dashboard/CenterQuickAccessGrid'
+import { SystemInfoWidget } from '@/components/dashboard/SystemInfoWidget'
+import { ActivityCalendarWidget } from '@/components/dashboard/ActivityCalendarWidget'
+import { NewsArticleListWidget } from '@/components/dashboard/NewsArticleListWidget'
 
+import { useRealtimeServerClock } from '@/lib/time-sync'
 
 const formatProgramName = (code?: string | null) => {
   if (!code) return 'Reguler'
@@ -38,6 +44,7 @@ const formatProgramName = (code?: string | null) => {
 }
 export default function DashboardPage() {
   const { data: session } = useSession()
+  const clock = useRealtimeServerClock(30000)
   const [showPaymentPopup, setShowPaymentPopup] = useState(false)
   const role = (session?.user as any)?.role || 'GURU'
   const subRole = (session?.user as any)?.subRole
@@ -329,11 +336,11 @@ export default function DashboardPage() {
 
   const [terminatingAll, setTerminatingAll] = useState<boolean>(false)
 
-  // Handler Supervisor: Putus & Akhiri Semua Sesi Pengguna Sekaligus
+  // Handler Supervisor: Putus & Akhiri Semua Sesi Pengguna Sekaligus (Kecuali Superadmin)
   const handleTerminateAllSessions = async () => {
     const result = await Swal.fire({
       title: 'Akhiri Semua Sesi Pengguna?',
-      html: 'Tindakan ini akan <strong>mengeluarkan (force logout) seluruh sesi login pengguna</strong> yang sedang aktif di sistem SIMASMUH (kecuali sesi Anda saat ini). Lanjutkan?',
+      html: 'Tindakan ini akan <strong>mengeluarkan (force logout) seluruh sesi login pengguna</strong> yang sedang aktif di sistem SIMASMUH (kecuali seluruh akun Superadmin). Lanjutkan?',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
@@ -476,6 +483,56 @@ export default function DashboardPage() {
       })
     } finally {
       setDeletingSessionId(null)
+    }
+  }
+
+  const [deletingAllLogs, setDeletingAllLogs] = useState<boolean>(false)
+
+  // Handler Superadmin: Hapus Riwayat Sesi Pengguna dari Database (Kecuali Pengguna Aktif & Superadmin)
+  const handleDeleteAllSessionLogs = async () => {
+    const result = await Swal.fire({
+      title: 'Hapus Semua Riwayat Sesi?',
+      html: 'Tindakan ini akan <strong>menghapus seluruh riwayat log sesi yang sudah offline / tidak aktif</strong> dari database.<br/><br/><span class="text-xs text-emerald-400 font-medium">&bull; Sesi pengguna yang sedang aktif (online) dan Superadmin tetap aman terlindungi.</span>',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#475569',
+      confirmButtonText: 'Ya, Hapus Riwayat',
+      cancelButtonText: 'Batal'
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      setDeletingAllLogs(true)
+      const res = await authenticatedFetch('/api-backend/users/all-session-logs', {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Gagal menghapus seluruh riwayat sesi')
+
+      Swal.fire({
+        title: 'Riwayat Sesi Dibersihkan!',
+        text: data.message,
+        icon: 'success',
+        timer: 2500,
+        showConfirmButton: false,
+      })
+      refetchSupervisor()
+      if (showAllSessionsModal) {
+        refetchAllSessions()
+      }
+      if (viewingUserSessions) {
+        setViewingUserSessions(null)
+      }
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Gagal Menghapus',
+        text: err?.message || 'Terjadi kesalahan sistem.',
+        icon: 'error',
+      })
+    } finally {
+      setDeletingAllLogs(false)
     }
   }
 
@@ -798,171 +855,136 @@ export default function DashboardPage() {
     const studentLinks = getRoleLinks(role, subRole, subRole2, subRole3).filter(link => link.href !== '/dashboard')
 
     return (
-      <div className="space-y-6 lg:space-y-8 w-full flex flex-col justify-between">
-        {/* Banner Welcome Header */}
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-700 p-5 sm:p-6 lg:p-8 rounded-2xl text-white shadow-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
+      <div className="space-y-6 w-full">
+        {/* Banner Welcome Header Ringkas */}
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-700 p-5 sm:p-6 rounded-2xl text-white shadow-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
-              Dashboard Siswa
+            <h1 className="text-xl sm:text-2xl tracking-tight text-white flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="font-extrabold">{clock.greeting} 👋,</span>
+              <span className="font-extrabold italic">{(session?.user as any)?.name || 'Siswa'}!</span>
+              <span className="font-normal italic text-blue-100 text-base sm:text-lg">Semoga harimu menyenangkan ✨</span>
             </h1>
-            <p className="text-blue-100 mt-1 text-sm sm:text-base font-medium flex items-center gap-2 flex-wrap">
-              <span>Selamat datang, {(session?.user as any)?.name || 'Siswa'}. Semoga Harimu Menyenangkan! 😊✨</span>
-              <span className="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-bold backdrop-blur-md">
-                Program {formatProgramName(activeStudent?.program)}
-              </span>
+            <p className="text-blue-100 mt-1 text-xs sm:text-sm font-medium">
+              Selamat datang di Dashboard Pengguna SIMASMUH SMA Muhammadiyah 1 Ponorogo
             </p>
           </div>
-          <div className="flex flex-wrap items-center sm:justify-end gap-2.5">
+          <div className="flex flex-wrap items-center sm:justify-end gap-2">
             {studentClass && (
-              <div className="bg-white/10 dark:bg-slate-900/50 backdrop-blur-md px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl border border-white/20 flex items-center gap-3 shadow-inner">
-                <UserSquare2 className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-300 shrink-0" />
-                <div className="text-xs sm:text-sm">
-                  <span className="text-blue-100 font-medium block text-[11px] sm:text-xs">Kelas Aktif:</span>
-                  <span className="font-extrabold text-white tracking-wide text-base sm:text-lg">{studentClass.name}</span>
-                </div>
-              </div>
+              <Badge className="bg-white/20 text-white font-bold border-white/20 text-xs px-3 py-1">
+                Kelas: {studentClass.name}
+              </Badge>
             )}
-            <div className="bg-white/10 dark:bg-slate-900/50 backdrop-blur-md px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl border border-white/20 flex items-center gap-3 shadow-inner">
-              <UserCheck className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300 shrink-0" />
-              <div className="text-xs sm:text-sm">
-                <span className="text-blue-100 font-medium block text-[11px] sm:text-xs">Wali Kelas:</span>
-                <span className="font-extrabold text-white tracking-wide text-base sm:text-lg">
-                  {studentClass?.homeroomTeacher?.user?.name || '-'}
-                </span>
-              </div>
-            </div>
+            <Badge className="bg-emerald-500 text-white font-bold text-xs px-3 py-1">
+              Program {formatProgramName(activeStudent?.program)}
+            </Badge>
             {allUnpaid.length > 0 && (
               <Button
                 onClick={() => setShowPaymentPopup(true)}
-                className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold border border-amber-300 backdrop-blur-md shadow-md text-xs sm:text-sm"
-                variant="outline"
+                className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold border border-amber-300 shadow-sm text-xs h-8 rounded-xl"
                 size="sm"
               >
-                <AlertTriangle className="w-4 h-4 mr-1.5 text-red-600 shrink-0" />
-                {allUnpaid.length} Tagihan Belum Lunas
+                <AlertTriangle className="w-3.5 h-3.5 mr-1 text-red-600 shrink-0" />
+                {allUnpaid.length} Tagihan
               </Button>
             )}
           </div>
         </div>
 
-        {/* Banner Alert Ringkas */}
-        {allUnpaid.length > 0 && (
-          <div className="bg-gradient-to-r from-red-500/15 via-amber-500/15 to-orange-500/15 border-2 border-red-500/50 dark:border-red-500/70 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden">
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-red-600 to-rose-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                <AlertTriangle className="w-6 h-6 text-white drop-shadow-sm" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="bg-red-600 text-white text-[10px] font-black tracking-widest uppercase px-2.5 py-0.5 rounded shadow-xs flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                    ALERT!
-                  </span>
-                  <span className="text-xs font-bold text-red-700 dark:text-red-300">
-                    Tagihan Belum Lunas
-                  </span>
-                </div>
-                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-tight">
-                  {allUnpaid.length} Tagihan senilai <span className="text-red-600 dark:text-red-400 font-black">{formatCurrency(totalUnpaidAmount)}</span> belum dilunasi.
-                </h3>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-              <Button
-                onClick={() => setShowPaymentPopup(true)}
-                size="sm"
-                className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-extrabold shadow-sm flex-1 sm:flex-initial rounded-xl text-xs sm:text-sm"
-              >
-                <CreditCard className="w-4 h-4 mr-1.5" />
-                Bayar Sekarang
-              </Button>
-              <Link href="/keuangan/laporan" className="flex-1 sm:flex-initial">
-                <Button size="sm" variant="outline" className="w-full font-bold rounded-xl border-slate-300 dark:border-slate-700 text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-800">
-                  Keuangan
-                </Button>
-              </Link>
-            </div>
+        {/* 3-AREA DASHBOARD LAYOUT */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 sm:gap-5 items-start">
+          {/* AREA KIRI: INFO AKUN & DAFTAR BERITA / ARTIKEL */}
+          <div className="md:col-span-1 xl:col-span-3 space-y-4 sm:space-y-5">
+            <UserAccountCard
+              role={role}
+              studentClass={studentClass}
+              activeStudent={activeStudent}
+              profileAvatarUrl={(session?.user as any)?.avatarUrl}
+              statusLabel="Siswa: Aktif"
+            />
+            <NewsArticleListWidget announcements={announcements} limit={4} />
           </div>
-        )}
 
-        {/* Menu Fitur Utama Siswa */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-          {studentLinks.map((link: any, idx: number) => {
-            const Icon = link.icon
-            return (
-              <Link key={idx} href={link.href} className="group">
-                <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs hover:shadow-xl hover:border-blue-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-4 sm:p-5 lg:p-6 gap-3 hover:-translate-y-1 rounded-2xl">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md transition-all duration-300 shadow-2xs">
-                    <Icon className="w-6 h-6 sm:w-7 sm:h-7 transition-colors" />
+          {/* AREA TENGAH: TOMBOL AKSES CEPAT & WIDGET UTAMA */}
+          <div className="md:col-span-2 xl:col-span-6 space-y-4 sm:space-y-5 order-first md:order-none">
+            {/* Banner Tagihan Alert jika ada */}
+            {allUnpaid.length > 0 && (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-500/15 to-amber-500/15 border border-rose-300 dark:border-rose-800 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
                   </div>
-                  <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    {link.name}
-                  </h3>
-                </Card>
-              </Link>
-            )
-          })}
-        </div>
-
-        {/* Konten Utama Siswa: Hanya Jadwal Pelajaran dan Informasi Berita Sekolah Bersisian Simetris */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full items-stretch">
-          {/* Jadwal Pelajaran Kelas */}
-          <div className="w-full flex flex-col h-full">
-            <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs overflow-hidden rounded-2xl h-full flex flex-col justify-between">
-              <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-4 shrink-0">
-                <div className="flex items-center justify-between gap-2">
                   <div>
-                    <CardTitle className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                      <CalendarDays className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                      Jadwal Pelajaran ({studentClass?.name || 'Kelas'})
-                    </CardTitle>
-                    <CardDescription className="text-xs mt-1 text-slate-500 dark:text-slate-400 font-medium">
-                      Jadwal kelas {studentClass?.name || 'Anda'}
-                    </CardDescription>
+                    <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">Tagihan Belum Lunas</h5>
+                    <p className="text-[11px] text-rose-700 dark:text-rose-300 font-medium">
+                      {allUnpaid.length} Tagihan ({formatCurrency(totalUnpaidAmount)})
+                    </p>
                   </div>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
-                    Hari ini: {daysMap[todayDayIndex]}
-                  </span>
                 </div>
+                <Button
+                  onClick={() => setShowPaymentPopup(true)}
+                  size="sm"
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-8 rounded-xl"
+                >
+                  Bayar Sekarang
+                </Button>
+              </div>
+            )}
+
+            {/* Quick Access Tile Grid */}
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-600" />
+                Menu Akses Cepat Aplikasi
+              </h3>
+              <CenterQuickAccessGrid links={studentLinks} role={role} />
+            </div>
+
+            {/* Jadwal Pelajaran Hari Ini */}
+            <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-xs rounded-2xl overflow-hidden">
+              <CardHeader className="p-4 pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-indigo-600" />
+                    Jadwal Pelajaran ({studentClass?.name || 'Kelas'})
+                  </CardTitle>
+                  <CardDescription className="text-[11px] mt-0.5">Hari ini: {daysMap[todayDayIndex]}</CardDescription>
+                </div>
+                <Link href="/akademik/jadwal-pelajaran">
+                  <Button variant="ghost" size="sm" className="text-xs text-indigo-600 h-7 px-2">
+                    Lihat Semua &rarr;
+                  </Button>
+                </Link>
               </CardHeader>
-              <CardContent className="p-4 flex-1 overflow-y-auto max-h-[560px] space-y-3 flex flex-col justify-start">
+              <CardContent className="p-4 space-y-2.5 max-h-[300px] overflow-y-auto">
                 {myClassSchedules.length === 0 ? (
-                  <div className="text-center py-14 text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl my-2 w-full">
-                    <CalendarDays className="w-12 h-12 mx-auto mb-2 opacity-30 stroke-[1.2]" />
-                    <p className="font-medium text-sm">Belum ada jadwal untuk kelas {studentClass?.name || 'Anda'} minggu ini.</p>
+                  <div className="text-center py-6 text-slate-400 text-xs border border-dashed rounded-xl">
+                    Tidak ada jadwal pelajaran terdaftar hari ini.
                   </div>
                 ) : (
-                  myClassSchedules.map((sch: any, idx: number) => {
+                  myClassSchedules.slice(0, 4).map((sch: any, idx: number) => {
                     const isSchToday = sch.dayOfWeek === todayDayIndex
                     return (
                       <div
                         key={sch.id || idx}
-                        className={`p-3.5 rounded-xl border flex items-center justify-between gap-4 transition-all w-full ${isSchToday
-                          ? 'bg-blue-50/70 dark:bg-slate-800/90 border-blue-300 dark:border-blue-600 shadow-sm ring-1 ring-blue-500/20'
-                          : 'bg-slate-50/50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800/80 hover:bg-slate-100/50 dark:hover:bg-slate-800/60'
-                          }`}
+                        className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs ${
+                          isSchToday
+                            ? 'bg-blue-50/70 dark:bg-slate-800/80 border-blue-200 dark:border-blue-700'
+                            : 'bg-slate-50/40 dark:bg-slate-800/30 border-slate-100 dark:border-slate-800'
+                        }`}
                       >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${isSchToday
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                              }`}>
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 bg-blue-600 text-white rounded">
                               {daysMap[sch.dayOfWeek]}
                             </span>
-                            <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-300 bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">
+                            <span className="font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
                               {sch.startTime} - {sch.endTime}
                             </span>
                           </div>
-                          <h4 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight">
-                            {sch.subject?.name || 'Mata Pelajaran'}
-                          </h4>
+                          <h5 className="font-bold text-slate-900 dark:text-white text-xs">{sch.subject?.name || 'Mapel'}</h5>
                         </div>
-                        <div className="text-right text-xs shrink-0">
-                          <span className="text-slate-400 dark:text-slate-500 block text-[11px]">Guru Pengampu</span>
-                          <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">
-                            {sch.teacher?.user?.name || sch.teacher?.nip || '-'}
-                          </span>
+                        <div className="text-right text-[11px] text-slate-500">
+                          <span>{sch.teacher?.user?.name || '-'}</span>
                         </div>
                       </div>
                     )
@@ -972,9 +994,10 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Informasi dan Berita Sekolah */}
-          <div className="w-full flex flex-col h-full">
-            {renderAnnouncements()}
+          {/* AREA KANAN: INFORMASI SISTEM & KALENDER KEGIATAN (col-span-3) */}
+          <div className="lg:col-span-3 space-y-5">
+            <SystemInfoWidget announcements={announcements} limit={3} />
+            <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
           </div>
         </div>
 
@@ -1018,38 +1041,21 @@ export default function DashboardPage() {
     const parentNavLinks = getRoleLinks(role, subRole, subRole2, subRole3).filter(link => link.href !== '/dashboard')
 
     return (
-      <div className="space-y-6 lg:space-y-8 w-full flex flex-col justify-between">
-        {/* Banner Welcome Header & Dropdown Selektor Siswa */}
-        <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-slate-900 p-5 sm:p-6 lg:p-8 rounded-3xl text-white shadow-xl flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 w-full relative overflow-hidden border border-white/10">
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-purple-500/20 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-extrabold backdrop-blur-md border border-white/20 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                Portal Wali Murid
-              </span>
-              <span className="text-xs text-indigo-200 font-medium hidden sm:inline">
-                Terhubung dengan {parentStudents.length} Siswa
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
-              Dashboard Orang Tua & Wali
+      <div className="space-y-6 w-full">
+        {/* Banner Welcome Header Wali Murid & Selektor Siswa */}
+        <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-slate-900 p-5 sm:p-6 rounded-2xl text-white shadow-md flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 w-full border border-white/10">
+          <div>
+            <h1 className="text-xl sm:text-2xl tracking-tight text-white flex items-center gap-1.5 sm:gap-2">
+              <span className="font-extrabold">{clock.greeting} 👋,</span>
+              <span className="font-extrabold italic">{(session?.user as any)?.name || 'Bapak/Ibu Wali Murid'}</span>
             </h1>
-            <p className="text-indigo-100 text-sm sm:text-base font-medium">
-              Selamat datang, <strong className="text-white font-bold">{(session?.user as any)?.name || 'Bapak/Ibu Wali Murid'}</strong>.
+            <p className="text-indigo-100 mt-1 text-xs sm:text-sm font-medium">
+              Portal Pemantauan Terpadu Wali Murid SIMASMUH SMA Muhammadiyah 1 Ponorogo
             </p>
           </div>
 
-          {/* Dropdown Selektor Siswa Terhubung */}
-          <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-extrabold text-indigo-200 uppercase tracking-wider flex items-center gap-1.5">
-                <GraduationCap className="w-4 h-4 text-emerald-300" />
-                Pilih Siswa yang Dipantau:
-              </label>
-
+          <div className="flex flex-wrap items-center gap-3">
+            {parentStudents.length > 1 && (
               <Select
                 value={selectedChildIdx.toString()}
                 onValueChange={(val) => {
@@ -1058,384 +1064,138 @@ export default function DashboardPage() {
                   }
                 }}
               >
-                <SelectTrigger className="w-full sm:w-[280px] lg:w-[320px] bg-white text-slate-900 dark:bg-slate-900 dark:text-white font-bold text-xs sm:text-sm h-12 rounded-2xl border-2 border-indigo-300 dark:border-indigo-700 shadow-lg focus:ring-2 focus:ring-indigo-400">
-                  <div className="flex items-center gap-2 truncate text-left">
-                    <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black text-xs shrink-0">
-                      {selectedChildIdx + 1}
-                    </div>
-                    <div className="truncate">
-                      <span className="font-extrabold block text-xs sm:text-sm">{activeStudent?.name || 'Pilih Siswa'}</span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-mono -mt-0.5">
-                        Kelas: {activeStudent?.className || '-'} &bull; NIS: {activeStudent?.nis || '-'}
-                      </span>
-                    </div>
-                  </div>
+                <SelectTrigger className="w-[200px] bg-white text-slate-900 dark:bg-slate-900 dark:text-white font-bold text-xs h-9 rounded-xl border border-indigo-300">
+                  <SelectValue placeholder="Pilih Siswa" />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-800 p-1.5 shadow-2xl">
+                <SelectContent className="rounded-xl">
                   {parentStudents.map((st: any, idx: number) => (
-                    <SelectItem
-                      key={st.id || idx}
-                      value={idx.toString()}
-                      className="rounded-xl py-2.5 px-3 font-semibold text-xs cursor-pointer focus:bg-indigo-50 dark:focus:bg-indigo-950"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${selectedChildIdx === idx ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                          }`}>
-                          {idx + 1}
-                        </div>
-                        <div>
-                          <p className="font-extrabold text-slate-900 dark:text-white text-xs">{st.name}</p>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                            Kelas: {st.className} &bull; NIS: {st.nis} {st.program ? `(${st.program})` : ''}
-                          </p>
-                        </div>
-                      </div>
+                    <SelectItem key={st.id || idx} value={idx.toString()} className="text-xs">
+                      {st.name} ({st.className})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            )}
 
-            {/* Tombol Cepat Tagihan jika ada yang belum lunas */}
+            {activeStudent && (
+              <Badge className="bg-white/20 text-white font-bold text-xs px-3 py-1">
+                Siswa: {activeStudent.name} (Kelas {activeStudent.className || '-'})
+              </Badge>
+            )}
+
             {allUnpaid.length > 0 && (
-              <div className="sm:self-end">
-                <Button
-                  onClick={() => setShowPaymentPopup(true)}
-                  className="w-full sm:w-auto h-12 px-4 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black rounded-2xl shadow-lg border border-amber-300 text-xs sm:text-sm flex items-center justify-center gap-2"
-                >
-                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                  <span>{allUnpaid.length} Tagihan</span>
-                </Button>
-              </div>
+              <Button
+                onClick={() => setShowPaymentPopup(true)}
+                className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs h-9 rounded-xl shadow-sm"
+                size="sm"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 mr-1 text-red-600" />
+                {allUnpaid.length} Tagihan
+              </Button>
             )}
           </div>
         </div>
 
-        {/* Card Identitas Siswa Aktif yang Dipilih */}
-        {activeStudent && (
-          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-black text-lg shadow-md shrink-0">
-                {activeStudent.name?.charAt(0) || 'S'}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">
-                    {activeStudent.name}
-                  </h3>
-                  <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950/80 dark:text-indigo-300 text-xs font-bold">
-                    Kelas {activeStudent.className}
-                  </Badge>
-                  {activeStudent.program && (
-                    <Badge variant="outline" className="text-xs font-semibold">
-                      {formatProgramName(activeStudent.program)}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
-                  NIS: <strong>{activeStudent.nis}</strong> {activeStudent.nisn ? `• NISN: ${activeStudent.nisn}` : ''} • Wali Kelas: <strong>{activeStudent.homeroomTeacherName}</strong>
-                </p>
-              </div>
-            </div>
-            <div className="text-xs bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between md:justify-end gap-4">
-              <div>
-                <span className="text-[10px] text-slate-400 block font-semibold uppercase">Status Tagihan:</span>
-                <span className={`font-black text-xs sm:text-sm ${allUnpaid.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                  {allUnpaid.length > 0 ? `${allUnpaid.length} Tagihan (${formatCurrency(totalUnpaidAmount)})` : 'Semua Tagihan Lunas'}
-                </span>
-              </div>
-              {allUnpaid.length > 0 && (
-                <Button
-                  size="sm"
-                  onClick={() => setShowPaymentPopup(true)}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs h-8 rounded-lg"
-                >
-                  Bayar
-                </Button>
-              )}
-            </div>
+        {/* 3-AREA DASHBOARD LAYOUT */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 sm:gap-5 items-start">
+          {/* AREA KIRI: INFO AKUN & BERITA SEKOLAH */}
+          <div className="md:col-span-1 xl:col-span-3 space-y-4 sm:space-y-5">
+            <UserAccountCard
+              role={role}
+              activeStudent={activeStudent}
+              profileAvatarUrl={(session?.user as any)?.avatarUrl}
+              statusLabel={`Wali: ${activeStudent?.name || 'Siswa'}`}
+            />
+            <NewsArticleListWidget announcements={announcements} limit={4} />
           </div>
-        )}
 
-        {/* Banner Alert Notifikasi Tagihan Belum Lunas & Virtual Account */}
-        {allUnpaid.length > 0 && (
-          <div className="bg-gradient-to-r from-red-500/15 via-amber-500/15 to-orange-500/15 border-2 border-red-500/50 dark:border-red-500/70 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden">
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-red-600 to-rose-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                <AlertTriangle className="w-6 h-6 text-white drop-shadow-sm" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="bg-red-600 text-white text-[10px] font-black tracking-widest uppercase px-2.5 py-0.5 rounded shadow-xs flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                    TAGIHAN: {activeStudent?.name}
-                  </span>
-                  <span className="text-xs font-bold text-red-700 dark:text-red-300">
-                    Kelas {activeStudent?.className || '-'} (NIS: {activeStudent?.nis || '-'})
-                  </span>
-                </div>
-                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-tight">
-                  {allUnpaid.length} Tagihan senilai <span className="text-red-600 dark:text-red-400 font-black">{formatCurrency(totalUnpaidAmount)}</span> dapat dibayarkan melalui Transfer Bank atau Virtual Account.
-                </h3>
-              </div>
+          {/* AREA TENGAH: TOMBOL AKSES CEPAT & WIDGET MONITORING */}
+          <div className="md:col-span-2 xl:col-span-6 space-y-4 sm:space-y-5 order-first md:order-none">
+            {/* Quick Access Tile Grid */}
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                Menu Akses Cepat Wali Murid
+              </h3>
+              <CenterQuickAccessGrid links={parentNavLinks} role={role} />
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-              <Button
-                onClick={() => setShowPaymentPopup(true)}
-                size="sm"
-                className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-extrabold shadow-sm flex-1 sm:flex-initial rounded-xl text-xs sm:text-sm"
-              >
-                <CreditCard className="w-4 h-4 mr-1.5" />
-                Bayar Sekarang
-              </Button>
-              <Link href="/keuangan/laporan" className="flex-1 sm:flex-initial">
-                <Button size="sm" variant="outline" className="w-full font-bold rounded-xl border-slate-300 dark:border-slate-700 text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-800">
-                  Rincian Tagihan
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
 
-        {/* Menu Navigasi Cepat Wali Murid (Mengikuti Siswa) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          {parentNavLinks.map((link: any, idx: number) => {
-            const Icon = link.icon
-            return (
-              <Link key={idx} href={link.href} className="group">
-                <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs hover:shadow-xl hover:border-indigo-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-4 gap-2.5 hover:-translate-y-1 rounded-2xl">
-                  <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-indigo-600 group-hover:to-purple-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md transition-all duration-300 shadow-2xs">
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 transition-colors" />
-                  </div>
-                  <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center text-xs sm:text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    {link.name}
-                  </h3>
-                </Card>
-              </Link>
-            )
-          })}
-        </div>
-
-        {/* Bagian Atas: Ringkasan Etika & Tata Tertib Siswa bersanding dengan Jadwal Pelajaran */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full items-stretch">
-          {/* Card Penilaian Etika & Tatib (Live Terintegrasi) */}
-          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl flex flex-col justify-between overflow-hidden">
-            <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  Buku Saku Adab, Ibadah & Tata Tertib Siswa
-                </CardTitle>
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 text-[10px] font-bold">
-                  Live Terintegrasi
-                </Badge>
-              </div>
-              <CardDescription className="text-xs mt-0.5 text-slate-500 dark:text-slate-400 font-medium">
-                Monitoring kedisiplinan dan amalan ibadah {activeStudent?.name || 'siswa'} (Terkoneksi Tim Tatib, BK & Wali Kelas)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-5 space-y-3 flex-1 flex flex-col justify-between">
-              <div className="grid grid-cols-3 gap-2">
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-center">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Poin Tatib</span>
-                  <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                    {activeStudent?.etikaTataTertib?.kedisiplinanScore ?? 100} / 100
-                  </span>
-                  <span className="text-[10px] text-emerald-600 block mt-0.5 font-semibold">
-                    {(activeStudent?.etikaTataTertib?.kedisiplinanScore ?? 100) >= 90 ? 'Tertib & Taat' : 'Perlu Pembinaan'}
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-center">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Amalan Ibadah</span>
-                  <span className="text-xl font-extrabold text-teal-600 dark:text-teal-400">
-                    {activeStudent?.etikaTataTertib?.ibadahScore || 'A (Sangat Baik)'}
-                  </span>
-                  <span className="text-[10px] text-teal-600 block mt-0.5 font-semibold">Sholat Berjamaah</span>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-center">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Etika Kesopanan</span>
-                  <span className="text-xl font-extrabold text-cyan-600 dark:text-cyan-400">
-                    {activeStudent?.etikaTataTertib?.perilakuScore || 'A (Terpuji)'}
-                  </span>
-                  <span className="text-[10px] text-cyan-600 block mt-0.5 font-semibold">Santun & Rukun</span>
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
-                <p className="font-semibold text-slate-900 dark:text-white mb-1">Catatan Karakter Terakhir:</p>
-                <p className="italic leading-relaxed">
-                  &quot;{activeStudent?.etikaTataTertib?.catatanKarakter || `Ananda ${activeStudent?.name || 'Siswa'} senantiasa menjaga adab, mematuhi peraturan sekolah, dan aktif dalam sholat berjamaah.`}&quot;
-                </p>
-              </div>
-              <div className="flex justify-end pt-1">
-                <Link href="/akademik/etika-tatib">
-                  <Button variant="ghost" size="sm" className="text-xs text-emerald-600 hover:text-emerald-700 font-bold">
-                    Lihat Rincian Buku Saku &rarr;
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Card Jadwal Pelajaran Kelas Siswa */}
-          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs overflow-hidden rounded-2xl flex flex-col justify-between">
-            <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-3 shrink-0">
-              <div className="flex items-center justify-between gap-2">
+            {/* Monitoring Ringkasan Etika Tatib & Jadwal Siswa */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Adab & Karakter Siswa */}
+              <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-xs rounded-2xl p-4 flex flex-col justify-between">
                 <div>
-                  <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                    <CalendarDays className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                    Jadwal Pelajaran ({activeStudent?.className || 'Kelas'})
-                  </CardTitle>
-                  <CardDescription className="text-xs mt-0.5 text-slate-500 dark:text-slate-400 font-medium">
-                    Mata pelajaran {activeStudent?.name || 'siswa'} hari {daysMap[todayDayIndex]}
-                  </CardDescription>
-                </div>
-                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
-                  Hari: {daysMap[todayDayIndex]}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-5 flex-1 overflow-y-auto max-h-[300px] space-y-2.5">
-              {myClassSchedules.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 border border-dashed rounded-xl">
-                  <CalendarDays className="w-10 h-10 mx-auto mb-1 opacity-30" />
-                  <p className="text-xs font-medium">Belum ada jadwal pelajaran terdaftar.</p>
-                </div>
-              ) : (
-                myClassSchedules.map((sch: any, idx: number) => {
-                  const isToday = sch.dayOfWeek === todayDayIndex
-                  return (
-                    <div
-                      key={sch.id || idx}
-                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs ${isToday
-                        ? 'bg-blue-50/80 dark:bg-slate-800/90 border-blue-200 dark:border-blue-700 font-medium'
-                        : 'bg-slate-50/50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800'
-                        }`}
-                    >
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded ${isToday ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                            }`}>
-                            {daysMap[sch.dayOfWeek]}
-                          </span>
-                          <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                            {sch.startTime} - {sch.endTime}
-                          </span>
-                        </div>
-                        <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
-                          {sch.subject?.name || 'Mata Pelajaran'}
-                        </h4>
-                      </div>
-                      <div className="text-right text-[11px]">
-                        <span className="text-slate-400 block text-[10px]">Guru</span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">
-                          {sch.teacher?.user?.name || sch.teacher?.nip || '-'}
-                        </span>
-                      </div>
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">
+                    <span className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Award className="w-4 h-4 text-emerald-600" />
+                      Poin Karakter & Adab
+                    </span>
+                    <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300">
+                      Live
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-around text-center py-1">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Poin Tatib</span>
+                      <span className="text-xl font-black text-emerald-600">
+                        {activeStudent?.etikaTataTertib?.kedisiplinanScore ?? 1000}
+                      </span>
                     </div>
-                  )
-                })
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Bagian Tengah: Widget Notifikasi WhatsApp & Widget E-Rapor */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full items-stretch">
-          {/* Card Notifikasi WhatsApp */}
-          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl">
-            <CardHeader className="p-5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <BellRing className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  Penerimaan Notifikasi WhatsApp
-                </CardTitle>
-                <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700">
-                  Aktif ke No: {(session?.user as any)?.username || '-'}
-                </Badge>
-              </div>
-              <CardDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Notifikasi otomatis langsung ke kontak WhatsApp resmi orang tua / wali.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-5 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60">
-                <span className="font-semibold text-slate-800 dark:text-slate-200">Notifikasi Presensi Kedatangan Siswa</span>
-                <Badge className="bg-emerald-600 text-white text-[10px]">Aktif</Badge>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60">
-                <span className="font-semibold text-slate-800 dark:text-slate-200">Notifikasi Presensi Kepulangan Siswa</span>
-                <Badge className="bg-emerald-600 text-white text-[10px]">Aktif</Badge>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60">
-                <span className="font-semibold text-slate-800 dark:text-slate-200">Notifikasi Tagihan Keuangan Baru</span>
-                <Badge className="bg-emerald-600 text-white text-[10px]">Aktif</Badge>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60">
-                <span className="font-semibold text-slate-800 dark:text-slate-200">Notifikasi Kuitansi Pembayaran Terverifikasi</span>
-                <Badge className="bg-emerald-600 text-white text-[10px]">Aktif</Badge>
-              </div>
-              <div className="flex justify-end pt-1">
-                <Link href="/pengaturan/notifikasi-wali">
-                  <Button variant="outline" size="sm" className="text-xs font-bold">
-                    Kelola Notifikasi WA &rarr;
+                    <div className="border-r border-slate-100 dark:border-slate-800 h-8" />
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Amalan Ibadah</span>
+                      <span className="text-xl font-black text-teal-600">
+                        {activeStudent?.etikaTataTertib?.ibadahGrade || 'A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Link href="/akademik/etika-tatib" className="pt-2">
+                  <Button variant="outline" size="sm" className="w-full text-xs font-bold h-7 rounded-lg">
+                    Rincian Buku Saku &rarr;
                   </Button>
                 </Link>
-              </div>
-            </CardContent>
-          </Card>
+              </Card>
 
-          {/* Card E-Rapor & Statistika */}
-          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs rounded-2xl flex flex-col justify-between">
-            <CardHeader className="p-5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <GraduationCap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                  Statistika E-Rapor & Prestasi
-                </CardTitle>
-                <Badge variant="outline" className="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 text-[10px] font-bold">
-                  Coming Soon
-                </Badge>
-              </div>
-              <CardDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Hasil belajar semester {activeStudent?.name || 'siswa'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-              <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900">
-                  <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 block uppercase">Indeks Prestasi</span>
-                  <span className="text-2xl font-extrabold text-purple-800 dark:text-purple-200">3.85</span>
+              {/* Jadwal Siswa Hari Ini */}
+              <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-xs rounded-2xl p-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">
+                    <span className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <CalendarDays className="w-4 h-4 text-indigo-600" />
+                      Jadwal Hari {daysMap[todayDayIndex]}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 max-h-24 overflow-y-auto">
+                    {myClassSchedules.length === 0 ? (
+                      <p className="text-[11px] text-slate-400 text-center py-2">Tidak ada jadwal tercatat</p>
+                    ) : (
+                      myClassSchedules.slice(0, 2).map((sch: any, idx: number) => (
+                        <div key={idx} className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-[11px] flex justify-between">
+                          <span className="font-bold truncate text-slate-800 dark:text-slate-200">{sch.subject?.name}</span>
+                          <span className="font-mono text-slate-500">{sch.startTime}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-                <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900">
-                  <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 block uppercase">Peringkat Kelas</span>
-                  <span className="text-2xl font-extrabold text-indigo-800 dark:text-indigo-200">3 / 32</span>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Fitur cetak dan unduh lembar Rapor Hasil Belajar Digital PDF resmi sedang dalam tahap finalisasi integrasi nilai leger.
-              </p>
-              <div className="flex justify-end pt-1">
-                <Link href="/akademik/e-rapor">
-                  <Button variant="outline" size="sm" className="text-xs text-purple-700 border-purple-200 font-bold">
-                    Buka Halaman E-Rapor &rarr;
+                <Link href="/akademik/jadwal-pelajaran" className="pt-2">
+                  <Button variant="outline" size="sm" className="w-full text-xs font-bold h-7 rounded-lg">
+                    Lihat Jadwal Lengkap &rarr;
                   </Button>
                 </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Bagian Bawah: Informasi Pengumuman Sekolah dan Log Kehadiran */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full items-stretch">
-          <div className="w-full flex flex-col h-full">
-            {renderAnnouncements()}
+              </Card>
+            </div>
           </div>
-          <div className="w-full flex flex-col h-full">
-            {renderAttendanceLog(true)}
+
+          {/* AREA KANAN: INFORMASI SISTEM & KALENDER KEGIATAN (col-span-3) */}
+          <div className="lg:col-span-3 space-y-5">
+            <SystemInfoWidget announcements={announcements} limit={3} />
+            <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
           </div>
         </div>
 
-        {/* Payment Popup (Transfer Bank & Virtual Account) */}
+        {/* Payment Popup */}
         <PaymentBillingPopup
           open={showPaymentPopup}
           onClose={() => setShowPaymentPopup(false)}
@@ -1500,7 +1260,7 @@ export default function DashboardPage() {
                 Dasbor Eksekutif & Ringkasan Sekolah
               </h1>
               <p className="text-amber-100 text-sm sm:text-base font-medium max-w-2xl leading-relaxed">
-                Selamat datang, <strong className="text-white font-bold">{(session?.user as any)?.name || 'Bapak/Ibu Kepala Sekolah'}</strong>. Berikut adalah ikhtisar analitik komprehensif, rekapitulasi operasional, serta monitoring berkala seluruh sektor kegiatan sekolah.
+                <strong className="font-bold">{clock.greeting}</strong>, <strong className="text-white font-bold italic">{(session?.user as any)?.name || 'Bapak/Ibu Kepala Sekolah'}</strong>. Berikut adalah ikhtisar analitik komprehensif, rekapitulasi operasional, serta monitoring berkala seluruh sektor kegiatan sekolah.
               </p>
             </div>
 
@@ -3059,28 +2819,28 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8 pb-8">
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 p-5 sm:p-6 lg:p-7 rounded-3xl text-white shadow-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2.5 py-0.5 rounded-full font-extrabold border border-indigo-500/30 flex items-center gap-1.5">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 p-4 sm:p-5 lg:p-6 rounded-2xl text-white shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 relative overflow-hidden">
+        <div className="relative z-10 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2.5 py-0.5 rounded-full font-bold border border-indigo-500/30 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse inline-block" />
-              {isSuperadminRole ? 'Pusat Kontrol Superadmin & Infrastruktur' : 'Dashboard Utama'}
+              {isSuperadminRole ? 'Superadmin' : 'Dashboard'}
             </span>
             <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px]">
-              Real-time Active
+              Real-time
             </Badge>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-            {isSuperadminRole ? 'Dasbor Utama Superadmin' : 'Dashboard Utama'}
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+            {clock.greeting}, {(session?.user as any)?.name || 'Superadmin'}
           </h1>
-          <p className="text-slate-300 text-xs sm:text-sm mt-1 font-medium">
-            Selamat datang, <strong className="text-white">{(session?.user as any)?.name || 'Superadmin'}</strong>. Monitoring seluruh subsistem, layanan port, dan aktivitas pengguna secara live.
+          <p className="text-slate-300 text-xs font-medium">
+            {isSuperadminRole ? 'Monitoring sistem, port, dan sesi pengguna aktif.' : 'Sistem Informasi Manajemen Terpadu SIMASMUH.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 relative z-10">
-          <span className="px-3.5 py-1.5 rounded-xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-inner flex items-center gap-2">
+          <span className="px-3 py-1.5 rounded-xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 text-white font-bold text-xs uppercase tracking-wider shadow-inner flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            {(role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') ? 'Tata Usaha (Badan Administrasi Umum)' : role} {subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' ? `• ${subRole}` : ''}
+            {(role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') ? 'Tata Usaha' : role} {subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' ? `• ${subRole}` : ''}
           </span>
         </div>
       </div>
@@ -3115,519 +2875,511 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* AREA MENU AKSES CEPAT INDIVIDUAL */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-6 rounded-full bg-blue-600 dark:bg-blue-500" />
-            <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-              Akses Cepat
-            </h2>
-          </div>
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
-            Pintasan menu modul utama
-          </span>
+      {/* 3-AREA GENERAL DASHBOARD LAYOUT */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 sm:gap-5 items-start">
+        {/* AREA KIRI: MY ACCOUNT & DAFTAR BERITA / ARTIKEL */}
+        <div className="md:col-span-1 xl:col-span-3 space-y-4 sm:space-y-5">
+          <UserAccountCard
+            role={role}
+            subRole={subRole}
+            profileAvatarUrl={(session?.user as any)?.avatarUrl}
+            statusLabel={isSuperadminRole ? 'Superadmin: Online' : 'Staff/Guru: Aktif'}
+          />
+          <NewsArticleListWidget announcements={announcements} limit={4} />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4 md:gap-6">
-          {currentLinks.map((link, idx) => {
-            const Icon = link.icon
-            return (
-              <Link key={idx} href={link.href} className="group">
-                <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-2xs hover:shadow-lg hover:border-blue-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-3.5 sm:p-5 lg:p-7 gap-2.5 sm:gap-4 hover:-translate-y-0.5 rounded-2xl">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md transition-all duration-300 shadow-2xs">
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 transition-colors" />
-                  </div>
-                  <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center text-xs sm:text-sm lg:text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
-                    {link.name}
-                  </h3>
-                </Card>
-              </Link>
-            )
-          })}
+        {/* AREA TENGAH: TOMBOL AKSES CEPAT */}
+        <div className="md:col-span-2 xl:col-span-6 space-y-4 sm:space-y-5 order-first md:order-none">
+          <div>
+            <div className="flex items-center justify-between mb-2 sm:mb-2.5">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 tracking-tight">
+                  Akses Cepat
+                </h3>
+              </div>
+              <span className="text-[10px] sm:text-[11px] text-slate-500 font-semibold">
+                {currentLinks.length} Modul
+              </span>
+            </div>
+            <CenterQuickAccessGrid links={currentLinks} role={role} />
+          </div>
+
+          {/* Log Absensi Harian Pegawai / Guru */}
+          {(role === 'GURU' || role === 'KARYAWAN' || role === 'PEGAWAI' || role === 'STAFF') && (
+            <div>
+              {renderAttendanceLog(false)}
+            </div>
+          )}
+        </div>
+
+        {/* AREA KANAN: INFORMASI SISTEM & KALENDER KEGIATAN */}
+        <div className="md:col-span-1 xl:col-span-3 space-y-4 sm:space-y-5">
+          <SystemInfoWidget announcements={announcements} limit={3} />
+          <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
         </div>
       </div>
 
-      {/* KARTU RUNTIME & MONITORING SISTEM LIVE (KHUSUS SUPERADMIN & ADMIN IT) */}
+      {/* KARTU SINKRONISASI TANGGAL & WAKTU SERVER (UTC+7) */}
       {isSuperadminRole && (
-        <div className="space-y-4">
-          <Card className="border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/90 text-white rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden border">
-            {/* Header Runtime & Monitoring Sistem */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
-              <div className="flex items-start sm:items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shrink-0">
-                  <Activity className="w-6 h-6 animate-pulse" />
+        <Card className="border-blue-200/80 dark:border-blue-900/50 bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40 backdrop-blur-xl rounded-2xl overflow-hidden shadow-xs p-4 sm:p-5 border">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-blue-600 text-white shadow-2xs">
+                  <Clock className="w-4 h-4" />
+                </span>
+                <div>
+                  <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    Sinkronisasi Tanggal & Waktu Server SIMASMUH
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      <CheckCircle2 className="w-3 h-3" /> Terkalibrasi Aktif
+                    </span>
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Standar zona waktu server <strong>UTC+7 (WIB / Asia/Jakarta)</strong> mengunci konsistensi presensi, log, dan jadwal di seluruh aplikasi.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Clock Display & Sync Button */}
+            <div className="flex items-center justify-between sm:justify-end gap-3 bg-white dark:bg-slate-800/90 p-3 rounded-xl border border-blue-100 dark:border-slate-700/80 shadow-2xs shrink-0">
+              <div className="text-left sm:text-right">
+                <div className="text-xl sm:text-2xl font-extrabold tracking-tight text-blue-600 dark:text-blue-400 font-mono leading-none">
+                  {clock.timeString} <span className="text-[10px] font-sans font-semibold text-slate-500">WIB</span>
+                </div>
+                <div className="text-[11px] font-medium text-slate-700 dark:text-slate-300 mt-0.5">
+                  {clock.dateString}
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  clock.reSync()
+                  Swal.fire({
+                    title: 'Waktu Berhasil Dikalibrasi!',
+                    text: `Waktu sistem telah disinkronkan langsung dengan server endpoint (${clock.latency} ms).`,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                  })
+                }}
+                disabled={clock.isSyncing}
+                className="rounded-xl border-blue-200 hover:bg-blue-50 text-blue-700 dark:text-blue-300 dark:border-blue-800 font-bold gap-1.5 text-xs h-8 px-3"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${clock.isSyncing ? 'animate-spin' : ''}`} />
+                <span>{clock.isSyncing ? 'Sinkron...' : 'Kalibrasi'}</span>
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* KARTU 1: RUNTIME & MONITORING SISTEM RINGKAS */}
+      {isSuperadminRole && (
+        <div className="space-y-6">
+          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-xs border">
+            {/* Header Ringkas Runtime Monitoring */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-2xs shrink-0">
+                  <Activity className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
-                      Runtime & Monitoring Sistem SIMASMUH
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                      Runtime & Monitoring Sistem
                     </h2>
-                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[10px] font-mono font-bold flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-                      LIVE MONITORING
+                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700/60 text-[10px] font-semibold py-0">
+                      Live
                     </Badge>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Informasi runtime NestJS, PostgreSQL Database, Uptime, Latency, dan Sesi Terkoneksi
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Status Uptime, Latensi, RAM, Port, dan Kapasitas Sistem
                   </p>
                 </div>
               </div>
 
               {/* Action Tools: Speed Test & Manual Refresh */}
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
                 <Button
                   onClick={handleRunSpeedTest}
                   disabled={speedTesting}
                   size="sm"
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md gap-1.5 h-9 px-3.5"
+                  variant="outline"
+                  className="font-semibold text-xs rounded-xl gap-1.5 h-8 px-3 border-slate-200 dark:border-slate-700"
                 >
-                  <Zap className={`w-3.5 h-3.5 text-amber-300 ${speedTesting ? 'animate-bounce' : ''}`} />
-                  {speedTesting ? 'Mengukur Speed...' : 'Jalankan Speed Test'}
+                  <Zap className={`w-3.5 h-3.5 text-amber-500 ${speedTesting ? 'animate-bounce' : ''}`} />
+                  <span>{speedTesting ? 'Menguji...' : 'Bench Jaringan'}</span>
                 </Button>
                 <Button
                   onClick={() => refetchSupervisor()}
                   disabled={loadingSupervisor || refetchingSupervisor}
                   variant="outline"
                   size="sm"
-                  className="border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl gap-1.5 h-9 px-3"
+                  className="font-semibold text-xs rounded-xl gap-1.5 h-8 px-2.5 border-slate-200 dark:border-slate-700"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${refetchingSupervisor ? 'animate-spin' : ''}`} />
-                  <span>Sync</span>
+                  <RefreshCw className={`w-3.5 h-3.5 text-blue-500 ${refetchingSupervisor ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Sync</span>
                 </Button>
               </div>
             </div>
 
-            {/* Grid 4 Kartu Ringkasan Metrik Kunci */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 mt-5">
-              {/* 1. Uptime & SLA */}
-              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-bold uppercase tracking-wider text-[11px]">System Uptime</span>
-                  <Clock className="w-4 h-4 text-cyan-400" />
+            {/* Grid 4 Metrik Kunci Ringkas */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3.5">
+              {/* 1. Uptime System (Tanpa Downtime) */}
+              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
+                  <span className="font-semibold uppercase text-[10px] tracking-wider">Uptime Sistem</span>
+                  <Clock className="w-3.5 h-3.5 text-blue-500" />
                 </div>
-                <div className="my-2">
-                  <div className="text-xl sm:text-2xl font-black text-cyan-300 font-mono">
+                <div className="my-1.5">
+                  <div className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white font-mono">
                     {supervisorData?.runtime?.uptimeHuman || '0j 0m 0d'}
                   </div>
-                  <span className="text-[11px] text-emerald-400 font-semibold block mt-0.5">
-                    Downtime: {supervisorData?.runtime?.downtimeEstimated || '0.00%'}
-                  </span>
                 </div>
-                <div className="text-[10px] text-slate-500 flex justify-between border-t border-slate-800/80 pt-1.5">
-                  <span>Host: {supervisorData?.runtime?.hostname || 'localhost'}</span>
-                  <span>Node {supervisorData?.runtime?.nodeVersion || 'v20'}</span>
+                <div className="text-[10px] text-slate-400 font-mono truncate">
+                  Host: {supervisorData?.runtime?.hostname || 'localhost'}
                 </div>
               </div>
 
-              {/* 2. Latency & DB Ping */}
-              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-bold uppercase tracking-wider text-[11px]">Latency & Respon</span>
-                  <Radio className="w-4 h-4 text-emerald-400" />
+              {/* 2. Latensi (Informasi Singkat Padat) */}
+              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
+                  <span className="font-semibold uppercase text-[10px] tracking-wider">Latensi</span>
+                  <Radio className="w-3.5 h-3.5 text-emerald-500" />
                 </div>
-                <div className="my-2">
-                  <div className="text-xl sm:text-2xl font-black text-emerald-400 font-mono flex items-center gap-1.5">
-                    <span>{supervisorData?.performance?.apiLatencyMs ?? 2} ms</span>
-                    <span className="text-xs font-normal text-slate-400">(API)</span>
+                <div className="my-1.5">
+                  <div className="text-lg sm:text-xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+                    {supervisorData?.performance?.apiLatencyMs ?? 2} ms
                   </div>
-                  <span className="text-[11px] text-slate-300 font-semibold block mt-0.5">
-                    Database Query: <strong className="text-emerald-400">{supervisorData?.performance?.dbLatencyMs ?? 1} ms</strong>
-                  </span>
                 </div>
-                <div className="text-[10px] text-slate-500 flex justify-between border-t border-slate-800/80 pt-1.5">
-                  <span>Status DB: {supervisorData?.performance?.dbStatus || 'HEALTHY'}</span>
-                  <span className="text-emerald-400">Aktif</span>
+                <div className="text-[10px] text-slate-400 font-mono truncate">
+                  DB: {supervisorData?.performance?.dbLatencyMs ?? 1} ms ({supervisorData?.performance?.dbStatus || 'HEALTHY'})
                 </div>
               </div>
 
-              {/* 3. Memory & RAM Usage */}
-              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-bold uppercase tracking-wider text-[11px]">Node RAM Heap</span>
-                  <HardDrive className="w-4 h-4 text-purple-400" />
+              {/* 3. Info RAM (Heap Used & Free / Total RAM) */}
+              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
+                  <span className="font-semibold uppercase text-[10px] tracking-wider">Info RAM</span>
+                  <HardDrive className="w-3.5 h-3.5 text-purple-500" />
                 </div>
-                <div className="my-2">
-                  <div className="text-xl sm:text-2xl font-black text-purple-300 font-mono">
-                    {supervisorData?.performance?.heapUsedMb ?? 0} MB
-                  </div>
-                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-                    <div
-                      style={{ width: `${Math.min(100, Math.round(((supervisorData?.performance?.heapUsedMb || 1) / (supervisorData?.performance?.heapTotalMb || 100)) * 100))}%` }}
-                      className="bg-purple-500 h-full rounded-full"
-                    />
+                <div className="my-1.5">
+                  <div className="text-lg sm:text-xl font-extrabold text-purple-600 dark:text-purple-400 font-mono">
+                    {supervisorData?.performance?.heapUsedMb ?? 0} MB <span className="text-xs font-normal text-slate-500">Heap</span>
                   </div>
                 </div>
-                <div className="text-[10px] text-slate-500 flex justify-between border-t border-slate-800/80 pt-1.5">
-                  <span>Total System RAM</span>
-                  <span className="font-mono text-slate-400">{supervisorData?.performance?.totalSystemMemoryGb ?? 0} GB</span>
+                <div className="text-[10px] text-slate-400 font-mono truncate">
+                  Free: <strong className="text-slate-600 dark:text-slate-300 font-semibold">{supervisorData?.performance?.freeSystemMemoryGb ?? 0} GB</strong> / Total: {supervisorData?.performance?.totalSystemMemoryGb ?? 0} GB
                 </div>
               </div>
 
-              {/* 4. Active Sessions & Last Connected */}
-              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-bold uppercase tracking-wider text-[11px]">Koneksi Pengguna</span>
-                  <Users className="w-4 h-4 text-amber-400" />
+              {/* 4. Koneksi Pengguna (Sesi Aktif & Total Pengguna) */}
+              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
+                  <span className="font-semibold uppercase text-[10px] tracking-wider">Koneksi Pengguna</span>
+                  <Users className="w-3.5 h-3.5 text-amber-500" />
                 </div>
-                <div className="my-2">
-                  <div className="text-xl sm:text-2xl font-black text-amber-300 font-mono">
-                    {supervisorData?.taskManager?.activeConnectedSessions ?? 1} Sesi Aktif
+                <div className="my-1.5">
+                  <div className="text-lg sm:text-xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">
+                    {supervisorData?.taskManager?.activeConnectedSessions ?? 1} <span className="text-xs font-normal text-slate-500">Sesi Aktif</span>
                   </div>
-                  <span className="text-[11px] text-slate-400 truncate block mt-0.5">
-                    Terakhir: <strong className="text-slate-200">{supervisorData?.taskManager?.lastUserConnected?.name || 'Superadmin'}</strong>
-                  </span>
                 </div>
-                <div className="text-[10px] text-slate-500 flex justify-between border-t border-slate-800/80 pt-1.5">
-                  <span>Total Pengguna: {supervisorData?.taskManager?.totalRegisteredUsers ?? 0}</span>
-                  <span className="text-amber-400 font-semibold">{supervisorData?.taskManager?.lastUserConnected?.role || 'SUPERADMIN'}</span>
+                <div className="text-[10px] text-slate-400 truncate">
+                  Total Terdaftar: <strong>{supervisorData?.taskManager?.totalRegisteredUsers ?? 0}</strong> Pengguna
                 </div>
               </div>
             </div>
 
-            {/* Panel Status Port 4 Layanan SIMASMUH + Speed Test Realtime Result */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-800/80">
-              {/* Standar 4 Layanan Port SIMASMUH */}
-              <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <Server className="w-3.5 h-3.5 text-indigo-400" />
-                    Status Port 4 Layanan Wajib SIMASMUH
+            {/* Sub-grid: Status Port 4 Layanan SIMASMUH + Bench Jaringan Ringkas */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              {/* Status Port Layanan (Info Port + Latensi jika online, Badge Offline jika offline) */}
+              <div className="p-3 rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/80">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Server className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    Status Port 4 Layanan SIMASMUH
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">Real-time Port Guard</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {(supervisorData?.taskManager?.services || [
-                    { name: 'Frontend Next.js Web', port: 3000, status: 'ONLINE', latencyMs: 2 },
-                    { name: 'Backend API NestJS', port: 3001, status: 'ONLINE', latencyMs: 2 },
-                    { name: 'Prisma Studio ORM', port: 51212, status: 'ONLINE', latencyMs: 1 },
-                    { name: 'PostgreSQL DB / Supabase', port: 54322, status: 'ONLINE', latencyMs: 2 },
-                  ]).map((srv: any, idx: number) => (
-                    <div key={idx} className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
-                      <div>
-                        <span className="font-bold text-slate-200 block truncate max-w-[120px] sm:max-w-none">{srv.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">Port :{srv.port} {srv.latencyMs !== undefined ? `(${srv.latencyMs}ms)` : ''}</span>
+                    { name: 'Frontend Web', port: 3000, status: 'ONLINE', latencyMs: 2 },
+                    { name: 'Backend API', port: 3001, status: 'ONLINE', latencyMs: 2 },
+                    { name: 'Prisma Studio', port: 51212, status: 'ONLINE', latencyMs: 1 },
+                    { name: 'PostgreSQL DB', port: 54322, status: 'ONLINE', latencyMs: 2 },
+                  ]).map((srv: any, idx: number) => {
+                    const isOnline = srv.status === 'ONLINE' || srv.status === 'READY'
+                    return (
+                      <div key={idx} className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between">
+                        <div className="truncate mr-1">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 block truncate text-[11px]">{srv.name}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">Port :{srv.port}</span>
+                        </div>
+                        {isOnline ? (
+                          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 text-[10px] font-mono px-1.5 py-0">
+                            {srv.latencyMs !== undefined ? `${srv.latencyMs}ms` : 'Online'}
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 text-[10px] px-1.5 py-0">
+                            Offline
+                          </Badge>
+                        )}
                       </div>
-                      <Badge className={
-                        srv.status === 'ONLINE'
-                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px]'
-                          : srv.status === 'READY'
-                          ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px]'
-                          : 'bg-rose-500/20 text-rose-400 border-rose-500/30 text-[10px]'
-                      }>
-                        {srv.status}
-                      </Badge>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
 
-              {/* Speed Test & Network Benchmarking Nyata (Client -> Server SIMASMUH) */}
-              <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 flex flex-col justify-between">
+              {/* Bench Jaringan Ringkas */}
+              <div className="p-3 rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      Benchmark Jaringan & Speed Test Nyata
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-amber-500" />
+                      Bench Jaringan
                     </span>
                     {speedTestResult && (
                       <span className="text-[10px] text-slate-400 font-mono">
-                        Diuji: {speedTestResult.timestamp}
+                        {speedTestResult.timestamp}
                       </span>
                     )}
                   </div>
 
                   {speedTesting ? (
-                    <div className="py-6 flex flex-col items-center justify-center gap-2 border border-slate-800 rounded-xl bg-slate-950/40">
-                      <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
-                      <span className="text-xs font-semibold text-slate-200">{speedTestStep || 'Menguji transmisi jaringan...'}</span>
-                      <span className="text-[10px] text-slate-500 font-mono">Uji transfer paket nyata IP Pengakses &rarr; Server Host</span>
+                    <div className="py-3 flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900">
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                      <span className="text-xs text-slate-600 dark:text-slate-300">{speedTestStep || 'Menguji transmisi...'}</span>
                     </div>
                   ) : speedTestResult ? (
-                    <div className="space-y-2.5">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                        <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
-                          <span className="text-[10px] text-slate-400 uppercase font-semibold block">Download</span>
-                          <span className="text-sm sm:text-base lg:text-lg font-black text-cyan-400 font-mono">{speedTestResult.downloadSpeed}</span>
+                    <div className="space-y-1.5">
+                      <div className="grid grid-cols-4 gap-1.5 text-center">
+                        <div className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
+                          <span className="text-[9px] text-slate-400 uppercase block font-semibold">Down</span>
+                          <span className="text-xs font-bold text-blue-600 dark:text-cyan-400 font-mono">{speedTestResult.downloadSpeed}</span>
                         </div>
-                        <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
-                          <span className="text-[10px] text-slate-400 uppercase font-semibold block">Upload</span>
-                          <span className="text-sm sm:text-base lg:text-lg font-black text-purple-400 font-mono">{speedTestResult.uploadSpeed}</span>
+                        <div className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
+                          <span className="text-[9px] text-slate-400 uppercase block font-semibold">Up</span>
+                          <span className="text-xs font-bold text-purple-600 dark:text-purple-400 font-mono">{speedTestResult.uploadSpeed}</span>
                         </div>
-                        <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
-                          <span className="text-[10px] text-slate-400 uppercase font-semibold block">Ping Latency</span>
-                          <span className="text-sm sm:text-base lg:text-lg font-black text-emerald-400 font-mono">{speedTestResult.ping} ms</span>
+                        <div className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
+                          <span className="text-[9px] text-slate-400 uppercase block font-semibold">Ping</span>
+                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">{speedTestResult.ping}ms</span>
                         </div>
-                        <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
-                          <span className="text-[10px] text-slate-400 uppercase font-semibold block">Jitter</span>
-                          <span className="text-sm sm:text-base lg:text-lg font-black text-amber-400 font-mono">{speedTestResult.jitter} ms</span>
+                        <div className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
+                          <span className="text-[9px] text-slate-400 uppercase block font-semibold">Jitter</span>
+                          <span className="text-xs font-bold text-amber-600 dark:text-amber-400 font-mono">{speedTestResult.jitter}ms</span>
                         </div>
                       </div>
-
-                      <div className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800/80 text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono">
-                        <div className="flex items-center gap-1.5 text-slate-300 truncate max-w-full sm:max-w-[60%]">
-                          <Laptop className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                          <span className="text-slate-500">IP & ISP Klien:</span>
-                          <strong className="text-cyan-300 truncate">
-                            {speedTestResult.clientIp} {speedTestResult.ispName ? `(${speedTestResult.ispName})` : ''}
-                          </strong>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-slate-300 truncate">
-                          <Server className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                          <span className="text-slate-500">Host Server:</span>
-                          <strong className="text-indigo-300">{speedTestResult.serverHost}</strong>
-                        </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center justify-between font-mono px-1">
+                        <span className="truncate max-w-[55%]">IP: {speedTestResult.clientIp}</span>
+                        <span className="truncate max-w-[40%] text-right">Host: {speedTestResult.serverHost}</span>
                       </div>
                     </div>
                   ) : (
-                    <div className="py-4 text-center border border-dashed border-slate-800 rounded-xl">
-                      <p className="text-xs text-slate-400">
-                        Klik tombol <strong>&quot;Jalankan Speed Test&quot;</strong> di atas untuk menguji throughput unduh, unggah, dan respon latensi dari IP perangkat Anda ke host server SIMASMUH secara nyata.
+                    <div className="py-2.5 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-lg bg-white/50 dark:bg-slate-900/50">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Klik <strong>&quot;Bench Jaringan&quot;</strong> untuk mengukur throughput & latensi.
                       </p>
                     </div>
                   )}
                 </div>
-
-                <div className="flex justify-between items-center text-[10px] text-slate-500 pt-2 border-t border-slate-800/80 mt-2">
-                  <span>Target: IP Pengakses &harr; Host Server SIMASMUH</span>
-                  <span className="text-indigo-400 font-mono">Real Network Pipeline</span>
-                </div>
               </div>
             </div>
 
-            {/* Panel Kemampuan Beban Sistem, Hardware Tersisa & Kapan Menyalakan Mode Ruang Tunggu */}
-            <div className="mt-4 pt-4 border-t border-slate-800/80">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 via-slate-950/80 to-indigo-950/30 border border-slate-800/90">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                      <DoorOpen className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-black text-white flex items-center gap-2">
-                        Kemampuan Load Sistem & Ambang Batas Mode Ruang Tunggu (Waiting Room)
-                      </h4>
-                      <p className="text-[11px] text-slate-400">
-                        Estimasi daya tampung akses pengguna serentak berdasarkan beban & sisa hardware server saat ini
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 self-start sm:self-auto">
-                    {supervisorData?.performance?.loadCapacity?.waitingRoomStatus === 'CRITICAL' ? (
-                      <Badge className="bg-rose-500/20 text-rose-300 border-rose-500/40 text-[10px] animate-pulse">
-                        Wajib Aktifkan Waiting Room
-                      </Badge>
-                    ) : supervisorData?.performance?.loadCapacity?.waitingRoomStatus === 'RECOMMENDED' ? (
-                      <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px]">
-                        Disarankan Nyalakan
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[10px]">
-                        Hardware Aman (Standby)
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mt-3.5">
-                  {/* Estimasi Daya Tampung Akses Pengguna Serentak */}
-                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-                      Estimasi Daya Tampung Akses Saat Ini
-                    </span>
-                    <div className="text-xl font-black text-indigo-400 font-mono flex items-baseline gap-1.5">
-                      <span>~{supervisorData?.performance?.loadCapacity?.estimatedMaxUsers ?? 500}</span>
-                      <span className="text-xs text-slate-300 font-normal">Pengguna Serentak</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400">
-                      Sesi Aktif: <strong className="text-emerald-400">{supervisorData?.performance?.loadCapacity?.activeUsers ?? 1}</strong> &bull; Utilisasi Beban: <strong className="text-amber-400">{supervisorData?.performance?.loadCapacity?.currentLoadPercent ?? 1}%</strong>
-                    </p>
-                  </div>
-
-                  {/* Sisa Kemampuan Hardware Tersisa */}
-                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-                      Kapasitas Hardware Tersisa
-                    </span>
-                    <div className="text-xl font-black text-cyan-400 font-mono flex items-baseline gap-1.5">
-                      <span>{supervisorData?.performance?.freeSystemMemoryGb ?? 0} GB Free</span>
-                      <span className="text-xs text-slate-400 font-normal">({supervisorData?.performance?.availableMemoryPercent ?? 0}% RAM Kosong)</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400">
-                      CPU Cores: <strong className="text-slate-200">{supervisorData?.performance?.cpuCount ?? 1} Core ({supervisorData?.performance?.cpuModel?.split(' ')?.[0] || 'CPU'})</strong> &bull; Buffer: <strong className="text-cyan-400">{supervisorData?.performance?.loadCapacity?.remainingHeadroomPercent ?? 99}% Headroom</strong>
-                    </p>
-                  </div>
-
-                  {/* Panduan Kapan Harus Menyalakan Mode Ruang Tunggu */}
-                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-                      Indikator Kapan Harus Menyalakan Ruang Tunggu
-                    </span>
-                    <p className="text-[11px] font-medium text-slate-200 leading-snug">
-                      {supervisorData?.performance?.loadCapacity?.waitingRoomAdvice || 'Beban normal. Kapasitas sangat siap menampung akses serentak digitalisasi sekolah.'}
-                    </p>
-                    <div className="text-[9px] text-slate-400 flex items-center gap-2 pt-0.5">
-                      <span>Batas Aman: &lt; 85% Beban</span>
-                      <span>&bull;</span>
-                      <span>Target: Akses Serentak Digitalisasi Sekolah</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Tabel Ringkas Aktivitas User Terkoneksi Terakhir (Task Manager Session Monitor) */}
-            <div className="mt-4 pt-4 border-t border-slate-800/80">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Laptop className="w-3.5 h-3.5 text-cyan-400" />
-                  Sesi Pengguna Terkoneksi Terakhir (Supervisor Live Log)
-                </span>
+            {/* Load Sistem & Waiting Room Ringkas */}
+            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="p-2.5 rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-2">
-                  <Button
-                    onClick={handleTerminateAllSessions}
-                    disabled={terminatingAll}
-                    variant="outline"
-                    size="sm"
-                    title="Keluarkan & Akhiri Seluruh Sesi Pengguna Lain yang Sedang Aktif"
-                    className="h-7 px-2.5 text-[11px] font-bold rounded-lg border-rose-500/50 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1.5 shadow-2xs"
-                  >
-                    <LogOut className={`w-3 h-3 text-rose-400 ${terminatingAll ? 'animate-spin' : ''}`} />
-                    <span>Akhiri Semua Sesi</span>
-                  </Button>
-                  <Button
-                    onClick={() => setShowAllSessionsModal(true)}
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/40 font-semibold px-2 h-7 gap-1"
-                  >
-                    <span>Lihat Semua Sesi</span>
-                    <span>&rarr;</span>
-                  </Button>
+                  <DoorOpen className="w-4 h-4 text-amber-500 shrink-0" />
+                  <div>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">Kapasitas Load:</span>{' '}
+                    <span className="text-slate-600 dark:text-slate-400 font-mono">
+                      ~{supervisorData?.performance?.loadCapacity?.estimatedMaxUsers ?? 500} Pengguna Serentak (Beban: {supervisorData?.performance?.loadCapacity?.currentLoadPercent ?? 1}%)
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-slate-500 text-[11px]">Waiting Room:</span>
+                  {supervisorData?.performance?.loadCapacity?.waitingRoomStatus === 'CRITICAL' ? (
+                    <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 text-[10px]">
+                      Wajib Aktif
+                    </Badge>
+                  ) : supervisorData?.performance?.loadCapacity?.waitingRoomStatus === 'RECOMMENDED' ? (
+                    <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800 text-[10px]">
+                      Disarankan
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 text-[10px]">
+                      Standby (Aman)
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* KARTU 2: SESI PENGGUNA LIVE LOG (TERPISAH) */}
+          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-xs border">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <Laptop className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                    Sesi Pengguna Live Log
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Aktivitas perangkat & pemantauan sesi login terkini
+                  </p>
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                      <th className="py-2 px-3">Nama Pengguna</th>
-                      <th className="py-2 px-3">Peran / Role</th>
-                      <th className="py-2 px-3">Perangkat / Browser</th>
-                      <th className="py-2 px-3">IP Address</th>
-                      <th className="py-2 px-3">Aktivitas Terakhir</th>
-                      <th className="py-2 px-3">Status</th>
-                      <th className="py-2 px-3 text-center">Rincian Perangkat</th>
-                      <th className="py-2 px-3 text-right">Pemutusan Sesi</th>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleTerminateAllSessions}
+                  disabled={terminatingAll}
+                  variant="outline"
+                  size="sm"
+                  title="Keluarkan paksa seluruh sesi login pengguna aktif"
+                  className="h-7 px-2.5 text-[11px] font-semibold rounded-lg border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 gap-1.5 shadow-2xs"
+                >
+                  <LogOut className={`w-3 h-3 ${terminatingAll ? 'animate-spin' : ''}`} />
+                  <span>Akhiri Semua Sesi</span>
+                </Button>
+                <Button
+                  onClick={handleDeleteAllSessionLogs}
+                  disabled={deletingAllLogs}
+                  variant="outline"
+                  size="sm"
+                  title="Hapus seluruh data riwayat sesi semua pengguna dari database"
+                  className="h-7 px-2.5 text-[11px] font-semibold rounded-lg border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 gap-1.5 shadow-2xs"
+                >
+                  <Trash2 className={`w-3 h-3 ${deletingAllLogs ? 'animate-spin' : ''}`} />
+                  <span>Hapus Semua Riwayat</span>
+                </Button>
+                <Button
+                  onClick={() => setShowAllSessionsModal(true)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-semibold px-2 h-7 gap-1"
+                >
+                  <span>Semua Sesi</span>
+                  <span>&rarr;</span>
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto mt-3">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
+                    <th className="py-2 px-3">Pengguna</th>
+                    <th className="py-2 px-3">Peran</th>
+                    <th className="py-2 px-3">Perangkat / IP</th>
+                    <th className="py-2 px-3">Aktivitas</th>
+                    <th className="py-2 px-3">Status</th>
+                    <th className="py-2 px-3 text-center">Rincian</th>
+                    <th className="py-2 px-3 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {(supervisorData?.taskManager?.lastActiveSessions || []).length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-4 text-center text-slate-500">
+                        Belum ada catatan riwayat sesi aktif
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-sans">
-                    {(supervisorData?.taskManager?.lastActiveSessions || []).length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="py-4 text-center text-slate-500">
-                          Belum ada catatan riwayat sesi aktif
+                  ) : (
+                    (supervisorData?.taskManager?.lastActiveSessions || []).slice(0, 6).map((s: any, idx: number) => (
+                      <tr key={s.userId || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
+                        <td className="py-2 px-3 font-semibold text-slate-900 dark:text-slate-200">
+                          {s.name}
+                          <span className="text-[10px] text-slate-400 block font-normal font-mono">@{s.username || s.userId}</span>
                         </td>
-                      </tr>
-                    ) : (
-                      (supervisorData?.taskManager?.lastActiveSessions || []).slice(0, 6).map((s: any, idx: number) => (
-                        <tr key={s.userId || idx} className="hover:bg-slate-900/40">
-                          <td className="py-2.5 px-3 font-bold text-slate-200">
-                            {s.name}
-                            <span className="text-[10px] text-slate-400 block font-normal font-mono">@{s.username || s.userId}</span>
-                          </td>
-                          <td className="py-2.5 px-3">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                              {s.role}
+                        <td className="py-2 px-3">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            {s.role}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-slate-600 dark:text-slate-300">
+                          {s.device || 'Desktop'}
+                          <span className="text-[10px] text-slate-400 font-mono block">{s.ipAddress}</span>
+                        </td>
+                        <td className="py-2 px-3 text-slate-600 dark:text-slate-300 text-[11px]">
+                          {s.lastActiveAt ? (
+                            <div>
+                              <span>{new Date(s.lastActiveAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</span>
+                              <span className="text-[10px] text-slate-400 font-mono block">
+                                {new Date(s.lastActiveAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                              </span>
+                            </div>
+                          ) : '-'}
+                        </td>
+                        <td className="py-2 px-3">
+                          {s.isLiveOnline ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Online
                             </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-slate-300">
-                            {s.device || 'Desktop'}
-                            <span className="text-[10px] text-slate-500 block">{s.browser || 'Browser'} &bull; {s.os || 'OS'}</span>
-                          </td>
-                          <td className="py-2.5 px-3 font-mono text-slate-400 text-[11px]">{s.ipAddress}</td>
-                          <td className="py-2.5 px-3 text-slate-300 text-[11px]">
-                            {s.lastActiveAt ? (
-                              <div>
-                                <span className="text-slate-200 font-medium block">
-                                  {new Date(s.lastActiveAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                </span>
-                                <span className="text-[10px] text-slate-400 font-mono">
-                                  {new Date(s.lastActiveAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} WIB
-                                </span>
-                              </div>
-                            ) : '-'}
-                          </td>
-                          <td className="py-2.5 px-3">
-                            {s.isLiveOnline ? (
-                              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/30 shadow-xs">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                Online
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded-full border border-slate-700/60">
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                                Offline
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Tombol Lihat Sesi Pengguna (Multi-device Pop-up) */}
-                          <td className="py-2.5 px-3 text-center">
-                            <Button
-                              onClick={() => setViewingUserSessions(s)}
-                              size="sm"
-                              variant="outline"
-                              title="Lihat Rincian Sesi & Perangkat Pengguna"
-                              className="h-7 px-2.5 text-[10px] font-bold rounded-lg border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 gap-1 shadow-2xs mx-auto"
-                            >
-                              <Eye className="w-3 h-3 text-cyan-400" />
-                              <span>Lihat Sesi ({s.sessions?.length || 1})</span>
-                            </Button>
-                          </td>
-
-                          {/* Kolom Pemutusan & Penghapusan Sesi */}
-                          <td className="py-2.5 px-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              {s.isActive && (
-                                <Button
-                                  onClick={() => handleTerminateSession({
-                                    id: s.primarySessionId || s.sessions?.[0]?.id,
-                                    name: s.name,
-                                    username: s.username,
-                                    device: s.device,
-                                  })}
-                                  disabled={terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id)}
-                                  size="sm"
-                                  variant="outline"
-                                  title="Akhiri dan Putus Sesi Pengguna"
-                                  className="h-7 px-2 text-[10px] font-bold rounded-lg border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 gap-1 shadow-2xs"
-                                >
-                                  <LogOut className={`w-3 h-3 text-amber-400 ${terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id) ? 'animate-spin' : ''}`} />
-                                  <span>Putus</span>
-                                </Button>
-                              )}
-
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                              Offline
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <Button
+                            onClick={() => setViewingUserSessions(s)}
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[10px] font-semibold rounded-lg border-slate-200 dark:border-slate-700 gap-1 mx-auto"
+                          >
+                            <Eye className="w-3 h-3 text-blue-500" />
+                            <span>{s.sessions?.length || 1} Sesi</span>
+                          </Button>
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {s.isActive && (
                               <Button
-                                onClick={() => handleDeleteUserSessions(s)}
-                                disabled={deletingSessionId === s.userId}
+                                onClick={() => handleTerminateSession({
+                                  id: s.primarySessionId || s.sessions?.[0]?.id,
+                                  name: s.name,
+                                  username: s.username,
+                                  device: s.device,
+                                })}
+                                disabled={terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id)}
                                 size="sm"
                                 variant="outline"
-                                title="Hapus Permanen Riwayat Sesi Pengguna Ini dari Database"
-                                className="h-7 px-2 text-[10px] font-bold rounded-lg border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1 shadow-2xs"
+                                className="h-6 px-1.5 text-[10px] font-semibold rounded-lg border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 gap-1"
                               >
-                                <Trash2 className={`w-3 h-3 text-rose-400 ${deletingSessionId === s.userId ? 'animate-spin' : ''}`} />
-                                <span>Hapus</span>
+                                <LogOut className={`w-3 h-3 ${terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id) ? 'animate-spin' : ''}`} />
+                                <span>Putus</span>
                               </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                            )}
+                            <Button
+                              onClick={() => handleDeleteUserSessions(s)}
+                              disabled={deletingSessionId === s.userId}
+                              size="sm"
+                              variant="outline"
+                              className="h-6 px-1.5 text-[10px] font-semibold rounded-lg border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 gap-1"
+                            >
+                              <Trash2 className={`w-3 h-3 ${deletingSessionId === s.userId ? 'animate-spin' : ''}`} />
+                              <span>Hapus</span>
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </Card>
         </div>
@@ -3794,10 +3546,21 @@ export default function DashboardPage() {
                   size="sm"
                   variant="outline"
                   title="Keluarkan Semua Sesi Pengguna Lain yang Sedang Aktif"
+                  className="h-8 px-2.5 text-xs font-bold rounded-xl border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 gap-1.5"
+                >
+                  <LogOut className={`w-3.5 h-3.5 text-amber-400 ${terminatingAll ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Akhiri Semua Sesi</span>
+                </Button>
+                <Button
+                  onClick={handleDeleteAllSessionLogs}
+                  disabled={deletingAllLogs}
+                  size="sm"
+                  variant="outline"
+                  title="Hapus Seluruh Riwayat Sesi Semua Pengguna dari Database"
                   className="h-8 px-2.5 text-xs font-bold rounded-xl border-rose-500/50 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1.5"
                 >
-                  <LogOut className={`w-3.5 h-3.5 text-rose-400 ${terminatingAll ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Akhiri Semua Sesi</span>
+                  <Trash2 className={`w-3.5 h-3.5 text-rose-400 ${deletingAllLogs ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Hapus Semua Riwayat</span>
                 </Button>
                 <Button
                   onClick={() => refetchAllSessions()}
@@ -4018,10 +3781,7 @@ export default function DashboardPage() {
           ))}
         </div>
       )}
-
-      <div className="w-full">
-        {renderAnnouncements()}
-      </div>
+      {/* Selesai konten dashboard utama */}
     </div>
   )
 }

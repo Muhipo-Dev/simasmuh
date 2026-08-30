@@ -113,19 +113,50 @@ export default function EtikaTatibPage() {
 
       {/* Grid Nilai & Statistika Karakter Live */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Poin Kedisiplinan */}
         <Card className="border-emerald-100 dark:border-emerald-950/60 bg-gradient-to-br from-emerald-50/40 via-white to-white dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900 shadow-xs">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Poin Kedisiplinan</p>
               <div className="flex items-baseline gap-2 mt-1">
                 <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">
-                  {etika.kedisiplinanScore ?? 100}
+                  {etika.kedisiplinanScore ?? 1000}
                 </h3>
-                <span className="text-xs font-semibold text-slate-500">/ 100 Poin Maksimal</span>
+                <span className={`text-xs font-black px-2 py-0.5 rounded-md ${
+                  (etika.kedisiplinanScore ?? 1000) >= 900
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                    : (etika.kedisiplinanScore ?? 1000) >= 700
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+                    : (etika.kedisiplinanScore ?? 1000) >= 500
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                    : (etika.kedisiplinanScore ?? 1000) >= 200
+                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300'
+                    : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                }`}>
+                  Grade {etika.kedisiplinanGrade || ((etika.kedisiplinanScore ?? 1000) >= 900 ? 'A' : (etika.kedisiplinanScore ?? 1000) >= 700 ? 'B' : (etika.kedisiplinanScore ?? 1000) >= 500 ? 'C' : (etika.kedisiplinanScore ?? 1000) >= 200 ? 'D' : 'E')}
+                </span>
               </div>
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1 flex items-center gap-1">
+              <p className={`text-xs font-semibold mt-1 flex items-center gap-1 ${
+                (etika.kedisiplinanScore ?? 1000) >= 900
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : (etika.kedisiplinanScore ?? 1000) >= 700
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : (etika.kedisiplinanScore ?? 1000) >= 500
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : (etika.kedisiplinanScore ?? 1000) >= 200
+                  ? 'text-orange-600 dark:text-orange-400'
+                  : 'text-rose-600 dark:text-rose-400 font-bold'
+              }`}>
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                {etika.kedisiplinanScore >= 90 ? 'Sangat Disiplin & Tertib' : etika.kedisiplinanScore >= 75 ? 'Cukup Disiplin' : 'Perlu Pembinaan'}
+                {(etika.kedisiplinanScore ?? 1000) >= 900
+                  ? 'Baik / Terpuji'
+                  : (etika.kedisiplinanScore ?? 1000) >= 700
+                  ? 'Pantauan & Bimbingan Ringan'
+                  : (etika.kedisiplinanScore ?? 1000) >= 500
+                  ? 'Pantauan & Bimbingan'
+                  : (etika.kedisiplinanScore ?? 1000) >= 200
+                  ? 'Perlu Bimbingan Ketat'
+                  : 'Kritis / Dikeluarkan dari Sekolah'}
               </p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600">
@@ -134,18 +165,19 @@ export default function EtikaTatibPage() {
           </CardContent>
         </Card>
 
+        {/* Amalan Ibadah */}
         <Card className="border-teal-100 dark:border-teal-950/60 bg-gradient-to-br from-teal-50/40 via-white to-white dark:from-teal-950/20 dark:via-slate-900 dark:to-slate-900 shadow-xs">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-teal-700 dark:text-teal-400 uppercase tracking-wider">Amalan & Sholat Berjamaah</p>
               <div className="flex items-baseline gap-2 mt-1">
                 <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">
-                  {etika.ibadahScore || 'A'}
+                  Grade {etika.ibadahGrade || 'A'}
                 </h3>
-                <span className="text-xs font-semibold text-slate-500">(Aktif Beribadah)</span>
               </div>
               <p className="text-xs text-teal-600 dark:text-teal-400 font-semibold mt-1 flex items-center gap-1">
-                <HeartHandshake className="w-3.5 h-3.5" /> Terdata Sholat Dzuhur & Dhuha
+                <HeartHandshake className="w-3.5 h-3.5" />
+                {etika.ibadahStatus || (etika.ibadahScore ? String(etika.ibadahScore) : 'Sholat Dzuhur & Dhuha Terdata')}
               </p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center text-teal-600">
@@ -154,18 +186,19 @@ export default function EtikaTatibPage() {
           </CardContent>
         </Card>
 
+        {/* Adab & Kesantunan */}
         <Card className="border-cyan-100 dark:border-cyan-950/60 bg-gradient-to-br from-cyan-50/40 via-white to-white dark:from-cyan-950/20 dark:via-slate-900 dark:to-slate-900 shadow-xs">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-cyan-700 dark:text-cyan-400 uppercase tracking-wider">Adab & Kesantunan</p>
               <div className="flex items-baseline gap-2 mt-1">
                 <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">
-                  {etika.perilakuScore || 'A'}
+                  Grade {etika.perilakuGrade || 'A'}
                 </h3>
-                <span className="text-xs font-semibold text-slate-500">(Terpuji)</span>
               </div>
               <p className="text-xs text-cyan-600 dark:text-cyan-400 font-semibold mt-1 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Santun kepada Guru & Teman
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {etika.perilakuStatus || (etika.perilakuScore ? String(etika.perilakuScore) : 'Santun kepada Guru & Teman')}
               </p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-cyan-100 dark:bg-cyan-900/50 flex items-center justify-center text-cyan-600">

@@ -33,3 +33,6 @@ services/whatsapp-gateway/dist/
 storage/compressed-logs/
 .unlighthouse/
 frontend/.unlighthouse/
+*.eslintcache
+.eslintcache
+

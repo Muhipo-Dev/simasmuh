@@ -8,6 +8,8 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "lint": "eslint --quiet",
+    "lint:fast": "eslint \"src/**/*.{ts,tsx}\" --cache --cache-strategy content --quiet",
+    "lint:sast": "eslint \"src/**/*.{ts,tsx}\" --cache --cache-strategy content --quiet",
     "audit": "unlighthouse --site http://localhost:3000",
     "audit:desktop": "unlighthouse --site http://localhost:3000 --desktop",
     "audit:ci": "unlighthouse --site http://localhost:3000 --build-static",

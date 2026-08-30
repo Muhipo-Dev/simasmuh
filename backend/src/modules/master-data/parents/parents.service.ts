@@ -736,20 +736,31 @@ export class ParentsService {
 
       const kedisiplinanScore = Math.max(
         0,
-        Math.min(100, 100 + totalPointsDelta),
+        Math.min(1000, 1000 + totalPointsDelta),
       );
-      const ibadahScore =
-        amalanIbadahCount >= 5
-          ? 'A (Sangat Baik)'
-          : amalanIbadahCount >= 2
-            ? 'B (Aktif)'
-            : 'B (Baik)';
-      const perilakuScore =
-        totalPelanggaran === 0
-          ? 'A (Terpuji)'
-          : totalPelanggaran <= 2
-            ? 'B (Baik)'
-            : 'C (Perlu Pembinaan)';
+
+      // Skala Predikat Huruf Standar 1000 Poin
+      const getGradeInfo = (score: number) => {
+        if (score >= 900) return { grade: 'A', status: 'Baik / Terpuji', label: 'A (Baik / Terpuji)' };
+        if (score >= 700) return { grade: 'B', status: 'Pantauan & Bimbingan Ringan', label: 'B (Pantauan & Bimbingan Ringan)' };
+        if (score >= 500) return { grade: 'C', status: 'Pantauan & Bimbingan', label: 'C (Pantauan & Bimbingan)' };
+        if (score >= 200) return { grade: 'D', status: 'Perlu Bimbingan Ketat', label: 'D (Perlu Bimbingan Ketat)' };
+        return { grade: 'E', status: 'Kritis / Dikeluarkan dari Sekolah', label: 'E (Kritis / Dikeluarkan dari Sekolah)' };
+      };
+
+      const kedisiplinanGradeInfo = getGradeInfo(kedisiplinanScore);
+
+      const ibadahScoreNum = Math.max(
+        0,
+        Math.min(1000, 1000 + amalanIbadahCount * 50 - totalPelanggaran * 30),
+      );
+      const ibadahGradeInfo = getGradeInfo(ibadahScoreNum);
+
+      const perilakuScoreNum = Math.max(
+        0,
+        Math.min(1000, 1000 - totalPelanggaran * 100),
+      );
+      const perilakuGradeInfo = getGradeInfo(perilakuScoreNum);
 
       return {
         id: st.id,
@@ -775,8 +786,14 @@ export class ParentsService {
         etikaTataTertib: {
           status: 'ACTIVE',
           kedisiplinanScore,
-          ibadahScore,
-          perilakuScore,
+          kedisiplinanGrade: kedisiplinanGradeInfo.grade,
+          kedisiplinanStatus: kedisiplinanGradeInfo.status,
+          ibadahScore: ibadahGradeInfo.label,
+          ibadahScoreNum,
+          ibadahGrade: ibadahGradeInfo.grade,
+          perilakuScore: perilakuGradeInfo.label,
+          perilakuScoreNum,
+          perilakuGrade: perilakuGradeInfo.grade,
           totalPelanggaran,
           totalPrestasi,
           catatanKarakter:

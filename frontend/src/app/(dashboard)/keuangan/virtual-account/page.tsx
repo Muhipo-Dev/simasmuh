@@ -117,6 +117,21 @@ export default function VirtualAccountPage() {
     fetchData()
   }
 
+  // Load all students for import preview matching
+  const [allStudentsLookup, setAllStudentsLookup] = useState<StudentVA[]>([])
+
+  const fetchAllStudentsLookup = async () => {
+    try {
+      const res = await authenticatedFetch('/api-backend/finance/virtual-accounts')
+      if (res.ok) {
+        const data = await res.json()
+        setAllStudentsLookup(data.students || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch lookup students:', err)
+    }
+  }
+
   // Handle File Upload and Parse
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -127,6 +142,7 @@ export default function VirtualAccountPage() {
   }
 
   const parseExcelFile = (file: File) => {
+    const lookupList = allStudentsLookup.length > 0 ? allStudentsLookup : students
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
@@ -159,8 +175,8 @@ export default function VirtualAccountPage() {
           const name = String(row[nameKey] || '').trim()
           const virtualAccount = String(row[vaKey] || '').trim()
 
-          // Match with currently loaded student list
-          const matched = students.find((s) => s.nis === nis)
+          // Match with loaded lookup student list by NIS
+          const matched = lookupList.find((s) => String(s.nis).trim() === nis)
 
           let status: ImportPreviewItem['status'] = 'VALID'
           if (!nis) status = 'MISSING_NIS'
@@ -378,10 +394,13 @@ export default function VirtualAccountPage() {
             Tambah VA Manual
           </button>
           <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl transition-all shadow-md active:scale-95"
+            onClick={() => {
+              fetchAllStudentsLookup()
+              setIsImportModalOpen(true)
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-md transition-all active:scale-95"
           >
-            <Upload className="w-3.5 h-3.5" />
+            <Upload className="w-4 h-4" />
             Import Virtual Account
           </button>
         </div>

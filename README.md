@@ -44,6 +44,22 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-30 (v1.9.0 - Redesain Modular Dashboard Superadmin & Komponen Ringkas, Pembersihan Riwayat Sesi Pengguna, Optimasi Virtual Account & Navigasi E-Rapor / Karakter):**
+  * **Redesain Arsitektur & Antarmuka Dashboard Superadmin (`/dashboard`):**
+    * Modularisasi komponen dashboard ke dalam sub-komponen terisolasi (`UserAccountCard`, `CenterQuickAccessGrid`, `ActivityCalendarWidget`, `NewsArticleListWidget`, `SystemInfoWidget`).
+    * Optimalisasi tata letak responsif compact dengan penyajian multi-widget yang efisien dan minim scroll.
+    * Fitur hapus riwayat sesi pengguna (`Clear History`) dan terminasi sesi aktif langsung dari kartu akun pengguna.
+  * **Penyempurnaan Modul Master Data & Manajemen Pengguna:**
+    * Peningkatan endpoint dan service manajemen akun pengguna (`users.service.ts` & `users.controller.ts`) dengan kemampuan reset riwayat login / sesi aman.
+    * Sinkronisasi data relasi orang tua / wali murid (`parents.service.ts`) dan pembersihan data kontak WhatsApp.
+  * **Sinkronisasi Modul Keuangan & Virtual Account:**
+    * Optimasi antarmuka dan penanganan data pada Virtual Account (`/keuangan/virtual-account`) serta validasi transaksi pada `finance.service.ts`.
+  * **Optimasi Modul Akademik, E-Rapor & Penilaian Karakter:**
+    * Penyelarasan antarmuka E-Rapor Digital (`/akademik/e-rapor`) dan Buku Saku Adab & Tatib (`/akademik/etika-tatib`).
+    * Peningkatan performa dan responsivitas komponen penilaian karakter interaktif (`InteractiveCharacterAssessmentManagement.tsx` & `character-assessments.service.ts`).
+  * **Penyelarasan Skrip Startup & Utilitas Waktu:**
+    * Penyempurnaan sinkronisasi waktu client-server (`time-sync.ts`) dan update skrip peluncur multi-platform (`simasmuh.ps1` & `jalankan_simasmuh.sh`).
+
 * **2026-08-27 (v1.8.0 - DevSecOps CI Pipeline, Penguatan Keamanan Sistem & Sanitasi Injeksi, Monitoring Real-time Dashboard Superadmin, Standar Notifikasi WhatsApp & Penyempurnaan Skrip Multi-Platform):**
   * **DevSecOps Pipeline & SAST Audit Otomatis (`.github/workflows/devsecops.yml`):**
     * Penambahan workflow GitHub Actions DevSecOps terintegrasi untuk audit kerentanan dependensi (`npm audit`), analisis statis SAST dengan ESLint & TypeScript rules, serta validasi kompilasi build frontend dan backend.

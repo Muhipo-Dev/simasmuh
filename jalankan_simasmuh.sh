@@ -606,11 +606,11 @@ if [ -n "$1" ]; then
 fi
 
 invoke_devsecops_sast() {
-    write_status "Menjalankan SAST & Security Audit (ESLint Static Analysis)..."
+    write_status "Menjalankan SAST & Security Audit (ESLint Static Analysis - Fast Cache)..."
     echo "Scanning Backend SAST..."
-    (cd "$BACKEND_DIR" && npm run lint) || write_info "SAST Backend selesai dengan catatan."
+    (cd "$BACKEND_DIR" && npm run lint:sast) || write_info "SAST Backend selesai dengan catatan."
     echo "Scanning Frontend SAST..."
-    (cd "$FRONTEND_DIR" && npm run lint) || write_info "SAST Frontend selesai dengan catatan."
+    (cd "$FRONTEND_DIR" && npm run lint:sast) || write_info "SAST Frontend selesai dengan catatan."
     write_ok "Audit SAST selesai."
 }
 

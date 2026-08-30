@@ -17,6 +17,9 @@ export const superadminLinks = [
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Presensi Camera AI', href: '/presensi/camera', icon: Camera },
   { name: 'Izin Keluar Pegawai', href: '/presensi/izin-keluar', icon: DoorOpen },
+  { name: 'Izin Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays },
+  { name: 'Berita & Informasi', href: '/informasi/pengumuman', icon: Megaphone },
+  { name: 'Banner Utama', href: '/informasi/banner', icon: ImageIcon },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
   { name: 'Kelola Notifikasi', href: '/pengaturan/notifikasi', icon: BellRing },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
@@ -60,7 +63,6 @@ export const siswaLinks = [
   { name: 'Jadwal', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Keuangan', href: '/keuangan/laporan', icon: Wallet },
   { name: 'Etika & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck },
-  { name: 'E-Rapor', href: '/akademik/e-rapor', icon: GraduationCap },
 ]
 
 export const waliMuridLinks = [
@@ -71,7 +73,6 @@ export const waliMuridLinks = [
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Tagihan & SPP', href: '/keuangan/laporan', icon: Wallet },
   { name: 'Etika & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck },
-  { name: 'E-Rapor Siswa', href: '/akademik/e-rapor', icon: GraduationCap },
   { name: 'Notifikasi WA', href: '/pengaturan/notifikasi-wali', icon: BellRing },
 ]
 

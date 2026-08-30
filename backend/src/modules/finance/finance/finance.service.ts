@@ -1515,6 +1515,7 @@ export class FinanceService {
         name: student.name,
         nis: student.nis,
         nisn: student.nisn,
+        virtualAccount: student.virtualAccount,
         className: student.class?.name || '-',
       },
       tagihans,

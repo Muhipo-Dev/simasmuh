@@ -422,9 +422,9 @@ function Invoke-DevSecOps-SAST {
     Write-Status "Menjalankan SAST & Security Audit ($Target)..." "Cyan"
     
     if ($Target -eq "All" -or $Target -eq "Backend") {
-        Write-Info "Scanning Backend SAST (ESLint & Security rules)..."
+        Write-Info "Scanning Backend SAST (ESLint & Security rules - Fast Cache)..."
         $bProc = Start-Process -FilePath "cmd.exe" `
-                               -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm run lint" `
+                               -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm run lint:sast" `
                                -WorkingDirectory $BACKEND_DIR `
                                -NoNewWindow -Wait -PassThru
         if ($bProc.ExitCode -ne 0) {
@@ -435,9 +435,9 @@ function Invoke-DevSecOps-SAST {
     }
     
     if ($Target -eq "All" -or $Target -eq "Frontend") {
-        Write-Info "Scanning Frontend SAST (ESLint & TypeScript rules)..."
+        Write-Info "Scanning Frontend SAST (ESLint & TypeScript rules - Fast Cache)..."
         $fProc = Start-Process -FilePath "cmd.exe" `
-                               -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run lint" `
+                               -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run lint:sast" `
                                -WorkingDirectory $FRONTEND_DIR `
                                -NoNewWindow -Wait -PassThru
         if ($fProc.ExitCode -ne 0) {

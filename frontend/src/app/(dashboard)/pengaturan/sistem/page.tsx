@@ -10,20 +10,9 @@ import {
   Save, 
   Upload, 
   Loader2, 
-  DollarSign, 
-  Landmark,
-  Layers,
   Sparkles,
   Phone,
-  MessageSquare,
-  CalendarDays,
-  Clock,
-  Globe,
-  Server,
-  RefreshCw,
-  CheckCircle2,
-  MapPin,
-  Wifi
+  CalendarDays
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
@@ -31,7 +20,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { compressImageFile } from '@/utils/imageCompressor'
-import { useRealtimeServerClock } from '@/lib/time-sync'
 
 type Setting = {
   id: string
@@ -41,8 +29,6 @@ type Setting = {
   email: string | null
   logoUrl: string | null
   backgroundUrl?: string | null
-  principalName: string | null
-  principalNip: string | null
   academicYear: string | null
   semester: string | null
   helpdeskPhone?: string | null
@@ -61,17 +47,14 @@ type BankAccount = {
 
 export default function SettingsPage() {
   const queryClient = useQueryClient()
-  const clock = useRealtimeServerClock(30000) // Sinkronisasi setiap 30 detik
 
   const [formData, setFormData] = useState({
-    schoolName: '',
+    schoolName: 'SMA Muhammadiyah 1 Ponorogo',
     address: '',
     phone: '',
     email: '',
     logoUrl: '',
     backgroundUrl: '',
-    principalName: '',
-    principalNip: '',
     helpdeskPhone: '088293733330',
     academicYear: '2026/2027',
     semester: 'Ganjil',
@@ -87,8 +70,6 @@ export default function SettingsPage() {
     bankNumber: '',
     bankOwner: ''
   })
-
-  const [isEditingServerMeta, setIsEditingServerMeta] = useState(false)
 
   const authenticatedQuery = useAuthenticatedQuery()
   const authenticatedFetch = useAuthenticatedFetch()
@@ -107,14 +88,12 @@ export default function SettingsPage() {
     if (settings) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
-        schoolName: settings.schoolName || '',
+        schoolName: 'SMA Muhammadiyah 1 Ponorogo',
         address: settings.address || '',
         phone: settings.phone || '',
         email: settings.email || '',
         logoUrl: settings.logoUrl || '',
         backgroundUrl: settings.backgroundUrl || '',
-        principalName: settings.principalName || '',
-        principalNip: settings.principalNip || '',
         helpdeskPhone: settings.helpdeskPhone || '088293733330',
         academicYear: settings.academicYear || '2026/2027',
         semester: settings.semester || 'Ganjil',
@@ -270,186 +249,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Card Sinkronisasi Tanggal & Waktu Server (UTC+7 / Jakarta / Bangkok) */}
-      <Card className="border-blue-200/80 dark:border-blue-900/50 bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40 backdrop-blur-xl rounded-2xl overflow-hidden shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-blue-600 text-white shadow-sm">
-                  <Clock className="w-5 h-5" />
-                </span>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    Sinkronisasi Tanggal & Waktu Server SIMASMUH
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                      <CheckCircle2 className="w-3 h-3" /> Terkalibrasi Aktif
-                    </span>
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Standar zona waktu server <strong>UTC+7 (WIB / Asia/Jakarta / Bangkok)</strong> mengunci konsistensi presensi, log, dan keuangan di manapun server diinstal.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                <div className="flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 group">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Globe className="w-4 h-4 text-blue-600 shrink-0" />
-                    <div className="min-w-0">
-                      <div className="font-semibold text-slate-900 dark:text-white">Zona Waktu Aktif</div>
-                      <div className="text-[11px] text-slate-500 font-mono truncate">{formData.timezone || clock.timezone} ({clock.utcOffset})</div>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditingServerMeta(true)}
-                    className="h-6 px-2 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg shrink-0"
-                  >
-                    Edit
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 group">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <div className="min-w-0">
-                      <div className="font-semibold text-slate-900 dark:text-white">Lokasi Instalasi Server</div>
-                      <div className="text-[11px] text-slate-500 truncate">{formData.serverLocation || clock.serverLocation}</div>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditingServerMeta(true)}
-                    className="h-6 px-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg shrink-0"
-                  >
-                    Edit
-                  </Button>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
-                  <Wifi className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <div className="min-w-0">
-                    <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      Latensi Endpoint Akses Web
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    </div>
-                    <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">{clock.latency} ms</span>
-                      <span className="text-[10px] text-slate-400">({typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'})</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Live Clock Display & Sync Button */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-white dark:bg-slate-800/90 p-4 rounded-2xl border border-blue-100 dark:border-slate-700/80 shadow-xs shrink-0">
-              <div className="text-center sm:text-right">
-                <div className="text-3xl font-extrabold tracking-tight text-blue-600 dark:text-blue-400 font-mono">
-                  {clock.timeString} <span className="text-xs font-sans font-semibold text-slate-500">{formData.timezone === 'Asia/Makassar' ? 'WITA' : formData.timezone === 'Asia/Jayapura' ? 'WIT' : 'WIB'}</span>
-                </div>
-                <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {clock.dateString}
-                </div>
-                <div className="text-[10px] text-slate-400">
-                  {clock.lastSyncTime ? `Sinkron terakhir: ${clock.lastSyncTime.toLocaleTimeString('id-ID')}` : 'Sinkronisasi otomatis'}
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  clock.reSync()
-                  Swal.fire({
-                    title: 'Waktu Berhasil Dikalibrasi!',
-                    text: `Waktu sistem telah disinkronkan langsung dengan server endpoint (${clock.latency} ms).`,
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                  })
-                }}
-                disabled={clock.isSyncing}
-                className="rounded-xl border-blue-200 hover:bg-blue-50 text-blue-700 dark:text-blue-300 dark:border-blue-800 font-bold gap-2 text-xs"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${clock.isSyncing ? 'animate-spin' : ''}`} />
-                {clock.isSyncing ? 'Sinkronisasi...' : 'Kalibrasi Sekarang'}
-              </Button>
-            </div>
-          </div>
-
-          {/* Modal / Dialog Edit Konfigurasi Zona Waktu & Lokasi Instalasi */}
-          {isEditingServerMeta && (
-            <div className="mt-4 pt-4 border-t border-blue-200/60 dark:border-blue-900/60 flex flex-col md:flex-row md:items-end gap-3 bg-white/90 dark:bg-slate-800/80 p-4 rounded-xl border animate-in fade-in zoom-in-95">
-              <div className="flex-1 space-y-1.5">
-                <Label htmlFor="timezoneSelect" className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5 text-blue-600" />
-                  Pilih Zona Waktu Server
-                </Label>
-                <select
-                  id="timezoneSelect"
-                  value={formData.timezone || 'Asia/Jakarta'}
-                  onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Asia/Jakarta">WIB - Asia/Jakarta (UTC+07:00)</option>
-                  <option value="Asia/Pontianak">WIB - Asia/Pontianak (UTC+07:00)</option>
-                  <option value="Asia/Makassar">WITA - Asia/Makassar (UTC+08:00)</option>
-                  <option value="Asia/Jayapura">WIT - Asia/Jayapura (UTC+09:00)</option>
-                  <option value="Asia/Bangkok">ICT - Asia/Bangkok (UTC+07:00)</option>
-                  <option value="UTC">UTC - Coordinated Universal Time (UTC+00:00)</option>
-                </select>
-              </div>
-
-              <div className="flex-1 space-y-1.5">
-                <Label htmlFor="serverLocationInput" className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                  Lokasi Instalasi Server
-                </Label>
-                <Input
-                  id="serverLocationInput"
-                  value={formData.serverLocation || ''}
-                  onChange={(e) => setFormData({ ...formData, serverLocation: e.target.value })}
-                  placeholder="Contoh: Ponorogo, Jawa Timur / Cloud Data Center"
-                  className="h-9 text-xs bg-white dark:bg-slate-900"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0 pt-2 md:pt-0">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => {
-                    mutation.mutate(formData)
-                    setIsEditingServerMeta(false)
-                    setTimeout(() => clock.reSync(), 400)
-                  }}
-                  disabled={mutation.isPending}
-                  className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm"
-                >
-                  <Save className="w-3.5 h-3.5 mr-1" />
-                  Simpan Perubahan
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditingServerMeta(false)}
-                  className="h-9 px-3 text-xs rounded-lg"
-                >
-                  Tutup
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Pengaturan Sekolah */}
         <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl rounded-2xl overflow-hidden">
@@ -473,7 +272,7 @@ export default function SettingsPage() {
                         src={formData.logoUrl} 
                         alt="Preview Logo" 
                         className="w-12 h-12 object-contain rounded-lg border border-slate-200 p-1 bg-slate-50 shrink-0" 
-                      />
+                        />
                     )}
                     <Input 
                       id="logo" 
@@ -520,15 +319,7 @@ export default function SettingsPage() {
                     Wallpaper latar belakang yang diselaraskan di seluruh halaman aplikasi.
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="schoolName">Nama Sekolah</Label>
-                  <Input 
-                    id="schoolName" 
-                    value={formData.schoolName}
-                    onChange={(e) => setFormData({...formData, schoolName: e.target.value})}
-                    required 
-                  />
-                </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="address">Alamat Lengkap</Label>
                   <Input 
@@ -619,28 +410,6 @@ export default function SettingsPage() {
                       <option value="Ganjil" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Ganjil (Semester 1)</option>
                       <option value="Genap" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Genap (Semester 2)</option>
                     </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-slate-200 pt-6">
-                <h3 className="text-lg font-medium leading-none mb-4">Informasi Kepala Sekolah</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="principalName">Nama Kepala Sekolah</Label>
-                    <Input 
-                      id="principalName" 
-                      value={formData.principalName}
-                      onChange={(e) => setFormData({...formData, principalName: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="principalNip">NIP Kepala Sekolah</Label>
-                    <Input 
-                      id="principalNip" 
-                      value={formData.principalNip}
-                      onChange={(e) => setFormData({...formData, principalNip: e.target.value})}
-                    />
                   </div>
                 </div>
               </div>

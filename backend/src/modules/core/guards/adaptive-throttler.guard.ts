@@ -1,5 +1,13 @@
-import { Injectable, Optional } from '@nestjs/common';
-import { ThrottlerGuard, ThrottlerRequest, ThrottlerException } from '@nestjs/throttler';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import {
+  ThrottlerGuard,
+  ThrottlerRequest,
+  ThrottlerException,
+  getOptionsToken,
+  getStorageToken,
+} from '@nestjs/throttler';
+import type { ThrottlerModuleOptions, ThrottlerStorage } from '@nestjs/throttler';
+import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { extractClientRealIp, isPrivateOrLocalIp } from '../utils/client-ip.util';
 import { WaitingRoomService } from '../waiting-room/waiting-room.service';
@@ -16,10 +24,15 @@ import { WaitingRoomService } from '../waiting-room/waiting-room.service';
 @Injectable()
 export class AdaptiveThrottlerGuard extends ThrottlerGuard {
   constructor(
+    @Inject(getOptionsToken())
+    protected readonly throttlerOptions: ThrottlerModuleOptions,
+    @Inject(getStorageToken())
+    protected readonly storage: ThrottlerStorage,
+    @Inject(Reflector)
+    protected readonly reflectorInstance: Reflector,
     @Optional() private readonly waitingRoomService?: WaitingRoomService,
-    ...rest: any[]
   ) {
-    super(...(rest as [any, any, any]));
+    super(throttlerOptions, storage, reflectorInstance);
   }
 
   protected async handleRequest(requestProps: ThrottlerRequest): Promise<boolean> {

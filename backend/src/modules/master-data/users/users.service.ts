@@ -492,7 +492,12 @@ export class UsersService {
     adminUserId: string,
     excludeCurrentSessionId?: string,
   ) {
-    const whereClause: any = { isActive: true };
+    const whereClause: any = {
+      isActive: true,
+      user: {
+        role: { not: 'SUPERADMIN' },
+      },
+    };
     if (excludeCurrentSessionId) {
       whereClause.id = { not: excludeCurrentSessionId };
     }
@@ -513,7 +518,7 @@ export class UsersService {
       category: 'AUTH',
       level: 'WARN',
       action: 'ADMIN_FORCE_LOGOUT_ALL',
-      message: `Superadmin memutuskan semua sesi pengguna aktif (${count} sesi telah diakhiri).`,
+      message: `Superadmin memutuskan semua sesi pengguna aktif non-superadmin (${count} sesi telah diakhiri).`,
       userId: adminUserId,
       details: {
         totalTerminated: count,
@@ -523,7 +528,7 @@ export class UsersService {
 
     return {
       success: true,
-      message: `Berhasil memutuskan dan mengakhiri ${count} sesi pengguna aktif.`,
+      message: `Berhasil memutuskan dan mengakhiri ${count} sesi pengguna aktif (sesi Superadmin tetap aman terlindungi).`,
       terminatedCount: count,
     };
   }
@@ -567,6 +572,36 @@ export class UsersService {
     };
   }
 
+  async deleteAllSessionLogs(adminUserId?: string) {
+    // Hanya menghapus riwayat sesi yang sudah tidak aktif (isActive: false)
+    // Sesi pengguna yang sedang aktif (online/login) tetap dipertahankan utuh
+    const { count } = await this.prisma.userSession.deleteMany({
+      where: {
+        isActive: false,
+        user: {
+          role: { not: 'SUPERADMIN' },
+        },
+      },
+    });
+
+    await this.systemLogService.log({
+      category: 'AUTH',
+      level: 'WARN',
+      action: 'ADMIN_DELETE_ALL_SESSIONS_HISTORY',
+      message: `Superadmin membersihkan seluruh riwayat sesi tidak aktif (${count} sesi) dari basis data (sesi pengguna aktif & Superadmin tetap dipertahankan).`,
+      details: {
+        totalDeleted: count,
+        deletedBy: adminUserId || 'SUPERADMIN',
+      },
+    });
+
+    return {
+      success: true,
+      message: `Berhasil menghapus ${count} riwayat sesi yang tidak aktif (sesi pengguna yang sedang aktif & Superadmin tetap aman terlindungi).`,
+      deletedCount: count,
+    };
+  }
+
   async deleteUserSessions(targetUserId: string, adminUserId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: targetUserId },
@@ -577,15 +612,26 @@ export class UsersService {
       throw new NotFoundException('Pengguna tidak ditemukan.');
     }
 
+    // Jika pengguna memiliki sesi aktif, hanya hapus riwayat sesi lamanya (isActive: false)
+    // Jika tidak ada sesi aktif, hapus seluruh catatannya
+    const activeCount = await this.prisma.userSession.count({
+      where: { userId: targetUserId, isActive: true },
+    });
+
+    const whereCondition: any = { userId: targetUserId };
+    if (activeCount > 0) {
+      whereCondition.isActive = false;
+    }
+
     const { count } = await this.prisma.userSession.deleteMany({
-      where: { userId: targetUserId },
+      where: whereCondition,
     });
 
     await this.systemLogService.log({
       category: 'AUTH',
       level: 'WARN',
       action: 'ADMIN_DELETE_ALL_USER_SESSIONS',
-      message: `Superadmin menghapus seluruh riwayat (${count} sesi) perangkat milik '${user.username || user.name}' dari basis data.`,
+      message: `Superadmin menghapus riwayat (${count} sesi) perangkat milik '${user.username || user.name}' dari basis data (sesi aktif tetap dilindungi).`,
       userId: user.id,
       userName: user.name,
       userRole: user.role,
@@ -595,9 +641,14 @@ export class UsersService {
       },
     });
 
+    const infoNote =
+      activeCount > 0
+        ? ` (${activeCount} sesi aktif saat ini tetap dipertahankan)`
+        : '';
+
     return {
       success: true,
-      message: `Berhasil menghapus ${count} riwayat sesi perangkat milik ${user.name || user.username} dari database.`,
+      message: `Berhasil menghapus ${count} riwayat sesi perangkat milik ${user.name || user.username} dari database${infoNote}.`,
       deletedCount: count,
     };
   }

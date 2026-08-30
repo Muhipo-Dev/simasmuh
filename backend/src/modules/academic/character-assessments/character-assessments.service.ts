@@ -216,7 +216,7 @@ export class CharacterAssessmentsService {
       },
     });
 
-    // Kalkulasi Poin Kedisiplinan (Dasar: 100 Poin) - hanya hitung yang sudah terverifikasi / disetujui / selesai
+    // Kalkulasi Poin Kedisiplinan (Dasar: 1000 Poin) - hanya hitung yang sudah terverifikasi / disetujui / selesai
     let totalPointsDelta = 0;
     let totalPelanggaran = 0;
     let totalPrestasi = 0;
@@ -254,37 +254,47 @@ export class CharacterAssessmentsService {
 
     const kedisiplinanScore = Math.max(
       0,
-      Math.min(100, 100 + totalPointsDelta),
+      Math.min(1000, 1000 + totalPointsDelta),
     );
 
-    // Predikat Kedisiplinan
-    let kedisiplinanPredikat = 'A (Sangat Baik / Teladan)';
-    if (kedisiplinanScore < 60)
-      kedisiplinanPredikat = 'D (Perlu Pembinaan Khusus)';
-    else if (kedisiplinanScore < 75)
-      kedisiplinanPredikat = 'C (Cukup / Peringatan)';
-    else if (kedisiplinanScore < 90) kedisiplinanPredikat = 'B (Baik)';
+    // Predikat / Skor Huruf Standar (Skala 1000 Poin)
+    // A: 900 - 1000 (Baik / Terpuji)
+    // B: 700 - 899  (Baik / Perlu Pantauan & Sedikit Bimbingan)
+    // C: 500 - 699  (Cukup / Perlu Pantauan & Bimbingan)
+    // D: 200 - 499  (Kurang / Perlu Bimbingan Ketat)
+    // E: 0 - 199    (Sangat Rendah / Dikeluarkan dari Sekolah)
+    const getGradeInfo = (score: number) => {
+      if (score >= 900) return { grade: 'A', label: 'A (Baik / Terpuji)' };
+      if (score >= 700) return { grade: 'B', label: 'B (Pantauan & Bimbingan Ringan)' };
+      if (score >= 500) return { grade: 'C', label: 'C (Pantauan & Bimbingan)' };
+      if (score >= 200) return { grade: 'D', label: 'D (Perlu Bimbingan Ketat)' };
+      return { grade: 'E', label: 'E (Kritis / Dikeluarkan dari Sekolah)' };
+    };
 
-    // Predikat Ibadah & Etika
-    const ibadahScore =
-      amalanIbadahCount >= 5
-        ? 'A (Sangat Rajin)'
-        : amalanIbadahCount >= 2
-          ? 'B (Aktif)'
-          : 'B (Baik)';
-    const perilakuScore =
-      totalPelanggaran === 0
-        ? 'A (Terpuji & Santun)'
-        : totalPelanggaran <= 2
-          ? 'B (Baik)'
-          : 'C (Perlu Pembinaan)';
+    const kedisiplinanPredikat = getGradeInfo(kedisiplinanScore).label;
+    const kedisiplinanGrade = getGradeInfo(kedisiplinanScore).grade;
+
+    // Perhitungan Skor Ibadah (Basis 1000 Poin) - Amalan ibadah dan poin kebaikan memulihkan poin yang berkurang
+    const ibadahBonus = (amalanIbadahCount * 50) + (totalPrestasi * 25);
+    const ibadahScoreNum = Math.max(0, Math.min(1000, 1000 + ibadahBonus - (totalPelanggaran * 30)));
+    const ibadahScore = getGradeInfo(ibadahScoreNum).label;
+    const ibadahGrade = getGradeInfo(ibadahScoreNum).grade;
+
+    // Perhitungan Skor Perilaku / Adab (Basis 1000 Poin) - Prestasi, adab, dan kebaikan (XP Kebaikan) dapat memulihkan skor
+    const kebaikanXpBonus = Math.max(0, totalPointsDelta > 0 ? totalPointsDelta : 0);
+    const perilakuScoreNum = Math.max(0, Math.min(1000, 1000 - (totalPelanggaran * 100) + kebaikanXpBonus));
+    const perilakuScore = getGradeInfo(perilakuScoreNum).label;
+    const perilakuGrade = getGradeInfo(perilakuScoreNum).grade;
 
     return {
       student,
       kedisiplinanScore,
       kedisiplinanPredikat,
+      kedisiplinanGrade,
       ibadahScore,
+      ibadahGrade,
       perilakuScore,
+      perilakuGrade,
       totalPelanggaran,
       totalPrestasi,
       totalCatatanKonseling,
@@ -957,12 +967,30 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
 
       const ketertibanScore = Math.max(
         0,
-        Math.min(100, 100 + totalPointsDelta),
+        Math.min(1000, 1000 + totalPointsDelta),
       );
+      const adabBonus = (adabEtikaCount * 50) + (totalPrestasi * 50);
       const adabScore = Math.max(
         0,
-        Math.min(100, 100 - totalPelanggaran * 5 + adabEtikaCount * 5),
+        Math.min(1000, 1000 - totalPelanggaran * 100 + adabBonus),
       );
+      const ibadahBonus = (amalanIbadahCount * 50) + (totalPrestasi * 25);
+      const ibadahScoreNum = Math.max(
+        0,
+        Math.min(1000, 1000 + ibadahBonus - totalPelanggaran * 30),
+      );
+
+      const getGradeInfo = (score: number) => {
+        if (score >= 900) return { grade: 'A', status: 'Baik / Terpuji' };
+        if (score >= 700) return { grade: 'B', status: 'Pantauan & Bimbingan Ringan' };
+        if (score >= 500) return { grade: 'C', status: 'Pantauan & Bimbingan' };
+        if (score >= 200) return { grade: 'D', status: 'Perlu Bimbingan Ketat' };
+        return { grade: 'E', status: 'Kritis / Dikeluarkan dari Sekolah' };
+      };
+
+      const ketertibanGradeInfo = getGradeInfo(ketertibanScore);
+      const adabGradeInfo = getGradeInfo(adabScore);
+      const ibadahGradeInfo = getGradeInfo(ibadahScoreNum);
 
       return {
         id: st.id,
@@ -973,7 +1001,14 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
         classId: st.classId,
         className: st.class?.name || 'Tanpa Kelas',
         ketertibanScore,
+        ketertibanGrade: ketertibanGradeInfo.grade,
+        ketertibanStatus: ketertibanGradeInfo.status,
         adabScore,
+        adabGrade: adabGradeInfo.grade,
+        adabStatus: adabGradeInfo.status,
+        ibadahScore: ibadahScoreNum,
+        ibadahGrade: ibadahGradeInfo.grade,
+        ibadahStatus: ibadahGradeInfo.status,
         totalPointsDelta,
         totalPelanggaran,
         totalPrestasi,
@@ -1002,7 +1037,7 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
 
     // Buat assessment penyeimbang atau reset status
     const currentSummary = await this.getStudentSummary(studentId);
-    const deltaToReset = 100 - currentSummary.kedisiplinanScore;
+    const deltaToReset = 1000 - currentSummary.kedisiplinanScore;
 
     // Tambahkan record rekam jejak Pemutihan / Reset Poin
     await this.prisma.characterAssessment.create({
@@ -1014,7 +1049,7 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
         title: 'Pemutihan / Reset Poin Kedisiplinan Siswa',
         description:
           reason ||
-          'Poin ketertiban dan kedisiplinan siswa di-reset kembali ke 100 poin oleh Tim Ketertiban.',
+          'Poin ketertiban dan kedisiplinan siswa di-reset kembali ke 1000 poin oleh Tim Ketertiban.',
         points: deltaToReset,
         status: 'SELESAI',
         actionTaken: 'Pemutihan Poin Kedisiplinan',
@@ -1029,11 +1064,11 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
       userId,
       userName: evaluator?.name,
       userRole: evaluator?.role,
-      details: { studentId, deltaToReset, reason },
     });
 
     return {
-      message: `Poin kedisiplinan siswa ${student.name} berhasil di-reset ke 100 poin.`,
+      success: true,
+      message: `Poin kedisiplinan siswa ${student.name} berhasil di-reset ke 1000 poin.`,
     };
   }
 

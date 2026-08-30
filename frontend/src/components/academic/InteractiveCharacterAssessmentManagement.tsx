@@ -34,41 +34,41 @@ export interface TatibParameter {
   defaultAction?: string
 }
 
-// Parameter Bawaan Standar SIMASMUH (Terstruktur & Komprehensif)
+// Parameter Bawaan Standar SIMASMUH (Terstruktur & Komprehensif Skala 1000 Poin)
 const DEFAULT_PARAMETERS: TatibParameter[] = [
   // --- KEDISIPLINAN & KERAPIAN (POSITIF & PEMBINAAN) ---
-  { id: 'param-dis-1', category: 'KEDISIPLINAN', title: 'Seragam Lengkap, Bersih & Rapi Sesuai Jadwal', points: 5, type: 'POSITIF', description: 'Mengenakan seragam rapi beserta atribut lengkap (dasi, sabuk, sepatu, kaos kaki)', defaultAction: 'Apresiasi kedisiplinan harian' },
-  { id: 'param-dis-2', category: 'KEDISIPLINAN', title: 'Kehadiran Tepat Waktu di Sekolah & Kelas', points: 5, type: 'POSITIF', description: 'Hadir konsisten sebelum bel masuk berbunyi setiap hari', defaultAction: 'Pencatatan teladan kedisiplinan' },
-  { id: 'param-dis-3', category: 'KEDISIPLINAN', title: 'Menjaga Kebersihan & Kerapian Meja/Loker Kelas', points: 5, type: 'POSITIF', description: 'Aktif merawat kebersihan ruang kelas dan meja belajar', defaultAction: 'Apresiasi kedisiplinan lingkungan' },
-  { id: 'param-dis-4', category: 'KEDISIPLINAN', title: 'Kedisiplinan Membawa Buku & Perlengkapan Belajar', points: 5, type: 'POSITIF', description: 'Perlengkapan sekolah dan buku pelajaran selalu siap', defaultAction: 'Apresiasi kesiapan belajar' },
-  { id: 'param-dis-5', category: 'KEDISIPLINAN', title: 'Tertib & Disiplin Mengikuti Upacara Bendera / Apel', points: 5, type: 'POSITIF', description: 'Mengikuti upacara hari Senin / apel pagi dengan khidmat', defaultAction: 'Pencatatan rekam jejak kepemimpinan' },
+  { id: 'param-dis-1', category: 'KEDISIPLINAN', title: 'Seragam Lengkap, Bersih & Rapi Sesuai Jadwal', points: 50, type: 'POSITIF', description: 'Mengenakan seragam rapi beserta atribut lengkap (dasi, sabuk, sepatu, kaos kaki)', defaultAction: 'Apresiasi kedisiplinan harian' },
+  { id: 'param-dis-2', category: 'KEDISIPLINAN', title: 'Kehadiran Tepat Waktu di Sekolah & Kelas', points: 50, type: 'POSITIF', description: 'Hadir konsisten sebelum bel masuk berbunyi setiap hari', defaultAction: 'Pencatatan teladan kedisiplinan' },
+  { id: 'param-dis-3', category: 'KEDISIPLINAN', title: 'Menjaga Kebersihan & Kerapian Meja/Loker Kelas', points: 50, type: 'POSITIF', description: 'Aktif merawat kebersihan ruang kelas dan meja belajar', defaultAction: 'Apresiasi kedisiplinan lingkungan' },
+  { id: 'param-dis-4', category: 'KEDISIPLINAN', title: 'Kedisiplinan Membawa Buku & Perlengkapan Belajar', points: 50, type: 'POSITIF', description: 'Perlengkapan sekolah dan buku pelajaran selalu siap', defaultAction: 'Apresiasi kesiapan belajar' },
+  { id: 'param-dis-5', category: 'KEDISIPLINAN', title: 'Tertib & Disiplin Mengikuti Upacara Bendera / Apel', points: 50, type: 'POSITIF', description: 'Mengikuti upacara hari Senin / apel pagi dengan khidmat', defaultAction: 'Pencatatan rekam jejak kepemimpinan' },
 
   // --- ADAB, ETIKA & KESANTUNAN ---
-  { id: 'param-adab-1', category: 'ADAB_ETIKA', title: 'Menerapkan 5S (Senyum, Salam, Sapa, Sopan, Santun)', points: 10, type: 'POSITIF', description: 'Membudayakan salam dan kesantunan kepada guru, karyawan, dan sesama siswa', defaultAction: 'Pemberian apresiasi karakter teladan' },
-  { id: 'param-adab-2', category: 'ADAB_ETIKA', title: 'Menghormati Guru & Berbicara Bahasa Santun', points: 10, type: 'POSITIF', description: 'Menggunakan tutur kata yang baik, tidak kasar, dan bertata krama luhur', defaultAction: 'Pencatatan adab terpuji di buku saku' },
-  { id: 'param-adab-3', category: 'ADAB_ETIKA', title: 'Sikap Tolong Menolong & Empati Antar Siswa', points: 10, type: 'POSITIF', description: 'Membantu teman yang kesulitan dan menjaga kerukunan tanpa bullying', defaultAction: 'Apresiasi keteladanan sosial' },
-  { id: 'param-adab-4', category: 'ADAB_ETIKA', title: 'Kejujuran & Integritas Siswa (Menemukan Barang / Tidak Menyontek)', points: 15, type: 'POSITIF', description: 'Mengembalikan barang temuan ke pos ketertiban / bertindak jujur', defaultAction: 'Penganugerahan teladan integritas' },
-  { id: 'param-adab-5', category: 'ADAB_ETIKA', title: 'Adab Makan & Minum Sesuai Sunnah (Duduk & Tangan Kanan)', points: 5, type: 'POSITIF', description: 'Menerapkan adab islami saat makan dan minum di area kantin/kelas', defaultAction: 'Apresiasi adab islami' },
+  { id: 'param-adab-1', category: 'ADAB_ETIKA', title: 'Menerapkan 5S (Senyum, Salam, Sapa, Sopan, Santun)', points: 100, type: 'POSITIF', description: 'Membudayakan salam dan kesantunan kepada guru, karyawan, dan sesama siswa', defaultAction: 'Pemberian apresiasi karakter teladan' },
+  { id: 'param-adab-2', category: 'ADAB_ETIKA', title: 'Menghormati Guru & Berbicara Bahasa Santun', points: 100, type: 'POSITIF', description: 'Menggunakan tutur kata yang baik, tidak kasar, dan bertata krama luhur', defaultAction: 'Pencatatan adab terpuji di buku saku' },
+  { id: 'param-adab-3', category: 'ADAB_ETIKA', title: 'Sikap Tolong Menolong & Empati Antar Siswa', points: 100, type: 'POSITIF', description: 'Membantu teman yang kesulitan dan menjaga kerukunan tanpa bullying', defaultAction: 'Apresiasi keteladanan sosial' },
+  { id: 'param-adab-4', category: 'ADAB_ETIKA', title: 'Kejujuran & Integritas Siswa (Menemukan Barang / Tidak Menyontek)', points: 150, type: 'POSITIF', description: 'Mengembalikan barang temuan ke pos ketertiban / bertindak jujur', defaultAction: 'Penganugerahan teladan integritas' },
+  { id: 'param-adab-5', category: 'ADAB_ETIKA', title: 'Adab Makan & Minum Sesuai Sunnah (Duduk & Tangan Kanan)', points: 50, type: 'POSITIF', description: 'Menerapkan adab islami saat makan dan minum di area kantin/kelas', defaultAction: 'Apresiasi adab islami' },
 
   // --- AMALAN IBADAH (PAI & ISMUBA) ---
-  { id: 'param-ibadah-1', category: 'IBADAH', title: 'Disiplin Sholat Dzuhur & Ashar Berjamaah di Masjid', points: 10, type: 'POSITIF', description: 'Hadir tepat waktu di masjid sebelum adzan/iqomah selesai', defaultAction: 'Pencatatan presensi ibadah di buku saku' },
-  { id: 'param-ibadah-2', category: 'IBADAH', title: 'Rutinitas Sholat Dhuha & Tadarus Al-Qur\'an', points: 10, type: 'POSITIF', description: 'Konsisten melaksanakan sholat dhuha dan tilawah Al-Qur\'an pagi', defaultAction: 'Apresiasi kebiasaan ibadah harian' },
-  { id: 'param-ibadah-3', category: 'IBADAH', title: 'Tertib & Disiplin Ibadah Kajian Jum\'at / Keputrian', points: 10, type: 'POSITIF', description: 'Mengikuti pembinaan keputrian dan sholat Jum\'at dengan tertib', defaultAction: 'Apresiasi keaktifan dakwah' },
-  { id: 'param-ibadah-4', category: 'IBADAH', title: 'Hafalan Surat Pendek / Juz Amma Tambahan', points: 15, type: 'POSITIF', description: 'Menunjukkan peningkatan setoran hafalan Al-Qur\'an secara berkala', defaultAction: 'Pencatatan prestasi keagamaan' },
+  { id: 'param-ibadah-1', category: 'IBADAH', title: 'Disiplin Sholat Dzuhur & Ashar Berjamaah di Masjid', points: 100, type: 'POSITIF', description: 'Hadir tepat waktu di masjid sebelum adzan/iqomah selesai', defaultAction: 'Pencatatan presensi ibadah di buku saku' },
+  { id: 'param-ibadah-2', category: 'IBADAH', title: 'Rutinitas Sholat Dhuha & Tadarus Al-Qur\'an', points: 100, type: 'POSITIF', description: 'Konsisten melaksanakan sholat dhuha dan tilawah Al-Qur\'an pagi', defaultAction: 'Apresiasi kebiasaan ibadah harian' },
+  { id: 'param-ibadah-3', category: 'IBADAH', title: 'Tertib & Disiplin Ibadah Kajian Jum\'at / Keputrian', points: 100, type: 'POSITIF', description: 'Mengikuti pembinaan keputrian dan sholat Jum\'at dengan tertib', defaultAction: 'Apresiasi keaktifan dakwah' },
+  { id: 'param-ibadah-4', category: 'IBADAH', title: 'Hafalan Surat Pendek / Juz Amma Tambahan', points: 150, type: 'POSITIF', description: 'Menunjukkan peningkatan setoran hafalan Al-Qur\'an secara berkala', defaultAction: 'Pencatatan prestasi keagamaan' },
 
   // --- PRESTASI & PENGHARGAAN ---
-  { id: 'param-pres-1', category: 'PRESTASI_PENGHARGAAN', title: 'Juara Lomba / Kejuaraan Akademik & Non-Akademik', points: 25, type: 'POSITIF', description: 'Membawa nama baik sekolah dalam kejuaraan/olimpiade tingkat Kab/Prov/Nasional', defaultAction: 'Penganugerahan sertifikat & penambahan poin' },
-  { id: 'param-pres-2', category: 'PRESTASI_PENGHARGAAN', title: 'Pengurus Organisasi / Duta / Teladan Sekolah Terpilih', points: 20, type: 'POSITIF', description: 'Menjalankan amanah kepemimpinan IPM/Hizbul Wathan/Tapak Suci dengan prima', defaultAction: 'Apresiasi kepemimpinan' },
+  { id: 'param-pres-1', category: 'PRESTASI_PENGHARGAAN', title: 'Juara Lomba / Kejuaraan Akademik & Non-Akademik', points: 250, type: 'POSITIF', description: 'Membawa nama baik sekolah dalam kejuaraan/olimpiade tingkat Kab/Prov/Nasional', defaultAction: 'Penganugerahan sertifikat & penambahan poin' },
+  { id: 'param-pres-2', category: 'PRESTASI_PENGHARGAAN', title: 'Pengurus Organisasi / Duta / Teladan Sekolah Terpilih', points: 200, type: 'POSITIF', description: 'Menjalankan amanah kepemimpinan IPM/Hizbul Wathan/Tapak Suci dengan prima', defaultAction: 'Apresiasi kepemimpinan' },
 
   // --- PELANGGARAN TATA TERTIB SEKOLAH ---
-  { id: 'param-pel-1', category: 'PELANGGARAN', title: 'Terlambat Masuk Sekolah (>15 Menit)', points: -5, type: 'NEGATIF', description: 'Datang melewati batas bel masuk sekolah', defaultAction: 'Teguran lisan & piket kebersihan' },
-  { id: 'param-pel-2', category: 'PELANGGARAN', title: 'Seragam Tidak Lengkap / Atribut Kurang', points: -5, type: 'NEGATIF', description: 'Tidak mengenakan dasi/kaos kaki/sepatu hitam/sabuk', defaultAction: 'Pencatatan tatib & penertiban' },
-  { id: 'param-pel-3', category: 'PELANGGARAN', title: 'Rambut Tidak Rapi / Melewati Kerah (Putra)', points: -10, type: 'NEGATIF', description: 'Panjang rambut tidak sesuai standar ketentuan sekolah', defaultAction: 'Pembinaan tatib & batas potong rambut 3 hari' },
-  { id: 'param-pel-4', category: 'PELANGGARAN', title: 'Membawa HP / Menggunakan Gadget Tanpa Izin KBM', points: -10, type: 'NEGATIF', description: 'Bermain game / sosmed saat jam pelajaran berlangsung', defaultAction: 'HP diamankan tatib s/d jam pulang' },
-  { id: 'param-pel-5', category: 'PELANGGARAN', title: 'Meninggalkan Kelas / Sekolah Tanpa Izin (Membolos)', points: -20, type: 'NEGATIF', description: 'Keluar gerbang/kelas saat jam KBM tanpa surat izin', defaultAction: 'Panggilan wali murid & pembinaan BK' },
-  { id: 'param-pel-6', category: 'PELANGGARAN', title: 'Tidak Mengikuti Sholat Berjamaah / Kabur saat Ibadah', points: -15, type: 'NEGATIF', description: 'Tidak menuju masjid saat panggilan sholat berkumandang', defaultAction: 'Bimbingan ibadah & pembinaan tatib' },
-  { id: 'param-pel-7', category: 'PELANGGARAN', title: 'Berkelahi / Melakukan Intimidasi / Bullying', points: -50, type: 'NEGATIF', description: 'Melakukan tindakan kekerasan fisik/verbal terhadap sesama siswa', defaultAction: 'Surat Peringatan & panggilan orang tua' },
-  { id: 'param-pel-8', category: 'PELANGGARAN', title: 'Merokok / Vape di Lingkungan Sekolah', points: -50, type: 'NEGATIF', description: 'Membawa/menghisap rokok atau rokok elektrik', defaultAction: 'Surat Peringatan (SP 1) & pemanggilan orang tua' },
+  { id: 'param-pel-1', category: 'PELANGGARAN', title: 'Terlambat Masuk Sekolah (>15 Menit)', points: -50, type: 'NEGATIF', description: 'Datang melewati batas bel masuk sekolah', defaultAction: 'Teguran lisan & piket kebersihan' },
+  { id: 'param-pel-2', category: 'PELANGGARAN', title: 'Seragam Tidak Lengkap / Atribut Kurang', points: -50, type: 'NEGATIF', description: 'Tidak mengenakan dasi/kaos kaki/sepatu hitam/sabuk', defaultAction: 'Pencatatan tatib & penertiban' },
+  { id: 'param-pel-3', category: 'PELANGGARAN', title: 'Rambut Tidak Rapi / Melewati Kerah (Putra)', points: -100, type: 'NEGATIF', description: 'Panjang rambut tidak sesuai standar ketentuan sekolah', defaultAction: 'Pembinaan tatib & batas potong rambut 3 hari' },
+  { id: 'param-pel-4', category: 'PELANGGARAN', title: 'Membawa HP / Menggunakan Gadget Tanpa Izin KBM', points: -100, type: 'NEGATIF', description: 'Bermain game / sosmed saat jam pelajaran berlangsung', defaultAction: 'HP diamankan tatib s/d jam pulang' },
+  { id: 'param-pel-5', category: 'PELANGGARAN', title: 'Meninggalkan Kelas / Sekolah Tanpa Izin (Membolos)', points: -200, type: 'NEGATIF', description: 'Keluar gerbang/kelas saat jam KBM tanpa surat izin', defaultAction: 'Panggilan wali murid & pembinaan BK' },
+  { id: 'param-pel-6', category: 'PELANGGARAN', title: 'Tidak Mengikuti Sholat Berjamaah / Kabur saat Ibadah', points: -150, type: 'NEGATIF', description: 'Tidak menuju masjid saat panggilan sholat berkumandang', defaultAction: 'Bimbingan ibadah & pembinaan tatib' },
+  { id: 'param-pel-7', category: 'PELANGGARAN', title: 'Berkelahi / Melakukan Intimidasi / Bullying', points: -500, type: 'NEGATIF', description: 'Melakukan tindakan kekerasan fisik/verbal terhadap sesama siswa', defaultAction: 'Surat Peringatan & panggilan orang tua' },
+  { id: 'param-pel-8', category: 'PELANGGARAN', title: 'Merokok / Vape di Lingkungan Sekolah', points: -500, type: 'NEGATIF', description: 'Membawa/menghisap rokok atau rokok elektrik', defaultAction: 'Surat Peringatan (SP 1) & pemanggilan orang tua' },
 ]
 
 export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'ALL' }: { defaultCategory?: string }) {
@@ -120,7 +120,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
   // State Parameter Tata Tertib (Tersimpan di LocalStorage / State)
   const [customParams, setCustomParams] = useState<TatibParameter[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('simasmuh_tatib_parameters_v2')
+      const saved = localStorage.getItem('simasmuh_tatib_parameters_v3')
       if (saved) {
         try { return JSON.parse(saved) } catch (e) { /* use default */ }
       }
@@ -132,7 +132,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
   const [newParamForm, setNewParamForm] = useState<Partial<TatibParameter>>({
     category: 'PELANGGARAN',
     title: '',
-    points: -10,
+    points: -100,
     type: 'NEGATIF',
     description: '',
     defaultAction: '',
@@ -147,7 +147,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
     type: 'NEGATIF' as any,
     title: '',
     description: '',
-    points: -10,
+    points: -100,
     date: new Date().toISOString().split('T')[0],
     actionTaken: '',
     status: canVerify ? 'SELESAI' : 'MENUNGGU',
@@ -158,7 +158,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
   const saveParametersToStorage = (params: TatibParameter[]) => {
     setCustomParams(params)
     if (typeof window !== 'undefined') {
-      localStorage.setItem('simasmuh_tatib_parameters_v2', JSON.stringify(params))
+      localStorage.setItem('simasmuh_tatib_parameters_v3', JSON.stringify(params))
     }
   }
 
@@ -378,7 +378,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
       Swal.fire({
         icon: 'success',
         title: 'Poin Berhasil Di-Reset',
-        text: data.message || 'Poin ketertiban siswa dikembalikan ke skor 100.',
+        text: data.message || 'Poin ketertiban siswa dikembalikan ke skor 1000.',
         timer: 2500,
         showConfirmButton: false,
       })
@@ -424,7 +424,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
       type: (matchingParam?.type || (defaultCat === 'PELANGGARAN' ? 'NEGATIF' : 'POSITIF')) as any,
       title: matchingParam?.title || '',
       description: matchingParam?.description || '',
-      points: matchingParam?.points || (defaultCat === 'PELANGGARAN' ? -10 : 10),
+      points: matchingParam?.points || (defaultCat === 'PELANGGARAN' ? -100 : 100),
       date: new Date().toISOString().split('T')[0],
       actionTaken: matchingParam?.defaultAction || 'Dibina dan dipantau berkala',
       status: canVerify ? 'SELESAI' : 'MENUNGGU',
@@ -444,7 +444,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
     Swal.fire({
       title: 'Reset Poin Ketertiban Siswa?',
       html: `<div class="text-xs text-slate-600 text-left">
-        <p>Anda akan melakukan pemutihan / mengembalikan skor ketertiban <b>${student.name}</b> (${student.nis}) kembali ke <b>100 Poin</b>.</p>
+        <p>Anda akan melakukan pemutihan / mengembalikan skor ketertiban <b>${student.name}</b> (${student.nis}) kembali ke <b>1000 Poin</b>.</p>
         <p class="mt-2 text-rose-600 font-semibold">Tindakan ini akan membuat catatan pemutihan resmi di sistem.</p>
       </div>`,
       input: 'text',
@@ -452,7 +452,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#2563eb',
-      confirmButtonText: 'Ya, Reset Poin ke 100',
+      confirmButtonText: 'Ya, Reset Poin ke 1000',
       cancelButtonText: 'Batal',
     }).then((res) => {
       if (res.isConfirmed) {
@@ -1022,7 +1022,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
                 Daftar Siswa, Skor Ketertiban & Skor Adab
               </CardTitle>
               <CardDescription className="text-xs mt-0.5">
-                Skor awal siswa 100. Poin diterapkan resmi setelah diverifikasi oleh Bagian Ketertiban.
+                Skor awal siswa 1000. Poin diterapkan resmi setelah diverifikasi oleh Bagian Ketertiban.
               </CardDescription>
             </div>
             <Badge variant="outline" className="font-bold text-xs">
@@ -1036,33 +1036,47 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
                 <TableHeader className="bg-slate-50 dark:bg-slate-900/60">
                   <TableRow>
                     <TableHead className="w-12 text-center text-xs font-bold">No</TableHead>
-                    <TableHead className="text-xs font-bold">Siswa & Rombel</TableHead>
-                    <TableHead className="text-xs font-bold text-center">Skor Ketertiban</TableHead>
-                    <TableHead className="text-xs font-bold text-center">Skor Adab</TableHead>
-                    <TableHead className="text-xs font-bold text-center">Pelanggaran</TableHead>
-                    <TableHead className="text-xs font-bold text-center">Prestasi / Teladan</TableHead>
+                    <TableHead className="text-xs font-bold">Nama Siswa</TableHead>
+                    <TableHead className="text-xs font-bold text-center">Skor Akumulasi</TableHead>
+                    <TableHead className="text-xs font-bold text-center">Jumlah Pelanggaran</TableHead>
+                    <TableHead className="text-xs font-bold text-center">Jumlah Prestasi</TableHead>
                     <TableHead className="text-xs font-bold text-center">Status</TableHead>
-                    <TableHead className="w-48 text-center text-xs font-bold">Aksi</TableHead>
+                    <TableHead className="w-44 text-center text-xs font-bold">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingSummary ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-32 text-center text-slate-400 text-sm">
+                      <TableCell colSpan={7} className="h-32 text-center text-slate-400 text-sm">
                         <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-blue-600" />
                         Memuat data skor...
                       </TableCell>
                     </TableRow>
                   ) : filteredStudentsSummary.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-32 text-center text-slate-400 text-sm">
+                      <TableCell colSpan={7} className="h-32 text-center text-slate-400 text-sm">
                         Tidak ada data siswa ditemukan.
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredStudentsSummary.map((st: any, idx: number) => {
-                      const isLowScore = st.ketertibanScore < 75
-                      const isMediumScore = st.ketertibanScore >= 75 && st.ketertibanScore < 90
+                      const getGradeColor = (score: number) => {
+                        if (score >= 900) return 'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                        if (score >= 700) return 'text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
+                        if (score >= 500) return 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                        if (score >= 200) return 'text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800'
+                        return 'text-rose-600 bg-rose-50 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                      }
+
+                      const getGradeLetter = (score: number) => {
+                        if (score >= 900) return 'A'
+                        if (score >= 700) return 'B'
+                        if (score >= 500) return 'C'
+                        if (score >= 200) return 'D'
+                        return 'E'
+                      }
+
+                      const kGrade = st.ketertibanGrade || getGradeLetter(st.ketertibanScore)
 
                       return (
                         <TableRow key={st.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 text-xs">
@@ -1074,26 +1088,22 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
                             </div>
                           </TableCell>
                           
+                          {/* Skor Akumulasi */}
                           <TableCell className="text-center">
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                              <span className={`font-black text-sm ${
-                                isLowScore ? 'text-rose-600' : isMediumScore ? 'text-amber-600' : 'text-emerald-600'
-                              }`}>
-                                {st.ketertibanScore}
+                            <div className="inline-flex flex-col items-center gap-0.5">
+                              <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border font-black text-xs ${getGradeColor(st.ketertibanScore)}`}>
+                                <span className="text-sm font-extrabold">{st.ketertibanScore}</span>
+                                <span className="text-[10px] font-black uppercase px-1 py-0.2 rounded bg-white/60 dark:bg-black/30">
+                                  Grade {kGrade}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400">
+                                {st.ketertibanScore >= 900 ? 'Baik / Terpuji' : st.ketertibanScore >= 700 ? 'Pantauan & Bimbingan' : st.ketertibanScore >= 500 ? 'Pantauan' : st.ketertibanScore >= 200 ? 'Bimbingan Ketat' : 'Kritis (Dikeluarkan)'}
                               </span>
-                              <span className="text-[10px] text-slate-400">/ 100</span>
                             </div>
                           </TableCell>
 
-                          <TableCell className="text-center">
-                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
-                              <span className="font-black text-sm text-blue-600 dark:text-blue-400">
-                                {st.adabScore}
-                              </span>
-                              <span className="text-[10px] text-blue-400">/ 100</span>
-                            </div>
-                          </TableCell>
-
+                          {/* Jumlah Pelanggaran */}
                           <TableCell className="text-center">
                             {st.totalPelanggaran > 0 ? (
                               <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 font-bold">
@@ -1104,6 +1114,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
                             )}
                           </TableCell>
 
+                          {/* Jumlah Prestasi */}
                           <TableCell className="text-center">
                             {st.totalPrestasi > 0 ? (
                               <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 font-bold">
@@ -1114,9 +1125,17 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
                             )}
                           </TableCell>
 
-                          {/* Status Pembinaan */}
+                          {/* Status */}
                           <TableCell className="text-center">
-                            {st.pendingVerificationCount > 0 ? (
+                            {st.ketertibanScore < 200 ? (
+                              <Badge className="bg-rose-600 hover:bg-rose-700 text-white font-black text-[10px] uppercase animate-pulse">
+                                Dikeluarkan (E)
+                              </Badge>
+                            ) : st.ketertibanScore < 500 ? (
+                              <Badge className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-[10px]">
+                                Bimbingan Ketat (D)
+                              </Badge>
+                            ) : st.pendingVerificationCount > 0 ? (
                               <Badge className="bg-amber-500 text-slate-950 font-bold text-[10px]">
                                 {st.pendingVerificationCount} Menunggu Tatib
                               </Badge>
@@ -1131,7 +1150,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
                             )}
                           </TableCell>
 
-                          {/* Aksi */}
+                          {/* Tombol Aksi */}
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-1.5">
                               <Button
@@ -1139,10 +1158,10 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
                                 variant="outline"
                                 onClick={() => handleOpenEditStudent(st)}
                                 className="h-8 px-2 text-[11px] font-bold rounded-lg border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 gap-1"
-                                title="Lihat Rekam Jejak & Edit Poin"
+                                title="Lihat Rekam Jejak & Kelola Poin"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
-                                <span>{canVerify ? 'Kelola / Catat' : 'Beri Poin'}</span>
+                                <span>{canVerify ? 'Kelola' : 'Beri Poin'}</span>
                               </Button>
 
                               {canVerify && (
@@ -1151,7 +1170,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
                                   variant="outline"
                                   onClick={() => handleResetPoints(st)}
                                   className="h-8 px-2 text-[11px] font-bold rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 gap-1"
-                                  title="Reset Poin Siswa ke 100"
+                                  title="Reset Poin Siswa ke 1000"
                                 >
                                   <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
                                   <span>Reset</span>
@@ -1374,7 +1393,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
                       ...prev,
                       category: val as any,
                       type: isPelanggaran ? 'NEGATIF' : 'POSITIF',
-                      points: isPelanggaran ? -10 : 10,
+                      points: isPelanggaran ? -100 : 100,
                     }))
                   }}
                 >
@@ -1574,7 +1593,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
                     className="h-9 text-xs border-amber-300 text-amber-700 hover:bg-amber-50 font-bold rounded-xl gap-1.5"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    <span>Reset Poin ke 100</span>
+                    <span>Reset Poin ke 1000</span>
                   </Button>
                 </div>
 

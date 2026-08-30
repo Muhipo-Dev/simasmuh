@@ -39,7 +39,7 @@ export class UploadController {
 
   @Post('carousel')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN_WEB, UserRole.ADMIN_IT)
+  @Roles(UserRole.ADMIN_WEB, UserRole.ADMIN_IT, UserRole.SUPERADMIN)
   async uploadCarouselImage(@Body() data: { image: string }) {
     if (!data.image) {
       return { error: 'No image provided' };
@@ -50,7 +50,7 @@ export class UploadController {
 
   @Delete('carousel/:filename')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN_WEB, UserRole.ADMIN_IT)
+  @Roles(UserRole.ADMIN_WEB, UserRole.ADMIN_IT, UserRole.SUPERADMIN)
   async deleteCarouselImage(@Param('filename') filename: string) {
     const success = await this.uploadService.deleteCarouselImage(filename);
     if (!success) {

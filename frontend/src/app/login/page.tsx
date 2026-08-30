@@ -203,8 +203,8 @@ export default function LoginPage() {
                   </h1>
                   <div className="flex items-center justify-center gap-1.5 text-slate-200/90 text-xs sm:text-sm font-medium">
                     <KeyRound className="w-3.5 h-3.5 text-blue-300 shrink-0" />
-                    <span>Single Sign-On (SSO)</span>
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/20">Aktif</span>
+                    <span>Sistem Informasi Manajemen SMA Muhipo</span>
+                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/20">Online</span>
                   </div>
                 </div>
 

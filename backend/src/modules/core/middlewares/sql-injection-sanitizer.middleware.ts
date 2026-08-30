@@ -10,7 +10,7 @@ export class SqlInjectionSanitizerMiddleware implements NestMiddleware {
     /(\b(insert\s+into|update\s+.+\s+set|delete\s+from|drop\s+(table|database|view|index)|truncate\s+table)\b)/i,
     /(;\s*(drop|delete|insert|update|alter|truncate|create)\b)/i,
     /(\bexec(\s|\+)+(s|x)p\w+)/i,
-    /((\b(or|and)\b\s+['"\d\w]+(\s*=\s*['"\d\w]+|\s+like\s+['"]|--|\#)))/i,
+    /((\b(or|and)\b\s+['"\d\w]+(\s*=\s*['"\d\w]+|\s+like\s+['"]|--|#)))/i,
     /(\b(benchmark|sleep)\s*\(\s*\d+\s*\))/i,
     /(\bwaitfor\s+delay\s+['"]\d+:\d+:\d+['"])/i,
     /(--\s*$|\/\*.*\*\/)/,
@@ -63,7 +63,7 @@ export class SqlInjectionSanitizerMiddleware implements NestMiddleware {
     }
 
     if (typeof data === 'object') {
-      for (const key of Object.keys(data as Record<string, unknown>)) {
+      for (const key of Object.keys(data)) {
         if (this.isSqliString(key)) return true;
         const val = (data as Record<string, unknown>)[key];
         if (this.containsSqlInjection(val)) return true;

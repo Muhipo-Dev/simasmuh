@@ -88,6 +88,13 @@ export class UsersController {
     return this.usersService.deleteSingleSession(sessionId, req.user?.id);
   }
 
+  @Delete('all-session-logs')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
+  deleteAllSessionLogs(@Request() req: any) {
+    return this.usersService.deleteAllSessionLogs(req.user?.id);
+  }
+
   @Delete(':id/all-sessions')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPERADMIN', UserRole.ADMIN_IT)

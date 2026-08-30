@@ -141,8 +141,38 @@ export function formatDateTimeWib(date: Date | string | number | null | undefine
 }
 
 /**
- * React Hook untuk live real-time server clock yang selalu akurat dan tersinkronisasi
+ * Mendapatkan salam waktu (Selamat Pagi / Siang / Sore / Malam) berdasarkan jam tersinkronisasi (WIB)
+ * Aturan Rentang Waktu:
+ * - 02.00 - 09.59: Selamat Pagi
+ * - 10.00 - 14.59 (atau 11.00-14.00): Selamat Siang
+ * - 15.00 - 18.59: Selamat Sore
+ * - 19.00 - 01.59: Selamat Malam
  */
+export function getGreetingByTime(date: Date | string | number | null | undefined = getSyncedDate()): string {
+  const d = !date ? getSyncedDate() : (typeof date === 'string' || typeof date === 'number' ? new Date(date) : date)
+  if (isNaN(d.getTime())) return 'Selamat Datang'
+
+  // Format jam integer di zona Asia/Jakarta
+  const hourString = new Intl.DateTimeFormat('en-US', {
+    timeZone: DEFAULT_SERVER_TIMEZONE,
+    hour: 'numeric',
+    hour12: false,
+  }).format(d)
+  const hour = parseInt(hourString, 10)
+
+  // Evaluasi jam WIB
+  if (hour >= 2 && hour < 10) {
+    return 'Selamat Pagi'
+  } else if (hour >= 10 && hour < 15) {
+    return 'Selamat Siang'
+  } else if (hour >= 15 && hour < 19) {
+    return 'Selamat Sore'
+  } else {
+    // 19:00 - 23:59 dan 00:00 - 01:59
+    return 'Selamat Malam'
+  }
+}
+
 export function useRealtimeServerClock(syncIntervalMs: number = 60000) {
   const [currentDate, setCurrentDate] = useState<Date>(() => getSyncedDate())
   const [serverMeta, setServerMeta] = useState<ServerTimePayload | null>(null)
@@ -182,6 +212,7 @@ export function useRealtimeServerClock(syncIntervalMs: number = 60000) {
 
   return {
     currentDate,
+    greeting: getGreetingByTime(currentDate),
     timeString: formatTimeWib(currentDate, true),
     dateString: formatDateWib(currentDate, { weekday: 'long' }),
     fullDateTimeString: formatDateTimeWib(currentDate),
@@ -195,3 +226,4 @@ export function useRealtimeServerClock(syncIntervalMs: number = 60000) {
     reSync: triggerSync,
   }
 }
+

@@ -1843,7 +1843,7 @@ export function PersuratanManagement() {
           <style>
             @page { 
               size: A4 portrait; 
-              margin: 8mm 12mm 6mm 12mm; 
+              margin: 15mm 15mm 15mm 15mm; 
             }
             @media print {
               html, body {
@@ -2030,7 +2030,7 @@ export function PersuratanManagement() {
               <img src="${customLogoKiri || '/muhammadiyah-logo-40493.png'}" alt="Logo Dikdasmen" />
             </div>
             <div class="kop-text">
-              <p class="org">${templateForm.kopInstansiAtas.replace(/\n/g, '<br/>') || 'MAJELIS PENDIDIKAN DASAR DAN MENENGAH DAN PNF<br/>PIMPINAN WILAYAH MUHAMMADIYAH JAWA TIMUR'}</p>
+              <p class="org">${templateForm.kopInstansiAtas.replace(/\n/g, '<br/>') || 'MAJELIS PENDIDIKAN DASAR DAN MENENGAH<br/>PIMPINAN WILAYAH MUHAMMADIYAH JAWA TIMUR'}</p>
               <p class="school">${templateForm.kopNamaSekolah || 'SMA MUHAMMADIYAH 1 PONOROGO'}</p>
               <p class="status">Status : ${templateForm.kopStatusAkreditasi || 'Terakreditasi A'} &nbsp;&nbsp;&nbsp;&nbsp; NPSN : ${templateForm.kopNpsn || '20510139'}</p>
               <p class="addr">${templateForm.kopAlamat || 'Jl. Batoro Katong No. 6B Telp/Fax (0352) 481521 Ponorogo 63411'}</p>

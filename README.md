@@ -44,6 +44,22 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-31 (v1.9.2 - Penguatan Sesi 30 Hari WhatsApp Gateway, Pengiriman Dokumen PDF, Verifikasi Poin Kedisiplinan & Redesain Interaktif Penilaian Karakter):**
+  * **Penyempurnaan WhatsApp Gateway Service (`services/whatsapp-gateway/`):**
+    * Penerapan kebijakan persistensi sesi 30 hari (*30-day session lifetime*) dengan mekanisme auto-reconnect, keep-alive ping socket Baileys, dan penanganan graceful reconnect tanpa auto-logout tak terduga.
+    * Dashboard web monitoring status sesi WhatsApp interaktif dengan indikator sisa masa berlaku (hari & jam), tanggal kadaluarsa, informasi nomor pengirim, serta tombol logout/reset sesi manual.
+    * Dukungan endpoint baru untuk pengiriman berkas dokumen/PDF (`/api/send-document`) dan gambar lampiran (`/api/send-image`).
+  * **Integrasi Backend WhatsApp Gateway (`whatsapp.service.ts` & `whatsapp.controller.ts`):**
+    * Integrasi proxy controller dan service untuk memeriksa status sesi WhatsApp, trigger logout/reconnect, dan pengiriman lampiran dokumen resmi sekolah ke nomor WhatsApp pengguna / wali murid.
+  * **Peningkatan Komprehensif Modul Penilaian Karakter & Bimbingan Konseling (`InteractiveCharacterAssessmentManagement.tsx`):**
+    * Peningkatan antarmuka penilaian karakter, adab, ibadah, dan etika tata tertib dengan visualisasi kartu statistik multi-metrik interaktif.
+    * Alur verifikasi dan konfirmasi catatan kedisiplinan & apresiasi prestasi siswa secara real-time.
+    * Fitur pencarian lanjutan, filter per kelas/kategori/periode, rekapitulasi data, cetak/ekspor laporan, dan notifikasi WhatsApp instan ke orang tua/wali murid.
+  * **Penyelarasan Modul Notifikasi & Hak Akses Navigasi:**
+    * Pembaruan halaman Pengaturan Notifikasi (`/pengaturan/notifikasi`) dengan kartu monitoring sesi WhatsApp Gateway real-time.
+    * Peningkatan alur persetujuan Izin Siswa (`/presensi/izin-siswa`) dan relasi data wali murid (`parents.service.ts`).
+    * Penyelarasan role-based navigation links (`nav-links.ts`) untuk Superadmin, Tata Usaha, Ketertiban, Guru BK/BP, dan Wali Kelas.
+
 * **2026-08-30 (v1.9.1 - Relasi Multi-Guru ke Multi-Mata Pelajaran & Manajemen Guru Pengampu di Master Data Mapel):**
   * **Relasi Many-to-Many Guru & Mata Pelajaran (`TeacherSubject`):**
     * Penambahan model relasi basis data `TeacherSubject` antara `TeacherProfile` dan `Subject` dengan integritas cascade delete dan proteksi unique index.

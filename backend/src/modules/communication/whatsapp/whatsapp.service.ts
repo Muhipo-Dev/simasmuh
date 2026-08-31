@@ -9,8 +9,16 @@ export interface SendWhatsAppDto {
   recipientName?: string;
   recipientRole?: string;
   category?:
-    'ABSENSI' | 'TAGIHAN' | 'PEMBAYARAN' | 'INFORMASI' | 'SISTEM' | 'IZIN';
+    | 'ABSENSI'
+    | 'TAGIHAN'
+    | 'PEMBAYARAN'
+    | 'INFORMASI'
+    | 'SISTEM'
+    | 'IZIN';
   title?: string;
+  mediaUrl?: string;
+  documentUrl?: string;
+  fileName?: string;
 }
 
 @Injectable()
@@ -45,20 +53,22 @@ export class WhatsAppService {
   async getWhatsAppConfig() {
     try {
       const setting = await this.prisma.setting.findFirst();
+      const defaultApiUrl = process.env.WHATSAPP_API_URL || 'http://localhost:3002/api/send';
+      const defaultApiKey = process.env.WHATSAPP_API_KEY || 'simasmuh_wa_secret_2026';
       return {
         senderNumber:
           setting?.whatsappSenderNumber ||
           process.env.WHATSAPP_SENDER_NUMBER ||
           WhatsAppService.DEFAULT_SENDER_NUMBER,
-        apiUrl: setting?.whatsappApiUrl || process.env.WHATSAPP_API_URL || null,
-        apiKey: setting?.whatsappApiKey || process.env.WHATSAPP_API_KEY || null,
+        apiUrl: setting?.whatsappApiUrl || defaultApiUrl,
+        apiKey: setting?.whatsappApiKey || defaultApiKey,
         schoolName: setting?.schoolName || 'SMA Muhammadiyah 1 Ponorogo',
       };
     } catch (e) {
       return {
         senderNumber: WhatsAppService.DEFAULT_SENDER_NUMBER,
-        apiUrl: null,
-        apiKey: null,
+        apiUrl: process.env.WHATSAPP_API_URL || 'http://localhost:3002/api/send',
+        apiKey: process.env.WHATSAPP_API_KEY || 'simasmuh_wa_secret_2026',
         schoolName: 'SMA Muhammadiyah 1 Ponorogo',
       };
     }
@@ -92,19 +102,29 @@ export class WhatsAppService {
 
     try {
       if (config.apiUrl && config.apiKey) {
-        // Integrasi Real REST API WhatsApp Gateway (Fonnte / Wablas / WABA / Custom)
+        const payload: Record<string, any> = {
+          target: normalizedPhone,
+          phone: normalizedPhone,
+          to: normalizedPhone,
+          message: data.message,
+          sender: config.senderNumber,
+        };
+
+        if (data.documentUrl || data.mediaUrl) {
+          payload.url = data.documentUrl || data.mediaUrl;
+          payload.file = data.documentUrl || data.mediaUrl;
+          payload.document = data.documentUrl || data.mediaUrl;
+          payload.filename = data.fileName || 'Dokumen_Resmi_SIMASMUH.pdf';
+        }
+
         const response = await fetch(config.apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: config.apiKey,
+            'x-api-key': config.apiKey,
           },
-          body: JSON.stringify({
-            target: normalizedPhone,
-            phone: normalizedPhone,
-            message: data.message,
-            sender: config.senderNumber,
-          }),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {

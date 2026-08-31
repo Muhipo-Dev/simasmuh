@@ -85,9 +85,17 @@ export class WhatsAppController {
   }
 
   @Post('send-test')
-  @Roles('SUPERADMIN', 'ADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'BENDAHARA')
+  @Roles('SUPERADMIN', 'ADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'BENDAHARA', 'BK_BP', 'BK', 'GURU', 'KETERTIBAN')
   async sendTestMessage(
-    @Body() body: { to: string; message: string; recipientName?: string },
+    @Body()
+    body: {
+      to: string;
+      message: string;
+      recipientName?: string;
+      mediaUrl?: string;
+      documentUrl?: string;
+      fileName?: string;
+    },
   ) {
     return this.whatsAppService.sendDirectMessage({
       to: body.to,
@@ -96,6 +104,36 @@ export class WhatsAppController {
       recipientName: body.recipientName || 'Uji Coba Pengguna',
       category: 'SISTEM',
       title: 'Uji Coba Notifikasi WhatsApp',
+      mediaUrl: body.mediaUrl,
+      documentUrl: body.documentUrl,
+      fileName: body.fileName,
+    });
+  }
+
+  @Post('send')
+  @Roles('SUPERADMIN', 'ADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'BENDAHARA', 'BK_BP', 'BK', 'GURU', 'KEPALA_SEKOLAH', 'KETERTIBAN')
+  async sendMessage(
+    @Body()
+    body: {
+      to: string;
+      message: string;
+      recipientName?: string;
+      category?: 'SISTEM' | 'ABSENSI' | 'TAGIHAN' | 'PEMBAYARAN' | 'INFORMASI' | 'IZIN';
+      title?: string;
+      mediaUrl?: string;
+      documentUrl?: string;
+      fileName?: string;
+    },
+  ) {
+    return this.whatsAppService.sendDirectMessage({
+      to: body.to,
+      message: body.message,
+      recipientName: body.recipientName || 'Wali Murid / Pengguna',
+      category: body.category || 'INFORMASI',
+      title: body.title || 'Informasi SIMASMUH',
+      mediaUrl: body.mediaUrl,
+      documentUrl: body.documentUrl,
+      fileName: body.fileName,
     });
   }
 

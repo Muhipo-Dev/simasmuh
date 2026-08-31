@@ -764,7 +764,7 @@ export default function FiturSubRolePage() {
       ) : slug === 'buku-tamu' ? (
         <GuestBookManagement />
       ) : slug === 'ketertiban' || slug === 'bk-bp' ? (
-        <InteractiveCharacterAssessmentManagement defaultCategory={slug === 'ketertiban' ? 'ALL' : 'ALL'} />
+        <InteractiveCharacterAssessmentManagement mode={slug === 'bk-bp' ? 'BK' : 'KETERTIBAN'} />
       ) : (
         <>
           {/* Grid Status Modul Terencana */}

@@ -21,6 +21,15 @@ interface GatewayStatus {
     name?: string
   } | null
   hasQr?: boolean
+  sessionMeta?: {
+    authenticatedAt?: string
+    expiresAt?: string
+    remainingDays?: number
+    remainingHours?: number
+    expiresAtFormatted?: string
+    authenticatedAtFormatted?: string
+  } | null
+  sessionLifetimeDays?: number
   config?: {
     whatsappSenderNumber?: string
     whatsappApiUrl?: string
@@ -440,7 +449,11 @@ export default function KelolaNotifikasiPage() {
                 <span className="text-xl font-bold text-gray-900 dark:text-white">
                   {isConnected ? 'Connected' : 'Scan Required'}
                 </span>
-                <span className="text-xs text-gray-500 block mt-1">Port :3002 (Self-Hosted)</span>
+                <span className="text-xs text-gray-500 block mt-1">
+                  {isConnected && gatewayStatus?.sessionMeta?.remainingDays !== undefined
+                    ? `Sesi Aktif 30 Hari (Sisa ${gatewayStatus.sessionMeta.remainingDays} Hari)`
+                    : 'Port :3002 (Sesi Persisten 30 Hari)'}
+                </span>
               </div>
             </div>
 

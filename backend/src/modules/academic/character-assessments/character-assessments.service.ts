@@ -29,16 +29,18 @@ export class CreateAssessmentDto {
     'KEDISIPLINAN',
     'PRESTASI_PENGHARGAAN',
     'PELANGGARAN',
+    'CATATAN_BK',
   ])
   category:
     | 'ADAB_ETIKA'
     | 'IBADAH'
     | 'KEDISIPLINAN'
     | 'PRESTASI_PENGHARGAAN'
-    | 'PELANGGARAN';
+    | 'PELANGGARAN'
+    | 'CATATAN_BK';
 
-  @IsEnum(['POSITIF', 'NEGATIF', 'RUTIN', 'CATATAN_KONSELING'])
-  type: 'POSITIF' | 'NEGATIF' | 'RUTIN' | 'CATATAN_KONSELING';
+  @IsEnum(['POSITIF', 'NEGATIF', 'RUTIN', 'CATATAN_KONSELING', 'PEMBINAAN', 'PEMANGGILAN_ORTU'])
+  type: 'POSITIF' | 'NEGATIF' | 'RUTIN' | 'CATATAN_KONSELING' | 'PEMBINAAN' | 'PEMANGGILAN_ORTU';
 
   @IsString()
   title: string;
@@ -122,6 +124,16 @@ export class CharacterAssessmentsService {
           student: {
             include: {
               class: true,
+              user: true,
+              parentRelations: {
+                include: {
+                  parent: {
+                    include: {
+                      user: true,
+                    },
+                  },
+                },
+              },
             },
           },
           evaluator: {
@@ -482,14 +494,16 @@ export class CharacterAssessmentsService {
         'SUPERADMIN',
         'ADMIN_IT',
         'KETERTIBAN',
+        'BK_BP',
+        'BK',
         'KEPALA_SEKOLAH',
         'BAU',
         'ADMIN_TU',
       ].includes(r || ''),
     );
 
-    // Jika diinput oleh Guru umum, status awal adalah MENUNGGU (menunggu verifikasi Petugas Ketertiban)
-    // Jika diinput langsung oleh Petugas Ketertiban / Superadmin, status langsung SELESAI / TERVERIFIKASI
+    // Jika diinput oleh Guru umum, status awal adalah MENUNGGU (menunggu verifikasi Petugas Ketertiban/BK)
+    // Jika diinput langsung oleh Petugas Ketertiban / Guru BK / Superadmin, status langsung SELESAI / TERVERIFIKASI
     const finalStatus = dto.status
       ? dto.status
       : isKetertibanOrAdmin
@@ -529,7 +543,7 @@ export class CharacterAssessmentsService {
       },
     });
 
-    // Jika langsung terverifikasi (oleh Tatib/Admin), kirim notifikasi in-app & WA ke Siswa & Orang Tua
+    // Jika langsung terverifikasi (oleh Tatib/BK/Admin), kirim notifikasi in-app & WA ke Siswa & Orang Tua
     if (
       finalStatus === 'SELESAI' ||
       finalStatus === 'TERVERIFIKASI' ||
@@ -543,7 +557,7 @@ export class CharacterAssessmentsService {
         dto,
       );
     } else {
-      // Jika status MENUNGGU (input guru), kirim notifikasi ke tim Ketertiban
+      // Jika status MENUNGGU (input guru), kirim notifikasi ke tim Ketertiban & BK
       try {
         const tatibUsers = await this.prisma.user.findMany({
           where: {
@@ -554,6 +568,12 @@ export class CharacterAssessmentsService {
               { subRole3: 'KETERTIBAN' },
               { subRole4: 'KETERTIBAN' },
               { subRole5: 'KETERTIBAN' },
+              { role: 'BK_BP' },
+              { subRole: 'BK_BP' },
+              { subRole2: 'BK_BP' },
+              { subRole3: 'BK_BP' },
+              { subRole4: 'BK_BP' },
+              { subRole5: 'BK_BP' },
             ],
           },
           select: { id: true, name: true, phone: true },
@@ -699,6 +719,39 @@ export class CharacterAssessmentsService {
           notifyParent: existing.notifyParent,
         },
       );
+
+      // Auto Rujukan ke Tim BK jika Poin Siswa Kritis (< 700) atau Pelanggaran Berat
+      try {
+        const summary = await this.getStudentSummary(existing.studentId);
+        if (summary.kedisiplinanScore < 700 || existing.points <= -100) {
+          const bkUsers = await this.prisma.user.findMany({
+            where: {
+              OR: [
+                { role: 'BK_BP' }, { subRole: 'BK_BP' }, { subRole2: 'BK_BP' },
+                { subRole3: 'BK_BP' }, { subRole4: 'BK_BP' }, { subRole5: 'BK_BP' },
+                { role: 'BK' }, { subRole: 'BK' },
+              ],
+            },
+            select: { id: true, name: true },
+          });
+
+          for (const bkUser of bkUsers) {
+            await this.prisma.notification.create({
+              data: {
+                userId: bkUser.id,
+                senderId: verifierId,
+                type: 'ETIKA_TATIB',
+                title: `Rujukan BK Otomatis: ${existing.student.name}`,
+                message: `Siswa ${existing.student.name} (${existing.student.class?.name || '-'}) mencapai skor kedisiplinan ${summary.kedisiplinanScore} Poin (${summary.kedisiplinanGrade}). Memerlukan tindak lanjut bimbingan konseling Guru BK.`,
+                priority: 'HIGH',
+                data: { assessmentId: id, studentId: existing.studentId, score: summary.kedisiplinanScore },
+              },
+            });
+          }
+        }
+      } catch (err: any) {
+        this.logger.error(`Gagal trigger rujukan otomatis BK: ${err.message}`);
+      }
     }
 
     // Notifikasi kembali ke Guru pencatat (Evaluator awal)
@@ -905,6 +958,16 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
       where: whereStudent,
       include: {
         class: true,
+        user: true,
+        parentRelations: {
+          include: {
+            parent: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
         characterAssessments: {
           orderBy: { date: 'desc' },
           include: {
@@ -1013,8 +1076,10 @@ _Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Si
         totalPelanggaran,
         totalPrestasi,
         totalPembinaan,
-        amalanIbadahCount,
-        adabEtikaCount,
+        parentPhone: st.parentRelations?.[0]?.parent?.user?.phone || st.parentRelations?.[0]?.parent?.phone || st.user?.phone || '',
+        parentName: st.parentRelations?.[0]?.parent?.user?.name || 'Orang Tua / Wali Murid',
+        parentRelations: st.parentRelations,
+        user: st.user,
         pendingVerificationCount,
         assessments,
       };

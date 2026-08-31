@@ -625,6 +625,66 @@ export class ParentsService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
+        student: {
+          include: {
+            class: {
+              include: {
+                homeroomTeacher: {
+                  include: {
+                    user: true,
+                  },
+                },
+                schedules: {
+                  include: {
+                    subject: true,
+                    teacher: {
+                      include: {
+                        user: true,
+                      },
+                    },
+                  },
+                  orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+                },
+              },
+            },
+            attendances: {
+              take: 20,
+              orderBy: { date: 'desc' },
+              include: {
+                schedule: {
+                  include: {
+                    subject: true,
+                  },
+                },
+              },
+            },
+            tagihans: {
+              orderBy: { createdAt: 'desc' },
+              include: {
+                payments: { orderBy: { paymentDate: 'desc' } },
+                paymentProofs: {
+                  orderBy: { createdAt: 'desc' },
+                  take: 1,
+                },
+              },
+            },
+            characterAssessments: {
+              where: {
+                status: { in: ['SELESAI', 'TERVERIFIKASI', 'DALAM_PEMBINAAN'] },
+              },
+              orderBy: { date: 'desc' },
+              include: {
+                evaluator: {
+                  select: {
+                    name: true,
+                    role: true,
+                    subRole: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         parentProfile: {
           include: {
             students: {
@@ -673,6 +733,9 @@ export class ParentsService {
                       },
                     },
                     characterAssessments: {
+                      where: {
+                        status: { in: ['SELESAI', 'TERVERIFIKASI', 'DALAM_PEMBINAAN'] },
+                      },
                       orderBy: { date: 'desc' },
                       include: {
                         evaluator: {
@@ -697,40 +760,49 @@ export class ParentsService {
       throw new NotFoundException('Pengguna tidak ditemukan');
     }
 
-    const students = (user.parentProfile?.students || []).map((ps) => {
-      const st = ps.student;
+    // Ambil daftar student baik dari relasi parentProfile maupun dari user.student langsung
+    const rawStudentList: { student: any; relation?: string }[] = [];
+    if (user.parentProfile?.students && user.parentProfile.students.length > 0) {
+      user.parentProfile.students.forEach((ps) => {
+        rawStudentList.push({ student: ps.student, relation: ps.relation || 'ORANG_TUA' });
+      });
+    } else if (user.student) {
+      rawStudentList.push({ student: user.student, relation: 'DIRI_SENDIRI' });
+    }
+
+    const students = rawStudentList.map(({ student: st, relation }) => {
       const allTagihans = st.tagihans || [];
       const unpaidTagihans = allTagihans.filter(
-        (t) => t.status === 'BELUM_LUNAS' || t.status === 'ANGSURAN',
+        (t: any) => t.status === 'BELUM_LUNAS' || t.status === 'ANGSURAN',
       );
       const totalUnpaid = unpaidTagihans.reduce(
-        (sum, t) => sum + Math.max(0, t.amount - (t.amountPaid || 0)),
+        (sum: number, t: any) => sum + Math.max(0, t.amount - (t.amountPaid || 0)),
         0,
       );
 
-      const assessments = st.characterAssessments || [];
+      // Hanya catatan terverifikasi yang masuk
+      const verifiedAssessments = (st.characterAssessments || []).filter((item: any) =>
+        item.status === 'SELESAI' ||
+        item.status === 'TERVERIFIKASI' ||
+        item.status === 'DALAM_PEMBINAAN',
+      );
+
       let totalPointsDelta = 0;
       let totalPelanggaran = 0;
       let totalPrestasi = 0;
       let amalanIbadahCount = 0;
 
-      assessments.forEach((item: any) => {
-        const isVerified =
-          item.status === 'SELESAI' ||
-          item.status === 'TERVERIFIKASI' ||
-          item.status === 'DALAM_PEMBINAAN';
-        if (isVerified) {
-          totalPointsDelta += item.points || 0;
-          if (item.category === 'PELANGGARAN' || item.type === 'NEGATIF') {
-            totalPelanggaran++;
-          } else if (
-            item.category === 'PRESTASI_PENGHARGAAN' ||
-            item.type === 'POSITIF'
-          ) {
-            totalPrestasi++;
-          } else if (item.category === 'IBADAH') {
-            amalanIbadahCount++;
-          }
+      verifiedAssessments.forEach((item: any) => {
+        totalPointsDelta += item.points || 0;
+        if (item.category === 'PELANGGARAN' || item.type === 'NEGATIF') {
+          totalPelanggaran++;
+        } else if (
+          item.category === 'PRESTASI_PENGHARGAAN' ||
+          item.type === 'POSITIF'
+        ) {
+          totalPrestasi++;
+        } else if (item.category === 'IBADAH') {
+          amalanIbadahCount++;
         }
       });
 
@@ -776,13 +848,13 @@ export class ParentsService {
           st.class?.homeroomTeacher?.user?.name ||
           st.class?.homeroomTeacher?.nip ||
           '-',
-        relation: ps.relation || 'ORANG_TUA',
+        relation,
         schedules: st.class?.schedules || [],
         recentAttendances: st.attendances || [],
         tagihans: allTagihans,
         unpaidTagihans,
         totalUnpaid,
-        // Fitur Etika, Tata Tertib & Ibadah (Live Data Terintegrasi)
+        // Fitur Etika, Tata Tertib & Ibadah (Live Data Terintegrasi Terverifikasi)
         etikaTataTertib: {
           status: 'ACTIVE',
           kedisiplinanScore,
@@ -797,11 +869,11 @@ export class ParentsService {
           totalPelanggaran,
           totalPrestasi,
           catatanKarakter:
-            assessments.length > 0
-              ? assessments[0].description || assessments[0].title
+            verifiedAssessments.length > 0
+              ? verifiedAssessments[0].description || verifiedAssessments[0].title
               : 'Siswa menunjukkan sikap yang santun, aktif mengikuti sholat berjamaah, dan disiplin waktu di sekolah.',
           timTatibContact: 'Tim Ketertiban & BP/BK Sekolah',
-          assessments,
+          assessments: verifiedAssessments,
         },
         // Fitur E-Rapor (Views only / Download Coming Soon)
         eRapor: {

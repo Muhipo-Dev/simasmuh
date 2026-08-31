@@ -51,6 +51,7 @@ export const guruLinks = [
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Jadwal', href: '/akademik/jadwal-mengajar', icon: CalendarDays },
   { name: 'Jurnal Mengajar', href: '/akademik/jurnal-mengajar', icon: BookOpen },
+  { name: 'Catatan Kedisiplinan', href: '/fitur/ketertiban', icon: ShieldAlert },
   { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen },
   { name: 'Izin Cuti', href: '/presensi/cuti', icon: CalendarDays },
 ]
@@ -181,9 +182,9 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar || isBau || isKepalaSekolah
   }
 
-  // 3. Modul Master Data Siswa, Guru, Kelas, Mapel — HANYA Admin TU (BAU), Superadmin & Kepala Sekolah/Guru/Wali Kelas
+  // 3. Modul Master Data Siswa, Guru, Kelas, Mapel — HANYA Admin TU (BAU), Superadmin & Kepala Sekolah/Guru/Wali Kelas/BK
   if (pathname.startsWith('/master-data/siswa')) {
-    return isBau || isKepalaSekolah || isGuru || isWaliKelas
+    return isBau || isKepalaSekolah || isGuru || isWaliKelas || isBk
   }
   if (pathname.startsWith('/master-data/guru')) {
     return isBau || isKepalaSekolah
@@ -217,16 +218,16 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isGuru || isPegawai || isBau || isKepalaSekolah
   }
   if (pathname.startsWith('/presensi/kehadiran-siswa')) {
-    return isGuru || isWaliKelas || isSiswa || isWaliMurid || isBau || isKepalaSekolah || isTatib
+    return isGuru || isWaliKelas || isSiswa || isWaliMurid || isBau || isKepalaSekolah || isTatib || isBk
   }
   if (pathname.startsWith('/presensi/izin-keluar')) {
     // Izin keluar pegawai hanya untuk guru/pegawai/BAU/Kepala Sekolah
     return isGuru || isPegawai || isBau || isKepalaSekolah
   }
   if (pathname.startsWith('/presensi/izin-siswa')) {
-    // Izin siswa: Tatib verifikasi, Wali Kelas verifikasi kelasnya, Siswa & Wali Murid lihat log sendiri, Kepala Sekolah lihat log
+    // Izin siswa: Tatib & BK verifikasi, Wali Kelas verifikasi kelasnya, Siswa & Wali Murid lihat log sendiri, Kepala Sekolah lihat log
     // TU (BAU) tidak memiliki akses ke modul izin siswa
-    return isWaliMurid || isSiswa || isWaliKelas || isTatib || isKepalaSekolah
+    return isWaliMurid || isSiswa || isWaliKelas || isTatib || isBk || isKepalaSekolah
   }
   if (pathname.startsWith('/presensi/dispensasi')) {
     // TU menerbitkan, Kepala Sekolah approve/reject langsung — Tatib tidak terlibat
@@ -247,8 +248,8 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     if (slug === 'persuratan') return isPersuratan || isBau || isKepalaSekolah
     if (slug === 'inventaris') return isBau || isKepalaSekolah
     if (slug === 'kepegawaian') return isSdm || isBau || isKepalaSekolah
-    if (slug === 'ketertiban') return isTatib || isGuru || isWaliKelas || isBau || isKepalaSekolah
-    if (slug === 'bk-bp') return isBk || isBau || isKepalaSekolah
+    if (slug === 'ketertiban') return isTatib || isBk || isGuru || isWaliKelas || isBau || isKepalaSekolah
+    if (slug === 'bk-bp') return isBk || isTatib || isBau || isKepalaSekolah
     if (slug === 'perpustakaan') return isPustakawan || isBau || isKepalaSekolah
     if (slug === 'tahfidz') return isGuruTahfidz || isBau || isKepalaSekolah
     if (slug === 'kebersihan') return roles.includes('KEBERSIHAN') || isBau || isKepalaSekolah
@@ -374,9 +375,11 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
         { name: 'Kepegawaian & SDM', href: '/fitur/kepegawaian', icon: UserCheck },
         { name: 'Manajemen Izin Cuti', href: '/presensi/cuti', icon: CalendarDays },
       ])
-    } else if (roleName === 'BK_BP') {
+    } else if (roleName === 'BK_BP' || roleName === 'BK') {
       addLinks([
-        { name: 'BK / BP', href: '/fitur/bk-bp', icon: HeartHandshake }
+        { name: 'BK / BP & Konseling', href: '/fitur/bk-bp', icon: HeartHandshake },
+        { name: 'Catatan Kedisiplinan', href: '/fitur/ketertiban', icon: ShieldAlert },
+        { name: 'Izin Siswa', href: '/presensi/izin-siswa', icon: ClipboardCheck },
       ])
     } else if (roleName === 'PUSTAKAWAN') {
       addLinks([

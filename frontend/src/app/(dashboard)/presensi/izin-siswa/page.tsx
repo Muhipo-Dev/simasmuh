@@ -69,16 +69,16 @@ export function IzinSiswaManagement() {
   const isBau = user?.role === 'ADMIN_TU' || user?.role === 'BAU' || user?.role === 'TATA_USAHA' || user?.subRole === 'BAU' || user?.subRole === 'ADMIN_TU'
   const isWaliKelas = user?.subRole === 'WALI_KELAS' || user?.role === 'WALI_KELAS'
   const isGuru = user?.role === 'GURU' || user?.subRole === 'GURU' || isWaliKelas
-  const isTatib = user?.role === 'KETERTIBAN' || user?.subRole === 'KETERTIBAN' || user?.subRole2 === 'KETERTIBAN' || user?.subRole3 === 'KETERTIBAN'
+  const isTatib = user?.role === 'KETERTIBAN' || user?.subRole === 'KETERTIBAN' || user?.subRole2 === 'KETERTIBAN' || user?.subRole3 === 'KETERTIBAN' || user?.subRole4 === 'KETERTIBAN' || user?.subRole5 === 'KETERTIBAN'
+  const isBk = user?.role === 'BK_BP' || user?.role === 'BK' || user?.subRole === 'BK_BP' || user?.subRole === 'BK' || user?.subRole2 === 'BK_BP' || user?.subRole3 === 'BK_BP' || user?.subRole4 === 'BK_BP' || user?.subRole5 === 'BK_BP'
   const isWaliMurid = user?.role === 'WALI_MURID' || user?.role === 'ORANG_TUA' || user?.role === 'PARENT'
   const isSiswa = user?.role === 'SISWA'
   
-  // Ketertiban (TATIB) memverifikasi semua izin siswa
-  // Wali Kelas memverifikasi izin siswa di kelasnya & lihat log
+  // Tim Ketertiban (TATIB) & Tim BK/BP & Wali Kelas memverifikasi semua izin siswa & melakukan pengecekan secara berkala
   // TU tidak memiliki akses ke modul ini
   // Kepala Sekolah & Siswa & Wali Murid hanya lihat log absensi masing-masing
-  const canManageAll = isSuperAdmin || isTatib || isWaliKelas
-  // Pengaju Izin Siswa: Khusus Wali Murid (Role Ketertiban tidak mengajukan izin, tetapi memverifikasi)
+  const canManageAll = isSuperAdmin || isTatib || isBk || isWaliKelas
+  // Pengaju Izin Siswa: Khusus Wali Murid (Role Ketertiban & BK tidak mengajukan izin, tetapi memverifikasi)
   const canCreate = isWaliMurid
 
   const [myIzin, setMyIzin] = useState<IzinSiswaItem[]>([])
@@ -278,12 +278,18 @@ export function IzinSiswaManagement() {
   }
 
   const handleOpenActionDialog = (izin: IzinSiswaItem, type: 'APPROVE' | 'REJECT') => {
+    const roleVerifierText = isBk 
+      ? 'Disetujui dan diverifikasi oleh Guru Bimbingan Konseling (BK/BP).' 
+      : isTatib 
+        ? 'Disetujui dan diverifikasi langsung oleh Tim Ketertiban Sekolah.' 
+        : 'Disetujui dan diverifikasi oleh pihak sekolah.'
+
     setActionDialog({
       open: true,
       type,
       izin,
       catatan: type === 'APPROVE' 
-        ? (isTatib ? 'Disetujui dan diverifikasi langsung oleh Tim Ketertiban Sekolah.' : 'Disetujui dan diverifikasi oleh pihak sekolah.') 
+        ? roleVerifierText 
         : 'Mohon maaf, permohonan izin siswa belum dapat disetujui.',
       loading: false,
     })
@@ -797,7 +803,7 @@ export function IzinSiswaManagement() {
               <Button size="sm" variant={activeTab === 'my' ? 'default' : 'ghost'} onClick={() => setActiveTab('my')} className={`rounded-xl font-extrabold text-xs px-4 h-9 ${activeTab === 'my' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600'}`}>Izin Saya</Button>
             )}
             <Button size="sm" variant={activeTab === 'all' ? 'default' : 'ghost'} onClick={() => setActiveTab('all')} className={`rounded-xl font-extrabold text-xs px-4 h-9 ${activeTab === 'all' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600'}`}>
-              {isTatib ? `Verifikasi Izin Siswa (${allIzin.length})` : `Semua Izin Siswa (${allIzin.length})`}
+              {(isTatib || isBk) ? `Verifikasi Izin Siswa (${allIzin.length})` : `Semua Izin Siswa (${allIzin.length})`}
             </Button>
           </div>
         ) : (

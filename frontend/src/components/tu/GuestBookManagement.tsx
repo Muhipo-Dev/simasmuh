@@ -446,7 +446,7 @@ export function GuestBookManagement() {
                 <div class="kop-wrapper">
                   <img class="logo-img" src="/muhammadiyah-logo-40493.png" alt="Logo Majelis Dikdasmen" onerror="this.style.display='none'" />
                   <div class="kop-text">
-                    <div class="kop-instansi">Majelis Dikdasmen & PNF PWM Jawa Timur</div>
+                    <div class="kop-instansi">Majelis Dikdasmen PWM Jawa Timur</div>
                     <div class="kop-sekolah">SMA Muhammadiyah 1 Ponorogo</div>
                     <div class="kop-tagline">Jl. Batoro Katong No. 6B Ponorogo | Telp. (0352) 481521</div>
                   </div>

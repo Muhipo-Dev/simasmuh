@@ -14,6 +14,7 @@ import {
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
 import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
+import { EmailNotificationService } from '../../communication/notifications/email.service';
 
 export class CreateAssessmentDto {
   @IsOptional()
@@ -78,6 +79,7 @@ export class CharacterAssessmentsService {
     private prisma: PrismaService,
     private systemLogService: SystemLogService,
     private whatsAppService: WhatsAppService,
+    private emailNotificationService: EmailNotificationService,
   ) {}
 
   async findAll(query: {
@@ -843,6 +845,67 @@ export class CharacterAssessmentsService {
               },
             },
           });
+        }
+      }
+
+      // Notifikasi Push Email ke Siswa & Orang Tua / Wali Murid
+      if (student.userId) {
+        const studentUser = await this.prisma.user.findUnique({
+          where: { id: student.userId },
+          select: { email: true, name: true },
+        });
+        if (studentUser?.email && studentUser.email.includes('@')) {
+          this.emailNotificationService
+            .sendEmailNotification({
+              to: studentUser.email,
+              subject: `[SIMASMUH Catatan Siswa] ${notifTitle}`,
+              title: notifTitle,
+              category: 'KEDISIPLINAN',
+              badgeLabel: notifCategory,
+              recipientName: studentUser.name,
+              contentText: notifMessage,
+              metaDetails: [
+                { label: 'Nama Siswa', value: student.name },
+                { label: 'Kelas', value: student.class?.name || '-' },
+                { label: 'Kategori', value: notifCategory },
+                { label: 'Poin Evaluasi', value: `${points > 0 ? '+' : ''}${points}` },
+                { label: 'Tindak Lanjut', value: dto.actionTaken || assessment.actionTaken || 'Diterapkan Bagian Ketertiban' },
+              ],
+              actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/akademik/etika-tatib`,
+              actionText: 'Lihat Buku Catatan Karakter',
+            })
+            .catch(() => {});
+        }
+      }
+
+      for (const rel of student.parentRelations || []) {
+        if (rel.parent?.userId) {
+          const parentUser = await this.prisma.user.findUnique({
+            where: { id: rel.parent.userId },
+            select: { email: true, name: true },
+          });
+          if (parentUser?.email && parentUser.email.includes('@')) {
+            this.emailNotificationService
+              .sendEmailNotification({
+                to: parentUser.email,
+                subject: `[SIMASMUH Catatan Ananda] ${notifTitle}`,
+                title: notifTitle,
+                category: 'KEDISIPLINAN',
+                badgeLabel: notifCategory,
+                recipientName: parentUser.name,
+                contentText: notifMessage,
+                metaDetails: [
+                  { label: 'Nama Siswa', value: student.name },
+                  { label: 'Kelas', value: student.class?.name || '-' },
+                  { label: 'Kategori', value: notifCategory },
+                  { label: 'Poin Evaluasi', value: `${points > 0 ? '+' : ''}${points}` },
+                  { label: 'Tindak Lanjut', value: dto.actionTaken || assessment.actionTaken || 'Diterapkan Bagian Ketertiban' },
+                ],
+                actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/akademik/etika-tatib`,
+                actionText: 'Buka Buku Saku & Catatan Siswa',
+              })
+              .catch(() => {});
+          }
         }
       }
 

@@ -4,9 +4,10 @@ import { CharacterAssessmentsController } from './character-assessments.controll
 import { PrismaModule } from '../../core/prisma/prisma.module';
 import { WhatsAppModule } from '../../communication/whatsapp/whatsapp.module';
 import { SystemLogModule } from '../../core/system-log/system-log.module';
+import { NotificationsModule } from '../../communication/notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule, WhatsAppModule, SystemLogModule],
+  imports: [PrismaModule, WhatsAppModule, SystemLogModule, NotificationsModule],
   controllers: [CharacterAssessmentsController],
   providers: [CharacterAssessmentsService],
   exports: [CharacterAssessmentsService],

@@ -283,6 +283,12 @@ model Setting {
   backgroundUrl        String?
   timezone             String? @default("Asia/Jakarta")
   serverLocation       String? @default("Ponorogo, Jawa Timur")
+  smtpHost             String? @default("mail.smamuhipo.sch.id")
+  smtpPort             Int?    @default(465)
+  smtpUser             String? @default("dev@smamuhipo.sch.id")
+  smtpPass             String?
+  smtpFrom             String? @default("dev@smamuhipo.sch.id")
+  smtpFromName         String? @default("SIMASMUH SMA Muhammadiyah 1 Ponorogo")
 }
 
 model Announcement {

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EmailNotificationService } from './email.service';
 
 export interface NotificationData {
   userId: string;
@@ -59,6 +60,7 @@ export class NotificationsService {
   constructor(
     private prisma: PrismaService,
     private eventEmitter: EventEmitter2,
+    private emailNotificationService: EmailNotificationService,
   ) {}
 
   /**
@@ -424,13 +426,33 @@ export class NotificationsService {
   }
 
   /**
-   * Send email notification (placeholder implementation)
+   * Send email notification directly using EmailNotificationService
    */
   private async sendEmailNotification(notification: any): Promise<void> {
-    // This would integrate with email service (SendGrid, AWS SES, etc.)
-    this.logger.log(`Email notification sent to ${notification.user.email}`);
+    if (!notification.user?.email) {
+      this.logger.warn(`User ${notification.userId} does not have a linked Google/email address.`);
+      return;
+    }
 
-    // Emit event for email service to handle
+    this.logger.log(`Dispatching email notification to ${notification.user.email}`);
+
+    let category: any = 'SISTEM';
+    if (notification.type?.includes('PAYMENT') || notification.type?.includes('TAGIHAN')) {
+      category = 'KEUANGAN';
+    }
+
+    await this.emailNotificationService.sendEmailNotification({
+      to: notification.user.email,
+      subject: notification.title,
+      title: notification.title,
+      category,
+      recipientName: notification.user.name,
+      contentText: notification.message,
+      actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`,
+      actionText: 'Buka Dashboard SIMASMUH',
+    });
+
+    // Emit event for other handlers if any
     this.eventEmitter.emit('notification.email.send', {
       to: notification.user.email,
       subject: notification.title,
@@ -441,12 +463,258 @@ export class NotificationsService {
   }
 
   /**
+   * Get user's Google account link status and email notification preferences
+   */
+  async getUserEmailPreferences(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        username: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error('Pengguna tidak ditemukan');
+    }
+
+    const isGoogleLinked = !!(user.email && user.email.includes('@'));
+
+    return {
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isGoogleLinked,
+      preferences: {
+        notifPresensi: true,
+        notifKeuangan: true,
+        notifPengumuman: true,
+        notifKedisiplinan: true,
+        notifPerizinan: true,
+      },
+    };
+  }
+
+  /**
+   * Update user's Google linked email or notification preferences
+   */
+  async updateUserEmailPreferences(userId: string, data: { email?: string; preferences?: any }) {
+    if (data.email) {
+      const emailTrimmed = data.email.trim().toLowerCase();
+      // Check if email already used by another user
+      const existing = await this.prisma.user.findFirst({
+        where: {
+          email: emailTrimmed,
+          id: { not: userId },
+        },
+      });
+
+      if (existing) {
+        throw new Error('Alamat email Google ini sudah ditautkan ke akun lain.');
+      }
+
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { email: emailTrimmed },
+      });
+    }
+
+    return this.getUserEmailPreferences(userId);
+  }
+
+  /**
+   * Send test push notification email to user's Google account
+   */
+  async sendTestEmail(userId: string, customEmail?: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, role: true },
+    });
+
+    if (!user) {
+      throw new Error('Pengguna tidak ditemukan');
+    }
+
+    const targetEmail = customEmail || user.email;
+    if (!targetEmail || !targetEmail.includes('@')) {
+      throw new Error('Belum ada akun email aktif yang ditautkan ke profil Anda.');
+    }
+
+    const result = await this.emailNotificationService.sendEmailNotification({
+      to: targetEmail,
+      subject: `[Uji Coba Push Email] Sambungan Akun Email SIMASMUH`,
+      title: 'Uji Coba Pengiriman Notifikasi Email Berhasil!',
+      category: 'SISTEM',
+      badgeLabel: 'TEST NOTIFIKASI AKTIF',
+      recipientName: user.name,
+      contentText: 'Selamat! Akun email Anda telah berhasil terhubung dengan sistem SIMASMUH SMA Muhammadiyah 1 Ponorogo. Notifikasi penting seputar absensi harian, tagihan SPP, bukti bayar, dan pengumuman sekolah akan dikirimkan ke email ini.',
+      metaDetails: [
+        { label: 'Nama Pengguna', value: user.name },
+        { label: 'Peran / Role', value: user.role },
+        { label: 'Alamat Email', value: targetEmail },
+        { label: 'Waktu Pengujian', value: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB' },
+      ],
+      actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pengaturan/notifikasi`,
+      actionText: 'Kelola Pengaturan Notifikasi',
+    });
+
+    if (!result.success) {
+      return {
+        success: false,
+        email: targetEmail,
+        message: `Gagal mengirimkan email ke ${targetEmail}: ${result.error || 'Server SMTP menolak pengiriman. Periksa kembali host, port, dan kata sandi email.'}`,
+        error: result.error,
+        simulated: false,
+      };
+    }
+
+    return {
+      success: true,
+      email: targetEmail,
+      message: `Email uji coba berhasil dikirim ke ${targetEmail}`,
+      simulated: result.simulated,
+    };
+  }
+
+  /**
+   * Superadmin: Get SMTP Server Configuration
+   */
+  getSmtpConfig() {
+    return this.emailNotificationService.getSmtpConfig();
+  }
+
+  /**
+   * Superadmin: Update SMTP Server Configuration
+   */
+  updateSmtpConfig(config: any) {
+    return this.emailNotificationService.updateSmtpConfig(config);
+  }
+
+  /**
+   * Superadmin: Test SMTP Server Connection
+   */
+  async testSmtpConnection(tempConfig?: any) {
+    return this.emailNotificationService.testSmtpConnection(tempConfig);
+  }
+
+  /**
+   * Superadmin: Audit Google Email Link Statistics across all user roles
+   */
+  async getUserEmailAuditStats() {
+    const [totalUsers, linkedUsers, roleStats] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.user.count({
+        where: { email: { contains: '@' } },
+      }),
+      this.prisma.user.groupBy({
+        by: ['role'],
+        _count: { id: true },
+      }),
+    ]);
+
+    const linkedByRole = await this.prisma.user.groupBy({
+      by: ['role'],
+      where: { email: { contains: '@' } },
+      _count: { id: true },
+    });
+
+    const roleBreakdown = roleStats.map((r) => {
+      const linked = linkedByRole.find((lr) => lr.role === r.role)?._count.id || 0;
+      return {
+        role: r.role,
+        total: r._count.id,
+        linked,
+        percentage: r._count.id > 0 ? Math.round((linked / r._count.id) * 100) : 0,
+      };
+    });
+
+    return {
+      totalUsers,
+      linkedUsers,
+      unlinkedUsers: totalUsers - linkedUsers,
+      linkedPercentage: totalUsers > 0 ? Math.round((linkedUsers / totalUsers) * 100) : 0,
+      roleBreakdown,
+    };
+  }
+
+  /**
+   * Superadmin: Broadcast email to users based on target role
+   */
+  async broadcastEmail(data: {
+    targetRole: 'SEMUA' | 'GURU' | 'SISWA' | 'WALI_MURID' | 'PEGAWAI';
+    subject: string;
+    title: string;
+    category?: any;
+    message: string;
+    senderId?: string;
+  }) {
+    const where: any = {
+      email: { contains: '@' },
+    };
+
+    if (data.targetRole !== 'SEMUA') {
+      if (data.targetRole === 'WALI_MURID') {
+        where.role = 'WALI_MURID';
+      } else {
+        where.role = data.targetRole;
+      }
+    }
+
+    const recipients = await this.prisma.user.findMany({
+      where,
+      select: { id: true, name: true, email: true, role: true },
+    });
+
+    if (recipients.length === 0) {
+      throw new Error(`Tidak ada pengguna pada target ${data.targetRole} yang telah menautkan akun email.`);
+    }
+
+    let successCount = 0;
+    let failedCount = 0;
+
+    // Send emails
+    for (const recipient of recipients) {
+      if (!recipient.email) continue;
+      try {
+        const res = await this.emailNotificationService.sendEmailNotification({
+          to: recipient.email,
+          subject: data.subject,
+          title: data.title,
+          category: data.category || 'PENGUMUMAN',
+          recipientName: recipient.name,
+          contentText: data.message,
+          actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/informasi/pengumuman`,
+          actionText: 'Buka Pengumuman Sekolah',
+        });
+
+        if (res.success) {
+          successCount++;
+        } else {
+          failedCount++;
+        }
+      } catch (e) {
+        failedCount++;
+      }
+    }
+
+    return {
+      totalTarget: recipients.length,
+      successCount,
+      failedCount,
+      message: `Siaran email berhasil diproses: ${successCount} berhasil, ${failedCount} gagal dari total ${recipients.length} penerima.`,
+    };
+  }
+
+  /**
    * Send SMS notification (placeholder implementation)
    */
   private async sendSMSNotification(notification: any): Promise<void> {
-    // This would integrate with SMS service (Twilio, AWS SNS, etc.)
     this.logger.log(`SMS notification sent for user ${notification.userId}`);
-
     this.eventEmitter.emit('notification.sms.send', {
       userId: notification.userId,
       message: notification.message,
@@ -458,9 +726,7 @@ export class NotificationsService {
    * Send push notification (placeholder implementation)
    */
   private async sendPushNotification(notification: any): Promise<void> {
-    // This would integrate with push notification service (FCM, APNS, etc.)
     this.logger.log(`Push notification sent for user ${notification.userId}`);
-
     this.eventEmitter.emit('notification.push.send', {
       userId: notification.userId,
       title: notification.title,

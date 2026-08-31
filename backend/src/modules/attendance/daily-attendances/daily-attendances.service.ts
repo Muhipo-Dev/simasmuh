@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { IzinKeluarService } from '../izin-keluar/izin-keluar.service';
 import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
+import { EmailNotificationService } from '../../communication/notifications/email.service';
 
 @Injectable()
 export class DailyAttendancesService {
@@ -9,6 +10,7 @@ export class DailyAttendancesService {
     private prisma: PrismaService,
     private izinKeluarService: IzinKeluarService,
     private whatsAppService: WhatsAppService,
+    private emailNotificationService: EmailNotificationService,
   ) {}
 
   getQrToken() {
@@ -86,6 +88,51 @@ export class DailyAttendancesService {
         },
       });
 
+      // Kirim Notifikasi Email Otomatis (Gratis & Bebas Blokir)
+      if (user) {
+        // Ke Akun User jika ada email
+        if (user.email && user.email.includes('@')) {
+          this.emailNotificationService
+            .sendAttendanceNotification({
+              toEmail: user.email,
+              studentOrUserName: user.name,
+              status: 'HADIR (MASUK)',
+              time: timeString,
+              dateFormatted,
+              role: user.role,
+              type: 'MASUK',
+            })
+            .catch(() => {});
+        }
+
+        // Ke Orang Tua / Wali jika siswa
+        if (user.student?.id) {
+          this.prisma.parentStudent
+            .findMany({
+              where: { studentId: user.student.id },
+              include: { parent: { include: { user: true } } },
+            })
+            .then((parentRels) => {
+              for (const rel of parentRels) {
+                if (rel.parent?.user?.email && rel.parent.user.email.includes('@')) {
+                  this.emailNotificationService
+                    .sendAttendanceNotification({
+                      toEmail: rel.parent.user.email,
+                      studentOrUserName: user.name,
+                      status: 'HADIR (MASUK)',
+                      time: timeString,
+                      dateFormatted,
+                      role: 'SISWA',
+                      type: 'MASUK',
+                    })
+                    .catch(() => {});
+                }
+              }
+            })
+            .catch(() => {});
+        }
+      }
+
       // Kirim Notifikasi WhatsApp Otomatis
       if (user) {
         this.whatsAppService
@@ -139,6 +186,49 @@ export class DailyAttendancesService {
       where: { id: existing.id },
       data: { checkOutTime: timeString },
     });
+
+    // Kirim Notifikasi Email Otomatis Pulang
+    if (user) {
+      if (user.email && user.email.includes('@')) {
+        this.emailNotificationService
+          .sendAttendanceNotification({
+            toEmail: user.email,
+            studentOrUserName: user.name,
+            status: 'PULANG',
+            time: timeString,
+            dateFormatted,
+            role: user.role,
+            type: 'PULANG',
+          })
+          .catch(() => {});
+      }
+
+      if (user.student?.id) {
+        this.prisma.parentStudent
+          .findMany({
+            where: { studentId: user.student.id },
+            include: { parent: { include: { user: true } } },
+          })
+          .then((parentRels) => {
+            for (const rel of parentRels) {
+              if (rel.parent?.user?.email && rel.parent.user.email.includes('@')) {
+                this.emailNotificationService
+                  .sendAttendanceNotification({
+                    toEmail: rel.parent.user.email,
+                    studentOrUserName: user.name,
+                    status: 'PULANG',
+                    time: timeString,
+                    dateFormatted,
+                    role: 'SISWA',
+                    type: 'PULANG',
+                  })
+                  .catch(() => {});
+              }
+            }
+          })
+          .catch(() => {});
+      }
+    }
 
     // Kirim Notifikasi WhatsApp Otomatis
     if (user) {

@@ -21,7 +21,7 @@ export const superadminLinks = [
   { name: 'Berita & Informasi', href: '/informasi/pengumuman', icon: Megaphone },
   { name: 'Banner Utama', href: '/informasi/banner', icon: ImageIcon },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
-  { name: 'Kelola Notifikasi', href: '/pengaturan/notifikasi', icon: BellRing },
+  { name: 'Notifikasi Email', href: '/pengaturan/notifikasi', icon: Mail },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
 ]
 
@@ -42,7 +42,7 @@ export const bauLinks = [
   { name: 'Inventaris & Aset', href: '/fitur/inventaris', icon: Package },
   { name: 'Kepegawaian & HRD', href: '/fitur/kepegawaian', icon: UserCheck },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog },
-  { name: 'Kelola Notifikasi', href: '/pengaturan/notifikasi', icon: BellRing },
+  { name: 'Notifikasi Email', href: '/pengaturan/notifikasi', icon: Mail },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings },
 ]
 
@@ -54,6 +54,7 @@ export const guruLinks = [
   { name: 'Catatan Kedisiplinan', href: '/fitur/ketertiban', icon: ShieldAlert },
   { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen },
   { name: 'Izin Cuti', href: '/presensi/cuti', icon: CalendarDays },
+  { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
 export const siswaLinks = [
@@ -64,6 +65,7 @@ export const siswaLinks = [
   { name: 'Jadwal', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Keuangan', href: '/keuangan/laporan', icon: Wallet },
   { name: 'Etika & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck },
+  { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
 export const waliMuridLinks = [
@@ -73,7 +75,7 @@ export const waliMuridLinks = [
   { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award },
   { name: 'Tagihan & SPP', href: '/keuangan/laporan', icon: Wallet },
   { name: 'Etika & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck },
-  { name: 'Notifikasi WA', href: '/pengaturan/notifikasi-wali', icon: BellRing },
+  { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-wali', icon: Mail },
 ]
 
 export const pegawaiLinks = [
@@ -82,6 +84,7 @@ export const pegawaiLinks = [
   { name: 'Jurnal Pegawai', href: '/presensi/jurnal-karyawan', icon: BookOpen },
   { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen },
   { name: 'Izin Cuti', href: '/presensi/cuti', icon: CalendarDays },
+  { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
 export const kepalaSekolahLinks = [
@@ -97,6 +100,7 @@ export const kepalaSekolahLinks = [
   { name: 'Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen },
   { name: 'Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
   { name: 'Pengumuman', href: '/informasi/pengumuman', icon: Megaphone },
+  { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
 export const keuanganAllLinks = [
@@ -107,6 +111,7 @@ export const keuanganAllLinks = [
   { name: 'Virtual Account BNI', href: '/keuangan/virtual-account', icon: Database },
   { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText },
+  { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
 export const keuanganMasukLinks = [
@@ -115,12 +120,14 @@ export const keuanganMasukLinks = [
   { name: 'Virtual Account BNI', href: '/keuangan/virtual-account', icon: Database },
   { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText },
+  { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
 export const keuanganKeluarLinks = [
   { name: 'Dashboard Keuangan', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText },
+  { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
 
@@ -130,7 +137,13 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   if (roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')) return true
 
   // Dashboard utama dan halaman profil umum selalu diizinkan untuk semua user login
-  if (pathname === '/dashboard' || pathname === '/profil' || pathname === '/pengaturan/profil') return true
+  if (
+    pathname === '/dashboard' ||
+    pathname === '/profil' ||
+    pathname === '/pengaturan/profil' ||
+    pathname === '/pengaturan/notifikasi-pengguna' ||
+    pathname === '/pengaturan/notifikasi-wali'
+  ) return true
 
   // Scan QR presensi umum
   if (pathname === '/presensi/scan-qr') return true

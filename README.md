@@ -44,6 +44,16 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-08-31 (v1.9.3 - Pembaruan Notifikasi Multi-Kanal Terpadu, Dukungan Email Transaksional, Manajemen Notifikasi Pengguna & Wali Murid, dan Harmonisasi Menu Navigasi):**
+  * **Integrasi Email Transaksional (`EmailService` & `Nodemailer`):**
+    * Penambahan modul layanan pengiriman email transaksional berbasis SMTP (`nodemailer`) dengan konfigurasi dinamis via environment variable (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`).
+    * Dukungan notifikasi multi-kanal terpadu (In-App Notification, WhatsApp Gateway resmi, dan Email) pada modul presensi harian, izin keluar, tagihan & verifikasi pembayaran keuangan, serta evaluasi karakter/kedisiplinan.
+  * **Pemisahan & Penataan Manajemen Notifikasi Dashboard:**
+    * Perombakan halaman pengaturan notifikasi menjadi modul terstruktur: **Notifikasi Pengguna** (`/pengaturan/notifikasi-pengguna`) untuk log & riwayat notifikasi akun perorangan, dan **Pengaturan Notifikasi Sistem** (`/pengaturan/notifikasi`) untuk broadcast & monitoring konektivitas multi-kanal.
+    * Harmonisasi halaman **Notifikasi Wali Murid** (`/pengaturan/notifikasi-wali`) dengan filter target penerima, riwayat broadcast WhatsApp, dan status transmisi pesan.
+  * **Harmonisasi Navigasi & Label Menu (`nav-links.ts`):**
+    * Pembaruan label dan rute menu sidebar untuk membedakan secara jelas notifikasi personal pengguna, notifikasi wali murid, dan kontrol notifikasi sistem.
+
 * **2026-08-31 (v1.9.2 - Penguatan Sesi 30 Hari WhatsApp Gateway, Pengiriman Dokumen PDF, Verifikasi Poin Kedisiplinan & Redesain Interaktif Penilaian Karakter):**
   * **Penyempurnaan WhatsApp Gateway Service (`services/whatsapp-gateway/`):**
     * Penerapan kebijakan persistensi sesi 30 hari (*30-day session lifetime*) dengan mekanisme auto-reconnect, keep-alive ping socket Baileys, dan penanganan graceful reconnect tanpa auto-logout tak terduga.

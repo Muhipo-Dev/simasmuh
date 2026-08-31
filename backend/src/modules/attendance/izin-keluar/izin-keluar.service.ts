@@ -6,12 +6,14 @@ import {
 import * as crypto from 'crypto';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
+import { EmailNotificationService } from '../../communication/notifications/email.service';
 
 @Injectable()
 export class IzinKeluarService {
   constructor(
     private prisma: PrismaService,
     private whatsAppService: WhatsAppService,
+    private emailNotificationService: EmailNotificationService,
   ) {}
 
   // Ajukan izin presensi (Pegawai, Guru, Siswa, atau Orang Tua mewakili Siswa)
@@ -358,6 +360,31 @@ export class IzinKeluarService {
         day: 'numeric',
       });
 
+      // Kirim notifikasi Email pemberitahuan persetujuan izin
+      if (targetUser.email && targetUser.email.includes('@')) {
+        this.emailNotificationService
+          .sendEmailNotification({
+            to: targetUser.email,
+            subject: `[SIMASMUH] Persetujuan Permohonan Izin / Dispensasi`,
+            title: 'Permohonan Izin Disetujui',
+            category: 'PERIZINAN',
+            badgeLabel: 'DISETUJUI',
+            recipientName: targetUser.name,
+            contentText: `Permohonan izin Anda untuk tanggal ${dateFormatted} pukul ${izin.waktuKeluar} telah disetujui resmi oleh ${principalName}.`,
+            metaDetails: [
+              { label: 'Nama', value: targetUser.name },
+              { label: 'Tanggal', value: dateFormatted },
+              { label: 'Waktu', value: izin.waktuKeluar },
+              { label: 'Alasan', value: izin.alasan },
+              { label: 'E-Sign Token', value: eSignToken },
+              { label: 'Catatan', value: catatanAdmin || '-' },
+            ],
+            actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/presensi/izin-keluar`,
+            actionText: 'Lihat Surat Izin Digital',
+          })
+          .catch(() => {});
+      }
+
       this.whatsAppService
         .sendAttendanceNotification({
           studentOrUserName: targetUser.name,
@@ -403,7 +430,7 @@ export class IzinKeluarService {
       include: { user: { select: { name: true } } },
     });
 
-    // Kirim notifikasi WhatsApp penolakan izin
+    // Kirim notifikasi WhatsApp & Email penolakan izin
     if (izin.user) {
       const targetUser = izin.user;
       const dateFormatted = new Date(izin.date).toLocaleDateString('id-ID', {
@@ -412,6 +439,31 @@ export class IzinKeluarService {
         month: 'long',
         day: 'numeric',
       });
+
+      if (targetUser.email && targetUser.email.includes('@')) {
+        this.emailNotificationService
+          .sendEmailNotification({
+            to: targetUser.email,
+            subject: `[SIMASMUH] Informasi Permohonan Izin / Dispensasi`,
+            title: 'Permohonan Izin Ditolak',
+            category: 'PERIZINAN',
+            badgeLabel: 'DITOLAK',
+            recipientName: targetUser.name,
+            contentText: `Permohonan izin Anda untuk tanggal ${dateFormatted} tidak disetujui. ${catatanAdmin ? `Alasan: ${catatanAdmin}` : ''}`,
+            metaDetails: [
+              { label: 'Nama', value: targetUser.name },
+              { label: 'Tanggal', value: dateFormatted },
+              { label: 'Alasan Izin', value: izin.alasan },
+              {
+                label: 'Catatan Penolakan',
+                value: catatanAdmin || 'Silakan hubungi pihak sekolah/atasan langsung.',
+              },
+            ],
+            actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/presensi/izin-keluar`,
+            actionText: 'Buka Menu Perizinan',
+          })
+          .catch(() => {});
+      }
 
       const recipientPhones = [
         targetUser.phone,

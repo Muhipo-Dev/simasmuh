@@ -7,6 +7,7 @@ import { PaymentNotificationsService } from './payment-notifications.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationListenersService } from './notification-listeners.service';
+import { EmailNotificationService } from './email.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 
 @Module({
@@ -26,6 +27,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
   providers: [
     NotificationsService,
     PaymentNotificationsService,
+    EmailNotificationService,
     NotificationsGateway,
     NotificationListenersService,
     PrismaService,
@@ -33,6 +35,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
   exports: [
     NotificationsService,
     PaymentNotificationsService,
+    EmailNotificationService,
     NotificationsGateway,
     NotificationListenersService,
   ],

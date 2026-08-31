@@ -78,6 +78,36 @@ export class PaymentNotificationsService {
         priority: NotificationPriority.NORMAL,
         channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
       });
+
+      // Also notify parents connected to this student via Email and In-App
+      const parentRelations = await this.prisma.parentStudent.findMany({
+        where: { studentId: tagihan.studentId },
+        include: { parent: { include: { user: true } } },
+      });
+
+      for (const rel of parentRelations) {
+        if (rel.parent?.user?.id) {
+          await this.notificationsService.createNotification({
+            userId: rel.parent.user.id,
+            senderId: createdBy,
+            type: NotificationType.TAGIHAN_CREATED,
+            title: 'Pemberitahuan Tagihan SPP Siswa',
+            message: `Tagihan ${tagihan.type} untuk ananda ${tagihan.student.name} sebesar ${amount} telah diterbitkan. Jatuh tempo: ${dueDate}${vaInfo}`,
+            data: {
+              tagihanId: tagihan.id,
+              studentId: tagihan.studentId,
+              studentName: tagihan.student.name,
+              type: tagihan.type,
+              amount: tagihan.amount,
+              dueDate: tagihan.dueDate,
+              month: tagihan.month,
+              year: tagihan.year,
+            },
+            priority: NotificationPriority.NORMAL,
+            channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+          });
+        }
+      }
     } catch (error) {
       this.logger.error(
         `Failed to send tagihan created notification: ${error.message}`,
@@ -226,6 +256,44 @@ export class PaymentNotificationsService {
           : NotificationPriority.URGENT,
         channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
       });
+
+      // Also notify parents connected to this student
+      const parentRelations = await this.prisma.parentStudent.findMany({
+        where: { studentId: proof.studentId },
+        include: { parent: { include: { user: true } } },
+      });
+
+      for (const rel of parentRelations) {
+        if (rel.parent?.user?.id) {
+          await this.notificationsService.createNotification({
+            userId: rel.parent.user.id,
+            senderId: verifiedBy,
+            type: isApproved
+              ? NotificationType.PAYMENT_VERIFIED
+              : NotificationType.PAYMENT_REJECTED,
+            title: isApproved
+              ? 'Kwitansi Lunas: Pembayaran SPP Terverifikasi'
+              : 'Pemberitahuan: Bukti Pembayaran Perlu Diperbaiki',
+            message: isApproved
+              ? `Pembayaran ${proof.tagihan?.type || 'SPP'} untuk ananda ${proof.student.name} sebesar ${amount} telah diverifikasi lunas oleh staf keuangan. Kwitansi digital telah tersedia.`
+              : `Bukti pembayaran untuk ananda ${proof.student.name} sebesar ${amount} ditolak. ${notes ? `Alasan: ${notes}` : 'Silakan upload ulang bukti yang valid.'}`,
+            data: {
+              proofId: proof.id,
+              studentId: proof.studentId,
+              studentName: proof.student.name,
+              amount: proof.amount,
+              tagihanId: proof.tagihanId,
+              status,
+              notes,
+              verifiedBy: proof.verifiedUser?.name,
+            },
+            priority: isApproved
+              ? NotificationPriority.HIGH
+              : NotificationPriority.URGENT,
+            channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+          });
+        }
+      }
     } catch (error) {
       this.logger.error(
         `Failed to send payment proof verification notification: ${error.message}`,

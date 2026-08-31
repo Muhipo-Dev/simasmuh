@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Delete,
   Body,
@@ -39,6 +40,84 @@ export class NotificationsController {
       offset: offset ? parseInt(offset, 10) : undefined,
       status,
       type,
+    });
+  }
+
+  /**
+   * Get current user's Google account link status and email preferences
+   */
+  @Get('email-preferences')
+  async getEmailPreferences(@Req() req: any) {
+    return this.notificationsService.getUserEmailPreferences(req.user.id);
+  }
+
+  /**
+   * Update current user's email preferences or link Google email
+   */
+  @Put('email-preferences')
+  async updateEmailPreferences(
+    @Req() req: any,
+    @Body() body: { email?: string; preferences?: any },
+  ) {
+    return this.notificationsService.updateUserEmailPreferences(req.user.id, body);
+  }
+
+  /**
+   * Send test notification email to current user's linked Google email
+   */
+  @Post('test-email')
+  async sendTestEmail(
+    @Req() req: any,
+    @Body() body?: { email?: string },
+  ) {
+    return this.notificationsService.sendTestEmail(req.user.id, body?.email);
+  }
+
+  /**
+   * Superadmin: Get SMTP Server Configuration
+   */
+  @Get('smtp-config')
+  @RequirePermissions(PaymentPermission.SYSTEM_CONFIGURATION)
+  async getSmtpConfig() {
+    return this.notificationsService.getSmtpConfig();
+  }
+
+  /**
+   * Superadmin: Update SMTP Server Configuration
+   */
+  @Put('smtp-config')
+  @RequirePermissions(PaymentPermission.SYSTEM_CONFIGURATION)
+  async updateSmtpConfig(@Body() body: any) {
+    return this.notificationsService.updateSmtpConfig(body);
+  }
+
+  /**
+   * Superadmin: Test SMTP Server Connection
+   */
+  @Post('test-smtp')
+  @RequirePermissions(PaymentPermission.SYSTEM_CONFIGURATION)
+  async testSmtpConnection(@Body() body?: any) {
+    return this.notificationsService.testSmtpConnection(body);
+  }
+
+  /**
+   * Superadmin: Audit Google Email Link Statistics across all users
+   */
+  @Get('audit-stats')
+  @RequirePermissions(PaymentPermission.SYSTEM_CONFIGURATION)
+  async getUserEmailAuditStats() {
+    return this.notificationsService.getUserEmailAuditStats();
+  }
+
+  /**
+   * Superadmin: Broadcast email to target roles
+   */
+  @Post('broadcast-email')
+  @RequirePermissions(PaymentPermission.SYSTEM_CONFIGURATION)
+  async broadcastEmail(@Req() req: any, @Body() body: any) {
+    return this.notificationsService.broadcastEmail({
+      ...body,
+      senderId: req.user.id,
     });
   }
 

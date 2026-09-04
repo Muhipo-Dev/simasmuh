@@ -17,9 +17,7 @@ export class ApiKeyGuard implements CanActivate {
 
     const validApiKeys = [
       process.env.API_KEY || 'siakad_secret_api_key_2026',
-      process.env.WHATSAPP_API_KEY || 'simasmuh_wa_secret_2026',
       'siakad_secret_api_key_2026',
-      'simasmuh_wa_secret_2026',
     ];
 
     if (

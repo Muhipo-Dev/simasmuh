@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
-import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
+import { EmailNotificationService } from '../../communication/notifications/email.service';
 import { CreateGuestBookDto } from './dto/create-guest-book.dto';
 import { UpdateGuestBookStatusDto } from './dto/update-guest-book-status.dto';
 
@@ -10,7 +10,7 @@ export class GuestBookService {
   constructor(
     private prisma: PrismaService,
     private systemLogService: SystemLogService,
-    private whatsAppService: WhatsAppService,
+    private emailNotificationService: EmailNotificationService,
   ) {}
 
   private getWibTimeString(): string {
@@ -55,26 +55,42 @@ export class GuestBookService {
       },
     });
 
-    // 2. Notifikasi WhatsApp ke Petugas TU / Log WA
+    // 2. Notifikasi Email ke Petugas TU jika terkonfigurasi
     try {
-      const waMessage =
-        `🔔 *NOTIFIKASI TAMU BARU (BUKU TAMU SIMASMUH)* 🔔\n\n` +
-        `👤 *Nama*: ${guest.namaTamu}\n` +
-        `🏢 *Instansi/Asal*: ${guest.instansi}\n` +
-        `🏷️ *Kategori*: ${guest.kategori}\n` +
-        `🎯 *Tujuan/Keperluan*: ${guest.tujuan}\n` +
-        `🤝 *Dituju*: ${guest.dituju}\n` +
-        `📞 *Kontak (WA)*: ${guest.kontak || '-'}\n` +
-        `⏰ *Waktu Tiba*: ${guest.waktu}\n\n` +
-        `_Pesan otomatis dicatat dari Formulir QR Buku Tamu SIMASMUH._`;
-
-      await this.whatsAppService.sendDirectMessage({
-        to: guest.kontak || '088293733330',
-        message: waMessage,
-        category: 'INFORMASI',
-        recipientName: guest.namaTamu,
-        title: 'Pencatatan Buku Tamu',
+      const tuUsers = await this.prisma.user.findMany({
+        where: {
+          role: { in: ['ADMIN_TU', 'SUPERADMIN', 'ADMIN'] },
+          email: { contains: '@' },
+        },
+        select: { email: true, name: true },
+        take: 3,
       });
+
+      for (const tu of tuUsers) {
+        if (tu.email) {
+          this.emailNotificationService
+            .sendEmailNotification({
+              to: tu.email,
+              subject: `[Buku Tamu SIMASMUH] Kedatangan Tamu: ${guest.namaTamu} (${guest.instansi})`,
+              title: 'Pemberitahuan Kunjungan Tamu Baru',
+              category: 'SISTEM',
+              badgeLabel: 'BUKU TAMU QR',
+              recipientName: tu.name,
+              contentText: `Tamu baru atas nama ${guest.namaTamu} dari ${guest.instansi} telah mengisi buku tamu untuk keperluan ${guest.tujuan} (${guest.dituju}).`,
+              metaDetails: [
+                { label: 'Nama Tamu', value: guest.namaTamu },
+                { label: 'Instansi', value: guest.instansi },
+                { label: 'Kategori', value: guest.kategori },
+                { label: 'Tujuan', value: guest.tujuan },
+                { label: 'Dituju', value: guest.dituju },
+                { label: 'Waktu Tiba', value: guest.waktu || '-' },
+              ],
+              actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/buku-tamu`,
+              actionText: 'Lihat Daftar Kunjungan Tamu',
+            })
+            .catch(() => {});
+        }
+      }
     } catch (err) {
       // Non-blocking error logging
     }

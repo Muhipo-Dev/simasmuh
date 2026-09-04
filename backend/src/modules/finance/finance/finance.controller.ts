@@ -32,18 +32,13 @@ import {
 export class FinanceController {
   constructor(private readonly financeService: FinanceService) {}
 
-  // ----- Payroll (existing) -----
+  // ----- Payroll Summary & Management -----
   @Get('payroll-summary')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   getPayrollSummary(
     @Req() req: any,
     @Query('year') year: string,
     @Query('month') month: string,
-    @Query('harianRate') harianRate?: string,
-    @Query('subRoleAllowance') subRoleAllowance?: string,
-    @Query('minHadirBonus') minHadirBonus?: string,
-    @Query('insentifKetertiban') insentifKetertiban?: string,
-    @Query('tunjanganMakan') tunjanganMakan?: string,
   ) {
     const userSubRoles = [
       req.user?.subRole,
@@ -70,15 +65,168 @@ export class FinanceController {
       );
     }
 
-    return this.financeService.getPayrollSummary(
-      parseInt(year, 10),
-      parseInt(month, 10),
-      harianRate ? parseInt(harianRate, 10) : undefined,
-      subRoleAllowance ? parseInt(subRoleAllowance, 10) : undefined,
-      minHadirBonus ? parseInt(minHadirBonus, 10) : undefined,
-      insentifKetertiban ? parseInt(insentifKetertiban, 10) : undefined,
-      tunjanganMakan ? parseInt(tunjanganMakan, 10) : undefined,
+    const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
+
+    return this.financeService.getPayrollSummary(currentYear, currentMonth);
+  }
+
+  @Post('payroll/save-record')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  async savePayrollRecord(
+    @Req() req: any,
+    @Body()
+    body: {
+      userId: string;
+      year: number;
+      month: number;
+      employmentStatus?: string;
+      totalHours: number;
+      hourlyRate: number;
+      manualAllowances?: { name: string; amount: number }[];
+      manualDeductions?: { name: string; amount: number }[];
+      notes?: string;
+    },
+  ) {
+    const userSubRoles = [
+      req.user?.subRole,
+      req.user?.subRole2,
+      req.user?.subRole3,
+      req.user?.subRole4,
+      req.user?.subRole5,
+      req.user?.role,
+    ];
+    const isKeuanganAll = userSubRoles.some((r) =>
+      ['KEUANGAN_ALL', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
+
+    if (!isKeuanganAll) {
+      throw new ForbiddenException(
+        'Akses ditolak. Pengaturan komponen penggajian hanya dapat diubah oleh Keuangan All / Superadmin.',
+      );
+    }
+
+    return this.financeService.savePayrollRecord(
+      body.userId,
+      body.year,
+      body.month,
+      body,
+    );
+  }
+
+  @Patch('payroll/employment-status/:userId')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  async updateStaffEmploymentStatus(
+    @Req() req: any,
+    @Param('userId') userId: string,
+    @Body('employmentStatus') employmentStatus: string,
+  ) {
+    const userSubRoles = [
+      req.user?.subRole,
+      req.user?.subRole2,
+      req.user?.subRole3,
+      req.user?.subRole4,
+      req.user?.subRole5,
+      req.user?.role,
+    ];
+    const isKeuanganAll = userSubRoles.some((r) =>
+      ['KEUANGAN_ALL', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+    );
+
+    if (!isKeuanganAll) {
+      throw new ForbiddenException(
+        'Akses ditolak. Pengaturan status kepegawaian hanya dapat diubah oleh Keuangan All / Superadmin.',
+      );
+    }
+
+    return this.financeService.updateStaffEmploymentStatus(
+      userId,
+      employmentStatus,
+    );
+  }
+
+  @Patch('payroll/bank-account/:userId')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  async updateStaffBankAccount(
+    @Req() req: any,
+    @Param('userId') userId: string,
+    @Body() body: { bankName?: string; bankAccountNumber?: string; bankAccountHolder?: string },
+  ) {
+    const userSubRoles = [
+      req.user?.subRole,
+      req.user?.subRole2,
+      req.user?.subRole3,
+      req.user?.subRole4,
+      req.user?.subRole5,
+      req.user?.role,
+    ];
+    const isKeuanganAll = userSubRoles.some((r) =>
+      ['KEUANGAN_ALL', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+    );
+
+    if (!isKeuanganAll) {
+      throw new ForbiddenException(
+        'Akses ditolak. Pengaturan rekening pegawai hanya dapat diubah oleh Keuangan All / Superadmin.',
+      );
+    }
+
+    return this.financeService.updateStaffBankAccount(userId, body);
+  }
+
+  @Get('payroll/my-slip-gaji')
+  async getMySlipGaji(
+    @Req() req: any,
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+  ) {
+    const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
+    return this.financeService.getStaffSlipGaji(
+      req.user?.id,
+      currentYear,
+      currentMonth,
+    );
+  }
+
+  @Get('payroll/slip-gaji/:userId')
+  @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
+  async getStaffSlipGaji(
+    @Req() req: any,
+    @Param('userId') userId: string,
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+  ) {
+    const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
+    return this.financeService.getStaffSlipGaji(
+      userId,
+      currentYear,
+      currentMonth,
+    );
+  }
+
+  @Get('payroll/export-excel')
+  @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
+  async exportPayrollExcel(
+    @Query('year') year: string,
+    @Query('month') month: string,
+    @Res() res: any,
+  ) {
+    const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
+    const buffer = await this.financeService.generatePayrollExcel(
+      currentYear,
+      currentMonth,
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=Rekapitulasi_Penggajian_${currentMonth}_${currentYear}.xlsx`,
+    );
+    res.send(buffer);
   }
 
   // ----- Tagihan - Daftar Siswa -----

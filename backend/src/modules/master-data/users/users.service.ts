@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
-import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
+import { EmailNotificationService } from '../../communication/notifications/email.service';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 
@@ -14,7 +14,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private systemLogService: SystemLogService,
-    private whatsAppService: WhatsAppService,
+    private emailNotificationService: EmailNotificationService,
   ) {}
 
   async findAll() {
@@ -27,11 +27,17 @@ export class UsersService {
         phone: true,
         nipNbm: true,
         role: true,
+        employmentStatus: true,
         subRole: true,
         subRole2: true,
         subRole3: true,
         subRole4: true,
         subRole5: true,
+        avatarUrl: true,
+        address: true,
+        bankName: true,
+        bankAccountNumber: true,
+        bankAccountHolder: true,
         createdAt: true,
         teacherProfile: true,
         student: {
@@ -136,9 +142,9 @@ export class UsersService {
     const phoneValue =
       data.phone && data.phone.trim() !== ''
         ? data.phone.trim()
-        : '088293733330';
+        : null;
 
-    return this.prisma.user.create({
+    const createdUser = await this.prisma.user.create({
       data: {
         username: usernameValue,
         name: data.name,
@@ -147,22 +153,30 @@ export class UsersService {
         phone: phoneValue,
         password: hashedPassword,
         role: data.role || 'GURU',
+        employmentStatus: data.employmentStatus || (data.role === 'GURU' || data.subRole === 'GURU' ? 'GTTP' : 'PTTP'),
         subRole: data.subRole || null,
         subRole2: data.subRole2 || null,
         subRole3: data.subRole3 || null,
         subRole4: data.subRole4 || null,
         subRole5: data.subRole5 || null,
+        avatarUrl: data.avatarUrl || null,
+        address: data.address || null,
+        bankName: data.bankName || null,
+        bankAccountNumber: data.bankAccountNumber || null,
+        bankAccountHolder: data.bankAccountHolder || null,
         ...(data.role === 'GURU' ||
         data.subRole === 'GURU' ||
         data.subRole2 === 'GURU' ||
         data.subRole3 === 'GURU' ||
         data.subRole4 === 'GURU' ||
-        data.subRole5 === 'GURU'
+        data.subRole5 === 'GURU' ||
+        data.lastEducation
           ? {
               teacherProfile: {
                 create: {
                   ...(nipNbmValue ? { nip: nipNbmValue } : {}),
                   phone: phoneValue,
+                  lastEducation: data.lastEducation || 'S1 Pendidikan',
                 },
               },
             }
@@ -176,13 +190,26 @@ export class UsersService {
         phone: true,
         nipNbm: true,
         role: true,
+        employmentStatus: true,
         subRole: true,
         subRole2: true,
         subRole3: true,
         subRole4: true,
         subRole5: true,
+        avatarUrl: true,
+        address: true,
+        bankName: true,
+        bankAccountNumber: true,
+        bankAccountHolder: true,
+        teacherProfile: true,
       },
     });
+
+    if (createdUser && createdUser.avatarUrl) {
+      this.triggerFaceNetSync(createdUser.id);
+    }
+
+    return createdUser;
   }
 
   async update(id: string, data: any) {
@@ -195,6 +222,10 @@ export class UsersService {
       subRole4: data.subRole4 || null,
       subRole5: data.subRole5 || null,
     };
+
+    if (data.employmentStatus !== undefined) {
+      updateData.employmentStatus = data.employmentStatus;
+    }
 
     // Validasi Keamanan Tunggal (Single Role) Kepala Sekolah pada Update
     const isAssigningKepalaSekolah =
@@ -231,7 +262,7 @@ export class UsersService {
       updateData.phone =
         data.phone && data.phone.trim() !== ''
           ? data.phone.trim()
-          : '088293733330';
+          : null;
     }
 
     if (data.username !== undefined) {
@@ -289,23 +320,51 @@ export class UsersService {
       updateData.password = await bcrypt.hash(data.password.trim(), 10);
     }
 
+    if (data.avatarUrl !== undefined) {
+      updateData.avatarUrl = data.avatarUrl;
+    }
+    if (data.address !== undefined) {
+      updateData.address = data.address;
+    }
+    if (data.bankName !== undefined) {
+      updateData.bankName = data.bankName;
+    }
+    if (data.bankAccountNumber !== undefined) {
+      updateData.bankAccountNumber = data.bankAccountNumber;
+    }
+    if (data.bankAccountHolder !== undefined) {
+      updateData.bankAccountHolder = data.bankAccountHolder;
+    }
+
     if (
       data.role === 'GURU' ||
       data.subRole === 'GURU' ||
       data.subRole2 === 'GURU' ||
       data.subRole3 === 'GURU' ||
       data.subRole4 === 'GURU' ||
-      data.subRole5 === 'GURU'
+      data.subRole5 === 'GURU' ||
+      data.lastEducation !== undefined ||
+      data.certificationStatus !== undefined
     ) {
       const existingProfile = await this.prisma.teacherProfile.findUnique({
         where: { userId: id },
       });
+      const profileData: any = {};
+      if (nipNbmValue !== undefined) profileData.nip = nipNbmValue;
+      if (data.phone !== undefined) profileData.phone = data.phone;
+      if (data.lastEducation !== undefined) profileData.lastEducation = data.lastEducation;
+      if (data.certificationStatus !== undefined) profileData.certificationStatus = data.certificationStatus;
+      if (data.certificationYear !== undefined) profileData.certificationYear = Number(data.certificationYear) || null;
+
       if (!existingProfile) {
         updateData.teacherProfile = {
-          create: { ...(nipNbmValue ? { nip: nipNbmValue } : {}) },
+          create: {
+            ...(nipNbmValue ? { nip: nipNbmValue } : {}),
+            ...profileData,
+          },
         };
-      } else if (nipNbmValue !== undefined) {
-        updateData.teacherProfile = { update: { nip: nipNbmValue } };
+      } else if (Object.keys(profileData).length > 0) {
+        updateData.teacherProfile = { update: profileData };
       }
     }
 
@@ -326,6 +385,12 @@ export class UsersService {
         subRole4: true,
         subRole5: true,
         avatarUrl: true,
+        address: true,
+        employmentStatus: true,
+        bankName: true,
+        bankAccountNumber: true,
+        bankAccountHolder: true,
+        teacherProfile: true,
       },
     });
 
@@ -337,15 +402,87 @@ export class UsersService {
   }
 
   async remove(id: string) {
-    return this.prisma.user.delete({
+    const user = await this.prisma.user.findUnique({
       where: { id },
+      include: {
+        teacherProfile: {
+          include: {
+            homeroomClasses: true,
+            schedules: true,
+          },
+        },
+        student: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Pengguna tidak ditemukan');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Bersihkan relasi jika user memiliki TeacherProfile
+      if (user.teacherProfile) {
+        const teacherId = user.teacherProfile.id;
+        await tx.class.updateMany({
+          where: { homeroomTeacherId: teacherId },
+          data: { homeroomTeacherId: null },
+        });
+        await tx.teacherSubject.deleteMany({
+          where: { teacherId },
+        });
+        await tx.teachingJournal.deleteMany({
+          where: { teacherId },
+        });
+        await tx.homeroomJournal.deleteMany({
+          where: { teacherId },
+        });
+        const schedules = await tx.schedule.findMany({
+          where: { teacherId },
+          select: { id: true },
+        });
+        if (schedules.length > 0) {
+          const scheduleIds = schedules.map((s) => s.id);
+          await tx.attendance.deleteMany({
+            where: { scheduleId: { in: scheduleIds } },
+          });
+          await tx.teachingJournal.deleteMany({
+            where: { scheduleId: { in: scheduleIds } },
+          });
+          await tx.schedule.deleteMany({
+            where: { id: { in: scheduleIds } },
+          });
+        }
+        await tx.teacherProfile.deleteMany({
+          where: { id: teacherId },
+        });
+      }
+
+      // 2. Bersihkan relasi langsung user
+      await tx.announcement.deleteMany({ where: { authorId: id } });
+      await tx.dailyAttendance.deleteMany({ where: { userId: id } });
+      await tx.presensiKegiatan.deleteMany({ where: { userId: id } });
+      await tx.staffJournal.deleteMany({ where: { userId: id } });
+      await tx.izinKeluar.deleteMany({ where: { userId: id } });
+      await tx.userSession.deleteMany({ where: { userId: id } });
+      await tx.notification.deleteMany({
+        where: { OR: [{ userId: id }, { senderId: id }] },
+      });
+      await tx.characterAssessment.deleteMany({
+        where: { evaluatorId: id },
+      });
+      await tx.systemLog.deleteMany({ where: { userId: id } });
+
+      return tx.user.delete({
+        where: { id },
+      });
     });
   }
 
   async removeMany(ids: string[]) {
-    return this.prisma.user.deleteMany({
-      where: { id: { in: ids } },
-    });
+    for (const id of ids) {
+      await this.remove(id).catch(() => null);
+    }
+    return { success: true, count: ids.length };
   }
 
   async getProfile(id: string) {
@@ -748,36 +885,25 @@ export class UsersService {
     const resetToken = randomBytes(24).toString('hex');
     const resetUrl = `/login?action=reset-password&token=${resetToken}&u=${encodeURIComponent(user.username)}`;
 
-    const targetPhone =
-      user.phone ||
-      user.student?.phone ||
-      user.teacherProfile?.phone ||
-      user.parentProfile?.phone ||
-      '088293733330';
+    const targetEmail = user.email;
 
-    const message =
-      `*🔑 LINK RESET PASSWORD RESMI - SIMASMUH*\n\n` +
-      `Halo *${user.name}* (${user.role}),\n` +
-      `Superadmin / Helpdesk IT SIMASMUH telah membuatkan tautan pemulihan sandi resmi untuk akun Anda:\n\n` +
-      `👤 *Username:* ${user.username}\n` +
-      `🔗 *Tautan Reset:* ${resetUrl}\n` +
-      `⏱️ *Masa Berlaku:* 24 Jam\n\n` +
-      `*SOP Keamanan:*\n` +
-      `1. Klik tautan di atas melalui browser Anda.\n` +
-      `2. Buat kata sandi baru yang kuat (minimal 6 karakter).\n` +
-      `3. Jangan bagikan tautan ini kepada siapapun.\n\n` +
-      `_Pesan otomatis dari Supervisor Task Manager SIMASMUH._`;
-
-    // Kirim notifikasi WhatsApp ganda
-    let waResult: any = { status: 'SKIPPED' };
-    if (targetPhone) {
-      waResult = await this.whatsAppService.sendDirectMessage({
-        to: targetPhone,
-        message,
-        recipientName: user.name,
-        recipientRole: user.role,
+    let emailResult: any = { status: 'SKIPPED' };
+    if (targetEmail && targetEmail.includes('@')) {
+      emailResult = await this.emailNotificationService.sendEmailNotification({
+        to: targetEmail,
+        subject: `[SIMASMUH] Tautan Pemulihan Kata Sandi Akun`,
+        title: 'Pemulihan Kata Sandi Akun SIMASMUH',
         category: 'SISTEM',
-        title: 'Pemulihan Sandi Pengguna (Superadmin Task Manager)',
+        badgeLabel: 'RESET PASSWORD',
+        recipientName: user.name,
+        contentText: `Administrator / Helpdesk IT SIMASMUH telah membuatkan tautan pemulihan kata sandi resmi untuk akun Anda (${user.username}).`,
+        metaDetails: [
+          { label: 'Username', value: user.username },
+          { label: 'Peran Akun', value: user.role },
+          { label: 'Masa Berlaku', value: '24 Jam' },
+        ],
+        actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}${resetUrl}`,
+        actionText: 'Atur Ulang Kata Sandi Akun',
       });
     }
 
@@ -786,23 +912,23 @@ export class UsersService {
       category: 'AUTH',
       level: 'INFO',
       action: 'ADMIN_SEND_RESET_LINK',
-      message: `Superadmin mengirimkan tautan reset password ke ${user.name} (${user.username}) via WhatsApp (${targetPhone})`,
+      message: `Superadmin mengirimkan tautan reset password ke ${user.name} (${user.username}) via Email (${targetEmail || 'N/A'})`,
       userId: user.id,
       userName: user.name,
       userRole: user.role,
       details: {
         resetToken,
-        targetPhone,
+        targetEmail,
         sentBy: adminUser?.name || 'SUPERADMIN',
-        waStatus: waResult?.status,
+        emailStatus: emailResult?.success ? 'SENT' : 'SKIPPED_OR_FAILED',
       },
     });
 
     return {
       success: true,
-      message: `Link reset password berhasil digenerate dan dikirim via WhatsApp ke ${user.name} (${targetPhone}).`,
+      message: `Link reset password berhasil digenerate dan dikirim via Email ke ${user.name} (${targetEmail || 'Email Pengguna'}).`,
       resetUrl,
-      targetPhone,
+      targetEmail,
       recipientName: user.name,
       username: user.username,
     };

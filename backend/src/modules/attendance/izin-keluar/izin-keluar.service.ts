@@ -5,14 +5,12 @@ import {
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../core/prisma/prisma.service';
-import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
 import { EmailNotificationService } from '../../communication/notifications/email.service';
 
 @Injectable()
 export class IzinKeluarService {
   constructor(
     private prisma: PrismaService,
-    private whatsAppService: WhatsAppService,
     private emailNotificationService: EmailNotificationService,
   ) {}
 
@@ -67,6 +65,7 @@ export class IzinKeluarService {
           select: {
             id: true,
             name: true,
+            email: true,
             role: true,
             subRole: true,
             phone: true,
@@ -126,37 +125,28 @@ export class IzinKeluarService {
           .catch(() => {});
       }
 
-      // 2. Kirim Notifikasi WhatsApp & In-App ke Siswa & Wali Murid bahwa surat dispensasi telah diajukan
-      if (izin.user) {
-        const studentPhone = izin.user.phone || izin.user.student?.phone;
-        const parentPhone = izin.user.student?.parentPhone;
-
-        const notifMsg = `*Surat Dispensasi Resmi Siswa - SIMASMUH*\n\nDispensasi resmi atas nama *${studentName}* (Kelas ${className}) telah diterbitkan Tata Usaha untuk kegiatan *${data.alasan}* pada tanggal *${data.date}* (${data.waktuKeluar} - ${data.estimasiKembali || 'Selesai'}). Saat ini menunggu persetujuan akhir Kepala Sekolah.`;
-
-        if (studentPhone) {
-          this.whatsAppService
-            .sendDirectMessage({
-              to: studentPhone,
-              recipientName: studentName,
-              recipientRole: 'SISWA',
-              category: 'IZIN',
-              title: 'Pengajuan Dispensasi Siswa',
-              message: notifMsg,
-            })
-            .catch(() => {});
-        }
-        if (parentPhone && parentPhone !== studentPhone) {
-          this.whatsAppService
-            .sendDirectMessage({
-              to: parentPhone,
-              recipientName: `Wali dari ${studentName}`,
-              recipientRole: 'WALI_MURID',
-              category: 'IZIN',
-              title: 'Pengajuan Dispensasi Siswa',
-              message: notifMsg,
-            })
-            .catch(() => {});
-        }
+      // 2. Kirim Notifikasi Email ke Siswa jika memiliki email
+      if (izin.user && izin.user.email && izin.user.email.includes('@')) {
+        this.emailNotificationService
+          .sendEmailNotification({
+            to: izin.user.email,
+            subject: `[SIMASMUH] Pengajuan Surat Dispensasi Siswa`,
+            title: 'Pengajuan Dispensasi Resmi',
+            category: 'PERIZINAN',
+            badgeLabel: 'MENUNGGU PERSETUJUAN',
+            recipientName: studentName,
+            contentText: `Dispensasi resmi atas nama ${studentName} (Kelas ${className}) telah diterbitkan Tata Usaha untuk kegiatan ${data.alasan} pada tanggal ${data.date} (${data.waktuKeluar} - ${data.estimasiKembali || 'Selesai'}). Saat ini menunggu persetujuan akhir Kepala Sekolah.`,
+            metaDetails: [
+              { label: 'Nama Siswa', value: studentName },
+              { label: 'Kelas', value: className },
+              { label: 'Tanggal', value: data.date },
+              { label: 'Waktu', value: `${data.waktuKeluar} - ${data.estimasiKembali || 'Selesai'}` },
+              { label: 'Kegiatan', value: data.alasan },
+            ],
+            actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/presensi/izin-keluar`,
+            actionText: 'Pantau Status Perizinan',
+          })
+          .catch(() => {});
       }
     }
 
@@ -230,7 +220,7 @@ export class IzinKeluarService {
     if (category === 'SISWA') {
       where.user = { role: 'SISWA' };
     } else if (category === 'PEGAWAI') {
-      where.user = { role: { not: 'SISWA' } };
+      where.user = { role: { notIn: ['SISWA', 'WALI_MURID'] } };
     }
 
     return this.prisma.izinKeluar.findMany({
@@ -384,25 +374,6 @@ export class IzinKeluarService {
           })
           .catch(() => {});
       }
-
-      this.whatsAppService
-        .sendAttendanceNotification({
-          studentOrUserName: targetUser.name,
-          role: targetUser.role,
-          phone:
-            targetUser.phone ||
-            targetUser.teacherProfile?.phone ||
-            targetUser.student?.phone ||
-            undefined,
-          parentPhone: targetUser.student?.parentPhone || undefined,
-          className: targetUser.student?.class?.name || undefined,
-          scanType: 'IZIN',
-          time: izin.waktuKeluar,
-          date: dateFormatted,
-          method: `Surat Dispensasi / Izin Resmi (E-Sign: ${eSignToken})`,
-          notes: `Alasan: ${izin.alasan}${catatanAdmin ? ` | Catatan: ${catatanAdmin}` : ''} | Ditandatangani Digital oleh ${principalName}`,
-        })
-        .catch(() => {});
     }
 
     return updated;
@@ -430,7 +401,7 @@ export class IzinKeluarService {
       include: { user: { select: { name: true } } },
     });
 
-    // Kirim notifikasi WhatsApp & Email penolakan izin
+    // Kirim notifikasi Email penolakan izin
     if (izin.user) {
       const targetUser = izin.user;
       const dateFormatted = new Date(izin.date).toLocaleDateString('id-ID', {
@@ -461,26 +432,6 @@ export class IzinKeluarService {
             ],
             actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/presensi/izin-keluar`,
             actionText: 'Buka Menu Perizinan',
-          })
-          .catch(() => {});
-      }
-
-      const recipientPhones = [
-        targetUser.phone,
-        targetUser.teacherProfile?.phone,
-        targetUser.student?.phone,
-        targetUser.student?.parentPhone,
-      ].filter(Boolean) as string[];
-
-      for (const phone of recipientPhones) {
-        this.whatsAppService
-          .sendDirectMessage({
-            to: phone,
-            recipientName: targetUser.name,
-            recipientRole: targetUser.role,
-            category: 'ABSENSI',
-            title: `Status Izin: Ditolak - ${targetUser.name}`,
-            message: `*PEMBERITAHUAN STATUS IZIN - SMA MUHAMMADIYAH 1 PONOROGO*\n❌ Status: *IZIN TIDAK DISETUJUI / DITOLAK*\n\nNama: *${targetUser.name}*\nTanggal: *${dateFormatted}*\nAlasan Pengajuan: ${izin.alasan}\nCatatan Admin: *${catatanAdmin || 'Izin tidak dapat disetujui oleh pihak sekolah.'}*\n\nSilakan konfirmasi ke pihak tata usaha / kesiswaan jika ada pertanyaan lebih lanjut.`,
           })
           .catch(() => {});
       }

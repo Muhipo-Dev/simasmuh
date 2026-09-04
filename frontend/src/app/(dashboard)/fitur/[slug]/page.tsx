@@ -28,6 +28,8 @@ import { PersuratanManagement } from '@/components/tu/PersuratanManagement'
 import { InventarisManagement } from '@/components/tu/InventarisManagement'
 import { KepegawaianManagement } from '@/components/tu/KepegawaianManagement'
 import { GuestBookManagement } from '@/components/tu/GuestBookManagement'
+import { NotulensiRapatManagement } from '@/components/tu/NotulensiRapatManagement'
+import { KegiatanSekolahManagement } from '@/components/tu/KegiatanSekolahManagement'
 
 type GuestEntry = {
   id: string
@@ -117,7 +119,7 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
       { title: 'Catatan Pembinaan', desc: 'Verifikasi & persetujuan catatan kedisiplinan guru.', status: 'DALAM_PENGEMBANGAN' },
       { title: 'Poin Kedisiplinan Siswa', desc: 'Pencatatan pelanggaran & teladan oleh seluruh guru.', status: 'DALAM_PENGEMBANGAN' },
       { title: 'Penerapan Skor Siswa', desc: 'Penetapan resmi skor ketertiban siswa ke buku saku.', status: 'SEGERA_HADIR' },
-      { title: 'Notifikasi Otomatis Wali', desc: 'Kirim notifikasi in-app & WhatsApp resmi ke wali murid.', status: 'SEGERA_HADIR' },
+      { title: 'Notifikasi Otomatis Wali', desc: 'Kirim notifikasi in-app & Email resmi ke wali murid.', status: 'SEGERA_HADIR' },
     ]
   },
   kebersihan: {
@@ -150,18 +152,18 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
     ]
   },
   kepegawaian: {
-    title: 'Kepegawaian (HRD)',
-    roleName: 'Kepegawaian',
-    category: 'Manajemen SDM',
+    title: 'Humas & SDM',
+    roleName: 'Humas & SDM',
+    category: 'Manajemen Humas & SDM',
     icon: UserCheck,
-    gradient: 'from-violet-600 via-purple-600 to-indigo-700',
-    badgeColor: 'bg-violet-500/10 text-violet-600 border-violet-500/20 dark:bg-violet-400/10 dark:text-violet-400',
-    description: 'Modul data pegawai, rekrutmen, pengajuan SK, dan pengarsipan berkas kepegawaian.',
+    gradient: 'from-purple-600 via-indigo-600 to-violet-700',
+    badgeColor: 'bg-purple-500/10 text-purple-600 border-purple-500/20 dark:bg-purple-400/10 dark:text-purple-400',
+    description: 'Pusat tata kelola Humas & SDM, publikasi web, arsip berkas kepegawaian guru/karyawan, rekrutmen digital, perizinan cuti, dan evaluasi kinerja terintegrasi.',
     modules: [
-      { title: 'Rekrutmen Pegawai', desc: 'Pengelolaan berkas pelamar dan penerimaan.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Database Pegawai', desc: 'Penyimpanan arsip SK, ijazah, dan NIP/NBM.', status: 'DALAM_PENGEMBANGAN' },
-      { title: 'Cuti & Izin Kerja', desc: 'Pengajuan cuti dan izin kerja digital.', status: 'TAHAP_DESAIN' },
-      { title: 'Evaluasi Kinerja', desc: 'Penilaian kinerja pendidik & tenaga kependidikan.', status: 'SEGERA_HADIR' },
+      { title: 'Database Pegawai & Guru', desc: 'Sinkronisasi arsip SK, ijazah, NIP/NBM, dan profil pegawai.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Rekrutmen & Seleksi Calon Pegawai', desc: 'Pengelolaan berkas pelamar, tahapan seleksi, hingga SK penerimaan.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Cuti & Perizinan Kerja', desc: 'Verifikasi dan persetujuan permohonan cuti oleh SDM.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Evaluasi Kinerja Pendidik', desc: 'Penilaian kinerja kompetensi pedagogik, profesional, kepribadian & sosial.', status: 'DALAM_PENGEMBANGAN' },
     ]
   },
   'bk-bp': {
@@ -219,6 +221,64 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
       { title: 'Template Surat', desc: 'Generator surat keterangan dan rekomendasi.', status: 'TAHAP_DESAIN' },
       { title: 'Disposisi Digital', desc: 'Alur penerusan surat masuk ke unit kerja.', status: 'SEGERA_HADIR' },
       { title: 'E-Archive', desc: 'Penyimpanan arsip dokumen penting sekolah.', status: 'DALAM_PENGEMBANGAN' },
+    ]
+  },
+  'notulensi-rapat': {
+    title: 'Notulensi Rapat',
+    roleName: 'Humas & SDM / Admin TU',
+    category: 'Administrasi & Humas',
+    icon: FileText,
+    gradient: 'from-purple-600 via-indigo-600 to-slate-800',
+    badgeColor: 'bg-purple-500/10 text-purple-600 border-purple-500/20 dark:bg-purple-400/10 dark:text-purple-400',
+    description: 'Pusat tata kelola notulensi rapat, rekam hasil keputusan, daftar hadir, dan tindak lanjut kedinasan.',
+    modules: [
+      { title: 'Rapat Dinas & Pimpinan', desc: 'Pencatatan rapat dinas dan koordinasi pimpinan.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Koordinasi Humas & SDM', desc: 'Arsip agenda pembahasan Humas dan SDM.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Daftar Hadir Digital', desc: 'Rekap absensi kehadiran peserta rapat.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Action Plan & Keputusan', desc: 'Dokumentasi tindak lanjut hasil keputusan resmi.', status: 'DALAM_PENGEMBANGAN' },
+    ]
+  },
+  notulensi: {
+    title: 'Notulensi Rapat',
+    roleName: 'Humas & SDM / Admin TU',
+    category: 'Administrasi & Humas',
+    icon: FileText,
+    gradient: 'from-purple-600 via-indigo-600 to-slate-800',
+    badgeColor: 'bg-purple-500/10 text-purple-600 border-purple-500/20 dark:bg-purple-400/10 dark:text-purple-400',
+    description: 'Pusat tata kelola notulensi rapat, rekam hasil keputusan, daftar hadir, dan tindak lanjut kedinasan.',
+    modules: [
+      { title: 'Rapat Dinas & Pimpinan', desc: 'Pencatatan rapat dinas dan koordinasi pimpinan.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Koordinasi Humas & SDM', desc: 'Arsip agenda pembahasan Humas dan SDM.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Daftar Hadir Digital', desc: 'Rekap absensi kehadiran peserta rapat.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Action Plan & Keputusan', desc: 'Dokumentasi tindak lanjut hasil keputusan resmi.', status: 'DALAM_PENGEMBANGAN' },
+    ]
+  },
+  kegiatan: {
+    title: 'Kegiatan Sekolah',
+    roleName: 'Humas & SDM / Admin TU',
+    category: 'Administrasi & Humas',
+    icon: Sparkles,
+    gradient: 'from-emerald-600 via-teal-600 to-slate-800',
+    badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
+    description: 'Pusat agenda kegiatan sekolah (Kajian Selasa Pagi, Workshop, Upacara) dan presensi mandiri via QR Code.',
+    modules: [
+      { title: 'Kajian Selasa Pagi', desc: 'Pencatatan materi kajian rutin dan presensi kehadiran.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'QR Code Generator', desc: 'Generate QR dinamis untuk scan absensi pegawai.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Presensi Live & Rekap', desc: 'Daftar hadir realtime, ekspor excel, dan cetak PDF.', status: 'DALAM_PENGEMBANGAN' },
+    ]
+  },
+  'kegiatan-sekolah': {
+    title: 'Kegiatan Sekolah',
+    roleName: 'Humas & SDM / Admin TU',
+    category: 'Administrasi & Humas',
+    icon: Sparkles,
+    gradient: 'from-emerald-600 via-teal-600 to-slate-800',
+    badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
+    description: 'Pusat agenda kegiatan sekolah (Kajian Selasa Pagi, Workshop, Upacara) dan presensi mandiri via QR Code.',
+    modules: [
+      { title: 'Kajian Selasa Pagi', desc: 'Pencatatan materi kajian rutin dan presensi kehadiran.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'QR Code Generator', desc: 'Generate QR dinamis untuk scan absensi pegawai.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Presensi Live & Rekap', desc: 'Daftar hadir realtime, ekspor excel, dan cetak PDF.', status: 'DALAM_PENGEMBANGAN' },
     ]
   }
 }
@@ -719,42 +779,7 @@ export default function FiturSubRolePage() {
         </Button>
       </div>
 
-      {/* Hero Banner Section (Hanya untuk fitur lain selain persuratan, kepegawaian, inventaris, buku-tamu, ketertiban & bk-bp yang sudah memiliki panel antarmuka lengkap) */}
-      {slug !== 'persuratan' && slug !== 'kepegawaian' && slug !== 'inventaris' && slug !== 'buku-tamu' && slug !== 'ketertiban' && slug !== 'bk-bp' && (
-        <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-6 sm:p-10 shadow-2xl border border-slate-800">
-          <div className={`absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-gradient-to-br ${config.gradient} opacity-20 blur-3xl rounded-full pointer-events-none`} />
-          
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="space-y-4 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-amber-300">
-                <Sparkle className="w-3.5 h-3.5 animate-pulse text-amber-400" />
-                <span>Layanan Kesiswaan & Kedisiplinan Sekolah</span>
-              </div>
-              
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
-                {config.title}
-              </h1>
-              
-              <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-                {config.description}
-              </p>
-            </div>
-
-            <div className="flex flex-col items-center justify-center self-center bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shrink-0 min-w-[200px] text-center shadow-inner">
-              <div className={`p-4 rounded-2xl bg-gradient-to-br ${config.gradient} shadow-lg mb-3`}>
-                <IconComponent className="w-10 h-10 text-white" />
-              </div>
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status Fitur</span>
-              <span className="text-sm font-extrabold text-emerald-400 mt-1 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                Aktif Siap Pakai
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Render Interaktif khusus Persuratan, Kepegawaian, Inventaris, Buku Tamu, Ketertiban & BK/BP */}
+      {/* Render Interaktif khusus Persuratan, Kepegawaian, Inventaris, Buku Tamu, Kegiatan, Notulensi, Ketertiban & BK/BP */}
       {slug === 'persuratan' ? (
         <PersuratanManagement />
       ) : slug === 'kepegawaian' ? (
@@ -763,6 +788,10 @@ export default function FiturSubRolePage() {
         <InventarisManagement />
       ) : slug === 'buku-tamu' ? (
         <GuestBookManagement />
+      ) : slug === 'kegiatan' || slug === 'kegiatan-sekolah' ? (
+        <KegiatanSekolahManagement />
+      ) : slug === 'notulensi-rapat' || slug === 'notulensi' ? (
+        <NotulensiRapatManagement />
       ) : slug === 'ketertiban' || slug === 'bk-bp' ? (
         <InteractiveCharacterAssessmentManagement mode={slug === 'bk-bp' ? 'BK' : 'KETERTIBAN'} />
       ) : (

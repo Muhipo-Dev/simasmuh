@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { IzinKeluarService } from '../izin-keluar/izin-keluar.service';
-import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
 import { EmailNotificationService } from '../../communication/notifications/email.service';
 
 @Injectable()
@@ -9,7 +8,6 @@ export class DailyAttendancesService {
   constructor(
     private prisma: PrismaService,
     private izinKeluarService: IzinKeluarService,
-    private whatsAppService: WhatsAppService,
     private emailNotificationService: EmailNotificationService,
   ) {}
 
@@ -22,7 +20,8 @@ export class DailyAttendancesService {
   }
 
   private getTimeString(date: Date) {
-    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   }
 
   async scanQr(userId: string, token: string) {
@@ -133,27 +132,6 @@ export class DailyAttendancesService {
         }
       }
 
-      // Kirim Notifikasi WhatsApp Otomatis
-      if (user) {
-        this.whatsAppService
-          .sendAttendanceNotification({
-            studentOrUserName: user.name,
-            role: user.role,
-            phone:
-              user.phone ||
-              user.teacherProfile?.phone ||
-              user.student?.phone ||
-              undefined,
-            parentPhone: user.student?.parentPhone || undefined,
-            className: user.student?.class?.name || undefined,
-            scanType: 'MASUK',
-            time: timeString,
-            date: dateFormatted,
-            method: 'Scan QR Code SIMASMUH',
-          })
-          .catch(() => {});
-      }
-
       return {
         ...record,
         scanType: 'MASUK',
@@ -230,27 +208,6 @@ export class DailyAttendancesService {
       }
     }
 
-    // Kirim Notifikasi WhatsApp Otomatis
-    if (user) {
-      this.whatsAppService
-        .sendAttendanceNotification({
-          studentOrUserName: user.name,
-          role: user.role,
-          phone:
-            user.phone ||
-            user.teacherProfile?.phone ||
-            user.student?.phone ||
-            undefined,
-          parentPhone: user.student?.parentPhone || undefined,
-          className: user.student?.class?.name || undefined,
-          scanType: 'PULANG',
-          time: timeString,
-          date: dateFormatted,
-          method: 'Scan QR Code SIMASMUH',
-        })
-        .catch(() => {});
-    }
-
     return {
       ...updated,
       scanType: 'PULANG',
@@ -315,9 +272,9 @@ export class DailyAttendancesService {
       izinMap.set(izin.userId, izin);
     }
 
-    // Get all staff & teachers (not SISWA)
+    // Get all staff & teachers (not SISWA or WALI_MURID)
     const staffList = await this.prisma.user.findMany({
-      where: { role: { not: 'SISWA' } },
+      where: { role: { notIn: ['SISWA', 'WALI_MURID'] } },
       select: {
         id: true,
         name: true,

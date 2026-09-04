@@ -36,9 +36,15 @@ model User {
   staffJournals     StaffJournal[]
   characterAssessments CharacterAssessment[]
   student           Student?
+  employmentStatus  String?           @default("GTTP") // PTTP, GTTP, GTP, PTP
+  bankName          String?           // misal: BNI, BRI, BSI, Mandiri, BCA, Jateng Syariah
+  bankAccountNumber String?           // Nomor rekening bank
+  bankAccountHolder String?           // Nama pemilik rekening bank
+  payrollRecords    PayrollRecord[]
   teacherProfile    TeacherProfile?
   parentProfile     ParentProfile?
   sessions          UserSession[]
+  presensiKegiatans PresensiKegiatan[]
 }
 
 model UserSession {
@@ -634,6 +640,85 @@ model GuestBook {
   @@index([createdAt])
 }
 
+model NotulensiRapat {
+  id                String   @id @default(uuid())
+  nomorNotulensi    String?  @unique
+  judulRapat        String
+  agenda            String?
+  kategori          String   @default("RAPAT_DINAS") // RAPAT_DINAS, RAPAT_GURU, RAPAT_KOORDINASI_SDM, RAPAT_PIMPINAN, RAPAT_WALI_MURID, RAPAT_KOMITE
+  tanggal           DateTime @default(now())
+  waktuMulai        String?  // e.g. 08:00
+  waktuSelesai      String?  // e.g. 11:30
+  tempat            String   @default("Aula Utama")
+  pemimpinRapat     String
+  notulis           String
+  pesertaHadirCount Int      @default(0)
+  pesertaTotalCount Int      @default(0)
+  daftarPeserta     String?  // Text daftar nama/peserta yang hadir
+  poinPembahasan    String?  // Teks uraian jalannya pembahasan diskusi
+  keputusanHasil    String   // Teks keputusan mutlak / hasil rapat
+  tindakLanjut      String?  // Action plan tindak lanjut
+  fotoDokumentasi   String?  // URL/Path foto dokumentasi rapat fisik
+  fileLampiran      String?  // URL/Path berkas lampiran (PDF/materi)
+  status            String   @default("FINAL") // DRAF, FINAL, DIVERIFIKASI
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([kategori])
+  @@index([status])
+  @@index([tanggal])
+  @@index([createdAt])
+}
+
+model KegiatanSekolah {
+  id               String             @id @default(uuid())
+  nomorKegiatan    String?            @unique // e.g. KEG-2026-001
+  namaKegiatan     String             // e.g. Kajian Selasa Pagi
+  kategori         String             @default("KAJIAN_SELASA_PAGI") // KAJIAN_SELASA_PAGI, WORKSHOP_PELATIHAN, UPACARA_APEL, PENGAJIAN_AKBAR, RAPAT_KHUSUS, KEGIATAN_LAIN
+  tanggal          DateTime           @default(now())
+  waktuMulai       String?            // e.g. 06:45
+  waktuSelesai     String?            // e.g. 07:30
+  tempat           String             @default("Masjid / Aula Utama")
+  pemateri         String?            // e.g. Ustadz Ahmad, M.Pd.I
+  penanggungJawab  String?            // e.g. Tim Humas & Ismuba
+  ringkasanMateri  String?            // Resume/catatan materi kegiatan
+  dokumentasiUrl   String?            // Foto dokumentasi / drive link
+  qrCodeToken      String             @unique // Unique token for scanning QR
+  status           String             @default("DIBUKA") // DIBUKA, SELESAI, DITUTUP, DIBATALKAN
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  presensis        PresensiKegiatan[]
+
+  @@index([kategori])
+  @@index([status])
+  @@index([tanggal])
+  @@index([qrCodeToken])
+  @@index([createdAt])
+}
+
+model PresensiKegiatan {
+  id             String          @id @default(uuid())
+  kegiatanId     String
+  userId         String
+  namaPeserta    String
+  nipNbm         String?
+  role           String          @default("GURU")
+  waktuPresensi  DateTime        @default(now())
+  metode         String          @default("QR_SCAN") // QR_SCAN, MANUAL
+  keterangan     String?         // Hadir tepat waktu, etc.
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  kegiatan       KegiatanSekolah @relation(fields: [kegiatanId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([kegiatanId, userId])
+  @@index([kegiatanId])
+  @@index([userId])
+  @@index([waktuPresensi])
+}
+
 model SuratKeluar {
   id               String    @id @default(uuid())
   nomorSurat       String
@@ -713,6 +798,46 @@ model SuratDisposisi {
   @@index([eSignToken])
   @@index([statusEsign])
   @@index([createdAt])
+}
+
+model PayrollRecord {
+  id                String   @id @default(uuid())
+  userId            String
+  month             Int      // 1-12
+  year              Int      // e.g. 2026
+  employmentStatus  String?  // PTTP, GTTP, GTP, PTP
+  
+  // Gaji Pokok (Otomatis berdasarkan Jumlah Jam x Satuan Tarif Perjam)
+  totalHours        Float    @default(0)
+  hourlyRate        Float    @default(0)
+  baseSalary        Float    @default(0) // totalHours * hourlyRate
+  
+  // Tunjangan Presensi (Otomatis dari Log Absensi Masuk & Pulang)
+  transportAllowance Float   @default(0) // Datang <= 07:05 (5k) + Pulang >= 15:00/13:30 (5k)
+  mealAllowance     Float    @default(0) // Durasi Masuk s/d Pulang >= 6 jam (8k)
+  totalAttendanceDays Int    @default(0)
+  
+  // Komponen Manual (Diinput bebas oleh Keuangan All / Superadmin)
+  // Format JSON array: [{ name: "Tunjangan Jabatan", amount: 500000 }, ...]
+  manualAllowances  Json?    // Array object { name: string, amount: number }
+  // Format JSON array: [{ name: "Potongan Koperasi", amount: 100000 }, ...]
+  manualDeductions  Json?    // Array object { name: string, amount: number }
+  
+  // Akumulasi Total
+  totalAllowance    Float    @default(0)
+  totalDeduction    Float    @default(0)
+  netSalary         Float    @default(0) // baseSalary + transportAllowance + mealAllowance + manualAllowances - manualDeductions
+  
+  notes             String?
+  isPublished       Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month, year])
+  @@index([month, year])
+  @@index([userId])
 }
 
 

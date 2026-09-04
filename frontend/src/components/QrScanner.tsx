@@ -122,6 +122,24 @@ export function QrScanner({ studentMode = false }: QrScannerProps) {
     setScanResult(null)
 
     try {
+      // 1. Cek apakah ini token kegiatan sekolah (Format KEG-*)
+      if (data.startsWith('KEG-')) {
+        const resKegiatan = await authenticatedFetch('/api-backend/kegiatan-sekolah/presensi/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qrCodeToken: data, userId })
+        })
+        const resKegiatanData = await resKegiatan.json()
+        if (!resKegiatan.ok) throw new Error(resKegiatanData.message || 'Gagal presensi kegiatan')
+
+        setScanResult('success')
+        setScanType(null)
+        setMessage(resKegiatanData.message || `Presensi "${resKegiatanData.kegiatan?.namaKegiatan}" Berhasil!`)
+        queryClient.invalidateQueries({ queryKey: ['kegiatan-sekolah'] })
+        return
+      }
+
+      // 2. Jika bukan KEG-, proses sebagai presensi harian masuk/pulang
       const res = await authenticatedFetch('/api-backend/daily-attendances/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

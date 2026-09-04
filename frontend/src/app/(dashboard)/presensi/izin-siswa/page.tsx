@@ -71,7 +71,7 @@ export function IzinSiswaManagement() {
   const isGuru = user?.role === 'GURU' || user?.subRole === 'GURU' || isWaliKelas
   const isTatib = user?.role === 'KETERTIBAN' || user?.subRole === 'KETERTIBAN' || user?.subRole2 === 'KETERTIBAN' || user?.subRole3 === 'KETERTIBAN' || user?.subRole4 === 'KETERTIBAN' || user?.subRole5 === 'KETERTIBAN'
   const isBk = user?.role === 'BK_BP' || user?.role === 'BK' || user?.subRole === 'BK_BP' || user?.subRole === 'BK' || user?.subRole2 === 'BK_BP' || user?.subRole3 === 'BK_BP' || user?.subRole4 === 'BK_BP' || user?.subRole5 === 'BK_BP'
-  const isWaliMurid = user?.role === 'WALI_MURID' || user?.role === 'ORANG_TUA' || user?.role === 'PARENT'
+  const isWaliMurid = user?.role === 'WALI_MURID'
   const isSiswa = user?.role === 'SISWA'
   
   // Tim Ketertiban (TATIB) & Tim BK/BP & Wali Kelas memverifikasi semua izin siswa & melakukan pengecekan secara berkala

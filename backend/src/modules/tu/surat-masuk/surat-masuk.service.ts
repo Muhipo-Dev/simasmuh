@@ -6,7 +6,7 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
-import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
+import { EmailNotificationService } from '../../communication/notifications/email.service';
 import { CreateSuratMasukDto } from './dto/create-surat-masuk.dto';
 import { UpdateSuratMasukDto } from './dto/update-surat-masuk.dto';
 import { CreateDisposisiDto } from './dto/create-disposisi.dto';
@@ -17,7 +17,7 @@ export class SuratMasukService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly systemLogService: SystemLogService,
-    private readonly whatsAppService: WhatsAppService,
+    private readonly emailNotificationService: EmailNotificationService,
   ) {}
 
   /**
@@ -359,52 +359,42 @@ export class SuratMasukService {
 
       const recipientStr = allTargetLabels.join(', ');
 
-      // Cari user terdaftar di database yang sesuai dengan nama/role target
+      // Cari user terdaftar di database yang sesuai dengan nama target
       const matchedUsers = await this.prisma.user.findMany({
         where: {
-          OR: [
-            { name: { in: recipientNames, mode: 'insensitive' } },
-            { phone: { not: null } },
-          ],
+          name: { in: recipientNames, mode: 'insensitive' },
+          email: { contains: '@' },
         },
-        take: 3,
+        take: 5,
       });
 
-      const messageContent =
-        `📌 *PENDELEGAIAN DISPOSISI SURAT MASUK*\n\n` +
-        `Assalamu'alaikum Wr. Wb.\n` +
-        `Yth. Bapak/Ibu (${recipientStr}), Anda menerima pendelegasian tindak lanjut Surat Masuk resmi yang telah diverifikasi & di-E-Sign oleh Kepala Sekolah (${signerName}).\n\n` +
-        `📋 *Detail Disposisi:*\n` +
-        `• No. Agenda: *${disposisi.nomorAgenda || surat.nomorAgenda}*\n` +
-        `• Instansi Pengirim: *${surat.instansi}*\n` +
-        `• No. Surat: *${surat.nomorSurat}*\n` +
-        `• Perihal: *${surat.perihal}*\n` +
-        `• Instruksi: *${Array.isArray(disposisi.instruksi) ? disposisi.instruksi.join(', ') : 'Ditindak Lanjuti'}*\n` +
-        `• Catatan Pimpinan: _"${disposisi.catatan || 'Segera koordinasikan dan tindak lanjuti.'}"_\n\n` +
-        `Mohon segera ditindaklanjuti sesuai instruksi pimpinan. Terima kasih.\n\n` +
-        `_SIMASMUH — SMA Muhammadiyah 1 Ponorogo_`;
-
-      if (matchedUsers.length > 0) {
-        for (const u of matchedUsers) {
-          const targetPhone = u.phone || '088293733330';
-          await this.whatsAppService.sendDirectMessage({
-            to: targetPhone,
-            recipientName: u.name || recipientStr,
-            title: 'PENDELEGAIAN DISPOSISI SURAT MASUK',
-            message: messageContent,
-          });
+      for (const u of matchedUsers) {
+        if (u.email) {
+          this.emailNotificationService
+            .sendEmailNotification({
+              to: u.email,
+              subject: `[Disposisi Surat Masuk] ${surat.perihal}`,
+              title: 'Pendelegasian Disposisi Surat Masuk',
+              category: 'PERIZINAN',
+              badgeLabel: 'DISPOSISI KEPALA SEKOLAH',
+              recipientName: u.name,
+              contentText: `Anda menerima pendelegasian tindak lanjut Surat Masuk resmi yang telah diverifikasi & di-E-Sign oleh Kepala Sekolah (${signerName}).`,
+              metaDetails: [
+                { label: 'No. Agenda', value: disposisi.nomorAgenda || surat.nomorAgenda },
+                { label: 'Instansi Pengirim', value: surat.instansi },
+                { label: 'No. Surat', value: surat.nomorSurat },
+                { label: 'Perihal', value: surat.perihal },
+                { label: 'Instruksi', value: Array.isArray(disposisi.instruksi) ? disposisi.instruksi.join(', ') : 'Ditindak Lanjuti' },
+                { label: 'Catatan Pimpinan', value: disposisi.catatan || 'Segera koordinasikan dan tindak lanjuti.' },
+              ],
+              actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tu/surat-masuk`,
+              actionText: 'Buka Lembar Disposisi Digital',
+            })
+            .catch(() => {});
         }
-      } else {
-        // Fallback pengiriman ke nomor resmi default
-        await this.whatsAppService.sendDirectMessage({
-          to: '088293733330',
-          recipientName: recipientStr,
-          title: 'PENDELEGAIAN DISPOSISI SURAT MASUK',
-          message: messageContent,
-        });
       }
     } catch (err) {
-      console.error('Gagal mengirim notifikasi WhatsApp Disposisi:', err);
+      console.error('Gagal mengirim notifikasi Email Disposisi:', err);
     }
   }
 

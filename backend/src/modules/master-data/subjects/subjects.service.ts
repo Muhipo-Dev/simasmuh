@@ -155,6 +155,39 @@ export class SubjectsService {
   }
 
   async remove(id: string) {
-    return this.prisma.subject.delete({ where: { id } });
+    const subject = await this.prisma.subject.findUnique({
+      where: { id },
+      include: { teacherSubjects: true, schedules: true, grades: true },
+    });
+    if (!subject) return null;
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Hapus relasi mata pelajaran guru
+      await tx.teacherSubject.deleteMany({ where: { subjectId: id } });
+
+      // 2. Hapus nilai yang terikat dengan mata pelajaran ini
+      await tx.grade.deleteMany({ where: { subjectId: id } });
+
+      // 3. Hapus jadwal & absensi yang terikat dengan mata pelajaran ini
+      const schedules = await tx.schedule.findMany({
+        where: { subjectId: id },
+        select: { id: true },
+      });
+      if (schedules.length > 0) {
+        const scheduleIds = schedules.map((s) => s.id);
+        await tx.attendance.deleteMany({
+          where: { scheduleId: { in: scheduleIds } },
+        });
+        await tx.teachingJournal.deleteMany({
+          where: { scheduleId: { in: scheduleIds } },
+        });
+        await tx.schedule.deleteMany({
+          where: { id: { in: scheduleIds } },
+        });
+      }
+
+      // 4. Hapus mata pelajaran
+      return tx.subject.delete({ where: { id } });
+    });
   }
 }

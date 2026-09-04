@@ -60,8 +60,9 @@ export function CutiPegawaiManagement() {
   const isGuru = user?.role === 'GURU' || user?.subRole === 'GURU'
   const isPegawai = user?.role === 'PEGAWAI' || user?.role === 'KARYAWAN'
 
-  // Hanya bagian SDM (KEPEGAWAIAN subRole di TU) yang dapat verifikasi & approve cuti
-  const isSdm = user?.subRole === 'KEPEGAWAIAN' || user?.subRole2 === 'KEPEGAWAIAN' || user?.subRole3 === 'KEPEGAWAIAN' || user?.role === 'KEPEGAWAIAN'
+  // Hanya bagian SDM (KEPEGAWAIAN / SDM / WAKA SDM & HUMAS subRole) yang dapat verifikasi & approve cuti
+  const sdmRoles = ['KEPEGAWAIAN', 'SDM', 'WAKA_HUMAS_SDM', 'HUMAS_SDM']
+  const isSdm = sdmRoles.includes(user?.subRole) || sdmRoles.includes(user?.subRole2) || sdmRoles.includes(user?.subRole3) || sdmRoles.includes(user?.subRole4) || sdmRoles.includes(user?.subRole5) || sdmRoles.includes(user?.role)
   const canManageAll = isSuperAdmin && false || isSdm // Superadmin TIDAK bisa verifikasi, hanya SDM TU
   // Kepala Sekolah hanya supervisi statistik (lihat semua, tanpa aksi)
   const canViewAll = isSdm || isKepalaSekolah

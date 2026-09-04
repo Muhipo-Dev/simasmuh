@@ -140,18 +140,105 @@ export class TeachersService {
   }
 
   async remove(id: string) {
-    // Because onDelete: Cascade is on TeacherProfile -> User, if we delete User, TeacherProfile is deleted.
-    // Wait, the schema says TeacherProfile belongs to User. If we delete TeacherProfile, User remains?
-    // Let's delete the TeacherProfile and its associated User.
     const teacher = await this.prisma.teacherProfile.findUnique({
       where: { id },
+      include: {
+        homeroomClasses: true,
+        schedules: true,
+        teachingJournals: true,
+        teacherSubjects: true,
+        homeroomJournals: true,
+      },
     });
-    if (teacher) {
-      // Deleting the user will cascade and delete the teacher profile if configured,
-      // but in our schema User has teacherProfile? and TeacherProfile has User @relation(onDelete: Cascade).
-      // So if we delete User, TeacherProfile is deleted.
-      return this.prisma.user.delete({ where: { id: teacher.userId } });
+
+    if (!teacher) {
+      return null;
     }
-    return null;
+
+    const userId = teacher.userId;
+
+    // Bersihkan relasi TeacherProfile sebelum penghapusan agar tidak terblok foreign key constraint
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Lepas jabatan wali kelas pada tabel Class
+      if (teacher.homeroomClasses && teacher.homeroomClasses.length > 0) {
+        await tx.class.updateMany({
+          where: { homeroomTeacherId: teacher.id },
+          data: { homeroomTeacherId: null },
+        });
+      }
+
+      // 2. Hapus relasi mata pelajaran guru
+      await tx.teacherSubject.deleteMany({
+        where: { teacherId: teacher.id },
+      });
+
+      // 3. Hapus jurnal mengajar & jurnal wali kelas terkait guru ini
+      await tx.teachingJournal.deleteMany({
+        where: { teacherId: teacher.id },
+      });
+      await tx.homeroomJournal.deleteMany({
+        where: { teacherId: teacher.id },
+      });
+
+      // 4. Hapus jadwal (Schedule) & kehadiran jadwal terkait profil guru ini
+      const schedules = await tx.schedule.findMany({
+        where: { teacherId: teacher.id },
+        select: { id: true },
+      });
+      if (schedules.length > 0) {
+        const scheduleIds = schedules.map((s) => s.id);
+        await tx.attendance.deleteMany({
+          where: { scheduleId: { in: scheduleIds } },
+        });
+        await tx.teachingJournal.deleteMany({
+          where: { scheduleId: { in: scheduleIds } },
+        });
+        await tx.schedule.deleteMany({
+          where: { id: { in: scheduleIds } },
+        });
+      }
+
+      // 5. Bersihkan entitas User relasi jika ada: DailyAttendance, Pengeluaran, Announcement, dll
+      await tx.announcement.deleteMany({
+        where: { authorId: userId },
+      });
+      await tx.dailyAttendance.deleteMany({
+        where: { userId },
+      });
+      await tx.presensiKegiatan.deleteMany({
+        where: { userId },
+      });
+      await tx.staffJournal.deleteMany({
+        where: { userId },
+      });
+      await tx.izinKeluar.deleteMany({
+        where: { userId },
+      });
+      await tx.userSession.deleteMany({
+        where: { userId },
+      });
+      await tx.notification.deleteMany({
+        where: { OR: [{ userId }, { senderId: userId }] },
+      });
+      await tx.characterAssessment.deleteMany({
+        where: { evaluatorId: userId },
+      });
+      await tx.systemLog.deleteMany({
+        where: { userId },
+      });
+
+      // 6. Hapus profil guru dan akun User
+      await tx.teacherProfile.deleteMany({
+        where: { id: teacher.id },
+      });
+
+      if (userId) {
+        await tx.user.delete({
+          where: { id: userId },
+        });
+      }
+    });
+
+    return { success: true, message: 'Data guru berhasil dihapus' };
   }
 }

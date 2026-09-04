@@ -358,7 +358,8 @@ export default function ProfilePage() {
     GURU: 'Guru', PEGAWAI: 'Karyawan', SISWA: 'Siswa', ADMIN_IT: 'Admin IT', KEUANGAN: 'Keuangan',
     ADMIN_TU: 'Tata Usaha (Badan Administrasi Umum)', BAU: 'Tata Usaha (Badan Administrasi Umum)', TATA_USAHA: 'Tata Usaha (Badan Administrasi Umum)',
     BK_BP: 'BK/BP', PEMBINA_EXTRA: 'Pembina Ekstrakulikuler', PEMBINA_EKSTRA: 'Pembina Ekstrakulikuler',
-    KURIKULUM: 'Kurikulum', KESISWAAN: 'Kesiswaan', KEAMANAN: 'Keamanan', KEPEGAWAIAN: 'Kepegawaian',
+    KURIKULUM: 'Kurikulum', KESISWAAN: 'Kesiswaan', KEAMANAN: 'Keamanan', KEPEGAWAIAN: 'Humas & SDM',
+    SDM: 'Humas & SDM', WAKA_HUMAS_SDM: 'Humas & SDM', HUMAS_SDM: 'Humas & SDM',
     KEBERSIHAN: 'Kebersihan', KEPALA_SEKOLAH: 'Kepala Sekolah', ADMIN_WEB: 'Admin Web',
     KETERTIBAN: 'Ketertiban', PUSTAKAWAN: 'Pustakawan', GURU_TAHFIDZ: 'Guru Tahfidz', PERSURATAN: 'Persuratan',
     WALI_KELAS: 'Wali Kelas', GURU_PIKET: 'Guru Piket'

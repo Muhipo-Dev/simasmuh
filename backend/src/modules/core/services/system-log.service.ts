@@ -6,7 +6,7 @@ export interface CreateLogDto {
     | 'AUTH'
     | 'PRESENSI'
     | 'KEUANGAN'
-    | 'WHATSAPP'
+    | 'EMAIL'
     | 'AKADEMIK'
     | 'SISTEM'
     | 'SECURITY';

@@ -1,14 +1,14 @@
 {
   "showPublicStream": true,
   "showPublicLogs": true,
-  "streamUrl": "BROWSER_WEBCAM",
+  "streamUrl": "rtsp://admin:password@192.168.1.64:554/Streaming/Channels/101",
   "cameraName": "Camera AI",
   "location": "Lab Kom",
-  "threshold": 0.86,
-  "cooldownMinutes": 74,
-  "isActive": false,
+  "threshold": 0.9,
+  "cooldownMinutes": 115,
+  "isActive": true,
   "welcomeVoice": true,
   "apiKeySecret": "simasmuh_face_token_secret_2026",
-  "updatedAt": "2026-08-30T02:09:26.337Z",
-  "streamSourceType": "BROWSER_WEBCAM"
+  "updatedAt": "2026-09-04T02:30:52.113Z",
+  "streamSourceType": "RTSP"
 }

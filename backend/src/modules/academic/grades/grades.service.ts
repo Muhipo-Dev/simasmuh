@@ -5,9 +5,24 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 export class GradesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(filter?: { nis?: string; studentId?: string }) {
+    const where: any = {};
+    if (filter?.studentId) {
+      where.studentId = filter.studentId;
+    } else if (filter?.nis) {
+      where.student = { nis: filter.nis };
+    }
+
     return this.prisma.grade.findMany({
-      include: { student: true, subject: true },
+      where,
+      include: {
+        student: {
+          include: {
+            class: true,
+          },
+        },
+        subject: true,
+      },
     });
   }
 

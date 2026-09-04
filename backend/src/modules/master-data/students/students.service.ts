@@ -300,15 +300,45 @@ export class StudentsService {
   }
 
   async remove(id: string) {
-    const student = await this.prisma.student.findUnique({ where: { id } });
-    if (student) {
-      if (student.userId) {
-        return this.prisma.user.delete({ where: { id: student.userId } });
-      } else {
-        return this.prisma.student.delete({ where: { id } });
+    const student = await this.prisma.student.findUnique({
+      where: { id },
+      include: { user: true },
+    });
+    if (!student) return null;
+
+    const userId = student.userId;
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Bersihkan relasi langsung tabel Student
+      await tx.attendance.deleteMany({ where: { studentId: id } });
+      await tx.grade.deleteMany({ where: { studentId: id } });
+      await tx.paymentProof.deleteMany({ where: { studentId: id } });
+      await tx.payment.deleteMany({ where: { studentId: id } });
+      await tx.virtualAccountTransaction.deleteMany({ where: { studentId: id } });
+      await tx.tagihan.deleteMany({ where: { studentId: id } });
+      await tx.parentStudent.deleteMany({ where: { studentId: id } });
+      await tx.characterAssessment.deleteMany({ where: { studentId: id } });
+
+      // 2. Hapus entitas Student
+      await tx.student.delete({ where: { id } });
+
+      // 3. Hapus entitas User jika ada
+      if (userId) {
+        await tx.dailyAttendance.deleteMany({ where: { userId } });
+        await tx.presensiKegiatan.deleteMany({ where: { userId } });
+        await tx.staffJournal.deleteMany({ where: { userId } });
+        await tx.izinKeluar.deleteMany({ where: { userId } });
+        await tx.userSession.deleteMany({ where: { userId } });
+        await tx.notification.deleteMany({
+          where: { OR: [{ userId }, { senderId: userId }] },
+        });
+        await tx.systemLog.deleteMany({ where: { userId } });
+
+        await tx.user.delete({ where: { id: userId } });
       }
-    }
-    return null;
+
+      return { success: true, message: 'Data siswa berhasil dihapus' };
+    });
   }
 
   /**

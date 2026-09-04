@@ -43,7 +43,7 @@ export interface FaceDetectionLog {
   cameraName: string;
 }
 
-import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
+import { EmailNotificationService } from '../../communication/notifications/email.service';
 import { SystemLogService } from '../../core/services/system-log.service';
 
 @Injectable()
@@ -69,7 +69,7 @@ export class FaceAttendanceService implements OnModuleInit {
 
   constructor(
     private prisma: PrismaService,
-    private whatsAppService: WhatsAppService,
+    private emailNotificationService: EmailNotificationService,
     private systemLogService: SystemLogService,
   ) {
     this.ensureConfigExists();
@@ -148,7 +148,7 @@ export class FaceAttendanceService implements OnModuleInit {
           streamUrl: '0',
           cameraName: 'Camera Gerbang Utama',
           location: 'Gerbang Depan Sekolah',
-          threshold: 0.48,
+          threshold: 0.70,
           cooldownMinutes: 10,
           isActive: false,
           welcomeVoice: true,
@@ -212,7 +212,7 @@ export class FaceAttendanceService implements OnModuleInit {
       streamUrl: '0',
       cameraName: 'Camera Gerbang Utama',
       location: 'Gerbang Depan Sekolah',
-      threshold: 0.48,
+      threshold: 0.90,
       cooldownMinutes: 10,
       isActive: false,
       welcomeVoice: true,
@@ -382,6 +382,16 @@ export class FaceAttendanceService implements OnModuleInit {
       throw new BadRequestException('Kunci autentikasi API kamera tidak valid');
     }
 
+    // Validasi mutlak batas input log sistem & absensi: harus di atas atau sama dengan 90% (0.90)
+    // Deteksi di bawah 90% (misal 70%-89%) hanya diizinkan untuk live preview tapi ditolak masuk ke log absen sistem
+    const minAttendanceThreshold = 0.90;
+    const confidenceValue = Number(payload.confidence) || 0;
+    if (confidenceValue < minAttendanceThreshold) {
+      throw new BadRequestException(
+        `Tingkat kemiripan wajah (${Math.round(confidenceValue * 100)}%) belum memenuhi syarat mutlak pencatatan log sistem (minimum 90%).`,
+      );
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: payload.userId },
       include: {
@@ -429,29 +439,25 @@ export class FaceAttendanceService implements OnModuleInit {
       scanType = 'MASUK';
       message = `Presensi Masuk berhasil dicatat pukul ${timeString}`;
 
-      // Kirim Notifikasi WhatsApp Otomatis
-      this.whatsAppService
-        .sendAttendanceNotification({
-          studentOrUserName: user.name,
-          role: user.role,
-          phone:
-            user.phone ||
-            user.teacherProfile?.phone ||
-            user.student?.phone ||
-            undefined,
-          parentPhone: user.student?.parentPhone || undefined,
-          className: user.student?.class?.name || undefined,
-          scanType: 'MASUK',
-          time: timeString,
-          date: today.toLocaleDateString('id-ID', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          }),
-          method: 'Face Recognition AI Camera',
-        })
-        .catch(() => {});
+      // Kirim Notifikasi Email Masuk
+      if (user.email && user.email.includes('@')) {
+        this.emailNotificationService
+          .sendAttendanceNotification({
+            toEmail: user.email,
+            studentOrUserName: user.name,
+            status: 'HADIR',
+            time: timeString,
+            dateFormatted: today.toLocaleDateString('id-ID', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            role: user.role,
+            type: 'MASUK',
+          })
+          .catch(() => {});
+      }
     } else if (!existing.checkOutTime) {
       // Check cooldown time between in and out
       if (existing.checkInTime) {
@@ -467,29 +473,25 @@ export class FaceAttendanceService implements OnModuleInit {
           scanType = 'PULANG';
           message = `Presensi Pulang berhasil dicatat pukul ${timeString}`;
 
-          // Kirim Notifikasi WhatsApp Otomatis
-          this.whatsAppService
-            .sendAttendanceNotification({
-              studentOrUserName: user.name,
-              role: user.role,
-              phone:
-                user.phone ||
-                user.teacherProfile?.phone ||
-                user.student?.phone ||
-                undefined,
-              parentPhone: user.student?.parentPhone || undefined,
-              className: user.student?.class?.name || undefined,
-              scanType: 'PULANG',
-              time: timeString,
-              date: today.toLocaleDateString('id-ID', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              }),
-              method: 'Face Recognition AI Camera',
-            })
-            .catch(() => {});
+          // Kirim Notifikasi Email Pulang
+          if (user.email && user.email.includes('@')) {
+            this.emailNotificationService
+              .sendAttendanceNotification({
+                toEmail: user.email,
+                studentOrUserName: user.name,
+                status: 'PULANG',
+                time: timeString,
+                dateFormatted: today.toLocaleDateString('id-ID', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                }),
+                role: user.role,
+                type: 'PULANG',
+              })
+              .catch(() => {});
+          }
         } else {
           scanType = 'SUDAH_LENGKAP';
           message = `Sudah tercatat masuk pada ${existing.checkInTime}. Cooldown ${config.cooldownMinutes} menit sebelum absen pulang.`;
@@ -502,29 +504,24 @@ export class FaceAttendanceService implements OnModuleInit {
         scanType = 'PULANG';
         message = `Presensi Pulang berhasil dicatat pukul ${timeString}`;
 
-        // Kirim Notifikasi WhatsApp Otomatis
-        this.whatsAppService
-          .sendAttendanceNotification({
-            studentOrUserName: user.name,
-            role: user.role,
-            phone:
-              user.phone ||
-              user.teacherProfile?.phone ||
-              user.student?.phone ||
-              undefined,
-            parentPhone: user.student?.parentPhone || undefined,
-            className: user.student?.class?.name || undefined,
-            scanType: 'PULANG',
-            time: timeString,
-            date: today.toLocaleDateString('id-ID', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            }),
-            method: 'Face Recognition AI Camera',
-          })
-          .catch(() => {});
+        if (user.email && user.email.includes('@')) {
+          this.emailNotificationService
+            .sendAttendanceNotification({
+              toEmail: user.email,
+              studentOrUserName: user.name,
+              status: 'PULANG',
+              time: timeString,
+              dateFormatted: today.toLocaleDateString('id-ID', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              }),
+              role: user.role,
+              type: 'PULANG',
+            })
+            .catch(() => {});
+        }
       }
     } else {
       scanType = 'SUDAH_LENGKAP';
@@ -934,32 +931,26 @@ export class FaceAttendanceService implements OnModuleInit {
     try {
       let localPath: string | null = null;
       if (user.avatarUrl) {
-        if (user.avatarUrl.startsWith('/uploads/')) {
-          const cleanRel = user.avatarUrl.replace(/^\/uploads\//, '');
-          const possiblePaths = [
-            join(STORAGE_ROOT, cleanRel),
-            join(STORAGE_ROOT, 'profiles', cleanRel),
-            join(STORAGE_ROOT, path.basename(cleanRel)),
-            join(STORAGE_ROOT, 'profiles', path.basename(cleanRel)),
-          ];
-          for (const p of possiblePaths) {
-            if (existsSync(p)) {
-              localPath = p;
-              break;
-            }
-          }
-        } else if (!user.avatarUrl.startsWith('http')) {
-          const possiblePaths = [
-            join(STORAGE_ROOT, user.avatarUrl),
-            join(STORAGE_ROOT, 'profiles', user.avatarUrl),
-            join(STORAGE_ROOT, path.basename(user.avatarUrl)),
-            join(STORAGE_ROOT, 'profiles', path.basename(user.avatarUrl)),
-          ];
-          for (const p of possiblePaths) {
-            if (existsSync(p)) {
-              localPath = p;
-              break;
-            }
+        const cleanRel = user.avatarUrl.replace(/^\/uploads\//, '');
+        const storageRoots = [
+          STORAGE_ROOT,
+          'D:/simasmuh_storage',
+          'C:/simasmuh_storage',
+          join(process.cwd(), 'storage'),
+        ];
+        const possiblePaths: string[] = [];
+        for (const sRoot of storageRoots) {
+          possiblePaths.push(
+            join(sRoot, cleanRel),
+            join(sRoot, 'profiles', cleanRel),
+            join(sRoot, path.basename(cleanRel)),
+            join(sRoot, 'profiles', path.basename(cleanRel)),
+          );
+        }
+        for (const p of possiblePaths) {
+          if (existsSync(p)) {
+            localPath = p;
+            break;
           }
         }
       }

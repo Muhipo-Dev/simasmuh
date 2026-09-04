@@ -41,10 +41,7 @@ const ROLE_CONFIG: Record<string, { label: string; bg: string; text: string; bor
   GURU: { label: 'GURU', bg: 'bg-emerald-50 dark:bg-emerald-950/80', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
   PEGAWAI: { label: 'PEGAWAI', bg: 'bg-cyan-50 dark:bg-cyan-950/80', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
   KARYAWAN: { label: 'PEGAWAI', bg: 'bg-cyan-50 dark:bg-cyan-950/80', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
-  KEUANGAN: { label: 'KEUANGAN', bg: 'bg-emerald-50 dark:bg-emerald-950/80', text: 'text-emerald-800 dark:text-emerald-200', border: 'border-emerald-300 dark:border-emerald-700' },
   WALI_MURID: { label: 'WALI MURID', bg: 'bg-blue-50 dark:bg-blue-950/80', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
-  ORANG_TUA: { label: 'WALI MURID', bg: 'bg-blue-50 dark:bg-blue-950/80', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
-  PARENT: { label: 'WALI MURID', bg: 'bg-blue-50 dark:bg-blue-950/80', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
   SISWA: { label: 'SISWA', bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-300', border: 'border-slate-200 dark:border-slate-700' },
 }
 
@@ -55,7 +52,7 @@ const SUB_ROLE_OPTIONS = [
   { value: 'KEUANGAN_MASUK', label: 'Keuangan Masuk (Tagihan & Verifikasi)' },
   { value: 'KEUANGAN_KELUAR', label: 'Keuangan Keluar (Pengeluaran)' },
   { value: 'KEUANGAN_ALL', label: 'Keuangan Penuh (Masuk, Keluar, Gaji & Kalkulasi)' },
-  { value: 'KEPEGAWAIAN', label: 'Kepegawaian / HRD' },
+  { value: 'HUMAS_SDM', label: 'Humas & SDM' },
   { value: 'KETERTIBAN', label: 'Ketertiban' },
   { value: 'BK_BP', label: 'BK / BP' },
   { value: 'PERSURATAN', label: 'Persuratan' },
@@ -81,7 +78,10 @@ const SUB_ROLE_CONFIG: Record<string, { label: string; bg: string; text: string;
   KEUANGAN_MASUK: { label: 'Keuangan Masuk', bg: 'bg-blue-50/90 dark:bg-blue-950/60', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
   KEUANGAN_KELUAR: { label: 'Keuangan Keluar', bg: 'bg-rose-50/90 dark:bg-rose-950/60', text: 'text-rose-700 dark:text-rose-300', border: 'border-rose-200 dark:border-rose-800' },
   KEUANGAN_ALL: { label: 'Keuangan Penuh', bg: 'bg-amber-50/90 dark:bg-amber-950/60', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
-  KEPEGAWAIAN: { label: 'Kepegawaian', bg: 'bg-violet-50/90 dark:bg-violet-950/60', text: 'text-violet-700 dark:text-violet-300', border: 'border-violet-200 dark:border-violet-800' },
+  KEPEGAWAIAN: { label: 'Humas & SDM', bg: 'bg-purple-50/90 dark:bg-purple-950/60', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
+  SDM: { label: 'Humas & SDM', bg: 'bg-purple-50/90 dark:bg-purple-950/60', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
+  WAKA_HUMAS_SDM: { label: 'Humas & SDM', bg: 'bg-purple-50/90 dark:bg-purple-950/60', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
+  HUMAS_SDM: { label: 'Humas & SDM', bg: 'bg-purple-50/90 dark:bg-purple-950/60', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
   KETERTIBAN: { label: 'Ketertiban', bg: 'bg-rose-50/90 dark:bg-rose-950/60', text: 'text-rose-700 dark:text-rose-300', border: 'border-rose-200 dark:border-rose-800' },
   BK_BP: { label: 'BK / BP', bg: 'bg-pink-50/90 dark:bg-pink-950/60', text: 'text-pink-700 dark:text-pink-300', border: 'border-pink-200 dark:border-pink-800' },
   PERSURATAN: { label: 'Persuratan', bg: 'bg-amber-50/90 dark:bg-amber-950/60', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
@@ -361,7 +361,7 @@ export default function UsersPage() {
 
   const isPending = createMutation.isPending || updateMutation.isPending
   // Filter khusus akun pegawai, guru, admin, dan pengelola internal (tidak menampilkan wali murid atau siswa)
-  const staffUsers = (users || []).filter(u => !['WALI_MURID', 'ORANG_TUA', 'PARENT', 'SISWA'].includes(u.role))
+  const staffUsers = (users || []).filter(u => !['WALI_MURID', 'SISWA'].includes(u.role))
   const filteredUsers = filterDataBySearch(staffUsers, searchQuery) || []
   const isAllSelected = filteredUsers.length > 0 && filteredUsers.every(u => selectedUserIds.includes(u.id))
 
@@ -483,15 +483,14 @@ export default function UsersPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">No. WhatsApp *</Label>
+                  <Label htmlFor="phone">No. WhatsApp (Opsional)</Label>
                   <Input 
                     id="phone" 
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="Contoh: 088293733330"
-                    required
                   />
-                  <p className="text-[11px] text-slate-500">Wajib aktif WhatsApp untuk notifikasi otomatis.</p>
+                  <p className="text-[11px] text-slate-500">Opsional untuk notifikasi otomatis WhatsApp.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email (Opsional)</Label>

@@ -17,20 +17,25 @@
      - **Backend API NestJS**: `http://localhost:3001`
      - **Prisma Studio**: `http://localhost:51212`
      - **Supabase Studio (Docker)**: `http://localhost:54323` (Database: `54322`, API: `54321`)
-7. **Standar Notifikasi Ganda (In-App & WhatsApp) & Keharusan Nomor Telepon**:
-   - Setiap fitur yang mengharuskan adanya notifikasi (seperti presensi/absen, tagihan keuangan, bukti & verifikasi pembayaran, informasi berita/pengumuman, perizinan, ataupun fitur masa depan lainnya), seluruh notifikasi selain wajib dikirim ke akun pengguna di sistem (In-App notification), **WAJIB** dikirimkan juga notifikasinya melalui WhatsApp.
-   - Setiap data pengguna (Siswa, Guru, Karyawan/Pegawai, dan Orang Tua/Wali) tabel data dirinya diwajibkan menggunakan nomor telepon yang aktif WhatsApp.
-   - Nomor pengirim resmi sistem ke pengguna adalah: `088293733330`.
-   - Data pengguna baru maupun eksisting wajib menyertakan nomor telepon WhatsApp (nomor dummy `088293733330` disediakan sebagai fallback pengembangan jika pengguna belum memasukkan nomor).
+7. **Standar Notifikasi Resmi (In-App & Email)**:
+   - Setiap fitur yang mengharuskan adanya notifikasi (seperti presensi/absen, tagihan keuangan, bukti & verifikasi pembayaran, informasi berita/pengumuman, perizinan, ataupun fitur lainnya), seluruh notifikasi dikirimkan ke akun pengguna di sistem (In-App notification) dan dikirimkan secara langsung melalui Email.
+   - Pengiriman email notifikasi diproses secara handal dan aman melalui layanan SMTP Email resmi SIMASMUH.
 8. **Standar Akun & Peran Pengguna Wali Murid (Orang Tua / Wali)**:
    - **Peran & Relasi**: Pengguna dengan role `WALI_MURID` adalah akun orang tua/wali murid yang dapat terhubung dengan 1 atau lebih siswa di sistem melalui relasi `ParentProfile` dan `ParentStudent`.
    - **Koneksi Identitas Siswa**: No. NIS atau NISN menjadi kunci penghubung antara data wali murid dan siswa yang diwalikan.
-   - **Kredensial Login**: Username wali murid adalah nomor telepon aktif WhatsApp, dan kata sandi awalnya adalah NIS dari siswa yang terhubung.
    - **Sinkronisasi Nama**: Nama lengkap wali murid tersinkronisasi dari biodata orang tua siswa (nama ayah/ibu/wali) atau dapat disesuaikan manual oleh superadmin.
-   - **Notifikasi & Laporan**: Nomor telepon wali murid digunakan sebagai tujuan resmi pengiriman notifikasi WhatsApp otomatis untuk presensi harian, update status perkembangan siswa, dan tagihan keuangan sekolah.
+   - **Notifikasi & Laporan**: Akun email wali murid digunakan sebagai tujuan resmi pengiriman notifikasi email otomatis untuk presensi harian, update status perkembangan siswa, dan tagihan keuangan sekolah.
 9. **Standar Mutlak Penamaan Ringkas & Responsive Layout (Mobile, Tablet, Desktop)**:
    - **Judul & Deskripsi Ringkas**: Seluruh judul fitur, modul, tab, kolom tabel, dan deskripsi wajib menggunakan bahasa yang singkat, padat, lugas, profesional, serta bebas dari kata-kata panjang atau embel-embel berlebihan yang tidak perlu.
    - **Efisiensi & Responsivitas Layout**: Seluruh tata letak halaman (Desktop, Tablet, Mobile) wajib diatur secara presisi hemat ruang layar (compact & padat). Gunakan grid/flex responsif (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3/4`), batasi lebar kolom perihal/keterangan dengan `truncate` / `line-clamp`, serta sederhanakan tombol aksi pada tabel/card menggunakan icon/button ringkas agar nyaman digunakan di semua ukuran layar.
 10. **Standar Mutlak Rute Dinamis & Adaptif (Adaptive Network & Tunnel Routing)**:
     - **Resolusi Host Domain & IP**: Seluruh pengarahan rute (NextAuth redirect, Next.js rewrite proxy, dan `getBackendUrl()`) **MUTLAK SELALU ADAPTIF** mengikuti protokol (`http/https`), IP server lokal (LAN/Wi-Fi), maupun domain tunnel eksternal yang sedang digunakan oleh pengakses.
     - **Tanpa Hardcoded Redirect Domain**: Dilarang keras melakukan pengalihan paksa (*hardcoded redirect*) ke satu hostname/domain spesifik (seperti `simasmuh.razagopo.my.id`). Setiap perbaikan atau penambahan rute baru di masa depan wajib mengikuti standar ini tanpa terkecuali.
+11. **Peniadaan Hero Banner Status Fitur / Placeholder (STRICT)**:
+    - Setiap ada penambahan atau perubahan fitur/modul baru, **DILARANG** menampilkan banner besar pengantar/placeholder (seperti hero box status fitur "Aktif Siap Pakai", kartu rencana modul terencana, badge status rancangan, atau deskripsi redundan).
+    - Halaman wajib langsung menyajikan antarmuka kerja interaktif fungsional (tabel data, filter, card kegiatan/data, form aksi, atau tombol operasional) secara bersih, ringkas, dan to the point.
+12. **Standar Mutlak Format Penamaan Kelas (Romawi spasi Angka)**:
+    - **Format Resmi**: Seluruh data kelas untuk data jangka panjang dan data relasi di sistem SIMASMUH dan CBT MUHIPO wajib menggunakan format: `[Romawi Kelas] [Angka Kelas]` (contoh: `X 1`, `X 2`, `XI 2`, `XII 2`, dst).
+    - **Konsistensi Relasi & Sinkronisasi**: Dilarang menggunakan pemisah tanda hubung (seperti `X-1`), format penjurusan lama pada nama kelas (seperti `X IPA 1`), atau format lainnya.
+    - **Placeholder & Template Excel**: Seluruh placeholder input, modal form, parser Excel, contoh baris template import siswa & kelas, serta sinkronisasi nilai/asesmen wajib seragam mengacu pada format standar ini.
+

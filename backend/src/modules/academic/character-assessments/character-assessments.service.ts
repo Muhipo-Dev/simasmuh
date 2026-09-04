@@ -13,7 +13,6 @@ import {
 } from 'class-validator';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
-import { WhatsAppService } from '../../communication/whatsapp/whatsapp.service';
 import { EmailNotificationService } from '../../communication/notifications/email.service';
 
 export class CreateAssessmentDto {
@@ -78,7 +77,6 @@ export class CharacterAssessmentsService {
   constructor(
     private prisma: PrismaService,
     private systemLogService: SystemLogService,
-    private whatsAppService: WhatsAppService,
     private emailNotificationService: EmailNotificationService,
   ) {}
 
@@ -909,48 +907,6 @@ export class CharacterAssessmentsService {
         }
       }
 
-      // Standar Notifikasi Ganda WhatsApp ke Orang Tua / Wali & Siswa
-      if (dto.notifyParent !== false) {
-        const waTargets = new Set<string>();
-        if (student.parentPhone) waTargets.add(student.parentPhone);
-        if (student.phone) waTargets.add(student.phone);
-
-        for (const rel of student.parentRelations || []) {
-          if (rel.parent?.phone) waTargets.add(rel.parent.phone);
-          if (rel.parent?.user?.phone) waTargets.add(rel.parent.user.phone);
-        }
-
-        if (waTargets.size === 0) {
-          waTargets.add(WhatsAppService.DEFAULT_SENDER_NUMBER);
-        }
-
-        for (const phone of waTargets) {
-          const waMessage = `🔔 *PEMBERITAHUAN CATATAN SISWA & TATA TERTIB*
-*SIMASMUH - SMA Muhammadiyah 1 Ponorogo*
-----------------------------------------
-👤 *Nama Siswa:* ${student.name}
-🏷️ *NIS/NISN:* ${student.nis} / ${student.nisn || '-'}
-🏫 *Kelas:* ${student.class?.name || '-'}
-📌 *Kategori:* ${notifCategory}
-📋 *Judul:* ${dto.title || assessment.title}
-📝 *Keterangan:* ${dto.description || '-'}
-⚖️ *Poin Evaluasi:* ${points > 0 ? '+' : ''}${points}
-🛠️ *Tindak Lanjut:* ${dto.actionTaken || assessment.actionTaken || 'Diverifikasi & diterapkan Bagian Ketertiban Sekolah'}
-👨‍🏫 *Verifikator / Pembina:* ${evaluator?.name || 'Bagian Ketertiban Sekolah'}
-----------------------------------------
-_Catatan ini telah diverifikasi & resmi diterapkan ke poin kedisiplinan siswa._
-_Informasi ini terkirim otomatis melalui Sistem Manajemen Akademik & Karakter Siswa (SIMASMUH)._`;
-
-          await this.whatsAppService.sendDirectMessage({
-            to: phone,
-            recipientName: student.name,
-            recipientRole: 'WALI_MURID',
-            category: 'INFORMASI',
-            title: `Evaluasi Kedisiplinan - ${student.name}`,
-            message: waMessage,
-          });
-        }
-      }
     } catch (err: any) {
       this.logger.error(
         `Gagal mengirim notifikasi adab & tatib: ${err.message}`,

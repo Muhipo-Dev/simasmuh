@@ -11,21 +11,18 @@ $ROOT         = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BACKEND_DIR  = Join-Path $ROOT "backend"
 $FRONTEND_DIR = Join-Path $ROOT "frontend"
 $FACE_AI_DIR  = Join-Path $ROOT "services\face-attendance"
-$WA_GATEWAY_DIR = Join-Path $ROOT "services\whatsapp-gateway"
 
 # Log files
 $BACKEND_LOG        = Join-Path $ROOT "backend.log"
 $FRONTEND_LOG       = Join-Path $ROOT "frontend.log"
 $PRISMA_STUDIO_LOG  = Join-Path $ROOT "prisma-studio.log"
 $FACE_AI_LOG        = Join-Path $ROOT "face-ai.log"
-$WA_GATEWAY_LOG     = Join-Path $ROOT "whatsapp-gateway.log"
 
 # PID marker files
 $BACKEND_PID_FILE        = Join-Path $ROOT ".backend.pid"
 $FRONTEND_PID_FILE       = Join-Path $ROOT ".frontend.pid"
 $PRISMA_STUDIO_PID_FILE  = Join-Path $ROOT ".prisma-studio.pid"
 $FACE_AI_PID_FILE        = Join-Path $ROOT ".face-ai.pid"
-$WA_GATEWAY_PID_FILE     = Join-Path $ROOT ".whatsapp-gateway.pid"
 
 # ─── HELPERS ────────────────────────────────────────────────
 
@@ -141,7 +138,7 @@ function Compress-LogFile-Gzip {
 
 function Compress-All-LogFiles {
     Write-Status "Mengompresi dan merotasi seluruh file log aktif..." "Cyan"
-    $allLogs = @($BACKEND_LOG, $FRONTEND_LOG, $PRISMA_STUDIO_LOG, $FACE_AI_LOG, $WA_GATEWAY_LOG)
+    $allLogs = @($BACKEND_LOG, $FRONTEND_LOG, $PRISMA_STUDIO_LOG, $FACE_AI_LOG)
     foreach ($logFile in $allLogs) {
         Compress-LogFile-Gzip -SourcePath $logFile
     }
@@ -231,7 +228,6 @@ function Get-ProcessMode {
 function Get-AppStatus {
     $backendRunning      = Test-PortListening 3001
     $frontendRunning     = Test-PortListening 3000
-    $waGatewayRunning    = Test-PortListening 3002
     $faceAiRunning       = Test-PortListening 8089
     $supabaseRunning     = Test-PortListening 54322
     $prismaStudioRunning = Test-PortListening 51212
@@ -254,7 +250,6 @@ function Get-AppStatus {
 
     $bStatus = if ($backendRunning)      { "AKTIF $bMode".PadRight(12) } else { "MATI".PadRight(12) }
     $fStatus = if ($frontendRunning)     { "AKTIF $fMode".PadRight(12) } else { "MATI".PadRight(12) }
-    $wStatus = if ($waGatewayRunning)    { "AKTIF".PadRight(12) } else { "MATI".PadRight(12) }
     $aStatus = if ($faceAiRunning)       { "AKTIF (FaceNet)".PadRight(15) } else { "STANDBY (UI)".PadRight(15) }
     $sStatus = if ($supabaseRunning)     { "AKTIF (Docker)".PadRight(14) } else { "MATI".PadRight(14) }
     $pStatus = if ($prismaStudioRunning) { "AKTIF".PadRight(12) } else { "MATI".PadRight(12) }
@@ -262,7 +257,6 @@ function Get-AppStatus {
 
     $bColor = if ($backendRunning)      { "Green" } else { "Red" }
     $fColor = if ($frontendRunning)     { "Green" } else { "Red" }
-    $wColor = if ($waGatewayRunning)    { "Green" } else { "Yellow" }
     $aColor = if ($faceAiRunning)       { "Green" } else { "Cyan" }
     $sColor = if ($supabaseRunning)     { "Green" } else { "Yellow" }
     $pColor = if ($prismaStudioRunning) { "Green" } else { "DarkGray" }
@@ -275,8 +269,6 @@ function Get-AppStatus {
     Write-Host ($fStatus + " :3000   |") -ForegroundColor $fColor
     Write-Host "  | Backend (API)      | " -NoNewline
     Write-Host ($bStatus + " :3001   |") -ForegroundColor $bColor
-    Write-Host "  | WhatsApp Gateway   | " -NoNewline
-    Write-Host ($wStatus + " :3002   |") -ForegroundColor $wColor
     Write-Host "  | AI Face Attendance | " -NoNewline
     Write-Host ($aStatus + " :8089 |") -ForegroundColor $aColor
     Write-Host "  | Supabase (Docker)  | " -NoNewline
@@ -292,11 +284,10 @@ function Get-AppStatus {
 # ─── STOP ────────────────────────────────────────────────────
 
 function Stop-Apps {
-    Write-Status "Menghentikan semua proses aplikasi (Frontend, Backend, WhatsApp Gateway, AI Face, Prisma Studio)..." "Yellow"
+    Write-Status "Menghentikan semua proses aplikasi (Frontend, Backend, AI Face, Prisma Studio)..." "Yellow"
 
     $bPid = Get-StoredPid $BACKEND_PID_FILE
     $fPid = Get-StoredPid $FRONTEND_PID_FILE
-    $wPid = Get-StoredPid $WA_GATEWAY_PID_FILE
     $pPid = Get-StoredPid $PRISMA_STUDIO_PID_FILE
     $aPid = Get-StoredPid $FACE_AI_PID_FILE
 
@@ -307,10 +298,6 @@ function Stop-Apps {
     if ($fPid) {
         Stop-ProcessById $fPid
         Remove-Item $FRONTEND_PID_FILE -ErrorAction SilentlyContinue
-    }
-    if ($wPid) {
-        Stop-ProcessById $wPid
-        Remove-Item $WA_GATEWAY_PID_FILE -ErrorAction SilentlyContinue
     }
     if ($pPid) {
         Stop-ProcessById $pPid
@@ -719,32 +706,6 @@ function Start-FaceAiService {
     return $true
 }
 
-function Start-WhatsAppGateway {
-    Write-Status "Menjalankan WhatsApp Gateway Service (Baileys di port 3002)..." "Cyan"
-    $wListen = Test-PortListening 3002
-    if ($wListen) {
-        Write-Ok "WhatsApp Gateway sudah aktif -> http://localhost:3002"
-        return $true
-    }
-
-    try { "" | Out-File -FilePath $WA_GATEWAY_LOG -Encoding utf8 -Force } catch {}
-    $cmdLine = "/c npm start >> `"$WA_GATEWAY_LOG`" 2>&1"
-    $proc = Start-Process -FilePath "cmd.exe" `
-                          -ArgumentList $cmdLine `
-                          -WorkingDirectory $WA_GATEWAY_DIR `
-                          -NoNewWindow -PassThru
-
-    $proc.Id | Set-Content $WA_GATEWAY_PID_FILE
-
-    Start-Sleep -Seconds 2
-    if (Test-PortListening 3002) {
-        Write-Ok "WhatsApp Gateway aktif -> http://localhost:3002"
-        return $true
-    }
-    Write-Info "WhatsApp Gateway berjalan di latar belakang (port 3002)."
-    return $true
-}
-
 function Start-Apps {
     param([string]$Mode = "Production")
     
@@ -760,18 +721,14 @@ function Start-Apps {
     $null = Start-SupabaseDocker
     Write-Host ""
 
-    # 2. Jalankan WhatsApp Gateway
-    $null = Start-WhatsAppGateway
-    Write-Host ""
-
-    # 3. Jalankan Backend
+    # 2. Jalankan Backend
     $backendOk = Start-Backend -Mode $Mode
     if (-not $backendOk) {
         Write-Err "Gagal memulai Backend. Periksa log di: $BACKEND_LOG"
         return
     }
 
-    # 4. Jalankan Frontend
+    # 3. Jalankan Frontend
     Write-Host ""
     $frontendOk = Start-Frontend -Mode $Mode
     if (-not $frontendOk) {
@@ -779,16 +736,15 @@ function Start-Apps {
         return
     }
 
-    # 5. Jalankan Prisma Studio
+    # 4. Jalankan Prisma Studio
     Write-Host ""
     $null = Start-PrismaStudio
 
     Write-Host ""
     Write-Ok "=========================================================="
-    Write-Ok " SIMASMUH + SUPABASE + PRISMA STUDIO + WA GATEWAY AKTIF!"
+    Write-Ok " SIMASMUH + SUPABASE + PRISMA STUDIO AKTIF!"
     Write-Ok " - Aplikasi Web        : http://localhost:3000"
     Write-Ok " - Backend API         : http://localhost:3001"
-    Write-Ok " - WhatsApp Gateway    : http://localhost:3002"
     Write-Ok " - Face AI Service     : On-Demand via Dashboard (Port 8089)"
     Write-Ok " - Prisma Studio       : http://localhost:51212"
     Write-Ok " - Supabase Studio     : http://localhost:54323"

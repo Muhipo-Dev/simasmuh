@@ -2,10 +2,10 @@ import { Module } from '@nestjs/common';
 import { SuratMasukService } from './surat-masuk.service';
 import { SuratMasukController } from './surat-masuk.controller';
 import { PrismaModule } from '../../core/prisma/prisma.module';
-import { WhatsAppModule } from '../../communication/whatsapp/whatsapp.module';
+import { NotificationsModule } from '../../communication/notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule, WhatsAppModule],
+  imports: [PrismaModule, NotificationsModule],
   controllers: [SuratMasukController],
   providers: [SuratMasukService],
   exports: [SuratMasukService],

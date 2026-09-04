@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
-import { WhatsAppService } from '../whatsapp/whatsapp.service';
+import { EmailNotificationService } from '../notifications/email.service';
 
 @Injectable()
 export class AnnouncementsService {
   constructor(
     private prisma: PrismaService,
-    private whatsAppService: WhatsAppService,
+    private emailNotificationService: EmailNotificationService,
   ) {}
 
   async create(data: {
@@ -37,17 +37,43 @@ export class AnnouncementsService {
       },
     });
 
-    // Kirim Notifikasi Siaran Berita / Pengumuman via WhatsApp
-    this.whatsAppService
-      .sendAnnouncementBroadcast({
-        title: created.title,
-        content: created.content,
-        authorName: created.author?.name,
-        target: created.target,
-        type: created.type,
-        eventDate: created.eventDate
-          ? created.eventDate.toLocaleDateString('id-ID')
-          : undefined,
+    // Kirim Notifikasi Siaran Berita / Pengumuman via Email ke penerima target
+    const targetRole = created.target || 'SEMUA';
+    const whereRole: any = { email: { contains: '@' } };
+    if (targetRole !== 'SEMUA' && targetRole !== 'ALL') {
+      whereRole.role = targetRole;
+    }
+
+    this.prisma.user
+      .findMany({
+        where: whereRole,
+        select: { email: true, name: true },
+        take: 100,
+      })
+      .then((recipients) => {
+        const cleanContent = created.content ? created.content.replace(/<[^>]*>?/gm, '') : '';
+        for (const r of recipients) {
+          if (r.email) {
+            this.emailNotificationService
+              .sendEmailNotification({
+                to: r.email,
+                subject: `[Pengumuman SIMASMUH] ${created.title}`,
+                title: created.title,
+                category: 'PENGUMUMAN',
+                badgeLabel: created.type || 'PENGUMUMAN RESMI',
+                recipientName: r.name,
+                contentText: cleanContent,
+                metaDetails: [
+                  { label: 'Kategori', value: created.type || 'Informasi Umum' },
+                  { label: 'Ditujukan Untuk', value: created.target },
+                  { label: 'Diterbitkan Oleh', value: created.author?.name || 'Pihak Sekolah' },
+                ],
+                actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/informasi/pengumuman`,
+                actionText: 'Baca Pengumuman Lengkap',
+              })
+              .catch(() => {});
+          }
+        }
       })
       .catch(() => {});
 

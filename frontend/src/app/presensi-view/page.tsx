@@ -29,7 +29,8 @@ import {
   Camera,
   Zap,
   PowerOff,
-  ShieldAlert
+  ShieldAlert,
+  QrCode
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -315,7 +316,7 @@ export default function PresensiPegawaiPage() {
           </Card>
         </div>
 
-        {/* PEMBERITAHUAN KHUSUS SAAT AI MICROSERVICE DINONAKTIFKAN OLEH ADMIN */}
+        {/* PEMBERITAHUAN KHUSUS SAAT AI MICROSERVICE DINONAKTIFKAN OLEH ADMIN / ERROR DENGAN FALLBACK SCAN QR */}
         {cameraConfig && !cameraConfig.isActive && (
           <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border border-amber-300/80 dark:border-amber-700/60 shadow-sm backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 dark:text-amber-200">
             <div className="flex items-center gap-3.5 min-w-0">
@@ -325,16 +326,24 @@ export default function PresensiPegawaiPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-xs sm:text-sm font-extrabold text-amber-900 dark:text-amber-100">
-                    AI Microservice FaceNet Sedang Dinonaktifkan Admin
+                    AI Biometrik FaceNet Sedang Standby / Nonaktif
                   </h3>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-200/90 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 font-mono font-bold border border-amber-400/40">
-                    STANDBY / OFF
+                    GUNAKAN SCAN QR CADANGAN
                   </span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-amber-800/90 dark:text-amber-300/90 mt-0.5 leading-relaxed">
-                  Layanan pemindaian wajah otomatis dan live camera stream saat ini sedang dinonaktifkan oleh Superadmin.
+                  Layanan pemindaian wajah otomatis sedang standby. Guru, pegawai, dan siswa dapat melakukan presensi kehadiran menggunakan pemindai QR Code cadangan.
                 </p>
               </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <Link href="/presensi/scan-qr">
+                <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5 shadow-sm">
+                  <QrCode className="w-4 h-4" />
+                  <span>Scan QR Sekarang</span>
+                </Button>
+              </Link>
             </div>
           </div>
         )}
@@ -432,20 +441,31 @@ export default function PresensiPegawaiPage() {
                                     : 'Arahkan wajah ke depan kamera gerbang untuk mencatat presensi harian secara otomatis.')}
                             </p>
                           </div>
-                          {cameraConfig?.isActive && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setStreamError(false)
-                                setStreamKey(Date.now())
-                              }}
-                              className="h-7 text-xs border-slate-700 text-slate-300 hover:text-white"
-                            >
-                              <RefreshCw className="w-3 h-3 mr-1" />
-                              Hubungkan Ulang
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
+                            {cameraConfig?.isActive && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setStreamError(false)
+                                  setStreamKey(Date.now())
+                                }}
+                                className="h-7 text-xs border-slate-700 text-slate-300 hover:text-white"
+                              >
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                Hubungkan Ulang
+                              </Button>
+                            )}
+                            <Link href="/presensi/scan-qr">
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1"
+                              >
+                                <QrCode className="w-3 h-3" />
+                                Gunakan Scan QR
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
                       )}
 
@@ -455,7 +475,7 @@ export default function PresensiPegawaiPage() {
                       </div>
 
                       <div className="absolute bottom-2 right-2 pointer-events-none px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-slate-300 border border-white/10">
-                        Sensitivitas: {Math.round((cameraConfig?.threshold || 0.48) * 100)}%
+                        Sensitivitas: {Math.round((cameraConfig?.threshold || 0.90) * 100)}%
                       </div>
                     </div>
 

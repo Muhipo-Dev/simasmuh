@@ -42,8 +42,11 @@ import {
   Tv,
   Film,
   Globe,
-  UserX
+  UserX,
+  QrCode
 } from 'lucide-react'
+import { QrScanner } from '@/components/QrScanner'
+import Link from 'next/link'
 
 import { toast } from 'sonner'
 
@@ -145,13 +148,13 @@ export default function FaceAttendanceCameraPage() {
     const u = session?.user as any
     return [u?.role, u?.subRole, u?.subRole2, u?.subRole3].filter(Boolean) as string[]
   }, [session])
-  const isSuperAdmin = userRoles.some(r => ['ADMIN_IT', 'SUPERADMIN', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(r))
+  const isSuperAdmin = userRoles.some(r => ['SUPERADMIN', 'ADMIN_IT'].includes(r))
 
   const queryClient = useQueryClient()
   const authenticatedQuery = useAuthenticatedQuery()
   const authenticatedFetch = useAuthenticatedFetch()
 
-  const [activeTab, setActiveTab] = useState<'monitor' | 'config' | 'dataset' | 'logs' | 'guide'>('monitor')
+  const [activeTab, setActiveTab] = useState<'monitor' | 'config' | 'dataset' | 'logs' | 'guide' | 'backup-qr'>('monitor')
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null)
   const [streamError, setStreamError] = useState(false)
@@ -796,9 +799,20 @@ export default function FaceAttendanceCameraPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
-            <Users className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
-            <span className="font-medium truncate text-[11px] sm:text-xs">{datasetData?.usersWithPhoto || 0} Profil Wajah Terdaftar</span>
+          <div className="flex items-center justify-between gap-2 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <Users className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
+              <span className="font-medium truncate text-[11px] sm:text-xs">{datasetData?.usersWithPhoto || 0} Profil Terdaftar</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('backup-qr')}
+              className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] flex items-center gap-1 transition-all shrink-0 shadow-xs"
+              title="Gunakan pemindai QR Code cadangan jika kamera biometrik bermasalah"
+            >
+              <QrCode className="w-3 h-3" />
+              <span>Backup QR</span>
+            </button>
           </div>
         </div>
       </div>
@@ -859,6 +873,16 @@ export default function FaceAttendanceCameraPage() {
         >
           <HelpCircle className="w-4 h-4 shrink-0" />
           <span>Panduan Stream</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('backup-qr')}
+          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+            activeTab === 'backup-qr' ? 'bg-amber-500 shadow text-white font-bold' : 'text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+          }`}
+        >
+          <QrCode className="w-4 h-4 shrink-0" />
+          <span>Backup Scan QR (Pilihan Ke-2)</span>
         </button>
       </div>
 
@@ -1462,7 +1486,7 @@ export default function FaceAttendanceCameraPage() {
                       Batas Sensitivitas Kemiripan Wajah (*Threshold*)
                     </Label>
                     <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-0.5">
-                      {Math.round((currentConfig?.threshold || 0.50) * 100)}%
+                      {Math.round((currentConfig?.threshold || 0.90) * 100)}%
                     </Badge>
                   </div>
                   <input
@@ -1470,7 +1494,7 @@ export default function FaceAttendanceCameraPage() {
                     min={1}
                     max={100}
                     step={1}
-                    value={Math.round((currentConfig?.threshold || 0.50) * 100)}
+                    value={Math.round((currentConfig?.threshold || 0.90) * 100)}
                     onChange={(e) => {
                       const num = Number(e.target.value)
                       setFormConfig((prev) => prev ? { ...prev, threshold: num / 100 } : null)
@@ -1479,7 +1503,7 @@ export default function FaceAttendanceCameraPage() {
                   />
                   <div className="flex justify-between text-[10px] text-slate-400 font-mono">
                     <span>1% (Sangat Fleksibel)</span>
-                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">Rekomendasi: 50% - 75%</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Standar Akurasi: &gt;= 90% (Toleransi 10%)</span>
                     <span>100% (Identik Sempurna)</span>
                   </div>
                 </div>
@@ -2036,6 +2060,43 @@ export default function FaceAttendanceCameraPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* TAB 6: BACKUP SCAN QR (PILIHAN KE-2 KETIKA KAMERA AI ERROR / OFFLINE) */}
+      {activeTab === 'backup-qr' && (
+        <div className="space-y-6">
+          <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-xl bg-amber-500 text-white shadow-xs shrink-0 mt-0.5">
+                <QrCode className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm sm:text-base font-extrabold text-amber-950 dark:text-amber-200">
+                  Cadangan Presensi Cepat (Backup QR Code)
+                </h3>
+                <p className="text-xs text-amber-800/90 dark:text-amber-300/90 leading-relaxed max-w-2xl">
+                  Fitur ini dirancang sebagai <strong>pilihan kedua (second choice)</strong> jika kamera biometrik AI FaceNet sedang mengalami kendala jaringan, offline, atau perangkat webcam bermasalah.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link href="/presensi/manajemen-qr">
+                <Button variant="outline" size="sm" className="border-amber-300 text-amber-900 dark:text-amber-200 dark:border-amber-800 text-xs font-bold">
+                  Buka Manajemen Layar QR
+                </Button>
+              </Link>
+              <Link href="/presensi/scan-qr" target="_blank">
+                <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold">
+                  Buka Scan QR Mandiri
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="max-w-2xl mx-auto">
+            <QrScanner />
+          </div>
+        </div>
       )}
     </div>
   )

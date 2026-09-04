@@ -432,6 +432,13 @@ class AttendanceWorker:
                 h_frame, w_frame = target_frame.shape[:2]
                 now = time.time()
 
+                # Refresh konfigurasi setiap ~30 siklus agar perubahan threshold dari dashboard/backend langsung diterapkan realtime
+                if ai_frame_counter % 30 == 0:
+                    try:
+                        self.config = fetch_backend_config()
+                    except Exception:
+                        pass
+
                 # Deteksi wajah dengan FaceNet / MTCNN teroptimasi
                 faces = self.engine.detect_faces(target_frame)
                 new_detections = []
@@ -450,8 +457,8 @@ class AttendanceWorker:
                     x2 = min(w_frame, x + w + pad_x)
                     face_crop = target_frame[y1:y2, x1:x2]
 
-                    # Threshold sensitivitas (default 0.58)
-                    threshold = self.config.threshold if self.config else 0.58
+                    # Threshold sensitivitas deteksi (default 70% atau 0.70)
+                    threshold = self.config.threshold if (self.config and self.config.threshold is not None) else 0.70
                     match_result = self.engine.match_face(face_crop, threshold=threshold)
 
                     if match_result:
@@ -527,6 +534,12 @@ class AttendanceWorker:
     def _process_attendance(self, user_record, similarity: float, face_crop: Optional[np.ndarray] = None):
         user_id = user_record.user_id
         now = time.time()
+        
+        # Validasi mutlak batas input log sistem & absensi: kemiripan harus >= 90% (0.90)
+        # Deteksi di bawah 90% (misal 70%-89%) hanya tampil di monitor tapi tidak dicatat ke log/database
+        if similarity < 0.90:
+            return
+
         cooldown_mins = self.config.cooldown_minutes if self.config else 10
         cooldown_sec = cooldown_mins * 60
 

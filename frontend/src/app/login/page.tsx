@@ -101,13 +101,13 @@ export default function LoginPage() {
     }
   }, [])
 
-  // Jika sudah dalam keadaan login aktif yang valid (bukan setelah expired), arahkan langsung ke /dashboard
+  // Jika sudah dalam keadaan login aktif yang valid (bukan setelah expired), arahkan langsung ke callbackUrl atau /dashboard
   useEffect(() => {
     if (status === 'authenticated' && session?.user && (session as any)?.error !== 'SessionExpired') {
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search)
         if (params.get('expired') !== '1') {
-          router.replace('/dashboard')
+          router.replace(getSafeCallbackUrl())
         }
       }
     }
@@ -119,9 +119,10 @@ export default function LoginPage() {
     setError('')
 
     try {
+      const targetUrl = getSafeCallbackUrl()
       const result = await signIn('credentials', {
         redirect: true,
-        callbackUrl: '/dashboard',
+        callbackUrl: targetUrl,
         email,
         password,
       })
@@ -223,7 +224,7 @@ export default function LoginPage() {
                       <div className="w-5 h-5 rounded-md bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
                         <User className="w-3 h-3 text-blue-300" />
                       </div>
-                      <span>Username / NIS / No. WhatsApp</span>
+                      <span>Username / NIS / Email</span>
                     </Label>
                     <Input
                       id="email"

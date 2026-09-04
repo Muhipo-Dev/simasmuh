@@ -739,7 +739,13 @@ export default function StudentsPage() {
     return classOk && programOk && genderOk && gelombangOk && jalurOk
   })
 
-  const filteredStudents = filterDataBySearch(rawFiltered, searchQuery)
+  const filteredStudents = filterDataBySearch(rawFiltered, searchQuery, [
+    'name',
+    'nisn',
+    'nis',
+    'user.username',
+    'class.name'
+  ])
 
   const toggleSelectStudent = (id: string) => {
     if (selectedStudentIds.includes(id)) {
@@ -850,7 +856,7 @@ export default function StudentsPage() {
         'NIS *': '2401001', 
         'Nama Siswa *': 'Ahmad Dahlan', 
         'L/P *': 'L', 
-        'Kelas *': 'X IPA 1', 
+        'Kelas *': 'X 2', 
         'NISN': '0012345678', 
         'Program': 'tahfidz',
         'Nama Panggilan': 'Dahlan',
@@ -1648,7 +1654,7 @@ export default function StudentsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold">Diterima di Sekolah Ini (Kelas)</Label>
-                        <Input value={formData.bioData?.diterimaDiKelas || ''} onChange={e => updateBioData('diterimaDiKelas', e.target.value)} placeholder="Contoh: X IPA 1" />
+                        <Input value={formData.bioData?.diterimaDiKelas || ''} onChange={e => updateBioData('diterimaDiKelas', e.target.value)} placeholder="Contoh: X 2" />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold">Tanggal Diterima</Label>

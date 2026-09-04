@@ -22,8 +22,110 @@ export class FinanceService {
   ) {}
 
   // ============================================================
-  // PAYROLL SUMMARY (existing feature)
+  // PAYROLL & SALARY CALCULATION SYSTEM (SIMASMUH)
   // ============================================================
+
+  /**
+   * Menghitung rincian tunjangan presensi harian per user untuk satu bulan:
+   * 1. Transport:
+   *    - Masuk <= 07:05 -> +5.000
+   *    - Pulang (Senin - Kamis): >= 15:00 -> +5.000
+   *    - Pulang (Jumat): >= 13:30 -> +5.000
+   *    - Datang > 07:05 atau Pulang < batas waktu -> tidak dapat transport (0)
+   * 2. Uang Makan:
+   *    - Durasi Masuk s/d Pulang >= 6 jam -> +8.000
+   *    - Durasi < 6 jam -> 0
+   */
+  private calculateAttendanceAllowances(attendances: any[]) {
+    let totalTransport = 0;
+    let totalMeal = 0;
+    let validDays = 0;
+    const dailyDetails: any[] = [];
+
+    for (const att of attendances) {
+      if (att.status !== 'HADIR') continue;
+      validDays++;
+
+      const dateObj = new Date(att.date);
+      const dayOfWeek = dateObj.getDay(); // 0 = Minggu, 5 = Jumat
+
+      const inTimeStr = att.checkInTime || att.time;
+      const outTimeStr = att.checkOutTime;
+
+      let transportIn = 0;
+      let transportOut = 0;
+      let meal = 0;
+      let durationHours = 0;
+
+      // Evaluasi Masuk
+      if (inTimeStr) {
+        const [inH, inM] = inTimeStr.split(':').map((v: string) => parseInt(v, 10) || 0);
+        const inMinutes = inH * 60 + inM;
+        // <= 07:05 (7*60 + 5 = 425 menit)
+        if (inMinutes <= 425) {
+          transportIn = 5000;
+        }
+      }
+
+      // Evaluasi Pulang
+      if (outTimeStr) {
+        const [outH, outM] = outTimeStr.split(':').map((v: string) => parseInt(v, 10) || 0);
+        const outMinutes = outH * 60 + outM;
+
+        if (dayOfWeek === 5) {
+          // Hari Jumat: >= 13:30 (13*60 + 30 = 810 menit)
+          if (outMinutes >= 810) {
+            transportOut = 5000;
+          }
+        } else {
+          // Senin - Kamis & hari lainnya: >= 15:00 (15*60 = 900 menit)
+          if (outMinutes >= 900) {
+            transportOut = 5000;
+          }
+        }
+      }
+
+      // Evaluasi Uang Makan berdasarkan durasi kerja
+      if (inTimeStr && outTimeStr) {
+        const [inH, inM] = inTimeStr.split(':').map((v: string) => parseInt(v, 10) || 0);
+        const [outH, outM] = outTimeStr.split(':').map((v: string) => parseInt(v, 10) || 0);
+        const inMinutes = inH * 60 + inM;
+        const outMinutes = outH * 60 + outM;
+        const diffMinutes = outMinutes - inMinutes;
+
+        if (diffMinutes > 0) {
+          durationHours = parseFloat((diffMinutes / 60).toFixed(2));
+          // Durasi >= 6 jam (360 menit)
+          if (diffMinutes >= 360) {
+            meal = 8000;
+          }
+        }
+      }
+
+      const transportDayTotal = transportIn + transportOut;
+      totalTransport += transportDayTotal;
+      totalMeal += meal;
+
+      dailyDetails.push({
+        date: att.date,
+        checkInTime: inTimeStr || '-',
+        checkOutTime: outTimeStr || '-',
+        durationHours,
+        transportIn,
+        transportOut,
+        transportTotal: transportDayTotal,
+        mealAllowance: meal,
+      });
+    }
+
+    return {
+      totalTransport,
+      totalMeal,
+      validDays,
+      dailyDetails,
+    };
+  }
+
   async getPayrollSummary(
     year: number,
     month: number,
@@ -33,32 +135,13 @@ export class FinanceService {
     insentifKetertibanParam?: number,
     tunjanganMakanParam?: number,
   ) {
-    const harianRate =
-      harianRateParam && !isNaN(harianRateParam) ? harianRateParam : 50000;
-    const subRoleAllowance =
-      subRoleAllowanceParam && !isNaN(subRoleAllowanceParam)
-        ? subRoleAllowanceParam
-        : 300000;
-    const minHadirBonus =
-      minHadirBonusParam && !isNaN(minHadirBonusParam)
-        ? minHadirBonusParam
-        : 20;
-    const insentifKetertiban =
-      insentifKetertibanParam && !isNaN(insentifKetertibanParam)
-        ? insentifKetertibanParam
-        : 200000;
-    const tunjanganMakanRate =
-      tunjanganMakanParam && !isNaN(tunjanganMakanParam)
-        ? tunjanganMakanParam
-        : 15000;
-
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     endDate.setHours(23, 59, 59, 999);
 
     const staffList = await this.prisma.user.findMany({
       where: {
-        role: { not: 'SISWA' },
+        role: { notIn: ['SISWA', 'WALI_MURID'] },
       },
       select: {
         id: true,
@@ -69,52 +152,34 @@ export class FinanceService {
         subRole3: true,
         subRole4: true,
         subRole5: true,
-        teacherProfile: { select: { nip: true } },
+        employmentStatus: true,
+        bankName: true,
+        bankAccountNumber: true,
+        bankAccountHolder: true,
+        nipNbm: true,
+        phone: true,
+        teacherProfile: { select: { nip: true, phone: true } },
       },
       orderBy: { name: 'asc' },
     });
 
     const attendances = await this.prisma.dailyAttendance.findMany({
       where: { date: { gte: startDate, lte: endDate }, status: 'HADIR' },
+      orderBy: { date: 'asc' },
     });
 
     const izinKeluars = await this.prisma.izinKeluar.findMany({
       where: { date: { gte: startDate, lte: endDate }, status: 'DISETUJUI' },
     });
 
-    const danaBantuans = await this.prisma.danaBantuan.findMany({
-      where: { kategori: 'PEGAWAI', isSynced: true },
+    const savedRecords = await this.prisma.payrollRecord.findMany({
+      where: { year, month },
     });
 
-    const baseSalaries: Record<string, number> = {
-      SUPERADMIN: 5000000,
-      ADMIN_IT: 4500000,
-      ADMIN_WEB: 4000000,
-      GURU: 3500000,
-      GURU_TAHFIDZ: 3800000,
-      KEPALA_SEKOLAH: 7000000,
-      WAKIL_KEPALA_SEKOLAH: 6000000,
-      BK_BP: 3500000,
-      WALI_KELAS: 3600000,
-      KURIKULUM: 4500000,
-      KESISWAAN: 4000000,
-      SARANA_PRASARANA: 3500000,
-      KEUANGAN: 4500000,
-      KEUANGAN_MASUK: 4500000,
-      KEUANGAN_KELUAR: 4500000,
-      KEUANGAN_ALL: 5500000,
-      ADMIN_TU: 4000000,
-      BAU: 4000000,
-      TATA_USAHA: 4000000,
-      SDM_KEPEGAWAIAN: 4000000,
-      KEPEGAWAIAN: 4000000,
-      PEGAWAI: 3000000,
-      KARYAWAN: 3000000,
-      KEBERSIHAN: 2500000,
-      KEAMANAN: 2800000,
-      PEMBINA_EKSTRA: 3200000,
-      PUSTAKAWAN: 3000000,
-    };
+    const recordMap = new Map<string, any>();
+    savedRecords.forEach((r) => {
+      recordMap.set(r.userId, r);
+    });
 
     return staffList.map((staff) => {
       const staffAttendances = attendances.filter((a) => a.userId === staff.id);
@@ -123,6 +188,7 @@ export class FinanceService {
           .filter((i) => i.userId === staff.id)
           .map((i) => i.date.toISOString().split('T')[0]),
       );
+
       const rolesList = [
         staff.role,
         staff.subRole,
@@ -133,46 +199,515 @@ export class FinanceService {
       ].filter(Boolean);
       const roles = rolesList.join(', ');
 
-      const baseSalary =
-        baseSalaries[staff.role] ||
-        baseSalaries[staff.subRole || ''] ||
-        3000000;
-      const roleAllowance =
-        Math.max(0, rolesList.length - 1) * subRoleAllowance;
-      const totalHadir = staffAttendances.length;
-      const totalHadirBonus = totalHadir * harianRate;
-      const bonusKetertiban =
-        totalHadir >= minHadirBonus ? insentifKetertiban : 0;
-      const totalTunjanganMakan = totalHadir * tunjanganMakanRate;
+      // Kalkulasi Tunjangan Presensi (Absen Makan & Transport) Otomatis Berdasarkan Log
+      const attCalc = this.calculateAttendanceAllowances(staffAttendances);
 
-      const matchedBantuan = danaBantuans
-        .filter(
-          (b) =>
-            !b.penerima ||
-            b.penerima.toLowerCase().includes(staff.name.toLowerCase()) ||
-            staff.name.toLowerCase().includes(b.penerima.toLowerCase()),
-        )
-        .reduce((sum, b) => sum + b.nominal, 0);
+      const savedRecord = recordMap.get(staff.id);
 
-      const totalPenghasilan =
-        baseSalary +
-        roleAllowance +
-        totalHadirBonus +
-        bonusKetertiban +
-        totalTunjanganMakan +
-        matchedBantuan;
+      // Status kepegawaian default jika belum diatur
+      const defaultStatus =
+        staff.employmentStatus ||
+        (staff.role === 'GURU' || staff.subRole === 'GURU' ? 'GTTP' : 'PTTP');
+
+      // Jam, Masa Kerja, Kelebihan Jam & Tarif
+      const totalHours = savedRecord?.totalHours ?? 0;
+      const hourlyRate = savedRecord?.hourlyRate ?? 0;
+      const baseSalary = savedRecord?.baseSalary ?? (totalHours * hourlyRate);
+
+      const rawNotes = savedRecord?.notes || '';
+      let parsedMeta: any = {};
+      try {
+        if (rawNotes.startsWith('{')) parsedMeta = JSON.parse(rawNotes);
+      } catch (e) {}
+
+      const masaKerja = parsedMeta.masaKerja ?? 0;
+      const kelebihanJam = Number(parsedMeta.kelebihanJam) || 0;
+
+      // Absen Makan & Transport
+      const transportAllowance = attCalc.totalTransport;
+      const mealAllowance = attCalc.totalMeal;
+
+      // Komponen Manual Tunjangan & Potongan
+      const manualAllowances: { name: string; amount: number }[] =
+        Array.isArray(savedRecord?.manualAllowances)
+          ? savedRecord.manualAllowances as { name: string; amount: number }[]
+          : [];
+      const manualDeductions: { name: string; amount: number }[] =
+        Array.isArray(savedRecord?.manualDeductions)
+          ? savedRecord.manualDeductions as { name: string; amount: number }[]
+          : [];
+
+      const totalManualAllowance = manualAllowances.reduce(
+        (sum, item) => sum + (Number(item.amount) || 0),
+        0,
+      );
+      const totalManualDeduction = manualDeductions.reduce(
+        (sum, item) => sum + (Number(item.amount) || 0),
+        0,
+      );
+
+      // Total Gaji Kotor = Gaji Pokok + Kelebihan Jam + Absen Makan + Transport + Tunjangan Manual
+      const totalAllowance =
+        transportAllowance + mealAllowance + totalManualAllowance;
+      const totalGrossSalary = baseSalary + kelebihanJam + totalAllowance;
+      const totalDeduction = totalManualDeduction;
+      const netSalary = totalGrossSalary - totalDeduction;
 
       return {
         id: staff.id,
         name: staff.name,
         roles,
-        totalHadir,
+        role: staff.role,
+        nip: staff.nipNbm || staff.teacherProfile?.nip || '-',
+        phone: staff.phone || staff.teacherProfile?.phone || '-',
+        employmentStatus: savedRecord?.employmentStatus || defaultStatus,
+        masaKerja,
+        bankName: staff.bankName || '',
+        bankAccountNumber: staff.bankAccountNumber || '',
+        bankAccountHolder: staff.bankAccountHolder || '',
+        totalHadir: staffAttendances.length,
         totalIzin: uniqueIzinDates.size,
-        tunjanganMakan: totalTunjanganMakan,
-        estimasiPenghasilan: totalPenghasilan,
-        bantuanNominal: matchedBantuan,
+        totalHours,
+        hourlyRate,
+        baseSalary,
+        kelebihanJam,
+        transportAllowance,
+        mealAllowance,
+        totalAllowance,
+        totalGrossSalary,
+        totalDeduction,
+        netSalary,
+        manualAllowances,
+        manualDeductions,
+        notes: rawNotes.startsWith('{') ? (parsedMeta.notes || '') : rawNotes,
+        isConfigured: !!savedRecord,
+        dailyDetails: attCalc.dailyDetails,
       };
     });
+  }
+
+  /** Menyimpan atau memperbarui rincian kalkulasi penggajian per pegawai */
+  async savePayrollRecord(
+    userId: string,
+    year: number,
+    month: number,
+    data: {
+      employmentStatus?: string;
+      bankName?: string;
+      bankAccountNumber?: string;
+      bankAccountHolder?: string;
+      masaKerja?: number;
+      kelebihanJam?: number;
+      totalHours: number;
+      hourlyRate: number;
+      manualAllowances?: { name: string; amount: number }[];
+      manualDeductions?: { name: string; amount: number }[];
+      notes?: string;
+    },
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('Pegawai tidak ditemukan');
+    }
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const attendances = await this.prisma.dailyAttendance.findMany({
+      where: { userId, date: { gte: startDate, lte: endDate }, status: 'HADIR' },
+    });
+
+    const attCalc = this.calculateAttendanceAllowances(attendances);
+
+    const totalHours = Number(data.totalHours) || 0;
+    const hourlyRate = Number(data.hourlyRate) || 0;
+    const baseSalary = totalHours * hourlyRate;
+    const kelebihanJam = Number(data.kelebihanJam) || 0;
+    const masaKerja = Number(data.masaKerja) || 0;
+
+    const manualAllowances = Array.isArray(data.manualAllowances)
+      ? data.manualAllowances
+      : [];
+    const manualDeductions = Array.isArray(data.manualDeductions)
+      ? data.manualDeductions
+      : [];
+
+    const totalManualAllowance = manualAllowances.reduce(
+      (sum, item) => sum + (Number(item.amount) || 0),
+      0,
+    );
+    const totalManualDeduction = manualDeductions.reduce(
+      (sum, item) => sum + (Number(item.amount) || 0),
+      0,
+    );
+
+    const transportAllowance = attCalc.totalTransport;
+    const mealAllowance = attCalc.totalMeal;
+    const totalAllowance =
+      transportAllowance + mealAllowance + totalManualAllowance;
+    const totalGrossSalary = baseSalary + kelebihanJam + totalAllowance;
+    const totalDeduction = totalManualDeduction;
+    const netSalary = totalGrossSalary - totalDeduction;
+
+    const employmentStatus =
+      data.employmentStatus || user.employmentStatus || 'GTTP';
+
+    // Update employmentStatus & data rekening di User jika ada perubahan
+    const updateUserData: any = {};
+    if (data.employmentStatus && data.employmentStatus !== user.employmentStatus) {
+      updateUserData.employmentStatus = data.employmentStatus;
+    }
+    if (data.bankName !== undefined) updateUserData.bankName = data.bankName;
+    if (data.bankAccountNumber !== undefined) updateUserData.bankAccountNumber = data.bankAccountNumber;
+    if (data.bankAccountHolder !== undefined) updateUserData.bankAccountHolder = data.bankAccountHolder;
+
+    if (Object.keys(updateUserData).length > 0) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: updateUserData,
+      });
+    }
+
+    const notesMeta = JSON.stringify({
+      masaKerja,
+      kelebihanJam,
+      notes: data.notes || '',
+    });
+
+    const record = await this.prisma.payrollRecord.upsert({
+      where: {
+        userId_month_year: {
+          userId,
+          month,
+          year,
+        },
+      },
+      create: {
+        userId,
+        month,
+        year,
+        employmentStatus,
+        totalHours,
+        hourlyRate,
+        baseSalary,
+        transportAllowance,
+        mealAllowance,
+        totalAttendanceDays: attendances.length,
+        manualAllowances: manualAllowances as any,
+        manualDeductions: manualDeductions as any,
+        totalAllowance,
+        totalDeduction,
+        netSalary,
+        notes: notesMeta,
+        isPublished: true,
+      },
+      update: {
+        employmentStatus,
+        totalHours,
+        hourlyRate,
+        baseSalary,
+        transportAllowance,
+        mealAllowance,
+        totalAttendanceDays: attendances.length,
+        manualAllowances: manualAllowances as any,
+        manualDeductions: manualDeductions as any,
+        totalAllowance,
+        totalDeduction,
+        netSalary,
+        notes: notesMeta,
+        isPublished: true,
+      },
+    });
+
+    return {
+      message: `Rincian penggajian untuk ${user.name} berhasil disimpan!`,
+      record,
+    };
+  }
+
+  /** Update data rekening bank pegawai */
+  async updateStaffBankAccount(
+    userId: string,
+    data: { bankName?: string; bankAccountNumber?: string; bankAccountHolder?: string },
+  ) {
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        bankName: data.bankName || null,
+        bankAccountNumber: data.bankAccountNumber || null,
+        bankAccountHolder: data.bankAccountHolder || null,
+      },
+      select: {
+        id: true,
+        name: true,
+        bankName: true,
+        bankAccountNumber: true,
+        bankAccountHolder: true,
+      },
+    });
+
+    return {
+      message: `Informasi rekening ${updated.name} berhasil diperbarui!`,
+      user: updated,
+    };
+  }
+
+  /** Update status jabatan kepegawaian (PTTP, GTTP, GTP, PTP) */
+  async updateStaffEmploymentStatus(userId: string, employmentStatus: string) {
+    const validStatuses = ['PTTP', 'GTTP', 'GTP', 'PTP'];
+    if (!validStatuses.includes(employmentStatus)) {
+      throw new BadRequestException('Label status kepegawaian tidak valid (PTTP, GTTP, GTP, PTP)');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { employmentStatus },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        employmentStatus: true,
+      },
+    });
+
+    return {
+      message: `Status kepegawaian ${updated.name} berhasil diubah menjadi ${employmentStatus}`,
+      user: updated,
+    };
+  }
+
+  /** Mengambil data slip gaji spesifik untuk satu pegawai */
+  async getStaffSlipGaji(userId: string, year: number, month: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        subRole: true,
+        subRole2: true,
+        subRole3: true,
+        subRole4: true,
+        subRole5: true,
+        employmentStatus: true,
+        bankName: true,
+        bankAccountNumber: true,
+        bankAccountHolder: true,
+        nipNbm: true,
+        phone: true,
+        avatarUrl: true,
+        teacherProfile: { select: { nip: true, phone: true } },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Pegawai tidak ditemukan');
+    }
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const attendances = await this.prisma.dailyAttendance.findMany({
+      where: { userId, date: { gte: startDate, lte: endDate }, status: 'HADIR' },
+      orderBy: { date: 'asc' },
+    });
+
+    const izinKeluars = await this.prisma.izinKeluar.findMany({
+      where: { userId, date: { gte: startDate, lte: endDate }, status: 'DISETUJUI' },
+    });
+
+    const attCalc = this.calculateAttendanceAllowances(attendances);
+
+    const savedRecord = await this.prisma.payrollRecord.findUnique({
+      where: {
+        userId_month_year: {
+          userId,
+          month,
+          year,
+        },
+      },
+    });
+
+    const rolesList = [
+      user.role,
+      user.subRole,
+      user.subRole2,
+      user.subRole3,
+      user.subRole4,
+      user.subRole5,
+    ].filter(Boolean);
+
+    const defaultStatus =
+      user.employmentStatus ||
+      (user.role === 'GURU' || user.subRole === 'GURU' ? 'GTTP' : 'PTTP');
+
+    const totalHours = savedRecord?.totalHours ?? 0;
+    const hourlyRate = savedRecord?.hourlyRate ?? 0;
+    const baseSalary = savedRecord?.baseSalary ?? (totalHours * hourlyRate);
+
+    const rawNotes = savedRecord?.notes || '';
+    let parsedMeta: any = {};
+    try {
+      if (rawNotes.startsWith('{')) parsedMeta = JSON.parse(rawNotes);
+    } catch (e) {}
+
+    const masaKerja = parsedMeta.masaKerja ?? 0;
+    const kelebihanJam = Number(parsedMeta.kelebihanJam) || 0;
+
+    const transportAllowance = attCalc.totalTransport;
+    const mealAllowance = attCalc.totalMeal;
+
+    const manualAllowances: { name: string; amount: number }[] =
+      Array.isArray(savedRecord?.manualAllowances)
+        ? (savedRecord?.manualAllowances as any)
+        : [];
+    const manualDeductions: { name: string; amount: number }[] =
+      Array.isArray(savedRecord?.manualDeductions)
+        ? (savedRecord?.manualDeductions as any)
+        : [];
+
+    const totalManualAllowance = manualAllowances.reduce(
+      (sum, item) => sum + (Number(item.amount) || 0),
+      0,
+    );
+    const totalManualDeduction = manualDeductions.reduce(
+      (sum, item) => sum + (Number(item.amount) || 0),
+      0,
+    );
+
+    const totalAllowance =
+      transportAllowance + mealAllowance + totalManualAllowance;
+    const totalGrossSalary = baseSalary + kelebihanJam + totalAllowance;
+    const totalDeduction = totalManualDeduction;
+    const netSalary = totalGrossSalary - totalDeduction;
+
+    const settings = await this.prisma.setting.findFirst();
+
+    return {
+      schoolInfo: {
+        schoolName: settings?.schoolName || 'SMA MUHAMMADIYAH 1 PONOROGO',
+        address: settings?.address || 'Jln. Batoro Katong No. 6B Ponorogo',
+        phone: settings?.phone || '(0352) 481521',
+        email: settings?.email || 'smamuhipo@gmail.com',
+        principalName: settings?.principalName || 'Sugeng Riadi, M.Pd.',
+        principalNip: settings?.principalNip || 'NBM. 974.501',
+        treasurerName: 'AGUNG TRIBOWO, SE',
+        logoUrl: settings?.logoUrl || null,
+      },
+      staff: {
+        id: user.id,
+        name: user.name,
+        roles: rolesList.join(', '),
+        role: user.role,
+        nip: user.nipNbm || user.teacherProfile?.nip || '-',
+        phone: user.phone || user.teacherProfile?.phone || '-',
+        employmentStatus: savedRecord?.employmentStatus || defaultStatus,
+        masaKerja,
+        bankName: user.bankName || '',
+        bankAccountNumber: user.bankAccountNumber || '',
+        bankAccountHolder: user.bankAccountHolder || '',
+      },
+      period: {
+        year,
+        month,
+      },
+      attendance: {
+        totalHadir: attendances.length,
+        totalIzin: izinKeluars.length,
+        dailyDetails: attCalc.dailyDetails,
+      },
+      calculation: {
+        totalHours,
+        hourlyRate,
+        baseSalary,
+        kelebihanJam,
+        transportAllowance,
+        mealAllowance,
+        manualAllowances,
+        manualDeductions,
+        totalAllowance,
+        totalGrossSalary,
+        totalDeduction,
+        netSalary,
+        notes: rawNotes.startsWith('{') ? (parsedMeta.notes || '') : rawNotes,
+      },
+    };
+  }
+
+  /** Export Rekapitulasi Gaji Excel Multi-Kolom Lengkap */
+  async generatePayrollExcel(year: number, month: number) {
+    const summary = await this.getPayrollSummary(year, month);
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(`Rekap Gaji ${month}-${year}`);
+
+    // Kolom Header Excel
+    worksheet.columns = [
+      { header: 'NO', key: 'no', width: 6 },
+      { header: 'NAMA PEGAWAI / GURU', key: 'name', width: 28 },
+      { header: 'STATUS JABATAN', key: 'employmentStatus', width: 16 },
+      { header: 'PERAN / ROLE', key: 'roles', width: 24 },
+      { header: 'BANK', key: 'bankName', width: 12 },
+      { header: 'NO. REKENING', key: 'bankAccountNumber', width: 20 },
+      { header: 'ATAS NAMA', key: 'bankAccountHolder', width: 24 },
+      { header: 'HADIR (HARI)', key: 'totalHadir', width: 14 },
+      { header: 'JAM KERJA', key: 'totalHours', width: 12 },
+      { header: 'TARIF / JAM (RP)', key: 'hourlyRate', width: 18 },
+      { header: 'GAJI POKOK (RP)', key: 'baseSalary', width: 18 },
+      { header: 'KELEBIHAN JAM (RP)', key: 'kelebihanJam', width: 20 },
+      { header: 'ABSEN MAKAN (RP)', key: 'mealAllowance', width: 20 },
+      { header: 'TRANSPORT (RP)', key: 'transportAllowance', width: 18 },
+      { header: 'TOTAL PENGHASILAN (RP)', key: 'totalGrossSalary', width: 26 },
+      { header: 'TOTAL POTONGAN (RP)', key: 'totalDeduction', width: 22 },
+      { header: 'GAJI BERSIH (NETTO) (RP)', key: 'netSalary', width: 26 },
+    ];
+
+    // Styling Header
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFF' } };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '005E36' } };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    headerRow.height = 28;
+
+    summary.forEach((item, idx) => {
+      const row = worksheet.addRow({
+        no: idx + 1,
+        name: item.name,
+        employmentStatus: item.employmentStatus,
+        roles: item.roles,
+        bankName: item.bankName || '-',
+        bankAccountNumber: item.bankAccountNumber || '-',
+        bankAccountHolder: item.bankAccountHolder || '-',
+        totalHadir: item.totalHadir,
+        totalHours: item.totalHours,
+        hourlyRate: item.hourlyRate,
+        baseSalary: item.baseSalary,
+        kelebihanJam: item.kelebihanJam || 0,
+        mealAllowance: item.mealAllowance,
+        transportAllowance: item.transportAllowance,
+        totalGrossSalary: item.totalGrossSalary || (item.baseSalary + item.totalAllowance),
+        totalDeduction: item.totalDeduction,
+        netSalary: item.netSalary,
+      });
+
+      // Format angka rupiah
+      [10, 11, 12, 13, 14, 15, 16, 17].forEach((colIdx) => {
+        row.getCell(colIdx).numFmt = '#,##0';
+      });
+
+      row.getCell(1).alignment = { horizontal: 'center' };
+      row.getCell(3).alignment = { horizontal: 'center' };
+      row.getCell(5).alignment = { horizontal: 'center' };
+      row.getCell(8).alignment = { horizontal: 'center' };
+      row.getCell(9).alignment = { horizontal: 'center' };
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   }
 
   // ============================================================

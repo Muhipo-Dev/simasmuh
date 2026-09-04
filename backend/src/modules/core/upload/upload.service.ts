@@ -10,19 +10,24 @@ export class UploadService {
   private readonly logger = new Logger(UploadService.name);
 
   /**
-   * Menyimpan gambar Base64 dengan kompresi otomatis WebP untuk efisiensi penyimpanan & bandwidth
+   * Menyimpan berkas Base64 (Gambar WebP/JPEG/PNG atau Dokumen PDF) dengan penyimpanan aman
    */
   async saveBase64Image(
     base64Str: string,
-    folder?: 'thumbnails' | 'profiles' | 'journals' | string,
+    folder?: 'thumbnails' | 'profiles' | 'journals' | 'sdm_docs' | string,
   ): Promise<string> {
-    const matches = base64Str.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+    const matches = base64Str.match(/^data:([A-Za-z0-9-+./]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
-      throw new Error('Invalid input string');
+      throw new Error('Format berkas tidak valid');
     }
 
+    const mimeType = matches[1].toLowerCase();
     const buffer = Buffer.from(matches[2], 'base64');
-    const filename = `${uuidv4()}-${Date.now()}.webp`;
+    
+    const isPdf = mimeType.includes('pdf');
+    const isImage = mimeType.includes('image');
+    const extension = isPdf ? 'pdf' : 'webp';
+    const filename = `${uuidv4()}-${Date.now()}.${extension}`;
 
     // Tentukan direktori penyimpanan target
     let targetDir = STORAGE_ROOT;
@@ -43,16 +48,21 @@ export class UploadService {
 
     const filePath = path.join(targetDir, filename);
 
-    try {
-      // Optimasi kompresi WebP dengan mempertahankan kualitas visual tinggi & ukuran file ringan
-      await sharp(buffer)
-        .rotate() // Menyesuaikan orientasi EXIF
-        .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 82, effort: 4 })
-        .toFile(filePath);
-    } catch (sharpError) {
-      // Fallback jika sharp gagal memproses format tertentu
-      this.logger.warn(`Sharp conversion fallback: ${sharpError}`);
+    if (isPdf) {
+      await fs.promises.writeFile(filePath, buffer);
+    } else if (isImage) {
+      try {
+        // Optimasi kompresi WebP dengan mempertahankan kualitas visual tinggi & ukuran file ringan
+        await sharp(buffer)
+          .rotate() // Menyesuaikan orientasi EXIF
+          .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 82, effort: 4 })
+          .toFile(filePath);
+      } catch (sharpError) {
+        this.logger.warn(`Sharp conversion fallback: ${sharpError}`);
+        await fs.promises.writeFile(filePath, buffer);
+      }
+    } else {
       await fs.promises.writeFile(filePath, buffer);
     }
 

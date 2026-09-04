@@ -407,7 +407,7 @@ export default function ClassesPage() {
                     <Label htmlFor="name">Nama Kelas</Label>
                     <Input 
                       id="name" 
-                      placeholder="Contoh: X IPA 1" 
+                      placeholder="Contoh: X 2" 
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       required 

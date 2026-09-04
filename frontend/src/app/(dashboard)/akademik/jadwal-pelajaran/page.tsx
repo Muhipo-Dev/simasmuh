@@ -316,7 +316,7 @@ export default function JadwalPelajaranPage() {
       if (selectedClassId === 'ALL') return true
       return sch.classId === selectedClassId
     }
-    if (role === 'SISWA' || role === 'WALI_MURID' || role === 'PARENT' || role === 'ORANG_TUA') {
+    if (role === 'SISWA' || role === 'WALI_MURID') {
       return sch.classId === activeStudentClass?.id
     }
     // Guru / Pegawai view

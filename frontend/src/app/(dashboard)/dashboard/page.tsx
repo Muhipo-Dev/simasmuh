@@ -12,9 +12,9 @@ import {
   Briefcase, BookOpen, UserCheck, Receipt, CreditCard, AlertTriangle,
   GraduationCap, Award, BellRing, Sparkles, ChevronDown, TrendingUp,
   TrendingDown, Wallet, Landmark, DollarSign, Activity, CheckCircle2,
-  ArrowUpRight, FileText, PieChart, ShieldAlert, BarChart3, Clock,
+  ArrowUpRight, FileText, FileCheck, PieChart, ShieldAlert, BarChart3, Clock,
   ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake, Megaphone, Camera, CornerDownRight,
-  Server, Cpu, HardDrive, Zap, Network, RefreshCw, Radio, Terminal, Laptop, Globe, Check, Key, Send, LogOut, Lock, Eye, Monitor, Smartphone, X, Search, Trash2
+  Server, Cpu, HardDrive, Zap, Network, RefreshCw, Radio, Terminal, Laptop, Globe, Check, Key, Send, LogOut, Lock, Eye, Monitor, Smartphone, X, Search, Trash2, Banknote
 } from 'lucide-react'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import Link from 'next/link'
@@ -117,22 +117,30 @@ export default function DashboardPage() {
   const [selectedChildIdx, setSelectedChildIdx] = useState(0)
   const [selectedStatCategory, setSelectedStatCategory] = useState<string>('SEMUA')
   const [selectedCurveType, setSelectedCurveType] = useState<'PRESENSI' | 'KEUANGAN' | 'PRESTASI' | 'DEMOGRAFI'>('PRESENSI')
+  const [showAllKsMenus, setShowAllKsMenus] = useState(false)
 
-  // Query untuk tagihan siswa (khusus siswa)
+  // Query untuk tagihan siswa (khusus siswa & wali murid)
   const { data: studentTagihans } = useQuery<{
     student: any;
     tagihans: any[];
   }>({
     queryKey: ['my-tagihans'],
     queryFn: () => authenticatedQuery('/api-backend/finance/my-tagihan'),
-    enabled: role === 'SISWA' || role === 'WALI_MURID' || role === 'PARENT' || role === 'ORANG_TUA'
+    enabled: role === 'SISWA' || role === 'WALI_MURID',
+  })
+
+  // Data Siswa Terhubung khusus untuk Akun Orang Tua / Wali Murid
+  const { data: connectedStudentsData } = useQuery({
+    queryKey: ['my-connected-students'],
+    queryFn: () => authenticatedQuery('/api-backend/master-data/parents/my-students'),
+    enabled: role === 'WALI_MURID',
   })
 
   // Query khusus Dashboard Wali Murid
   const { data: parentDashboard } = useQuery<any>({
     queryKey: ['parent-my-dashboard'],
     queryFn: () => authenticatedQuery('/api-backend/parents/my-dashboard'),
-    enabled: role === 'WALI_MURID' || role === 'PARENT' || role === 'ORANG_TUA'
+    enabled: role === 'WALI_MURID'
   })
 
   // Query Khusus Dashboard Eksekutif & Statistika Lengkap Kepala Sekolah / Keuangan Penuh
@@ -992,6 +1000,50 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Widget Rekapitulasi Nilai Semester CBT */}
+            <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-xs rounded-2xl overflow-hidden">
+              <CardHeader className="p-4 pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-blue-600" />
+                    Nilai Semester (CBT MUHIPO)
+                  </CardTitle>
+                  <CardDescription className="text-[11px] mt-0.5">
+                    Hasil ujian berbasis komputer terintegrasi NIS
+                  </CardDescription>
+                </div>
+                <Link href="/akademik/nilai-semester">
+                  <Button variant="ghost" size="sm" className="text-xs text-blue-600 font-bold h-7 px-2">
+                    Lihat Rekap Nilai &rarr;
+                  </Button>
+                </Link>
+              </CardHeader>
+              <CardContent className="p-4 space-y-2.5">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">Sistem Ujian</span>
+                    <span className="text-xs font-black text-blue-700 dark:text-blue-300">CBT Online</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">Status Akun</span>
+                    <span className="text-xs font-black text-indigo-700 dark:text-indigo-300">Tersinkron</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">Standar KKM</span>
+                    <span className="text-xs font-black text-emerald-700 dark:text-emerald-300">75.0</span>
+                  </div>
+                </div>
+                <div className="pt-1 flex items-center justify-between text-xs">
+                  <span className="text-slate-500 text-[11px]">Akses rincian nilai per mata pelajaran:</span>
+                  <Link href="/akademik/nilai-semester">
+                    <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold">
+                      Buka Menu Nilai
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* AREA KANAN: INFORMASI SISTEM & KALENDER KEGIATAN (col-span-3) */}
@@ -1013,7 +1065,7 @@ export default function DashboardPage() {
   // ============================================================
   // DASHBOARD WALI MURID (Orang Tua / Wali Siswa)
   // ============================================================
-  if (role === 'WALI_MURID' || role === 'PARENT' || role === 'ORANG_TUA') {
+  if (role === 'WALI_MURID') {
     const parentStudents = parentDashboard?.students || []
     const activeStudent = parentStudents[selectedChildIdx] || parentStudents[0]
     const studentClass = activeStudent ? { name: activeStudent.className } : null
@@ -1281,55 +1333,155 @@ export default function DashboardPage() {
         </div>
 
         {/* PUSAT PENGAWASAN & AKSES CEPAT LAYANAN DATA SEKOLAH (ATAS) */}
-        <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 px-1">
-            <div>
-              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-500" />
-                Pusat Pengawasan & Akses Layanan Data Sekolah
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Tampilan log terpadu dan monitoring mandiri data sekolah (Akses supervisi & pemantauan eksekutif).
-              </p>
-            </div>
-          </div>
+        {(() => {
+          const primaryKsLinks = [
+            { name: 'E-Sign & Surat', href: '/fitur/persuratan', icon: FileCheck, desc: 'E-Sign & Disposisi' },
+            { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award, desc: 'Verifikasi Izin' },
+            { name: 'Inventaris & Sarpras', href: '/fitur/inventaris', icon: Package, desc: 'Aset & Sarana' },
+            { name: 'Kepegawaian & HRD', href: '/fitur/kepegawaian', icon: UserCheck, desc: 'Personalia & Berkas' },
+            { name: 'Supervisi Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, desc: 'Jadwal Pembelajaran' },
+            { name: 'Data Kelas', href: '/master-data/kelas', icon: BookOpen, desc: 'Rombel & Ruang' },
+            { name: 'Data Guru & Pegawai', href: '/master-data/guru', icon: Users, desc: 'Pendidik & Tendik' },
+            { name: 'Data Siswa', href: '/master-data/siswa', icon: UserSquare2, desc: 'Buku Induk Siswa' },
+          ]
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
-            {[
-              { name: 'Guru & Tendik', href: '/master-data/guru', icon: Users, desc: 'Log Pendidik' },
-              { name: 'Data Siswa', href: '/master-data/siswa', icon: UserSquare2, desc: 'Buku Induk' },
-              { name: 'Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen, desc: 'Daftar Kelas' },
-              { name: 'Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, desc: 'Jadwal Belajar' },
-              { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: Wallet, desc: 'Rekap Keuangan Sekolah' },
-              { name: 'Pengumuman', href: '/informasi/pengumuman', icon: Megaphone, desc: 'Pemberitahuan' },
-              { name: 'Presensi Pegawai', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck, desc: 'Log Kehadiran' },
-              { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: UserCheck, desc: 'Log Presensi' },
-            ].map((link, idx) => {
-              const Icon = link.icon
-              return (
-                <Link key={idx} href={link.href} className="group">
-                  <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-2xs hover:shadow-lg hover:border-amber-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-3.5 gap-2 rounded-2xl hover:-translate-y-0.5 text-center">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-amber-500 group-hover:to-orange-600 group-hover:text-white group-hover:border-transparent transition-all duration-300 shadow-2xs">
-                      <Icon className="w-5 h-5 transition-colors" />
+          const allPermittedKsLinks = [
+            // Pimpinan, Tata Usaha & Sarpras
+            { category: 'Pimpinan, Tata Usaha & Sarana Prasarana', items: [
+              { name: 'E-Sign & Persuratan', href: '/fitur/persuratan', icon: FileCheck, desc: 'Naskah Surat, Disposisi & E-Sign' },
+              { name: 'Permohonan Dispensasi', href: '/presensi/dispensasi', icon: Award, desc: 'Verifikasi Izin & Dispensasi' },
+              { name: 'Inventaris & Sarpras', href: '/fitur/inventaris', icon: Package, desc: 'Aset & Sarana Prasarana' },
+              { name: 'Kepegawaian & HRD', href: '/fitur/kepegawaian', icon: UserCheck, desc: 'Data Personalia & Berkas Pegawai' },
+            ]},
+            // Akademik, Kurikulum & Master Data
+            { category: 'Akademik, Kurikulum & Master Data', items: [
+              { name: 'Supervisi Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, desc: 'Jadwal Pembelajaran KBM' },
+              { name: 'Data Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen, desc: 'Daftar Kelas & Wali Kelas' },
+              { name: 'Data Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap, desc: 'Kurikulum & Mata Pelajaran' },
+              { name: 'Data Guru & Karyawan', href: '/master-data/guru', icon: Users, desc: 'Buku Induk Guru & Tendik' },
+              { name: 'Data Induk Siswa', href: '/master-data/siswa', icon: UserSquare2, desc: 'Buku Induk & Biodata Siswa' },
+            ]},
+            // Keuangan Pribadi & Notifikasi
+            { category: 'Penghasilan & Informasi Akun', items: [
+              { name: 'Slip Gaji Pribadi', href: '/keuangan/slip-gaji', icon: Banknote, desc: 'Rincian Penghasilan Pribadi' },
+              { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, desc: 'Pemberitahuan & Notifikasi' },
+            ]},
+          ]
+
+          return (
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-1">
+                <div>
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-500" />
+                    Pusat Pengawasan & Akses Layanan Data Sekolah
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Tampilan log terpadu dan monitoring mandiri data sekolah (Akses supervisi & pemantauan eksekutif).
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllKsMenus(!showAllKsMenus)}
+                  className="rounded-xl border-amber-300 dark:border-amber-800/60 bg-amber-50/80 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-xs font-bold gap-1.5 shadow-2xs self-start sm:self-auto transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>{showAllKsMenus ? 'Tutup Menu Lainnya' : 'Tampilkan Menu Lainnya'}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showAllKsMenus ? 'rotate-180' : ''}`} />
+                </Button>
+              </div>
+
+              {/* Grid 8 Menu Utama / Akses Cepat Primer */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                {primaryKsLinks.map((link, idx) => {
+                  const Icon = link.icon
+                  return (
+                    <Link key={idx} href={link.href} className="group">
+                      <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-2xs hover:shadow-lg hover:border-amber-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-3.5 gap-2 rounded-2xl hover:-translate-y-0.5 text-center">
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-amber-500 group-hover:to-orange-600 group-hover:text-white group-hover:border-transparent transition-all duration-300 shadow-2xs">
+                          <Icon className="w-5 h-5 transition-colors" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-800 dark:text-slate-100 text-xs group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
+                            {link.name}
+                          </h3>
+                          <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                            {link.desc}
+                          </span>
+                        </div>
+                      </Card>
+                    </Link>
+                  )
+                })}
+              </div>
+
+              {/* Panel Menu Lengkap yang Diizinkan untuk Kepala Sekolah (Expandable / Toggle) */}
+              {showAllKsMenus && (
+                <div className="mt-4 p-4 sm:p-5 rounded-3xl bg-slate-50/90 dark:bg-slate-900/90 border border-amber-200/70 dark:border-amber-900/50 shadow-inner space-y-5 animate-in fade-in slide-in-from-top-3 duration-300">
+                  <div className="flex items-center justify-between border-b border-slate-200/70 dark:border-slate-800 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                          Direktori Lengkap Hak Akses & Layanan Kepala Sekolah
+                        </h3>
+                        <p className="text-[11px] text-slate-500">
+                          Seluruh modul, fitur persuratan, akademik, presensi, tata usaha, dan keuangan yang terotorisasi untuk pimpinan.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-bold text-slate-800 dark:text-slate-100 text-xs group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
-                        {link.name}
-                      </h3>
-                      <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
-                        {link.desc}
-                      </span>
-                    </div>
-                  </Card>
-                </Link>
-              )
-            })}
-          </div>
-        </div>
+                    <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800 text-[10px] font-bold">
+                      Akses Terotorisasi
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-4">
+                    {allPermittedKsLinks.map((sec, sIdx) => (
+                      <div key={sIdx} className="space-y-2">
+                        <h4 className="text-xs font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider flex items-center gap-1.5 px-1">
+                          <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                          {sec.category}
+                        </h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+                          {sec.items.map((item, iIdx) => {
+                            const ItemIcon = item.icon
+                            return (
+                              <Link key={iIdx} href={item.href} className="group">
+                                <div className="h-full p-3 rounded-2xl bg-white dark:bg-slate-950/80 border border-slate-200/70 dark:border-slate-800/80 hover:border-amber-500 hover:shadow-md transition-all flex flex-col justify-between gap-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                                      <ItemIcon className="w-3.5 h-3.5" />
+                                    </div>
+                                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-1">
+                                      {item.name}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] text-slate-400 font-medium line-clamp-1 pl-0.5">
+                                    {item.desc}
+                                  </span>
+                                </div>
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* CARD UNIFIED KEPALA SEKOLAH: PUSAT PERSETUJUAN, DISPOSISI & E-SIGN PIMPINAN */}
         {(() => {
-          const pendingDispensasi = (dispensasiList || []).filter((d: any) => d.status === 'MENUNGGU')
+          const pendingDispCount = execStats?.persuratan?.pendingDispensasi ?? (dispensasiList || []).filter((d: any) => d.status === 'MENUNGGU').length
+          const pendingDispCountVal = typeof pendingDispCount === 'number' ? pendingDispCount : 0
+          const pendingDisposisi = execStats?.persuratan?.pendingDisposisi ?? 0
+          const pendingSuratKeluar = execStats?.persuratan?.pendingSuratKeluar ?? 0
 
           return (role === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH') ? (
             <Card className="border-indigo-200/80 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-blue-50/50 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-blue-950/30 shadow-xs rounded-3xl p-5 space-y-4">
@@ -1381,8 +1533,8 @@ export default function DashboardPage() {
                         <p className="text-[10px] text-slate-500">Izin Siswa & Pegawai</p>
                       </div>
                     </div>
-                    <Badge className={`${pendingDispensasi.length > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-emerald-600 text-white'} font-mono font-bold text-xs px-2 py-0.5 rounded-lg shrink-0`}>
-                      {pendingDispensasi.length > 0 ? `${pendingDispensasi.length} Menunggu` : 'Semua Disetujui'}
+                    <Badge className={`${pendingDispCountVal > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-emerald-600 text-white'} font-mono font-bold text-xs px-2 py-0.5 rounded-lg shrink-0`}>
+                      {pendingDispCountVal > 0 ? `${pendingDispCountVal} Menunggu` : 'Semua Disetujui'}
                     </Badge>
                   </div>
                 </Link>
@@ -1398,8 +1550,8 @@ export default function DashboardPage() {
                         <p className="text-[10px] text-slate-500">Perlu Arahan Pimpinan</p>
                       </div>
                     </div>
-                    <Badge className="bg-purple-600 text-white font-mono font-bold text-xs px-2 py-0.5 rounded-lg shrink-0">
-                      2 Disposisi
+                    <Badge className={`${pendingDisposisi > 0 ? 'bg-purple-600 text-white animate-pulse' : 'bg-emerald-600 text-white'} font-mono font-bold text-xs px-2 py-0.5 rounded-lg shrink-0`}>
+                      {pendingDisposisi > 0 ? `${pendingDisposisi} Disposisi` : 'Selesai'}
                     </Badge>
                   </div>
                 </Link>
@@ -1415,8 +1567,8 @@ export default function DashboardPage() {
                         <p className="text-[10px] text-slate-500">Antrian Menunggu E-Sign</p>
                       </div>
                     </div>
-                    <Badge className="bg-amber-500 text-white font-mono font-bold text-xs px-2 py-0.5 rounded-lg shrink-0">
-                      3 Menunggu TTD
+                    <Badge className={`${pendingSuratKeluar > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-emerald-600 text-white'} font-mono font-bold text-xs px-2 py-0.5 rounded-lg shrink-0`}>
+                      {pendingSuratKeluar > 0 ? `${pendingSuratKeluar} Menunggu TTD` : 'Semua Ditandatangani'}
                     </Badge>
                   </div>
                 </Link>
@@ -1695,15 +1847,23 @@ export default function DashboardPage() {
                         {(() => {
                           const weekly = execStats?.weeklyTrends || []
                           if (weekly.length === 0) return null
-                          const maxP = Math.max(...weekly.map((w: any) => w.pemasukan || 0), 1000000)
+                          const maxP = Math.max(
+                            ...weekly.map((w: any) => Math.max(w.pemasukan || 0, w.pengeluaran || 0)),
+                            1000000
+                          )
                           const ptsOut = weekly.map((w: any, i: number) => ({
                             x: 45 + (i * (420 / Math.max(1, weekly.length - 1))),
-                            y: 150 - (Math.min(maxP, (w.pemasukan * 0.35) + 50000) / maxP) * 115,
+                            y: 150 - (Math.min(maxP, w.pengeluaran || 0) / maxP) * 115,
+                            val: w.pengeluaran || 0,
                           }))
-                          const ptsSaldo = weekly.map((w: any, i: number) => ({
-                            x: 45 + (i * (420 / Math.max(1, weekly.length - 1))),
-                            y: 150 - (Math.min(maxP, (w.pemasukan * 0.65) + 100000) / maxP) * 120,
-                          }))
+                          const ptsSaldo = weekly.map((w: any, i: number) => {
+                            const net = Math.max(0, (w.pemasukan || 0) - (w.pengeluaran || 0))
+                            return {
+                              x: 45 + (i * (420 / Math.max(1, weekly.length - 1))),
+                              y: 150 - (Math.min(maxP, net) / maxP) * 120,
+                              val: net,
+                            }
+                          })
                           const createPath = (pArr: any[]) => pArr.reduce((acc: string, p: any, i: number, a: any[]) => {
                             if (i === 0) return `M ${p.x} ${p.y}`
                             const prev = a[i - 1]
@@ -2087,7 +2247,7 @@ export default function DashboardPage() {
                         <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Kepatuhan Tata Tertib Keseluruhan</span>
                       </div>
                       <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-extrabold text-xs">
-                        98.4% Tertib
+                        {execStats?.karakterTatib?.kepatuhanPct ?? 100}% Tertib
                       </Badge>
                     </div>
                   </div>
@@ -2259,7 +2419,7 @@ export default function DashboardPage() {
                         </div>
                         <div>
                           <h3 className="font-extrabold text-slate-900 dark:text-white text-sm">Tren Aktivitas Sesi Pembelajaran</h3>
-                          <span className="text-[11px] text-slate-400">Total {todaySchedules.length} Sesi Terjadwal</span>
+                          <span className="text-[11px] text-slate-400">Total {todaySchedules.length} Sesi Terjadwal Hari Ini</span>
                         </div>
                       </div>
                       <Badge className="bg-indigo-600 text-white font-bold text-[11px]">{ov.totalJurnalMengajar ?? 0} Jurnal</Badge>
@@ -2288,10 +2448,11 @@ export default function DashboardPage() {
                         {(() => {
                           const weekly = execStats?.weeklyTrends || []
                           if (weekly.length === 0) return null
-                          const maxS = Math.max(todaySchedules.length, 6)
+                          const maxS = Math.max(...weekly.map((w: any) => w.jadwalCount || 0), todaySchedules.length, 1)
                           const pts = weekly.map((w: any, i: number) => ({
                             x: 45 + (i * (420 / Math.max(1, weekly.length - 1))),
-                            y: 150 - ((w.siswaHadir > 0 ? (i % 2 === 0 ? 5 : 6) : 0) / maxS) * 120,
+                            y: 150 - ((w.jadwalCount || 0) / maxS) * 120,
+                            val: w.jadwalCount || 0,
                           }))
                           const pathStr = pts.reduce((acc: string, p: any, i: number, a: any[]) => {
                             if (i === 0) return `M ${p.x} ${p.y}`
@@ -2322,7 +2483,7 @@ export default function DashboardPage() {
                       <div key={idx} className="space-y-0.5">
                         <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 block">{w.date}</span>
                         <span className="text-[9px] text-indigo-600 font-extrabold block">
-                          {w.siswaHadir > 0 ? '6 Sesi' : '0 Sesi'}
+                          {w.jadwalCount ?? (w.siswaHadir > 0 ? 6 : 0)} Sesi
                         </span>
                       </div>
                     ))}

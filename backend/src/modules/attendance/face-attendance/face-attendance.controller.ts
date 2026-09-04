@@ -28,15 +28,7 @@ export class FaceAttendanceController {
 
   @Put('config')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(
-    'SUPERADMIN',
-    UserRole.ADMIN_IT,
-    UserRole.ADMIN_TU,
-    UserRole.BAU,
-    UserRole.TATA_USAHA,
-    SubRole.ADMIN_TU,
-    SubRole.BAU,
-  )
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
   updateConfig(@Body() data: Partial<FaceCameraConfig>) {
     return this.faceAttendanceService.updateConfig(data);
   }
@@ -149,30 +141,14 @@ export class FaceAttendanceController {
 
   @Post('service/start')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(
-    'SUPERADMIN',
-    UserRole.ADMIN_IT,
-    UserRole.ADMIN_TU,
-    UserRole.BAU,
-    UserRole.TATA_USAHA,
-    SubRole.ADMIN_TU,
-    SubRole.BAU,
-  )
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
   startAiService() {
     return this.faceAttendanceService.startAiWorker();
   }
 
   @Post('service/stop')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(
-    'SUPERADMIN',
-    UserRole.ADMIN_IT,
-    UserRole.ADMIN_TU,
-    UserRole.BAU,
-    UserRole.TATA_USAHA,
-    SubRole.ADMIN_TU,
-    SubRole.BAU,
-  )
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
   stopAiService() {
     return this.faceAttendanceService.stopAiWorker();
   }

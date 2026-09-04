@@ -98,9 +98,41 @@ export class ClassesService {
   }
 
   async remove(id: string) {
-    const oldClass = await this.prisma.class.findUnique({ where: { id } });
-    const removed = await this.prisma.class.delete({ where: { id } });
-    if (oldClass?.homeroomTeacherId) {
+    const oldClass = await this.prisma.class.findUnique({
+      where: { id },
+      include: { schedules: true, students: true },
+    });
+    if (!oldClass) return null;
+
+    const removed = await this.prisma.$transaction(async (tx) => {
+      // 1. Bersihkan jadwal kelas
+      const schedules = await tx.schedule.findMany({
+        where: { classId: id },
+        select: { id: true },
+      });
+      if (schedules.length > 0) {
+        const scheduleIds = schedules.map((s) => s.id);
+        await tx.attendance.deleteMany({
+          where: { scheduleId: { in: scheduleIds } },
+        });
+        await tx.teachingJournal.deleteMany({
+          where: { scheduleId: { in: scheduleIds } },
+        });
+        await tx.schedule.deleteMany({
+          where: { id: { in: scheduleIds } },
+        });
+      }
+
+      // 2. Lepaskan hubungan kelas dari siswa jika ada
+      await tx.student.updateMany({
+        where: { classId: id },
+        data: { classId: '' }, // atau null jika opsional
+      }).catch(() => null);
+
+      return tx.class.delete({ where: { id } });
+    });
+
+    if (oldClass.homeroomTeacherId) {
       await this.syncTeacherHomeroomSubRole(oldClass.homeroomTeacherId);
     }
     return removed;

@@ -255,16 +255,23 @@ class FaceRecognitionEngine:
             except Exception:
                 img = None
 
-        # 2. Coba cari di storage root lokal jika avatar_url mengarah ke /uploads/
+        # 2. Coba cari di storage root lokal jika avatar_url mengarah ke /uploads/ atau path relatif
         if img is None and record.avatar_url:
-            storage_root = os.environ.get("STORAGE_PATH", "D:/simasmuh_storage" if os.name == 'nt' else os.path.expanduser("~/simasmuh_storage"))
             clean_rel = record.avatar_url.replace("/uploads/", "").lstrip("/\\")
-            possible_paths = [
-                os.path.join(storage_root, clean_rel),
-                os.path.join(storage_root, "profiles", clean_rel),
-                os.path.join(storage_root, os.path.basename(clean_rel)),
-                os.path.join(storage_root, "profiles", os.path.basename(clean_rel))
+            storage_roots = [
+                os.environ.get("STORAGE_PATH", "D:/simasmuh_storage" if os.name == 'nt' else os.path.expanduser("~/simasmuh_storage")),
+                "D:/simasmuh_storage",
+                "C:/simasmuh_storage",
+                os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "backend", "storage")),
             ]
+            possible_paths = []
+            for s_root in storage_roots:
+                possible_paths.extend([
+                    os.path.join(s_root, clean_rel),
+                    os.path.join(s_root, "profiles", clean_rel),
+                    os.path.join(s_root, os.path.basename(clean_rel)),
+                    os.path.join(s_root, "profiles", os.path.basename(clean_rel)),
+                ])
             for p in possible_paths:
                 if os.path.exists(p):
                     try:
@@ -454,7 +461,7 @@ class FaceRecognitionEngine:
 
         return boxes
 
-    def match_face(self, face_crop: np.ndarray, threshold: float = 0.46) -> Optional[Tuple[FaceUserRecord, float]]:
+    def match_face(self, face_crop: np.ndarray, threshold: float = 0.90) -> Optional[Tuple[FaceUserRecord, float]]:
         """Mencocokkan potongan wajah dengan database FaceNet 512-D vector embedding pengguna secara instan."""
         if not self.user_database or face_crop is None or face_crop.size == 0:
             return None

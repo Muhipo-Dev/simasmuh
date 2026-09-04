@@ -395,7 +395,7 @@ export class FinanceCalculationService {
    */
   async calculatePayrollSummary(year: number, month: number): Promise<any[]> {
     const staffList = await this.prisma.user.findMany({
-      where: { role: { not: 'SISWA' } },
+      where: { role: { notIn: ['SISWA', 'WALI_MURID'] } },
       select: {
         id: true,
         name: true,

@@ -293,7 +293,7 @@ export default function LogKehadiranPegawaiPage() {
               </div>
 
               <div className="absolute bottom-2 right-2 pointer-events-none px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-slate-300 border border-white/10">
-                Sensitivitas: {Math.round((cameraConfig?.threshold || 0.7) * 100)}%
+                Sensitivitas: {Math.round((cameraConfig?.threshold || 0.90) * 100)}%
               </div>
             </div>
 

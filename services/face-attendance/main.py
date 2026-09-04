@@ -179,13 +179,15 @@ def scan_frame(payload: ScanFrameRequest):
             x2 = min(w_frame, x + w + pad_x)
             face_crop = frame[y1:y2, x1:x2]
 
-            threshold = worker.config.threshold if worker.config and worker.config.threshold is not None else 0.46
+            threshold = worker.config.threshold if (worker.config and worker.config.threshold is not None) else 0.70
             match_res = engine.match_face(face_crop, threshold=threshold)
 
             if match_res:
                 user_rec, sim = match_res
                 pct = int(sim * 100)
-                worker._process_attendance(user_rec, sim, face_crop=face_crop)
+                # Hanya catat ke log absen jika memenuhi batas mutlak >= 0.90
+                if sim >= 0.90:
+                    worker._process_attendance(user_rec, sim, face_crop=face_crop)
                 results.append({
                     "box": [int(x), int(y), int(w), int(h)],
                     "is_registered": True,

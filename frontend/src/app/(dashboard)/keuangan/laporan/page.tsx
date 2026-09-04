@@ -1127,7 +1127,7 @@ export default function FinanceReportPage() {
     ['KEPALA_SEKOLAH', 'SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'TATA_USAHA'].includes(r)
   )
 
-  const isParent = roles.includes('WALI_MURID') || roles.includes('ORANG_TUA') || roles.includes('PARENT')
+  const isParent = roles.includes('WALI_MURID')
 
   const authenticatedQuery = useAuthenticatedQuery()
 

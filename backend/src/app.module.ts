@@ -29,12 +29,13 @@ import { IzinKeluarModule } from './modules/attendance/izin-keluar/izin-keluar.m
 import { FinanceModule } from './modules/finance/finance/finance.module';
 import { PaymentProofsModule } from './modules/finance/payment-proofs/payment-proofs.module';
 import { NotificationsModule } from './modules/communication/notifications/notifications.module';
-import { WhatsAppModule } from './modules/communication/whatsapp/whatsapp.module';
 import { FaceAttendanceModule } from './modules/attendance/face-attendance/face-attendance.module';
 import { CharacterAssessmentsModule } from './modules/academic/character-assessments/character-assessments.module';
 import { GuestBookModule } from './modules/tu/guest-book/guest-book.module';
 import { SuratKeluarModule } from './modules/tu/surat-keluar/surat-keluar.module';
 import { SuratMasukModule } from './modules/tu/surat-masuk/surat-masuk.module';
+import { NotulensiRapatModule } from './modules/tu/notulensi-rapat/notulensi-rapat.module';
+import { KegiatanSekolahModule } from './modules/tu/kegiatan-sekolah/kegiatan-sekolah.module';
 import { SystemLogModule } from './modules/core/system-log/system-log.module';
 import { WaitingRoomModule } from './modules/core/waiting-room/waiting-room.module';
 import { WaitingRoomMiddleware } from './modules/core/waiting-room/waiting-room.middleware';
@@ -101,12 +102,13 @@ import { AdaptiveThrottlerGuard } from './modules/core/guards/adaptive-throttler
     FinanceModule,
     PaymentProofsModule,
     NotificationsModule,
-    WhatsAppModule,
     FaceAttendanceModule,
     CharacterAssessmentsModule,
     GuestBookModule,
     SuratKeluarModule,
     SuratMasukModule,
+    NotulensiRapatModule,
+    KegiatanSekolahModule,
   ],
   controllers: [AppController],
   providers: [

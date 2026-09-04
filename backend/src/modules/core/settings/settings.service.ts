@@ -209,12 +209,17 @@ export class SettingsService {
       totalPelanggaranSiswa,
       totalPrestasiSiswa,
       totalIbadahSiswa,
+      pendingDispensasiCount,
+      pendingDisposisiCount,
+      pendingSuratKeluarCount,
+      totalSuratMasuk,
+      totalSuratKeluar,
     ] = await Promise.all([
       this.prisma.student.count(),
       this.prisma.teacherProfile.count(),
       this.prisma.user.count({
         where: {
-          role: { notIn: ['SISWA', 'WALI_MURID', 'ORANG_TUA', 'PARENT'] },
+          role: { notIn: ['SISWA', 'WALI_MURID'] },
         },
       }),
       this.prisma.parentProfile.count(),
@@ -306,6 +311,34 @@ export class SettingsService {
       this.prisma.characterAssessment.count({
         where: { category: 'IBADAH' },
       }),
+      this.prisma.izinKeluar.count({
+        where: {
+          status: 'MENUNGGU',
+          OR: [
+            { alasan: { contains: '[IZIN DISPENSASI]' } },
+            { alasan: { contains: '[DISPENSASI' } },
+            { alasan: { contains: '[IZIN KEGIATAN]' } },
+          ],
+        },
+      }),
+      this.prisma.suratDisposisi.count({
+        where: {
+          OR: [
+            { statusEsign: 'MENUNGGU_VERIFIKASI' },
+            { statusEsign: 'MENUNGGU' },
+          ],
+        },
+      }),
+      this.prisma.suratKeluar.count({
+        where: {
+          OR: [
+            { status: 'MENUNGGU_TTD' },
+            { status: 'DRAF' },
+          ],
+        },
+      }),
+      this.prisma.suratMasuk.count(),
+      this.prisma.suratKeluar.count(),
     ]);
 
     // Presensi Siswa Hari Ini
@@ -383,7 +416,21 @@ export class SettingsService {
       }))
       .sort((a, b) => b.count - a.count);
 
-    // Agregasi Kurva Tren Mingguan (7 Hari Terakhir) Presensi, Keuangan, Karakter & Demografi
+    // Kepatuhan Tata Tertib Realtime: Persentase siswa tanpa catatan pelanggaran aktif
+    const distinctPelanggarCount = await this.prisma.characterAssessment.groupBy({
+      by: ['studentId'],
+      where: {
+        OR: [{ category: 'PELANGGARAN' }, { type: 'NEGATIF' }],
+      },
+      _count: { studentId: true },
+    }).then((res) => res.length).catch(() => 0);
+
+    const kepatuhanTatibPct =
+      totalSiswa > 0
+        ? Math.max(0, Math.min(100, Math.round(((totalSiswa - distinctPelanggarCount) / totalSiswa) * 1000) / 10))
+        : 100;
+
+    // Agregasi Kurva Tren Mingguan (7 Hari Terakhir) Presensi, Keuangan, Karakter & Akademik
     const weeklyTrends: any[] = [];
     const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
     for (let i = 6; i >= 0; i--) {
@@ -408,37 +455,60 @@ export class SettingsService {
         999,
       );
 
-      const dayLabel = `${dayNames[startD.getDay()]} (${startD.getDate()}/${startD.getMonth() + 1})`;
+      const dayOfWeek = startD.getDay();
+      const dayLabel = `${dayNames[dayOfWeek]} (${startD.getDate()}/${startD.getMonth() + 1})`;
 
-      // Ambil presensi, keuangan, dan prestasi karakter pada hari d
-      const [dayAtt, dayStaffAtt, dayPayments, dayPrestasi, dayPelanggaran] =
-        await Promise.all([
-          this.prisma.attendance.count({
-            where: { date: { gte: startD, lte: endD }, status: 'HADIR' },
-          }),
-          this.prisma.dailyAttendance.count({
-            where: { date: { gte: startD, lte: endD }, status: 'HADIR' },
-          }),
-          this.prisma.tagihan.findMany({
-            where: {
-              updatedAt: { gte: startD, lte: endD },
-              status: { in: ['LUNAS', 'ANGSURAN'] },
-            },
-            select: { amountPaid: true, amount: true, status: true },
-          }),
-          this.prisma.characterAssessment.count({
-            where: {
-              createdAt: { gte: startD, lte: endD },
-              OR: [{ category: 'PRESTASI_PENGHARGAAN' }, { type: 'POSITIF' }],
-            },
-          }),
-          this.prisma.characterAssessment.count({
-            where: {
-              createdAt: { gte: startD, lte: endD },
-              OR: [{ category: 'PELANGGARAN' }, { type: 'NEGATIF' }],
-            },
-          }),
-        ]);
+      // Ambil presensi, keuangan, pengeluaran, jadwal, dan catatan karakter pada hari d
+      const [
+        dayAtt,
+        dayStaffAtt,
+        dayPayments,
+        dayExpenses,
+        daySchedulesCount,
+        dayJournalsCount,
+        dayPrestasi,
+        dayPelanggaran,
+      ] = await Promise.all([
+        this.prisma.attendance.count({
+          where: { date: { gte: startD, lte: endD }, status: 'HADIR' },
+        }),
+        this.prisma.dailyAttendance.count({
+          where: { date: { gte: startD, lte: endD }, status: 'HADIR' },
+        }),
+        this.prisma.tagihan.findMany({
+          where: {
+            updatedAt: { gte: startD, lte: endD },
+            status: { in: ['LUNAS', 'ANGSURAN'] },
+          },
+          select: { amountPaid: true, amount: true, status: true },
+        }),
+        this.prisma.pengeluaran.findMany({
+          where: {
+            date: { gte: startD, lte: endD },
+          },
+          select: { amount: true },
+        }),
+        this.prisma.schedule.count({
+          where: { dayOfWeek: dayOfWeek },
+        }),
+        this.prisma.teachingJournal.count({
+          where: {
+            date: { gte: startD, lte: endD },
+          },
+        }),
+        this.prisma.characterAssessment.count({
+          where: {
+            createdAt: { gte: startD, lte: endD },
+            OR: [{ category: 'PRESTASI_PENGHARGAAN' }, { type: 'POSITIF' }],
+          },
+        }),
+        this.prisma.characterAssessment.count({
+          where: {
+            createdAt: { gte: startD, lte: endD },
+            OR: [{ category: 'PELANGGARAN' }, { type: 'NEGATIF' }],
+          },
+        }),
+      ]);
 
       const pctSiswa =
         totalSiswa > 0
@@ -453,14 +523,22 @@ export class SettingsService {
           sum + (p.amountPaid || (p.status === 'LUNAS' ? p.amount : 0)),
         0,
       );
+      const nominalPengeluaran = dayExpenses.reduce(
+        (sum, p) => sum + (p.amount || 0),
+        0,
+      );
 
       weeklyTrends.push({
         date: dayLabel,
+        dayOfWeek,
         siswaHadir: dayAtt,
         siswaPct: pctSiswa,
         staffHadir: dayStaffAtt,
         staffPct: pctStaff,
         pemasukan: nominalPemasukan,
+        pengeluaran: nominalPengeluaran,
+        jadwalCount: daySchedulesCount,
+        jurnalCount: dayJournalsCount,
         prestasi: dayPrestasi,
         pelanggaran: dayPelanggaran,
       });
@@ -483,12 +561,25 @@ export class SettingsService {
         totalPelanggaranSiswa,
         totalPrestasiSiswa,
         totalIbadahSiswa,
+        pendingDispensasiCount,
+        pendingDisposisiCount,
+        pendingSuratKeluarCount,
+        totalSuratMasuk,
+        totalSuratKeluar,
+      },
+      persuratan: {
+        pendingDispensasi: pendingDispensasiCount,
+        pendingDisposisi: pendingDisposisiCount,
+        pendingSuratKeluar: pendingSuratKeluarCount,
+        totalSuratMasuk,
+        totalSuratKeluar,
       },
       karakterTatib: {
         totalAssessments: totalKarakterAssessments,
         totalPelanggaran: totalPelanggaranSiswa,
         totalPrestasi: totalPrestasiSiswa,
         totalIbadah: totalIbadahSiswa,
+        kepatuhanPct: kepatuhanTatibPct,
       },
       demografis: {
         gender: studentsGender.map((g) => ({

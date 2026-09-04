@@ -70,7 +70,7 @@ export default function DispensasiPage() {
   const isTatib = user?.role === 'KETERTIBAN' || user?.subRole === 'KETERTIBAN' || user?.subRole2 === 'KETERTIBAN' || user?.subRole3 === 'KETERTIBAN'
   const isWaliKelas = user?.subRole === 'WALI_KELAS' || user?.role === 'WALI_KELAS'
   const isGuru = user?.role === 'GURU' || user?.subRole === 'GURU' || isWaliKelas
-  const isWaliMurid = user?.role === 'WALI_MURID' || user?.role === 'ORANG_TUA' || user?.role === 'PARENT'
+  const isWaliMurid = user?.role === 'WALI_MURID'
   const isSiswa = user?.role === 'SISWA'
 
   const isKepalaSekolah = user?.role === 'KEPALA_SEKOLAH'

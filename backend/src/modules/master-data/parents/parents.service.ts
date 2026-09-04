@@ -363,20 +363,41 @@ export class ParentsService {
   }
 
   async remove(id: string) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { parentProfile: true },
+    });
     if (!user) {
       throw new NotFoundException('Data wali murid tidak ditemukan');
     }
 
-    return this.prisma.user.delete({
-      where: { id },
+    return this.prisma.$transaction(async (tx) => {
+      if (user.parentProfile) {
+        await tx.parentStudent.deleteMany({
+          where: { parentId: user.parentProfile.id },
+        });
+        await tx.parentProfile.deleteMany({
+          where: { id: user.parentProfile.id },
+        });
+      }
+
+      await tx.userSession.deleteMany({ where: { userId: id } });
+      await tx.notification.deleteMany({
+        where: { OR: [{ userId: id }, { senderId: id }] },
+      });
+      await tx.systemLog.deleteMany({ where: { userId: id } });
+
+      return tx.user.delete({
+        where: { id },
+      });
     });
   }
 
   async removeMany(ids: string[]) {
-    return this.prisma.user.deleteMany({
-      where: { id: { in: ids }, role: 'WALI_MURID' },
-    });
+    for (const id of ids) {
+      await this.remove(id).catch(() => null);
+    }
+    return { success: true, count: ids.length };
   }
 
   async getAvailableStudents() {
@@ -912,7 +933,7 @@ export class ParentsService {
     // Simpan konfirmasi preferensi notifikasi
     return {
       success: true,
-      message: 'Pengaturan notifikasi WhatsApp wali murid berhasil diperbarui.',
+      message: 'Pengaturan notifikasi email wali murid berhasil diperbarui.',
       settings,
     };
   }

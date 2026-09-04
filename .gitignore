@@ -1,38 +1,35 @@
+# Dependencies (dapat diinstall ulang)
 node_modules/
-.env
-.env.*
-.DS_Store
-*.log
-backend/uploads/
-backend/temp-uploads/
-backend/dist/
-backend/docs/
-backend/quarantine/
-backend/scripts/
-backend/*.js
-!backend/check-db.js
-frontend/.next/
-frontend/out/
-frontend/build/
-*.ps1
-!simasmuh.ps1
-*.bat
-!JALANKAN_SIMASMUH.bat
-*.pid
-.*.pid
-__pycache__/
-*.pyc
-*.pt
-*.npz
 .venv/
 .venv-gpu/
 venv/
-.vscode/
-services/whatsapp-gateway/auth_session/
+__pycache__/
+*.pyc
+
+# Build outputs (dapat di-build ulang)
+backend/dist/
+frontend/.next/
+frontend/out/
+frontend/build/
 services/whatsapp-gateway/dist/
-storage/compressed-logs/
-.unlighthouse/
-frontend/.unlighthouse/
+frontend/tsconfig.tsbuildinfo
+frontend/next-env.d.ts
 *.eslintcache
 .eslintcache
+.unlighthouse/
+frontend/.unlighthouse/
 
+# Local Runtime temporary & Process IDs
+*.log
+*.pid
+.*.pid
+storage/compressed-logs/
+backend/temp-uploads/
+backend/quarantine/
+services/whatsapp-gateway/auth_session/
+supabase/.branches/
+supabase/.temp/
+
+# OS / Editor specific
+.DS_Store
+.vscode/

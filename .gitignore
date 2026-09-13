@@ -32,9 +32,15 @@ supabase/.temp/
 
 # Environment variables & secrets (MUTLAK TIDAK BOLEH KE GIT)
 .env
-.env.*
+.env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.ocal
 *.env
 *.env.local
+*.env*
 
 # OS / Editor specific
 .DS_Store

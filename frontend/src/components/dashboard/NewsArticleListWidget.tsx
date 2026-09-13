@@ -16,7 +16,7 @@ export function NewsArticleListWidget({
   limit = 5
 }: NewsArticleListWidgetProps) {
   const newsList = (announcements || []).filter(
-    (a: any) => a.type === 'BERITA' || !a.type || a.type === 'PENGUMUMAN'
+    (a: any) => a.type === 'BERITA' || (!a.type && a.type !== 'PENGUMUMAN' && a.type !== 'INFORMASI' && a.type !== 'AGENDA')
   ).slice(0, limit)
 
   return (

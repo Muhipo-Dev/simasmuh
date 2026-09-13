@@ -75,9 +75,9 @@ export default function DispensasiPage() {
 
   const isKepalaSekolah = user?.role === 'KEPALA_SEKOLAH'
 
-  // Tata Usaha (BAU/TU) menerbitkan dispensasi
-  // Kepala Sekolah langsung approve/reject tanpa melalui Tim Ketertiban
-  const canPublish = isBau
+  // Tim Ketertiban menerbitkan dispensasi (Superadmin juga memiliki akses penuh)
+  // Kepala Sekolah langsung approve/reject
+  const canPublish = isTatib || isSuperAdmin
   const canManage = isKepalaSekolah
 
   const [allDispensasi, setAllDispensasi] = useState<DispensasiItem[]>([])
@@ -388,7 +388,7 @@ export default function DispensasiPage() {
             </h1>
           </div>
           <p className="text-purple-100 mt-2 text-xs sm:text-sm max-w-2xl leading-relaxed">
-            Penerbitan surat dispensasi resmi oleh <strong>Tata Usaha (TU)</strong>. Persetujuan langsung oleh <strong>Kepala Sekolah</strong>. Data tercatat di log absensi siswa yang dapat dipantau oleh Siswa &amp; Wali Murid.
+            Penerbitan surat dispensasi resmi oleh <strong>Tim Ketertiban</strong>. Persetujuan langsung oleh <strong>Kepala Sekolah</strong>. Data tercatat di log absensi siswa yang dapat dipantau oleh Siswa &amp; Wali Murid.
           </p>
         </div>
 
@@ -716,7 +716,7 @@ export default function DispensasiPage() {
           <Award className="w-12 h-12 text-slate-300 mx-auto" />
           <h3 className="font-bold text-slate-700 dark:text-slate-300 text-base">Belum Ada Riwayat Dispensasi</h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            Dispensasi resmi yang diterbitkan oleh Tata Usaha untuk jam pelajaran siswa akan muncul di sini.
+            Dispensasi resmi yang diterbitkan oleh Tim Ketertiban untuk jam pelajaran siswa akan muncul di sini.
           </p>
         </div>
       ) : (

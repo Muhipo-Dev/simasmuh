@@ -8,6 +8,8 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationListenersService } from './notification-listeners.service';
 import { EmailNotificationService } from './email.service';
+import { WhatsappChatbotService } from './whatsapp-chatbot.service';
+import { WhatsappChatbotController } from './whatsapp-chatbot.controller';
 import { PrismaService } from '../../core/prisma/prisma.service';
 
 @Module({
@@ -23,11 +25,12 @@ import { PrismaService } from '../../core/prisma/prisma.service';
       signOptions: { expiresIn: '1d' },
     }),
   ],
-  controllers: [NotificationsController],
+  controllers: [NotificationsController, WhatsappChatbotController],
   providers: [
     NotificationsService,
     PaymentNotificationsService,
     EmailNotificationService,
+    WhatsappChatbotService,
     NotificationsGateway,
     NotificationListenersService,
     PrismaService,
@@ -36,6 +39,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
     NotificationsService,
     PaymentNotificationsService,
     EmailNotificationService,
+    WhatsappChatbotService,
     NotificationsGateway,
     NotificationListenersService,
   ],

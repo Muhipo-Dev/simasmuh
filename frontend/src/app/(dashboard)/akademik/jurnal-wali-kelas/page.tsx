@@ -1,20 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Loader2, Pencil, Trash2, User, Users, GraduationCap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 
 export default function HomeroomJournalsPage() {
-  const authenticatedFetch = useAuthenticatedFetch();
+  const { data: session } = useSession()
+  const user = session?.user as any
+  const userId = user?.id
+  const userRolesList = [user?.role, user?.subRole, user?.subRole2, user?.subRole3, user?.subRole4, user?.subRole5].filter(Boolean)
+  const isSuperAdmin = userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN'].includes(r))
+  const isWaliKelas = userRolesList.includes('WALI_KELAS') || userRolesList.includes('GURU')
+
+  const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -24,11 +32,13 @@ export default function HomeroomJournalsPage() {
     date: new Date().toISOString().split('T')[0],
     notes: '',
     actionTaken: '',
-    teacherId: ''
+    teacherId: '',
+    studentName: ''
   })
 
+  // 1. Data Jurnal
   const { data: journals, isLoading } = useQuery<any[]>({
-    queryKey: ['homeroom-journals'],
+    queryKey: ['homeroom-journals', userId],
     queryFn: async () => {
       const res = await authenticatedFetch('/api-backend/homeroom-journals')
       if (!res.ok) throw new Error('Gagal memuat data jurnal wali kelas')
@@ -36,12 +46,51 @@ export default function HomeroomJournalsPage() {
     }
   })
 
+  // 2. Data Guru
   const { data: teachers } = useQuery<any[]>({
     queryKey: ['teachers'],
     queryFn: async () => {
       const res = await authenticatedFetch('/api-backend/teachers')
       return res.json()
     }
+  })
+
+  // 3. Data Kelas & Siswa
+  const { data: classes } = useQuery<any[]>({
+    queryKey: ['classes'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/classes')
+      return res.json()
+    }
+  })
+
+  const { data: allStudents } = useQuery<any[]>({
+    queryKey: ['students'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/students')
+      return res.json()
+    }
+  })
+
+  // Cari Guru & Kelas Perwalian yang terhubung dengan Akun yang Login
+  const currentTeacher = teachers?.find((t: any) => 
+    t.userId === userId || 
+    t.user?.id === userId || 
+    t.user?.email === user?.email ||
+    (t.user?.username && t.user?.username === user?.username)
+  )
+
+  const myHomeroomClass = classes?.find((c: any) => 
+    c.homeroomTeacherId === currentTeacher?.id ||
+    c.homeroomTeacher?.userId === userId ||
+    c.homeroomTeacher?.user?.email === user?.email
+  )
+
+  // Filter siswa: jika wali kelas, tampilkan siswa di kelas perwaliannya; jika superadmin, tampilkan semua siswa
+  const availableStudents = (allStudents || []).filter((s: any) => {
+    if (isSuperAdmin && !myHomeroomClass) return true
+    if (myHomeroomClass) return s.classId === myHomeroomClass.id
+    return true
   })
 
   const createMutation = useMutation({
@@ -62,7 +111,7 @@ export default function HomeroomJournalsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (updatedJournal: any) => {
-      const { id, ...payload } = updatedJournal;
+      const { id, ...payload } = updatedJournal
       const res = await authenticatedFetch(`/api-backend/homeroom-journals/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -90,7 +139,14 @@ export default function HomeroomJournalsPage() {
 
   const handleOpenAddDialog = () => {
     setIsEdit(false)
-    setFormData({ id: '', date: new Date().toISOString().split('T')[0], notes: '', actionTaken: '', teacherId: '' })
+    setFormData({
+      id: '',
+      date: new Date().toISOString().split('T')[0],
+      notes: '',
+      actionTaken: '',
+      teacherId: currentTeacher?.id || teachers?.[0]?.id || '',
+      studentName: ''
+    })
     setOpen(true)
   }
 
@@ -101,14 +157,15 @@ export default function HomeroomJournalsPage() {
       date: new Date(item.date).toISOString().split('T')[0], 
       notes: item.notes || '', 
       actionTaken: item.actionTaken || '', 
-      teacherId: item.teacherId || '' 
+      teacherId: item.teacherId || '',
+      studentName: ''
     })
     setOpen(true)
   }
 
   const handleCloseDialog = () => {
     setOpen(false)
-    setFormData({ id: '', date: new Date().toISOString().split('T')[0], notes: '', actionTaken: '', teacherId: '' })
+    setFormData({ id: '', date: new Date().toISOString().split('T')[0], notes: '', actionTaken: '', teacherId: '', studentName: '' })
   }
 
   const handleDelete = (id: string) => {
@@ -119,75 +176,175 @@ export default function HomeroomJournalsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Jika ada siswa yang dipilih dan belum ada di notes, sertakan identitas siswa
+    let finalNotes = formData.notes
+    if (formData.studentName && !formData.notes.startsWith(`[${formData.studentName}]`)) {
+      finalNotes = `[${formData.studentName}] ${formData.notes}`
+    }
+
     const payload = {
-      ...formData,
+      teacherId: formData.teacherId || currentTeacher?.id || teachers?.[0]?.id,
+      notes: finalNotes,
+      actionTaken: formData.actionTaken,
       date: new Date(formData.date).toISOString()
     }
+
     if (isEdit) {
-      updateMutation.mutate(payload)
+      updateMutation.mutate({ id: formData.id, ...payload })
     } else {
       createMutation.mutate(payload)
     }
   }
 
+  // Filter jurnal milik wali kelas yang login jika bukan superadmin
+  const displayedJournals = (journals || []).filter((j: any) => {
+    if (isSuperAdmin) return true
+    if (currentTeacher?.id) return j.teacherId === currentTeacher.id
+    return true
+  })
+
+  const searchedJournals = filterDataBySearch(displayedJournals, searchQuery)
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Jurnal Wali Kelas</h1>
-          <p className="text-slate-500 mt-1">Catatan kejadian, bimbingan, dan pembinaan siswa oleh Wali Kelas.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            Jurnal Wali Kelas
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+            Catatan kejadian, bimbingan, dan pembinaan siswa {myHomeroomClass ? `kelas ${myHomeroomClass.name}` : 'oleh Wali Kelas'}.
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
-            Cetak PDF
-          </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleOpenAddDialog}>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto" onClick={handleOpenAddDialog}>
             <Plus className="w-4 h-4 mr-2" />
             Tulis Jurnal Wali
           </Button>
+
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogContent>
+            <DialogContent className="max-w-lg">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
                   <DialogTitle>{isEdit ? 'Ubah Jurnal Wali Kelas' : 'Tulis Jurnal Wali Kelas'}</DialogTitle>
                   <DialogDescription>
-                    {isEdit ? 'Perbarui catatan kejadian atau bimbingan.' : 'Masukkan catatan bimbingan atau kejadian untuk kelas perwalian Anda.'}
+                    {isEdit ? 'Perbarui catatan kejadian atau bimbingan.' : 'Masukkan catatan bimbingan atau kejadian untuk siswa di kelas perwalian Anda.'}
                   </DialogDescription>
                 </DialogHeader>
+
                 <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Tanggal</Label>
-                    <Input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
+                  {/* Info Wali Kelas & Kelas Terhubung */}
+                  {myHomeroomClass ? (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center justify-between text-xs sm:text-sm">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                        <span className="font-semibold text-blue-900 dark:text-blue-200">
+                          Kelas Perwalian: <span className="font-bold underline">{myHomeroomClass.name}</span>
+                        </span>
+                      </div>
+                      <div className="text-blue-700 dark:text-blue-300 font-medium">
+                        {currentTeacher?.user?.name || user?.name}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Tanggal</Label>
+                      <Input 
+                        type="date" 
+                        value={formData.date} 
+                        onChange={e => setFormData({...formData, date: e.target.value})} 
+                        required 
+                      />
+                    </div>
+
+                    {/* Jika Superadmin/tidak terdeteksi, pilih wali kelas. Jika Wali Kelas, otomatis terpasang */}
+                    {isSuperAdmin && !myHomeroomClass ? (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Wali Kelas</Label>
+                        <Select 
+                          value={formData.teacherId} 
+                          onValueChange={(v) => setFormData({...formData, teacherId: v || ''})} 
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih Wali Kelas">
+                              {teachers?.find(t => t.id === formData.teacherId)?.user?.name || 'Pilih Wali Kelas'}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {teachers?.map(t => (
+                              <SelectItem key={t.id} value={t.id}>
+                                {t.user?.name || t.nip}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Wali Kelas Pengampu</Label>
+                        <Input 
+                          disabled 
+                          value={currentTeacher?.user?.name || user?.name || 'Wali Kelas'} 
+                          className="bg-slate-100 dark:bg-slate-800 font-medium cursor-not-allowed text-xs" 
+                        />
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-2">
-                    <Label>Wali Kelas</Label>
-                    <Select value={formData.teacherId} onValueChange={(v) => setFormData({...formData, teacherId: v || ''})} required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih Wali Kelas">
-                          {teachers?.find(t => t.id === formData.teacherId)
-                            ? (teachers.find(t => t.id === formData.teacherId).user?.name || teachers.find(t => t.id === formData.teacherId).nip || 'Wali Kelas')
-                            : undefined}
-                        </SelectValue>
+
+                  {/* Dropdown Pilih Siswa Kelas */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold flex items-center justify-between">
+                      <span>Pilih Siswa (Kelas Perwalian)</span>
+                      <span className="text-slate-400 font-normal text-[11px]">
+                        {availableStudents.length} Siswa Terdaftar
+                      </span>
+                    </Label>
+                    <Select 
+                      value={formData.studentName} 
+                      onValueChange={(v) => setFormData({ ...formData, studentName: v || '' })}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="-- Pilih Siswa Terkait (Opsional / Spesifik Siswa) --" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {teachers?.map(t => <SelectItem key={t.id} value={t.id}>{t.user?.name || t.nip}</SelectItem>)}
+                      <SelectContent className="max-h-60">
+                        {availableStudents.map((s: any) => (
+                          <SelectItem key={s.id} value={`${s.name} (${s.nis || s.nisn || s.class?.name})`}>
+                            {s.name} - {s.nis ? `NIS: ${s.nis}` : (s.class?.name || 'Siswa')}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Catatan Kejadian / Bimbingan</Label>
-                    <Input value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Deskripsikan catatan..." required />
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Catatan Kejadian / Bimbingan</Label>
+                    <Input 
+                      value={formData.notes} 
+                      onChange={e => setFormData({...formData, notes: e.target.value})} 
+                      placeholder="Masukkan catatan bimbingan / kejadian..." 
+                      required 
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Tindak Lanjut (Opsional)</Label>
-                    <Input value={formData.actionTaken} onChange={e => setFormData({...formData, actionTaken: e.target.value})} placeholder="Tindakan yang telah diambil..." />
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Tindak Lanjut (Opsional)</Label>
+                    <Input 
+                      value={formData.actionTaken} 
+                      onChange={e => setFormData({...formData, actionTaken: e.target.value})} 
+                      placeholder="Tindakan yang telah diambil..." 
+                    />
                   </div>
                 </div>
+
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={handleCloseDialog}>Batal</Button>
                   <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="bg-blue-600">
                     {(createMutation.isPending || updateMutation.isPending) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    Simpan
+                    Simpan Jurnal
                   </Button>
                 </DialogFooter>
               </form>
@@ -196,61 +353,80 @@ export default function HomeroomJournalsPage() {
         </div>
       </div>
 
-      <Card className="shadow-sm border-slate-200">
-        <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <Card className="shadow-sm border-slate-200 dark:border-slate-800 dark:bg-slate-900/50">
+        <CardHeader className="bg-slate-50/50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <CardTitle>Daftar Catatan Wali Kelas</CardTitle>
-            <CardDescription>Menampilkan log bimbingan dan kejadian terkait kelas perwalian.</CardDescription>
+            <CardTitle className="text-lg font-bold dark:text-slate-100">Daftar Catatan Wali Kelas</CardTitle>
+            <CardDescription className="dark:text-slate-400 text-xs">
+              Log pembinaan dan evaluasi berkala siswa perwalian.
+            </CardDescription>
           </div>
           <TableSearch
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Cari catatan/tindak lanjut..."
+            placeholder="Cari catatan / siswa / tindak lanjut..."
           />
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-slate-50">
+            <TableHeader className="bg-slate-50 dark:bg-slate-800/80">
               <TableRow>
-                <TableHead className="w-[100px] pl-6">Tanggal</TableHead>
-                <TableHead>Wali Kelas</TableHead>
-                <TableHead>Catatan Kejadian</TableHead>
-                <TableHead>Tindak Lanjut</TableHead>
-                <TableHead className="text-right pr-6">Aksi</TableHead>
+                <TableHead className="w-[120px] pl-6 text-xs font-semibold">Tanggal</TableHead>
+                <TableHead className="text-xs font-semibold">Wali Kelas</TableHead>
+                <TableHead className="text-xs font-semibold">Catatan Kejadian / Bimbingan</TableHead>
+                <TableHead className="text-xs font-semibold">Tindak Lanjut</TableHead>
+                <TableHead className="text-right pr-6 text-xs font-semibold">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-10">
-                    <div className="flex flex-col items-center justify-center text-slate-500">
-                      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
+                      <Loader2 className="w-6 h-6 border-blue-600 text-blue-600 animate-spin mb-2" />
                       Memuat data...
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : filterDataBySearch(journals, searchQuery)?.length === 0 ? (
+              ) : searchedJournals.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-10 text-slate-500">
+                  <TableCell colSpan={5} className="text-center py-10 text-slate-500 dark:text-slate-400">
                     {searchQuery ? 'Tidak ada catatan yang sesuai dengan pencarian.' : 'Belum ada jurnal wali kelas.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                filterDataBySearch(journals, searchQuery)?.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="pl-6 font-medium text-slate-500">
-                      {new Date(item.date).toLocaleDateString('id-ID')}
+                searchedJournals.map((item: any) => (
+                  <TableRow key={item.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50">
+                    <TableCell className="pl-6 font-medium text-slate-600 dark:text-slate-400 text-xs">
+                      {new Date(item.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </TableCell>
-                    <TableCell className="font-semibold text-slate-900">{item.teacher?.user?.name || '-'}</TableCell>
-                    <TableCell>{item.notes}</TableCell>
-                    <TableCell className="text-slate-600">{item.actionTaken || '-'}</TableCell>
+                    <TableCell className="font-semibold text-slate-900 dark:text-slate-200 text-xs">
+                      {item.teacher?.user?.name || '-'}
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-800 dark:text-slate-200 max-w-md">
+                      {item.notes}
+                    </TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-400 text-xs">
+                      {item.actionTaken || '-'}
+                    </TableCell>
                     <TableCell className="pr-6">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(item)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                          <Pencil className="w-4 h-4" />
+                      <div className="flex justify-end gap-1.5">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleOpenEditDialog(item)} 
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} disabled={deleteMutation.isPending} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                          <Trash2 className="w-4 h-4" />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDelete(item.id)} 
+                          disabled={deleteMutation.isPending} 
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     </TableCell>
@@ -264,3 +440,4 @@ export default function HomeroomJournalsPage() {
     </div>
   )
 }
+

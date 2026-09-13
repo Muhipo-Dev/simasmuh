@@ -25,6 +25,7 @@ model User {
   subRole5          String?
   nipNbm            String?
   announcements     Announcement[]
+  systemAnnouncements SystemAnnouncement[]
   dailyAttendances  DailyAttendance[]
   uploadedFiles     FileHash[]
   izinKeluars       IzinKeluar[]
@@ -307,8 +308,27 @@ model Announcement {
   updatedAt DateTime  @updatedAt
   eventDate DateTime?
   image     String?
-  type      String    @default("BERITA")
+  type      String    @default("BERITA") // BERITA, AGENDA
   author    User      @relation(fields: [authorId], references: [id])
+}
+
+model SystemAnnouncement {
+  id        String    @id @default(uuid())
+  title     String
+  content   String
+  target    String    @default("SEMUA")
+  authorId  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  image     String?
+  type      String    @default("PENGUMUMAN") // PENGUMUMAN, INFORMASI
+  isUrgent  Boolean   @default(false) // Jika true, muncul mendesak sebagai popup otomatis setelah login di dashboard pengguna
+  author    User      @relation(fields: [authorId], references: [id])
+
+  @@index([authorId])
+  @@index([type])
+  @@index([isUrgent])
+  @@index([createdAt])
 }
 
 model StaffJournal {

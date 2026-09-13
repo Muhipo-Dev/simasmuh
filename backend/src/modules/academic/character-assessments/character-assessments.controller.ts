@@ -104,6 +104,18 @@ export class CharacterAssessmentsController {
     return this.assessmentsService.update(id, body, userId);
   }
 
+  @Post('reset-all')
+  async resetAllAssessments(
+    @Body() body: ResetPointsDto,
+    @Request() req: any,
+  ) {
+    const userId = req.user?.id || req.user?.userId;
+    if (!userId) {
+      throw new BadRequestException('Pengguna tidak valid');
+    }
+    return this.assessmentsService.resetAllAssessments(userId, body.reason);
+  }
+
   @Post('student/:studentId/reset')
   async resetStudentPoints(
     @Param('studentId') studentId: string,

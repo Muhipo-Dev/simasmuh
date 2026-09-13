@@ -130,12 +130,12 @@ export class IzinKeluarService {
         this.emailNotificationService
           .sendEmailNotification({
             to: izin.user.email,
-            subject: `[SIMASMUH] Pengajuan Surat Dispensasi Siswa`,
-            title: 'Pengajuan Dispensasi Resmi',
+            subject: `[Dispensasi] ${studentName}`,
+            title: 'Pengajuan Dispensasi',
             category: 'PERIZINAN',
             badgeLabel: 'MENUNGGU PERSETUJUAN',
             recipientName: studentName,
-            contentText: `Dispensasi resmi atas nama ${studentName} (Kelas ${className}) telah diterbitkan Tata Usaha untuk kegiatan ${data.alasan} pada tanggal ${data.date} (${data.waktuKeluar} - ${data.estimasiKembali || 'Selesai'}). Saat ini menunggu persetujuan akhir Kepala Sekolah.`,
+            contentText: `Dispensasi ${studentName} (${className}) untuk ${data.alasan} pada ${data.date} (${data.waktuKeluar} - ${data.estimasiKembali || 'Selesai'}). Menunggu persetujuan Kepala Sekolah.`,
             metaDetails: [
               { label: 'Nama Siswa', value: studentName },
               { label: 'Kelas', value: className },
@@ -143,8 +143,8 @@ export class IzinKeluarService {
               { label: 'Waktu', value: `${data.waktuKeluar} - ${data.estimasiKembali || 'Selesai'}` },
               { label: 'Kegiatan', value: data.alasan },
             ],
-            actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/presensi/izin-keluar`,
-            actionText: 'Pantau Status Perizinan',
+            actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/presensi/izin-keluar`,
+            actionText: 'Lihat Status',
           })
           .catch(() => {});
       }
@@ -355,12 +355,12 @@ export class IzinKeluarService {
         this.emailNotificationService
           .sendEmailNotification({
             to: targetUser.email,
-            subject: `[SIMASMUH] Persetujuan Permohonan Izin / Dispensasi`,
-            title: 'Permohonan Izin Disetujui',
+            subject: `[Izin Disetujui] ${targetUser.name}`,
+            title: 'Izin Disetujui',
             category: 'PERIZINAN',
             badgeLabel: 'DISETUJUI',
             recipientName: targetUser.name,
-            contentText: `Permohonan izin Anda untuk tanggal ${dateFormatted} pukul ${izin.waktuKeluar} telah disetujui resmi oleh ${principalName}.`,
+            contentText: `Izin Anda tanggal ${dateFormatted} pukul ${izin.waktuKeluar} telah disetujui oleh ${principalName}.`,
             metaDetails: [
               { label: 'Nama', value: targetUser.name },
               { label: 'Tanggal', value: dateFormatted },
@@ -369,8 +369,8 @@ export class IzinKeluarService {
               { label: 'E-Sign Token', value: eSignToken },
               { label: 'Catatan', value: catatanAdmin || '-' },
             ],
-            actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/presensi/izin-keluar`,
-            actionText: 'Lihat Surat Izin Digital',
+            actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/presensi/izin-keluar`,
+            actionText: 'Lihat Surat Izin',
           })
           .catch(() => {});
       }
@@ -415,12 +415,12 @@ export class IzinKeluarService {
         this.emailNotificationService
           .sendEmailNotification({
             to: targetUser.email,
-            subject: `[SIMASMUH] Informasi Permohonan Izin / Dispensasi`,
-            title: 'Permohonan Izin Ditolak',
+            subject: `[Izin Ditolak] ${targetUser.name}`,
+            title: 'Izin Ditolak',
             category: 'PERIZINAN',
             badgeLabel: 'DITOLAK',
             recipientName: targetUser.name,
-            contentText: `Permohonan izin Anda untuk tanggal ${dateFormatted} tidak disetujui. ${catatanAdmin ? `Alasan: ${catatanAdmin}` : ''}`,
+            contentText: `Izin Anda tanggal ${dateFormatted} tidak disetujui.${catatanAdmin ? ` Alasan: ${catatanAdmin}` : ''}`,
             metaDetails: [
               { label: 'Nama', value: targetUser.name },
               { label: 'Tanggal', value: dateFormatted },
@@ -430,8 +430,8 @@ export class IzinKeluarService {
                 value: catatanAdmin || 'Silakan hubungi pihak sekolah/atasan langsung.',
               },
             ],
-            actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/presensi/izin-keluar`,
-            actionText: 'Buka Menu Perizinan',
+            actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/presensi/izin-keluar`,
+            actionText: 'Lihat Perizinan',
           })
           .catch(() => {});
       }

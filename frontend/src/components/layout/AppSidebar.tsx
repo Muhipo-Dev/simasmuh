@@ -11,6 +11,7 @@ export interface NavLinkItem {
   name: string
   href: string
   icon: LucideIcon
+  group?: string
 }
 
 interface AppSidebarProps {
@@ -39,24 +40,24 @@ export function AppSidebar({
         />
       )}
 
-      {/* Sidebar Frame */}
+      {/* Sidebar Frame Persis CBT MUHIPO dengan Dark & Light Mode */}
       <aside
-        className={`w-72 bg-slate-950/90 dark:bg-slate-950/95 border-r border-white/10 text-white backdrop-blur-2xl flex flex-col fixed inset-y-0 z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl ${
+        className={`w-72 bg-white/95 dark:bg-slate-950/95 border-r border-slate-200 dark:border-white/10 text-slate-800 dark:text-white backdrop-blur-2xl flex flex-col fixed inset-y-0 z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Sidebar Header: Area Informasi Waktu Tanggal dan Jam Real-Time */}
-        <div className="h-16 flex items-center justify-between px-4 bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border-b border-white/10 backdrop-blur-md shrink-0">
+        <div className="h-16 flex items-center justify-between px-4 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-blue-600/10 dark:from-blue-900/60 dark:to-indigo-900/60 border-b border-slate-200 dark:border-white/10 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 shadow-inner flex items-center justify-center shrink-0">
+            <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 shadow-inner flex items-center justify-center shrink-0">
               <Clock className="w-5 h-5 animate-pulse" />
             </div>
             <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-1.5 font-mono font-bold text-white text-base tracking-tight leading-none">
+              <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900 dark:text-white text-base tracking-tight leading-none">
                 <span>{clock.timeString}</span>
-                <span className="text-[10px] font-sans font-semibold px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/20">WIB</span>
+                <span className="text-[10px] font-sans font-semibold px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">WIB</span>
               </div>
-              <span className="text-[11px] text-slate-300 truncate font-medium mt-1 leading-tight" title={clock.dateString}>
+              <span className="text-[11px] text-slate-600 dark:text-slate-300 truncate font-medium mt-1 leading-tight" title={clock.dateString}>
                 {clock.dateString}
               </span>
             </div>
@@ -64,7 +65,7 @@ export function AppSidebar({
           <button
             type="button"
             onClick={onClose}
-            className="lg:hidden p-2 text-white/70 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
+            className="lg:hidden p-2 text-slate-500 dark:text-white/70 hover:text-slate-800 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -72,31 +73,44 @@ export function AppSidebar({
 
         {/* Sidebar Menu Items */}
         <div className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5 custom-scrollbar">
-          {links.map((link) => {
+          {links.map((link, idx) => {
             const Icon = link.icon
             const isActive =
               pathname === link.href ||
               (link.href !== '/dashboard' && pathname.startsWith(`${link.href}/`))
+            
+            const prevLink = idx > 0 ? links[idx - 1] : null
+            const isNewGroup = link.group && link.group !== prevLink?.group
 
             return (
-              <Link key={link.href} href={link.href} onClick={onClose}>
-                <div
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all duration-200 text-xs sm:text-sm font-semibold ${
-                    isActive
-                      ? 'bg-blue-600/30 text-blue-200 border border-blue-400/30 backdrop-blur-md shadow-inner'
-                      : 'text-slate-300/80 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <Icon
-                    className={`w-4 h-4 shrink-0 ${
+              <React.Fragment key={link.href}>
+                {isNewGroup && (
+                  <div className="pt-3 pb-1 px-3 mt-1 flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-blue-600 dark:text-blue-400 shrink-0">
+                      {link.group}
+                    </span>
+                    <div className="h-px bg-slate-200 dark:bg-white/10 flex-1" />
+                  </div>
+                )}
+                <Link href={link.href} onClick={onClose}>
+                  <div
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all duration-200 text-xs sm:text-sm font-semibold ${
                       isActive
-                        ? 'text-blue-300'
-                        : 'text-slate-400 group-hover:text-white'
+                        ? 'bg-blue-50 dark:bg-blue-600/25 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-400/30 backdrop-blur-md shadow-xs'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-950 dark:hover:text-white'
                     }`}
-                  />
-                  <span className="truncate">{link.name}</span>
-                </div>
-              </Link>
+                  >
+                    <Icon
+                      className={`w-4 h-4 shrink-0 ${
+                        isActive
+                          ? 'text-blue-600 dark:text-blue-300'
+                          : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    />
+                    <span className="truncate">{link.name}</span>
+                  </div>
+                </Link>
+              </React.Fragment>
             )
           })}
         </div>

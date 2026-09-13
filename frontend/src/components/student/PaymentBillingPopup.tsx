@@ -62,9 +62,12 @@ type PaymentBillingPopupProps = {
 const PAYMENT_TYPE_LABELS: Record<string, { label: string; color: string }> = {
   SPP: { label: 'SPP', color: 'bg-blue-100 text-blue-800 border-blue-200' },
   DPP: { label: 'DPP', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  UKA: { label: 'UKA', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
-  UKS: { label: 'UKS', color: 'bg-teal-100 text-teal-800 border-teal-200' },
-  INFAQ: { label: 'Infaq', color: 'bg-green-100 text-green-800 border-green-200' },
+  UIS: { label: 'UIS (Infaq Sekolah)', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  UKA: { label: 'UKA (Kegiatan Akademik)', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
+  UKS: { label: 'UKS (Kegiatan Sekolah)', color: 'bg-teal-100 text-teal-800 border-teal-200' },
+  INFAQ: { label: 'UIS (Infaq Sekolah)', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  SERAGAM: { label: 'Seragam', color: 'bg-amber-100 text-amber-800 border-amber-200' },
+  LKS: { label: 'LKS / Buku', color: 'bg-sky-100 text-sky-800 border-sky-200' },
 }
 
 const formatCurrency = (amount: number) => 
@@ -141,18 +144,33 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId, s
   })
 
   const allTagihans = tagihanData?.tagihans || []
-  const tagihans = allTagihans.filter((t: any) => {
-    // Jika tidak ada bukti pembayaran sama sekali, wajib muncul
-    if (!t.paymentProofs || t.paymentProofs.length === 0) return true;
-    
-    // Jika ada bukti pembayaran yang "MENUNGGU_VERIFIKASI", sembunyikan (tidak boleh double upload sampai diverifikasi/ditolak)
-    const hasPending = t.paymentProofs.some((p: any) => p.status === 'MENUNGGU_VERIFIKASI');
-    if (hasPending) return false;
+  const now = new Date()
+  const currentMonth = now.getMonth() + 1
+  const currentYear = now.getFullYear()
 
-    // Jika semua bukti pembayaran sudah diproses (DIVERIFIKASI / DITOLAK), cek sisa tagihannya
-    const paid = t.amountPaid || 0;
-    const remaining = Math.max(0, t.amount - paid);
-    return remaining > 0;
+  const tagihans = allTagihans.filter((t: any) => {
+    // Jika status LUNAS atau sisa tagihan <= 0, jangan tampilkan
+    const paid = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)
+    const remaining = Math.max(0, t.amount - paid)
+    if (remaining <= 0 || t.status === 'LUNAS') return false
+
+    // Jika ada bukti pembayaran yang "MENUNGGU_VERIFIKASI", sembunyikan (tidak boleh double upload sampai diverifikasi/ditolak)
+    if (t.paymentProofs && t.paymentProofs.length > 0) {
+      const hasPending = t.paymentProofs.some((p: any) => p.status === 'MENUNGGU_VERIFIKASI')
+      if (hasPending) return false
+    }
+
+    // Filter SPP Berkala:
+    // Jika tipe SPP, tampilkan jika sedang diangsur (paid > 0 / ANGSURAN) atau jika bulannya sudah masuk periode berjalan (<= currentMonth)
+    if (t.type?.toUpperCase() === 'SPP' && t.year && t.month) {
+      if (t.status === 'ANGSURAN' || paid > 0) return true
+      if (t.year < currentYear) return true
+      if (t.year === currentYear && t.month <= currentMonth) return true
+      return false
+    }
+
+    // Tagihan non-SPP lainnya (DPP, UKA, UKS, Seragam, dll) tampilkan selama belum lunas
+    return true
   })
   const studentInfo = tagihanData?.student
 

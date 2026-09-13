@@ -70,6 +70,11 @@ export default function JadwalPelajaranPage() {
   const [parsedPreview, setParsedPreview] = useState<any[] | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Modal State for Delete All Schedules with Admin Authorization
+  const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false)
+  const [authPassword, setAuthPassword] = useState('')
+  const [authError, setAuthError] = useState('')
+
   // 1. Fetch Daftar Kelas
   const { data: classes, isLoading: loadingClasses } = useQuery<any[]>({
     queryKey: ['classes'],
@@ -191,13 +196,43 @@ export default function JadwalPelajaranPage() {
     }
   })
 
+  // Mutation Hapus Seluruh Jadwal Pelajaran (Otorisasi Password)
+  const deleteAllMutation = useMutation({
+    mutationFn: async (passwordConfirm: string) => {
+      const res = await authenticatedFetch('/api-backend/schedules/delete-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, passwordConfirm })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Gagal menghapus seluruh data jadwal pelajaran')
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['teachers'] })
+      queryClient.invalidateQueries({ queryKey: ['classes'] })
+      queryClient.invalidateQueries({ queryKey: ['subjects'] })
+      setDeleteAllModalOpen(false)
+      setAuthPassword('')
+      setAuthError('')
+      alert(data.message || 'Seluruh data jadwal pelajaran berhasil dikosongkan. Data guru dan mata pelajaran tetap aman terjaga.')
+    },
+    onError: (err: any) => {
+      setAuthError(err.message || 'Terjadi kesalahan saat memverifikasi password otorisasi.')
+    }
+  })
+
   // Bulk Import Mutation for aSc Timetables
   const bulkImportMutation = useMutation({
     mutationFn: async (schedulesToImport: any[]) => {
       const res = await authenticatedFetch('/api-backend/schedules/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(schedulesToImport)
+        body: JSON.stringify({
+          schedules: schedulesToImport,
+          replaceExisting: true
+        })
       })
       if (!res.ok) throw new Error('Gagal mengimpor jadwal aSc Timetables')
       return res.json()
@@ -208,7 +243,7 @@ export default function JadwalPelajaranPage() {
       queryClient.invalidateQueries({ queryKey: ['subjects'] })
       queryClient.invalidateQueries({ queryKey: ['teachers'] })
       queryClient.invalidateQueries({ queryKey: ['students'] })
-      alert(`Berhasil mengimpor ${data?.length || 0} jadwal dari aSc Timetables! Seluruh data jadwal siswa telah tersinkronisasi.`)
+      alert(`Berhasil mengimpor ${data?.length || 0} jadwal dari aSc Timetables! Data jadwal lama telah ditumpuk/digantikan secara rapi dan otomatis.`)
       setImportModalOpen(false)
       setXmlFile(null)
       setParsedPreview(null)
@@ -310,6 +345,15 @@ export default function JadwalPelajaranPage() {
   const myClassId = myProfile?.classId
   const activeStudentClass = classes?.find((c: any) => c.id === myClassId) || myProfile?.class || (classes && classes.length > 0 ? classes[0] : null)
 
+  const parseTimeToMinutes = (t: string | undefined | null): number => {
+    if (!t) return 0
+    const clean = t.replace('.', ':').trim()
+    const parts = clean.split(':')
+    const hours = parseInt(parts[0] || '0', 10) || 0
+    const minutes = parseInt(parts[1] || '0', 10) || 0
+    return hours * 60 + minutes
+  }
+
   // Filter jadwal
   const filteredSchedules = (schedules || []).filter((sch: any) => {
     if (isSuperAdmin) {
@@ -325,10 +369,13 @@ export default function JadwalPelajaranPage() {
     }
     return true
   }).sort((a: any, b: any) => {
-    if (a.dayOfWeek !== b.dayOfWeek) {
-      return a.dayOfWeek - b.dayOfWeek
+    if ((a.dayOfWeek ?? 1) !== (b.dayOfWeek ?? 1)) {
+      return (a.dayOfWeek ?? 1) - (b.dayOfWeek ?? 1)
     }
-    return a.startTime.localeCompare(b.startTime)
+    const timeA = parseTimeToMinutes(a.startTime)
+    const timeB = parseTimeToMinutes(b.startTime)
+    if (timeA !== timeB) return timeA - timeB
+    return parseTimeToMinutes(a.endTime) - parseTimeToMinutes(b.endTime)
   })
 
   // Kelompokkan jadwal berdasarkan hari (Senin - Sabtu: 1 - 6)
@@ -340,6 +387,17 @@ export default function JadwalPelajaranPage() {
     const day = sch.dayOfWeek ?? 1
     if (!groupedSchedules[day]) groupedSchedules[day] = []
     groupedSchedules[day].push(sch)
+  })
+
+  // Pastikan setiap hari selalu terurut dari jam pagi ke jam terakhir numerik
+  Object.keys(groupedSchedules).forEach((key) => {
+    const dayNum = Number(key)
+    groupedSchedules[dayNum].sort((a: any, b: any) => {
+      const timeA = parseTimeToMinutes(a.startTime)
+      const timeB = parseTimeToMinutes(b.startTime)
+      if (timeA !== timeB) return timeA - timeB
+      return parseTimeToMinutes(a.endTime) - parseTimeToMinutes(b.endTime)
+    })
   })
 
   return (
@@ -364,22 +422,33 @@ export default function JadwalPelajaranPage() {
             </p>
           </div>
 
-          {/* Akses Cepat Tombol Superadmin: Import aSc Timetables & Tambah Manual */}
+          {/* Akses Cepat Tombol Superadmin: Import aSc Timetables, Tambah Manual, & Hapus Semua */}
           {isSuperAdmin && (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <Button
                 onClick={() => setImportModalOpen(true)}
-                className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold px-5 py-6 rounded-2xl shadow-lg hover:shadow-amber-400/20 transition-all flex items-center justify-center gap-2 border border-amber-300"
+                className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold px-4 py-5 rounded-2xl shadow-lg hover:shadow-amber-400/20 transition-all flex items-center justify-center gap-2 border border-amber-300 text-xs sm:text-sm"
               >
-                <FileCode className="w-5 h-5 text-indigo-900" />
-                <span>Import aSc TimeTables (XML)</span>
+                <FileCode className="w-4 h-4 text-indigo-900" />
+                <span>Import aSc (XML)</span>
               </Button>
               <Button
                 onClick={handleOpenAdd}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-5 py-6 rounded-2xl shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-5 rounded-2xl shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4" />
                 <span>Tambah Manual</span>
+              </Button>
+              <Button
+                onClick={() => {
+                  setAuthPassword('')
+                  setAuthError('')
+                  setDeleteAllModalOpen(true)
+                }}
+                className="bg-rose-500/90 hover:bg-rose-600 text-white font-bold px-4 py-5 rounded-2xl shadow-lg hover:shadow-rose-500/20 transition-all flex items-center justify-center gap-2 border border-rose-400/50 text-xs sm:text-sm"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Hapus Semua Jadwal</span>
               </Button>
             </div>
           )}
@@ -769,6 +838,95 @@ export default function JadwalPelajaranPage() {
                   <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                 )}
                 {isEdit ? 'Simpan Perubahan' : 'Tambah Jadwal'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Dialog Otorisasi Hapus Semua Jadwal Pelajaran */}
+      <Dialog open={deleteAllModalOpen} onOpenChange={setDeleteAllModalOpen}>
+        <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (!authPassword) {
+                setAuthError('Silakan masukkan password akun Anda untuk otorisasi.')
+                return
+              }
+              deleteAllMutation.mutate(authPassword)
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-rose-600" />
+                Otorisasi Hapus Semua Jadwal
+              </DialogTitle>
+              <DialogDescription className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
+                Tindakan ini akan mengosongkan seluruh data jadwal pelajaran yang aktif di sistem. 
+                <strong className="block mt-1 text-slate-800 dark:text-slate-200">
+                  Data Guru, Mata Pelajaran, dan Kelas tetap aman utuh terlindungi.
+                </strong>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl p-3.5 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-rose-600" />
+                  <span>Verifikasi Keamanan Otoritas</span>
+                </div>
+                <p className="text-[11px] leading-normal">
+                  Masukkan kata sandi akun Anda (<strong>{session?.user?.name || username}</strong>) untuk memproses penghapusan jadwal secara permanen.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Password Otorisasi Admin
+                </Label>
+                <Input
+                  type="password"
+                  placeholder="Masukkan password akun Anda..."
+                  value={authPassword}
+                  onChange={(e) => {
+                    setAuthPassword(e.target.value)
+                    setAuthError('')
+                  }}
+                  className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-medium"
+                  required
+                  autoFocus
+                />
+                {authError && (
+                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 mt-1">
+                    {authError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDeleteAllModalOpen(false)
+                  setAuthPassword('')
+                  setAuthError('')
+                }}
+                className="border-slate-200 dark:border-slate-700"
+              >
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                disabled={deleteAllMutation.isPending}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+              >
+                {deleteAllMutation.isPending && (
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                )}
+                Konfirmasi & Hapus Jadwal
               </Button>
             </DialogFooter>
           </form>

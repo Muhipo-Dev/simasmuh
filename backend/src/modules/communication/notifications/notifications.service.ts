@@ -37,6 +37,9 @@ export enum NotificationType {
   // Security notifications
   SUSPICIOUS_ACTIVITY = 'SUSPICIOUS_ACTIVITY',
   FILE_QUARANTINED = 'FILE_QUARANTINED',
+
+  // Persuratan & Disposisi
+  DISPOSISI_ASSIGNED = 'DISPOSISI_ASSIGNED',
 }
 
 export enum NotificationPriority {
@@ -448,8 +451,8 @@ export class NotificationsService {
       category,
       recipientName: notification.user.name,
       contentText: notification.message,
-      actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`,
-      actionText: 'Buka Dashboard SIMASMUH',
+      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/dashboard`,
+      actionText: 'Buka Dashboard',
     });
 
     // Emit event for other handlers if any
@@ -547,20 +550,20 @@ export class NotificationsService {
 
     const result = await this.emailNotificationService.sendEmailNotification({
       to: targetEmail,
-      subject: `[Uji Coba Push Email] Sambungan Akun Email SIMASMUH`,
-      title: 'Uji Coba Pengiriman Notifikasi Email Berhasil!',
+      subject: `[Uji Coba] Email SIMASMUH`,
+      title: 'Uji Coba Email Berhasil',
       category: 'SISTEM',
-      badgeLabel: 'TEST NOTIFIKASI AKTIF',
+      badgeLabel: 'TEST EMAIL',
       recipientName: user.name,
-      contentText: 'Selamat! Akun email Anda telah berhasil terhubung dengan sistem SIMASMUH SMA Muhammadiyah 1 Ponorogo. Notifikasi penting seputar absensi harian, tagihan SPP, bukti bayar, dan pengumuman sekolah akan dikirimkan ke email ini.',
+      contentText: 'Email Anda terhubung dengan SIMASMUH. Notifikasi presensi, keuangan, dan pengumuman akan dikirim ke alamat ini.',
       metaDetails: [
-        { label: 'Nama Pengguna', value: user.name },
-        { label: 'Peran / Role', value: user.role },
-        { label: 'Alamat Email', value: targetEmail },
-        { label: 'Waktu Pengujian', value: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB' },
+        { label: 'Nama', value: user.name },
+        { label: 'Peran', value: user.role },
+        { label: 'Email', value: targetEmail },
+        { label: 'Waktu', value: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB' },
       ],
-      actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pengaturan/notifikasi`,
-      actionText: 'Kelola Pengaturan Notifikasi',
+      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/pengaturan/notifikasi`,
+      actionText: 'Pengaturan Notifikasi',
     });
 
     if (!result.success) {
@@ -688,8 +691,8 @@ export class NotificationsService {
           category: data.category || 'PENGUMUMAN',
           recipientName: recipient.name,
           contentText: data.message,
-          actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/informasi/pengumuman`,
-          actionText: 'Buka Pengumuman Sekolah',
+          actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/informasi/pengumuman`,
+          actionText: 'Lihat Pengumuman',
         });
 
         if (res.success) {

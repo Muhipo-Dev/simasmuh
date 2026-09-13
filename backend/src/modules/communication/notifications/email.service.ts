@@ -319,7 +319,7 @@ export class EmailNotificationService implements OnModuleInit {
             <table width="100%" border="0" cellpadding="0" cellspacing="0">
               <tr>
                 <td>
-                  <span style="display: inline-block; font-size: 11px; font-weight: 800; color: #93c5fd; text-transform: uppercase; letter-spacing: 1.5px;">SIMASMUH PUSH NOTIFICATION</span>
+                  <span style="display: inline-block; font-size: 11px; font-weight: 800; color: #93c5fd; text-transform: uppercase; letter-spacing: 1.5px;">NOTIFIKASI SIMASMUH</span>
                   <h1 style="color: #ffffff; font-size: 20px; font-weight: 700; margin: 4px 0 0 0; line-height: 1.3;">${schoolName}</h1>
                 </td>
               </tr>
@@ -361,7 +361,7 @@ export class EmailNotificationService implements OnModuleInit {
             <!-- Note Box -->
             <div style="margin-top: 24px; padding: 12px 16px; background-color: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 4px;">
               <p style="margin: 0; font-size: 12px; color: #64748b; line-height: 1.5;">
-                ℹ️ Pesan ini dikirimkan secara otomatis dari <strong>Sistem Informasi Manajemen Sekolah Terpadu (SIMASMUH)</strong> karena akun email Anda terhubung dengan profil pengguna sekolah.
+                ℹ️ Email otomatis dari <strong>SIMASMUH</strong> — SMA Muhammadiyah 1 Ponorogo.
               </p>
             </div>
           </td>
@@ -374,7 +374,7 @@ export class EmailNotificationService implements OnModuleInit {
               © ${currentYear} ${schoolName}. Semua hak dilindungi.
             </p>
             <p style="font-size: 11px; color: #cbd5e1; margin: 0;">
-              Pengaturan notifikasi dapat diubah kapan saja melalui menu Profil / Pengaturan Notifikasi SIMASMUH.
+              Kelola notifikasi via menu Pengaturan di SIMASMUH.
             </p>
           </td>
         </tr>
@@ -435,24 +435,24 @@ export class EmailNotificationService implements OnModuleInit {
   }) {
     const isMasuk = params.type === 'MASUK' || params.status.toUpperCase() === 'HADIR';
     const badge = isMasuk ? 'PRESENSI MASUK' : 'PRESENSI PULANG';
-    const subject = `[Presensi SIMASMUH] Kehadiran ${params.studentOrUserName} - ${params.dateFormatted}`;
+    const subject = `[Presensi] ${params.studentOrUserName} - ${params.dateFormatted}`;
 
     return this.sendEmailNotification({
       to: params.toEmail,
       subject,
-      title: `Konfirmasi Presensi: ${params.studentOrUserName}`,
+      title: `Presensi: ${params.studentOrUserName}`,
       category: 'PRESENSI',
       badgeLabel: badge,
       recipientName: params.studentOrUserName,
-      contentText: `Data presensi siswa/pengguna telah tercatat pada sistem SIMASMUH dengan status ${params.status}.`,
+      contentText: `Presensi tercatat: ${params.status}.`,
       metaDetails: [
         { label: 'Nama', value: params.studentOrUserName },
         { label: 'Tanggal', value: params.dateFormatted },
         { label: 'Waktu Tercatat', value: params.time },
         { label: 'Status Kehadiran', value: params.status },
       ],
-      actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/presensi/harian`,
-      actionText: 'Lihat Riwayat Presensi',
+      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/presensi/harian`,
+      actionText: 'Lihat Presensi',
     });
   }
 
@@ -468,16 +468,16 @@ export class EmailNotificationService implements OnModuleInit {
     monthYear: string;
     dueDateFormatted?: string;
   }) {
-    const subject = `[Tagihan SIMASMUH] Pemberitahuan ${params.tagihanType} - ${params.studentName}`;
+    const subject = `[Tagihan] ${params.tagihanType} - ${params.studentName}`;
 
     return this.sendEmailNotification({
       to: params.toEmail,
       subject,
-      title: `Tagihan Pembayaran ${params.tagihanType}`,
+      title: `Tagihan ${params.tagihanType}`,
       category: 'KEUANGAN',
       badgeLabel: 'TAGIHAN KEUANGAN',
       recipientName: params.recipientName,
-      contentText: `Tagihan ${params.tagihanType} untuk ananda ${params.studentName} periode ${params.monthYear} telah diterbitkan.`,
+      contentText: `Tagihan ${params.tagihanType} a.n. ${params.studentName} periode ${params.monthYear} telah terbit.`,
       metaDetails: [
         { label: 'Nama Siswa', value: params.studentName },
         { label: 'Jenis Tagihan', value: params.tagihanType },
@@ -485,8 +485,8 @@ export class EmailNotificationService implements OnModuleInit {
         { label: 'Total Nominal', value: params.amountFormatted },
         { label: 'Jatuh Tempo', value: params.dueDateFormatted || 'Tanggal 10 setiap bulan' },
       ],
-      actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/keuangan/tagihan-saya`,
-      actionText: 'Buka Rincian Tagihan & Bayar',
+      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/keuangan/tagihan-saya`,
+      actionText: 'Lihat Tagihan',
     });
   }
 
@@ -502,16 +502,16 @@ export class EmailNotificationService implements OnModuleInit {
     paidDateFormatted: string;
     receiptNumber: string;
   }) {
-    const subject = `[Kwitansi Lunas] Pembayaran ${params.tagihanType} - ${params.studentName}`;
+    const subject = `[Lunas] ${params.tagihanType} - ${params.studentName}`;
 
     return this.sendEmailNotification({
       to: params.toEmail,
       subject,
-      title: `Kwitansi Pembayaran Berhasil (${params.receiptNumber})`,
+      title: `Kwitansi Lunas (${params.receiptNumber})`,
       category: 'KEUANGAN',
       badgeLabel: 'LUNAS / VERIFIED',
       recipientName: params.recipientName,
-      contentText: `Pembayaran ${params.tagihanType} sebesar ${params.amountFormatted} telah diverifikasi lunas oleh staf keuangan.`,
+      contentText: `Pembayaran ${params.tagihanType} sebesar ${params.amountFormatted} telah diverifikasi lunas.`,
       metaDetails: [
         { label: 'Nomor Kwitansi', value: params.receiptNumber },
         { label: 'Nama Siswa', value: params.studentName },
@@ -519,8 +519,8 @@ export class EmailNotificationService implements OnModuleInit {
         { label: 'Nominal Terverifikasi', value: params.amountFormatted },
         { label: 'Tanggal Verifikasi', value: params.paidDateFormatted },
       ],
-      actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/keuangan/riwayat`,
-      actionText: 'Unduh Kwitansi Digital (PDF)',
+      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/keuangan/riwayat`,
+      actionText: 'Lihat Kwitansi',
     });
   }
 }

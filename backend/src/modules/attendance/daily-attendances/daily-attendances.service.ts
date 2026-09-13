@@ -481,4 +481,152 @@ export class DailyAttendancesService {
 
     return result;
   }
+
+  async getClassAttendanceSummary(classId: string, period: 'daily' | 'weekly' | 'monthly', dateStr?: string) {
+    if (!classId) return [];
+
+    let targetDate = new Date();
+    if (dateStr) {
+      const parsed = new Date(dateStr);
+      if (!isNaN(parsed.getTime())) targetDate = parsed;
+    }
+
+    let startDate = new Date(targetDate);
+    let endDate = new Date(targetDate);
+
+    if (period === 'daily') {
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (period === 'weekly') {
+      // Senin - Sabtu pekan berjalan
+      const day = targetDate.getDay(); // 0: Sun, 1: Mon, ...
+      const diffToMon = day === 0 ? -6 : 1 - day;
+      startDate.setDate(targetDate.getDate() + diffToMon);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 5);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (period === 'monthly') {
+      startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0);
+      endDate.setHours(23, 59, 59, 999);
+    }
+
+    // Ambil semua siswa di kelas ini
+    const students = await this.prisma.student.findMany({
+      where: { classId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const studentUserIds: string[] = students
+      .map((s) => s.user?.id || s.userId)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+    // Ambil seluruh log presensi siswa di rentang waktu
+    const attendances = await this.prisma.dailyAttendance.findMany({
+      where: {
+        userId: { in: studentUserIds },
+        date: { gte: startDate, lte: endDate },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    // Ambil seluruh izin siswa yang disetujui di rentang waktu
+    const izinList = await this.prisma.izinKeluar.findMany({
+      where: {
+        userId: { in: studentUserIds },
+        status: 'DISETUJUI',
+        date: { gte: startDate, lte: endDate },
+      },
+    });
+
+    return students.map((std) => {
+      const uId = std.user?.id || std.userId;
+      const stdAtts = attendances.filter(a => a.userId === uId);
+      const stdIzins = izinList.filter(i => i.userId === uId);
+
+      const totalHadir = stdAtts.filter(a => a.status === 'HADIR').length;
+      const totalIzin = stdIzins.length + stdAtts.filter(a => a.status === 'IZIN').length;
+      const totalTerlambat = stdAtts.filter(a => {
+        if (!a.checkInTime) return false;
+        const [h, m] = a.checkInTime.split(':').map(Number);
+        return (h * 60 + m) > (7 * 60); // Masuk lewat dari pukul 07:00
+      }).length;
+
+      // Ambil rekaman terbaru / hari target
+      const todayAtt = stdAtts.find(a => {
+        const d = new Date(a.date);
+        return d.toDateString() === targetDate.toDateString();
+      });
+      const todayIzin = stdIzins.find(i => {
+        const d = new Date(i.date);
+        return d.toDateString() === targetDate.toDateString();
+      });
+
+      let statusHariIni = 'BELUM HADIR';
+      let checkInHariIni = '-';
+      let checkOutHariIni = '-';
+      let keteranganHariIni = 'Belum scan presensi';
+
+      if (todayAtt) {
+        statusHariIni = todayAtt.status;
+        checkInHariIni = todayAtt.checkInTime || todayAtt.time || '-';
+        checkOutHariIni = todayAtt.checkOutTime || '-';
+        if (checkOutHariIni !== '-') {
+          keteranganHariIni = `Hadir & Pulang (${checkInHariIni} – ${checkOutHariIni})`;
+        } else if (checkInHariIni !== '-') {
+          keteranganHariIni = `Hadir Masuk (${checkInHariIni})`;
+        }
+      }
+
+      if (todayIzin) {
+        statusHariIni = 'IZIN';
+        keteranganHariIni = `Izin Disetujui: ${todayIzin.alasan}`;
+      }
+
+      return {
+        studentId: std.id,
+        userId: uId,
+        nis: std.nis,
+        nisn: std.nisn,
+        name: std.name,
+        gender: std.gender,
+        program: std.program,
+        statusHariIni,
+        checkInHariIni,
+        checkOutHariIni,
+        keteranganHariIni,
+        summary: {
+          hadir: totalHadir,
+          izin: totalIzin,
+          terlambat: totalTerlambat,
+        },
+        logs: stdAtts.map(a => ({
+          date: a.date.toISOString().split('T')[0],
+          time: a.time,
+          checkIn: a.checkInTime,
+          checkOut: a.checkOutTime,
+          status: a.status,
+        })),
+        izins: stdIzins.map(i => ({
+          id: i.id,
+          date: i.date.toISOString().split('T')[0],
+          alasan: i.alasan,
+          waktu: i.waktuKeluar,
+          status: i.status,
+        })),
+      };
+    });
+  }
 }
+

@@ -30,6 +30,13 @@ services/whatsapp-gateway/auth_session/
 supabase/.branches/
 supabase/.temp/
 
+# Environment variables & secrets (MUTLAK TIDAK BOLEH KE GIT)
+.env
+.env.*
+*.env
+*.env.local
+
 # OS / Editor specific
 .DS_Store
 .vscode/
+

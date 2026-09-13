@@ -34,13 +34,18 @@ export default function AnnouncementsPage() {
   const { data: session } = useSession()
   const userRole = (session?.user as any)?.role || ''
   const userSubRole = (session?.user as any)?.subRole || ''
+  const isSuperadminOrIT = ['SUPERADMIN', 'ADMIN_IT'].includes(userRole) || ['SUPERADMIN', 'ADMIN_IT'].includes(userSubRole)
+  const isAdminWeb = ['ADMIN_WEB', 'WAKA_HUMAS_SDM', 'HUMAS_SDM'].includes(userRole) || ['ADMIN_WEB', 'WAKA_HUMAS_SDM', 'HUMAS_SDM'].includes(userSubRole)
   const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || userSubRole === 'KEPALA_SEKOLAH'
+  const defaultType = isAdminWeb && !isSuperadminOrIT ? 'BERITA' : 'PENGUMUMAN'
+
   const queryClient = useQueryClient()
   const authenticatedFetch = useAuthenticatedFetch()
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategoryTab, setSelectedCategoryTab] = useState('ALL')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({ title: '', content: '', target: 'SEMUA', type: 'BERITA', eventDate: '', image: '' })
+  const [formData, setFormData] = useState({ title: '', content: '', target: 'SEMUA', type: defaultType, eventDate: '', image: '' })
   const [isCompressing, setIsCompressing] = useState(false)
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,14 +64,19 @@ export default function AnnouncementsPage() {
     }
   };
 
-  const { data: announcements, isLoading } = useQuery<Announcement[]>({
+  const { data: rawAnnouncements, isLoading } = useQuery<Announcement[]>({
     queryKey: ['announcements'],
     queryFn: async () => {
       const res = await authenticatedFetch('/api-backend/announcements')
-      if (!res.ok) throw new Error('Gagal memuat data berita & informasi')
+      if (!res.ok) throw new Error('Gagal memuat data berita & agenda')
       return res.json()
     }
   })
+
+  // Khusus Berita & Artikel serta Agenda Kegiatan
+  const announcements = (rawAnnouncements || []).filter(
+    (item) => item.type === 'BERITA' || item.type === 'AGENDA'
+  )
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -91,13 +101,13 @@ export default function AnnouncementsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      if (!res.ok) throw new Error('Gagal menambah pengumuman')
+      if (!res.ok) throw new Error('Gagal menambah data')
       return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['announcements'] })
       setOpen(false)
-      setFormData({ title: '', content: '', target: 'ALL', type: 'BERITA', eventDate: '', image: '' })
+      setFormData({ title: '', content: '', target: 'SEMUA', type: defaultType, eventDate: '', image: '' })
     }
   })
 
@@ -119,28 +129,26 @@ export default function AnnouncementsPage() {
 
       const payload = { ...originalPayload, image: imageUrl };
       
-      // Convert eventDate if it exists to match Prisma expectations if necessary
-      // It's handled backend-side in service, but we ensure string is sent
       const res = await authenticatedFetch(`/api-backend/announcements/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      if (!res.ok) throw new Error('Gagal memperbarui pengumuman')
+      if (!res.ok) throw new Error('Gagal memperbarui data')
       return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['announcements'] })
       setOpen(false)
       setEditingId(null)
-      setFormData({ title: '', content: '', target: 'ALL', type: 'BERITA', eventDate: '', image: '' })
+      setFormData({ title: '', content: '', target: 'SEMUA', type: defaultType, eventDate: '', image: '' })
     }
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await authenticatedFetch(`/api-backend/announcements/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Gagal menghapus pengumuman')
+      if (!res.ok) throw new Error('Gagal menghapus data')
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['announcements'] })
@@ -158,153 +166,211 @@ export default function AnnouncementsPage() {
 
   const getTargetBadgeColor = (target: string) => {
     switch(target) {
-      case 'ALL': return 'bg-purple-100 text-purple-700 border-purple-200'
+      case 'ALL':
+      case 'SEMUA': return 'bg-purple-100 text-purple-700 border-purple-200'
       case 'PUBLIC': return 'bg-green-100 text-green-700 border-green-200'
       case 'INTERNAL': return 'bg-blue-100 text-blue-700 border-blue-200'
       case 'GURU': return 'bg-amber-100 text-amber-700 border-amber-200'
       case 'SISWA': return 'bg-sky-100 text-sky-700 border-sky-200'
+      case 'WALI_MURID': return 'bg-emerald-100 text-emerald-700 border-emerald-200'
       default: return 'bg-slate-100 text-slate-700 border-slate-200'
     }
   }
 
   const getTargetLabel = (target: string) => {
     switch(target) {
-      case 'ALL': return 'Semua (Beranda & Dashboard)'
-      case 'PUBLIC': return 'Publik (Hanya Beranda)'
-      case 'INTERNAL': return 'Internal (Semua Warga Sekolah)'
+      case 'ALL':
+      case 'SEMUA': return 'Semua (Publik & Internal)'
+      case 'PUBLIC': return 'Publik (Halaman Depan)'
+      case 'INTERNAL': return 'Internal (Guru, Siswa, Wali)'
       case 'GURU': return 'Khusus Guru & Karyawan'
       case 'SISWA': return 'Khusus Siswa'
+      case 'WALI_MURID': return 'Khusus Wali Murid'
       default: return target
     }
   }
+
+  const getTypeBadge = (type: string) => {
+    switch (type) {
+      case 'BERITA':
+        return <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 border border-blue-200">Berita & Artikel</span>
+      case 'AGENDA':
+        return <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 border border-orange-200">Agenda Kegiatan</span>
+      case 'PENGUMUMAN':
+        return <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 border border-purple-200">Pengumuman Sistem</span>
+      case 'INFORMASI':
+        return <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 border border-emerald-200">Update & Keamanan</span>
+      default:
+        return <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">{type}</span>
+    }
+  }
+
+  // Filter based on Tab
+  const categoryFilteredAnnouncements = (announcements || []).filter((item) => {
+    if (selectedCategoryTab === 'ALL') return true
+    if (selectedCategoryTab === 'BERITA_AGENDA') return item.type === 'BERITA' || item.type === 'AGENDA'
+    if (selectedCategoryTab === 'SISTEM') return item.type === 'PENGUMUMAN' || item.type === 'INFORMASI'
+    return item.type === selectedCategoryTab
+  })
+
+  const filteredData = filterDataBySearch(categoryFilteredAnnouncements, searchQuery)
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
             <Megaphone className="w-6 h-6 text-blue-600" />
-            Berita & Informasi
+            Berita & Agenda Kegiatan
           </h1>
-          <p className="text-slate-500 mt-1">Kelola berita untuk halaman utama dan informasi internal sekolah.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
+            Panel publikasi Berita, Artikel, dan Agenda Kegiatan Sekolah untuk portal utama dan sistem SIMASMUH.
+          </p>
         </div>
         
         {!isKepalaSekolah && (
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all" onClick={() => setOpen(true)}>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all rounded-xl text-xs sm:text-sm" onClick={() => {
+            setEditingId(null);
+            setFormData({ title: '', content: '', target: 'SEMUA', type: 'BERITA', eventDate: '', image: '' });
+            setOpen(true);
+          }}>
             <Plus className="w-4 h-4 mr-2" />
-            Tulis Pengumuman
+            Tulis Berita / Agenda
           </Button>
         )}
         <Dialog open={open} onOpenChange={(val) => {
           setOpen(val);
           if (!val) {
             setEditingId(null);
-            setFormData({ title: '', content: '', target: 'ALL', type: 'BERITA', eventDate: '', image: '' });
+            setFormData({ title: '', content: '', target: 'SEMUA', type: 'BERITA', eventDate: '', image: '' });
           }
         }}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[540px] rounded-2xl">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>{editingId ? 'Edit Berita / Pengumuman' : 'Tulis Berita / Pengumuman Baru'}</DialogTitle>
-                <DialogDescription>
-                  {editingId ? 'Perbarui informasi pengumuman ini.' : 'Pengumuman akan langsung diterbitkan sesuai dengan target audiens yang Anda pilih.'}
+                <DialogTitle>{editingId ? 'Edit Konten Publikasi' : 'Penerbitan Berita / Agenda Baru'}</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Konten ini akan dipublikasikan ke portal publik serta widget Berita & Kalender Kegiatan.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Judul Pengumuman</Label>
+              <div className="space-y-4 py-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="title" className="text-xs font-bold">Judul Konten</Label>
                   <Input 
                     id="title" 
                     value={formData.title} 
                     onChange={e => setFormData({...formData, title: e.target.value})}
-                    placeholder="Contoh: Pengumuman Libur Semester"
+                    placeholder={formData.type === 'AGENDA' ? 'Contoh: Workshop Pembelajaran Digital' : 'Contoh: Siswa SMA MUHIPO Raih Juara 1 Olimpiade'}
                     required
+                    className="rounded-xl text-xs sm:text-sm"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Tipe</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="type" className="text-xs font-bold">Kategori</Label>
                     <select 
                       id="type" 
                       value={formData.type}
                       onChange={e => setFormData({...formData, type: e.target.value})}
-                      className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                      className="flex h-9 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 font-medium"
                     >
-                      <option value="BERITA">Berita</option>
-                      <option value="AGENDA">Agenda</option>
+                      <option value="BERITA">📰 Berita & Artikel</option>
+                      <option value="AGENDA">📅 Agenda Kegiatan</option>
                     </select>
                   </div>
                   
-                  {formData.type === 'AGENDA' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="eventDate">Tanggal Acara</Label>
+                  {formData.type === 'AGENDA' ? (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="eventDate" className="text-xs font-bold">Tanggal & Waktu Acara</Label>
                       <Input 
                         id="eventDate" 
                         type="datetime-local"
                         value={formData.eventDate} 
                         onChange={e => setFormData({...formData, eventDate: e.target.value})}
                         required
+                        className="rounded-xl text-xs h-9"
                       />
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="target" className="text-xs font-bold">Target Penerima</Label>
+                      <select 
+                        id="target" 
+                        value={formData.target}
+                        onChange={e => setFormData({...formData, target: e.target.value})}
+                        className="flex h-9 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 font-medium"
+                      >
+                        <option value="SEMUA">🌐 Semua (Publik & Internal)</option>
+                        <option value="PUBLIC">🌍 Publik (Portal Beranda)</option>
+                        <option value="INTERNAL">🏫 Internal (Guru, Siswa, Wali)</option>
+                        <option value="GURU">👨‍🏫 Khusus Guru & Karyawan</option>
+                        <option value="SISWA">🎓 Khusus Siswa</option>
+                        <option value="WALI_MURID">👨‍👩‍👦 Khusus Wali Murid</option>
+                      </select>
                     </div>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="target">Target Audiens</Label>
-                  <select 
-                    id="target" 
-                    value={formData.target}
-                    onChange={e => setFormData({...formData, target: e.target.value})}
-                    className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-                  >
-                    <option value="SEMUA">Semua (Tampil di Publik & Internal)</option>
-                    <option value="PUBLIC">Publik (Hanya Halaman Depan)</option>
-                    <option value="INTERNAL">Internal (Semua Guru & Siswa)</option>
-                    <option value="GURU">Khusus Guru & Karyawan</option>
-                    <option value="SISWA">Khusus Siswa</option>
-                    <option value="WALI_MURID">Khusus Wali Murid</option>
-                  </select>
-                </div>
+                {formData.type === 'AGENDA' && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="target" className="text-xs font-bold">Target Audiens Agenda</Label>
+                    <select 
+                      id="target" 
+                      value={formData.target}
+                      onChange={e => setFormData({...formData, target: e.target.value})}
+                      className="flex h-9 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 font-medium"
+                    >
+                      <option value="SEMUA">🌐 Semua (Publik & Internal)</option>
+                      <option value="PUBLIC">🌍 Publik (Portal Beranda)</option>
+                      <option value="INTERNAL">🏫 Internal (Guru, Siswa, Wali)</option>
+                      <option value="GURU">👨‍🏫 Khusus Guru & Karyawan</option>
+                      <option value="SISWA">🎓 Khusus Siswa</option>
+                      <option value="WALI_MURID">👨‍👩‍👦 Khusus Wali Murid</option>
+                    </select>
+                  </div>
+                )}
                 
-                <div className="space-y-2">
-                  <Label htmlFor="image">Upload Gambar (Opsional)</Label>
-                  <div className="flex items-center gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="image" className="text-xs font-bold">Banner / Gambar Lampiran (Opsional)</Label>
+                  <div className="flex items-center gap-3">
                     <Input 
                       id="image" 
                       type="file" 
                       accept="image/*"
                       onChange={handleImageUpload}
                       disabled={isCompressing}
+                      className="rounded-xl text-xs h-9"
                     />
-                    {isCompressing && <Loader2 className="w-5 h-5 animate-spin text-blue-500" />}
+                    {isCompressing && <Loader2 className="w-4 h-4 animate-spin text-blue-500 shrink-0" />}
                   </div>
                   {formData.image && (
-                    <div className="mt-2 text-sm text-green-600 flex items-center">
-                      <ImageIcon className="w-4 h-4 mr-1" /> Gambar berhasil disiapkan.
+                    <div className="mt-1 text-xs text-emerald-600 flex items-center font-medium">
+                      <ImageIcon className="w-3.5 h-3.5 mr-1" /> Gambar cover siap diunggah.
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="content">Isi Pengumuman</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="content" className="text-xs font-bold">Isi Pesan / Informasi</Label>
                   <Textarea 
                     id="content" 
                     value={formData.content} 
                     onChange={e => setFormData({...formData, content: e.target.value})}
-                    placeholder="Tuliskan isi informasi di sini..."
-                    className="min-h-[120px]"
+                    placeholder="Tuliskan isi rincian berita, instruksi pengumuman, atau jadwal kegiatan di sini..."
+                    className="min-h-[100px] rounded-xl text-xs sm:text-sm"
                     required
                   />
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => {
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button type="button" variant="outline" size="sm" className="rounded-xl text-xs" onClick={() => {
                   setOpen(false)
                   setEditingId(null)
-                  setFormData({ title: '', content: '', target: 'ALL', type: 'BERITA', eventDate: '', image: '' })
+                  setFormData({ title: '', content: '', target: 'SEMUA', type: defaultType, eventDate: '', image: '' })
                 }}>Batal</Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="bg-blue-600 hover:bg-blue-700">
-                  {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingId ? 'Simpan Perubahan' : 'Terbitkan'}
+                <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="bg-blue-600 hover:bg-blue-700 rounded-xl text-xs">
+                  {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                  {editingId ? 'Simpan Perubahan' : 'Terbitkan Sekarang'}
                 </Button>
               </DialogFooter>
             </form>
@@ -312,16 +378,39 @@ export default function AnnouncementsPage() {
         </Dialog>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 dark:border-slate-800 pb-3">
+        {[
+          { id: 'ALL', label: 'Semua (Berita & Agenda)' },
+          { id: 'BERITA', label: '📰 Berita & Artikel' },
+          { id: 'AGENDA', label: '📅 Agenda Kegiatan' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setSelectedCategoryTab(tab.id)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              selectedCategoryTab === tab.id
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs overflow-hidden rounded-2xl">
-        <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <CardTitle className="text-lg font-extrabold text-slate-900 dark:text-white">Daftar Pengumuman</CardTitle>
-            <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">Semua berita dan informasi yang pernah Anda publikasikan.</CardDescription>
+            <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Daftar Konten & Informasi</CardTitle>
+            <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">
+              Daftar berita, agenda acara, dan pengumuman sistem yang telah dipublikasikan.
+            </CardDescription>
           </div>
           <TableSearch
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Cari pengumuman (judul/isi)..."
+            placeholder="Cari judul/isi pesan..."
           />
         </CardHeader>
         <CardContent className="p-0">
@@ -329,11 +418,11 @@ export default function AnnouncementsPage() {
             <Table>
               <TableHeader className="bg-slate-50/50 dark:bg-slate-800/40">
                 <TableRow>
-                  <TableHead className="w-[40%] font-semibold text-slate-700">Judul & Isi</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Target Audiens</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Penulis</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Tanggal Terbit</TableHead>
-                  <TableHead className="text-right font-semibold text-slate-700">Aksi</TableHead>
+                  <TableHead className="w-[42%] font-semibold text-slate-700 dark:text-slate-300 text-xs">Konten & Kategori</TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300 text-xs">Target Audiens</TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300 text-xs">Penerbit</TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300 text-xs">Waktu</TableHead>
+                  <TableHead className="text-right font-semibold text-slate-700 dark:text-slate-300 text-xs">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -342,74 +431,72 @@ export default function AnnouncementsPage() {
                     <TableCell colSpan={5} className="h-32 text-center">
                       <div className="flex flex-col items-center justify-center text-slate-500">
                         <Loader2 className="h-6 w-6 animate-spin text-blue-500 mb-2" />
-                        <p>Memuat data berita...</p>
+                        <p className="text-xs">Memuat data publikasi...</p>
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : filterDataBySearch(announcements, searchQuery)?.length === 0 ? (
+                ) : filteredData?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-32 text-center">
                       <div className="flex flex-col items-center justify-center text-slate-500">
-                        <Megaphone className="h-10 w-10 text-slate-300 mb-3" />
-                        <p className="text-base font-medium text-slate-900">{searchQuery ? 'Tidak ada pengumuman yang sesuai pencarian' : 'Belum ada pengumuman'}</p>
-                        {!searchQuery && <p className="text-sm">Klik &apos;Tulis Pengumuman&apos; untuk membuat informasi baru.</p>}
+                        <Megaphone className="h-9 w-9 text-slate-300 mb-2" />
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{searchQuery ? 'Tidak ada konten yang sesuai pencarian' : 'Belum ada konten publikasi'}</p>
+                        {!searchQuery && <p className="text-xs text-slate-400 mt-0.5">Klik tombol penerbitan untuk membuat postingan baru.</p>}
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filterDataBySearch(announcements, searchQuery)?.map((item) => (
-                    <TableRow key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                  filteredData?.map((item) => (
+                    <TableRow key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                       <TableCell>
                         <div className="flex items-start gap-3">
                           {item.image ? (
                             /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={item.image} alt={item.title} className="w-16 h-16 rounded-md object-cover flex-shrink-0" />
+                            <img src={item.image} alt={item.title} className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover flex-shrink-0 border border-slate-200 dark:border-slate-700" />
                           ) : (
-                            <div className="w-16 h-16 rounded-md bg-slate-100 flex items-center justify-center flex-shrink-0">
-                              <ImageIcon className="w-6 h-6 text-slate-400" />
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-slate-700">
+                              <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400" />
                             </div>
                           )}
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm ${item.type === 'AGENDA' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {item.type}
-                              </span>
-                              <span className="font-semibold text-slate-900">{item.title}</span>
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {getTypeBadge(item.type)}
+                              <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm line-clamp-1">{item.title}</span>
                             </div>
-                            <div className="text-sm text-slate-500 line-clamp-2">{item.content}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{item.content}</div>
                             {item.type === 'AGENDA' && item.eventDate && (
-                              <div className="mt-1 text-xs font-medium text-slate-600 flex items-center">
-                                <CalendarDays className="w-3.5 h-3.5 mr-1 text-orange-500" />
-                                {new Date(item.eventDate).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                              <div className="text-[11px] font-semibold text-orange-600 dark:text-orange-400 flex items-center gap-1 pt-0.5">
+                                <CalendarDays className="w-3.5 h-3.5" />
+                                Acara: {new Date(item.eventDate).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} WIB
                               </div>
                             )}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getTargetBadgeColor(item.target)}`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getTargetBadgeColor(item.target)}`}>
                           {getTargetLabel(item.target)}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm font-medium text-slate-900">{item.author?.name || 'Sistem'}</div>
-                        <div className="text-xs text-slate-500">{item.author?.role || '-'}</div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{item.author?.name || 'Sistem'}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{item.author?.role || '-'}</div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center text-sm text-slate-600">
-                          <Clock className="w-3.5 h-3.5 mr-1.5 text-slate-400" />
+                        <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
+                          <Clock className="w-3.5 h-3.5 mr-1 text-slate-400 shrink-0" />
                           {new Date(item.createdAt).toLocaleDateString('id-ID', {
-                            day: 'numeric', month: 'long', year: 'numeric'
+                            day: 'numeric', month: 'short', year: 'numeric'
                           })}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
                         {!isKepalaSekolah ? (
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-1">
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg"
                               onClick={() => {
                                 setEditingId(item.id)
                                 setFormData({
@@ -423,24 +510,24 @@ export default function AnnouncementsPage() {
                                 setOpen(true)
                               }}
                             >
-                              <Pencil className="w-4 h-4" />
+                              <Pencil className="w-3.5 h-3.5" />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg"
                               onClick={() => {
-                                if (confirm('Apakah Anda yakin ingin menghapus pengumuman ini?')) {
+                                if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
                                   deleteMutation.mutate(item.id)
                                 }
                               }}
                               disabled={deleteMutation.isPending}
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           </div>
                         ) : (
-                          <span className="text-[11px] text-slate-400 italic">Read-Only</span>
+                          <span className="text-[10px] text-slate-400 italic">Read-Only</span>
                         )}
                       </TableCell>
                     </TableRow>

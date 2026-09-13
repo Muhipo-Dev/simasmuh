@@ -120,41 +120,41 @@ export default function EtikaTatibPage() {
               <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Poin Kedisiplinan</p>
               <div className="flex items-baseline gap-2 mt-1">
                 <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">
-                  {etika.kedisiplinanScore ?? 1000}
+                  {etika.kedisiplinanScore ?? 100}
                 </h3>
                 <span className={`text-xs font-black px-2 py-0.5 rounded-md ${
-                  (etika.kedisiplinanScore ?? 1000) >= 900
+                  (etika.kedisiplinanScore ?? 100) >= 90
                     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                    : (etika.kedisiplinanScore ?? 1000) >= 700
+                    : (etika.kedisiplinanScore ?? 100) >= 70
                     ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
-                    : (etika.kedisiplinanScore ?? 1000) >= 500
+                    : (etika.kedisiplinanScore ?? 100) >= 50
                     ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
-                    : (etika.kedisiplinanScore ?? 1000) >= 200
+                    : (etika.kedisiplinanScore ?? 100) >= 20
                     ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300'
                     : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
                 }`}>
-                  Grade {etika.kedisiplinanGrade || ((etika.kedisiplinanScore ?? 1000) >= 900 ? 'A' : (etika.kedisiplinanScore ?? 1000) >= 700 ? 'B' : (etika.kedisiplinanScore ?? 1000) >= 500 ? 'C' : (etika.kedisiplinanScore ?? 1000) >= 200 ? 'D' : 'E')}
+                  Grade {etika.kedisiplinanGrade || ((etika.kedisiplinanScore ?? 100) >= 90 ? 'A' : (etika.kedisiplinanScore ?? 100) >= 70 ? 'B' : (etika.kedisiplinanScore ?? 100) >= 50 ? 'C' : (etika.kedisiplinanScore ?? 100) >= 20 ? 'D' : 'E')}
                 </span>
               </div>
               <p className={`text-xs font-semibold mt-1 flex items-center gap-1 ${
-                (etika.kedisiplinanScore ?? 1000) >= 900
+                (etika.kedisiplinanScore ?? 100) >= 90
                   ? 'text-emerald-600 dark:text-emerald-400'
-                  : (etika.kedisiplinanScore ?? 1000) >= 700
+                  : (etika.kedisiplinanScore ?? 100) >= 70
                   ? 'text-blue-600 dark:text-blue-400'
-                  : (etika.kedisiplinanScore ?? 1000) >= 500
+                  : (etika.kedisiplinanScore ?? 100) >= 50
                   ? 'text-amber-600 dark:text-amber-400'
-                  : (etika.kedisiplinanScore ?? 1000) >= 200
+                  : (etika.kedisiplinanScore ?? 100) >= 20
                   ? 'text-orange-600 dark:text-orange-400'
                   : 'text-rose-600 dark:text-rose-400 font-bold'
               }`}>
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                {(etika.kedisiplinanScore ?? 1000) >= 900
+                {(etika.kedisiplinanScore ?? 100) >= 90
                   ? 'Baik / Terpuji'
-                  : (etika.kedisiplinanScore ?? 1000) >= 700
+                  : (etika.kedisiplinanScore ?? 100) >= 70
                   ? 'Pantauan & Bimbingan Ringan'
-                  : (etika.kedisiplinanScore ?? 1000) >= 500
+                  : (etika.kedisiplinanScore ?? 100) >= 50
                   ? 'Pantauan & Bimbingan'
-                  : (etika.kedisiplinanScore ?? 1000) >= 200
+                  : (etika.kedisiplinanScore ?? 100) >= 20
                   ? 'Perlu Bimbingan Ketat'
                   : 'Kritis / Dikeluarkan dari Sekolah'}
               </p>

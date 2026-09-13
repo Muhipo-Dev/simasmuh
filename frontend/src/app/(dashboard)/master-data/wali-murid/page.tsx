@@ -378,15 +378,18 @@ export default function WaliMuridPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      {/* Header Glassmorphic Standar CBT MUHIPO */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 backdrop-blur-xl shadow-xs">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-            <Users className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+          <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 block mb-1">
+            Master Data Orang Tua / Wali
+          </span>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <Users className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
             Data Wali Murid
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Kelola data akun orang tua / wali yang terhubung dengan siswa untuk akses sistem, notifikasi WhatsApp, dan laporan siswa.
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
+            Kelola data akun orang tua / wali yang terhubung dengan siswa untuk akses sistem, notifikasi, dan laporan siswa.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -397,7 +400,7 @@ export default function WaliMuridPage() {
                 setIsBulkDeleteMode(true)
                 setDeleteDialogOpen(true)
               }}
-              className="bg-red-600 hover:bg-red-700 text-white gap-2"
+              className="bg-red-600 hover:bg-red-700 text-white gap-2 font-bold text-xs h-9 rounded-xl shadow-xs"
             >
               <Trash2 className="w-4 h-4" />
               Hapus ({selectedParentIds.length}) Terpilih
@@ -406,7 +409,7 @@ export default function WaliMuridPage() {
           <Button
             variant="outline"
             onClick={() => setSyncDialogOpen(true)}
-            className="border-indigo-200 text-indigo-700 dark:text-indigo-300 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 gap-2"
+            className="border-indigo-200 text-indigo-700 dark:text-indigo-300 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 gap-2 font-bold text-xs h-9 rounded-xl"
           >
             <Sparkles className="w-4 h-4 text-indigo-500" />
             Sinkronkan dari Siswa

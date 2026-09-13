@@ -16,6 +16,11 @@ export class StudentsService {
       include: {
         class: true,
         user: true,
+        grades: {
+          include: {
+            subject: true,
+          },
+        },
         parentRelations: {
           include: {
             parent: {
@@ -33,14 +38,29 @@ export class StudentsService {
   async findOne(id: string) {
     return this.prisma.student.findUnique({
       where: { id },
-      include: { class: true, user: true },
+      include: {
+        class: true,
+        user: true,
+        grades: {
+          include: {
+            subject: true,
+          },
+        },
+      },
     });
   }
 
   async findByUserId(userId: string) {
     return this.prisma.student.findFirst({
       where: { userId },
-      include: { class: true },
+      include: {
+        class: true,
+        grades: {
+          include: {
+            subject: true,
+          },
+        },
+      },
     });
   }
 
@@ -618,7 +638,7 @@ export class StudentsService {
       nis: '12345',
       name: 'Contoh: Ahmad Dahlan',
       gender: 'L',
-      className: 'X IPA 1',
+      className: 'X 1',
       username: 'ahmad123',
       password: 'password123',
       program: 'tahfidz',
@@ -686,8 +706,8 @@ export class StudentsService {
       },
       {
         column: 'Kelas',
-        description: 'Nama kelas sesuai dengan kelas yang ada di sistem',
-        example: 'X IPA 1',
+        description: 'Nama kelas sesuai dengan kelas yang ada di sistem (Format: Romawi spasi Angka)',
+        example: 'X 1',
       },
       {
         column: 'Username',

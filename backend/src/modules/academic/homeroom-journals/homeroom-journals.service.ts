@@ -5,9 +5,17 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 export class HomeroomJournalsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(query?: { teacherId?: string; userId?: string }) {
+    const where: any = {};
+    if (query?.teacherId) {
+      where.teacherId = query.teacherId;
+    } else if (query?.userId) {
+      where.teacher = { userId: query.userId };
+    }
     return this.prisma.homeroomJournal.findMany({
-      include: { teacher: { include: { user: true } } },
+      where,
+      include: { teacher: { include: { user: true, homeroomClasses: true } } },
+      orderBy: { date: 'desc' },
     });
   }
 

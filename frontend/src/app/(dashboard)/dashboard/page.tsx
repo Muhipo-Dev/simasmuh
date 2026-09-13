@@ -24,8 +24,11 @@ import { getRoleLinks } from '@/lib/nav-links'
 import { UserAccountCard } from '@/components/dashboard/UserAccountCard'
 import { CenterQuickAccessGrid } from '@/components/dashboard/CenterQuickAccessGrid'
 import { SystemInfoWidget } from '@/components/dashboard/SystemInfoWidget'
+import { UrgentAnnouncementPopup } from '@/components/dashboard/UrgentAnnouncementPopup'
 import { ActivityCalendarWidget } from '@/components/dashboard/ActivityCalendarWidget'
 import { NewsArticleListWidget } from '@/components/dashboard/NewsArticleListWidget'
+import { StudentDashboard } from '@/components/dashboard/StudentDashboard'
+import { PrayerTimesWidget } from '@/components/dashboard/PrayerTimesWidget'
 
 import { useRealtimeServerClock } from '@/lib/time-sync'
 
@@ -38,10 +41,18 @@ const formatProgramName = (code?: string | null) => {
   if (c === 'kader') return 'Kader'
   if (c === 'inklusi') return 'Inklusi'
   if (c === 'enterpreneur' || c === 'entrepreneur') return 'Entrepreneur'
-  if (c === 'seni budaya') return 'Seni Budaya'
-  if (c === 'soshum saintek') return 'Soshum Saintek'
   return code.charAt(0).toUpperCase() + code.slice(1)
 }
+
+const parseTimeToMinutes = (t: string | undefined | null): number => {
+  if (!t) return 0
+  const clean = t.replace('.', ':').trim()
+  const parts = clean.split(':')
+  const hours = parseInt(parts[0] || '0', 10) || 0
+  const minutes = parseInt(parts[1] || '0', 10) || 0
+  return hours * 60 + minutes
+}
+
 export default function DashboardPage() {
   const { data: session } = useSession()
   const clock = useRealtimeServerClock(30000)
@@ -89,6 +100,11 @@ export default function DashboardPage() {
   const { data: announcements, isLoading: loadingAnnouncements } = useQuery<any[]>({
     queryKey: ['announcements', role, subRole, subRole2, subRole3],
     queryFn: () => authenticatedQuery(`/api-backend/announcements/dashboard?role=${role}&subRole=${subRole || ''}&subRole2=${subRole2 || ''}&subRole3=${subRole3 || ''}`)
+  })
+
+  const { data: systemAnnouncements, isLoading: loadingSystemAnnouncements } = useQuery<any[]>({
+    queryKey: ['system-announcements-dashboard', role, subRole, subRole2, subRole3],
+    queryFn: () => authenticatedQuery(`/api-backend/system-announcements/dashboard?role=${role}&subRole=${subRole || ''}&subRole2=${subRole2 || ''}&subRole3=${subRole3 || ''}`)
   })
 
   const { data: settings } = useQuery<any>({
@@ -633,7 +649,12 @@ export default function DashboardPage() {
       }
       return true;
     })
-    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    .sort((a, b) => {
+      const timeA = parseTimeToMinutes(a.startTime)
+      const timeB = parseTimeToMinutes(b.startTime)
+      if (timeA !== timeB) return timeA - timeB
+      return parseTimeToMinutes(a.endTime) - parseTimeToMinutes(b.endTime)
+    })
 
   const hadirCount = (attendances || []).filter(a => a.status === 'HADIR').length
   const attendancePercentage = attendances && attendances.length > 0
@@ -732,37 +753,49 @@ export default function DashboardPage() {
   }
 
   const renderAttendanceLog = (isStudent = false) => (
-    <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs w-full h-full flex flex-col rounded-2xl overflow-hidden">
-      <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 pb-4 shrink-0">
-        <CardTitle className="text-lg font-extrabold text-slate-900 dark:text-white">Log Absensi (30 Hari Terakhir)</CardTitle>
-        <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">Riwayat kehadiran harian Anda</CardDescription>
+    <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-2xs w-full flex flex-col rounded-2xl overflow-hidden">
+      <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-3.5 sm:p-4 pb-2.5 shrink-0 flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-xs sm:text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+            <ClipboardCheck className="w-4 h-4 text-emerald-600" />
+            Log Absensi (30 Hari Terakhir)
+          </CardTitle>
+          <CardDescription className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+            Riwayat kehadiran harian pegawai/guru
+          </CardDescription>
+        </div>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto max-h-[460px] p-4 sm:p-5">
+      <CardContent className="flex-1 overflow-y-auto max-h-[360px] p-3 sm:p-3.5">
         {loadingHistory ? (
-          <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+          <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>
         ) : !myHistory || myHistory.length === 0 ? (
-          <div className="text-center py-10 text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl my-2">
+          <div className="text-center py-6 text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl my-1 text-xs">
             Belum ada data absensi tercatat
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {myHistory.map((log: any, i: number) => (
-              <div key={i} className="p-3.5 border border-slate-100 dark:border-slate-800 rounded-xl bg-slate-50/70 dark:bg-slate-800/50 space-y-2 hover:bg-slate-100/60 dark:hover:bg-slate-800/80 transition-colors">
+              <div key={i} className="p-2.5 border border-slate-100 dark:border-slate-800 rounded-xl bg-slate-50/70 dark:bg-slate-800/50 space-y-1 hover:bg-slate-100/60 dark:hover:bg-slate-800/80 transition-colors">
                 <div className="flex justify-between items-center">
-                  <p className="font-semibold text-sm text-slate-900 dark:text-white">
+                  <p className="font-bold text-xs text-slate-900 dark:text-white">
                     {new Date(log.date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${log.status === 'HADIR' ? 'bg-green-100 dark:bg-green-950/90 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800' : 'bg-red-100 dark:bg-red-950/90 text-red-700 dark:text-red-300'
-                    }`}>{log.status}</span>
+                  <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${
+                    log.status === 'HADIR'
+                      ? 'bg-emerald-100 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                      : 'bg-rose-100 dark:bg-rose-950/90 text-rose-700 dark:text-rose-300'
+                  }`}>
+                    {log.status}
+                  </span>
                 </div>
-                <div className="flex gap-3 flex-wrap pt-0.5">
-                  <span className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+                <div className="flex gap-2.5 flex-wrap pt-0.5 text-[11px]">
+                  <span className="text-slate-600 dark:text-slate-300 flex items-center gap-1 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
                     Masuk: {log.checkInTime || log.time || '-'}
                   </span>
                   {!isStudent && (
-                    <span className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+                    <span className="text-slate-600 dark:text-slate-300 flex items-center gap-1 font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block"></span>
                       Pulang: {log.checkOutTime || <span className="text-slate-400 dark:text-slate-500">Belum</span>}
                     </span>
                   )}
@@ -837,228 +870,24 @@ export default function DashboardPage() {
       s.nis === session?.user?.email
     )
     const studentClass = (Array.isArray(classes) ? classes : []).find((c: any) => c.id === activeStudent?.classId) || activeStudent?.class || (classes && classes.length > 0 ? classes[0] : null)
-    const myClassSchedules = (schedules || [])
-      .filter((sch: any) => sch.classId === studentClass?.id)
-      .sort((a: any, b: any) => {
-        if (a.dayOfWeek !== b.dayOfWeek) return a.dayOfWeek - b.dayOfWeek
-        return a.startTime.localeCompare(b.startTime)
-      })
-
-    const todayDayIndex = new Date().getDay()
-    const daysMap = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
-
-    // Hitung total tagihan belum lunas
-    const allUnpaid = (studentTagihans?.tagihans || []).filter((t: any) => t.status === 'BELUM_LUNAS' || t.status === 'ANGSURAN')
-    const unpaidTagihans = allUnpaid.filter((t: any) => !t.paymentProofs || t.paymentProofs.length === 0 || t.paymentProofs[0]?.status === 'DITOLAK')
-    const verifyingTagihans = allUnpaid.filter((t: any) => t.paymentProofs && t.paymentProofs.length > 0 && t.paymentProofs[0]?.status === 'MENUNGGU_VERIFIKASI')
-
-    const totalUnpaidAmount = allUnpaid.reduce((sum: number, tagihan: any) => sum + Math.max(0, tagihan.amount - (tagihan.amountPaid || 0)), 0)
-    const formatCurrency = (amount: number) =>
-      new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        maximumFractionDigits: 0
-      }).format(amount)
-
-    const studentLinks = getRoleLinks(role, subRole, subRole2, subRole3).filter(link => link.href !== '/dashboard')
+    
+    // Classmates in the same class
+    const classmates = (Array.isArray(students) ? students : []).filter((s: any) => s.classId === studentClass?.id)
 
     return (
-      <div className="space-y-6 w-full">
-        {/* Banner Welcome Header Ringkas */}
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-700 p-5 sm:p-6 rounded-2xl text-white shadow-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
-          <div>
-            <h1 className="text-xl sm:text-2xl tracking-tight text-white flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <span className="font-extrabold">{clock.greeting} 👋,</span>
-              <span className="font-extrabold italic">{(session?.user as any)?.name || 'Siswa'}!</span>
-              <span className="font-normal italic text-blue-100 text-base sm:text-lg">Semoga harimu menyenangkan ✨</span>
-            </h1>
-            <p className="text-blue-100 mt-1 text-xs sm:text-sm font-medium">
-              Selamat datang di Dashboard Pengguna SIMASMUH SMA Muhammadiyah 1 Ponorogo
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center sm:justify-end gap-2">
-            {studentClass && (
-              <Badge className="bg-white/20 text-white font-bold border-white/20 text-xs px-3 py-1">
-                Kelas: {studentClass.name}
-              </Badge>
-            )}
-            <Badge className="bg-emerald-500 text-white font-bold text-xs px-3 py-1">
-              Program {formatProgramName(activeStudent?.program)}
-            </Badge>
-            {allUnpaid.length > 0 && (
-              <Button
-                onClick={() => setShowPaymentPopup(true)}
-                className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold border border-amber-300 shadow-sm text-xs h-8 rounded-xl"
-                size="sm"
-              >
-                <AlertTriangle className="w-3.5 h-3.5 mr-1 text-red-600 shrink-0" />
-                {allUnpaid.length} Tagihan
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* 3-AREA DASHBOARD LAYOUT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 sm:gap-5 items-start">
-          {/* AREA KIRI: INFO AKUN & DAFTAR BERITA / ARTIKEL */}
-          <div className="md:col-span-1 xl:col-span-3 space-y-4 sm:space-y-5">
-            <UserAccountCard
-              role={role}
-              studentClass={studentClass}
-              activeStudent={activeStudent}
-              profileAvatarUrl={(session?.user as any)?.avatarUrl}
-              statusLabel="Siswa: Aktif"
-            />
-            <NewsArticleListWidget announcements={announcements} limit={4} />
-          </div>
-
-          {/* AREA TENGAH: TOMBOL AKSES CEPAT & WIDGET UTAMA */}
-          <div className="md:col-span-2 xl:col-span-6 space-y-4 sm:space-y-5 order-first md:order-none">
-            {/* Banner Tagihan Alert jika ada */}
-            {allUnpaid.length > 0 && (
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-500/15 to-amber-500/15 border border-rose-300 dark:border-rose-800 flex items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
-                    <AlertTriangle className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h5 className="font-extrabold text-xs text-slate-900 dark:text-white">Tagihan Belum Lunas</h5>
-                    <p className="text-[11px] text-rose-700 dark:text-rose-300 font-medium">
-                      {allUnpaid.length} Tagihan ({formatCurrency(totalUnpaidAmount)})
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  onClick={() => setShowPaymentPopup(true)}
-                  size="sm"
-                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-8 rounded-xl"
-                >
-                  Bayar Sekarang
-                </Button>
-              </div>
-            )}
-
-            {/* Quick Access Tile Grid */}
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                Menu Akses Cepat Aplikasi
-              </h3>
-              <CenterQuickAccessGrid links={studentLinks} role={role} />
-            </div>
-
-            {/* Jadwal Pelajaran Hari Ini */}
-            <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-xs rounded-2xl overflow-hidden">
-              <CardHeader className="p-4 pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-indigo-600" />
-                    Jadwal Pelajaran ({studentClass?.name || 'Kelas'})
-                  </CardTitle>
-                  <CardDescription className="text-[11px] mt-0.5">Hari ini: {daysMap[todayDayIndex]}</CardDescription>
-                </div>
-                <Link href="/akademik/jadwal-pelajaran">
-                  <Button variant="ghost" size="sm" className="text-xs text-indigo-600 h-7 px-2">
-                    Lihat Semua &rarr;
-                  </Button>
-                </Link>
-              </CardHeader>
-              <CardContent className="p-4 space-y-2.5 max-h-[300px] overflow-y-auto">
-                {myClassSchedules.length === 0 ? (
-                  <div className="text-center py-6 text-slate-400 text-xs border border-dashed rounded-xl">
-                    Tidak ada jadwal pelajaran terdaftar hari ini.
-                  </div>
-                ) : (
-                  myClassSchedules.slice(0, 4).map((sch: any, idx: number) => {
-                    const isSchToday = sch.dayOfWeek === todayDayIndex
-                    return (
-                      <div
-                        key={sch.id || idx}
-                        className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs ${
-                          isSchToday
-                            ? 'bg-blue-50/70 dark:bg-slate-800/80 border-blue-200 dark:border-blue-700'
-                            : 'bg-slate-50/40 dark:bg-slate-800/30 border-slate-100 dark:border-slate-800'
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 bg-blue-600 text-white rounded">
-                              {daysMap[sch.dayOfWeek]}
-                            </span>
-                            <span className="font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
-                              {sch.startTime} - {sch.endTime}
-                            </span>
-                          </div>
-                          <h5 className="font-bold text-slate-900 dark:text-white text-xs">{sch.subject?.name || 'Mapel'}</h5>
-                        </div>
-                        <div className="text-right text-[11px] text-slate-500">
-                          <span>{sch.teacher?.user?.name || '-'}</span>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Widget Rekapitulasi Nilai Semester CBT */}
-            <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-xs rounded-2xl overflow-hidden">
-              <CardHeader className="p-4 pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4 text-blue-600" />
-                    Nilai Semester (CBT MUHIPO)
-                  </CardTitle>
-                  <CardDescription className="text-[11px] mt-0.5">
-                    Hasil ujian berbasis komputer terintegrasi NIS
-                  </CardDescription>
-                </div>
-                <Link href="/akademik/nilai-semester">
-                  <Button variant="ghost" size="sm" className="text-xs text-blue-600 font-bold h-7 px-2">
-                    Lihat Rekap Nilai &rarr;
-                  </Button>
-                </Link>
-              </CardHeader>
-              <CardContent className="p-4 space-y-2.5">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900">
-                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">Sistem Ujian</span>
-                    <span className="text-xs font-black text-blue-700 dark:text-blue-300">CBT Online</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900">
-                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">Status Akun</span>
-                    <span className="text-xs font-black text-indigo-700 dark:text-indigo-300">Tersinkron</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900">
-                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">Standar KKM</span>
-                    <span className="text-xs font-black text-emerald-700 dark:text-emerald-300">75.0</span>
-                  </div>
-                </div>
-                <div className="pt-1 flex items-center justify-between text-xs">
-                  <span className="text-slate-500 text-[11px]">Akses rincian nilai per mata pelajaran:</span>
-                  <Link href="/akademik/nilai-semester">
-                    <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold">
-                      Buka Menu Nilai
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* AREA KANAN: INFORMASI SISTEM & KALENDER KEGIATAN (col-span-3) */}
-          <div className="lg:col-span-3 space-y-5">
-            <SystemInfoWidget announcements={announcements} limit={3} />
-            <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
-          </div>
-        </div>
-
-        {/* Payment Popup */}
-        <PaymentBillingPopup
-          open={showPaymentPopup}
-          onClose={() => setShowPaymentPopup(false)}
-        />
-      </div>
+      <StudentDashboard
+        session={session}
+        activeStudent={activeStudent}
+        studentClass={studentClass}
+        classmates={classmates}
+        schedules={schedules || []}
+        grades={activeStudent?.grades || []}
+        dailyAttendanceHistory={myHistory || []}
+        studentTagihans={studentTagihans}
+        announcements={announcements || []}
+        systemAnnouncements={systemAnnouncements || []}
+        clock={clock}
+      />
     )
   }
 
@@ -1086,34 +915,40 @@ export default function DashboardPage() {
 
     const myClassSchedules = (activeStudent?.schedules || [])
       .sort((a: any, b: any) => {
+        const aIsToday = a.dayOfWeek === todayDayIndex ? 0 : 1
+        const bIsToday = b.dayOfWeek === todayDayIndex ? 0 : 1
+        if (aIsToday !== bIsToday) return aIsToday - bIsToday
         if (a.dayOfWeek !== b.dayOfWeek) return a.dayOfWeek - b.dayOfWeek
-        return a.startTime.localeCompare(b.startTime)
+        const timeA = parseTimeToMinutes(a.startTime)
+        const timeB = parseTimeToMinutes(b.startTime)
+        if (timeA !== timeB) return timeA - timeB
+        return parseTimeToMinutes(a.endTime) - parseTimeToMinutes(b.endTime)
       })
 
     const parentNavLinks = getRoleLinks(role, subRole, subRole2, subRole3).filter(link => link.href !== '/dashboard')
 
     return (
-      <div className="space-y-6 w-full">
+      <div className="space-y-3.5 sm:space-y-4 w-full">
         {/* Banner Welcome Header Wali Murid & Selektor Siswa */}
-        <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-slate-900 p-5 sm:p-6 rounded-2xl text-white shadow-md flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 w-full border border-white/10">
+        <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-slate-900 p-4 sm:p-5 rounded-2xl text-white shadow-md flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5 w-full border border-white/10">
           <div>
-            <h1 className="text-xl sm:text-2xl tracking-tight text-white flex items-center gap-1.5 sm:gap-2">
+            <h1 className="text-lg sm:text-xl tracking-tight text-white flex items-center gap-1.5 sm:gap-2">
               <span className="font-extrabold">{clock.greeting} 👋,</span>
               <span className="font-extrabold italic">{(session?.user as any)?.name || 'Bapak/Ibu Wali Murid'}</span>
             </h1>
-            <p className="text-indigo-100 mt-1 text-xs sm:text-sm font-medium">
+            <p className="text-indigo-100 mt-0.5 text-xs font-medium">
               Portal Pemantauan Terpadu Wali Murid SIMASMUH SMA Muhammadiyah 1 Ponorogo
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             {parentStudents.length > 1 && (
               <div className="relative">
                 <select
                   value={selectedChildIdx}
                   onChange={(e) => setSelectedChildIdx(parseInt(e.target.value, 10))}
                   aria-label="Pilih Siswa"
-                  className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white font-bold text-xs h-9 px-3 py-1 pr-8 rounded-xl border border-indigo-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none"
+                  className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white font-bold text-xs h-8 px-2.5 py-1 pr-7 rounded-xl border border-indigo-300 shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none"
                 >
                   {parentStudents.map((st: any, idx: number) => (
                     <option key={st.id || idx} value={idx}>
@@ -1121,12 +956,12 @@ export default function DashboardPage() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             )}
 
             {activeStudent && (
-              <Badge className="bg-white/20 text-white font-bold text-xs px-3 py-1">
+              <Badge className="bg-white/20 text-white font-bold text-[11px] px-2.5 py-0.5">
                 Siswa: {activeStudent.name} (Kelas {activeStudent.className || '-'})
               </Badge>
             )}
@@ -1134,7 +969,7 @@ export default function DashboardPage() {
             {allUnpaid.length > 0 && (
               <Button
                 onClick={() => setShowPaymentPopup(true)}
-                className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs h-9 rounded-xl shadow-sm"
+                className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs h-8 rounded-xl shadow-xs"
                 size="sm"
               >
                 <AlertTriangle className="w-3.5 h-3.5 mr-1 text-red-600" />
@@ -1144,54 +979,57 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* JADWAL SHOLAT & KHGT MUHAMMADIYAH REALTIME BANNER */}
+        <PrayerTimesWidget variant="banner" />
+
         {/* 3-AREA DASHBOARD LAYOUT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 sm:gap-5 items-start">
-          {/* AREA KIRI: INFO AKUN & BERITA SEKOLAH */}
-          <div className="md:col-span-1 xl:col-span-3 space-y-4 sm:space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3.5 sm:gap-4 items-start">
+          {/* AREA KIRI: INFO AKUN & INFORMASI SISTEM */}
+          <div className="md:col-span-1 xl:col-span-3 space-y-3.5 sm:space-y-4">
             <UserAccountCard
               role={role}
               activeStudent={activeStudent}
               profileAvatarUrl={(session?.user as any)?.avatarUrl}
               statusLabel={`Wali: ${activeStudent?.name || 'Siswa'}`}
             />
-            <NewsArticleListWidget announcements={announcements} limit={4} />
+            <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
           </div>
 
           {/* AREA TENGAH: TOMBOL AKSES CEPAT & WIDGET MONITORING */}
-          <div className="md:col-span-2 xl:col-span-6 space-y-4 sm:space-y-5 order-first md:order-none">
+          <div className="md:col-span-2 xl:col-span-6 space-y-3.5 sm:space-y-4 order-first md:order-none">
             {/* Quick Access Tile Grid */}
             <div>
-              <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+              <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                 Menu Akses Cepat Wali Murid
               </h3>
               <CenterQuickAccessGrid links={parentNavLinks} role={role} />
             </div>
 
             {/* Monitoring Ringkasan Etika Tatib & Jadwal Siswa */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Adab & Karakter Siswa */}
-              <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-xs rounded-2xl p-4 flex flex-col justify-between">
+              <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-2xs rounded-xl p-3 sm:p-3.5 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5 mb-2">
                     <span className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <Award className="w-4 h-4 text-emerald-600" />
+                      <Award className="w-3.5 h-3.5 text-emerald-600" />
                       Poin Karakter & Adab
                     </span>
-                    <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300">
+                    <Badge variant="outline" className="text-[9.5px] bg-emerald-50 text-emerald-700 border-emerald-300 px-1.5 py-0">
                       Live
                     </Badge>
                   </div>
                   <div className="flex items-center justify-around text-center py-1">
                     <div>
-                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Poin Tatib</span>
+                      <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Poin Tatib</span>
                       <span className="text-xl font-black text-emerald-600">
-                        {activeStudent?.etikaTataTertib?.kedisiplinanScore ?? 1000}
+                        {activeStudent?.etikaTataTertib?.kedisiplinanScore ?? 100}
                       </span>
                     </div>
-                    <div className="border-r border-slate-100 dark:border-slate-800 h-8" />
+                    <div className="border-r border-slate-100 dark:border-slate-800 h-7" />
                     <div>
-                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Amalan Ibadah</span>
+                      <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Amalan Ibadah</span>
                       <span className="text-xl font-black text-teal-600">
                         {activeStudent?.etikaTataTertib?.ibadahGrade || 'A'}
                       </span>
@@ -1199,34 +1037,34 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <Link href="/akademik/etika-tatib" className="pt-2">
-                  <Button variant="outline" size="sm" className="w-full text-xs font-bold h-7 rounded-lg">
-                    Rincian Buku Saku &rarr;
+                  <Button variant="outline" size="sm" className="w-full text-[11px] font-bold h-7 rounded-lg">
+                    Buku Saku &rarr;
                   </Button>
                 </Link>
               </Card>
 
               {/* Status Kehadiran Siswa */}
-              <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-xs rounded-2xl p-4 flex flex-col justify-between">
+              <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-2xs rounded-xl p-3 sm:p-3.5 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5 mb-2">
                     <span className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <ClipboardCheck className="w-4 h-4 text-blue-600" />
+                      <ClipboardCheck className="w-3.5 h-3.5 text-blue-600" />
                       Status Presensi & Izin
                     </span>
-                    <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-300">
+                    <Badge variant="outline" className="text-[9.5px] bg-blue-50 text-blue-700 border-blue-300 px-1.5 py-0">
                       Harian
                     </Badge>
                   </div>
                   <div className="flex items-center justify-around text-center py-1">
                     <div>
-                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Presensi Bulan Ini</span>
+                      <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Presensi Bulan Ini</span>
                       <span className="text-xl font-black text-blue-600">
                         {activeStudent?.attendances?.length || 0} Hari
                       </span>
                     </div>
-                    <div className="border-r border-slate-100 dark:border-slate-800 h-8" />
+                    <div className="border-r border-slate-100 dark:border-slate-800 h-7" />
                     <div>
-                      <span className="text-[10px] text-slate-400 font-bold block uppercase">Izin Sakit / Lain</span>
+                      <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Izin Sakit/Lain</span>
                       <span className="text-xl font-black text-amber-600">
                         0
                       </span>
@@ -1234,20 +1072,23 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <Link href="/presensi/kehadiran-siswa" className="pt-2">
-                  <Button variant="outline" size="sm" className="w-full text-xs font-bold h-7 rounded-lg">
-                    Log Presensi Lengkap &rarr;
+                  <Button variant="outline" size="sm" className="w-full text-[11px] font-bold h-7 rounded-lg">
+                    Log Presensi &rarr;
                   </Button>
                 </Link>
               </Card>
             </div>
           </div>
 
-          {/* AREA KANAN: INFORMASI SISTEM & KALENDER KEGIATAN (col-span-3) */}
-          <div className="lg:col-span-3 space-y-5">
-            <SystemInfoWidget announcements={announcements} limit={3} />
+          {/* AREA KANAN: DAFTAR BERITA / ARTIKEL & KALENDER KEGIATAN */}
+          <div className="md:col-span-1 xl:col-span-3 space-y-3.5 sm:space-y-4">
+            <NewsArticleListWidget announcements={announcements} limit={4} />
             <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
           </div>
         </div>
+
+        {/* Urgent System Announcement Popup */}
+        <UrgentAnnouncementPopup announcements={systemAnnouncements} />
 
         {/* Payment Popup */}
         <PaymentBillingPopup
@@ -1331,6 +1172,9 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* JADWAL SHOLAT & KHGT MUHAMMADIYAH REALTIME BANNER */}
+        <PrayerTimesWidget variant="banner" />
 
         {/* PUSAT PENGAWASAN & AKSES CEPAT LAYANAN DATA SEKOLAH (ATAS) */}
         {(() => {
@@ -2959,6 +2803,9 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Urgent System Announcement Popup */}
+        <UrgentAnnouncementPopup announcements={systemAnnouncements} />
       </div>
     )
   }
@@ -2981,57 +2828,60 @@ export default function DashboardPage() {
     }).format(amount || 0)
 
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8 pb-8">
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 p-4 sm:p-5 lg:p-6 rounded-2xl text-white shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 relative overflow-hidden">
-        <div className="relative z-10 space-y-1">
+    <div className="space-y-3.5 sm:space-y-4 pb-6">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 p-3.5 sm:p-4 lg:p-5 rounded-2xl text-white shadow-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 relative overflow-hidden">
+        <div className="relative z-10 space-y-0.5">
           <div className="flex items-center gap-2">
-            <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2.5 py-0.5 rounded-full font-bold border border-indigo-500/30 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse inline-block" />
+            <span className="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.2 rounded-full font-bold border border-indigo-500/30 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse inline-block" />
               {isSuperadminRole ? 'Superadmin' : 'Dashboard'}
             </span>
-            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px]">
+            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[9.5px] px-1.5 py-0">
               Real-time
             </Badge>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+          <h1 className="text-lg sm:text-xl font-black tracking-tight text-white">
             {clock.greeting}, {(session?.user as any)?.name || 'Superadmin'}
           </h1>
-          <p className="text-slate-300 text-xs font-medium">
+          <p className="text-slate-300 text-[11px] font-medium">
             {isSuperadminRole ? 'Monitoring sistem, port, dan sesi pengguna aktif.' : 'Sistem Informasi Manajemen Terpadu SIMASMUH.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 relative z-10">
-          <span className="px-3 py-1.5 rounded-xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 text-white font-bold text-xs uppercase tracking-wider shadow-inner flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <span className="px-2.5 py-1 rounded-xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 text-white font-bold text-[11px] uppercase tracking-wider shadow-inner flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
             {(role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') ? 'Tata Usaha' : role} {subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' ? `• ${subRole}` : ''}
           </span>
         </div>
       </div>
 
+      {/* JADWAL SHOLAT & KHGT MUHAMMADIYAH REALTIME BANNER */}
+      <PrayerTimesWidget variant="banner" />
+
       {/* Kartu Statistika Keuangan (Khusus Keuangan All & Kepala Sekolah - Superadmin Khusus Runtime & Sistem) */}
       {(isKeuanganAll || isKepalaSekolah) && role !== 'SUPERADMIN' && role !== 'ADMIN_IT' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-[11px] font-bold text-slate-400 uppercase block">Saldo Kas Bersih</span>
-            <span className="text-xl sm:text-2xl font-black text-emerald-600 mt-1 block">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <Card className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Saldo Kas Bersih</span>
+            <span className="text-lg sm:text-xl font-black text-emerald-600 mt-0.5 block">
               {formatCurrency(fin.saldoKasSekolah ?? 0)}
             </span>
           </Card>
-          <Card className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-[11px] font-bold text-slate-400 uppercase block">Pemasukan Lunas</span>
-            <span className="text-xl sm:text-2xl font-black text-blue-600 mt-1 block">
+          <Card className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Pemasukan Lunas</span>
+            <span className="text-lg sm:text-xl font-black text-blue-600 mt-0.5 block">
               {formatCurrency(fin.totalPemasukanLunas ?? 0)}
             </span>
           </Card>
-          <Card className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-[11px] font-bold text-slate-400 uppercase block">Piutang Siswa</span>
-            <span className="text-xl sm:text-2xl font-black text-amber-600 mt-1 block">
+          <Card className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Piutang Siswa</span>
+            <span className="text-lg sm:text-xl font-black text-amber-600 mt-0.5 block">
               {formatCurrency(fin.totalPiutangSiswa ?? 0)}
             </span>
           </Card>
-          <Card className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-[11px] font-bold text-slate-400 uppercase block">Total Pengeluaran</span>
-            <span className="text-xl sm:text-2xl font-black text-rose-600 mt-1 block">
+          <Card className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Pengeluaran</span>
+            <span className="text-lg sm:text-xl font-black text-rose-600 mt-0.5 block">
               {formatCurrency(fin.totalPengeluaran ?? 0)}
             </span>
           </Card>
@@ -3040,7 +2890,7 @@ export default function DashboardPage() {
 
       {/* 3-AREA GENERAL DASHBOARD LAYOUT */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 sm:gap-5 items-start">
-        {/* AREA KIRI: MY ACCOUNT & DAFTAR BERITA / ARTIKEL */}
+        {/* AREA KIRI: MY ACCOUNT & INFORMASI PENGUMUMAN SISTEM */}
         <div className="md:col-span-1 xl:col-span-3 space-y-4 sm:space-y-5">
           <UserAccountCard
             role={role}
@@ -3048,7 +2898,7 @@ export default function DashboardPage() {
             profileAvatarUrl={(session?.user as any)?.avatarUrl}
             statusLabel={isSuperadminRole ? 'Superadmin: Online' : 'Staff/Guru: Aktif'}
           />
-          <NewsArticleListWidget announcements={announcements} limit={4} />
+          <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
         </div>
 
         {/* AREA TENGAH: TOMBOL AKSES CEPAT */}
@@ -3076,9 +2926,9 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* AREA KANAN: INFORMASI SISTEM & KALENDER KEGIATAN */}
+        {/* AREA KANAN: DAFTAR BERITA / ARTIKEL & KALENDER KEGIATAN */}
         <div className="md:col-span-1 xl:col-span-3 space-y-4 sm:space-y-5">
-          <SystemInfoWidget announcements={announcements} limit={3} />
+          <NewsArticleListWidget announcements={announcements} limit={4} />
           <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
         </div>
       </div>
@@ -3944,6 +3794,10 @@ export default function DashboardPage() {
           ))}
         </div>
       )}
+
+      {/* Urgent System Announcement Popup */}
+      <UrgentAnnouncementPopup announcements={systemAnnouncements} />
+
       {/* Selesai konten dashboard utama */}
     </div>
   )

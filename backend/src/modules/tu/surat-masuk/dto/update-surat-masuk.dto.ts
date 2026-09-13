@@ -48,4 +48,8 @@ export class UpdateSuratMasukDto {
   @IsString()
   @IsOptional()
   statusTahapan?: string;
+
+  @IsString()
+  @IsOptional()
+  statusDisposisi?: string;
 }

@@ -81,11 +81,6 @@ export class RolesGuard implements CanActivate {
   private getUserPermissions(user: any): string[] {
     const permissions: string[] = [];
 
-    // Admin IT and SUPERADMIN have all permissions
-    if (user.role === UserRole.ADMIN_IT || user.role === 'SUPERADMIN') {
-      return Object.values(PaymentPermission);
-    }
-
     // Student and Parent (WALI_MURID) permissions
     if (
       user.role === UserRole.SISWA ||
@@ -98,7 +93,7 @@ export class RolesGuard implements CanActivate {
       );
     }
 
-    // Finance (Keuangan) permissions granular setup
+    // Finance (Keuangan) permissions granular setup - STRICTLY for finance staff only
     const userSubRoles = [
       user.subRole,
       user.subRole2,
@@ -106,14 +101,12 @@ export class RolesGuard implements CanActivate {
       user.subRole4,
       user.subRole5,
       user.role,
-    ];
+    ].filter(Boolean);
     const isKeuanganMasuk = userSubRoles.includes('KEUANGAN_MASUK');
     const isKeuanganKeluar = userSubRoles.includes('KEUANGAN_KELUAR');
     const isKeuanganAll =
       userSubRoles.includes('KEUANGAN_ALL') ||
-      userSubRoles.includes('SUPERVISOR_KEUANGAN') ||
-      user.role === 'SUPERADMIN' ||
-      user.role === 'ADMIN_IT';
+      userSubRoles.includes('SUPERVISOR_KEUANGAN');
     const isGeneralKeuangan =
       isKeuanganAll ||
       isKeuanganMasuk ||
@@ -122,39 +115,18 @@ export class RolesGuard implements CanActivate {
       userSubRoles.includes(SubRole.KEUANGAN);
 
     if (isGeneralKeuangan) {
-      if (isKeuanganAll) {
-        permissions.push(
-          PaymentPermission.VIEW_ALL_BILLS,
-          PaymentPermission.VIEW_EXPENSES,
-          PaymentPermission.CREATE_BILLS,
-          PaymentPermission.UPDATE_BILLS,
-          PaymentPermission.DELETE_BILLS,
-          PaymentPermission.VERIFY_PAYMENTS,
-          PaymentPermission.VIEW_FINANCIAL_REPORTS,
-          PaymentPermission.GENERATE_MASS_BILLS,
-          PaymentPermission.BULK_OPERATIONS,
-        );
-      } else {
-        if (isKeuanganMasuk) {
-          permissions.push(
-            PaymentPermission.VIEW_ALL_BILLS,
-            PaymentPermission.CREATE_BILLS,
-            PaymentPermission.UPDATE_BILLS,
-            PaymentPermission.VERIFY_PAYMENTS,
-            PaymentPermission.GENERATE_MASS_BILLS,
-            PaymentPermission.BULK_OPERATIONS,
-          );
-        }
-        if (isKeuanganKeluar) {
-          permissions.push(
-            PaymentPermission.VIEW_EXPENSES,
-            PaymentPermission.VIEW_FINANCIAL_REPORTS,
-            PaymentPermission.CREATE_BILLS,
-            PaymentPermission.UPDATE_BILLS,
-            PaymentPermission.DELETE_BILLS,
-          );
-        }
-      }
+      // Seluruh role/subrole keuangan (KEUANGAN_ALL, KEUANGAN_MASUK, KEUANGAN_KELUAR, KEUANGAN) memiliki hak akses penuh operasi tagihan & reset
+      permissions.push(
+        PaymentPermission.VIEW_ALL_BILLS,
+        PaymentPermission.VIEW_EXPENSES,
+        PaymentPermission.CREATE_BILLS,
+        PaymentPermission.UPDATE_BILLS,
+        PaymentPermission.DELETE_BILLS,
+        PaymentPermission.VERIFY_PAYMENTS,
+        PaymentPermission.VIEW_FINANCIAL_REPORTS,
+        PaymentPermission.GENERATE_MASS_BILLS,
+        PaymentPermission.BULK_OPERATIONS,
+      );
     }
 
     // Headmaster (KEPALA_SEKOLAH) supervisory permissions (read-only reports & bills)
@@ -167,25 +139,6 @@ export class RolesGuard implements CanActivate {
         PaymentPermission.VIEW_FINANCIAL_REPORTS,
         PaymentPermission.VIEW_OWN_BILLS,
         PaymentPermission.VIEW_OWN_PAYMENT_HISTORY,
-      );
-    }
-
-    // Admin TU (BAU) permissions
-    const isBau =
-      userSubRoles.includes('ADMIN_TU') ||
-      userSubRoles.includes('BAU') ||
-      userSubRoles.includes('TATA_USAHA');
-    if (isBau) {
-      permissions.push(
-        PaymentPermission.VIEW_ALL_BILLS,
-        PaymentPermission.VIEW_EXPENSES,
-        PaymentPermission.CREATE_BILLS,
-        PaymentPermission.UPDATE_BILLS,
-        PaymentPermission.DELETE_BILLS,
-        PaymentPermission.VERIFY_PAYMENTS,
-        PaymentPermission.VIEW_FINANCIAL_REPORTS,
-        PaymentPermission.GENERATE_MASS_BILLS,
-        PaymentPermission.BULK_OPERATIONS,
       );
     }
 

@@ -422,26 +422,29 @@ export default function SubjectsPage() {
         }}
       />
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 backdrop-blur-xl shadow-xs">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Mata Pelajaran
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">
+              Master Data Akademik
+            </span>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+              Mata Pelajaran & Guru Pengampu
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">
-              Kelola data master mata pelajaran dan pengaturan guru pengampu.
+            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
+              Kelola data master mata pelajaran dan pengaturan guru pengampu terpadu.
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+              className="text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 text-xs h-9 rounded-xl font-bold"
               onClick={() => {
                 setImportProgress((prev) => ({ ...prev, status: 'idle' }))
                 setImportDialogOpen(true)
               }}
             >
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              <FileSpreadsheet className="w-4 h-4 mr-1.5" />
               Import Excel
             </Button>
 
@@ -449,14 +452,14 @@ export default function SubjectsPage() {
               <DialogTrigger
                 render={
                   <Button
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs"
                     onClick={() => {
                       setIsEdit(false)
                       setFormData({ name: '', code: '', teacherIds: [] })
                       setTeacherSearch('')
                     }}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
+                    <Plus className="w-4 h-4 mr-1.5" />
                     Tambah Mapel
                   </Button>
                 }

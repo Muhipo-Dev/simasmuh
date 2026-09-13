@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -42,6 +42,8 @@ type LogEntry = {
 
 interface FaceDetectionLog {
   id: string
+  date?: string
+  dateFormatted?: string
   timestamp: string
   userId: string
   userName: string
@@ -98,7 +100,7 @@ export default function LogKehadiranPegawaiPage() {
   })
 
   // 3. Fetch Live Logs Realtime
-  const { data: liveLogs, refetch: refetchLiveLogs } = useQuery<FaceDetectionLog[]>({
+  const { data: rawLiveLogs, refetch: refetchLiveLogs } = useQuery<FaceDetectionLog[]>({
     queryKey: ['face-attendance-live-logs'],
     queryFn: async () => {
       const res = await authenticatedFetch('/api-backend/face-attendance/logs')
@@ -107,6 +109,17 @@ export default function LogKehadiranPegawaiPage() {
     },
     refetchInterval: 2500,
   })
+
+  const todayIsoStr = useMemo(() => {
+    const today = new Date()
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+  }, [])
+
+  const liveLogs = useMemo(() => {
+    if (!rawLiveLogs) return []
+    return rawLiveLogs.filter((l) => l.date === todayIsoStr)
+  }, [rawLiveLogs, todayIsoStr])
 
   const { data: logs, isLoading } = useQuery<LogEntry[]>({
     queryKey: ['monthly-log-pegawai', userId, selectedYear, selectedMonth],
@@ -161,13 +174,17 @@ export default function LogKehadiranPegawaiPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Header Glassmorphic Standar CBT MUHIPO */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 backdrop-blur-xl shadow-xs">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-            <Briefcase className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+          <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">
+            Presensi & Kehadiran
+          </span>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <Briefcase className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             Kehadiran Pegawai
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Rekapitulasi riwayat presensi kerja dan kalkulasi estimasi penghasilan bulanan Anda.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">Rekapitulasi riwayat presensi kerja dan kalkulasi estimasi penghasilan bulanan Anda.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -394,9 +411,13 @@ export default function LogKehadiranPegawaiPage() {
                           <CheckCircle2 className="w-3 h-3 shrink-0" />
                           {log.scanType}
                         </span>
-                        <p className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 mt-0.5 flex items-center justify-end gap-1">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          {log.timestamp}
+                        <p className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 mt-0.5 flex items-center justify-end gap-1 flex-wrap">
+                          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{log.dateFormatted || log.date}</span>
+                          <span className="text-slate-300 dark:text-slate-600">•</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            {log.timestamp}
+                          </span>
                         </p>
                       </div>
                     </div>

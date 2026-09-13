@@ -43,7 +43,6 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react'
-import { QrScanner } from '@/components/QrScanner'
 import Link from 'next/link'
 import NextImage from 'next/image'
 import { toast } from 'sonner'
@@ -66,6 +65,8 @@ interface FaceCameraConfig {
 
 interface FaceDetectionLog {
   id: string
+  date?: string
+  dateFormatted?: string
   timestamp: string
   userId: string
   userName: string
@@ -175,7 +176,7 @@ export default function FaceNetAiStandalonePage() {
   const authenticatedQuery = useAuthenticatedQuery()
   const authenticatedFetch = useAuthenticatedFetch()
 
-  const [activeTab, setActiveTab] = useState<'monitor' | 'config' | 'dataset' | 'logs' | 'backup-qr'>('monitor')
+  const [activeTab, setActiveTab] = useState<'monitor' | 'config' | 'dataset' | 'logs'>('monitor')
   const [showStreamUrl, setShowStreamUrl] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null)
@@ -217,6 +218,10 @@ export default function FaceNetAiStandalonePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'SISWA' | 'GURU' | 'PEGAWAI'>('ALL')
   const [photoFilter, setPhotoFilter] = useState<'ALL' | 'WITH_PHOTO' | 'NO_PHOTO'>('ALL')
+
+  // Log filter states (default: hari ini saja)
+  const [logFilterMode, setLogFilterMode] = useState<'TODAY' | 'ALL'>('TODAY')
+  const [logSearchQuery, setLogSearchQuery] = useState('')
 
   // Local form state for config
   const [formConfig, setFormConfig] = useState<FaceCameraConfig | null>(null)
@@ -410,13 +415,13 @@ export default function FaceNetAiStandalonePage() {
       isProcessing = true
       try {
         const offscreen = document.createElement('canvas')
-        const scale = Math.min(1.0, 480 / video.videoWidth)
+        const scale = Math.min(1.0, 360 / video.videoWidth)
         offscreen.width = Math.round(video.videoWidth * scale)
         offscreen.height = Math.round(video.videoHeight * scale)
         const ctx = offscreen.getContext('2d')
         if (ctx) {
           ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height)
-          const base64 = offscreen.toDataURL('image/jpeg', 0.70)
+          const base64 = offscreen.toDataURL('image/jpeg', 0.65)
           const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -436,8 +441,15 @@ export default function FaceNetAiStandalonePage() {
               ],
             }))
             drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
-            if (rawFaces.some((f: any) => f.is_registered)) {
-              queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+            if (rawFaces.length > 0) {
+              if (rawFaces.some((f: any) => f.is_registered)) {
+                queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+              }
+              // Cooldown 2.0 detik setelah objek terdeteksi sebelum memindai frame berikutnya
+              await new Promise((r) => setTimeout(r, 2000))
+            } else {
+              // Mode Sleep Hemat Daya Ringan (Standby 200ms) saat tidak ada objek wajah di depan kamera
+              await new Promise((r) => setTimeout(r, 200))
             }
           }
         }
@@ -453,7 +465,7 @@ export default function FaceNetAiStandalonePage() {
       } finally {
         isProcessing = false
       }
-    }, 250)
+    }, 100)
 
     return () => clearInterval(interval)
   }, [isBrowserCamStreaming])
@@ -482,6 +494,9 @@ export default function FaceNetAiStandalonePage() {
   const filteredUsers = useMemo(() => {
     if (!datasetData?.dataset) return []
     return datasetData.dataset.filter((user) => {
+      // Kecualikan akun wali murid dari deteksi & absensi wajah
+      if (user.role === 'WALI_MURID') return false
+
       if (roleFilter === 'SISWA' && user.role !== 'SISWA') return false
       if (roleFilter === 'GURU' && user.role !== 'GURU') return false
       if (roleFilter === 'PEGAWAI' && (user.role === 'SISWA' || user.role === 'GURU')) return false
@@ -501,13 +516,44 @@ export default function FaceNetAiStandalonePage() {
     })
   }, [datasetData, roleFilter, photoFilter, searchQuery])
 
-  // Count stats from logs
+  // Filtered logs (Hari ini vs Semua tersimpan)
+  const todayIsoStr = useMemo(() => {
+    const today = new Date()
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+  }, [])
+
+  const displayedLogs = useMemo(() => {
+    if (!logsData) return []
+    let list = logsData
+
+    // Default atau saat mode TODAY: hanya tampilkan log hari ini
+    if (logFilterMode === 'TODAY') {
+      list = list.filter((l) => l.date === todayIsoStr)
+    }
+
+    if (logSearchQuery.trim() !== '') {
+      const q = logSearchQuery.toLowerCase()
+      list = list.filter(
+        (l) =>
+          l.userName?.toLowerCase().includes(q) ||
+          l.identifier?.toLowerCase().includes(q) ||
+          l.userRole?.toLowerCase().includes(q) ||
+          l.cameraName?.toLowerCase().includes(q)
+      )
+    }
+
+    return list
+  }, [logsData, logFilterMode, todayIsoStr, logSearchQuery])
+
+  // Count stats from logs hari ini
   const logStats = useMemo(() => {
     if (!logsData) return { masuk: 0, pulang: 0, total: 0 }
-    const masuk = logsData.filter(l => l.scanType === 'MASUK').length
-    const pulang = logsData.filter(l => l.scanType === 'PULANG').length
-    return { masuk, pulang, total: logsData.length }
-  }, [logsData])
+    const todayLogs = logsData.filter((l) => l.date === todayIsoStr)
+    const masuk = todayLogs.filter((l) => l.scanType === 'MASUK').length
+    const pulang = todayLogs.filter((l) => l.scanType === 'PULANG').length
+    return { masuk, pulang, total: todayLogs.length }
+  }, [logsData, todayIsoStr])
 
   // Mutation to save config
   const { mutate: updateConfig, isPending: isSaving } = useMutation({
@@ -866,15 +912,6 @@ export default function FaceNetAiStandalonePage() {
                 </Button>
               )}
             </div>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('backup-qr')}
-              className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0"
-            >
-              <QrCode className="w-3.5 h-3.5" />
-              <span>Backup QR</span>
-            </button>
           </div>
         </div>
 
@@ -934,16 +971,6 @@ export default function FaceNetAiStandalonePage() {
                 {logsData.length}
               </Badge>
             )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('backup-qr')}
-            className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
-              activeTab === 'backup-qr' ? 'bg-amber-500 shadow text-white font-bold' : 'text-amber-400 hover:bg-amber-950/40'
-            }`}
-          >
-            <QrCode className="w-4 h-4 shrink-0" />
-            <span>Backup QR Code</span>
           </button>
         </div>
 
@@ -1217,9 +1244,35 @@ export default function FaceNetAiStandalonePage() {
                           <CardDescription className="text-[11px] text-slate-400">Verifikasi snapshot wajah & pencatatan presensi</CardDescription>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => refetchLogs()} title="Segarkan Log" className="h-8 w-8 p-0 text-slate-400 hover:text-white rounded-lg">
-                          <RefreshCw className="w-4 h-4" />
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Toggle Filter Hari Ini vs Semua Arsip */}
+                        <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setLogFilterMode('TODAY')}
+                            className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
+                              logFilterMode === 'TODAY'
+                                ? 'bg-indigo-600 text-white shadow-xs'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Hari Ini
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLogFilterMode('ALL')}
+                            className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
+                              logFilterMode === 'ALL'
+                                ? 'bg-indigo-600 text-white shadow-xs'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Semua Arsip
+                          </button>
+                        </div>
+
+                        <Button variant="ghost" size="sm" onClick={() => refetchLogs()} title="Segarkan Log" className="h-7 w-7 p-0 text-slate-400 hover:text-white rounded-lg">
+                          <RefreshCw className="w-3.5 h-3.5" />
                         </Button>
                         {isSuperAdmin ? (
                           <Button 
@@ -1228,9 +1281,9 @@ export default function FaceNetAiStandalonePage() {
                             onClick={handleConfirmClearLogs} 
                             disabled={isClearing} 
                             title="Reset Seluruh Log & Presensi Hari Ini"
-                            className="h-8 w-8 p-0 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-lg"
+                            className="h-7 w-7 p-0 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-lg"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         ) : (
                           <Button 
@@ -1249,18 +1302,18 @@ export default function FaceNetAiStandalonePage() {
 
                   {/* Scrollable Live Scan List */}
                   <CardContent className="p-3.5 flex-1 overflow-y-auto space-y-3">
-                    {logsData && logsData.length === 0 ? (
+                    {displayedLogs && displayedLogs.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2.5">
                         <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-slate-500 border border-slate-800">
                           <Camera className="w-7 h-7 stroke-1" />
                         </div>
-                        <p className="text-sm font-bold text-slate-200">Menunggu Wajah Terdeteksi</p>
+                        <p className="text-sm font-bold text-slate-200">Belum Ada Presensi Hari Ini</p>
                         <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                          Arahkan wajah siswa atau guru ke depan kamera. Hasil identifikasi dan foto snapshot kamera akan otomatis muncul di sini.
+                          Arahkan wajah siswa atau guru ke depan kamera. Hasil identifikasi dan foto snapshot kamera hari ini akan otomatis muncul di sini.
                         </p>
                       </div>
                     ) : (
-                      logsData?.map((log, index) => (
+                      displayedLogs?.map((log, index) => (
                         <div 
                           key={log.id} 
                           className={`p-3.5 rounded-2xl transition-all border ${
@@ -1299,9 +1352,13 @@ export default function FaceNetAiStandalonePage() {
                                   <CheckCircle2 className="w-3 h-3 shrink-0" />
                                   {log.scanType}
                                 </span>
-                                <p className="text-[11px] font-mono font-bold text-slate-300 mt-0.5 flex items-center justify-end gap-1">
-                                  <Clock className="w-3 h-3 text-slate-400" />
-                                  {log.timestamp}
+                                <p className="text-[11px] font-mono font-bold text-slate-300 mt-0.5 flex items-center justify-end gap-1 flex-wrap">
+                                  <span className="text-[10px] font-semibold text-slate-400">{log.dateFormatted || log.date}</span>
+                                  <span className="text-slate-600">•</span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-slate-400" />
+                                    {log.timestamp}
+                                  </span>
                                 </p>
                               </div>
                             </div>
@@ -1861,12 +1918,42 @@ export default function FaceNetAiStandalonePage() {
         {/* TAB 4: RIWAYAT LOG LENGKAP */}
         {activeTab === 'logs' && (
           <Card className="shadow-sm border-slate-800 bg-slate-900/90 text-white">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-lg">Riwayat Log Scan Wajah</CardTitle>
-                <CardDescription className="text-slate-400">Seluruh pencatatan presensi biometrik yang masuk hari ini</CardDescription>
+                <CardDescription className="text-slate-400">
+                  {logFilterMode === 'TODAY' 
+                    ? `Menampilkan pencatatan presensi biometrik hari ini (${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })})`
+                    : 'Menampilkan seluruh arsip pencatatan presensi biometrik'}
+                </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Toggle Filter Hari Ini vs Semua */}
+                <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setLogFilterMode('TODAY')}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                      logFilterMode === 'TODAY'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Hari Ini
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLogFilterMode('ALL')}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                      logFilterMode === 'ALL'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Semua Arsip
+                  </button>
+                </div>
+
                 <Button variant="outline" size="sm" onClick={() => refetchLogs()} className="border-slate-700 text-slate-300">
                   <RefreshCw className="w-3.5 h-3.5 mr-1" /> Segarkan
                 </Button>
@@ -1887,11 +1974,25 @@ export default function FaceNetAiStandalonePage() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Search Bar Log */}
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Input
+                    type="text"
+                    placeholder="Cari berdasarkan nama, NIS/NIP, atau peran..."
+                    value={logSearchQuery}
+                    onChange={(e) => setLogSearchQuery(e.target.value)}
+                    className="pl-9 bg-slate-950/80 border-slate-800 text-xs text-white placeholder:text-slate-500 rounded-xl"
+                  />
+                </div>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
                   <thead className="border-b border-slate-800 text-slate-400 uppercase font-mono">
                     <tr>
-                      <th className="py-2.5 px-3">Waktu</th>
+                      <th className="py-2.5 px-3">Tanggal & Waktu</th>
                       <th className="py-2.5 px-3">Nama</th>
                       <th className="py-2.5 px-3">Peran / ID</th>
                       <th className="py-2.5 px-3">Status</th>
@@ -1900,60 +2001,42 @@ export default function FaceNetAiStandalonePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
-                    {logsData?.map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-800/40">
-                        <td className="py-2 px-3 font-mono text-slate-300">{log.timestamp}</td>
-                        <td className="py-2 px-3 font-semibold text-white">{log.userName}</td>
-                        <td className="py-2 px-3 text-slate-400">{log.userRole} ({log.identifier})</td>
-                        <td className="py-2 px-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            log.scanType === 'MASUK' ? 'bg-emerald-950 text-emerald-300' : 'bg-blue-950 text-blue-300'
-                          }`}>
-                            {log.scanType}
-                          </span>
+                    {displayedLogs && displayedLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-slate-500">
+                          {logFilterMode === 'TODAY' 
+                            ? 'Belum ada data scan presensi wajah untuk hari ini.' 
+                            : 'Tidak ada data log yang sesuai pencarian.'}
                         </td>
-                        <td className="py-2 px-3 font-mono text-indigo-400">{Math.round(log.confidence * 100)}%</td>
-                        <td className="py-2 px-3 text-slate-400">{log.cameraName}</td>
                       </tr>
-                    ))}
+                    ) : (
+                      displayedLogs?.map((log) => (
+                        <tr key={log.id} className="hover:bg-slate-800/40">
+                          <td className="py-2 px-3 font-mono text-slate-300">
+                            <div className="flex flex-col">
+                              <span className="font-sans font-semibold text-slate-300 text-[11px]">{log.dateFormatted || log.date}</span>
+                              <span className="font-bold text-slate-400">{log.timestamp}</span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-3 font-semibold text-white">{log.userName}</td>
+                          <td className="py-2 px-3 text-slate-400">{log.userRole} ({log.identifier})</td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              log.scanType === 'MASUK' ? 'bg-emerald-950 text-emerald-300' : 'bg-blue-950 text-blue-300'
+                            }`}>
+                              {log.scanType}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 font-mono text-indigo-400">{Math.round(log.confidence * 100)}%</td>
+                          <td className="py-2 px-3 text-slate-400">{log.cameraName}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </CardContent>
           </Card>
-        )}
-
-
-        {/* TAB 6: BACKUP QR CODE */}
-        {activeTab === 'backup-qr' && (
-          <div className="space-y-6">
-            <div className="p-4 sm:p-5 rounded-2xl bg-amber-950/40 border border-amber-900/50 flex flex-col md:flex-row md:items-center justify-between gap-4 text-amber-200">
-              <div className="flex items-start gap-3.5">
-                <div className="p-2.5 rounded-xl bg-amber-500 text-white shrink-0 mt-0.5">
-                  <QrCode className="w-5 h-5" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-sm sm:text-base font-extrabold text-amber-100">
-                    Cadangan Pemindai QR Code (Second Choice)
-                  </h3>
-                  <p className="text-xs text-amber-300/90 leading-relaxed max-w-2xl">
-                    Gunakan pemindai QR Code ini sebagai pilihan kedua jika kamera biometrik AI sedang dinonaktifkan, offline, atau mengalami kendala jaringan.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Link href="/presensi/scan-qr" target="_blank">
-                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold">
-                    Buka Scan QR Mandiri
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            <div className="max-w-2xl mx-auto bg-slate-900 p-6 rounded-2xl border border-slate-800">
-              <QrScanner />
-            </div>
-          </div>
         )}
       </main>
 

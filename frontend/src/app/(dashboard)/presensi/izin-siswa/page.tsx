@@ -78,8 +78,8 @@ export function IzinSiswaManagement() {
   // TU tidak memiliki akses ke modul ini
   // Kepala Sekolah & Siswa & Wali Murid hanya lihat log absensi masing-masing
   const canManageAll = isSuperAdmin || isTatib || isBk || isWaliKelas
-  // Pengaju Izin Siswa: Khusus Wali Murid (Role Ketertiban & BK tidak mengajukan izin, tetapi memverifikasi)
-  const canCreate = isWaliMurid
+  // Pengaju Izin Siswa: Khusus Wali Murid & Wali Kelas (Wali Kelas dapat menginputkan izin siswa secara sah jika izin di luar sistem)
+  const canCreate = isWaliMurid || isWaliKelas || isSuperAdmin
 
   const [myIzin, setMyIzin] = useState<IzinSiswaItem[]>([])
   const [allIzin, setAllIzin] = useState<IzinSiswaItem[]>([])
@@ -87,7 +87,7 @@ export function IzinSiswaManagement() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [activeTab, setActiveTab] = useState<'my' | 'all'>('all')
+  const [activeTab, setActiveTab] = useState<'my' | 'all'>(isWaliMurid ? 'my' : 'all')
   const [filterDate, setFilterDate] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -122,11 +122,13 @@ export function IzinSiswaManagement() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [myRes, allRes, studentsRes] = await Promise.all([
+      const [myRes, allRes, studentsRes, allStudentsRes, classesRes] = await Promise.all([
         authenticatedFetch('/api-backend/izin-keluar/my'),
         // Tatib & Wali Kelas fetch semua izin siswa; Siswa/WaliMurid/KepSek hanya via /my
         canManageAll ? authenticatedFetch(`/api-backend/izin-keluar?${filterDate ? `date=${filterDate}&` : ''}category=SISWA`) : Promise.resolve(null),
         isWaliMurid ? authenticatedFetch('/api-backend/parents/my-students') : Promise.resolve(null),
+        isWaliKelas || isSuperAdmin ? authenticatedFetch('/api-backend/students') : Promise.resolve(null),
+        isWaliKelas ? authenticatedFetch('/api-backend/classes') : Promise.resolve(null),
       ])
 
       if (myRes?.ok) {
@@ -156,12 +158,41 @@ export function IzinSiswaManagement() {
           }
         }
       }
+
+      if (allStudentsRes?.ok) {
+        const rawStudents = await allStudentsRes.json()
+        if (Array.isArray(rawStudents) && (isWaliKelas || isSuperAdmin)) {
+          let homeroomClassId = ''
+          if (classesRes?.ok) {
+            const classesData = await classesRes.json()
+            const myClass = classesData.find((c: any) => c.homeroomTeacher?.userId === user?.id || c.homeroomTeacher?.user?.id === user?.id)
+            if (myClass) homeroomClassId = myClass.id
+          }
+
+          const filteredStd = homeroomClassId
+            ? rawStudents.filter((s: any) => s.classId === homeroomClassId || s.class?.id === homeroomClassId)
+            : rawStudents
+
+          const mapped = filteredStd.map((s: any) => ({
+            id: s.id,
+            userId: s.userId || s.user?.id || s.id,
+            name: s.name,
+            nis: s.nis,
+            className: s.class?.name || '',
+          }))
+          setMyStudents(mapped)
+          if (mapped.length > 0 && !form.targetUserId) {
+            setForm(prev => ({ ...prev, targetUserId: mapped[0].userId }))
+          }
+        }
+      }
     } catch (e) {
       console.error(e)
     } finally {
       setLoading(false)
     }
   }
+
 
   useEffect(() => {
     if (session) fetchData()
@@ -532,24 +563,39 @@ export function IzinSiswaManagement() {
               <ClipboardList className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Sistem Izin Siswa (Wali Murid)
+              {isWaliKelas ? 'Izin Siswa & Dispensasi Kelas' : 'Sistem Izin Siswa (Wali Murid)'}
             </h1>
           </div>
           <p className="text-blue-100 mt-2 text-xs sm:text-sm max-w-2xl leading-relaxed">
-            Pengajuan izin sakit dan keperluan keluarga khusus dibuat oleh <strong>Wali Murid</strong> dengan melampirkan surat keterangan. Pencatatan &amp; verifikasi dilakukan oleh <strong>Tim Ketertiban Sekolah (Tatib)</strong>.
+            {isWaliKelas 
+              ? 'Kelola, verifikasi permohonan izin siswa perwalian, atau tambahkan izin secara sah bagi siswa yang melapor di luar sistem SIMASMUH.'
+              : 'Pengajuan izin sakit dan keperluan keluarga dapat dilakukan via sistem aplikasi dan WhatsApp Chatbot resmi sekolah (+62 882-9373-3330). Seluruh data tersimpan aman dan terintegrasi otomatis.'}
           </p>
         </div>
 
-        {canCreate && (
-          <Button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-white text-blue-700 hover:bg-blue-50 font-black rounded-2xl shadow-md transition-all px-5 py-6 flex items-center gap-2 shrink-0 self-start sm:self-center"
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
+          <a
+            href="https://wa.me/6288293733330?text=IZIN"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition-all"
           >
-            <Plus className="w-5 h-5" />
-            Ajukan Izin Siswa
-          </Button>
-        )}
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            Lapor via WhatsApp
+          </a>
+
+          {canCreate && (
+            <Button
+              onClick={() => setShowForm(!showForm)}
+              className="bg-white text-blue-700 hover:bg-blue-50 font-black rounded-2xl shadow-md transition-all px-4 py-5 flex items-center gap-2 text-xs"
+            >
+              <Plus className="w-4 h-4" />
+              {isWaliKelas ? 'Tambahkan Izin Siswa' : 'Ajukan di Web'}
+            </Button>
+          )}
+        </div>
       </div>
+
 
       {msg && (
         <div className={`p-4 rounded-2xl border font-semibold text-sm flex items-center gap-2.5 ${

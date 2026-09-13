@@ -30,6 +30,7 @@ import { KepegawaianManagement } from '@/components/tu/KepegawaianManagement'
 import { GuestBookManagement } from '@/components/tu/GuestBookManagement'
 import { NotulensiRapatManagement } from '@/components/tu/NotulensiRapatManagement'
 import { KegiatanSekolahManagement } from '@/components/tu/KegiatanSekolahManagement'
+import { DisposisiUserManagement } from '@/components/tu/DisposisiUserManagement'
 
 type GuestEntry = {
   id: string
@@ -120,6 +121,19 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
       { title: 'Poin Kedisiplinan Siswa', desc: 'Pencatatan pelanggaran & teladan oleh seluruh guru.', status: 'DALAM_PENGEMBANGAN' },
       { title: 'Penerapan Skor Siswa', desc: 'Penetapan resmi skor ketertiban siswa ke buku saku.', status: 'SEGERA_HADIR' },
       { title: 'Notifikasi Otomatis Wali', desc: 'Kirim notifikasi in-app & Email resmi ke wali murid.', status: 'SEGERA_HADIR' },
+    ]
+  },
+  'catatan-kedisiplinan': {
+    title: 'Catatan Kedisiplinan Siswa',
+    roleName: 'Guru',
+    category: 'Kesiswaan & Kedisiplinan',
+    icon: ShieldAlert,
+    gradient: 'from-rose-600 via-red-600 to-pink-600',
+    badgeColor: 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:bg-rose-400/10 dark:text-rose-400',
+    description: 'Modul pencatatan draf poin kedisiplinan, pelanggaran, dan keteladanan siswa oleh guru.',
+    modules: [
+      { title: 'Pencatatan Draf Guru', desc: 'Pencatatan pelanggaran & teladan oleh guru.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Daftar Siswa & Skor', desc: 'Monitoring rekap poin kedisiplinan siswa.', status: 'DALAM_PENGEMBANGAN' },
     ]
   },
   kebersihan: {
@@ -779,9 +793,11 @@ export default function FiturSubRolePage() {
         </Button>
       </div>
 
-      {/* Render Interaktif khusus Persuratan, Kepegawaian, Inventaris, Buku Tamu, Kegiatan, Notulensi, Ketertiban & BK/BP */}
+      {/* Render Interaktif khusus Persuratan, Disposisi Guru/Pegawai, Kepegawaian, Inventaris, Buku Tamu, Kegiatan, Notulensi, Ketertiban & BK/BP */}
       {slug === 'persuratan' ? (
         <PersuratanManagement />
+      ) : slug === 'disposisi' ? (
+        <DisposisiUserManagement />
       ) : slug === 'kepegawaian' ? (
         <KepegawaianManagement />
       ) : slug === 'inventaris' ? (
@@ -792,8 +808,8 @@ export default function FiturSubRolePage() {
         <KegiatanSekolahManagement />
       ) : slug === 'notulensi-rapat' || slug === 'notulensi' ? (
         <NotulensiRapatManagement />
-      ) : slug === 'ketertiban' || slug === 'bk-bp' ? (
-        <InteractiveCharacterAssessmentManagement mode={slug === 'bk-bp' ? 'BK' : 'KETERTIBAN'} />
+      ) : slug === 'catatan-kedisiplinan' || slug === 'ketertiban' || slug === 'bk-bp' ? (
+        <InteractiveCharacterAssessmentManagement mode={slug === 'bk-bp' ? 'BK' : slug === 'catatan-kedisiplinan' ? 'GURU' : 'KETERTIBAN'} />
       ) : (
         <>
           {/* Grid Status Modul Terencana */}

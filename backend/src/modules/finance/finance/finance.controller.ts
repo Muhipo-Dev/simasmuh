@@ -264,6 +264,22 @@ export class FinanceController {
     return this.financeService.addTagihanMassal(body);
   }
 
+  // ----- Rilis Tagihan 1 Tahun Penuh (Massal) -----
+  @Post('tagihan/release-yearly')
+  @RequirePermissions(PaymentPermission.GENERATE_MASS_BILLS)
+  @UseGuards(FinanceOperationGuard)
+  releaseYearlyBills(@Req() req: any, @Body() body: any) {
+    return this.financeService.releaseYearlyBills(req.user?.id, body);
+  }
+
+  // ----- Reset Rilis Tagihan 1 Tahun (Restricted Password Verification) -----
+  @Post('tagihan/reset-yearly')
+  @RequirePermissions(PaymentPermission.DELETE_BILLS)
+  @UseGuards(FinanceOperationGuard)
+  resetYearlyBills(@Req() req: any, @Body() body: any) {
+    return this.financeService.resetYearlyBills(req.user?.id, body);
+  }
+
   // ============================================================
   // SPP MASS INPUT PER CLASS (Server-Side Calculation)
   // ============================================================
@@ -487,6 +503,47 @@ export class FinanceController {
     res.setHeader(
       'Content-Disposition',
       `attachment; filename=rekap_keuangan_kelas_${classId}.xlsx`,
+    );
+    res.send(buffer);
+  }
+
+  // ============================================================
+  // REKAPITULASI 3 BULANAN (TRIWULAN) ENDPOINTS
+  // ============================================================
+  @Get('rekap-quarterly')
+  @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
+  getQuarterlyRecap(
+    @Query('classId') classId: string,
+    @Query('year') year?: string,
+    @Query('quarter') quarter?: string,
+  ) {
+    const yr = year ? parseInt(year, 10) : new Date().getFullYear();
+    const qtr = quarter ? parseInt(quarter, 10) : 1;
+    return this.financeService.getQuarterlyRecap(classId, yr, qtr);
+  }
+
+  @Get('export-rekap-triwulan')
+  @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
+  async exportRekapTriwulan(
+    @Query('classId') classId: string,
+    @Query('year') year: string,
+    @Query('quarter') quarter: string,
+    @Res() res: Response,
+  ) {
+    const yr = year ? parseInt(year, 10) : new Date().getFullYear();
+    const qtr = quarter ? parseInt(quarter, 10) : 1;
+    const buffer = await this.financeService.exportRekapTriwulanExcel(
+      classId,
+      yr,
+      qtr,
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=rekap_triwulan_${qtr}_kelas_${classId}.xlsx`,
     );
     res.send(buffer);
   }

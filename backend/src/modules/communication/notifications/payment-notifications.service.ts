@@ -312,44 +312,58 @@ export class PaymentNotificationsService {
     createdBy?: string,
   ): Promise<void> {
     try {
-      // Get class information
-      const classInfo = await this.prisma.class.findUnique({
-        where: { id: classId },
-        include: {
-          students: {
-            include: {
-              user: true,
+      // Jika classId === 'ALL', cari seluruh siswa aktif
+      let studentsTarget: any[] = [];
+      let classNameLabel = 'Semua Siswa';
+
+      if (classId && classId !== 'ALL') {
+        const classInfo = await this.prisma.class.findUnique({
+          where: { id: classId },
+          include: {
+            students: {
+              include: {
+                user: true,
+              },
             },
           },
-        },
-      });
-
-      if (!classInfo) {
-        this.logger.warn(
-          `Cannot send bulk notification - class not found: ${classId}`,
-        );
-        return;
+        });
+        if (classInfo) {
+          studentsTarget = classInfo.students;
+          classNameLabel = `Kelas ${classInfo.name}`;
+        }
+      } else {
+        studentsTarget = await this.prisma.student.findMany({
+          include: {
+            user: true,
+            class: { select: { name: true } },
+          },
+        });
       }
 
-      const formattedAmount = new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        maximumFractionDigits: 0,
-      }).format(amount);
+      const formattedAmount = amount > 0
+        ? new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            maximumFractionDigits: 0,
+          }).format(amount)
+        : '';
+
+      const tagihanMessage = tagihanType === 'PAKET_TAHUNAN'
+        ? `Paket Tagihan Administrasi Sekolah Tahun Ajaran baru telah diterbitkan untuk ${classNameLabel}.`
+        : `Tagihan ${tagihanType} ${formattedAmount ? `sebesar ${formattedAmount}` : ''} telah dibuat untuk ${classNameLabel}.`;
 
       // Send notification to each student
-      const notificationPromises = classInfo.students
-        .filter((student) => student.user)
-        .map((student) =>
-          this.notificationsService.createNotification({
-            userId: student.user!.id,
+      for (const student of studentsTarget) {
+        if (student.user?.id) {
+          await this.notificationsService.createNotification({
+            userId: student.user.id,
             senderId: createdBy,
             type: NotificationType.BULK_TAGIHAN_CREATED,
-            title: 'Tagihan Baru Dibuat',
-            message: `Tagihan ${tagihanType} sebesar ${formattedAmount} telah dibuat untuk kelas ${classInfo.name}.`,
+            title: 'Tagihan Baru Diterbitkan',
+            message: tagihanMessage,
             data: {
               classId,
-              className: classInfo.name,
+              className: classNameLabel,
               tagihanType,
               amount,
               studentId: student.id,
@@ -357,13 +371,40 @@ export class PaymentNotificationsService {
             },
             priority: NotificationPriority.NORMAL,
             channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
-          }),
-        );
+          });
+        }
 
-      await Promise.all(notificationPromises);
+        // Send notification to parents
+        const parentRelations = await this.prisma.parentStudent.findMany({
+          where: { studentId: student.id },
+          include: { parent: { include: { user: true } } },
+        });
+
+        for (const rel of parentRelations) {
+          if (rel.parent?.user?.id) {
+            await this.notificationsService.createNotification({
+              userId: rel.parent.user.id,
+              senderId: createdBy,
+              type: NotificationType.BULK_TAGIHAN_CREATED,
+              title: '[Wali Murid] Tagihan Administrasi Diterbitkan',
+              message: `Tagihan ${tagihanType === 'PAKET_TAHUNAN' ? 'Administrasi Sekolah' : tagihanType} untuk ananda ${student.name} telah diterbitkan. Silakan cek rincian pada menu Tagihan Siswa.`,
+              data: {
+                classId,
+                className: classNameLabel,
+                studentId: student.id,
+                studentName: student.name,
+                tagihanType,
+                amount,
+              },
+              priority: NotificationPriority.NORMAL,
+              channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+            });
+          }
+        }
+      }
 
       this.logger.log(
-        `Sent bulk tagihan notifications to ${notificationPromises.length} students in class ${classInfo.name}`,
+        `Sent bulk tagihan notifications to ${studentsTarget.length} students (${classNameLabel})`,
       );
 
       // Notify finance staff about the bulk creation
@@ -374,10 +415,10 @@ export class PaymentNotificationsService {
           senderId: createdBy,
           type: NotificationType.BULK_TAGIHAN_CREATED,
           title: 'Tagihan Massal Dibuat',
-          message: `${count} tagihan ${tagihanType} sebesar ${formattedAmount} telah dibuat untuk kelas ${classInfo.name}.`,
+          message: `${count} tagihan ${tagihanType} ${formattedAmount ? `sebesar ${formattedAmount}` : ''} telah dibuat untuk ${classNameLabel}.`,
           data: {
             classId,
-            className: classInfo.name,
+            className: classNameLabel,
             tagihanType,
             amount,
             bulkCount: count,
@@ -503,28 +544,58 @@ export class PaymentNotificationsService {
 
     if (daysUntilDue <= 1) {
       title = 'Pembayaran Segera Jatuh Tempo!';
-      message = `Tagihan ${tagihan.type} sebesar ${amount} akan jatuh tempo pada ${dueDate}. Segera lakukan pembayaran untuk menghindari denda.`;
+      message = `Tagihan ${tagihan.type} sebesar ${amount} akan jatuh tempo pada ${dueDate}. Segera lakukan pembayaran untuk menghindari kendala administrasi.`;
     } else {
       title = 'Pengingat Pembayaran';
       message = `Tagihan ${tagihan.type} sebesar ${amount} akan jatuh tempo dalam ${daysUntilDue} hari (${dueDate}). Mohon segera lakukan pembayaran.`;
     }
 
-    await this.notificationsService.createNotification({
-      userId: tagihan.student.user.id,
-      type: NotificationType.PAYMENT_DUE,
-      title,
-      message,
-      data: {
-        tagihanId: tagihan.id,
-        studentId: tagihan.studentId,
-        type: tagihan.type,
-        amount: tagihan.amount,
-        dueDate: tagihan.dueDate,
-        daysUntilDue,
-      },
-      priority,
-      channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+    if (tagihan.student?.user?.id) {
+      await this.notificationsService.createNotification({
+        userId: tagihan.student.user.id,
+        type: NotificationType.PAYMENT_DUE,
+        title,
+        message,
+        data: {
+          tagihanId: tagihan.id,
+          studentId: tagihan.studentId,
+          type: tagihan.type,
+          amount: tagihan.amount,
+          dueDate: tagihan.dueDate,
+          daysUntilDue,
+        },
+        priority,
+        channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+      });
+    }
+
+    // Kirim notifikasi ke wali murid siswa
+    const parentRelations = await this.prisma.parentStudent.findMany({
+      where: { studentId: tagihan.studentId },
+      include: { parent: { include: { user: true } } },
     });
+
+    for (const rel of parentRelations) {
+      if (rel.parent?.user?.id) {
+        await this.notificationsService.createNotification({
+          userId: rel.parent.user.id,
+          type: NotificationType.PAYMENT_DUE,
+          title: `[Wali Murid] ${title}`,
+          message: `Tagihan ${tagihan.type} untuk ananda ${tagihan.student?.name || 'Siswa'} sebesar ${amount} jatuh tempo pada ${dueDate}.`,
+          data: {
+            tagihanId: tagihan.id,
+            studentId: tagihan.studentId,
+            studentName: tagihan.student?.name,
+            type: tagihan.type,
+            amount: tagihan.amount,
+            dueDate: tagihan.dueDate,
+            daysUntilDue,
+          },
+          priority,
+          channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+        });
+      }
+    }
   }
 
   /**
@@ -537,10 +608,12 @@ export class PaymentNotificationsService {
 
     try {
       const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
 
       const overdueTagihans = await this.prisma.tagihan.findMany({
         where: {
-          status: 'BELUM_LUNAS',
+          status: { in: ['BELUM_LUNAS', 'ANGSURAN'] },
           dueDate: {
             lt: now,
           },
@@ -555,8 +628,23 @@ export class PaymentNotificationsService {
         },
       });
 
-      for (const tagihan of overdueTagihans) {
-        if (tagihan.student.user && tagihan.dueDate) {
+      // Filter tagihan SPP berkala (hanya kirim notifikasi jika bulan tagihan <= bulan berjalan atau ada angsuran)
+      const validOverdue = overdueTagihans.filter((t: any) => {
+        const paid = t.amountPaid || 0;
+        const remaining = Math.max(0, t.amount - paid);
+        if (remaining <= 0) return false;
+
+        if (t.type.toUpperCase() === 'SPP' && t.year && t.month) {
+          if (t.year < currentYear) return true;
+          if (t.year === currentYear && t.month <= currentMonth) return true;
+          if (t.status === 'ANGSURAN' || paid > 0) return true;
+          return false;
+        }
+        return true;
+      });
+
+      for (const tagihan of validOverdue) {
+        if (tagihan.dueDate) {
           const daysOverdue = Math.ceil(
             (now.getTime() - new Date(tagihan.dueDate).getTime()) /
               (1000 * 60 * 60 * 24),
@@ -566,29 +654,59 @@ export class PaymentNotificationsService {
             style: 'currency',
             currency: 'IDR',
             maximumFractionDigits: 0,
-          }).format(tagihan.amount);
+          }).format(tagihan.amount - (tagihan.amountPaid || 0));
 
-          await this.notificationsService.createNotification({
-            userId: tagihan.student.user.id,
-            type: NotificationType.PAYMENT_OVERDUE,
-            title: 'Pembayaran Terlambat',
-            message: `Tagihan ${tagihan.type} sebesar ${amount} sudah terlambat ${daysOverdue} hari. Mohon segera lakukan pembayaran untuk menghindari sanksi akademik.`,
-            data: {
-              tagihanId: tagihan.id,
-              studentId: tagihan.studentId,
-              type: tagihan.type,
-              amount: tagihan.amount,
-              dueDate: tagihan.dueDate,
-              daysOverdue,
-            },
-            priority: NotificationPriority.URGENT,
-            channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+          if (tagihan.student?.user?.id) {
+            await this.notificationsService.createNotification({
+              userId: tagihan.student.user.id,
+              type: NotificationType.PAYMENT_OVERDUE,
+              title: 'Pembayaran Terlambat',
+              message: `Tagihan ${tagihan.type} sebesar ${amount} sudah terlambat ${daysOverdue} hari. Mohon segera lakukan pembayaran untuk menghindari kendala administrasi.`,
+              data: {
+                tagihanId: tagihan.id,
+                studentId: tagihan.studentId,
+                type: tagihan.type,
+                amount: tagihan.amount,
+                dueDate: tagihan.dueDate,
+                daysOverdue,
+              },
+              priority: NotificationPriority.URGENT,
+              channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+            });
+          }
+
+          // Kirim juga ke akun wali murid
+          const parentRelations = await this.prisma.parentStudent.findMany({
+            where: { studentId: tagihan.studentId },
+            include: { parent: { include: { user: true } } },
           });
+
+          for (const rel of parentRelations) {
+            if (rel.parent?.user?.id) {
+              await this.notificationsService.createNotification({
+                userId: rel.parent.user.id,
+                type: NotificationType.PAYMENT_OVERDUE,
+                title: 'Pemberitahuan Keterlambatan Pembayaran',
+                message: `Tagihan ${tagihan.type} ananda ${tagihan.student?.name || 'Siswa'} sebesar ${amount} terlambat ${daysOverdue} hari. Mohon segera diselesaikan.`,
+                data: {
+                  tagihanId: tagihan.id,
+                  studentId: tagihan.studentId,
+                  studentName: tagihan.student?.name,
+                  type: tagihan.type,
+                  amount: tagihan.amount,
+                  dueDate: tagihan.dueDate,
+                  daysOverdue,
+                },
+                priority: NotificationPriority.URGENT,
+                channel: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+              });
+            }
+          }
         }
       }
 
       this.logger.log(
-        `Sent ${overdueTagihans.length} overdue payment notifications`,
+        `Sent ${validOverdue.length} overdue payment notifications`,
       );
     } catch (error) {
       this.logger.error(

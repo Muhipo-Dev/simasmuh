@@ -104,9 +104,10 @@ export default function BeritaPage() {
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-4">
           {[
             { id: 'ALL', label: 'Semua Kategori' },
-            { id: 'BERITA', label: 'Berita Terbaru' },
-            { id: 'PENGUMUMAN', label: 'Pengumuman Resmi' },
+            { id: 'BERITA', label: 'Berita & Artikel' },
             { id: 'AGENDA', label: 'Agenda Kegiatan' },
+            { id: 'PENGUMUMAN', label: 'Pengumuman Resmi' },
+            { id: 'INFORMASI', label: 'Informasi & Update' },
           ].map((tab) => (
             <button
               key={tab.id}

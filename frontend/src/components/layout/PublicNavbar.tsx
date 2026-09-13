@@ -2,8 +2,10 @@
 
 import React from 'react'
 import Link from 'next/link'
+import NextImage from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LogIn, Menu, CalendarDays } from 'lucide-react'
+import { LogIn, Menu, CalendarDays, LayoutDashboard, User } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { useQuery } from '@tanstack/react-query'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import {
@@ -14,12 +16,13 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { AppNavbar } from './AppNavbar'
-import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 
 interface PublicNavbarProps {
   academicYear?: string
   semester?: string
   className?: string
+  hideNavLinks?: boolean
 }
 
 const navItems = [
@@ -36,9 +39,32 @@ export function PublicNavbar({
   academicYear: initialAcademicYear,
   semester: initialSemester,
   className = '',
+  hideNavLinks = false,
 }: PublicNavbarProps) {
   const pathname = usePathname()
   const authFetch = useAuthenticatedFetch()
+  const authenticatedQuery = useAuthenticatedQuery()
+  const { data: session, status } = useSession()
+
+  const userId = (session?.user as { id?: string })?.id
+  const isLoggedIn = status === 'authenticated' && !!session?.user
+  const userRole = (session?.user as any)?.role || ''
+  const userName = (session?.user as any)?.name || 'Pengguna'
+
+  // Fetch avatar profile if logged in
+  const { data: profileData } = useQuery<{ name?: string; avatarUrl?: string }>({
+    queryKey: ['public-navbar-profile', userId],
+    queryFn: () => userId ? authenticatedQuery(`/api-backend/users/${userId}/profile`) : Promise.resolve(null),
+    enabled: !!userId && isLoggedIn,
+    staleTime: 1000 * 30,
+    retry: false,
+  })
+
+  const displayName = profileData?.name || userName
+  const avatarUrl = profileData?.avatarUrl
+
+  // Sembunyikan navigasi & tombol login untuk endpoint facenetai atau jika diminta secara eksplisit
+  const isMinimal = hideNavLinks || pathname === '/facenetai' || pathname?.startsWith('/facenetai')
 
   // Fetch live system settings for TA badge if not passed as prop
   const { data: settings } = useQuery({
@@ -64,7 +90,7 @@ export function PublicNavbar({
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/'
-    return pathname.startsWith(href)
+    return pathname?.startsWith(href)
   }
 
   return (
@@ -72,108 +98,158 @@ export function PublicNavbar({
       logoHref="/"
       className={className}
       actions={
-        <>
-          {/* Desktop Actions (xl+ screen) */}
-          <div className="hidden xl:flex items-center gap-2.5 2xl:gap-3.5 border-l border-white/15 pl-4 2xl:pl-6 shrink-0">
+        isMinimal ? (
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {currentAcademicYear && (
-              <div className="flex items-center gap-1.5 px-2.5 2xl:px-3 py-1.5 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200 font-bold text-xs shadow-2xs backdrop-blur-md shrink-0">
-                <CalendarDays className="w-3.5 h-3.5 text-blue-300 shrink-0" />
+              <div className="flex items-center gap-1.5 px-2.5 2xl:px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs backdrop-blur-md shrink-0">
+                <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                 <span>TA: {currentAcademicYear}</span>
                 {currentSemester && (
-                  <span className="font-medium text-[11px] text-blue-200/80">
+                  <span className="font-medium text-[11px] text-blue-600/80 dark:text-blue-200/80">
                     ({currentSemester === 'ODD' ? 'Ganjil' : currentSemester === 'EVEN' ? 'Genap' : currentSemester})
                   </span>
                 )}
               </div>
             )}
             <ThemeToggle />
-            <Link
-              href="/login"
-              className="bg-[#2B50A1] hover:bg-[#1f3c7a] dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-4 2xl:px-5 py-2 rounded-full font-bold text-xs 2xl:text-sm flex items-center transition-all shadow-sm hover:shadow-md active:scale-95 shrink-0"
-            >
-              <LogIn className="w-4 h-4 mr-1.5 2xl:mr-2" />
-              <span>Login</span>
-            </Link>
           </div>
-
-          {/* Tablet & Mobile Menu / Theme Toggle (below xl) */}
-          <div className="xl:hidden flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {currentAcademicYear && (
-              <div className="hidden sm:flex md:hidden lg:flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200 font-bold text-[10px] shadow-2xs backdrop-blur-md shrink-0">
-                <CalendarDays className="w-3 h-3 text-blue-300 shrink-0" />
-                <span>{currentAcademicYear}</span>
-              </div>
-            )}
-            <ThemeToggle size="sm" />
-            <DropdownMenu>
-              <DropdownMenuTrigger className="bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl w-9 h-9 p-0 flex items-center justify-center shadow-xs transition-colors backdrop-blur-md shrink-0">
-                <Menu className="h-5 w-5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-64 mt-2 bg-slate-900/95 backdrop-blur-2xl border-slate-800 p-2.5 text-slate-100 shadow-2xl rounded-2xl animate-in fade-in zoom-in-95 duration-200"
-              >
-                {currentAcademicYear && (
-                  <div className="px-3 py-2 mb-1.5 rounded-xl bg-blue-950/40 border border-blue-800/40 flex items-center justify-between text-xs font-semibold text-blue-300">
-                    <span className="flex items-center gap-1.5">
-                      <CalendarDays className="w-3.5 h-3.5" />
-                      Tahun Ajaran
+        ) : (
+          <>
+            {/* Desktop Actions (xl+ screen) */}
+            <div className="hidden xl:flex items-center gap-2.5 2xl:gap-3.5 border-l border-slate-200 dark:border-white/15 pl-4 2xl:pl-6 shrink-0">
+              {currentAcademicYear && (
+                <div className="flex items-center gap-1.5 px-2.5 2xl:px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs backdrop-blur-md shrink-0">
+                  <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span>TA: {currentAcademicYear}</span>
+                  {currentSemester && (
+                    <span className="font-medium text-[11px] text-blue-600/80 dark:text-blue-200/80">
+                      ({currentSemester === 'ODD' ? 'Ganjil' : currentSemester === 'EVEN' ? 'Genap' : currentSemester})
                     </span>
-                    <span className="font-bold font-mono text-white">{currentAcademicYear}</span>
+                  )}
+                </div>
+              )}
+              <ThemeToggle />
+
+              {isLoggedIn ? (
+                <Link
+                  href="/dashboard"
+                  className="bg-blue-600 hover:bg-blue-700 text-white pl-2 pr-4 py-1.5 rounded-full font-bold text-xs 2xl:text-sm flex items-center gap-2 transition-all shadow-xs hover:shadow-md active:scale-95 shrink-0"
+                >
+                  <div className="w-6 h-6 rounded-full bg-white/20 relative overflow-hidden flex items-center justify-center text-[10px] font-black shrink-0 border border-white/30">
+                    {avatarUrl ? (
+                      <NextImage src={avatarUrl} alt="Avatar" fill className="object-cover" />
+                    ) : (
+                      <span>{displayName.charAt(0).toUpperCase()}</span>
+                    )}
                   </div>
-                )}
-                {navItems.map((item) => {
-                  const active = isActive(item.href)
-                  return (
-                    <DropdownMenuItem key={item.href} className="p-0 focus:bg-transparent">
+                  <span className="max-w-[110px] truncate">{displayName}</span>
+                  <LayoutDashboard className="w-3.5 h-3.5 opacity-80" />
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 2xl:px-5 py-2 rounded-full font-bold text-xs 2xl:text-sm flex items-center transition-all shadow-xs hover:shadow-md active:scale-95 shrink-0"
+                >
+                  <LogIn className="w-4 h-4 mr-1.5 2xl:mr-2" />
+                  <span>Login</span>
+                </Link>
+              )}
+            </div>
+
+            {/* Tablet & Mobile Menu / Theme Toggle (below xl) */}
+            <div className="xl:hidden flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {currentAcademicYear && (
+                <div className="hidden sm:flex md:hidden lg:flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-[10px] shadow-2xs backdrop-blur-md shrink-0">
+                  <CalendarDays className="w-3.5 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span>{currentAcademicYear}</span>
+                </div>
+              )}
+              <ThemeToggle size="sm" />
+              <DropdownMenu>
+                <DropdownMenuTrigger className="bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-800 dark:text-white border border-slate-200 dark:border-white/20 rounded-xl w-9 h-9 p-0 flex items-center justify-center shadow-xs transition-colors backdrop-blur-md shrink-0">
+                  <Menu className="h-5 w-5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-64 mt-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-slate-200 dark:border-slate-800 p-2.5 text-slate-900 dark:text-slate-100 shadow-2xl rounded-2xl animate-in fade-in zoom-in-95 duration-200"
+                >
+                  {currentAcademicYear && (
+                    <div className="px-3 py-2 mb-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/40 flex items-center justify-between text-xs font-semibold text-blue-700 dark:text-blue-300">
+                      <span className="flex items-center gap-1.5">
+                        <CalendarDays className="w-3.5 h-3.5" />
+                        Tahun Ajaran
+                      </span>
+                      <span className="font-bold font-mono text-slate-900 dark:text-white">{currentAcademicYear}</span>
+                    </div>
+                  )}
+                  {navItems.map((item) => {
+                    const active = isActive(item.href)
+                    return (
+                      <DropdownMenuItem key={item.href} className="p-0 focus:bg-transparent">
+                        <Link
+                          href={item.href}
+                          className={`w-full cursor-pointer py-2 px-3 text-sm rounded-xl transition-colors ${
+                            active
+                              ? 'font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/50'
+                              : 'font-semibold text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10'
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    )
+                  })}
+                  <DropdownMenuSeparator className="my-1.5 border-slate-200 dark:border-white/10" />
+                  <DropdownMenuItem className="p-0 focus:bg-transparent">
+                    {isLoggedIn ? (
                       <Link
-                        href={item.href}
-                        className={`w-full cursor-pointer py-2 px-3 text-sm rounded-xl transition-colors ${
-                          active
-                            ? 'font-bold text-blue-400 bg-blue-950/60 border border-blue-800/50'
-                            : 'font-medium text-slate-200 hover:text-white hover:bg-white/10'
-                        }`}
+                        href="/dashboard"
+                        className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl flex items-center justify-between shadow-xs"
                       >
-                        {item.label}
+                        <span className="flex items-center gap-2 truncate">
+                          <LayoutDashboard className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{displayName}</span>
+                        </span>
+                        <span className="text-[10px] font-normal px-2 py-0.5 rounded-md bg-blue-700/80">Dashboard</span>
                       </Link>
-                    </DropdownMenuItem>
-                  )
-                })}
-                <DropdownMenuSeparator className="my-1.5 border-white/10" />
-                <DropdownMenuItem className="p-0 focus:bg-transparent">
-                  <Link
-                    href="/login"
-                    className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-white bg-[#2B50A1] hover:bg-[#1f3c7a] rounded-xl flex items-center justify-center shadow-sm"
-                  >
-                    <LogIn className="w-4 h-4 mr-2" />
-                    Login
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </>
+                    ) : (
+                      <Link
+                        href="/login"
+                        className="w-full cursor-pointer py-2.5 px-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl flex items-center justify-center shadow-xs"
+                      >
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Login
+                      </Link>
+                    )}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </>
+        )
       }
     >
-      {/* Desktop Navigation Links (Only visible on xl+ screens to prevent collision when zooming or on tablets) */}
-      <div className="hidden xl:flex items-center gap-1 2xl:gap-2">
-        {navItems.map((item) => {
-          const active = isActive(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`px-3 2xl:px-3.5 py-1.5 rounded-full text-xs 2xl:text-sm transition-all shrink-0 ${
-                active
-                  ? 'font-bold text-white bg-blue-600/40 border border-blue-400/50 shadow-xs'
-                  : 'font-semibold text-slate-200 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              {item.label}
-            </Link>
-          )
-        })}
-      </div>
+      {/* Desktop Navigation Links */}
+      {!isMinimal && (
+        <div className="hidden xl:flex items-center gap-1 2xl:gap-2">
+          {navItems.map((item) => {
+            const active = isActive(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`px-3.5 2xl:px-4 py-1.5 rounded-full text-xs 2xl:text-sm transition-all shrink-0 font-bold ${
+                  active
+                    ? 'text-white bg-blue-600 shadow-xs'
+                    : 'text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10'
+                }`}
+              >
+                {item.label}
+              </Link>
+            )
+          })}
+        </div>
+      )}
     </AppNavbar>
   )
 }

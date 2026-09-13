@@ -82,8 +82,14 @@ export class FaceAttendanceController {
   }
 
   @Get('logs')
-  getLogs() {
-    return this.faceAttendanceService.getRecentLogs();
+  getLogs(
+    @Query('todayOnly') todayOnly?: string,
+    @Query('date') date?: string,
+  ) {
+    return this.faceAttendanceService.getRecentLogs({
+      todayOnly: todayOnly === 'true' || todayOnly === '1',
+      date,
+    });
   }
 
   @Post('logs/clear')

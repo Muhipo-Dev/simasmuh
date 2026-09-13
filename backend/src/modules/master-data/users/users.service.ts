@@ -891,19 +891,19 @@ export class UsersService {
     if (targetEmail && targetEmail.includes('@')) {
       emailResult = await this.emailNotificationService.sendEmailNotification({
         to: targetEmail,
-        subject: `[SIMASMUH] Tautan Pemulihan Kata Sandi Akun`,
-        title: 'Pemulihan Kata Sandi Akun SIMASMUH',
+        subject: `[Reset Password] Akun ${user.username}`,
+        title: 'Reset Kata Sandi',
         category: 'SISTEM',
         badgeLabel: 'RESET PASSWORD',
         recipientName: user.name,
-        contentText: `Administrator / Helpdesk IT SIMASMUH telah membuatkan tautan pemulihan kata sandi resmi untuk akun Anda (${user.username}).`,
+        contentText: `Tautan reset password untuk akun ${user.username} telah dibuat oleh Admin.`,
         metaDetails: [
           { label: 'Username', value: user.username },
           { label: 'Peran Akun', value: user.role },
           { label: 'Masa Berlaku', value: '24 Jam' },
         ],
-        actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}${resetUrl}`,
-        actionText: 'Atur Ulang Kata Sandi Akun',
+        actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}${resetUrl}`,
+        actionText: 'Reset Kata Sandi',
       });
     }
 

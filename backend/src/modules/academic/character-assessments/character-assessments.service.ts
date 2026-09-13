@@ -266,35 +266,35 @@ export class CharacterAssessmentsService {
 
     const kedisiplinanScore = Math.max(
       0,
-      Math.min(1000, 1000 + totalPointsDelta),
+      Math.min(100, 100 + totalPointsDelta),
     );
 
-    // Predikat / Skor Huruf Standar (Skala 1000 Poin)
-    // A: 900 - 1000 (Baik / Terpuji)
-    // B: 700 - 899  (Baik / Perlu Pantauan & Sedikit Bimbingan)
-    // C: 500 - 699  (Cukup / Perlu Pantauan & Bimbingan)
-    // D: 200 - 499  (Kurang / Perlu Bimbingan Ketat)
-    // E: 0 - 199    (Sangat Rendah / Dikeluarkan dari Sekolah)
+    // Predikat / Skor Huruf Standar (Skala 100 Poin)
+    // A: 90 - 100 (Baik / Terpuji)
+    // B: 70 - 89  (Baik / Pantauan & Bimbingan Ringan)
+    // C: 50 - 69  (Cukup / Pantauan & Bimbingan)
+    // D: 20 - 49  (Kurang / Perlu Bimbingan Ketat)
+    // E: 0 - 19   (Sangat Rendah / Dikeluarkan dari Sekolah)
     const getGradeInfo = (score: number) => {
-      if (score >= 900) return { grade: 'A', label: 'A (Baik / Terpuji)' };
-      if (score >= 700) return { grade: 'B', label: 'B (Pantauan & Bimbingan Ringan)' };
-      if (score >= 500) return { grade: 'C', label: 'C (Pantauan & Bimbingan)' };
-      if (score >= 200) return { grade: 'D', label: 'D (Perlu Bimbingan Ketat)' };
+      if (score >= 90) return { grade: 'A', label: 'A (Baik / Terpuji)' };
+      if (score >= 70) return { grade: 'B', label: 'B (Pantauan & Bimbingan Ringan)' };
+      if (score >= 50) return { grade: 'C', label: 'C (Pantauan & Bimbingan)' };
+      if (score >= 20) return { grade: 'D', label: 'D (Perlu Bimbingan Ketat)' };
       return { grade: 'E', label: 'E (Kritis / Dikeluarkan dari Sekolah)' };
     };
 
     const kedisiplinanPredikat = getGradeInfo(kedisiplinanScore).label;
     const kedisiplinanGrade = getGradeInfo(kedisiplinanScore).grade;
 
-    // Perhitungan Skor Ibadah (Basis 1000 Poin) - Amalan ibadah dan poin kebaikan memulihkan poin yang berkurang
-    const ibadahBonus = (amalanIbadahCount * 50) + (totalPrestasi * 25);
-    const ibadahScoreNum = Math.max(0, Math.min(1000, 1000 + ibadahBonus - (totalPelanggaran * 30)));
+    // Perhitungan Skor Ibadah (Basis 100 Poin) - Amalan ibadah dan poin kebaikan memulihkan poin yang berkurang
+    const ibadahBonus = (amalanIbadahCount * 5) + (totalPrestasi * 3);
+    const ibadahScoreNum = Math.max(0, Math.min(100, 100 + ibadahBonus - (totalPelanggaran * 3)));
     const ibadahScore = getGradeInfo(ibadahScoreNum).label;
     const ibadahGrade = getGradeInfo(ibadahScoreNum).grade;
 
-    // Perhitungan Skor Perilaku / Adab (Basis 1000 Poin) - Prestasi, adab, dan kebaikan (XP Kebaikan) dapat memulihkan skor
+    // Perhitungan Skor Perilaku / Adab (Basis 100 Poin) - Prestasi, adab, dan kebaikan (XP Kebaikan) dapat memulihkan skor
     const kebaikanXpBonus = Math.max(0, totalPointsDelta > 0 ? totalPointsDelta : 0);
-    const perilakuScoreNum = Math.max(0, Math.min(1000, 1000 - (totalPelanggaran * 100) + kebaikanXpBonus));
+    const perilakuScoreNum = Math.max(0, Math.min(100, 100 - (totalPelanggaran * 10) + kebaikanXpBonus));
     const perilakuScore = getGradeInfo(perilakuScoreNum).label;
     const perilakuGrade = getGradeInfo(perilakuScoreNum).grade;
 
@@ -489,24 +489,14 @@ export class CharacterAssessmentsService {
       evaluator?.subRole5,
     ].filter(Boolean);
 
-    const isKetertibanOrAdmin = userRoles.some((r) =>
-      [
-        'SUPERADMIN',
-        'ADMIN_IT',
-        'KETERTIBAN',
-        'BK_BP',
-        'BK',
-        'KEPALA_SEKOLAH',
-        'BAU',
-        'ADMIN_TU',
-      ].includes(r || ''),
-    );
+    // Logika Verifikasi Poin Kedisiplinan:
+    // Poin hanya berstatus 'SELESAI' / langsung terverifikasi jika dibuat langsung oleh role/subRole KETERTIBAN.
+    // Draf dibuat oleh Guru umum / role lainnya dan wajib menunggu verifikasi oleh role KETERTIBAN.
+    const isKetertiban = userRoles.includes('KETERTIBAN');
 
-    // Jika diinput oleh Guru umum, status awal adalah MENUNGGU (menunggu verifikasi Petugas Ketertiban/BK)
-    // Jika diinput langsung oleh Petugas Ketertiban / Guru BK / Superadmin, status langsung SELESAI / TERVERIFIKASI
     const finalStatus = dto.status
       ? dto.status
-      : isKetertibanOrAdmin
+      : isKetertiban
         ? 'SELESAI'
         : 'MENUNGGU';
 
@@ -667,6 +657,19 @@ export class CharacterAssessmentsService {
       where: { id: verifierId },
     });
 
+    const verifierRoles = [
+      verifier?.role,
+      verifier?.subRole,
+      verifier?.subRole2,
+      verifier?.subRole3,
+      verifier?.subRole4,
+      verifier?.subRole5,
+    ].filter(Boolean);
+
+    if (!verifierRoles.includes('KETERTIBAN')) {
+      throw new BadRequestException('Hanya pengguna dengan kewenangan role Ketertiban yang dapat memverifikasi catatan kedisiplinan siswa.');
+    }
+
     const statusTarget = body.status || 'TERVERIFIKASI';
     const actionTakenTarget =
       body.actionTaken ||
@@ -720,10 +723,10 @@ export class CharacterAssessmentsService {
         },
       );
 
-      // Auto Rujukan ke Tim BK jika Poin Siswa Kritis (< 700) atau Pelanggaran Berat
+      // Auto Rujukan ke Tim BK jika Poin Siswa Kritis (< 70) atau Pelanggaran Berat
       try {
         const summary = await this.getStudentSummary(existing.studentId);
-        if (summary.kedisiplinanScore < 700 || existing.points <= -100) {
+        if (summary.kedisiplinanScore < 70 || existing.points <= -15) {
           const bkUsers = await this.prisma.user.findMany({
             where: {
               OR: [
@@ -856,7 +859,7 @@ export class CharacterAssessmentsService {
           this.emailNotificationService
             .sendEmailNotification({
               to: studentUser.email,
-              subject: `[SIMASMUH Catatan Siswa] ${notifTitle}`,
+              subject: `[Catatan Siswa] ${notifTitle}`,
               title: notifTitle,
               category: 'KEDISIPLINAN',
               badgeLabel: notifCategory,
@@ -869,8 +872,8 @@ export class CharacterAssessmentsService {
                 { label: 'Poin Evaluasi', value: `${points > 0 ? '+' : ''}${points}` },
                 { label: 'Tindak Lanjut', value: dto.actionTaken || assessment.actionTaken || 'Diterapkan Bagian Ketertiban' },
               ],
-              actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/akademik/etika-tatib`,
-              actionText: 'Lihat Buku Catatan Karakter',
+              actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/akademik/etika-tatib`,
+              actionText: 'Lihat Catatan',
             })
             .catch(() => {});
         }
@@ -886,7 +889,7 @@ export class CharacterAssessmentsService {
             this.emailNotificationService
               .sendEmailNotification({
                 to: parentUser.email,
-                subject: `[SIMASMUH Catatan Ananda] ${notifTitle}`,
+                subject: `[Catatan Ananda] ${notifTitle}`,
                 title: notifTitle,
                 category: 'KEDISIPLINAN',
                 badgeLabel: notifCategory,
@@ -899,8 +902,8 @@ export class CharacterAssessmentsService {
                   { label: 'Poin Evaluasi', value: `${points > 0 ? '+' : ''}${points}` },
                   { label: 'Tindak Lanjut', value: dto.actionTaken || assessment.actionTaken || 'Diterapkan Bagian Ketertiban' },
                 ],
-                actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/akademik/etika-tatib`,
-                actionText: 'Buka Buku Saku & Catatan Siswa',
+                actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/akademik/etika-tatib`,
+                actionText: 'Lihat Catatan Siswa',
               })
               .catch(() => {});
           }
@@ -1049,24 +1052,24 @@ export class CharacterAssessmentsService {
 
       const ketertibanScore = Math.max(
         0,
-        Math.min(1000, 1000 + totalPointsDelta),
+        Math.min(100, 100 + totalPointsDelta),
       );
-      const adabBonus = (adabEtikaCount * 50) + (totalPrestasi * 50);
+      const adabBonus = (adabEtikaCount * 5) + (totalPrestasi * 5);
       const adabScore = Math.max(
         0,
-        Math.min(1000, 1000 - totalPelanggaran * 100 + adabBonus),
+        Math.min(100, 100 - totalPelanggaran * 10 + adabBonus),
       );
-      const ibadahBonus = (amalanIbadahCount * 50) + (totalPrestasi * 25);
+      const ibadahBonus = (amalanIbadahCount * 5) + (totalPrestasi * 3);
       const ibadahScoreNum = Math.max(
         0,
-        Math.min(1000, 1000 + ibadahBonus - totalPelanggaran * 30),
+        Math.min(100, 100 + ibadahBonus - totalPelanggaran * 3),
       );
 
       const getGradeInfo = (score: number) => {
-        if (score >= 900) return { grade: 'A', status: 'Baik / Terpuji' };
-        if (score >= 700) return { grade: 'B', status: 'Pantauan & Bimbingan Ringan' };
-        if (score >= 500) return { grade: 'C', status: 'Pantauan & Bimbingan' };
-        if (score >= 200) return { grade: 'D', status: 'Perlu Bimbingan Ketat' };
+        if (score >= 90) return { grade: 'A', status: 'Baik / Terpuji' };
+        if (score >= 70) return { grade: 'B', status: 'Pantauan & Bimbingan Ringan' };
+        if (score >= 50) return { grade: 'C', status: 'Pantauan & Bimbingan' };
+        if (score >= 20) return { grade: 'D', status: 'Perlu Bimbingan Ketat' };
         return { grade: 'E', status: 'Kritis / Dikeluarkan dari Sekolah' };
       };
 
@@ -1121,7 +1124,7 @@ export class CharacterAssessmentsService {
 
     // Buat assessment penyeimbang atau reset status
     const currentSummary = await this.getStudentSummary(studentId);
-    const deltaToReset = 1000 - currentSummary.kedisiplinanScore;
+    const deltaToReset = 100 - currentSummary.kedisiplinanScore;
 
     // Tambahkan record rekam jejak Pemutihan / Reset Poin
     await this.prisma.characterAssessment.create({
@@ -1133,7 +1136,7 @@ export class CharacterAssessmentsService {
         title: 'Pemutihan / Reset Poin Kedisiplinan Siswa',
         description:
           reason ||
-          'Poin ketertiban dan kedisiplinan siswa di-reset kembali ke 1000 poin oleh Tim Ketertiban.',
+          'Poin ketertiban dan kedisiplinan siswa di-reset kembali ke 100 poin oleh Tim Ketertiban.',
         points: deltaToReset,
         status: 'SELESAI',
         actionTaken: 'Pemutihan Poin Kedisiplinan',
@@ -1152,7 +1155,30 @@ export class CharacterAssessmentsService {
 
     return {
       success: true,
-      message: `Poin kedisiplinan siswa ${student.name} berhasil di-reset ke 1000 poin.`,
+      message: `Poin kedisiplinan siswa ${student.name} berhasil di-reset ke 100 poin.`,
+    };
+  }
+
+  async resetAllAssessments(userId: string, reason?: string) {
+    const evaluator = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    const deleted = await this.prisma.characterAssessment.deleteMany({});
+
+    await this.systemLogService.log({
+      category: 'AKADEMIK',
+      action: 'CHARACTER_ASSESSMENT_RESET_ALL',
+      message: `Reset massal seluruh data poin kedisiplinan dan apresiasi siswa (${deleted.count} catatan dihapus, skor kembali ke 100) oleh ${evaluator?.name || userId}. Alasan: ${reason || 'Reset ke credit awal'}`,
+      userId,
+      userName: evaluator?.name,
+      userRole: evaluator?.role,
+    });
+
+    return {
+      success: true,
+      message: `Seluruh data pelanggaran dan apresiasi berhasil di-reset. Semua siswa kembali ke kredit awal 100 Poin (${deleted.count} catatan dibersihkan).`,
+      deletedCount: deleted.count,
     };
   }
 

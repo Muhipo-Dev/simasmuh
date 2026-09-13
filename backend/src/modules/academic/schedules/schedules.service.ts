@@ -21,6 +21,7 @@ export class SchedulesService {
         subject: true,
         teacher: { include: { user: true } },
       },
+      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
     });
   }
 
@@ -46,7 +47,24 @@ export class SchedulesService {
     return this.prisma.schedule.create({ data });
   }
 
-  async createBulk(dataArray: any[]) {
+  async createBulk(dataArray: any[], replaceExisting: boolean = true) {
+    // Jika replaceExisting true (default saat import XML), bersihkan jadwal lama terlebih dahulu agar tertumpuk/tergantikan
+    if (replaceExisting) {
+      await this.prisma.$transaction(async (tx) => {
+        const existingSchedules = await tx.schedule.findMany({ select: { id: true } });
+        if (existingSchedules.length > 0) {
+          const scheduleIds = existingSchedules.map((s) => s.id);
+          await tx.attendance.deleteMany({
+            where: { scheduleId: { in: scheduleIds } },
+          });
+          await tx.teachingJournal.deleteMany({
+            where: { scheduleId: { in: scheduleIds } },
+          });
+          await tx.schedule.deleteMany({});
+        }
+      });
+    }
+
     const createdSchedules: any[] = [];
     let currentSubjectCount: number | undefined = undefined;
 
@@ -109,13 +127,15 @@ export class SchedulesService {
       if (!teacherId && data.teacherName) {
         let teacherProf = await this.prisma.teacherProfile.findFirst({
           where: {
-            user: { name: { equals: data.teacherName, mode: 'insensitive' } },
+            user: {
+              name: { equals: data.teacherName, mode: 'insensitive' },
+            },
           },
           include: { user: true },
         });
 
         if (!teacherProf) {
-          const defaultPassword = await bcrypt.hash('guru123', 10);
+          const defaultPassword = await bcrypt.hash('Guru123!', 10);
           const baseUsername = data.teacherName
             .replace(/\s+/g, '')
             .toLowerCase()
@@ -158,6 +178,59 @@ export class SchedulesService {
     }
 
     return createdSchedules;
+  }
+
+  async deleteAllSchedules(userId: string, passwordConfirm: string) {
+    if (!userId || !passwordConfirm) {
+      throw new Error('Identitas user dan password otorisasi wajib diisi.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error('Pengguna tidak ditemukan.');
+    }
+
+    const isAuthorizedRole = [
+      'SUPERADMIN',
+      'ADMIN_IT',
+      'ADMIN_TU',
+      'BAU',
+      'TATA_USAHA',
+    ].includes(user.role);
+
+    if (!isAuthorizedRole) {
+      throw new Error('Anda tidak memiliki izin otorisasi untuk menghapus semua jadwal.');
+    }
+
+    const isPasswordValid = await bcrypt.compare(passwordConfirm, user.password);
+    if (!isPasswordValid) {
+      throw new Error('Password otorisasi yang Anda masukkan salah.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const allSchedules = await tx.schedule.findMany({ select: { id: true } });
+      const totalCount = allSchedules.length;
+
+      if (totalCount > 0) {
+        const scheduleIds = allSchedules.map((s) => s.id);
+        await tx.attendance.deleteMany({
+          where: { scheduleId: { in: scheduleIds } },
+        });
+        await tx.teachingJournal.deleteMany({
+          where: { scheduleId: { in: scheduleIds } },
+        });
+        await tx.schedule.deleteMany({});
+      }
+
+      return {
+        success: true,
+        message: `Berhasil menghapus seluruh ${totalCount} data jadwal pelajaran sekolah. Data kelas, guru, dan mata pelajaran tetap aman terjaga.`,
+        deletedCount: totalCount,
+      };
+    });
   }
 
   async update(id: string, data: any) {

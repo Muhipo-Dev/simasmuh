@@ -27,6 +27,7 @@ export class ClassesService {
         students: true,
         schedules: {
           include: { subject: true },
+          orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
         },
         homeroomTeacher: {
           include: {

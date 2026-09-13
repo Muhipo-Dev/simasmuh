@@ -30,7 +30,9 @@ export interface FaceCameraConfig {
 
 export interface FaceDetectionLog {
   id: string;
-  timestamp: string;
+  date: string; // Format YYYY-MM-DD
+  dateFormatted?: string; // Format lokal e.g. "Kamis, 10 Sep 2026"
+  timestamp: string; // Jam scan HH:mm:ss
   userId: string;
   userName: string;
   userRole: string;
@@ -65,7 +67,7 @@ export class FaceAttendanceService implements OnModuleInit {
     'face-attendance-logs.json',
   );
   private recentLogs: FaceDetectionLog[] = [];
-  private readonly maxLogs = 50;
+  private readonly maxLogs = 1000;
 
   constructor(
     private prisma: PrismaService,
@@ -78,11 +80,38 @@ export class FaceAttendanceService implements OnModuleInit {
 
   private loadLogsFile() {
     try {
+      const normalizeLogs = (logs: any[]): FaceDetectionLog[] => {
+        return logs.map((log) => {
+          if (!log.date || !log.dateFormatted) {
+            let logDate = new Date();
+            if (log.id && log.id.includes('-')) {
+              const ts = Number(log.id.split('-')[0]);
+              if (!isNaN(ts) && ts > 0) logDate = new Date(ts);
+            }
+            const pad = (n: number) => n.toString().padStart(2, '0');
+            const dateIso = `${logDate.getFullYear()}-${pad(logDate.getMonth() + 1)}-${pad(logDate.getDate())}`;
+            const dateFormatted = logDate.toLocaleDateString('id-ID', {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            });
+            return {
+              ...log,
+              date: log.date || dateIso,
+              dateFormatted: log.dateFormatted || dateFormatted,
+            };
+          }
+          return log;
+        });
+      };
+
       if (existsSync(this.logsPath)) {
         const raw = readFileSync(this.logsPath, 'utf8');
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          this.recentLogs = parsed.slice(0, this.maxLogs);
+          this.recentLogs = normalizeLogs(parsed).slice(0, this.maxLogs);
+          this.saveLogsFile();
           return;
         }
       }
@@ -90,7 +119,7 @@ export class FaceAttendanceService implements OnModuleInit {
         const raw = readFileSync(this.legacyLogsPath, 'utf8');
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          this.recentLogs = parsed.slice(0, this.maxLogs);
+          this.recentLogs = normalizeLogs(parsed).slice(0, this.maxLogs);
           this.saveLogsFile();
         }
       }
@@ -185,35 +214,43 @@ export class FaceAttendanceService implements OnModuleInit {
   }
 
   getConfig(): FaceCameraConfig {
-    try {
-      if (existsSync(this.configPath)) {
+    if (existsSync(this.configPath)) {
+      try {
         const raw = readFileSync(this.configPath, 'utf8');
         const parsed = JSON.parse(raw);
+        const threshold = typeof parsed.threshold === 'number' 
+          ? Math.max(0.40, Math.min(0.85, parsed.threshold)) 
+          : 0.58;
         return {
           showPublicStream: true,
           showPublicLogs: true,
           ...parsed,
+          threshold,
         };
-      }
-      if (existsSync(this.legacyConfigPath)) {
+      } catch {}
+    }
+    if (existsSync(this.legacyConfigPath)) {
+      try {
         const raw = readFileSync(this.legacyConfigPath, 'utf8');
         const parsed = JSON.parse(raw);
+        const threshold = typeof parsed.threshold === 'number' 
+          ? Math.max(0.40, Math.min(0.85, parsed.threshold)) 
+          : 0.58;
         return {
           showPublicStream: true,
           showPublicLogs: true,
           ...parsed,
+          threshold,
         };
-      }
-    } catch (err) {
-      this.logger.error('Error reading face attendance config', err);
+      } catch {}
     }
     return {
       streamSourceType: 'WEBCAM',
       streamUrl: '0',
       cameraName: 'Camera Gerbang Utama',
       location: 'Gerbang Depan Sekolah',
-      threshold: 0.90,
-      cooldownMinutes: 10,
+      threshold: 0.58,
+      cooldownMinutes: 15,
       isActive: false,
       welcomeVoice: true,
       showPublicStream: true,
@@ -265,6 +302,11 @@ export class FaceAttendanceService implements OnModuleInit {
 
   async getUsersDataset() {
     const users = await this.prisma.user.findMany({
+      where: {
+        role: {
+          not: 'WALI_MURID' as any,
+        },
+      },
       select: {
         id: true,
         name: true,
@@ -382,13 +424,12 @@ export class FaceAttendanceService implements OnModuleInit {
       throw new BadRequestException('Kunci autentikasi API kamera tidak valid');
     }
 
-    // Validasi mutlak batas input log sistem & absensi: harus di atas atau sama dengan 90% (0.90)
-    // Deteksi di bawah 90% (misal 70%-89%) hanya diizinkan untuk live preview tapi ditolak masuk ke log absen sistem
+    // Validasi batas mutlak input log sistem & absensi: kemiripan biometrik FaceNet terkalibrasi >= 90% (0.90)
     const minAttendanceThreshold = 0.90;
     const confidenceValue = Number(payload.confidence) || 0;
     if (confidenceValue < minAttendanceThreshold) {
       throw new BadRequestException(
-        `Tingkat kemiripan wajah (${Math.round(confidenceValue * 100)}%) belum memenuhi syarat mutlak pencatatan log sistem (minimum 90%).`,
+        `Tingkat kemiripan wajah (${Math.round(confidenceValue * 100)}%) belum memenuhi syarat mutlak pencatatan presensi (minimum 90%).`,
       );
     }
 
@@ -407,12 +448,42 @@ export class FaceAttendanceService implements OnModuleInit {
     }
 
     const today = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dayOfWeek = today.getDay(); // 0 = Minggu, 1 = Senin, ..., 5 = Jumat, 6 = Sabtu
+    const isWorkDay = dayOfWeek >= 1 && dayOfWeek <= 5; // Senin - Jumat
+
+    // Cek Hari Kerja (Senin - Jumat)
+    if (!isWorkDay) {
+      throw new BadRequestException(
+        'Presensi wajah otomatis hanya aktif pada hari kerja efektif (Senin s.d. Jumat).',
+      );
+    }
+
+    const currentHours = today.getHours();
+    const currentMinutes = today.getMinutes();
+    const currentTotalMinutes = currentHours * 60 + currentMinutes;
+
+    const isStudent = user.role === 'SISWA';
+
+    // 1. Ketentuan Khusus Siswa:
+    // - Hanya presensi MASUK pada rentang waktu 05:00 s.d. 07:30
+    // - Terkoneksi ke laporan rekap presensi e-Rapor
+    if (isStudent) {
+      const studentMinMinutes = 5 * 60; // 05:00
+      const studentMaxMinutes = 7 * 60 + 30; // 07:30
+
+      if (currentTotalMinutes < studentMinMinutes || currentTotalMinutes > studentMaxMinutes) {
+        throw new BadRequestException(
+          `Waktu presensi masuk siswa hanya dibuka pukul 05:00 s.d. 07:30 (Waktu saat ini: ${pad(currentHours)}:${pad(currentMinutes)}).`,
+        );
+      }
+    }
+
     const startOfDay = new Date(today);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(today);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const pad = (n: number) => n.toString().padStart(2, '0');
     const timeString = `${pad(today.getHours())}:${pad(today.getMinutes())}:${pad(today.getSeconds())}`;
 
     const existing = await this.prisma.dailyAttendance.findFirst({
@@ -426,7 +497,7 @@ export class FaceAttendanceService implements OnModuleInit {
     let message = '';
 
     if (!existing) {
-      // First scan = Masuk
+      // First scan = Masuk (Siswa & Guru/Pegawai)
       await this.prisma.dailyAttendance.create({
         data: {
           date: startOfDay,
@@ -437,7 +508,9 @@ export class FaceAttendanceService implements OnModuleInit {
         },
       });
       scanType = 'MASUK';
-      message = `Presensi Masuk berhasil dicatat pukul ${timeString}`;
+      message = isStudent
+        ? `Presensi Masuk Siswa berhasil dicatat pukul ${timeString} (Sinkron e-Rapor)`
+        : `Presensi Masuk berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
 
       // Kirim Notifikasi Email Masuk
       if (user.email && user.email.includes('@')) {
@@ -458,12 +531,27 @@ export class FaceAttendanceService implements OnModuleInit {
           })
           .catch(() => {});
       }
+    } else if (isStudent) {
+      // Siswa hanya berlaku presensi masuk (tidak berlaku absen pulang)
+      scanType = 'SUDAH_LENGKAP';
+      message = `Presensi masuk siswa sudah tercatat hari ini pada pukul ${existing.checkInTime || existing.time}.`;
     } else if (!existing.checkOutTime) {
-      // Check cooldown time between in and out
+      // 2. Ketentuan Presensi Pulang (Khusus Guru / Karyawan / Pegawai):
+      // - Harus sebelum jam 18:00 (18:00 = 1080 menit)
+      // - Terhubung langsung ke perhitungan tunjangan transport & uang makan di modul Keuangan
+      const staffMaxCheckOutMinutes = 18 * 60; // 18:00
+
+      if (currentTotalMinutes > staffMaxCheckOutMinutes) {
+        throw new BadRequestException(
+          `Batas waktu presensi pulang pegawai maksimal pukul 18:00 (Waktu saat ini: ${timeString}).`,
+        );
+      }
+
+      // Pengecekan jeda cooldown waktu presensi (sesuai setting konfigurasi dalam menit)
       if (existing.checkInTime) {
         const [inHour, inMin] = existing.checkInTime.split(':').map(Number);
         const inTotalMins = inHour * 60 + (inMin || 0);
-        const outTotalMins = today.getHours() * 60 + today.getMinutes();
+        const outTotalMins = currentTotalMinutes;
 
         if (outTotalMins - inTotalMins >= config.cooldownMinutes) {
           await this.prisma.dailyAttendance.update({
@@ -471,7 +559,7 @@ export class FaceAttendanceService implements OnModuleInit {
             data: { checkOutTime: timeString },
           });
           scanType = 'PULANG';
-          message = `Presensi Pulang berhasil dicatat pukul ${timeString}`;
+          message = `Presensi Pulang berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
 
           // Kirim Notifikasi Email Pulang
           if (user.email && user.email.includes('@')) {
@@ -502,7 +590,7 @@ export class FaceAttendanceService implements OnModuleInit {
           data: { checkOutTime: timeString },
         });
         scanType = 'PULANG';
-        message = `Presensi Pulang berhasil dicatat pukul ${timeString}`;
+        message = `Presensi Pulang berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
 
         if (user.email && user.email.includes('@')) {
           this.emailNotificationService
@@ -525,11 +613,21 @@ export class FaceAttendanceService implements OnModuleInit {
       }
     } else {
       scanType = 'SUDAH_LENGKAP';
-      message = `Presensi harian sudah lengkap (Masuk: ${existing.checkInTime}, Pulang: ${existing.checkOutTime})`;
+      message = `Presensi harian pegawai sudah lengkap (Masuk: ${existing.checkInTime}, Pulang: ${existing.checkOutTime})`;
     }
+
+    const dateIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+    const dateFormatted = today.toLocaleDateString('id-ID', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
 
     const logEntry: FaceDetectionLog = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      date: dateIso,
+      dateFormatted,
       timestamp: timeString,
       userId: user.id,
       userName: user.name,
@@ -588,8 +686,20 @@ export class FaceAttendanceService implements OnModuleInit {
     };
   }
 
-  getRecentLogs(): FaceDetectionLog[] {
-    return this.recentLogs;
+  getRecentLogs(options?: { todayOnly?: boolean; date?: string }): FaceDetectionLog[] {
+    if (!options) return this.recentLogs;
+    let filtered = [...this.recentLogs];
+    
+    if (options.todayOnly) {
+      const today = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const todayIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+      filtered = filtered.filter((l) => l.date === todayIso);
+    } else if (options.date) {
+      filtered = filtered.filter((l) => l.date === options.date);
+    }
+    
+    return filtered;
   }
 
   async deleteSingleLog(id: string, resetDb: boolean = true) {

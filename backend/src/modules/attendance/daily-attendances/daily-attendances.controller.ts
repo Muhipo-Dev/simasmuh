@@ -44,4 +44,18 @@ export class DailyAttendancesController {
       parseInt(month, 10),
     );
   }
+
+  @Get('class-summary')
+  getClassAttendanceSummary(
+    @Query('classId') classId: string,
+    @Query('period') period?: 'daily' | 'weekly' | 'monthly',
+    @Query('date') date?: string,
+  ) {
+    return this.dailyAttendancesService.getClassAttendanceSummary(
+      classId,
+      period || 'daily',
+      date,
+    );
+  }
 }
+

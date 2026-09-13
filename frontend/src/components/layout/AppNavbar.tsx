@@ -92,12 +92,12 @@ export function AppNavbar({
 
   return (
     <header
-      className={`h-14 sm:h-16 lg:h-20 flex items-center justify-between px-3 sm:px-5 lg:px-8 xl:px-12 sticky top-0 z-40 shadow-xs transition-all duration-300 bg-slate-950/80 dark:bg-slate-950/90 border-b border-white/10 text-white backdrop-blur-xl shrink-0 w-full overflow-x-clip ${className}`}
+      className={`h-14 sm:h-16 lg:h-20 flex items-center justify-between px-3 sm:px-5 lg:px-8 xl:px-12 sticky top-0 z-40 shadow-xs transition-colors duration-300 bg-white/85 dark:bg-slate-950/85 border-b border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white backdrop-blur-xl shrink-0 w-full overflow-x-clip ${className}`}
     >
       {/* SISI KIRI: Logo & Identitas SIMASMUH */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
         <Link href={logoHref} className="flex items-center gap-2 sm:gap-2.5 lg:gap-3 group min-w-0">
-          <div className="p-1 sm:p-1.5 rounded-xl border shadow-2xs transition-transform group-hover:scale-105 shrink-0 bg-white/15 border-white/20 backdrop-blur-md flex items-center justify-center">
+          <div className="p-1 sm:p-1.5 rounded-2xl border shadow-2xs transition-transform group-hover:scale-105 shrink-0 bg-blue-50 dark:bg-white/10 border-blue-200/80 dark:border-white/15 backdrop-blur-md flex items-center justify-center overflow-hidden">
             {activeLogo.startsWith('http') || activeLogo.startsWith('data:') ? (
               <img
                 src={activeLogo}
@@ -116,12 +116,12 @@ export function AppNavbar({
             )}
           </div>
           <div className="flex flex-col justify-center min-w-0">
-            <span className="font-black text-sm sm:text-base lg:text-lg xl:text-xl tracking-tight leading-none text-blue-500 dark:text-blue-400 truncate">
+            <span className="font-black text-sm sm:text-base lg:text-lg xl:text-xl tracking-tight leading-none text-blue-600 dark:text-blue-400 truncate">
               SIMASMUH
             </span>
             {subtitle && (
               <span
-                className={`text-[9px] sm:text-[10px] lg:text-xs font-normal leading-tight text-slate-300 dark:text-slate-400 mt-0.5 truncate max-w-[140px] sm:max-w-[200px] lg:max-w-none ${
+                className={`text-[9px] sm:text-[10px] lg:text-xs font-normal leading-tight text-slate-500 dark:text-slate-400 mt-0.5 truncate max-w-[140px] sm:max-w-[200px] lg:max-w-none ${
                   hideSubtitleOnMobile ? 'hidden md:inline' : 'inline'
                 }`}
               >
@@ -134,7 +134,7 @@ export function AppNavbar({
 
       {/* SISI TENGAH: Menu Navigasi (Otomatis fleksibel & bebas tabrakan) */}
       {children && (
-        <div className="hidden xl:flex items-center gap-1 2xl:gap-2 text-slate-200 min-w-0 mx-2 2xl:mx-4 shrink">
+        <div className="hidden xl:flex items-center gap-1 2xl:gap-2 text-slate-700 dark:text-slate-200 min-w-0 mx-2 2xl:mx-4 shrink">
           {children}
         </div>
       )}

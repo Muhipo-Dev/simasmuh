@@ -38,7 +38,26 @@ export default function JadwalMengajarPage() {
     )
   })
 
-  const { sortConfig, handleSort, sortedItems: sortedSchedules } = useSorting(mySchedules || [])
+  const parseTimeToMinutes = (t: string | undefined | null): number => {
+    if (!t) return 0
+    const clean = t.replace('.', ':').trim()
+    const parts = clean.split(':')
+    const hours = parseInt(parts[0] || '0', 10) || 0
+    const minutes = parseInt(parts[1] || '0', 10) || 0
+    return hours * 60 + minutes
+  }
+
+  const sortedInitialSchedules = [...mySchedules].sort((a: any, b: any) => {
+    if ((a.dayOfWeek ?? 1) !== (b.dayOfWeek ?? 1)) {
+      return (a.dayOfWeek ?? 1) - (b.dayOfWeek ?? 1)
+    }
+    const timeA = parseTimeToMinutes(a.startTime)
+    const timeB = parseTimeToMinutes(b.startTime)
+    if (timeA !== timeB) return timeA - timeB
+    return parseTimeToMinutes(a.endTime) - parseTimeToMinutes(b.endTime)
+  })
+
+  const { sortConfig, handleSort, sortedItems: sortedSchedules } = useSorting(sortedInitialSchedules)
   const searchedSchedules = filterDataBySearch(sortedSchedules, searchQuery)
 
   return (
@@ -83,13 +102,12 @@ export default function JadwalMengajarPage() {
                 <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="dayOfWeek" className="pl-6 font-semibold dark:text-slate-200">Hari</SortableTableHead>
                 <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="startTime" className="font-semibold dark:text-slate-200">Waktu</SortableTableHead>
                 <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="class.name" className="font-semibold dark:text-slate-200">Kelas</SortableTableHead>
-                <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="subject.name" className="font-semibold dark:text-slate-200">Mata Pelajaran</SortableTableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading || status === 'loading' ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10">
+                  <TableCell colSpan={3} className="text-center py-10">
                     <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                       <Loader2 className="w-6 h-6 animate-spin mb-2 text-blue-600 dark:text-blue-400" />
                       Memuat jadwal mengajar Anda...
@@ -98,7 +116,7 @@ export default function JadwalMengajarPage() {
                 </TableRow>
               ) : searchedSchedules.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-12 text-slate-500 dark:text-slate-400">
+                  <TableCell colSpan={3} className="text-center py-12 text-slate-500 dark:text-slate-400">
                     <div className="flex flex-col items-center justify-center">
                       <Calendar className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-2 stroke-[1.5]" />
                       <p className="font-medium text-base text-slate-700 dark:text-slate-300">{searchQuery ? 'Tidak ada jadwal yang sesuai pencarian.' : 'Tidak ada jadwal mengajar.'}</p>
@@ -110,19 +128,17 @@ export default function JadwalMengajarPage() {
                 searchedSchedules.map((jadwal) => (
                   <TableRow key={jadwal.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50">
                     <TableCell className="pl-6 font-semibold text-slate-900 dark:text-slate-200">
-                      {['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][jadwal.dayOfWeek]}
+                      <span className="inline-block py-0.5 px-2.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-sm">
+                        {['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][jadwal.dayOfWeek]}
+                      </span>
                     </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-300 font-mono text-sm">
+                    <TableCell className="text-slate-700 dark:text-slate-300 font-mono text-sm font-medium">
                       {jadwal.startTime} - {jadwal.endTime}
                     </TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-bold bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                         {jadwal.class?.name || '-'}
                       </span>
-                    </TableCell>
-                    <TableCell className="font-semibold text-slate-900 dark:text-slate-100">
-                      {jadwal.subject?.name || '-'}
-                      {jadwal.subject?.code ? <span className="ml-2 text-xs text-slate-400 font-mono">({jadwal.subject?.code})</span> : null}
                     </TableCell>
                   </TableRow>
                 ))

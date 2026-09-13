@@ -71,12 +71,12 @@ export class GuestBookService {
           this.emailNotificationService
             .sendEmailNotification({
               to: tu.email,
-              subject: `[Buku Tamu SIMASMUH] Kedatangan Tamu: ${guest.namaTamu} (${guest.instansi})`,
-              title: 'Pemberitahuan Kunjungan Tamu Baru',
+              subject: `[Buku Tamu] ${guest.namaTamu} - ${guest.instansi}`,
+              title: 'Kunjungan Tamu Baru',
               category: 'SISTEM',
               badgeLabel: 'BUKU TAMU QR',
               recipientName: tu.name,
-              contentText: `Tamu baru atas nama ${guest.namaTamu} dari ${guest.instansi} telah mengisi buku tamu untuk keperluan ${guest.tujuan} (${guest.dituju}).`,
+              contentText: `Tamu ${guest.namaTamu} dari ${guest.instansi} berkunjung untuk ${guest.tujuan} (${guest.dituju}).`,
               metaDetails: [
                 { label: 'Nama Tamu', value: guest.namaTamu },
                 { label: 'Instansi', value: guest.instansi },
@@ -85,8 +85,8 @@ export class GuestBookService {
                 { label: 'Dituju', value: guest.dituju },
                 { label: 'Waktu Tiba', value: guest.waktu || '-' },
               ],
-              actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/buku-tamu`,
-              actionText: 'Lihat Daftar Kunjungan Tamu',
+              actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/buku-tamu`,
+              actionText: 'Lihat Buku Tamu',
             })
             .catch(() => {});
         }

@@ -153,7 +153,7 @@ export class FinanceOperationGuard implements CanActivate {
       return false;
     }
 
-    // Admin IT, SUPERADMIN, ADMIN_TU, BAU, and Finance staff can perform financial operations
+    // STRICT: Only dedicated finance staff can perform finance modifications & reset
     const userSubRoles = [
       user.role,
       user.subRole,
@@ -161,17 +161,13 @@ export class FinanceOperationGuard implements CanActivate {
       user.subRole3,
       user.subRole4,
       user.subRole5,
-    ];
+    ].filter(Boolean);
     const allowedFinanceRoles = [
-      'ADMIN_IT',
-      'SUPERADMIN',
-      'ADMIN_TU',
-      'BAU',
-      'TATA_USAHA',
       'KEUANGAN',
       'KEUANGAN_ALL',
       'KEUANGAN_MASUK',
       'KEUANGAN_KELUAR',
+      'SUPERVISOR_KEUANGAN',
     ];
     const hasFinanceAccess = userSubRoles.some((r) =>
       allowedFinanceRoles.includes(r),
@@ -179,7 +175,7 @@ export class FinanceOperationGuard implements CanActivate {
 
     if (!hasFinanceAccess) {
       throw new ForbiddenException(
-        'Access denied. Finance permissions required',
+        'Akses ditolak. Operasi keuangan hanya dapat dilakukan oleh staf keuangan berwenang.',
       );
     }
 

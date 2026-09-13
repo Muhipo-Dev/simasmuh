@@ -68,8 +68,8 @@ export class AnnouncementsService {
                   { label: 'Ditujukan Untuk', value: created.target },
                   { label: 'Diterbitkan Oleh', value: created.author?.name || 'Pihak Sekolah' },
                 ],
-                actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/informasi/pengumuman`,
-                actionText: 'Baca Pengumuman Lengkap',
+                actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/informasi/pengumuman`,
+                actionText: 'Lihat Pengumuman',
               })
               .catch(() => {});
           }

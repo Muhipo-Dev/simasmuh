@@ -29,7 +29,7 @@ export default function LogPresensiSiswaPage() {
   const userRole = user?.role || ''
   const isWaliKelas = user?.subRole === 'WALI_KELAS' || user?.subRole2 === 'WALI_KELAS' || user?.subRole3 === 'WALI_KELAS'
   const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole)
-  const isStaffOrGuru = isSuperOrAdmin || ['GURU', 'KETERTIBAN'].includes(userRole) || isWaliKelas
+  const isStaffOrGuru = isSuperOrAdmin || isWaliKelas
 
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString())
@@ -130,13 +130,17 @@ export default function LogPresensiSiswaPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Header Glassmorphic Standar CBT MUHIPO */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 backdrop-blur-xl shadow-xs">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-            <UserCheck className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+          <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">
+            Presensi & Kehadiran
+          </span>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <UserCheck className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             Kehadiran Siswa
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Rekapitulasi riwayat presensi masuk harian Anda.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">Rekapitulasi riwayat presensi masuk harian Anda.</p>
         </div>
 
         <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
@@ -146,7 +150,7 @@ export default function LogPresensiSiswaPage() {
                 value={targetUserId} 
                 onChange={(e) => { if (e.target.value) setSelectedStudentUserId(e.target.value) }}
                 aria-label="Pilih Siswa"
-                className="w-[220px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold text-xs h-9 px-3 py-1 pr-8 rounded-xl border border-blue-300 dark:border-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none truncate"
+                className="w-[220px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold text-xs h-9 px-3 py-1 pr-8 rounded-xl border border-blue-300 dark:border-slate-700 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none truncate"
               >
                 {effectiveStudentList.map((item: any, idx: number) => {
                   const sName = item.student?.name || item.name

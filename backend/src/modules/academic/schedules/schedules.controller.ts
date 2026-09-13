@@ -33,8 +33,18 @@ export class SchedulesController {
   }
 
   @Post('bulk')
-  createBulk(@Body() dataArray: any[]) {
-    return this.schedulesService.createBulk(dataArray);
+  createBulk(@Body() body: any) {
+    const dataArray = Array.isArray(body) ? body : body.schedules;
+    const replaceExisting = body.replaceExisting !== undefined ? body.replaceExisting : true;
+    return this.schedulesService.createBulk(dataArray, replaceExisting);
+  }
+
+  @Post('delete-all')
+  deleteAll(@Body() payload: { userId: string; passwordConfirm: string }) {
+    return this.schedulesService.deleteAllSchedules(
+      payload.userId,
+      payload.passwordConfirm,
+    );
   }
 
   @Put(':id')

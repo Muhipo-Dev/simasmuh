@@ -52,6 +52,8 @@ interface StaffAttendance {
 
 interface FaceDetectionLog {
   id: string
+  date?: string
+  dateFormatted?: string
   timestamp: string
   userId: string
   userName: string
@@ -113,7 +115,7 @@ export default function PresensiPegawaiPage() {
   })
 
   // 3. Fetch Live Logs Realtime (Realtime Polling)
-  const { data: liveLogs, refetch: refetchLiveLogs } = useQuery<FaceDetectionLog[]>({
+  const { data: rawLiveLogs, refetch: refetchLiveLogs } = useQuery<FaceDetectionLog[]>({
     queryKey: ['face-attendance-live-logs'],
     queryFn: async () => {
       const res = await authenticatedFetch('/api-backend/face-attendance/logs')
@@ -122,6 +124,17 @@ export default function PresensiPegawaiPage() {
     },
     refetchInterval: 2000,
   })
+
+  const todayIsoStr = useMemo(() => {
+    const today = new Date()
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+  }, [])
+
+  const liveLogs = useMemo(() => {
+    if (!rawLiveLogs) return []
+    return rawLiveLogs.filter((l) => l.date === todayIsoStr)
+  }, [rawLiveLogs, todayIsoStr])
 
   useEffect(() => {
     fetch(getPublicApiUrl('/settings/public'), { cache: 'no-store' })
@@ -594,9 +607,13 @@ export default function PresensiPegawaiPage() {
                                   <CheckCircle2 className="w-3 h-3 shrink-0" />
                                   {log.scanType}
                                 </span>
-                                <p className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 mt-0.5 flex items-center justify-end gap-1">
-                                  <Clock className="w-3 h-3 text-slate-400" />
-                                  {log.timestamp}
+                                <p className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 mt-0.5 flex items-center justify-end gap-1 flex-wrap">
+                                  <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{log.dateFormatted || log.date}</span>
+                                  <span className="text-slate-300 dark:text-slate-600">•</span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-slate-400" />
+                                    {log.timestamp}
+                                  </span>
                                 </p>
                               </div>
                             </div>

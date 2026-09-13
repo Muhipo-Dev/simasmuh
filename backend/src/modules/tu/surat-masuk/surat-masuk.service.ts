@@ -7,6 +7,12 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
 import { EmailNotificationService } from '../../communication/notifications/email.service';
+import {
+  NotificationsService,
+  NotificationType,
+  NotificationPriority,
+  NotificationChannel,
+} from '../../communication/notifications/notifications.service';
 import { CreateSuratMasukDto } from './dto/create-surat-masuk.dto';
 import { UpdateSuratMasukDto } from './dto/update-surat-masuk.dto';
 import { CreateDisposisiDto } from './dto/create-disposisi.dto';
@@ -18,6 +24,7 @@ export class SuratMasukService {
     private readonly prisma: PrismaService,
     private readonly systemLogService: SystemLogService,
     private readonly emailNotificationService: EmailNotificationService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -215,6 +222,7 @@ export class SuratMasukService {
         ringkasan:
           dto.ringkasan !== undefined ? dto.ringkasan : existing.ringkasan,
         statusTahapan: dto.statusTahapan || existing.statusTahapan,
+        statusDisposisi: dto.statusDisposisi || existing.statusDisposisi,
       },
       include: { disposisi: true },
     });
@@ -369,16 +377,42 @@ export class SuratMasukService {
       });
 
       for (const u of matchedUsers) {
+        // 1. In-App Notification SIMASMUH
+        try {
+          await this.notificationsService.createNotification({
+            userId: u.id,
+            type: NotificationType.DISPOSISI_ASSIGNED,
+            title: 'Disposisi Surat Masuk Baru',
+            message: `Kepala Sekolah (${signerName}) mendisposisikan surat perihal "${surat.perihal}" kepada Anda untuk segera ditindaklanjuti.`,
+            priority: NotificationPriority.HIGH,
+            channel: [NotificationChannel.IN_APP],
+            data: {
+              suratMasukId: surat.id,
+              nomorAgenda: disposisi.nomorAgenda || surat.nomorAgenda,
+              nomorSurat: surat.nomorSurat,
+              perihal: surat.perihal,
+              instansi: surat.instansi,
+              instruksi: disposisi.instruksi,
+              catatan: disposisi.catatan,
+              fileUrl: surat.fileUrl,
+              token: disposisi.eSignToken,
+            },
+          });
+        } catch (inAppErr) {
+          console.error('Gagal membuat In-App Notification Disposisi:', inAppErr);
+        }
+
+        // 2. Official Email Notification
         if (u.email) {
           this.emailNotificationService
             .sendEmailNotification({
               to: u.email,
-              subject: `[Disposisi Surat Masuk] ${surat.perihal}`,
-              title: 'Pendelegasian Disposisi Surat Masuk',
+              subject: `[Disposisi] ${surat.perihal}`,
+              title: 'Disposisi Surat Masuk',
               category: 'PERIZINAN',
               badgeLabel: 'DISPOSISI KEPALA SEKOLAH',
               recipientName: u.name,
-              contentText: `Anda menerima pendelegasian tindak lanjut Surat Masuk resmi yang telah diverifikasi & di-E-Sign oleh Kepala Sekolah (${signerName}).`,
+              contentText: `Anda menerima disposisi surat masuk dari Kepala Sekolah (${signerName}).`,
               metaDetails: [
                 { label: 'No. Agenda', value: disposisi.nomorAgenda || surat.nomorAgenda },
                 { label: 'Instansi Pengirim', value: surat.instansi },
@@ -387,14 +421,14 @@ export class SuratMasukService {
                 { label: 'Instruksi', value: Array.isArray(disposisi.instruksi) ? disposisi.instruksi.join(', ') : 'Ditindak Lanjuti' },
                 { label: 'Catatan Pimpinan', value: disposisi.catatan || 'Segera koordinasikan dan tindak lanjuti.' },
               ],
-              actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tu/surat-masuk`,
-              actionText: 'Buka Lembar Disposisi Digital',
+              actionUrl: `${process.env.FRONTEND_URL || ''}/fitur/disposisi`,
+              actionText: 'Lihat Disposisi',
             })
             .catch(() => {});
         }
       }
     } catch (err) {
-      console.error('Gagal mengirim notifikasi Email Disposisi:', err);
+      console.error('Gagal mengirim notifikasi Disposisi:', err);
     }
   }
 

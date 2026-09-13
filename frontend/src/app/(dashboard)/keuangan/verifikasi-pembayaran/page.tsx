@@ -30,6 +30,7 @@ export default function PaymentProofVerificationPage() {
       const response = await authenticatedQuery(url).catch(() => [])
       return response?.data || response || []
     },
+    refetchInterval: 5000,
   })
 
   const verifyProofMutation = useMutation({

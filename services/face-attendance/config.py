@@ -12,8 +12,8 @@ class FaceServiceConfig(BaseModel):
     camera_name: str = "Camera Gerbang Utama"
     location: str = "Gerbang Depan Sekolah"
     # Detection threshold (cosine similarity)
-    threshold: float = 0.70
-    cooldown_minutes: int = 10
+    threshold: float = 0.58
+    cooldown_minutes: int = 15
     is_active: bool = True
     welcome_voice: bool = True
 
@@ -27,8 +27,8 @@ def fetch_backend_config() -> FaceServiceConfig:
                 stream_url=data.get("streamUrl", "0"),
                 camera_name=data.get("cameraName", "Camera Gerbang Utama"),
                 location=data.get("location", "Gerbang Depan Sekolah"),
-                threshold=float(data.get("threshold", 0.70)),
-                cooldown_minutes=int(data.get("cooldownMinutes", 10)),
+                threshold=float(data.get("threshold", 0.58)),
+                cooldown_minutes=int(data.get("cooldownMinutes", 15)),
                 is_active=bool(data.get("isActive", True)),
                 welcome_voice=bool(data.get("welcomeVoice", True)),
             )

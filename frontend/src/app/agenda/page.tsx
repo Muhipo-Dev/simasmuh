@@ -1,8 +1,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Calendar, LogIn, Menu, MapPin, Phone, Mail, ChevronLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Calendar, ChevronLeft, CalendarDays, Plus } from 'lucide-react';
 import { PublicNavbar, AppFooter } from '@/components/layout';
+import { FullCalendarView } from '@/components/calendar/FullCalendarView';
+import { AgendaActionButton } from '@/components/calendar/AgendaActionButton';
+import { getPublicApiUrl } from '@/lib/api-config';
 
 interface Announcement {
   id: string;
@@ -15,8 +17,6 @@ interface Announcement {
   createdAt: string | Date;
   author?: { name: string };
 }
-
-import { getPublicApiUrl } from '@/lib/api-config';
 
 const getSettings = async () => {
   try {
@@ -48,10 +48,6 @@ export default async function AgendaPage() {
   const settings = await getSettings()
   const announcements = await getAnnouncements()
 
-  const agendaList = announcements
-    .filter((a) => a.type === 'AGENDA')
-    .sort((a, b) => new Date(a.eventDate || a.createdAt).getTime() - new Date(b.eventDate || b.createdAt).getTime())
-
   const address = settings?.address || 'Jl. Batoro Katong No. 123, Ponorogo, Jawa Timur'
   const phone = settings?.phone || '(0352) 123456'
   const email = settings?.email || 'info@smamuhipo.sch.id'
@@ -76,57 +72,36 @@ export default async function AgendaPage() {
       <PublicNavbar academicYear={settings?.academicYear} semester={settings?.semester} />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col py-12 px-6 lg:px-20 bg-slate-50">
-        <div className="max-w-4xl mx-auto w-full">
-          <Link href="/" className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium mb-6">
-            <ChevronLeft className="w-4 h-4 mr-1" /> Kembali ke Beranda
-          </Link>
-          
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 md:p-12">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8 border-b border-slate-100 pb-6">
-              <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center shrink-0">
-                <Calendar className="w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Agenda Sekolah</h1>
-                <p className="text-slate-500 mt-1">Daftar agenda dan kegiatan sekolah terdekat.</p>
+      <main className="flex-1 flex flex-col py-4 sm:py-6 lg:py-8 px-3 sm:px-6 lg:px-12 bg-slate-50/90 dark:bg-slate-950/80">
+        <div className="max-w-6xl mx-auto w-full space-y-4 sm:space-y-6">
+          <div className="flex items-center justify-between gap-2">
+            <Link href="/" className="inline-flex items-center text-xs font-bold text-blue-600 hover:text-blue-700">
+              <ChevronLeft className="w-4 h-4 mr-1" /> Beranda
+            </Link>
+            <div className="flex items-center gap-2">
+              <AgendaActionButton />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xs border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-5 lg:p-6">
+            <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-orange-100 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400 rounded-xl flex items-center justify-center shrink-0">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <h1 className="text-base sm:text-xl lg:text-2xl font-black text-slate-900 dark:text-white">
+                    Kalender Akademik &amp; Agenda
+                  </h1>
+                  <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 hidden sm:block">
+                    Penanggalan Masehi, Hijriah (KHGT), Libur Nasional, dan Agenda Sekolah.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-8">
-              {agendaList.length === 0 ? (
-                <div className="text-center py-12 text-slate-500 border-2 border-dashed border-slate-200 rounded-xl">
-                  <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-lg font-medium text-slate-900">Belum ada agenda</p>
-                  <p>Tidak ada agenda sekolah yang dijadwalkan dalam waktu dekat.</p>
-                </div>
-              ) : (
-                agendaList.map((agenda) => {
-                  const eventDate = new Date(agenda.eventDate || agenda.createdAt);
-                  const day = eventDate.getDate().toString().padStart(2, '0');
-                  const month = eventDate.toLocaleDateString('id-ID', { month: 'short' });
-                  const fullDate = eventDate.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                  
-                  return (
-                    <div key={agenda.id} className="flex flex-col sm:flex-row gap-4 sm:gap-6 group bg-slate-50 p-5 sm:p-6 rounded-xl border border-slate-100 hover:border-orange-200 transition-colors">
-                      <div className="flex flex-row sm:flex-col items-center justify-center sm:w-20 px-4 sm:px-0 py-3 sm:h-20 rounded-xl bg-white text-orange-600 shrink-0 shadow-sm border border-orange-100 group-hover:bg-orange-500 group-hover:text-white transition-colors gap-2 sm:gap-0">
-                        <span className="text-xl sm:text-2xl font-bold leading-none sm:mb-1">{day}</span>
-                        <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider">{month}</span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2 group-hover:text-orange-600 transition-colors">{agenda.title}</h3>
-                        <p className="text-sm text-slate-500 flex items-center gap-1.5 mb-3 font-medium">
-                          <Calendar className="w-4 h-4 text-orange-500" /> {fullDate}
-                        </p>
-                        <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
-                          {agenda.content}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            {/* Full Interactive Dual Calendar */}
+            <FullCalendarView initialAnnouncements={announcements} />
           </div>
         </div>
       </main>
@@ -164,19 +139,16 @@ export default async function AgendaPage() {
             <h4 className="text-white font-bold text-lg mb-6">Kontak Kami</h4>
             <ul className="space-y-4 text-sm">
               <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
-                <span>{address}</span>
+                <span className="text-slate-400">{address}</span>
               </li>
               {phone && (
                 <li className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-slate-500 shrink-0" />
-                  <span>{phone}</span>
+                  <span className="text-slate-400">{phone}</span>
                 </li>
               )}
               {email && (
                 <li className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-slate-500 shrink-0" />
-                  <span>{email}</span>
+                  <span className="text-slate-400">{email}</span>
                 </li>
               )}
             </ul>

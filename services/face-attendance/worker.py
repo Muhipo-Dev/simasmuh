@@ -17,7 +17,8 @@ class AttendanceWorker:
         self.stop_event = threading.Event()
         self.capture_thread: Optional[threading.Thread] = None
         self.ai_thread: Optional[threading.Thread] = None
-        self.last_attendance_time: Dict[str, float] = {}  # userId -> timestamp
+        self.last_attendance_time: Dict[str, float] = {}  # userId -> timestamp absensi masuk/pulang (menit konfigurasi)
+        self.last_scan_time: float = 0.0                  # Cooldown Scanner Umum: 2 detik antar scan
         self.current_fps: float = 0.0
         self.stream_status: str = "OFFLINE"
         self.total_scans_today: int = 0
@@ -77,10 +78,12 @@ class AttendanceWorker:
         """Mereset timer cooldown deteksi presensi agar wajah dapat langsung dicatat ulang."""
         if all_users or not user_id:
             self.last_attendance_time.clear()
+            self.last_scan_time = 0.0
             self.total_scans_today = 0
             print("[INFO] Semua timer cooldown presensi kamera berhasil direset.")
         else:
             self.last_attendance_time.pop(user_id, None)
+            self.last_scan_time = 0.0
             print(f"[INFO] Timer cooldown presensi untuk user '{user_id}' berhasil direset.")
         return True
 
@@ -162,9 +165,20 @@ class AttendanceWorker:
                             print(f"[DEBUG] Gagal buka webcam {idx} backend {backend}: {e_open}")
                 return None
 
-            elif isinstance(src, str) and any(src.startswith(proto) for proto in ["rtsp://", "rtmp://", "http://", "https://"]):
-                # Konfigurasi FFMPEG RTSP ultra low-latency (tanpa buffering, max_delay 0)
-                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|fflags;nobuffer|flags;low_delay|max_delay;0|probesize;32768|analyzeduration;0|stimeout;3000000"
+            elif isinstance(src, str) and any(src.startswith(proto) for proto in ["rtsp://", "rtsps://", "rtmp://", "http://", "https://"]):
+                # Konfigurasi FFMPEG RTSP ultra low-latency (zero buffering, TCP transport, fast probing)
+                # Opsi ini mematikan jitter buffer internal FFMPEG agar streaming IP Cam realtime 100% tanpa akumulasi lag
+                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = (
+                    "rtsp_transport;tcp|"
+                    "fflags;nobuffer|"
+                    "flags;low_delay|"
+                    "max_delay;0|"
+                    "reorder_queue_size;0|"
+                    "buffer_size;1024000|"
+                    "probesize;32768|"
+                    "analyzeduration;0|"
+                    "stimeout;3000000"
+                )
                 try:
                     c = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
                     if c is not None and c.isOpened():
@@ -174,7 +188,7 @@ class AttendanceWorker:
                             pass
                         ret_test, test_frame = c.read()
                         if ret_test and test_frame is not None and test_frame.size > 0:
-                            print(f"[INFO] RTSP / Network Stream ultra low-latency terhubung ke: {src}")
+                            print(f"[INFO] RTSP IP Cam ultra low-latency terhubung ke: {src}")
                             return c
                 except Exception as e_rtsp:
                     print(f"[DEBUG] CAP_FFMPEG RTSP error: {e_rtsp}")
@@ -189,7 +203,7 @@ class AttendanceWorker:
                             pass
                         ret_test, test_frame = c.read()
                         if ret_test and test_frame is not None and test_frame.size > 0:
-                            print(f"[INFO] RTSP / Network Stream berhasil terhubung (fallback default): {src}")
+                            print(f"[INFO] RTSP IP Cam berhasil terhubung (fallback): {src}")
                             return c
                 except Exception as e_fallback:
                     print(f"[DEBUG] Fallback RTSP error: {e_fallback}")
@@ -304,9 +318,9 @@ class AttendanceWorker:
                     reg_cnt = self.registered_count
                     guest_cnt = self.guest_count
 
-                # Render Bounding Box Wajah
+                # Render Bounding Box Wajah (Tetap tampil selama periode jeda cooldown 2.0 detik)
                 for det in raw_detections:
-                    if now - det.get("timestamp", 0) > 1.2:
+                    if now - det.get("timestamp", 0) > 2.1:
                         continue
 
                     x1, y1, x2, y2 = det["box"]
@@ -455,10 +469,11 @@ class AttendanceWorker:
                     y2 = min(h_frame, y + h + pad_y)
                     x1 = max(0, x - pad_x)
                     x2 = min(w_frame, x + w + pad_x)
+                    # Crop wajah berdefinisi tinggi langsung dari target_frame (High Fidelity ROI)
                     face_crop = target_frame[y1:y2, x1:x2]
 
-                    # Threshold sensitivitas deteksi (default 70% atau 0.70)
-                    threshold = self.config.threshold if (self.config and self.config.threshold is not None) else 0.70
+                    # Threshold sensitivitas deteksi (default 58% atau 0.58)
+                    threshold = self.config.threshold if (self.config and self.config.threshold is not None) else 0.58
                     match_result = self.engine.match_face(face_crop, threshold=threshold)
 
                     if match_result:
@@ -495,12 +510,17 @@ class AttendanceWorker:
                     self.registered_count = reg_count
                     self.guest_count = guest_count
 
-                # Jeda inferensi hemat daya CPU: jika tidak ada wajah, istirahatkan CPU lebih lama (~4 FPS idle, ~6-7 FPS active)
-                time.sleep(0.12 if faces else 0.25)
+                # Adaptive Sleep Mode (Hemat Daya & Instan Bangun):
+                # - Jika wajah terdeteksi: Bangun instan, proses presensi, lalu cooldown 2.0 detik
+                # - Jika tidak ada objek: Masuk mode sleep hemat CPU secara bertahap (0.15s - 0.25s) dan langsung aktif begitu wajah muncul
+                if faces:
+                    time.sleep(2.0)
+                else:
+                    time.sleep(0.18)
 
             except Exception as ai_err:
                 print(f"[ERROR] AI Inference exception: {ai_err}")
-                time.sleep(0.2)
+                time.sleep(0.10)
 
     def generate_mjpeg_stream(self):
         """Generator frame MJPEG real-time ultra low-latency (25-30 FPS responsif tanpa delay buffer)."""
@@ -535,18 +555,24 @@ class AttendanceWorker:
         user_id = user_record.user_id
         now = time.time()
         
-        # Validasi mutlak batas input log sistem & absensi: kemiripan harus >= 90% (0.90)
-        # Deteksi di bawah 90% (misal 70%-89%) hanya tampil di monitor tapi tidak dicatat ke log/database
+        # 1. Validasi syarat mutlak presensi: kemiripan biometrik terkalibrasi wajib di atas 90% (>= 0.90)
         if similarity < 0.90:
             return
 
-        cooldown_mins = self.config.cooldown_minutes if self.config else 10
+        # 2. Cooldown Scanner Umum: 2 Detik antar pemindaian scanner aktif
+        SCANNER_COOLDOWN_SEC = 2.0
+        if now - self.last_scan_time < SCANNER_COOLDOWN_SEC:
+            return
+
+        # 3. Jeda Cooldown Berulang Akun Masuk Sistem: Sesuai konfigurasi (default 15 menit)
+        cooldown_mins = self.config.cooldown_minutes if self.config else 15
         cooldown_sec = cooldown_mins * 60
 
         last_time = self.last_attendance_time.get(user_id, 0)
         if now - last_time < cooldown_sec:
             return
 
+        self.last_scan_time = now
         self.last_attendance_time[user_id] = now
         self.total_scans_today += 1
         print(f"[ATTENDANCE SCAN] Terdeteksi: {user_record.name} ({user_record.role}) | Kemiripan: {round(similarity*100, 1)}%")

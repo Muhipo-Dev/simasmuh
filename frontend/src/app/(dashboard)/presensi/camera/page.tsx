@@ -67,6 +67,8 @@ interface FaceCameraConfig {
 
 interface FaceDetectionLog {
   id: string
+  date?: string
+  dateFormatted?: string
   timestamp: string
   userId: string
   userName: string
@@ -195,6 +197,10 @@ export default function FaceAttendanceCameraPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'SISWA' | 'GURU' | 'PEGAWAI'>('ALL')
   const [photoFilter, setPhotoFilter] = useState<'ALL' | 'WITH_PHOTO' | 'NO_PHOTO'>('ALL')
+
+  // Log filter states (default: hari ini saja)
+  const [logFilterMode, setLogFilterMode] = useState<'TODAY' | 'ALL'>('TODAY')
+  const [logSearchQuery, setLogSearchQuery] = useState('')
 
   // Local form state for config
   const [formConfig, setFormConfig] = useState<FaceCameraConfig | null>(null)
@@ -437,13 +443,13 @@ export default function FaceAttendanceCameraPage() {
       isProcessing = true
       try {
         const offscreen = document.createElement('canvas')
-        const scale = Math.min(1.0, 480 / video.videoWidth)
+        const scale = Math.min(1.0, 360 / video.videoWidth)
         offscreen.width = Math.round(video.videoWidth * scale)
         offscreen.height = Math.round(video.videoHeight * scale)
         const ctx = offscreen.getContext('2d')
         if (ctx) {
           ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height)
-          const base64 = offscreen.toDataURL('image/jpeg', 0.70)
+          const base64 = offscreen.toDataURL('image/jpeg', 0.65)
           const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -463,8 +469,15 @@ export default function FaceAttendanceCameraPage() {
               ],
             }))
             drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
-            if (rawFaces.some((f: any) => f.is_registered)) {
-              queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+            if (rawFaces.length > 0) {
+              if (rawFaces.some((f: any) => f.is_registered)) {
+                queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+              }
+              // Cooldown 2.0 detik setelah objek terdeteksi sebelum memindai frame berikutnya
+              await new Promise((r) => setTimeout(r, 2000))
+            } else {
+              // Mode Sleep Hemat Daya Ringan (Standby 200ms) saat tidak ada objek wajah di depan kamera
+              await new Promise((r) => setTimeout(r, 200))
             }
           }
         }
@@ -480,7 +493,7 @@ export default function FaceAttendanceCameraPage() {
       } finally {
         isProcessing = false
       }
-    }, 250)
+    }, 100)
 
     return () => clearInterval(interval)
   }, [isBrowserCamStreaming])
@@ -509,6 +522,9 @@ export default function FaceAttendanceCameraPage() {
   const filteredUsers = useMemo(() => {
     if (!datasetData?.dataset) return []
     return datasetData.dataset.filter((user) => {
+      // Kecualikan akun wali murid dari deteksi & absensi wajah
+      if (user.role === 'WALI_MURID') return false
+
       if (roleFilter === 'SISWA' && user.role !== 'SISWA') return false
       if (roleFilter === 'GURU' && user.role !== 'GURU') return false
       if (roleFilter === 'PEGAWAI' && (user.role === 'SISWA' || user.role === 'GURU')) return false
@@ -528,13 +544,44 @@ export default function FaceAttendanceCameraPage() {
     })
   }, [datasetData, roleFilter, photoFilter, searchQuery])
 
-  // Count stats from logs
+  // Filtered logs (Hari ini vs Semua tersimpan)
+  const todayIsoStr = useMemo(() => {
+    const today = new Date()
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+  }, [])
+
+  const displayedLogs = useMemo(() => {
+    if (!logsData) return []
+    let list = logsData
+
+    // Default atau saat mode TODAY: hanya tampilkan log hari ini
+    if (logFilterMode === 'TODAY') {
+      list = list.filter((l) => l.date === todayIsoStr)
+    }
+
+    if (logSearchQuery.trim() !== '') {
+      const q = logSearchQuery.toLowerCase()
+      list = list.filter(
+        (l) =>
+          l.userName?.toLowerCase().includes(q) ||
+          l.identifier?.toLowerCase().includes(q) ||
+          l.userRole?.toLowerCase().includes(q) ||
+          l.cameraName?.toLowerCase().includes(q)
+      )
+    }
+
+    return list
+  }, [logsData, logFilterMode, todayIsoStr, logSearchQuery])
+
+  // Count stats from logs hari ini
   const logStats = useMemo(() => {
     if (!logsData) return { masuk: 0, pulang: 0, total: 0 }
-    const masuk = logsData.filter(l => l.scanType === 'MASUK').length
-    const pulang = logsData.filter(l => l.scanType === 'PULANG').length
-    return { masuk, pulang, total: logsData.length }
-  }, [logsData])
+    const todayLogs = logsData.filter((l) => l.date === todayIsoStr)
+    const masuk = todayLogs.filter(l => l.scanType === 'MASUK').length
+    const pulang = todayLogs.filter(l => l.scanType === 'PULANG').length
+    return { masuk, pulang, total: todayLogs.length }
+  }, [logsData, todayIsoStr])
 
   // Mutation to save config
   const { mutate: updateConfig, isPending: isSaving } = useMutation({
@@ -1225,9 +1272,35 @@ export default function FaceAttendanceCameraPage() {
                         <CardDescription className="text-[11px] text-slate-500 dark:text-slate-400">Verifikasi snapshot wajah & pencatatan presensi</CardDescription>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => refetchLogs()} title="Segarkan Log" className="h-8 w-8 p-0 text-slate-500 hover:text-indigo-600 rounded-lg">
-                        <RefreshCw className="w-4 h-4" />
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Toggle Filter Hari Ini vs Semua Arsip */}
+                      <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <button
+                          type="button"
+                          onClick={() => setLogFilterMode('TODAY')}
+                          className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
+                            logFilterMode === 'TODAY'
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          Hari Ini
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLogFilterMode('ALL')}
+                          className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
+                            logFilterMode === 'ALL'
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          Semua Arsip
+                        </button>
+                      </div>
+
+                      <Button variant="ghost" size="sm" onClick={() => refetchLogs()} title="Segarkan Log" className="h-7 w-7 p-0 text-slate-500 hover:text-indigo-600 rounded-lg">
+                        <RefreshCw className="w-3.5 h-3.5" />
                       </Button>
                       <Button 
                         variant="ghost" 
@@ -1235,9 +1308,9 @@ export default function FaceAttendanceCameraPage() {
                         onClick={handleConfirmClearLogs} 
                         disabled={isClearing} 
                         title="Reset Seluruh Log & Presensi Hari Ini di Database"
-                        className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg"
+                        className="h-7 w-7 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </div>
@@ -1245,18 +1318,18 @@ export default function FaceAttendanceCameraPage() {
 
                 {/* Scrollable Live Scan List */}
                 <CardContent className="p-3.5 flex-1 overflow-y-auto space-y-3">
-                  {logsData && logsData.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2.5">
+                  {displayedLogs && displayedLogs.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 dark:text-slate-400 space-y-2.5">
                       <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
                         <Camera className="w-7 h-7 stroke-1" />
                       </div>
-                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Menunggu Wajah Terdeteksi</p>
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Belum Ada Presensi Hari Ini</p>
                       <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                        Arahkan wajah siswa atau guru ke depan kamera. Hasil identifikasi dan foto snapshot kamera akan otomatis muncul di sini.
+                        Arahkan wajah siswa atau guru ke depan kamera. Hasil identifikasi dan foto snapshot kamera hari ini akan otomatis muncul di sini.
                       </p>
                     </div>
                   ) : (
-                    logsData?.map((log, index) => (
+                    displayedLogs?.map((log, index) => (
                       <div 
                         key={log.id} 
                         className={`p-3.5 rounded-2xl transition-all border ${
@@ -1295,9 +1368,13 @@ export default function FaceAttendanceCameraPage() {
                                 <CheckCircle2 className="w-3 h-3 shrink-0" />
                                 {log.scanType}
                               </span>
-                              <p className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 mt-0.5 flex items-center justify-end gap-1">
-                                <Clock className="w-3 h-3 text-slate-400" />
-                                {log.timestamp}
+                              <p className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 mt-0.5 flex items-center justify-end gap-1 flex-wrap">
+                                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{log.dateFormatted || log.date}</span>
+                                <span className="text-slate-300 dark:text-slate-600">•</span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-slate-400" />
+                                  {log.timestamp}
+                                </span>
                               </p>
                             </div>
 
@@ -1482,19 +1559,22 @@ export default function FaceAttendanceCameraPage() {
                 {/* Range: Threshold */}
                 <div className="space-y-3 pt-2">
                   <div className="flex justify-between items-center">
-                    <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      Batas Sensitivitas Kemiripan Wajah (*Threshold*)
-                    </Label>
+                    <div>
+                      <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Sensitivitas Deteksi Bounding Box (*Threshold*)
+                      </Label>
+                      <p className="text-[11px] text-slate-500">Mengatur kepekaan visual kotak deteksi (*bounding box*), sedangkan pencatatan log presensi mutlak menyaring kemiripan di atas 90%.</p>
+                    </div>
                     <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-0.5">
-                      {Math.round((currentConfig?.threshold || 0.90) * 100)}%
+                      {Math.round((currentConfig?.threshold || 0.58) * 100)}%
                     </Badge>
                   </div>
                   <input
                     type="range"
-                    min={1}
-                    max={100}
+                    min={40}
+                    max={85}
                     step={1}
-                    value={Math.round((currentConfig?.threshold || 0.90) * 100)}
+                    value={Math.round((currentConfig?.threshold || 0.58) * 100)}
                     onChange={(e) => {
                       const num = Number(e.target.value)
                       setFormConfig((prev) => prev ? { ...prev, threshold: num / 100 } : null)
@@ -1502,18 +1582,21 @@ export default function FaceAttendanceCameraPage() {
                     className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
                   />
                   <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                    <span>1% (Sangat Fleksibel)</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Standar Akurasi: &gt;= 90% (Toleransi 10%)</span>
-                    <span>100% (Identik Sempurna)</span>
+                    <span>40% (Sensitif)</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rekomendasi FaceNet: 55% - 62%</span>
+                    <span>85% (Ketat)</span>
                   </div>
                 </div>
 
                 {/* Range: Cooldown */}
                 <div className="space-y-3 pt-2">
                   <div className="flex justify-between items-center">
-                    <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      Jeda Cooldown Presensi Antar Scan (*Anti-Spam*)
-                    </Label>
+                    <div>
+                      <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Jeda Cooldown Presensi (*Absensi Masuk / Pulang*)
+                      </Label>
+                      <p className="text-[11px] text-slate-500">Log deteksi sistem tetap tercatat realtime (cooldown 2 detik), sedangkan status presensi masuk/pulang mengikuti durasi jeda ini.</p>
+                    </div>
                     <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-0.5">
                       {(() => {
                         const mins = currentConfig?.cooldownMinutes || 10
@@ -1926,10 +2009,35 @@ export default function FaceAttendanceCameraPage() {
                 Daftar lengkap seluruh aktivitas presensi wajah yang berhasil terverifikasi.
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => refetchLogs()} className="gap-1.5">
-                <RefreshCw className="w-3.5 h-3.5" />
-                Refresh
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Toggle Filter Hari Ini vs Semua */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setLogFilterMode('TODAY')}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    logFilterMode === 'TODAY'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Hari Ini
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilterMode('ALL')}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    logFilterMode === 'ALL'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Semua Arsip
+                </button>
+              </div>
+
+              <Button variant="outline" size="sm" onClick={() => refetchLogs()} className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300">
+                <RefreshCw className="w-3.5 h-3.5 mr-1" /> Segarkan
               </Button>
               <Button 
                 variant="outline" 
@@ -1939,20 +2047,38 @@ export default function FaceAttendanceCameraPage() {
                 className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 gap-1.5"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Reset Semua Log & Presensi DB
+                Reset Log & Presensi
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            {logsData && logsData.length === 0 ? (
+            {/* Search Bar Log */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  type="text"
+                  placeholder="Cari berdasarkan nama, NIS/NIP, atau peran..."
+                  value={logSearchQuery}
+                  onChange={(e) => setLogSearchQuery(e.target.value)}
+                  className="pl-9 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs rounded-xl"
+                />
+              </div>
+            </div>
+
+            {displayedLogs && displayedLogs.length === 0 ? (
               <div className="text-center py-12 text-slate-500 space-y-2">
                 <Camera className="w-10 h-10 mx-auto text-slate-300 stroke-1" />
-                <p className="font-medium text-slate-600">Belum ada aktivitas presensi wajah hari ini.</p>
+                <p className="font-medium text-slate-600">
+                  {logFilterMode === 'TODAY' 
+                    ? 'Belum ada aktivitas presensi wajah hari ini.' 
+                    : 'Tidak ada data log presensi yang sesuai pencarian.'}
+                </p>
                 <p className="text-xs text-slate-400">Log akan otomatis muncul saat siswa atau guru terdeteksi di depan camera dan tersinkronisasi ke basis data Supabase.</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
-                {logsData?.map((log) => (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {displayedLogs?.map((log) => (
                   <div key={log.id} className="py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/80 px-3 rounded-xl transition-colors">
                     <div className="flex items-center gap-3.5">
                       <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center border border-slate-300">
@@ -1985,7 +2111,15 @@ export default function FaceAttendanceCameraPage() {
                         }`}>
                           {log.scanType}
                         </span>
-                        <p className="text-[11px] text-slate-400 font-mono mt-0.5">{log.timestamp}</p>
+                        <p className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center justify-end gap-1.5 flex-wrap">
+                          {log.dateFormatted || log.date ? (
+                            <>
+                              <span className="text-slate-600 font-sans font-medium">{log.dateFormatted || log.date}</span>
+                              <span className="text-slate-300">•</span>
+                            </>
+                          ) : null}
+                          <span className="font-bold">{log.timestamp}</span>
+                        </p>
                       </div>
                       <Button
                         variant="ghost"
@@ -2049,13 +2183,13 @@ export default function FaceAttendanceCameraPage() {
             <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2 text-indigo-950">
               <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-800 flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-indigo-600" />
-                Tips Pengaturan Kamera Presensi:
+                Ketentuan Mutlak & Jadwal Presensi Wajah SIMASMUH:
               </h4>
-              <ul className="list-disc list-inside text-xs space-y-1 text-indigo-900/90 leading-relaxed">
-                <li>Untuk pengujian di laptop/PC tanpa CCTV, Anda dapat memilih preset <strong>Webcam Browser (Langsung)</strong> atau <strong>Webcam USB (0)</strong>.</li>
-                <li>Posisikan camera setinggi 1.6 - 1.8 meter menghadap ke lorong / gerbang masuk siswa.</li>
-                <li>Hindari posisi *backlight* (menghadap langsung ke arah sinar matahari terik).</li>
-                <li>Resolusi ideal adalah 640x480 pada 18-20 FPS untuk pemrosesan CPU yang dingin dan stabil.</li>
+              <ul className="list-disc list-inside text-xs space-y-1.5 text-indigo-900/90 leading-relaxed">
+                <li><strong>Syarat Mutlak Akurasi:</strong> Hanya wajah dengan kemiripan di atas <strong>90% (&ge; 0.90)</strong> yang tercatat ke log presensi dan tersinkronisasi ke sistem.</li>
+                <li><strong>Presensi Siswa:</strong> Aktif setiap hari kerja (<strong>Senin s.d. Jumat</strong>) pada pukul <strong>05.00 s.d. 07.30</strong> pagi untuk pencatatan Masuk. Data langsung tersinkronisasi ke rekap kehadiran untuk e-Rapor.</li>
+                <li><strong>Presensi Guru, Pegawai & Karyawan:</strong> Berlaku presensi Masuk dan Pulang (maksimal sebelum pukul <strong>18.00</strong> di setiap hari kerja). Data terhubung otomatis ke perhitungan tunjangan transport, uang makan, dan penggajian di modul Keuangan.</li>
+                <li>Posisikan camera setinggi 1.6 - 1.8 meter menghadap ke lorong / gerbang masuk dan hindari posisi *backlight*.</li>
               </ul>
             </div>
           </CardContent>

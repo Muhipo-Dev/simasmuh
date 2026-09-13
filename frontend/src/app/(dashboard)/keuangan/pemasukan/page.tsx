@@ -15,7 +15,7 @@ import {
   Wallet, Users, BarChart3, Building2, Search, Pencil, Trash2,
   Loader2, PlusCircle, CheckCircle2, TrendingUp, X, Download,
   AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, Sparkles,
-  ShieldAlert, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check, Info
+  ShieldAlert, ShieldCheck, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check, Info
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
@@ -81,18 +81,24 @@ const MONTHS = [
 ]
 
 const PAYMENT_TYPES = [
-  { value: 'SPP', label: 'SPP', desc: 'Sumbangan Pembinaan Pendidikan' },
-  { value: 'DPP', label: 'DPP', desc: 'Dana Pengembangan Akademik' },
-  { value: 'UKA', label: 'UKA', desc: 'Uang Kegiatan Akademik' },
-  { value: 'UKS', label: 'UKS', desc: 'Uang Kegiatan Siswa' },
-  { value: 'INFAQ', label: 'Infaq', desc: 'Uang Infaq Sekolah (Sukarela)' },
+  { value: 'SPP', label: 'SPP', desc: 'Sumbangan Pembinaan Pendidikan (Bulanan)' },
+  { value: 'DPP', label: 'DPP', desc: 'Dana Pengembangan Pendidikan (Tahunan)' },
+  { value: 'UIS', label: 'UIS', desc: 'Uang Infaq Sekolah' },
+  { value: 'UKA', label: 'UKA', desc: 'Uang Kegiatan Akademik (UTS/UAS/Outdoor/UTBK)' },
+  { value: 'UKS', label: 'UKS', desc: 'Uang Kegiatan Sekolah (OSIS/PHBI/Asuransi/Wisuda)' },
+  { value: 'SERAGAM', label: 'Seragam', desc: 'Biaya Seragam Sekolah (Khusus Kelas X)' },
+  { value: 'LKS', label: 'LKS', desc: 'Biaya Buku & Lembar Kerja Siswa' },
+  { value: 'INFAQ', label: 'Infaq', desc: 'Uang Infaq Sekolah (Legacy/Sukarela)' },
 ]
 
 const TYPE_COLORS: Record<string, string> = {
   SPP: 'bg-blue-50 text-blue-700 border border-blue-200',
   DPP: 'bg-purple-50 text-purple-700 border border-purple-200',
+  UIS: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
   UKA: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
   UKS: 'bg-teal-50 text-teal-700 border border-teal-200',
+  SERAGAM: 'bg-amber-50 text-amber-700 border border-amber-200',
+  LKS: 'bg-sky-50 text-sky-700 border border-sky-200',
   INFAQ: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
   AKADEMIK: 'bg-amber-50 text-amber-700 border border-amber-200',
   SEKOLAH: 'bg-rose-50 text-rose-700 border border-rose-200',
@@ -121,19 +127,28 @@ function ConfirmDialog({ open, onClose, onConfirm, loading, title, description }
 }) {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-700">
-            <AlertTriangle className="w-5 h-5" /> {title}
-          </DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} disabled={loading}>Batal</Button>
-          <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={onConfirm} disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} Hapus
+      <DialogContent className="max-w-sm w-[92vw] p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-red-700 p-5 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2.5 text-white text-base sm:text-lg font-black">
+              <div className="p-2 bg-white/15 rounded-xl backdrop-blur-md border border-white/20">
+                <AlertTriangle className="w-5 h-5 text-rose-100" />
+              </div>
+              {title}
+            </DialogTitle>
+            <DialogDescription className="text-rose-100 text-xs mt-1">
+              {description}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+        <div className="p-5 flex gap-2.5 justify-end bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800">
+          <Button variant="outline" onClick={onClose} disabled={loading} className="h-11 px-5 rounded-xl font-bold border-slate-300 dark:border-slate-700">
+            Batal
           </Button>
-        </DialogFooter>
+          <Button className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold h-11 px-5 rounded-xl shadow-md gap-2" onClick={onConfirm} disabled={loading}>
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Hapus
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   )
@@ -202,11 +217,12 @@ function TagihanModal({
     if (typeVal === 'SPP') {
       return studentProgConfig?.defaultSpp && studentProgConfig.defaultSpp > 0 ? studentProgConfig.defaultSpp : 300000
     }
-    if (typeVal === 'DPP') return publicSettings?.defaultDpp || 0
-    if (typeVal === 'UKA') return publicSettings?.defaultUka || 0
-    if (typeVal === 'UKS') return publicSettings?.defaultUks || 0
-    if (typeVal === 'INFAQ') return publicSettings?.defaultInfaq || 300000
-    if (typeVal === 'SERAGAM') return publicSettings?.defaultSeragam || 2000000
+    if (typeVal === 'DPP') return publicSettings?.defaultDpp || 3000000
+    if (typeVal === 'UIS' || typeVal === 'INFAQ') return publicSettings?.defaultInfaq || 200000
+    if (typeVal === 'UKA') return publicSettings?.defaultUka || 1200000
+    if (typeVal === 'UKS') return publicSettings?.defaultUks || 900000
+    if (typeVal === 'SERAGAM') return publicSettings?.defaultSeragam || 1300000
+    if (typeVal === 'LKS') return 0
     return 0
   }
 
@@ -221,24 +237,8 @@ function TagihanModal({
     let autoDiscountPct = 0
     let autoDiscountReason = ''
 
-    if (typeVal === 'SPP') {
-      autoAmount = getDefaultAmountForType('SPP').toString()
-    } else if (typeVal === 'DPP') {
-      const def = getDefaultAmountForType('DPP')
-      if (def > 0) autoAmount = def.toString()
-    } else if (typeVal === 'UKA') {
-      const def = getDefaultAmountForType('UKA')
-      if (def > 0) autoAmount = def.toString()
-    } else if (typeVal === 'UKS') {
-      const def = getDefaultAmountForType('UKS')
-      if (def > 0) autoAmount = def.toString()
-    } else if (typeVal === 'INFAQ') {
-      const def = getDefaultAmountForType('INFAQ')
-      if (def > 0) autoAmount = def.toString()
-    } else if (typeVal === 'SERAGAM') {
-      const def = getDefaultAmountForType('SERAGAM')
-      if (def > 0) autoAmount = def.toString()
-    }
+    const def = getDefaultAmountForType(typeVal)
+    if (def > 0) autoAmount = def.toString()
 
     if (effectiveDefaultDiscount > 0) {
       autoDiscountPct = effectiveDefaultDiscount
@@ -838,10 +838,10 @@ function TagihanModal({
           </div>
 
           {/* Daftar Tagihan */}
-          <div className="space-y-2 max-h-72 overflow-y-auto pr-0.5">
+          <div className="space-y-2.5 max-h-80 overflow-y-auto pr-0.5 custom-scrollbar">
             {filtered.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                Belum ada tagihan.
+              <div className="text-center py-8 text-slate-400 text-xs font-semibold bg-slate-50 dark:bg-slate-950 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                Tidak ada tagihan yang sesuai filter.
               </div>
             ) : filtered.map(t => {
               const paid = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)
@@ -859,27 +859,27 @@ function TagihanModal({
                 : ''
 
               return (
-                <div key={t.id} className="p-3.5 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200/80 transition-colors">
-                  <div className="flex items-start justify-between gap-4">
+                <div key={t.id} className="p-4 bg-slate-50/80 dark:bg-slate-950/70 hover:bg-slate-100/80 dark:hover:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 transition-colors">
+                  <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-600'}`}>{t.type}</span>
+                        <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-lg ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-600'}`}>{t.type}</span>
                         {t.status === 'LUNAS' ? (
-                          <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Lunas</span>
+                          <span className="text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> LUNAS</span>
                         ) : t.status === 'ANGSURAN' ? (
-                          <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 flex items-center gap-1"><Clock className="w-3 h-3" /> Angsuran ({pct}%)</span>
+                          <span className="text-xs font-black text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-800 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> ANGSURAN ({pct}%)</span>
                         ) : (
-                          <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200 flex items-center gap-1"><Clock className="w-3 h-3" /> Belum Lunas</span>
+                          <span className="text-xs font-black text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-900/60 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> BELUM LUNAS</span>
                         )}
                         {t.month && t.year && (
-                          <span className="text-xs text-slate-500 font-medium">{MONTHS.find(m => m.value === t.month!.toString())?.label} {t.year}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">{MONTHS.find(m => m.value === t.month!.toString())?.label} {t.year}</span>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        <span className="font-bold text-slate-900 text-base">{currency(t.amount)}</span>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className="font-black text-slate-900 dark:text-white text-base sm:text-lg">{currency(t.amount)}</span>
                         {dInfo?.originalAmount && dInfo.originalAmount > t.amount && (
-                          <span className="text-xs text-slate-400 line-through">
+                          <span className="text-xs text-slate-400 line-through font-semibold">
                             {currency(dInfo.originalAmount)}
                           </span>
                         )}
@@ -888,7 +888,7 @@ function TagihanModal({
                       {/* Beasiswa Badge */}
                       {dInfo && (
                         <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                             Beasiswa {dInfo.beasiswaPercentage}% ({dInfo.reason || 'Beasiswa Default Siswa'})
                           </span>
                         </div>
@@ -896,59 +896,59 @@ function TagihanModal({
 
                       {/* Progress Angsuran */}
                       {t.status !== 'LUNAS' && paid > 0 && (
-                        <div className="mt-2 space-y-1">
-                          <div className="flex justify-between text-xs text-slate-600">
-                            <span>Terbayar: <strong className="text-emerald-600">{currency(paid)}</strong></span>
-                            <span>Sisa: <strong className="text-red-600">{currency(remaining)}</strong></span>
+                        <div className="mt-2.5 space-y-1 bg-amber-500/10 p-2.5 rounded-xl border border-amber-300/40">
+                          <div className="flex justify-between text-xs font-bold">
+                            <span className="text-slate-600 dark:text-slate-400">Terbayar: <strong className="text-emerald-600 dark:text-emerald-400">{currency(paid)}</strong></span>
+                            <span className="text-slate-600 dark:text-slate-400">Sisa: <strong className="text-rose-600 dark:text-rose-400">{currency(remaining)}</strong></span>
                           </div>
-                          <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                          <div className="w-full h-2 bg-amber-200/60 dark:bg-amber-950 rounded-full overflow-hidden">
+                            <div className="h-full bg-amber-600 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
                       )}
 
                       {t.status === 'LUNAS' && t.paidDate && (
-                        <p className="text-xs text-emerald-500 mt-0.5">Dibayar: {formatDate(t.paidDate)}</p>
+                        <p className="text-xs text-emerald-600 font-bold mt-1">Lunas Pada: {formatDate(t.paidDate)}</p>
                       )}
-                      {cleanNotesText && <p className="text-xs text-slate-500 mt-0.5 truncate">{cleanNotesText}</p>}
+                      {cleanNotesText && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate italic">{cleanNotesText}</p>}
                     </div>
 
-                    <div className="flex flex-col gap-1 shrink-0">
+                    <div className="flex sm:flex-col gap-1.5 shrink-0 justify-end items-end w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60">
                       {/* Lunasi / Angsur / Batal */}
                       {t.status !== 'LUNAS' ? (
                         <button onClick={() => openPayDialog(t)}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors">
-                          <CheckCircle2 className="w-3 h-3" /> {t.status === 'ANGSURAN' ? 'Angsur / Lunasi' : 'Bayar / Angsur'}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 hover:bg-emerald-200 border border-emerald-300 dark:border-emerald-800 transition-colors shadow-xs">
+                          <Receipt className="w-3.5 h-3.5 text-emerald-600" /> {t.status === 'ANGSURAN' ? 'Angsur / Lunasi' : 'Bayar Kasir'}
                         </button>
                       ) : (
                         <button onClick={() => batalLunasiMut.mutate(t.id)} disabled={batalLunasiMut.isPending}
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors">
-                          {batalLunasiMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />} Batal
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-100 border border-slate-200 dark:border-slate-800 transition-colors">
+                          {batalLunasiMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />} Batal Lunas
                         </button>
                       )}
                       <div className="flex gap-1 justify-end">
                         {/* Set Diskon Button */}
                         {t.status === 'BELUM_LUNAS' && (
                           <button onClick={() => openDiscountModal(t.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                            className="p-2 rounded-xl text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
                             title="Set Diskon">
-                            <TrendingUp className="w-3.5 h-3.5" />
+                            <TrendingUp className="w-4 h-4" />
                           </button>
                         )}
                         {parseDiscountInfo(t.notes) && (
                           <button onClick={() => removeDiscountMut.mutate(t.id)} disabled={removeDiscountMut.isPending}
-                            className="p-1.5 rounded-lg text-amber-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            className="p-2 rounded-xl text-amber-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
                             title="Hapus Diskon">
-                            <X className="w-3.5 h-3.5" />
+                            <X className="w-4 h-4" />
                           </button>
                         )}
                         <button onClick={() => startEdit(t)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                          <Pencil className="w-3.5 h-3.5" />
+                          className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors">
+                          <Pencil className="w-4 h-4" />
                         </button>
                         <button onClick={() => setDeleteId(t.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
+                          className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors">
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -963,15 +963,17 @@ function TagihanModal({
 
       {/* MODAL BAYAR / ANGSURAN TAGIHAN */}
       <Dialog open={!!payTargetTagihan} onOpenChange={(v) => { if (!v) closePayDialog() }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-emerald-700">
-              <Receipt className="w-5 h-5 text-emerald-600" /> Pembayaran / Angsuran Tagihan
-            </DialogTitle>
-            <DialogDescription>
-              {payTargetTagihan?.type} — {student?.name}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-md w-[95vw] p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-green-700 p-5 text-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2.5 text-white text-lg font-black">
+                <Receipt className="w-5 h-5 text-emerald-200" /> Pembayaran / Angsuran Kasir
+              </DialogTitle>
+              <DialogDescription className="text-emerald-100 text-xs mt-0.5">
+                {payTargetTagihan?.type} — {student?.name}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
           {payTargetTagihan && (() => {
             const paid = payTargetTagihan.amountPaid || (payTargetTagihan.status === 'LUNAS' ? payTargetTagihan.amount : 0)
@@ -979,59 +981,59 @@ function TagihanModal({
             const isInfaq = payTargetTagihan.type.toLowerCase() === 'infaq'
 
             return (
-              <div className="space-y-4 pt-2">
-                <div className="bg-slate-50 border rounded-xl p-3 space-y-1.5 text-xs">
+              <div className="p-5 sm:p-6 space-y-4 text-slate-800 dark:text-slate-100">
+                <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Total Tagihan:</span>
-                    <span className="font-bold text-slate-800">{currency(payTargetTagihan.amount)}</span>
+                    <span className="text-slate-500 font-semibold">Total Tagihan Awal:</span>
+                    <span className="font-extrabold text-slate-900 dark:text-white">{currency(payTargetTagihan.amount)}</span>
                   </div>
                   {paid > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Sudah Terbayar:</span>
-                      <span className="font-semibold text-emerald-600">{currency(paid)}</span>
+                      <span className="text-slate-500 font-semibold">Sudah Terbayar:</span>
+                      <span className="font-black text-emerald-600 dark:text-emerald-400">{currency(paid)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm pt-1 border-t">
-                    <span className="font-semibold text-slate-700">Sisa Tagihan:</span>
-                    <span className="font-bold text-red-600">{currency(remaining)}</span>
+                  <div className="flex justify-between text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
+                    <span className="font-black text-slate-800 dark:text-slate-200">Sisa Tagihan:</span>
+                    <span className="font-black text-rose-600 dark:text-rose-400 text-base">{currency(remaining)}</span>
                   </div>
                 </div>
 
                 {/* Warning if Infaq */}
                 {isInfaq && (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 text-xs text-amber-800">
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200">
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong>Aturan Infaq:</strong> Tagihan Infaq <u>TIDAK BISA</u> diangsur. Pembayaran harus dilakukan lunas sekaligus ({currency(remaining)}).
+                      <strong>Aturan Infaq:</strong> Tagihan Infaq <u>TIDAK BISA</u> diangsur. Pembayaran harus lunas sekaligus ({currency(remaining)}).
                     </div>
                   </div>
                 )}
 
                 {/* Option Mode */}
                 <div>
-                  <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Opsi Pembayaran</Label>
+                  <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 block">Pilihan Mode</Label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => { setPayMode('LUNAS'); setPayAmountInput(remaining.toString()); }}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
+                      className={`py-2.5 px-3 rounded-xl text-xs font-black border transition-all ${
                         payMode === 'LUNAS'
-                          ? 'bg-emerald-600 text-white border-emerald-600'
-                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
                       }`}
                     >
-                      Lunas Sekaligus ({currency(remaining)})
+                      Lunas ({currency(remaining)})
                     </button>
                     <button
                       type="button"
                       disabled={isInfaq}
                       onClick={() => { setPayMode('ANGSURAN'); setPayAmountInput(''); }}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
+                      className={`py-2.5 px-3 rounded-xl text-xs font-black border transition-all ${
                         isInfaq
                           ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
                           : payMode === 'ANGSURAN'
-                          ? 'bg-amber-600 text-white border-amber-600'
-                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                          : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
                       }`}
                     >
                       Cicil / Angsur
@@ -1040,37 +1042,37 @@ function TagihanModal({
                 </div>
 
                 {/* Input Nominal */}
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700 mb-1 block">Nominal Pembayaran (Rp)</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Nominal Dibayar (Rp)</Label>
                   <Input
                     type="number"
                     placeholder="Masukkan nominal..."
                     value={payAmountInput}
                     disabled={payMode === 'LUNAS' || isInfaq}
                     onChange={(e) => setPayAmountInput(e.target.value)}
-                    className="bg-white"
+                    className="bg-white dark:bg-slate-950 font-black text-slate-900 dark:text-white h-11 rounded-xl text-sm"
                   />
                   {payMode === 'ANGSURAN' && !isInfaq && payAmountInput && (
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      Sisa setelah angsuran ini: <strong>{currency(Math.max(0, remaining - (parseFloat(payAmountInput) || 0)))}</strong>
+                    <p className="text-[11px] text-slate-500 font-semibold mt-1">
+                      Sisa setelah angsuran ini: <strong className="text-rose-600">{currency(Math.max(0, remaining - (parseFloat(payAmountInput) || 0)))}</strong>
                     </p>
                   )}
                 </div>
 
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700 mb-1 block">Catatan Pembayaran (Opsional)</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Catatan Kasir (Opsional)</Label>
                   <Input
-                    placeholder="Misal: Angsuran ke-1 / Titipan tunai"
+                    placeholder="Misal: Angsuran ke-1 Kasir Tunai"
                     value={payNotesInput}
                     onChange={(e) => setPayNotesInput(e.target.value)}
-                    className="bg-white"
+                    className="bg-white dark:bg-slate-950 text-xs h-10 rounded-xl"
                   />
                 </div>
 
-                <DialogFooter className="gap-2 pt-2">
-                  <Button variant="outline" onClick={closePayDialog}>Batal</Button>
+                <div className="flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <Button variant="outline" onClick={closePayDialog} className="flex-1 h-11 rounded-xl font-bold">Batal</Button>
                   <Button
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md"
                     disabled={!payAmountInput || parseFloat(payAmountInput) <= 0 || lunasiMut.isPending}
                     onClick={() => {
                       const amount = parseFloat(payAmountInput)
@@ -1082,9 +1084,9 @@ function TagihanModal({
                     }}
                   >
                     {lunasiMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    Proses Pembayaran
+                    Simpan Pembayaran
                   </Button>
-                </DialogFooter>
+                </div>
               </div>
             )
           })()}
@@ -1098,26 +1100,30 @@ function TagihanModal({
 
       {/* Discount Modal */}
       <Dialog open={showDiscountModal} onOpenChange={(v) => { if (!v) setShowDiscountModal(false) }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-700">
-              <TrendingUp className="w-5 h-5" /> Set Diskon Tagihan
-            </DialogTitle>
-            <DialogDescription>Pilih persentase diskon untuk tagihan ini.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
+        <DialogContent className="max-w-sm w-[95vw] p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="bg-gradient-to-r from-amber-600 to-orange-600 p-5 text-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-white text-lg font-black">
+                <TrendingUp className="w-5 h-5 text-amber-200" /> Set Diskon Tagihan
+              </DialogTitle>
+              <DialogDescription className="text-amber-100 text-xs mt-0.5">
+                Terapkan potongan diskon / beasiswa khusus tagihan.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="p-5 space-y-4">
             <div>
-              <Label className="text-sm font-semibold text-slate-700 mb-2 block">Persentase Diskon</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 block">Persentase Diskon</Label>
+              <div className="grid grid-cols-4 gap-2">
                 {[25, 50, 75, 100].map((pct) => (
                   <button
                     key={pct}
                     type="button"
                     onClick={() => setDiscountPercentage(pct as 25 | 50 | 75 | 100)}
-                    className={`px-3 py-2 rounded-lg text-sm font-bold border transition-all ${
+                    className={`py-2 rounded-xl text-xs font-black border transition-all ${
                       discountPercentage === pct
-                        ? 'bg-amber-600 text-white border-amber-600'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-amber-300'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                        : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-amber-300'
                     }`}
                   >
                     {pct}%
@@ -1126,26 +1132,26 @@ function TagihanModal({
               </div>
             </div>
             <div>
-              <Label className="text-sm font-semibold text-slate-700 mb-1 block">Alasan (Opsional)</Label>
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">Alasan (Opsional)</Label>
               <Input
                 placeholder="Misal: Beasiswa prestasi"
                 value={discountReason}
                 onChange={(e) => setDiscountReason(e.target.value)}
-                className="bg-white"
+                className="bg-white dark:bg-slate-950 text-xs h-10 rounded-xl font-medium"
               />
             </div>
+            <div className="flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <Button variant="outline" onClick={() => setShowDiscountModal(false)} className="flex-1 h-10 rounded-xl font-bold">Batal</Button>
+              <Button
+                className="flex-1 h-10 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl shadow-md"
+                disabled={discountMut.isPending}
+                onClick={() => discountMut.mutate()}
+              >
+                {discountMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Terapkan Diskon
+              </Button>
+            </div>
           </div>
-          <DialogFooter className="gap-2 pt-2">
-            <Button variant="outline" onClick={() => setShowDiscountModal(false)}>Batal</Button>
-            <Button
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-              disabled={discountMut.isPending}
-              onClick={() => discountMut.mutate()}
-            >
-              {discountMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Terapkan Diskon
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
@@ -1153,185 +1159,814 @@ function TagihanModal({
 }
 
 // ============================================================
-// TAGIHAN MASSAL MODAL
+// MODAL RILIS TAGIHAN 1 TAHUN KEDEPAN (MASSAL / PER KELAS / PER SISWA)
 // ============================================================
-function TagihanMassalModal({
+function ReleaseYearlyModal({
   open, onClose, classes }: {
   open: boolean; onClose: () => void; classes: ClassItem[]
 }) {
   const authenticatedFetch = useAuthenticatedFetch();
   const qc = useQueryClient()
-  const [form, setForm] = useState<FormState & { classId: string }>({ ...defaultForm(), classId: classes?.[0]?.id || '' })
+  
+  const [scope, setScope] = useState<'CLASS' | 'GRADE' | 'ALL'>('CLASS')
+  const [classId, setClassId] = useState(classes?.[0]?.id || '')
+  const [gradeLevel, setGradeLevel] = useState<number>(10)
+  const [startYear, setStartYear] = useState<number>(currentYear)
+  const [customAcademicYear, setCustomAcademicYear] = useState<string>(`${currentYear}/${currentYear + 1}`)
+  const [isManualAcademicYear, setIsManualAcademicYear] = useState<boolean>(false)
+  const [sppStartMonth, setSppStartMonth] = useState<number>(7) // Default Juli
+  const [sppStartYear, setSppStartYear] = useState<number>(currentYear)
+  const [notes, setNotes] = useState('')
+
+  // Component toggles & custom overrides
+  const [includeSpp, setIncludeSpp] = useState(true)
+  const [sppMonthly, setSppMonthly] = useState<number>(300000)
+
+  const [includeDpp, setIncludeDpp] = useState(true)
+  const [dppAmount, setDppAmount] = useState<number>(3000000)
+
+  const [includeUis, setIncludeUis] = useState(true)
+  const [uisAmount, setUisAmount] = useState<number>(200000)
+
+  const [includeUka, setIncludeUka] = useState(true)
+  const [ukaAmount, setUkaAmount] = useState<number>(1200000)
+
+  const [includeUks, setIncludeUks] = useState(true)
+  const [uksAmount, setUksAmount] = useState<number>(900000)
+
+  const [includeSeragam, setIncludeSeragam] = useState(false)
+  const [seragamGender, setSeragamGender] = useState<'PUTRA' | 'PUTRI' | 'ALL'>('ALL')
+  const [seragamPutraAmount, setSeragamPutraAmount] = useState<number>(1300000)
+  const [seragamPutriAmount, setSeragamPutriAmount] = useState<number>(1575000)
+
+  const [includeLks, setIncludeLks] = useState(false)
+  const [lksAmount, setLksAmount] = useState<number>(0)
+  const [lksPeriod, setLksPeriod] = useState<'SEMESTER_1' | 'SEMESTER_2' | 'TAHUNAN'>('TAHUNAN')
+
+  // State untuk Otorisasi Override Tagihan Duplikat
+  const [allowOverride, setAllowOverride] = useState(false)
+  const [overrideModalOpen, setOverrideModalOpen] = useState(false)
+  const [overridePassword, setOverridePassword] = useState('')
+  const [overrideError, setOverrideError] = useState('')
+
+  // State untuk Reset Rilis Tagihan Tahunan dengan verifikasi password
+  const [resetModalOpen, setResetModalOpen] = useState(false)
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetOnlyUnpaid, setResetOnlyUnpaid] = useState(false)
+  const [resetError, setResetError] = useState('')
 
   useEffect(() => {
-    if (classes && classes.length > 0 && !form.classId) {
-      setForm(f => ({ ...f, classId: classes[0].id }))
+    if (classes && classes.length > 0 && !classId) {
+      setClassId(classes[0].id)
     }
-  }, [classes, form.classId])
+  }, [classes, classId])
 
-  const mut = useMutation({
-    mutationFn: async () => {
-      const endpoint = form.type === 'SPP' 
-        ? '/api-backend/finance/spp/mass-input' 
-        : '/api-backend/finance/tagihan/massal';
-      
-      const payload = form.type === 'SPP' ? {
-        classId: form.classId,
-        amount: parseFloat(form.amount),
-        month: parseInt(form.month),
-        year: parseInt(form.year),
-        dueDate: form.dueDate || undefined,
-        notes: form.notes || undefined,
-      } : {
-        classId: form.classId, type: form.type, amount: parseFloat(form.amount),
-        month: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.month) : null,
-        year: ['SPP', 'DPP'].includes(form.type) ? parseInt(form.year) : null,
-        dueDate: form.dueDate || null, notes: form.notes || null,
-        discountPercentage: form.discountPercentage,
-        discountReason: form.discountReason || null,
-      };
+  // Sinkronisasi tahun awal SPP dan teks tahun ajaran saat startYear berubah (jika mode otomatis aktif)
+  useEffect(() => {
+    setSppStartYear(startYear)
+    if (!isManualAcademicYear) {
+      setCustomAcademicYear(`${startYear}/${startYear + 1}`)
+    }
+  }, [startYear, isManualAcademicYear])
 
-      const res = await authenticatedFetch(endpoint, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+  // Sinkronisasi default komponen biaya berdasarkan tingkat kelas
+  useEffect(() => {
+    if (gradeLevel === 10) {
+      setDppAmount(3000000)
+      setUksAmount(900000)
+      setIncludeSeragam(true)
+      setUkaAmount(1200000)
+      setUisAmount(150000)
+    } else if (gradeLevel === 11) {
+      setDppAmount(0)
+      setIncludeSeragam(false)
+      setUksAmount(900000)
+      setUkaAmount(1200000)
+      setUisAmount(150000)
+    } else if (gradeLevel === 12) {
+      setIncludeSeragam(false)
+      setDppAmount(0)
+      setUkaAmount(2125000)
+      setUksAmount(1500000)
+      setUisAmount(100000)
+    }
+  }, [gradeLevel])
+
+  const releaseMut = useMutation({
+    mutationFn: async (opts?: { override?: boolean; password?: string }) => {
+      const isOverrideActive = opts?.override ?? allowOverride
+      const authPass = opts?.password ?? overridePassword
+
+      const payload = {
+        academicYear: customAcademicYear || `${startYear}/${startYear + 1}`,
+        targetScope: scope === 'CLASS' ? 'CLASS' : scope === 'GRADE' ? 'GRADE' : 'ALL',
+        classId: scope === 'CLASS' ? classId : undefined,
+        gradeLevel: scope === 'GRADE' ? gradeLevel : undefined,
+        yearStart: Number(startYear),
+        sppStartMonth: Number(sppStartMonth),
+        sppStartYear: Number(sppStartYear),
+        customSppMonthly: includeSpp ? sppMonthly : 0,
+        customDpp: includeDpp ? dppAmount : 0,
+        customUis: includeUis ? uisAmount : 0,
+        customUka: includeUka ? ukaAmount : 0,
+        customUks: includeUks ? uksAmount : 0,
+        customSeragam: includeSeragam ? (seragamGender === 'PUTRI' ? seragamPutriAmount : seragamPutraAmount) : 0,
+        customLks: includeLks ? lksAmount : 0,
+        lksType: lksPeriod === 'TAHUNAN' ? 'SETAHUN' : 'SEMESTER',
+        itemsSelection: {
+          spp: includeSpp,
+          dpp: includeDpp,
+          uis: includeUis,
+          uka: includeUka,
+          uks: includeUks,
+          seragam: includeSeragam,
+          lks: includeLks,
+        },
+        allowOverrideDuplicates: isOverrideActive,
+        authorizationPassword: isOverrideActive ? authPass : undefined,
+      }
+
+      const res = await authenticatedFetch('/api-backend/finance/tagihan/release-yearly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error('Gagal membuat tagihan massal')
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal merilis paket tagihan tahunan')
+      }
       return res.json()
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['finance-students'] }); onClose() },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      setOverrideModalOpen(false)
+      setOverridePassword('')
+      setOverrideError('')
+      
+      const isDuplicatedDetected = data.duplicatesDetected > 0
+      Swal.fire({
+        title: isDuplicatedDetected ? 'Rilis Selesai (Proteksi Aktif)' : 'Berhasil Rilis Tagihan 1 Tahun!',
+        text: data.message || `Berhasil memproses tagihan tahun ajaran siswa.`,
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+      onClose()
+    },
+    onError: (err: any) => {
+      if (overrideModalOpen) {
+        setOverrideError(err.message || 'Password otorisasi salah atau gagal')
+      } else {
+        Swal.fire('Gagal Merilis Tagihan', err.message || 'Terjadi kesalahan sistem', 'error')
+      }
+    },
   })
 
+  // Mutasi Reset Rilis Tagihan Tahunan
+  const resetYearlyMut = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        scope,
+        classId: scope === 'CLASS' ? classId : undefined,
+        gradeLevel: scope === 'GRADE' ? gradeLevel : undefined,
+        startYear,
+        password: resetPassword,
+        onlyUnpaid: resetOnlyUnpaid,
+      }
+
+      const res = await authenticatedFetch('/api-backend/finance/tagihan/reset-yearly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Password otorisasi salah atau gagal mereset rilis tagihan')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      setResetModalOpen(false)
+      setResetPassword('')
+      setResetError('')
+      Swal.fire({
+        title: 'Reset Tagihan Berhasil!',
+        text: data.message || `Berhasil mereset tagihan tahunan siswa.`,
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+      onClose()
+    },
+    onError: (err: any) => {
+      setResetError(err.message || 'Password otorisasi tidak valid')
+    },
+  })
+
+  // Total estimasi per siswa
+  const totalPerTahun = useMemo(() => {
+    let tot = 0
+    if (includeSpp) tot += (sppMonthly * 12)
+    if (includeDpp) tot += dppAmount
+    if (includeUis) tot += uisAmount
+    if (includeUka) tot += ukaAmount
+    if (includeUks) tot += uksAmount
+    if (includeSeragam) tot += seragamPutraAmount // Estimasi default putra
+    if (includeLks) tot += lksAmount
+    return tot
+  }, [includeSpp, sppMonthly, includeDpp, dppAmount, includeUis, uisAmount, includeUka, ukaAmount, includeUks, uksAmount, includeSeragam, seragamPutraAmount, includeLks, lksAmount])
+
+  // Label rentang SPP 12 Bulan yang akan dirilis
+  const sppRangePreview = useMemo(() => {
+    const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+    let endM = (sppStartMonth + 11) % 12
+    if (endM === 0) endM = 12
+    const endY = sppStartYear + Math.floor((sppStartMonth + 11 - 1) / 12)
+    return `${monthNames[sppStartMonth]} ${sppStartYear} - ${monthNames[endM]} ${endY}`
+  }, [sppStartMonth, sppStartYear])
+
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-xl sm:max-w-2xl lg:max-w-3xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-        <div className="shrink-0 bg-gradient-to-r from-purple-700 via-indigo-700 to-violet-600 p-5 sm:p-6 text-white shadow-sm">
+      <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[92vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="shrink-0 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 p-5 sm:p-6 text-white shadow-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2.5 text-white text-lg sm:text-xl font-extrabold">
               <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
-                <Layers className="w-5 h-5 text-purple-200" />
+                <Layers className="w-5 h-5 text-blue-200" />
               </div>
-              Tagihan Massal per Kelas
+              Rilis Tagihan 1 Tahun ({sppRangePreview})
             </DialogTitle>
-            <DialogDescription className="text-purple-100 text-xs sm:text-sm mt-1">
-              Buat tagihan sekaligus untuk semua siswa dalam satu kelas dengan opsi diskon otomatis.
+            <DialogDescription className="text-blue-100 text-xs sm:text-sm mt-1">
+              Rilis tagihan 12 bulan SPP ({sppRangePreview}), DPP tahunan, UIS, UKA, UKS, Seragam, & LKS ({customAcademicYear ? `TA ${customAcademicYear}` : `Tahun ${startYear}`}).
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-5 custom-scrollbar">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Pilih Kelas</Label>
-            <Select value={form.classId} onValueChange={(v) => setForm(f => ({ ...f, classId: v ?? f.classId }))}>
-              <SelectTrigger className="bg-white dark:bg-slate-950 h-11 font-semibold rounded-xl border-slate-200 dark:border-slate-800"><SelectValue placeholder="Pilih kelas..." /></SelectTrigger>
-              <SelectContent>
-                {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 custom-scrollbar text-slate-800 dark:text-slate-100">
+          {/* Target & Scope */}
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+            <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+              1. Sasaran & Periode Tagihan
+            </Label>
 
-          <div className="space-y-2">
-            <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Jenis Tagihan</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-              {PAYMENT_TYPES.map(t => (
-                <button 
-                  key={t.value} 
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, type: t.value }))}
-                  className={`h-11 px-3 rounded-xl text-xs sm:text-sm font-extrabold border transition-all flex items-center justify-center ${
-                    form.type === t.value 
-                      ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-500/20' 
-                      : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-700'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              {PAYMENT_TYPES.find(t => t.value === form.type)?.desc}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Nominal (Rp)</Label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">Rp</span>
-                <Input 
-                  type="number" 
-                  placeholder="Bebas / Default sistem" 
-                  value={form.amount}
-                  onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} 
-                  className="pl-9 h-11 bg-white dark:bg-slate-950 font-bold rounded-xl border-slate-200 dark:border-slate-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                />
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium">Kosongkan untuk nominal default sistem.</p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Tagihan Untuk Periode</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Select value={form.month} onValueChange={(v) => setForm(f => ({ ...f, month: v ?? f.month }))}>
-                  <SelectTrigger className="bg-white dark:bg-slate-950 h-11 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800"><SelectValue placeholder="Bulan" /></SelectTrigger>
-                  <SelectContent>{MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
-                </Select>
-                <Select value={form.year} onValueChange={(v) => setForm(f => ({ ...f, year: v ?? f.year }))}>
-                  <SelectTrigger className="bg-white dark:bg-slate-950 h-11 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800"><SelectValue placeholder="Tahun" /></SelectTrigger>
-                  <SelectContent>{YEARS.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {/* Cakupan Target: Hanya Per Kelas atau Per Angkatan */}
+              <div className="flex flex-col justify-between">
+                <div className="h-5 flex items-center mb-1.5">
+                  <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Cakupan Sasaran</Label>
+                </div>
+                <Select value={scope} onValueChange={(v: any) => setScope(v)}>
+                  <SelectTrigger className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl">
+                    <SelectValue>
+                      {scope === 'CLASS' ? 'Per Kelas Spesifik' : 'Per Angkatan / Tingkat'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CLASS">Per Kelas Spesifik</SelectItem>
+                    <SelectItem value="GRADE">Per Angkatan / Tingkat</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
+
+              {/* Pilihan Kelas / Angkatan */}
+              {scope === 'CLASS' ? (
+                <div className="flex flex-col justify-between">
+                  <div className="h-5 flex items-center mb-1.5">
+                    <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Pilih Kelas</Label>
+                  </div>
+                  <Select value={classId} onValueChange={(v) => { if (v) setClassId(v) }}>
+                    <SelectTrigger className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl">
+                      <SelectValue placeholder="Pilih kelas...">
+                        {classes.find(c => c.id === classId)?.name || 'Pilih kelas...'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="flex flex-col justify-between">
+                  <div className="h-5 flex items-center mb-1.5">
+                    <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Tingkat / Angkatan</Label>
+                  </div>
+                  <Select value={gradeLevel.toString()} onValueChange={(v) => { if (v) setGradeLevel(parseInt(v)) }}>
+                    <SelectTrigger className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl">
+                      <SelectValue>
+                        {gradeLevel === 10 ? 'Kelas 10 (Fase E)' : gradeLevel === 11 ? 'Kelas 11 (Fase F)' : 'Kelas 12 (Tingkat Akhir)'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">Kelas 10 (Fase E)</SelectItem>
+                      <SelectItem value="11">Kelas 11 (Fase F)</SelectItem>
+                      <SelectItem value="12">Kelas 12 (Tingkat Akhir)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Bulan & Tahun Awal Mulai Tagihan */}
+              <div className="flex flex-col justify-between">
+                <div className="h-5 flex items-center mb-1.5">
+                  <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Bulan Awal Mulai</Label>
+                </div>
+                <Select value={sppStartMonth.toString()} onValueChange={(v) => setSppStartMonth(Number(v))}>
+                  <SelectTrigger className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl">
+                    <SelectValue>
+                      {[
+                        '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                        'Juli (Awal TA)', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+                      ][sppStartMonth] || `Bulan ${sppStartMonth}`}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Januari</SelectItem>
+                    <SelectItem value="2">Februari</SelectItem>
+                    <SelectItem value="3">Maret</SelectItem>
+                    <SelectItem value="4">April</SelectItem>
+                    <SelectItem value="5">Mei</SelectItem>
+                    <SelectItem value="6">Juni</SelectItem>
+                    <SelectItem value="7">Juli (Awal TA)</SelectItem>
+                    <SelectItem value="8">Agustus</SelectItem>
+                    <SelectItem value="9">September</SelectItem>
+                    <SelectItem value="10">Oktober</SelectItem>
+                    <SelectItem value="11">November</SelectItem>
+                    <SelectItem value="12">Desember</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tahun Ajaran / Periode */}
+              <div className="flex flex-col justify-between">
+                <div className="h-5 flex items-center justify-between mb-1.5">
+                  <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Tahun Ajaran / Awal</Label>
+                  <button
+                    type="button"
+                    onClick={() => setIsManualAcademicYear(!isManualAcademicYear)}
+                    className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    {isManualAcademicYear ? 'Pilih Tahun' : 'Ketik Manual'}
+                  </button>
+                </div>
+                {isManualAcademicYear ? (
+                  <Input
+                    type="text"
+                    value={customAcademicYear}
+                    onChange={(e) => setCustomAcademicYear(e.target.value)}
+                    placeholder="Misal: 2026/2027"
+                    className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl"
+                  />
+                ) : (
+                  <Select value={startYear.toString()} onValueChange={(v) => {
+                    if (v) {
+                      const y = parseInt(v)
+                      setStartYear(y)
+                      setCustomAcademicYear(`${y}/${y + 1}`)
+                    }
+                  }}>
+                    <SelectTrigger className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl">
+                      <SelectValue>
+                        {`${startYear} / ${startYear + 1}`}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 9 }, (_, i) => currentYear - 3 + i).map((yr) => (
+                        <SelectItem key={yr} value={yr.toString()}>{yr} / {yr + 1}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
+
+            {/* Banner Periode Terpilih */}
+            <div className="p-3 bg-blue-50/80 dark:bg-blue-950/40 rounded-xl border border-blue-200/80 dark:border-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <span className="text-slate-600 dark:text-slate-300">
+                Rentang Paket 12 Bulan: <strong className="font-extrabold text-blue-700 dark:text-blue-300">{sppRangePreview}</strong>
+              </span>
+              <span className="font-bold text-slate-500 dark:text-slate-400 text-[11px]">
+                Tahun Ajaran: <span className="text-blue-600 dark:text-blue-400 font-extrabold">{customAcademicYear || `${startYear}/${startYear + 1}`}</span>
+              </span>
             </div>
           </div>
 
-          {/* Diskon Massal */}
-          <div className="bg-purple-50/60 border border-purple-200/80 rounded-xl p-3 space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-purple-900">
-              <TrendingUp className="w-4 h-4 text-purple-600" /> Diskon Massal (Server Calculated)
+          {/* Rincian Komponen Biaya 1 Tahun */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                2. Komponen & Tarif Biaya Resmi 1 Tahun
+              </Label>
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                Total Estimasi Paket: {currency(totalPerTahun)} / siswa
+              </span>
             </div>
-            <div className="grid grid-cols-5 gap-1.5">
-              {[0, 25, 50, 75, 100].map((pct) => (
-                <button
-                  key={pct}
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, discountPercentage: pct }))}
-                  className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                    form.discountPercentage === pct
-                      ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-purple-300'
-                  }`}
-                >
-                  {pct === 0 ? 'Tanpa Diskon' : `${pct}%`}
-                </button>
-              ))}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {/* SPP Bulanan x 12 */}
+              <div className={`p-4 rounded-2xl border transition-all space-y-3 ${includeSpp ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+                <div className="flex justify-between items-center">
+                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-blue-900 dark:text-blue-300">
+                    <input type="checkbox" checked={includeSpp} onChange={(e) => setIncludeSpp(e.target.checked)} className="rounded text-blue-600" />
+                    SPP (12 Bulan Sekaligus)
+                  </label>
+                  <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Bulanan</span>
+                </div>
+                
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 mb-1 block">Tarif Per Bulan (Default)</span>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                    <Input
+                      type="number"
+                      disabled={!includeSpp}
+                      value={sppMonthly || ''}
+                      onChange={(e) => setSppMonthly(Number(e.target.value))}
+                      className="pl-8 h-9 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-blue-100 dark:border-blue-900/60">
+                  <p className="text-[11px] font-medium text-blue-700 dark:text-blue-300 leading-tight">
+                    Periode: <strong className="font-bold">{sppRangePreview}</strong> (12 Bulan = {currency(sppMonthly * 12)})
+                  </p>
+                </div>
+              </div>
+
+              {/* DPP Tahunan */}
+              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeDpp ? 'bg-purple-50/60 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+                <div className="flex justify-between items-center">
+                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-purple-900 dark:text-purple-300">
+                    <input type="checkbox" checked={includeDpp} onChange={(e) => setIncludeDpp(e.target.checked)} className="rounded text-purple-600" />
+                    DPP (Dana Pengembangan)
+                  </label>
+                  <span className="text-[10px] font-black bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Setahun</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                  <Input
+                    type="number"
+                    disabled={!includeDpp}
+                    value={dppAmount || ''}
+                    onChange={(e) => setDppAmount(Number(e.target.value))}
+                    className="pl-8 h-10 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500">Wajib tuntas dalam 1 tahun ajaran.</p>
+              </div>
+
+              {/* UIS (Infaq Sekolah) */}
+              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeUis ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+                <div className="flex justify-between items-center">
+                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-emerald-900 dark:text-emerald-300">
+                    <input type="checkbox" checked={includeUis} onChange={(e) => setIncludeUis(e.target.checked)} className="rounded text-emerald-600" />
+                    UIS (Uang Infaq Sekolah)
+                  </label>
+                  <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">Setahun</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                  <Input
+                    type="number"
+                    disabled={!includeUis}
+                    value={uisAmount || ''}
+                    onChange={(e) => setUisAmount(Number(e.target.value))}
+                    className="pl-8 h-10 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500">Infaq sarana & prasarana sekolah.</p>
+              </div>
+
+              {/* UKA (Kegiatan Akademik) */}
+              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeUka ? 'bg-indigo-50/60 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+                <div className="flex justify-between items-center">
+                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-indigo-900 dark:text-indigo-300">
+                    <input type="checkbox" checked={includeUka} onChange={(e) => setIncludeUka(e.target.checked)} className="rounded text-indigo-600" />
+                    UKA (Kegiatan Akademik)
+                  </label>
+                  <span className="text-[10px] font-black bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">UTS/UAS/Outdoor</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                  <Input
+                    type="number"
+                    disabled={!includeUka}
+                    value={ukaAmount || ''}
+                    onChange={(e) => setUkaAmount(Number(e.target.value))}
+                    className="pl-8 h-10 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500">UTS, UAS, Outdoor, Fortasi, HW, UTBK.</p>
+              </div>
+
+              {/* UKS (Kegiatan Sekolah) */}
+              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeUks ? 'bg-teal-50/60 dark:bg-teal-950/30 border-teal-200 dark:border-teal-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+                <div className="flex justify-between items-center">
+                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-teal-900 dark:text-teal-300">
+                    <input type="checkbox" checked={includeUks} onChange={(e) => setIncludeUks(e.target.checked)} className="rounded text-teal-600" />
+                    UKS (Kegiatan Sekolah)
+                  </label>
+                  <span className="text-[10px] font-black bg-teal-100 text-teal-800 px-2 py-0.5 rounded">OSIS/PHBI/Wisuda</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                  <Input
+                    type="number"
+                    disabled={!includeUks}
+                    value={uksAmount || ''}
+                    onChange={(e) => setUksAmount(Number(e.target.value))}
+                    className="pl-8 h-10 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500">OSIS, PHBI, Asuransi, Kalender, Wisuda.</p>
+              </div>
+
+              {/* Seragam (Khusus Kls 10) */}
+              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeSeragam ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+                <div className="flex justify-between items-center">
+                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-amber-900 dark:text-amber-300">
+                    <input type="checkbox" checked={includeSeragam} onChange={(e) => setIncludeSeragam(e.target.checked)} className="rounded text-amber-600" />
+                    Seragam (Khusus Kelas X)
+                  </label>
+                  <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Paket Masuk</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-500">Putra (Rp)</span>
+                    <Input
+                      type="number"
+                      disabled={!includeSeragam}
+                      value={seragamPutraAmount || ''}
+                      onChange={(e) => setSeragamPutraAmount(Number(e.target.value))}
+                      className="h-9 text-xs font-bold bg-white dark:bg-slate-950 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-500">Putri (Rp)</span>
+                    <Input
+                      type="number"
+                      disabled={!includeSeragam}
+                      value={seragamPutriAmount || ''}
+                      onChange={(e) => setSeragamPutriAmount(Number(e.target.value))}
+                      className="h-9 text-xs font-bold bg-white dark:bg-slate-950 rounded-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* LKS / Buku */}
+              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeLks ? 'bg-sky-50/60 dark:bg-sky-950/30 border-sky-200 dark:border-sky-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+                <div className="flex justify-between items-center">
+                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-sky-900 dark:text-sky-300">
+                    <input type="checkbox" checked={includeLks} onChange={(e) => setIncludeLks(e.target.checked)} className="rounded text-sky-600" />
+                    LKS & Buku Modul
+                  </label>
+                  <span className="text-[10px] font-black bg-sky-100 text-sky-800 px-2 py-0.5 rounded">Fleksibel</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                  <Input
+                    type="number"
+                    disabled={!includeLks}
+                    value={lksAmount || ''}
+                    placeholder="Nominal LKS..."
+                    onChange={(e) => setLksAmount(Number(e.target.value))}
+                    className="pl-8 h-10 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Select disabled={!includeLks} value={lksPeriod} onValueChange={(v: any) => setLksPeriod(v)}>
+                    <SelectTrigger className="bg-white dark:bg-slate-950 h-8 text-[11px] font-bold rounded-lg"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TAHUNAN">Setahun Penuh</SelectItem>
+                      <SelectItem value="SEMESTER_1">Semester Ganjil</SelectItem>
+                      <SelectItem value="SEMESTER_2">Semester Genap</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
-            {form.discountPercentage > 0 && (
+          </div>
+
+          {/* Catatan & Proteksi Duplikasi */}
+          <div className="space-y-3">
+            <div className="p-3.5 bg-blue-50/70 dark:bg-blue-950/40 rounded-2xl border border-blue-200 dark:border-blue-900 flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div className="text-xs text-blue-900 dark:text-blue-200 space-y-1">
+                <p className="font-extrabold text-blue-950 dark:text-blue-100">Proteksi Anti-Duplikasi Otomatis Aktif</p>
+                <p className="leading-relaxed text-[11px] text-blue-800 dark:text-blue-300">
+                  Sistem otomatis mendeteksi tagihan yang sudah ada sebelumnya. Tagihan yang sudah terbit atau lunas <strong>tidak akan diduplikasi/ditimpa</strong> dan langsung dilewati (skip).
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">Catatan Rilis (Opsional)</Label>
               <Input
-                placeholder="Alasan Diskon Massal (Misal: Program Khusus / Beasiswa)"
-                value={form.discountReason}
-                onChange={(e) => setForm(f => ({ ...f, discountReason: e.target.value }))}
-                className="bg-white text-xs"
+                placeholder="Misal: Rilis Tagihan Resmi Ajaran 2025/2026"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="bg-white dark:bg-slate-950 text-xs h-10 rounded-xl"
               />
-            )}
-          </div>
-
-          <div>
-            <Label className="text-sm font-semibold text-slate-700 mb-1 block">Catatan (opsional)</Label>
-            <Textarea placeholder="Catatan..." rows={2} value={form.notes}
-              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="bg-white resize-none" />
+            </div>
           </div>
         </div>
 
-        <div className="shrink-0 p-4 sm:p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
-          <Button variant="outline" onClick={onClose} className="h-10 rounded-xl font-semibold border-slate-300 dark:border-slate-700">Batal</Button>
-          <Button className="h-10 bg-purple-600 hover:bg-purple-700 text-white font-extrabold rounded-xl shadow-md gap-2"
-            disabled={!form.classId || mut.isPending}
-            onClick={() => mut.mutate()}>
-            {mut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
-            Buat Tagihan Massal
+        <div className="shrink-0 p-4 sm:p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => { setResetModalOpen(true); setResetPassword(''); setResetError(''); }}
+            className="h-11 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl font-extrabold gap-2 text-xs"
+          >
+            <RotateCcw className="w-4 h-4 text-rose-600" />
+            Reset Rilis Tagihan Tahunan
           </Button>
+
+          <div className="flex flex-col-reverse sm:flex-row gap-2.5">
+            <Button variant="outline" onClick={onClose} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+              Batal
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setOverrideModalOpen(true); setOverridePassword(''); setOverrideError(''); }}
+              className="h-11 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded-xl font-extrabold gap-2 text-xs"
+            >
+              <Lock className="w-4 h-4 text-amber-600" />
+              Otorisasi Perbarui Duplikat
+            </Button>
+            <Button
+              className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md gap-2"
+              disabled={releaseMut.isPending}
+              onClick={() => releaseMut.mutate({ override: false })}
+            >
+              {releaseMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              Rilis Tagihan 1 Tahun Sekarang
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* MODAL OTORISASI PERBARUI DUPLIKAT TAGIHAN */}
+    <Dialog open={overrideModalOpen} onOpenChange={(v) => { if (!v) { setOverrideModalOpen(false); setOverridePassword(''); setOverrideError(''); } }}>
+      <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="shrink-0 bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 p-6 text-white shadow-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2.5 text-white text-lg font-extrabold">
+              <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
+                <Lock className="w-5 h-5 text-amber-200" />
+              </div>
+              Otorisasi Pembaruan Tagihan Duplikat
+            </DialogTitle>
+            <DialogDescription className="text-amber-100 text-xs mt-1">
+              Perbarui tagihan yang sudah ada sebelumnya dengan tarif baru (khusus tagihan yang belum lunas).
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); releaseMut.mutate({ override: true, password: overridePassword }); }} className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+            <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-2xl text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+              <p className="font-extrabold flex items-center gap-1.5 text-sm text-amber-800 dark:text-amber-300">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                Ketentuan Otorisasi Pembaruan
+              </p>
+              <p className="leading-relaxed">
+                Tindakan ini akan <strong>menyesuaikan nominal tarif baru</strong> pada tagihan siswa yang terdeteksi duplikat, namun <u>tagihan yang sudah LUNAS tetap dilindungi</u> dan tidak akan diubah.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                Password Akun Keuangan <span className="text-rose-500">*</span>
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  type="password"
+                  placeholder="Masukkan password akun keuangan Anda..."
+                  value={overridePassword}
+                  onChange={(e) => { setOverridePassword(e.target.value); setOverrideError(''); }}
+                  className="pl-9 h-11 bg-white dark:bg-slate-950 font-bold rounded-xl border-slate-200 dark:border-slate-800"
+                  required
+                />
+              </div>
+              {overrideError && (
+                <p className="text-xs font-bold text-rose-600 dark:text-rose-400 mt-1">{overrideError}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="shrink-0 p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+            <Button type="button" variant="outline" onClick={() => setOverrideModalOpen(false)} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              disabled={releaseMut.isPending || !overridePassword}
+              className="h-11 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl shadow-md gap-2"
+            >
+              {releaseMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              Setujui & Perbarui Tagihan
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+
+    {/* MODAL OTORISASI RESET RILIS TAGIHAN TAHUNAN */}
+    <Dialog open={resetModalOpen} onOpenChange={(v) => { if (!v) { setResetModalOpen(false); setResetPassword(''); setResetError(''); } }}>
+      <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="shrink-0 bg-gradient-to-r from-rose-700 via-red-700 to-rose-900 p-6 text-white shadow-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2.5 text-white text-lg font-extrabold">
+              <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
+                <ShieldAlert className="w-5 h-5 text-rose-200" />
+              </div>
+              Otorisasi Reset Rilis Tagihan Tahunan
+            </DialogTitle>
+            <DialogDescription className="text-rose-100 text-xs mt-1">
+              Hapus seluruh tagihan 1 tahun ajaran ({startYear}/{startYear + 1}) sesuai sasaran yang dipilih.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); resetYearlyMut.mutate(); }} className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl text-xs text-rose-900 dark:text-rose-200 space-y-1.5">
+              <p className="font-extrabold flex items-center gap-1.5 text-sm text-rose-800 dark:text-rose-300">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                Sasaran Reset Tagihan
+              </p>
+              <p className="leading-relaxed">
+                Tindakan ini akan menghapus tagihan tahun ajaran <strong>{startYear}/{startYear + 1}</strong> untuk:{' '}
+                <strong>
+                  {scope === 'CLASS'
+                    ? `Kelas ${classes.find(c => c.id === classId)?.name || classId}`
+                    : scope === 'GRADE'
+                    ? `Tingkat / Angkatan Kelas ${gradeLevel}`
+                    : 'Seluruh Siswa Aktif'}
+                </strong>.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+              <input
+                type="checkbox"
+                id="resetOnlyUnpaid"
+                checked={resetOnlyUnpaid}
+                onChange={(e) => setResetOnlyUnpaid(e.target.checked)}
+                className="rounded text-rose-600 w-4 h-4 cursor-pointer"
+              />
+              <label htmlFor="resetOnlyUnpaid" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                Hanya reset tagihan yang <u>BELUM LUNAS</u> (Lindungi tagihan yang sudah lunas).
+              </label>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                Password Akun Keuangan <span className="text-rose-500">*</span>
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  type="password"
+                  placeholder="Masukkan password akun keuangan Anda..."
+                  value={resetPassword}
+                  onChange={(e) => { setResetPassword(e.target.value); setResetError(''); }}
+                  className="pl-9 h-11 bg-white dark:bg-slate-950 font-bold rounded-xl border-slate-200 dark:border-slate-800"
+                  required
+                />
+              </div>
+              {resetError && (
+                <p className="text-xs font-bold text-rose-600 dark:text-rose-400 mt-1">{resetError}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="shrink-0 p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
+            <Button type="button" variant="outline" onClick={() => setResetModalOpen(false)} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              disabled={resetYearlyMut.isPending || !resetPassword}
+              className="h-11 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl shadow-md gap-2"
+            >
+              {resetYearlyMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+              Konfirmasi & Reset Tagihan
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
 
@@ -1339,14 +1974,19 @@ function TagihanMassalModal({
 // MANUAL CASH PAYMENT MODAL (Pembayaran Tunai Kasir Keuangan)
 // ============================================================
 function ManualCashPaymentModal({
-  open, onClose, students }: {
-  open: boolean; onClose: () => void; students: StudentSummary[]
+  open, onClose, students, classes = [] }: {
+  open: boolean; onClose: () => void; students: StudentSummary[]; classes?: ClassItem[]
 }) {
   const authenticatedFetch = useAuthenticatedFetch()
   const authenticatedQuery = useAuthenticatedQuery()
   const qc = useQueryClient()
 
+  // Filter States
   const [studentSearch, setStudentSearch] = useState('')
+  const [filterKelas, setFilterKelas] = useState('')
+  const [filterProgram, setFilterProgram] = useState('')
+  const [filterStatusTunggakan, setFilterStatusTunggakan] = useState<'ALL' | 'HANYA_TUNGGAKAN' | 'LUNAS'>('ALL')
+
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [selectedTagihanId, setSelectedTagihanId] = useState('')
   const [cashAmount, setCashAmount] = useState('')
@@ -1363,16 +2003,54 @@ function ManualCashPaymentModal({
 
   const selectedStudent = students.find(s => s.id === selectedStudentId)
 
+  // Ekstrak Program Unik dari Data Siswa
+  const uniquePrograms = useMemo(() => {
+    const list = students.map(s => s.program).filter(Boolean) as string[]
+    return [...new Set(list)].sort()
+  }, [students])
+
+  // Ekstrak Kelas Unik dari Data Siswa / Classes
+  const uniqueClasses = useMemo(() => {
+    if (classes && classes.length > 0) {
+      return classes.map(c => c.name).sort()
+    }
+    const list = students.map(s => s.className).filter(Boolean)
+    return [...new Set(list)].sort()
+  }, [students, classes])
+
   const filteredStudents = useMemo(() => {
-    if (!studentSearch.trim()) return []
-    const q = studentSearch.toLowerCase().trim()
-    return students.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      s.nisn.includes(q) ||
-      s.nis.includes(q) ||
-      s.className.toLowerCase().includes(q)
-    )
-  }, [students, studentSearch])
+    let res = students
+
+    // Filter Kelas
+    if (filterKelas) {
+      res = res.filter(s => s.className === filterKelas)
+    }
+
+    // Filter Program
+    if (filterProgram) {
+      res = res.filter(s => s.program?.toLowerCase() === filterProgram.toLowerCase())
+    }
+
+    // Filter Status Tunggakan
+    if (filterStatusTunggakan === 'HANYA_TUNGGAKAN') {
+      res = res.filter(s => s.belumLunasCount > 0 || (s.totalTagihan - s.totalLunas) > 0)
+    } else if (filterStatusTunggakan === 'LUNAS') {
+      res = res.filter(s => s.belumLunasCount === 0 && (s.totalTagihan - s.totalLunas) <= 0)
+    }
+
+    // Search query
+    if (studentSearch.trim()) {
+      const q = studentSearch.toLowerCase().trim()
+      res = res.filter(s =>
+        s.name.toLowerCase().includes(q) ||
+        s.nisn.includes(q) ||
+        s.nis.includes(q) ||
+        s.className.toLowerCase().includes(q)
+      )
+    }
+
+    return res
+  }, [students, studentSearch, filterKelas, filterProgram, filterStatusTunggakan])
 
   const activeTagihans = (studentDetail?.tagihans || []).filter(t => t.status !== 'LUNAS')
   const selectedTagihan = activeTagihans.find(t => t.id === selectedTagihanId)
@@ -1438,7 +2116,11 @@ function ManualCashPaymentModal({
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['finance-students'] })
-      qc.invalidateQueries({ queryKey: ['student-tagihan', selectedStudentId] })
+      qc.invalidateQueries({ queryKey: ['student-tagihan'] })
+      qc.invalidateQueries({ queryKey: ['student-tagihan-cash'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      qc.invalidateQueries({ queryKey: ['quarterly-rekap'] })
+      qc.invalidateQueries({ queryKey: ['payment-proofs'] })
       Swal.fire({
         title: data?.isLunas ? 'Pelunasan Berhasil!' : 'Angsuran Berhasil Dicatat!',
         text: data?.message || 'Pembayaran tunai berhasil dicatat.',
@@ -1458,55 +2140,78 @@ function ManualCashPaymentModal({
     }
   })
 
+  const resetAllFilters = () => {
+    setStudentSearch('')
+    setFilterKelas('')
+    setFilterProgram('')
+    setFilterStatusTunggakan('ALL')
+  }
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+      <DialogContent className="max-w-[96vw] md:max-w-3xl lg:max-w-4xl w-full max-h-[92vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
         {/* Fixed Header Banner */}
-        <div className="shrink-0 bg-gradient-to-r from-emerald-700 via-teal-700 to-green-700 p-5 sm:p-6 text-white shadow-sm">
+        <div className="shrink-0 bg-gradient-to-r from-emerald-700 via-teal-700 to-green-700 p-4 sm:p-5 text-white shadow-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-white text-lg sm:text-xl font-extrabold">
-              <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
-                <Wallet className="w-5 h-5 text-emerald-200" />
+            <DialogTitle className="flex items-center gap-2.5 text-white text-base sm:text-lg font-black">
+              <div className="p-1.5 sm:p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
+                <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-200" />
               </div>
               Input Pembayaran Tunai (Kasir Keuangan)
             </DialogTitle>
-            <DialogDescription className="text-emerald-100 text-xs sm:text-sm mt-1">
-              Pencatatan langsung pembayaran tunai siswa di loket kasir keuangan dengan kalkulasi diskon otomatis dan pratinjau kuitansi.
+            <DialogDescription className="text-emerald-100 text-[11px] sm:text-xs mt-0.5">
+              Pencatatan langsung pembayaran tunai siswa di loket kasir keuangan.
             </DialogDescription>
           </DialogHeader>
         </div>
 
         {/* Scrollable Body Content */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 custom-scrollbar">
-          {/* STEP 1: PENCARIAN & PROFIL SISWA */}
-          <div className="space-y-3">
-            <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-              1. Pilih Siswa Pembayar
-            </Label>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5 custom-scrollbar text-slate-800 dark:text-slate-100">
+          {/* STEP 1: PENCARIAN & FILTER SISWA */}
+          <div className="space-y-2.5 bg-slate-50 dark:bg-slate-800/40 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                1. Pilih Siswa Pembayar
+              </Label>
+              {(filterKelas || filterProgram || filterStatusTunggakan !== 'ALL' || studentSearch) && !selectedStudent && (
+                <button
+                  type="button"
+                  onClick={resetAllFilters}
+                  className="text-[11px] font-bold text-rose-600 hover:text-rose-700 dark:text-rose-400 flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" /> Reset Filter
+                </button>
+              )}
+            </div>
             
             {selectedStudent ? (
-              <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-                <div className="flex items-center gap-3.5">
-                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-extrabold shrink-0 ${selectedStudent.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+              <div className="bg-emerald-50/90 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-extrabold shrink-0 ${selectedStudent.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
                     {selectedStudent.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-extrabold text-slate-900 dark:text-white text-base">{selectedStudent.name}</p>
-                      <span className="px-2.5 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold border border-emerald-200 dark:border-emerald-800">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-black text-slate-900 dark:text-white text-sm sm:text-base">{selectedStudent.name}</p>
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[11px] font-black border border-emerald-200 dark:border-emerald-800">
                         {selectedStudent.className}
                       </span>
+                      {selectedStudent.program && (
+                        <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 text-[11px] font-black border border-blue-200 dark:border-blue-800">
+                          {selectedStudent.program}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
                       NISN: {selectedStudent.nisn} · NIS: {selectedStudent.nis}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-emerald-200/60">
-                  <div className="text-right">
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">Total Sisa Tunggakan</p>
-                    <p className="font-extrabold text-red-600 dark:text-red-400 text-base sm:text-lg">
+                <div className="flex items-center gap-3 justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-emerald-200/60">
+                  <div className="text-left sm:text-right">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">Sisa Tagihan</p>
+                    <p className="font-black text-rose-600 dark:text-rose-400 text-sm sm:text-base">
                       {currency(selectedStudent.totalTagihan - selectedStudent.totalLunas)}
                     </p>
                   </div>
@@ -1514,7 +2219,7 @@ function ManualCashPaymentModal({
                     variant="outline" 
                     size="sm" 
                     onClick={() => { setSelectedStudentId(''); setStudentSearch(''); setSelectedTagihanId(''); setCashAmount(''); setCashDiscountPct(0); }} 
-                    className="text-xs font-extrabold h-9 rounded-xl border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 shrink-0"
+                    className="text-xs font-bold h-8 sm:h-9 rounded-xl border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 shrink-0"
                   >
                     Ganti Siswa
                   </Button>
@@ -1522,23 +2227,73 @@ function ManualCashPaymentModal({
               </div>
             ) : (
               <div className="space-y-2.5">
-                <div className="relative">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    placeholder="Ketik nama siswa, NISN, NIS, atau nama kelas (misal: Ahmad / XII-1)..."
-                    value={studentSearch}
-                    onChange={(e) => setStudentSearch(e.target.value)}
-                    className="pl-10 h-11 bg-white dark:bg-slate-950 font-medium text-xs sm:text-sm rounded-xl border-slate-200 dark:border-slate-800"
-                  />
+                {/* Search Bar & Multi Filter Bar */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  <div className="relative sm:col-span-2 lg:col-span-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <Input
+                      placeholder="Cari nama / NISN / NIS..."
+                      value={studentSearch}
+                      onChange={(e) => setStudentSearch(e.target.value)}
+                      className="pl-8.5 h-9 sm:h-10 bg-white dark:bg-slate-950 font-medium text-xs rounded-xl border-slate-200 dark:border-slate-800"
+                    />
+                  </div>
+
+                  {/* Filter Kelas */}
+                  <div>
+                    <Select value={filterKelas || 'all'} onValueChange={(v) => setFilterKelas(!v || v === 'all' ? '' : v)}>
+                      <SelectTrigger className="h-9 sm:h-10 bg-white dark:bg-slate-950 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                        <SelectValue placeholder="Semua Kelas">
+                          {filterKelas ? `Kelas ${filterKelas}` : 'Semua Kelas'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Kelas</SelectItem>
+                        {uniqueClasses.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Filter Program */}
+                  <div>
+                    <Select value={filterProgram || 'all'} onValueChange={(v) => setFilterProgram(!v || v === 'all' ? '' : v)}>
+                      <SelectTrigger className="h-9 sm:h-10 bg-white dark:bg-slate-950 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                        <SelectValue placeholder="Semua Program">
+                          {filterProgram ? `Program: ${filterProgram}` : 'Semua Program'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Program</SelectItem>
+                        {uniquePrograms.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Filter Status Tagihan */}
+                  <div>
+                    <Select value={filterStatusTunggakan} onValueChange={(v: any) => setFilterStatusTunggakan(v)}>
+                      <SelectTrigger className="h-9 sm:h-10 bg-white dark:bg-slate-950 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                        <SelectValue placeholder="Status Tagihan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Semua Status</SelectItem>
+                        <SelectItem value="HANYA_TUNGGAKAN">Hanya Menunggak</SelectItem>
+                        <SelectItem value="LUNAS">Bebas Tunggakan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                {/* Hasil Pencarian Siswa */}
-                {studentSearch.trim() !== '' && (
-                  <div className="max-h-60 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-950 shadow-md">
-                    {filteredStudents.length === 0 ? (
-                      <div className="p-4 text-center text-xs text-slate-400 font-medium">Tidak ada siswa yang cocok dengan &quot;{studentSearch}&quot;</div>
-                    ) : (
-                      filteredStudents.map(s => (
+                {/* List Siswa Terfilter */}
+                <div className="max-h-52 sm:max-h-60 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-950 shadow-inner custom-scrollbar">
+                  {filteredStudents.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                      Tidak ada siswa yang sesuai dengan filter atau kata kunci pencarian.
+                    </div>
+                  ) : (
+                    filteredStudents.slice(0, 40).map(s => {
+                      const sisa = s.totalTagihan - s.totalLunas
+                      return (
                         <button
                           key={s.id}
                           type="button"
@@ -1548,42 +2303,53 @@ function ManualCashPaymentModal({
                             setCashAmount('')
                             setCashDiscountPct(0)
                           }}
-                          className="w-full text-left p-3 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 transition-colors flex items-center justify-between group"
+                          className="w-full text-left p-2.5 sm:p-3 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 transition-colors flex items-center justify-between group gap-2"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
                               {s.name.charAt(0).toUpperCase()}
                             </div>
-                            <div>
-                              <p className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm group-hover:text-emerald-700 dark:group-hover:text-emerald-400">{s.name}</p>
-                              <p className="text-[11px] text-slate-400 font-mono">NISN: {s.nisn} • Kelas <span className="font-bold text-slate-600 dark:text-slate-300">{s.className}</span></p>
+                            <div className="min-w-0">
+                              <p className="font-black text-slate-900 dark:text-white text-xs sm:text-sm group-hover:text-emerald-700 dark:group-hover:text-emerald-400 truncate">
+                                {s.name}
+                              </p>
+                              <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate">
+                                {s.nisn} · <span className="font-bold text-slate-600 dark:text-slate-300">{s.className}</span> {s.program ? `· ${s.program}` : ''}
+                              </p>
                             </div>
                           </div>
-                          <span className="text-xs font-extrabold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-3 py-1 rounded-full border border-rose-200 dark:border-rose-900/60 shrink-0">
-                            Sisa: {currency(s.totalTagihan - s.totalLunas)}
-                          </span>
+                          <div className="text-right shrink-0">
+                            <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border ${sisa > 0 ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900/60' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                              {sisa > 0 ? currency(sisa) : 'Lunas'}
+                            </span>
+                          </div>
                         </button>
-                      ))
-                    )}
-                  </div>
-                )}
+                      )
+                    })
+                  )}
+                  {filteredStudents.length > 40 && (
+                    <div className="p-2 text-center text-[10px] text-slate-400 font-semibold bg-slate-50 dark:bg-slate-900">
+                      Menampilkan 40 dari {filteredStudents.length} siswa. Gunakan kolom pencarian / filter untuk mempersempit.
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
           {/* STEP 2: PILIH TAGIHAN SISWA */}
           {selectedStudentId && (
-            <div className="space-y-3">
-              <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+            <div className="space-y-2.5 bg-slate-50 dark:bg-slate-800/40 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
                 2. Pilih Tagihan Yang Ingin Dibayar
               </Label>
               {activeTagihans.length === 0 ? (
-                <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl text-xs text-emerald-800 dark:text-emerald-300 font-semibold flex items-center gap-2">
+                <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 font-bold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   Siswa ini tidak memiliki tagihan aktif / seluruh tagihan telah lunas.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {activeTagihans.map(t => {
                     const paid = t.amountPaid || 0
                     const remaining = Math.max(0, t.amount - paid)
@@ -1592,34 +2358,34 @@ function ManualCashPaymentModal({
                       <div
                         key={t.id}
                         onClick={() => handleSelectTagihan(t.id)}
-                        className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                        className={`p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
                           isSelected 
-                            ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-500 shadow-md ring-2 ring-emerald-500/20' 
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 shadow-sm ring-2 ring-emerald-500/20' 
                             : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-lg ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-700'}`}>
+                            <span className={`text-[11px] font-black px-2 py-0.5 rounded-md ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-700'}`}>
                               {t.type}
                             </span>
                             {t.month && t.year && (
-                              <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-1.5">
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mt-1">
                                 {MONTHS.find(m => m.value === t.month!.toString())?.label} {t.year}
                               </p>
                             )}
                           </div>
-                          <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${t.status === 'ANGSURAN' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${t.status === 'ANGSURAN' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
                             {t.status === 'ANGSURAN' ? 'Angsuran' : 'Belum Lunas'}
                           </span>
                         </div>
 
                         <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                           <div>
-                            <p className="text-[11px] text-slate-400 font-medium">Sisa Tagihan</p>
-                            <p className="font-extrabold text-slate-900 dark:text-white text-base">{currency(remaining)}</p>
+                            <p className="text-[10px] text-slate-400 font-semibold">Sisa Tagihan</p>
+                            <p className="font-black text-slate-900 dark:text-white text-sm sm:text-base">{currency(remaining)}</p>
                           </div>
-                          <span className="text-xs text-slate-400 font-medium">
+                          <span className="text-[10px] text-slate-400 font-medium">
                             Total: {currency(t.amount)}
                           </span>
                         </div>
@@ -1651,25 +2417,25 @@ function ManualCashPaymentModal({
             const isInfaq = selectedTagihan.type.toLowerCase() === 'infaq'
 
             return (
-              <div className="space-y-5 bg-gradient-to-br from-slate-50 to-emerald-50/30 dark:from-slate-950 dark:to-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 rounded-3xl space-y-5">
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-                  <Label className="text-xs font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider block flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-600" />
+              <div className="space-y-4 bg-gradient-to-br from-slate-50 to-emerald-50/30 dark:from-slate-950 dark:to-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 rounded-2xl">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
+                  <Label className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider block flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                     3. Rincian & Opsi Pembayaran Kasir
                   </Label>
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
                     {selectedTagihan.type}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Terapkan Diskon Kasir */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block flex items-center gap-1.5">
-                      <Percent className="w-3.5 h-3.5 text-amber-600" /> Diskon Tunai Kasir
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block flex items-center gap-1">
+                      <Percent className="w-3 h-3 text-amber-600" /> Diskon Tunai Kasir
                     </Label>
                     <Select value={cashDiscountPct.toString()} onValueChange={(v) => handleDiscountChange(parseInt(v || '0', 10))}>
-                      <SelectTrigger className="bg-white dark:bg-slate-950 h-11 font-semibold text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                      <SelectTrigger className="bg-white dark:bg-slate-950 h-10 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800">
                         <SelectValue placeholder="Pilih persentase diskon..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1685,25 +2451,25 @@ function ManualCashPaymentModal({
                         placeholder="Alasan Diskon (misal: Diskon Kasir / Beasiswa)"
                         value={cashDiscountReason}
                         onChange={(e) => setCashDiscountReason(e.target.value)}
-                        className="bg-white dark:bg-slate-950 text-xs h-10 mt-1.5 rounded-xl border-slate-200 dark:border-slate-800"
+                        className="bg-white dark:bg-slate-950 text-xs h-9 mt-1 rounded-xl border-slate-200 dark:border-slate-800"
                       />
                     )}
                   </div>
 
                   {/* Nominal Bayar Input & Shortcut */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
                       Nominal Dibayar (Rp)
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">Rp</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">Rp</span>
                       <Input
                         type="number"
                         disabled={isInfaq}
-                        placeholder="Masukkan nominal bayar..."
+                        placeholder="Masukkan nominal..."
                         value={cashAmount}
                         onChange={(e) => setCashAmount(e.target.value)}
-                        className="pl-9 h-11 bg-white dark:bg-slate-950 font-extrabold text-slate-900 dark:text-white rounded-xl border-slate-200 dark:border-slate-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="pl-8.5 h-10 bg-white dark:bg-slate-950 font-black text-slate-900 dark:text-white rounded-xl border-slate-200 dark:border-slate-800 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
                     {/* Shortcut Buttons */}
@@ -1712,14 +2478,14 @@ function ManualCashPaymentModal({
                         <button
                           type="button"
                           onClick={() => setCashAmount(remainingBeforePay.toString())}
-                          className="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200"
+                          className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200"
                         >
                           Lunas ({currency(remainingBeforePay)})
                         </button>
                         <button
                           type="button"
                           onClick={() => setCashAmount(Math.round(remainingBeforePay / 2).toString())}
-                          className="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-200"
+                          className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-200"
                         >
                           50% ({currency(Math.round(remainingBeforePay / 2))})
                         </button>
@@ -1729,12 +2495,12 @@ function ManualCashPaymentModal({
                 </div>
 
                 {/* PRATINJAU KUITANSI / TRANSACTION BREAKDOWN CARD */}
-                <div className="bg-white dark:bg-slate-950 border border-emerald-200 dark:border-emerald-900/60 p-4 sm:p-5 rounded-2xl space-y-2.5 text-xs text-slate-700 dark:text-slate-300 shadow-sm">
-                  <p className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] text-emerald-700 dark:text-emerald-400">
+                <div className="bg-white dark:bg-slate-950 border border-emerald-200 dark:border-emerald-900/60 p-3.5 sm:p-4 rounded-xl space-y-2 text-xs text-slate-700 dark:text-slate-300 shadow-xs">
+                  <p className="font-black uppercase tracking-wider text-[10px] text-emerald-700 dark:text-emerald-400">
                     Pratinjau Kalkulasi Kuitansi
                   </p>
 
-                  <div className="space-y-1.5 pt-1">
+                  <div className="space-y-1 pt-0.5 text-xs">
                     <div className="flex justify-between">
                       <span className="text-slate-500">Total Tagihan Awal:</span>
                       <span className="font-semibold text-slate-900 dark:text-white">{currency(origAmount)}</span>
@@ -1742,7 +2508,7 @@ function ManualCashPaymentModal({
 
                     {paid > 0 && (
                       <div className="flex justify-between text-blue-700 dark:text-blue-400">
-                        <span>Sudah Diangsur Sebelumnya:</span>
+                        <span>Sudah Diangsur:</span>
                         <span className="font-bold">{currency(paid)}</span>
                       </div>
                     )}
@@ -1759,48 +2525,36 @@ function ManualCashPaymentModal({
                       <span>{currency(remainingBeforePay)}</span>
                     </div>
 
-                    <div className="flex justify-between font-extrabold text-emerald-700 dark:text-emerald-400 text-sm">
-                      <span>Nominal Dibayar Tunai:</span>
+                    <div className="flex justify-between font-black text-emerald-700 dark:text-emerald-400 text-sm pt-0.5">
+                      <span>Nominal Bayar Tunai:</span>
                       <span>{currency(payInputVal)}</span>
                     </div>
 
-                    <div className="flex justify-between items-center font-extrabold text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
-                      <span className="text-slate-800 dark:text-slate-200">Status Setelah Pembayaran:</span>
+                    <div className="flex justify-between items-center font-black text-xs sm:text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
+                      <span className="text-slate-800 dark:text-slate-200">Status Transaksi:</span>
                       {remainingAfterPay === 0 ? (
-                        <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-xs font-black flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> LUNAS SEKALIGUS
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-[11px] font-black flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> LUNAS SEKALIGUS
                         </span>
                       ) : (
-                        <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-xs font-black flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" /> ANGSURAN (Kurang Bayar: {currency(remainingAfterPay)})
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-[11px] font-black flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> ANGSURAN (Kurang: {currency(remainingAfterPay)})
                         </span>
                       )}
                     </div>
-
-                    {remainingAfterPay > 0 && payInputVal > 0 && (
-                      <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl text-amber-900 dark:text-amber-200 text-xs font-medium flex items-start gap-2 mt-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-extrabold text-amber-800 dark:text-amber-300">Logika Angsuran Aktif</p>
-                          <p className="mt-0.5">
-                            Nominal pembayaran ({currency(payInputVal)}) kurang dari sisa tagihan ({currency(remainingBeforePay)}). Sistem otomatis menghitung & mencatat transaksi ini sebagai <strong>Angsuran (Sisa Kurang Bayar {currency(remainingAfterPay)})</strong>.
-                          </p>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
 
                 {/* Catatan / Kuitansi */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
                     Catatan / Nomor Kuitansi (Opsional)
                   </Label>
                   <Input
                     placeholder="Misal: KWT-KASIR/#1024 - Tunai Kasir Keuangan"
                     value={cashNotes}
                     onChange={(e) => setCashNotes(e.target.value)}
-                    className="bg-white dark:bg-slate-950 text-xs h-11 rounded-xl border-slate-200 dark:border-slate-800"
+                    className="bg-white dark:bg-slate-950 text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800"
                   />
                 </div>
               </div>
@@ -1809,12 +2563,12 @@ function ManualCashPaymentModal({
         </div>
 
         {/* Fixed Sticky Footer */}
-        <div className="shrink-0 p-4 sm:p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
-          <Button type="button" variant="outline" onClick={onClose} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+        <div className="shrink-0 p-3.5 sm:p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onClose} className="h-10 rounded-xl font-semibold border-slate-300 dark:border-slate-700 text-xs">
             Batal
           </Button>
           <Button
-            className="h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow-md gap-2"
+            className="h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md gap-2 text-xs"
             disabled={!selectedTagihanId || !cashAmount || parseFloat(cashAmount) <= 0 || payMut.isPending}
             onClick={() => payMut.mutate()}
           >
@@ -1908,17 +2662,20 @@ function TabTagihan() {
   const { data: students = [], isLoading } = useQuery<StudentSummary[]>({
     queryKey: ['finance-students'],
     queryFn: () => authenticatedQuery('/api-backend/finance/students'),
+    refetchInterval: 5000,
   })
 
   const { data: classes = [] } = useQuery<ClassItem[]>({
     queryKey: ['classes'],
     queryFn: () => authenticatedQuery('/api-backend/classes'),
+    staleTime: 60000,
   })
 
   const { data: detailData } = useQuery<StudentDetail>({
     queryKey: ['student-tagihan', selectedStudent?.id],
     queryFn: () => authenticatedQuery(`/api-backend/finance/students/${selectedStudent!.id}/tagihan`),
     enabled: !!selectedStudent?.id,
+    refetchInterval: 5000,
   })
 
   const filtered = useMemo(() =>
@@ -2058,44 +2815,110 @@ function TabTagihan() {
     }
   }
 
+  // Perhitungan Ringkasan Cepat
+  const stats = useMemo(() => {
+    const totalSiswa = filtered.length
+    const totalTunggakan = filtered.reduce((sum, s) => sum + ((s.sisaTagihan && s.sisaTagihan > 0) ? s.sisaTagihan : Math.max(0, s.totalTagihan - s.totalLunas)), 0)
+    const siswaLunas = filtered.filter(s => s.belumLunasCount === 0).length
+    const siswaMenunggak = filtered.filter(s => s.belumLunasCount > 0).length
+    return { totalSiswa, totalTunggakan, siswaLunas, siswaMenunggak }
+  }, [filtered])
+
   return (
     <div className="space-y-4">
+      {/* Quick Summary Metric Cards - Compact & High Contrast */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+        {!isKepalaSekolah ? (
+          <button
+            onClick={() => setCashModalOpen(true)}
+            className="group text-left bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 border border-emerald-500 p-3 sm:p-4 rounded-2xl shadow-xs transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between"
+          >
+            <div className="flex items-center justify-between w-full">
+              <p className="text-[11px] font-extrabold text-emerald-100 uppercase tracking-wider">Kasir Pembayaran</p>
+              <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                <Wallet className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="mt-1 flex items-baseline justify-between">
+              <p className="text-base sm:text-lg font-black text-white">Kasir Tunai</p>
+              <span className="text-[11px] font-bold text-emerald-200 group-hover:underline">Buka Loket &rarr;</span>
+            </div>
+          </button>
+        ) : (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 sm:p-4 rounded-2xl shadow-xs">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Siswa Terfilter</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">{stats.totalSiswa} <span className="text-xs font-semibold text-slate-400">Siswa</span></p>
+          </div>
+        )}
+        <div className="bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 p-3 sm:p-4 rounded-2xl shadow-xs">
+          <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">Bebas Tunggakan</p>
+          <p className="text-xl sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-0.5">{stats.siswaLunas} <span className="text-xs font-semibold text-emerald-600/70">Lunas</span></p>
+        </div>
+        <div className="bg-rose-50/70 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 p-3 sm:p-4 rounded-2xl shadow-xs">
+          <p className="text-[11px] font-bold text-rose-800 dark:text-rose-300 uppercase tracking-wider">Memiliki Tagihan</p>
+          <p className="text-xl sm:text-2xl font-black text-rose-700 dark:text-rose-400 mt-0.5">{stats.siswaMenunggak} <span className="text-xs font-semibold text-rose-600/70">Siswa</span></p>
+        </div>
+        <div className="bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 p-3 sm:p-4 rounded-2xl shadow-xs">
+          <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">Total Sisa Tagihan</p>
+          <p className="text-base sm:text-xl font-black text-amber-900 dark:text-amber-300 mt-0.5 truncate">{currency(stats.totalTunggakan)}</p>
+        </div>
+      </div>
+
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-between">
-        <div className="flex gap-2 flex-1 min-w-[280px]">
-          <div className="relative flex-1 max-w-xs">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 sm:p-4 rounded-2xl shadow-xs flex flex-col lg:flex-row gap-3 justify-between items-stretch lg:items-center">
+        <div className="flex flex-wrap sm:flex-nowrap gap-2 flex-1">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input placeholder="Cari nama, NISN, NIS..." className="pl-9 bg-white" value={search}
-              onChange={e => setSearch(e.target.value)} />
+            <Input
+              placeholder="Cari nama, NISN, NIS, kelas..."
+              className="pl-9 h-10 text-xs sm:text-sm font-semibold bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
           <Select value={filterKelas || 'all'} onValueChange={(v) => setFilterKelas(!v || v === 'all' ? '' : v)}>
-            <SelectTrigger className="w-[140px] bg-white font-semibold"><SelectValue placeholder="Semua Kelas" /></SelectTrigger>
+            <SelectTrigger className="w-[140px] sm:w-[160px] h-10 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl">
+              <SelectValue placeholder="Semua Kelas" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Kelas</SelectItem>
               {uniqueKelas.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
+
+        <div className="flex flex-wrap gap-2 shrink-0 justify-end">
           {!isKepalaSekolah && (
             <>
-              <Button onClick={() => setCashModalOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm">
-                <Wallet className="w-4 h-4" /> Pembayaran Tunai / Manual
+              <Button onClick={() => setMassalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 h-10 px-3.5 text-xs font-extrabold rounded-xl shadow-xs">
+                <Layers className="w-4 h-4" /> Rilis 1 Tahun
               </Button>
-              <Button variant="outline" onClick={() => setMassalOpen(true)}
-                className="border-purple-400 text-purple-700 hover:bg-purple-50 gap-2">
-                <Layers className="w-4 h-4" /> Tagihan Massal
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (filtered.length === 0) {
+                    Swal.fire('Info', 'Tidak ada siswa yang sesuai filter saat ini untuk di-reset.', 'info');
+                    return;
+                  }
+                  openResetModal(filtered.map(s => s.id));
+                }}
+                disabled={filtered.length === 0}
+                className="border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 h-10 px-3.5 text-xs font-extrabold rounded-xl shadow-xs gap-1.5"
+                title={filterKelas ? `Reset Tagihan untuk Kelas ${filterKelas} (${filtered.length} Siswa)` : `Reset Tagihan Seluruh Siswa Terfilter (${filtered.length} Siswa)`}
+              >
+                <RotateCcw className="w-4 h-4 text-rose-600" />
+                {filterKelas ? `Reset Kelas ${filterKelas}` : search ? `Reset Hasil Cari (${filtered.length})` : 'Reset Semua Siswa'}
               </Button>
             </>
           )}
           <Button variant="outline" onClick={handleExportRekapKelas}
-            className="border-indigo-600 text-indigo-700 hover:bg-indigo-50 gap-1.5 font-bold"
+            className="border-indigo-300 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 h-10 px-3 text-xs font-bold rounded-xl"
             title="Eksport Excel Rekap Keuangan Per Kelas">
-            <FileSpreadsheet className="w-4 h-4 text-indigo-600" /> Rekap Excel Kelas
+            <FileSpreadsheet className="w-4 h-4 text-indigo-600" /> Excel Kelas
           </Button>
           <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}
-            className="border-emerald-500 text-emerald-700 hover:bg-emerald-50 gap-1.5">
+            className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 h-10 px-3 text-xs font-bold rounded-xl">
             <Download className="w-4 h-4" /> Export All
           </Button>
         </div>
@@ -2103,7 +2926,7 @@ function TabTagihan() {
 
       {/* Floating / Top Action Bar When Students Are Selected */}
       {selectedStudentIds.length > 0 && (
-        <div className="bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/40 dark:to-pink-950/40 border border-rose-200 dark:border-rose-900/60 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200">
+        <div className="bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/40 dark:to-pink-950/40 border border-rose-200 dark:border-rose-900/60 p-3 sm:p-3.5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200">
           <div className="flex items-center gap-3">
             <span className="font-extrabold text-xs text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 border border-rose-200 dark:border-rose-800 px-3 py-1 rounded-full flex items-center gap-1.5">
               <CheckSquare className="w-3.5 h-3.5 text-rose-600" />
@@ -2142,7 +2965,7 @@ function TabTagihan() {
         <CardContent className="p-0 overflow-x-auto max-w-full">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-slate-100/70 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 font-bold">
+              <TableHeader className="bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-extrabold text-xs">
                 <TableRow>
                   {!isKepalaSekolah && (
                     <TableHead className="w-10 text-center px-3 py-3 whitespace-nowrap">
@@ -2160,7 +2983,7 @@ function TabTagihan() {
                   <TableHead className="whitespace-nowrap">Nama Siswa</TableHead>
                   <TableHead className="text-center whitespace-nowrap">Status Tagihan</TableHead>
                   <TableHead className="text-center whitespace-nowrap">SPP Lunas</TableHead>
-                  <TableHead className="text-right whitespace-nowrap">Total Tagihan</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Total Sisa Tagihan</TableHead>
                   <TableHead className="text-center whitespace-nowrap">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -2174,8 +2997,8 @@ function TabTagihan() {
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-16 text-slate-400">
-                      {search || filterKelas ? 'Tidak ditemukan.' : 'Belum ada data siswa.'}
+                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-16 text-slate-400 font-medium">
+                      {search || filterKelas ? 'Tidak ada siswa yang sesuai kriteria filter.' : 'Belum ada data siswa.'}
                     </TableCell>
                   </TableRow>
                 ) : filtered.map((s, i) => {
@@ -2193,45 +3016,49 @@ function TabTagihan() {
                           </button>
                         </TableCell>
                       )}
-                      <TableCell className="text-center text-slate-400 font-medium text-sm whitespace-nowrap">{i + 1}</TableCell>
+                      <TableCell className="text-center text-slate-400 font-medium text-xs whitespace-nowrap">{i + 1}</TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
                             {s.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-900 dark:text-white leading-tight">{s.name}</p>
-                            <p className="text-xs text-slate-400 font-mono">NISN: {s.nisn} · Kelas {s.className}</p>
+                            <p className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm leading-tight">{s.name}</p>
+                            <p className="text-[11px] text-slate-400 font-mono mt-0.5">NISN: {s.nisn} · <span className="font-bold text-slate-600 dark:text-slate-300">Kelas {s.className}</span></p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-center whitespace-nowrap">
                         {s.belumLunasCount > 0
-                          ? <span className="font-bold px-2.5 py-1 rounded-lg text-xs bg-red-50 text-red-600 border border-red-100 inline-block whitespace-nowrap">{s.belumLunasCount} Tagihan</span>
-                          : <span className="text-emerald-600 font-bold text-xs bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3.5 h-3.5" /> LUNAS</span>
+                          ? <span className="font-extrabold px-2.5 py-1 rounded-lg text-xs bg-red-50 text-red-700 border border-red-200 inline-block whitespace-nowrap">{s.belumLunasCount} Tagihan</span>
+                          : <span className="text-emerald-700 font-extrabold text-xs bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> LUNAS</span>
                         }
                       </TableCell>
                       <TableCell className="text-center whitespace-nowrap">
-                        <span className={`font-bold px-2.5 py-1 rounded-lg text-xs inline-block whitespace-nowrap ${s.sppLunasCount >= 12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : s.sppLunasCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
+                        <span className={`font-extrabold px-2.5 py-1 rounded-lg text-xs inline-block whitespace-nowrap ${s.sppLunasCount >= 12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : s.sppLunasCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
                           {s.sppLunasCount}/12 Bulan
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-semibold text-slate-700 dark:text-slate-200 text-sm whitespace-nowrap">
-                        {s.sisaTagihan !== undefined && s.sisaTagihan > 0 ? currency(s.sisaTagihan) : <span className="text-slate-300">—</span>}
+                      <TableCell className="text-right font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm whitespace-nowrap">
+                        {s.sisaTagihan !== undefined && s.sisaTagihan > 0 ? (
+                          <span className="text-rose-600 dark:text-rose-400">{currency(s.sisaTagihan)}</span>
+                        ) : (
+                          <span className="text-emerald-600 font-bold">Rp 0 (Lunas)</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center whitespace-nowrap">
                         <div className="flex justify-center items-center gap-1.5">
                           <Button size="sm" variant="outline"
-                            className="border-blue-300 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-xs gap-1.5 h-8 rounded-xl font-bold"
+                            className="border-blue-300 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-xs gap-1.5 h-8 px-3 rounded-xl font-extrabold"
                             onClick={() => openModal(s)}>
-                            <Receipt className="w-3.5 h-3.5" /> {isKepalaSekolah ? 'Lihat Detail' : 'Kelola'}
+                            <Receipt className="w-3.5 h-3.5" /> {isKepalaSekolah ? 'Detail' : 'Kelola'}
                           </Button>
                           {!isKepalaSekolah && (
                             <Button size="sm" variant="outline"
                               title="Reset Tagihan Siswa (Otorisasi Password)"
-                              className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 text-xs gap-1 h-8 rounded-xl"
+                              className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 text-xs gap-1 h-8 px-2.5 rounded-xl"
                               onClick={() => openResetModal([s.id])}>
-                              <RotateCcw className="w-3.5 h-3.5" /> Reset
+                              <RotateCcw className="w-3.5 h-3.5" />
                             </Button>
                           )}
                         </div>
@@ -2476,7 +3303,7 @@ function TabTagihan() {
       <TagihanModal student={detailData ?? null} open={modalOpen}
         onClose={() => { setModalOpen(false); setSelectedStudent(null) }}
         onResetStudent={(id) => openResetModal([id])} />
-      <TagihanMassalModal open={massalOpen} onClose={() => setMassalOpen(false)} classes={classes} />
+      <ReleaseYearlyModal open={massalOpen} onClose={() => setMassalOpen(false)} classes={classes} />
       <ManualCashPaymentModal open={cashModalOpen} onClose={() => setCashModalOpen(false)} students={students} />
     </div>
   )
@@ -2487,9 +3314,26 @@ function TabTagihan() {
 // ============================================================
 function TabRekap() {
   const authenticatedFetch = useAuthenticatedFetch();
+  const authenticatedQuery = useAuthenticatedQuery();
   const years = YEARS
+  const [rekapMode, setRekapMode] = useState<'GENERAL' | 'TRIWULAN'>('GENERAL')
   const [year, setYear] = useState(currentYear.toString())
   const [month, setMonth] = useState('')
+
+  // Triwulan states
+  const [triwulanClassId, setTriwulanClassId] = useState('')
+  const [quarter, setQuarter] = useState<'1' | '2' | '3' | '4'>('1')
+
+  const { data: classes = [] } = useQuery<ClassItem[]>({
+    queryKey: ['classes'],
+    queryFn: () => authenticatedQuery('/api-backend/classes'),
+  })
+
+  useEffect(() => {
+    if (classes.length > 0 && !triwulanClassId) {
+      setTriwulanClassId(classes[0].id)
+    }
+  }, [classes, triwulanClassId])
 
   const { data: rekap, isLoading } = useQuery<Rekap>({
     queryKey: ['finance-rekap', year, month],
@@ -2499,7 +3343,39 @@ function TabRekap() {
       if (!res.ok) throw new Error('Gagal memuat rekapitulasi')
       return res.json()
     },
+    enabled: rekapMode === 'GENERAL',
+    refetchInterval: 5000,
   })
+
+  const { data: quarterlyData, isLoading: loadingQuarterly } = useQuery<any>({
+    queryKey: ['quarterly-rekap', triwulanClassId, year, quarter],
+    queryFn: async () => {
+      const res = await authenticatedFetch(`/api-backend/finance/rekap-quarterly?classId=${triwulanClassId}&year=${year}&quarter=${quarter}`)
+      if (!res.ok) throw new Error('Gagal memuat rekapitulasi triwulan')
+      return res.json()
+    },
+    enabled: rekapMode === 'TRIWULAN' && !!triwulanClassId,
+    refetchInterval: 5000,
+  })
+
+  const handleExportTriwulanExcel = async () => {
+    if (!triwulanClassId) return
+    try {
+      const res = await authenticatedFetch(`/api-backend/finance/export-rekap-triwulan?classId=${triwulanClassId}&year=${year}&quarter=${quarter}`)
+      if (!res.ok) throw new Error('Gagal mengunduh file rekap triwulan')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `rekap_triwulan_Q${quarter}_${quarterlyData?.class?.name || 'kelas'}_${year}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      Swal.fire('Gagal Ekspor', err.message || 'Terjadi kesalahan sistem saat ekspor', 'error')
+    }
+  }
 
   const totalYearly = rekap?.yearly.reduce((s, t) => s + t.total, 0) ?? 0
   const totalMonthly = rekap?.monthly.reduce((s, t) => s + t.total, 0) ?? 0
@@ -2508,26 +3384,189 @@ function TabRekap() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-3 items-center">
-        <Select value={year} onValueChange={(v) => setYear(v ?? year)}>
-          <SelectTrigger className="w-[110px] bg-white"><SelectValue /></SelectTrigger>
-          <SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
-        </Select>
-        <Select value={month || 'all'} onValueChange={(v) => setMonth(!v || v === 'all' ? '' : v)}>
-          <SelectTrigger className="w-[150px] bg-white"><SelectValue placeholder="Semua Bulan" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Bulan</SelectItem>
-            {MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        {month && (
-          <Button variant="ghost" size="sm" onClick={() => setMonth('')} className="text-slate-500 gap-1">
-            <X className="w-3 h-3" /> Reset
+      {/* Sub Mode Selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRekapMode('GENERAL')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 ${
+              rekapMode === 'GENERAL'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-100'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" /> Ringkasan Tahunan & Bulanan
+          </button>
+          <button
+            type="button"
+            onClick={() => setRekapMode('TRIWULAN')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 ${
+              rekapMode === 'TRIWULAN'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-100'
+            }`}
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Rekap Triwulan (3 Bulan Sekali) Per Kelas
+          </button>
+        </div>
+
+        {rekapMode === 'TRIWULAN' && (
+          <Button
+            onClick={handleExportTriwulanExcel}
+            disabled={!quarterlyData || loadingQuarterly}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs h-10 rounded-xl gap-1.5 shadow-sm"
+          >
+            <Download className="w-4 h-4" /> Export Excel Triwulan
           </Button>
         )}
       </div>
 
-      {isLoading ? (
+      {/* Filter Bar */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <Select value={year} onValueChange={(v) => setYear(v ?? year)}>
+          <SelectTrigger className="w-[110px] bg-white dark:bg-slate-950 font-bold text-xs h-10 rounded-xl"><SelectValue /></SelectTrigger>
+          <SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
+        </Select>
+
+        {rekapMode === 'GENERAL' ? (
+          <>
+            <Select value={month || 'all'} onValueChange={(v) => setMonth(!v || v === 'all' ? '' : v)}>
+              <SelectTrigger className="w-[150px] bg-white dark:bg-slate-950 font-bold text-xs h-10 rounded-xl"><SelectValue placeholder="Semua Bulan" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Bulan</SelectItem>
+                {MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {month && (
+              <Button variant="ghost" size="sm" onClick={() => setMonth('')} className="text-slate-500 gap-1 h-10 rounded-xl">
+                <X className="w-3 h-3" /> Reset
+              </Button>
+            )}
+          </>
+        ) : (
+          <>
+            <Select value={triwulanClassId} onValueChange={(v) => { if (v) setTriwulanClassId(v) }}>
+              <SelectTrigger className="w-[180px] bg-white dark:bg-slate-950 font-bold text-xs h-10 rounded-xl">
+                <SelectValue placeholder="Pilih Kelas...">
+                  {classes.find(c => c.id === triwulanClassId)?.name || 'Pilih Kelas...'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            <Select value={quarter} onValueChange={(v: any) => setQuarter(v)}>
+              <SelectTrigger className="w-[200px] bg-white dark:bg-slate-950 font-bold text-xs h-10 rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Triwulan 1 (Juli - Sep)</SelectItem>
+                <SelectItem value="2">Triwulan 2 (Okt - Des)</SelectItem>
+                <SelectItem value="3">Triwulan 3 (Jan - Mar)</SelectItem>
+                <SelectItem value="4">Triwulan 4 (Apr - Jun)</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        )}
+      </div>
+
+      {rekapMode === 'TRIWULAN' ? (
+        loadingQuarterly ? (
+          <div className="text-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-indigo-600 mx-auto mb-2" />
+            <p className="text-slate-500 text-sm">Memuat rekap triwulan kelas...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Header Informasi Kelas & Wali Kelas */}
+            <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-5 rounded-2xl border border-indigo-900 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest block">Laporan Rekapitulasi Triwulan</span>
+                <h3 className="text-xl sm:text-2xl font-black text-white mt-0.5">
+                  Kelas {quarterlyData?.class?.name || '-'}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1">
+                  Wali Kelas: <strong className="text-white">{quarterlyData?.class?.homeroomTeacher || 'Belum Ditentukan'}</strong>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-right">
+                <div className="bg-white/10 p-3 rounded-xl backdrop-blur-md">
+                  <p className="text-[11px] text-slate-300 font-semibold">Total Lunas Triwulan</p>
+                  <p className="text-base sm:text-lg font-black text-emerald-300">
+                    {currency(quarterlyData?.summary?.totalLunas || 0)}
+                  </p>
+                </div>
+                <div className="bg-white/10 p-3 rounded-xl backdrop-blur-md">
+                  <p className="text-[11px] text-slate-300 font-semibold">Sisa Tunggakan</p>
+                  <p className="text-base sm:text-lg font-black text-rose-300">
+                    {currency(quarterlyData?.summary?.totalSisa || 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabel Detail Siswa Triwulan */}
+            <Card className="shadow-sm border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+              <CardContent className="p-0 overflow-x-auto max-w-full">
+                <Table>
+                  <TableHeader className="bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-extrabold text-xs">
+                    <TableRow>
+                      <TableHead className="w-12 text-center whitespace-nowrap">No</TableHead>
+                      <TableHead className="whitespace-nowrap">Nama Siswa</TableHead>
+                      <TableHead className="whitespace-nowrap">NISN / NIS</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Tagihan Triwulan</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Terbayar (Lunas)</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Sisa Tunggakan</TableHead>
+                      <TableHead className="text-center whitespace-nowrap">Status Triwulan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(!quarterlyData?.students || quarterlyData.students.length === 0) ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-12 text-slate-400">
+                          Tidak ada data siswa / tagihan untuk triwulan ini.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      quarterlyData.students.map((st: any, idx: number) => {
+                        const isLunas = st.sisa === 0 && st.totalTagihan > 0
+                        return (
+                          <TableRow key={st.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <TableCell className="text-center text-slate-400 font-medium text-xs whitespace-nowrap">{idx + 1}</TableCell>
+                            <TableCell className="font-bold text-slate-900 dark:text-white whitespace-nowrap">{st.name}</TableCell>
+                            <TableCell className="text-xs font-mono text-slate-500 whitespace-nowrap">{st.nisn} / {st.nis}</TableCell>
+                            <TableCell className="text-right font-semibold text-slate-700 dark:text-slate-300 text-xs whitespace-nowrap">{currency(st.totalTagihan)}</TableCell>
+                            <TableCell className="text-right font-extrabold text-emerald-600 text-xs whitespace-nowrap">{currency(st.totalLunas)}</TableCell>
+                            <TableCell className="text-right font-extrabold text-rose-600 text-xs whitespace-nowrap">{currency(st.sisa)}</TableCell>
+                            <TableCell className="text-center whitespace-nowrap">
+                              {isLunas ? (
+                                <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black border border-emerald-300">
+                                  LUNAS
+                                </span>
+                              ) : st.totalLunas > 0 ? (
+                                <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black border border-amber-300">
+                                  ANGSURAN
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-[11px] font-black border border-rose-300">
+                                  BELUM BAYAR
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      ) : isLoading ? (
         <div className="text-center py-20">
           <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
           <p className="text-slate-500 text-sm">Memuat...</p>
@@ -2643,710 +3682,12 @@ function TabRekap() {
 }
 
 // ============================================================
-// TAB: DANA BANTUAN
-// ============================================================
-type DanaBantuanItem = {
-  id: string
-  namaBantuan: string
-  kategori: 'SISWA' | 'PEGAWAI' | 'OPERASIONAL' | 'UMUM'
-  sumberDana: string
-  nominal: number
-  penerima: string | null
-  tanggal: string
-  status: 'DRAFT' | 'DISETUJUI' | 'TERSALURKAN'
-  keterangan: string | null
-  targetSync: 'KEUANGAN_KELUAR' | 'PENGGAJIAN' | 'NONE'
-  isSynced: boolean
-  syncedAt: string | null
-  syncedReferenceId: string | null
-  user?: { name: string }
-}
-
-function TabDanaBantuan() {
-  const authenticatedQuery = useAuthenticatedQuery()
-  const authenticatedFetch = useAuthenticatedFetch()
-  const queryClient = useQueryClient()
-
-  const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString())
-  const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString())
-  const [selectedKategori, setSelectedKategori] = useState<string>('ALL')
-  const [selectedStatus, setSelectedStatus] = useState<string>('ALL')
-  const [searchQuery, setSearchQuery] = useState('')
-
-  // Modal State
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState<DanaBantuanItem | null>(null)
-  const [formState, setFormState] = useState({
-    namaBantuan: '',
-    sumberDana: 'Yayasan',
-    kategori: 'SISWA',
-    nominal: '',
-    penerima: '',
-    tanggal: new Date().toISOString().split('T')[0],
-    status: 'DISETUJUI',
-    targetSync: 'KEUANGAN_KELUAR',
-    keterangan: ''
-  })
-
-  // Sync Confirmation State
-  const [syncItem, setSyncItem] = useState<DanaBantuanItem | null>(null)
-  const [syncTarget, setSyncTarget] = useState<'KEUANGAN_KELUAR' | 'PENGGAJIAN'>('KEUANGAN_KELUAR')
-
-  const { data: danaList = [], isLoading } = useQuery<DanaBantuanItem[]>({
-    queryKey: ['dana-bantuan', selectedYear, selectedMonth, selectedKategori, selectedStatus],
-    queryFn: () => authenticatedQuery(`/api-backend/finance/dana-bantuan?year=${selectedYear}&month=${selectedMonth}&kategori=${selectedKategori}&status=${selectedStatus}`)
-  })
-
-  // Create / Update Mutation
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        ...formState,
-        nominal: parseFloat(formState.nominal) || 0
-      }
-      if (editingItem) {
-        return authenticatedFetch(`/api-backend/finance/dana-bantuan/${editingItem.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-      } else {
-        return authenticatedFetch('/api-backend/finance/dana-bantuan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dana-bantuan'] })
-      setIsFormOpen(false)
-      setEditingItem(null)
-      Swal.fire({
-        icon: 'success',
-        title: 'Berhasil',
-        text: editingItem ? 'Data bantuan berhasil diperbarui.' : 'Data bantuan baru berhasil ditambahkan.',
-        timer: 2000,
-        showConfirmButton: false
-      })
-    },
-    onError: (err: any) => {
-      Swal.fire('Error', err.message || 'Gagal menyimpan data bantuan', 'error')
-    }
-  })
-
-  // Delete Mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return authenticatedFetch(`/api-backend/finance/dana-bantuan/${id}`, {
-        method: 'DELETE'
-      })
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dana-bantuan'] })
-      Swal.fire('Terhapus', 'Data bantuan berhasil dihapus.', 'success')
-    },
-    onError: (err: any) => {
-      Swal.fire('Error', err.message || 'Gagal menghapus data bantuan', 'error')
-    }
-  })
-
-  // Sync Mutation
-  const syncMutation = useMutation({
-    mutationFn: async ({ id, targetSync }: { id: string; targetSync: string }) => {
-      return authenticatedFetch(`/api-backend/finance/dana-bantuan/${id}/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetSync })
-      })
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dana-bantuan'] })
-      queryClient.invalidateQueries({ queryKey: ['payroll-summary'] })
-      setSyncItem(null)
-      Swal.fire({
-        icon: 'success',
-        title: 'Sinkronisasi Berhasil',
-        text: 'Data bantuan telah berhasil tersingkron ke modul keuangan yang dituju.',
-        timer: 2200,
-        showConfirmButton: false
-      })
-    },
-    onError: (err: any) => {
-      Swal.fire('Error', err.message || 'Gagal melakukan sinkronisasi data bantuan', 'error')
-    }
-  })
-
-  const openForm = (item?: DanaBantuanItem) => {
-    if (item) {
-      setEditingItem(item)
-      setFormState({
-        namaBantuan: item.namaBantuan,
-        sumberDana: item.sumberDana,
-        kategori: item.kategori,
-        nominal: item.nominal.toString(),
-        penerima: item.penerima || '',
-        tanggal: item.tanggal ? item.tanggal.split('T')[0] : new Date().toISOString().split('T')[0],
-        status: item.status,
-        targetSync: item.targetSync,
-        keterangan: item.keterangan || ''
-      })
-    } else {
-      setEditingItem(null)
-      setFormState({
-        namaBantuan: '',
-        sumberDana: 'Yayasan',
-        kategori: 'SISWA',
-        nominal: '',
-        penerima: '',
-        tanggal: new Date().toISOString().split('T')[0],
-        status: 'DISETUJUI',
-        targetSync: 'KEUANGAN_KELUAR',
-        keterangan: ''
-      })
-    }
-    setIsFormOpen(true)
-  }
-
-  const handleDelete = (item: DanaBantuanItem) => {
-    confirmDelete({
-      title: 'Hapus Data Bantuan?',
-      text: `Apakah Anda yakin ingin menghapus "${item.namaBantuan}"?`,
-      onConfirm: () => deleteMutation.mutateAsync(item.id)
-    })
-  }
-
-  const filteredDana = useMemo(() => {
-    return danaList.filter((item) => {
-      const matchSearch =
-        item.namaBantuan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.penerima && item.penerima.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        item.sumberDana.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.keterangan && item.keterangan.toLowerCase().includes(searchQuery.toLowerCase()))
-      return matchSearch
-    })
-  }, [danaList, searchQuery])
-
-  // Statistics
-  const totalNominal = useMemo(() => danaList.reduce((acc, item) => acc + item.nominal, 0), [danaList])
-  const totalSyncedKeuanganKeluar = useMemo(() => danaList.filter(d => d.isSynced && d.targetSync === 'KEUANGAN_KELUAR').reduce((acc, item) => acc + item.nominal, 0), [danaList])
-  const totalSyncedPenggajian = useMemo(() => danaList.filter(d => d.isSynced && d.targetSync === 'PENGGAJIAN').reduce((acc, item) => acc + item.nominal, 0), [danaList])
-
-  const handleExportExcel = () => {
-    if (filteredDana.length === 0) return
-    const dataToExport = filteredDana.map((item, idx) => ({
-      No: idx + 1,
-      'Nama Bantuan': item.namaBantuan,
-      'Sumber Dana': item.sumberDana,
-      Kategori: item.kategori,
-      Nominal: item.nominal,
-      Penerima: item.penerima || '-',
-      Tanggal: formatDate(item.tanggal),
-      Status: item.status,
-      'Status Sinkron': item.isSynced ? `Tersinkron (${item.targetSync})` : 'Belum Sinkron',
-      Keterangan: item.keterangan || '-'
-    }))
-
-    const ws = XLSX.utils.json_to_sheet(dataToExport)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Dana Bantuan')
-    XLSX.writeFile(wb, `Dana_Bantuan_${selectedMonth}_${selectedYear}.xlsx`)
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-100 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Total Dana Bantuan</p>
-              <h3 className="text-xl font-bold text-slate-900 mt-1">{currency(totalNominal)}</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">{danaList.length} Program / Pendataan</p>
-            </div>
-            <div className="w-12 h-12 bg-indigo-500 text-white rounded-xl flex items-center justify-center shadow-md">
-              <HeartHandshake className="w-6 h-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Sinkron Keu. Keluar</p>
-              <h3 className="text-xl font-bold text-slate-900 mt-1">{currency(totalSyncedKeuanganKeluar)}</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Disalurkan via Pengeluaran Kas</p>
-            </div>
-            <div className="w-12 h-12 bg-amber-500 text-white rounded-xl flex items-center justify-center shadow-md">
-              <Receipt className="w-6 h-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Sinkron Penggajian</p>
-              <h3 className="text-xl font-bold text-slate-900 mt-1">{currency(totalSyncedPenggajian)}</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Insentif / Tunjangan Pegawai</p>
-            </div>
-            <div className="w-12 h-12 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md">
-              <Wallet className="w-6 h-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Status Sinkronisasi</p>
-              <h3 className="text-xl font-bold text-slate-800 mt-1">
-                {danaList.filter(d => d.isSynced).length} / {danaList.length}
-              </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Program Telah Tersinkron</p>
-            </div>
-            <div className="w-12 h-12 bg-slate-700 text-white rounded-xl flex items-center justify-center shadow-md">
-              <RefreshCw className="w-6 h-6" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Table Card */}
-      <Card className="shadow-sm border-slate-200">
-        <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <HeartHandshake className="w-5 h-5 text-indigo-600" />
-                Tabel Pendataan Dana Bantuan
-              </CardTitle>
-              <CardDescription>
-                Kelola pendataan bantuan yayasan/donatur dan alokasi sinkronisasi ke data Keuangan Keluar dan Penggajian.
-              </CardDescription>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={() => openForm()} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                <PlusCircle className="w-4 h-4 mr-2" /> Tambah Data Bantuan
-              </Button>
-              <Button variant="outline" onClick={handleExportExcel} disabled={filteredDana.length === 0} className="border-slate-300 text-slate-700">
-                <Download className="w-4 h-4 mr-2" /> Export Excel
-              </Button>
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-4 pt-3 border-t border-slate-200/60">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-              <Input
-                placeholder="Cari bantuan / penerima..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-white"
-              />
-            </div>
-
-            <Select value={selectedKategori} onValueChange={(val) => { if (val) setSelectedKategori(val) }}>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Kategori Bantuan" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Semua Kategori</SelectItem>
-                <SelectItem value="SISWA">Siswa (Beasiswa/Subsidi)</SelectItem>
-                <SelectItem value="PEGAWAI">Pegawai (Insentif/Gaji)</SelectItem>
-                <SelectItem value="OPERASIONAL">Operasional Sekolah</SelectItem>
-                <SelectItem value="UMUM">Bantuan Umum</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedStatus} onValueChange={(val) => { if (val) setSelectedStatus(val) }}>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Semua Status</SelectItem>
-                <SelectItem value="DRAFT">Draft</SelectItem>
-                <SelectItem value="DISETUJUI">Disetujui</SelectItem>
-                <SelectItem value="TERSALURKAN">Tersalurkan</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedMonth} onValueChange={(val) => { if (val) setSelectedMonth(val) }}>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Bulan" />
-              </SelectTrigger>
-              <SelectContent>
-                {MONTHS.map(m => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedYear} onValueChange={(val) => { if (val) setSelectedYear(val) }}>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Tahun" />
-              </SelectTrigger>
-              <SelectContent>
-                {YEARS.map(y => (
-                  <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="w-[50px] text-center">No</TableHead>
-                  <TableHead>Program Bantuan & Keterangan</TableHead>
-                  <TableHead>Sumber Dana</TableHead>
-                  <TableHead className="text-center">Kategori</TableHead>
-                  <TableHead className="text-right">Nominal (Rp)</TableHead>
-                  <TableHead>Penerima / Target</TableHead>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Sinkronisasi</TableHead>
-                  <TableHead className="text-right w-[140px]">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12">
-                      <div className="flex flex-col items-center justify-center text-slate-500">
-                        <Loader2 className="w-6 h-6 animate-spin mb-2 text-indigo-600" />
-                        Memuat data dana bantuan...
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredDana.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-slate-500">
-                      Tidak ada data dana bantuan yang ditemukan.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredDana.map((item, index) => (
-                    <TableRow key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                      <TableCell className="text-center font-medium text-slate-500">{index + 1}</TableCell>
-                      <TableCell>
-                        <div className="font-bold text-slate-900">{item.namaBantuan}</div>
-                        {item.keterangan && (
-                          <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">{item.keterangan}</div>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium text-slate-700">{item.sumberDana}</TableCell>
-                      <TableCell className="text-center">
-                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                          item.kategori === 'SISWA' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                          item.kategori === 'PEGAWAI' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          item.kategori === 'OPERASIONAL' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                          'bg-purple-50 text-purple-700 border-purple-200'
-                        }`}>
-                          {item.kategori}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-indigo-700 text-base">
-                        {currency(item.nominal)}
-                      </TableCell>
-                      <TableCell className="text-slate-800 font-medium">{item.penerima || '-'}</TableCell>
-                      <TableCell className="text-xs text-slate-600 whitespace-nowrap">{formatDate(item.tanggal)}</TableCell>
-                      <TableCell className="text-center">
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
-                          item.status === 'TERSALURKAN' ? 'bg-emerald-100 text-emerald-800' :
-                          item.status === 'DISETUJUI' ? 'bg-blue-100 text-blue-800' :
-                          'bg-slate-100 text-slate-600'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {item.isSynced ? (
-                          <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                            item.targetSync === 'PENGGAJIAN'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}>
-                            <CheckCircle2 className="w-3 h-3" />
-                            {item.targetSync === 'PENGGAJIAN' ? 'Penggajian' : 'Keu. Keluar'}
-                          </span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSyncItem(item)
-                              setSyncTarget(item.targetSync === 'PENGGAJIAN' ? 'PENGGAJIAN' : 'KEUANGAN_KELUAR')
-                            }}
-                            className="text-xs h-7 px-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-                          >
-                            <RefreshCw className="w-3 h-3 mr-1" />
-                            Sinkronkan
-                          </Button>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => openForm(item)}
-                          className="h-8 w-8 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDelete(item)}
-                          className="h-8 w-8 text-slate-600 hover:text-rose-600 hover:bg-rose-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* MODAL: Form Tambah / Edit */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-indigo-700">
-              <HeartHandshake className="w-5 h-5" />
-              {editingItem ? 'Edit Data Dana Bantuan' : 'Input Pendataan Dana Bantuan'}
-            </DialogTitle>
-            <DialogDescription>
-              Isikan detail bantuan dari yayasan/donatur yang nantinya dapat disinkronkan ke Keuangan Keluar dan Penggajian.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label>Nama Program Bantuan <span className="text-rose-500">*</span></Label>
-              <Input
-                placeholder="Misal: Bantuan Operasional Yayasan / Subsidi SPP Siswa"
-                value={formState.namaBantuan}
-                onChange={(e) => setFormState({ ...formState, namaBantuan: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Sumber Dana</Label>
-              <Select value={formState.sumberDana} onValueChange={(val) => { if (val) setFormState({ ...formState, sumberDana: val }) }}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Pilih Sumber Dana" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Yayasan">Yayasan / Persyarikatan</SelectItem>
-                  <SelectItem value="BOS">Pemerintah / BOS</SelectItem>
-                  <SelectItem value="Donatur">Donatur / Perorangan</SelectItem>
-                  <SelectItem value="CSR">CSR Perusahaan</SelectItem>
-                  <SelectItem value="Lainnya">Lainnya</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Kategori Bantuan</Label>
-              <Select value={formState.kategori} onValueChange={(val) => { if (val) setFormState({ ...formState, kategori: val }) }}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Pilih Kategori" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SISWA">Siswa (Beasiswa / Subsidi SPP)</SelectItem>
-                  <SelectItem value="PEGAWAI">Pegawai (Insentif / Tunjangan)</SelectItem>
-                  <SelectItem value="OPERASIONAL">Operasional Sekolah</SelectItem>
-                  <SelectItem value="UMUM">Bantuan Umum / Sosial</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Nominal Bantuan (Rp) <span className="text-rose-500">*</span></Label>
-              <Input
-                type="number"
-                placeholder="Nominal rupiah..."
-                value={formState.nominal}
-                onChange={(e) => setFormState({ ...formState, nominal: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Penerima / Target Bantuan</Label>
-              <Input
-                placeholder="Misal: Ahmad Dani (Guru) / Kelas 10 / Sekolah"
-                value={formState.penerima}
-                onChange={(e) => setFormState({ ...formState, penerima: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Tanggal Bantuan</Label>
-              <Input
-                type="date"
-                value={formState.tanggal}
-                onChange={(e) => setFormState({ ...formState, tanggal: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Status Pendataan</Label>
-              <Select value={formState.status} onValueChange={(val) => { if (val) setFormState({ ...formState, status: val }) }}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DRAFT">Draft</SelectItem>
-                  <SelectItem value="DISETUJUI">Disetujui</SelectItem>
-                  <SelectItem value="TERSALURKAN">Tersalurkan</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label>Target Sinkronisasi Utama</Label>
-              <Select value={formState.targetSync} onValueChange={(val) => { if (val) setFormState({ ...formState, targetSync: val }) }}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Pilih Target Sinkronisasi" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="KEUANGAN_KELUAR">Keuangan Keluar (Pengeluaran Kas Operasional)</SelectItem>
-                  <SelectItem value="PENGGAJIAN">Penggajian (Insentif / Tunjangan Bantuan Gaji)</SelectItem>
-                  <SelectItem value="NONE">Belum Diisi / Pending</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label>Keterangan / Kebutuhan Pendataan</Label>
-              <Textarea
-                rows={3}
-                placeholder="Tuliskan catatan rincian kebutuhan pendataan bantuan di sini..."
-                value={formState.keterangan}
-                onChange={(e) => setFormState({ ...formState, keterangan: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-slate-100">
-            <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
-              Batal
-            </Button>
-            <Button
-              type="button"
-              disabled={saveMutation.isPending || !formState.namaBantuan || !formState.nominal}
-              onClick={() => saveMutation.mutate()}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editingItem ? 'Simpan Perubahan' : 'Tambah Data Bantuan'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* MODAL: Confirmation Sinkronisasi */}
-      <Dialog open={!!syncItem} onOpenChange={(open) => !open && setSyncItem(null)}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-indigo-700">
-              <RefreshCw className="w-5 h-5 text-indigo-600" />
-              Proses Sinkronisasi Bantuan
-            </DialogTitle>
-            <DialogDescription>
-              Pilih modul tujuan sinkronisasi untuk mendata alokasi dana bantuan ini secara sistematis.
-            </DialogDescription>
-          </DialogHeader>
-
-          {syncItem && (
-            <div className="space-y-4 py-2">
-              <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 text-sm space-y-1">
-                <div className="font-bold text-slate-900">{syncItem.namaBantuan}</div>
-                <div className="text-slate-600">Nominal: <strong className="text-indigo-700">{currency(syncItem.nominal)}</strong></div>
-                <div className="text-slate-500 text-xs">Penerima: {syncItem.penerima || '-'} | Sumber: {syncItem.sumberDana}</div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="font-semibold text-slate-800">Target Modul Sinkronisasi</Label>
-                <div className="grid grid-cols-1 gap-2">
-                  <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                    syncTarget === 'KEUANGAN_KELUAR' ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-200 hover:bg-slate-50'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="syncTargetRadio"
-                      checked={syncTarget === 'KEUANGAN_KELUAR'}
-                      onChange={() => setSyncTarget('KEUANGAN_KELUAR')}
-                      className="mt-1 text-indigo-600"
-                    />
-                    <div>
-                      <div className="font-bold text-slate-900 text-sm">Keuangan Keluar (Outflow / Pengeluaran)</div>
-                      <div className="text-xs text-slate-500">
-                        Membuat entri pengeluaran kas otomatis di menu Keuangan Keluar untuk pelaporan pertanggungjawaban.
-                      </div>
-                    </div>
-                  </label>
-
-                  <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                    syncTarget === 'PENGGAJIAN' ? 'border-emerald-600 bg-emerald-50/50' : 'border-slate-200 hover:bg-slate-50'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="syncTargetRadio"
-                      checked={syncTarget === 'PENGGAJIAN'}
-                      onChange={() => setSyncTarget('PENGGAJIAN')}
-                      className="mt-1 text-emerald-600"
-                    />
-                    <div>
-                      <div className="font-bold text-slate-900 text-sm">Penggajian (Insentif / Tunjangan Gaji)</div>
-                      <div className="text-xs text-slate-500">
-                        Menghubungkan dana bantuan ke rekapitulasi estimasi penghasilan pegawai / guru penerima.
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-slate-100">
-            <Button type="button" variant="outline" onClick={() => setSyncItem(null)}>
-              Batal
-            </Button>
-            <Button
-              type="button"
-              disabled={syncMutation.isPending}
-              onClick={() => syncItem && syncMutation.mutate({ id: syncItem.id, targetSync: syncTarget })}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              {syncMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Jalankan Sinkronisasi
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
-// ============================================================
 // MAIN PAGE
 // ============================================================
 const TABS = [
   { id: 'tagihan', label: 'Tagihan Siswa', icon: Receipt },
   { id: 'verifikasi', label: 'Verifikasi Pembayaran', icon: CheckCircle2 },
   { id: 'rekap', label: 'Rekapitulasi', icon: BarChart3 },
-  { id: 'dana-bantuan', label: 'Dana Bantuan', icon: HeartHandshake },
 ]
 
 export default function KeuanganMasukPage() {
@@ -3369,7 +3710,7 @@ export default function KeuanganMasukPage() {
           </div>
           Keuangan Masuk
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1 ml-0.5">Pembuatan tagihan, verifikasi pembayaran, rekapitulasi & dana bantuan sekolah</p>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1 ml-0.5">Pembuatan tagihan, verifikasi pembayaran, & rekapitulasi keuangan sekolah</p>
       </div>
 
       <div className="border-b border-slate-200">
@@ -3392,10 +3733,8 @@ export default function KeuanganMasukPage() {
         {activeTab === 'tagihan' && <TabTagihan />}
         {activeTab === 'verifikasi' && <PaymentProofVerificationPage />}
         {activeTab === 'rekap' && <TabRekap />}
-        {activeTab === 'dana-bantuan' && <TabDanaBantuan />}
       </div>
     </div>
     </KeuanganRoleContext.Provider>
   )
 }
-

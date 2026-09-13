@@ -414,24 +414,32 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <div className="flex justify-between items-center">
+      {/* Header Glassmorphic Standar CBT MUHIPO */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 backdrop-blur-xl shadow-xs">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Manajemen Akun Pegawai</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Kelola data login dan hak akses pegawai, guru, staf TU, dan pengelola sistem.</p>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">
+            Master Data Kepegawaian
+          </span>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+            Manajemen Akun Pegawai
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
+            Kelola data login dan hak akses pegawai, guru, staf TU, dan pengelola sistem.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {selectedUserIds.length > 0 && (
             <Button
               variant="destructive"
               onClick={handleOpenBulkDeleteDialog}
-              className="bg-red-600 hover:bg-red-700 text-white gap-2"
+              className="bg-red-600 hover:bg-red-700 text-white gap-2 font-bold text-xs h-9 rounded-xl shadow-xs"
             >
               <Trash2 className="w-4 h-4" />
               Hapus ({selectedUserIds.length}) Terpilih
             </Button>
           )}
-          <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700 font-bold text-xs h-9 rounded-xl shadow-xs">
+            <Plus className="w-4 h-4 mr-1.5" />
             Tambah Akun Pegawai
           </Button>
         </div>

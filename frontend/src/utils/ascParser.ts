@@ -168,5 +168,22 @@ export function parseAscTimetableXml(xmlText: string, dbClasses: any[], dbSubjec
     }
   }
 
-  return schedules;
+  const parseTimeToMinutes = (t: string | undefined | null): number => {
+    if (!t) return 0;
+    const clean = t.replace('.', ':').trim();
+    const parts = clean.split(':');
+    const hours = parseInt(parts[0] || '0', 10) || 0;
+    const minutes = parseInt(parts[1] || '0', 10) || 0;
+    return hours * 60 + minutes;
+  };
+
+  return schedules.sort((a, b) => {
+    if (a.dayOfWeek !== b.dayOfWeek) {
+      return a.dayOfWeek - b.dayOfWeek;
+    }
+    const timeA = parseTimeToMinutes(a.startTime);
+    const timeB = parseTimeToMinutes(b.startTime);
+    if (timeA !== timeB) return timeA - timeB;
+    return parseTimeToMinutes(a.endTime) - parseTimeToMinutes(b.endTime);
+  });
 }

@@ -46,3 +46,5 @@ supabase/.temp/
 .DS_Store
 .vscode/
 
+# Large raw uncompressed SQL dumps (>100MB rejected by GitHub)
+simasmuh_siakad_coba_full_backup.sql

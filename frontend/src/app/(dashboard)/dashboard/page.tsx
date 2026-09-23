@@ -14,7 +14,7 @@ import {
   TrendingDown, Wallet, Landmark, DollarSign, Activity, CheckCircle2,
   ArrowUpRight, FileText, FileCheck, PieChart, ShieldAlert, BarChart3, Clock,
   ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake, Megaphone, Camera, CornerDownRight,
-  Server, Cpu, HardDrive, Zap, Network, RefreshCw, Radio, Terminal, Laptop, Globe, Check, Key, Send, LogOut, Lock, Eye, Monitor, Smartphone, X, Search, Trash2, Banknote
+  Server, Cpu, HardDrive, Zap, Network, RefreshCw, Radio, Terminal, Laptop, Globe, Check, Key, Send, LogOut, Lock, Eye, Monitor, Smartphone, X, Search, Trash2, Banknote, PenTool
 } from 'lucide-react'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import Link from 'next/link'
@@ -29,6 +29,8 @@ import { ActivityCalendarWidget } from '@/components/dashboard/ActivityCalendarW
 import { NewsArticleListWidget } from '@/components/dashboard/NewsArticleListWidget'
 import { StudentDashboard } from '@/components/dashboard/StudentDashboard'
 import { PrayerTimesWidget } from '@/components/dashboard/PrayerTimesWidget'
+import { SignaturePadDialog } from '@/components/dashboard/SignaturePadDialog'
+import { ExecutiveStatsPanel } from '@/components/dashboard/ExecutiveStatsPanel'
 
 import { useRealtimeServerClock } from '@/lib/time-sync'
 
@@ -134,6 +136,8 @@ export default function DashboardPage() {
   const [selectedStatCategory, setSelectedStatCategory] = useState<string>('SEMUA')
   const [selectedCurveType, setSelectedCurveType] = useState<'PRESENSI' | 'KEUANGAN' | 'PRESTASI' | 'DEMOGRAFI'>('PRESENSI')
   const [showAllKsMenus, setShowAllKsMenus] = useState(false)
+  const [showSignaturePad, setShowSignaturePad] = useState(false)
+  const [showExecutiveStats, setShowExecutiveStats] = useState(false)
 
   // Query untuk tagihan siswa (khusus siswa & wali murid)
   const { data: studentTagihans } = useQuery<{
@@ -1099,10 +1103,9 @@ export default function DashboardPage() {
     )
   }
 
-  // ============================================================
-  // DASHBOARD KEPALA SEKOLAH (DASBOR EKSEKUTIF SEKOLAH)
-  // ============================================================
-  if (role === 'KEPALA_SEKOLAH' || (isKepalaSekolah && !isKeuanganAll)) {
+  // DASHBOARD KEPALA SEKOLAH (Menggunakan layout universal 3-kolom modern dengan panel E-Sign & Statistika Khusus)
+  // Alur dilanjutkan ke generic return di bawah agar compact & konsisten
+  if (false && (role === 'KEPALA_SEKOLAH' || (isKepalaSekolah && !isKeuanganAll))) {
 
 
     const ov = execStats?.overview || {}
@@ -2847,9 +2850,42 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 relative z-10">
+          {/* Tombol Khusus Kepala Sekolah: Tanda Tangan Digital (E-Sign) & Toggle Statistika */}
+          {isKepalaSekolah && (
+            <>
+              <Button
+                size="sm"
+                onClick={() => setShowSignaturePad(true)}
+                className="h-8 sm:h-8.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-extrabold text-[11px] shadow-sm gap-1.5 border border-amber-400/40"
+              >
+                <PenTool className="w-3.5 h-3.5" />
+                <span>Tanda Tangan (E-Sign)</span>
+                {((execStats?.persuratan?.pendingDispensasi || 0) + (execStats?.persuratan?.pendingSuratKeluar || 0) + (execStats?.persuratan?.pendingDisposisi || 0)) > 0 && (
+                  <Badge className="h-4.5 px-1.5 bg-white text-orange-700 font-mono font-black text-[9px] rounded-full ml-0.5">
+                    {(execStats?.persuratan?.pendingDispensasi || 0) + (execStats?.persuratan?.pendingSuratKeluar || 0) + (execStats?.persuratan?.pendingDisposisi || 0)}
+                  </Badge>
+                )}
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowExecutiveStats(!showExecutiveStats)}
+                className={`h-8 sm:h-8.5 rounded-xl font-extrabold text-[11px] gap-1.5 backdrop-blur-md transition-all ${
+                  showExecutiveStats
+                    ? 'bg-amber-500 text-white border-amber-400 shadow-sm'
+                    : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-amber-300" />
+                <span>{showExecutiveStats ? 'Tutup Statistika' : 'Statistika Sekolah'}</span>
+              </Button>
+            </>
+          )}
+
           <span className="px-2.5 py-1 rounded-xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 text-white font-bold text-[11px] uppercase tracking-wider shadow-inner flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            {(role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') ? 'Tata Usaha' : role} {subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' ? `• ${subRole}` : ''}
+            {(role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') ? 'Tata Usaha' : isKepalaSekolah ? 'Kepala Sekolah' : role} {subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' && subRole !== 'KEPALA_SEKOLAH' ? `• ${subRole}` : ''}
           </span>
         </div>
       </div>
@@ -2857,8 +2893,19 @@ export default function DashboardPage() {
       {/* JADWAL SHOLAT & KHGT MUHAMMADIYAH REALTIME BANNER */}
       <PrayerTimesWidget variant="banner" />
 
-      {/* Kartu Statistika Keuangan (Khusus Keuangan All & Kepala Sekolah - Superadmin Khusus Runtime & Sistem) */}
-      {(isKeuanganAll || isKepalaSekolah) && role !== 'SUPERADMIN' && role !== 'ADMIN_IT' && (
+      {/* Panel Detail Statistika Eksekutif (Khusus Kepala Sekolah - Muncul saat tombol Statistika ditekan) */}
+      {isKepalaSekolah && showExecutiveStats && (
+        <ExecutiveStatsPanel
+          execStats={execStats}
+          studentsCount={students?.length || 0}
+          classesCount={classes?.length || 0}
+          totalPegawai={totalPegawai}
+          onClose={() => setShowExecutiveStats(false)}
+        />
+      )}
+
+      {/* Kartu Statistika Keuangan (Khusus Staff Keuangan Khusus/Supervisor Keuangan) */}
+      {isKeuanganAll && !isKepalaSekolah && role !== 'SUPERADMIN' && role !== 'ADMIN_IT' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Card className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Saldo Kas Bersih</span>
@@ -2896,6 +2943,72 @@ export default function DashboardPage() {
             subRole={subRole}
             profileAvatarUrl={(session?.user as any)?.avatarUrl}
           />
+
+          {/* Widget Antrean E-Sign & Persuratan Khusus Kepala Sekolah */}
+          {isKepalaSekolah && (
+            <Card className="p-3.5 rounded-2xl border border-amber-200/80 dark:border-amber-900/50 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/20 shadow-2xs space-y-2.5">
+              <div className="flex items-center justify-between border-b border-amber-100 dark:border-slate-800 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                    <PenTool className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-900 dark:text-white leading-tight">
+                      Antrean E-Sign Pimpinan
+                    </h4>
+                    <span className="text-[10px] text-slate-500">Perlu Pengesahan</span>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowSignaturePad(true)}
+                  className="h-6 px-2 text-[10px] font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60 rounded-lg"
+                >
+                  Canvas TTD
+                </Button>
+              </div>
+
+              <div className="space-y-1.5 text-xs">
+                <Link
+                  href="/presensi/dispensasi"
+                  className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 hover:border-amber-400 transition-colors"
+                >
+                  <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                    Dispensasi Siswa/Guru
+                  </span>
+                  <Badge className={`${(execStats?.persuratan?.pendingDispensasi || 0) > 0 ? 'bg-rose-500' : 'bg-emerald-600'} text-white text-[9.5px] px-1.5 py-0`}>
+                    {(execStats?.persuratan?.pendingDispensasi || 0) > 0 ? `${execStats?.persuratan?.pendingDispensasi} Menunggu` : 'Nihil'}
+                  </Badge>
+                </Link>
+
+                <Link
+                  href="/fitur/persuratan?tab=surat-masuk"
+                  className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 hover:border-amber-400 transition-colors"
+                >
+                  <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                    Disposisi Surat Masuk
+                  </span>
+                  <Badge className={`${(execStats?.persuratan?.pendingDisposisi || 0) > 0 ? 'bg-purple-600' : 'bg-emerald-600'} text-white text-[9.5px] px-1.5 py-0`}>
+                    {(execStats?.persuratan?.pendingDisposisi || 0) > 0 ? `${execStats?.persuratan?.pendingDisposisi} Disposisi` : 'Selesai'}
+                  </Badge>
+                </Link>
+
+                <Link
+                  href="/fitur/persuratan?tab=surat-keluar"
+                  className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 hover:border-amber-400 transition-colors"
+                >
+                  <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                    Surat Keluar / SK Kepsek
+                  </span>
+                  <Badge className={`${(execStats?.persuratan?.pendingSuratKeluar || 0) > 0 ? 'bg-amber-500' : 'bg-emerald-600'} text-white text-[9.5px] px-1.5 py-0`}>
+                    {(execStats?.persuratan?.pendingSuratKeluar || 0) > 0 ? `${execStats?.persuratan?.pendingSuratKeluar} TTD` : 'Lengkap'}
+                  </Badge>
+                </Link>
+              </div>
+            </Card>
+          )}
+
           <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
         </div>
 
@@ -3795,6 +3908,19 @@ export default function DashboardPage() {
 
       {/* Urgent System Announcement Popup */}
       <UrgentAnnouncementPopup announcements={systemAnnouncements} />
+
+      {/* Dialog Canvas Tanda Tangan Digital (E-Sign) Pimpinan / Kepala Sekolah */}
+      <SignaturePadDialog
+        open={showSignaturePad}
+        onClose={() => setShowSignaturePad(false)}
+        userName={(session?.user as any)?.name || 'Kepala Sekolah'}
+        userRole={role}
+        pendingCounts={{
+          dispensasi: execStats?.persuratan?.pendingDispensasi || 0,
+          disposisi: execStats?.persuratan?.pendingDisposisi || 0,
+          suratKeluar: execStats?.persuratan?.pendingSuratKeluar || 0
+        }}
+      />
 
       {/* Selesai konten dashboard utama */}
     </div>

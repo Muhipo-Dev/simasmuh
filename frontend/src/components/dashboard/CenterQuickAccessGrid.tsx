@@ -52,7 +52,7 @@ const COMMON_ACTION_HREFS = [
 
 export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGridProps) {
   // Pisahkan modul khusus peran/tugas (Atas) dan modul umum harian (Bawah)
-  const isSpecializedRole = role === 'KEUANGAN' || role === 'KEUANGAN_ALL' || role === 'KEUANGAN_MASUK' || role === 'KEUANGAN_KELUAR' ||
+  const isSpecializedRole = role === 'KEPALA_SEKOLAH' || role === 'KEUANGAN' || role === 'KEUANGAN_ALL' || role === 'KEUANGAN_MASUK' || role === 'KEUANGAN_KELUAR' ||
     role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || role === 'SUPERVISOR_KEUANGAN' || role === 'PEGAWAI' || role === 'KARYAWAN' || role === 'GURU'
 
   // Pisahkan link menjadi roleSpecific dan common

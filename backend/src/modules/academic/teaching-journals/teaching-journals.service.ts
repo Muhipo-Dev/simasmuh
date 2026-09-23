@@ -5,9 +5,41 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 export class TeachingJournalsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(query?: { userId?: string; teacherId?: string; date?: string; scheduleId?: string }) {
+    const where: any = {};
+    if (query?.scheduleId) {
+      where.scheduleId = query.scheduleId;
+    }
+    if (query?.teacherId) {
+      where.teacherId = query.teacherId;
+    }
+    if (query?.userId) {
+      where.schedule = {
+        teacher: { userId: query.userId },
+      };
+    }
+    if (query?.date) {
+      const startOfDay = new Date(query.date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(query.date);
+      endOfDay.setHours(23, 59, 59, 999);
+      where.date = {
+        gte: startOfDay,
+        lte: endOfDay,
+      };
+    }
     return this.prisma.teachingJournal.findMany({
-      include: { schedule: { include: { class: true } } },
+      where,
+      include: {
+        schedule: {
+          include: {
+            class: true,
+            subject: true,
+            teacher: { include: { user: true } },
+          },
+        },
+      },
+      orderBy: { date: 'desc' },
     });
   }
 

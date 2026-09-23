@@ -6,6 +6,7 @@ import {
   Param,
   Put,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { TeachingJournalsService } from './teaching-journals.service';
 
@@ -14,8 +15,13 @@ export class TeachingJournalsController {
   constructor(private readonly journalsService: TeachingJournalsService) {}
 
   @Get()
-  findAll() {
-    return this.journalsService.findAll();
+  findAll(
+    @Query('userId') userId?: string,
+    @Query('teacherId') teacherId?: string,
+    @Query('date') date?: string,
+    @Query('scheduleId') scheduleId?: string,
+  ) {
+    return this.journalsService.findAll({ userId, teacherId, date, scheduleId });
   }
 
   @Get(':id')

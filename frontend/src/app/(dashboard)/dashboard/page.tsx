@@ -2902,7 +2902,7 @@ export default function DashboardPage() {
         </div>
 
         {/* AREA TENGAH: TOMBOL AKSES CEPAT */}
-        <div className="md:col-span-2 xl:col-span-6 space-y-4 sm:space-y-5 order-first md:order-none">
+        <div className="md:col-span-2 xl:col-span-5 space-y-4 sm:space-y-5 order-first md:order-none">
           <div>
             <div className="flex items-center justify-between mb-2 sm:mb-2.5">
               <div className="flex items-center gap-1.5">
@@ -2926,8 +2926,8 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* AREA KANAN: DAFTAR BERITA / ARTIKEL & KALENDER KEGIATAN */}
-        <div className="md:col-span-1 xl:col-span-3 space-y-4 sm:space-y-5">
+        {/* AREA KANAN: DAFTAR BERITA / ARTIKEL & KALENDER KEGIATAN (Lebih Lebar) */}
+        <div className="md:col-span-1 xl:col-span-4 space-y-4 sm:space-y-5">
           <NewsArticleListWidget announcements={announcements} limit={4} />
           <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
         </div>

@@ -602,13 +602,13 @@ export function ActivityCalendarWidget({
       {viewMode === 'month' ? (
         <>
           {/* Navigation Controls */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-1">
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={prevMonth}
-                className="h-6 w-6 sm:h-6.5 sm:w-6.5 rounded-lg border-slate-200 dark:border-slate-800"
+                className="h-6 w-6 rounded-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
               >
                 <ChevronLeft className="w-3 h-3" />
               </Button>
@@ -616,7 +616,7 @@ export function ActivityCalendarWidget({
                 variant="outline"
                 size="icon"
                 onClick={nextMonth}
-                className="h-6 w-6 sm:h-6.5 sm:w-6.5 rounded-lg border-slate-200 dark:border-slate-800"
+                className="h-6 w-6 rounded-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
               >
                 <ChevronRight className="w-3 h-3" />
               </Button>
@@ -624,27 +624,27 @@ export function ActivityCalendarWidget({
                 variant="outline"
                 size="sm"
                 onClick={goToday}
-                className="h-6 sm:h-6.5 px-1.5 sm:px-2 text-[10px] font-bold rounded-lg border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100"
+                className="h-6 px-1.5 text-[10px] font-bold rounded-lg border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 hover:bg-blue-100"
               >
                 Hari Ini
               </Button>
             </div>
             <div className="text-right">
-              <div className="flex items-center justify-end gap-1.5">
-                <span className="font-extrabold text-[11px] sm:text-xs text-slate-800 dark:text-slate-100 tracking-wide">
+              <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                <span className="font-black text-xs text-slate-900 dark:text-white tracking-tight">
                   {monthNames[month]} {year}
                 </span>
-                <span className="text-[8.5px] font-semibold text-amber-700 dark:text-amber-300 font-mono bg-amber-50 dark:bg-amber-950/50 px-1 py-0.2 rounded border border-amber-200/50">
+                <span className="text-[9px] font-bold text-amber-800 dark:text-amber-300 font-mono bg-amber-100/80 dark:bg-amber-950/80 px-1 py-0.2 rounded border border-amber-300/80">
                   {midMonthHijri.monthName} {midMonthHijri.year} H
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Calendar Grid */}
-          <div className="border border-slate-100 dark:border-slate-800/80 rounded-xl overflow-hidden">
+          {/* Calendar Grid - Solid Background & High Legibility */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
             {/* Days Header */}
-            <div className="grid grid-cols-7 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 text-center py-1 text-[9px] sm:text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">
+            <div className="grid grid-cols-7 bg-slate-100/90 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-800 text-center py-1 text-[9.5px] font-black text-slate-600 dark:text-slate-300 uppercase">
               {dayNames.map((d, i) => (
                 <div key={i} className={i === 0 ? 'text-rose-600 dark:text-rose-400' : i === 5 ? 'text-emerald-600 dark:text-emerald-400' : ''}>
                   {d}
@@ -653,7 +653,7 @@ export function ActivityCalendarWidget({
             </div>
 
             {/* Cells */}
-            <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-800/60 text-center text-xs">
+            <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-800 text-center text-xs">
               {calendarDays.map((cell, idx) => {
                 const isToday = cell.key === todayKey
                 const hasEvents = cell.events.length > 0
@@ -681,93 +681,68 @@ export function ActivityCalendarWidget({
                         setSelectedDateStr(cell.key)
                       }
                     }}
-                    className={`min-h-[46px] sm:min-h-[52px] p-1 flex flex-col items-center justify-between transition-colors relative group ${
+                    className={`h-[38px] sm:h-[42px] p-0.5 sm:p-1 flex flex-col items-center justify-between transition-colors relative group bg-white dark:bg-slate-900 ${
                       !cell.isCurrentMonth
-                        ? 'bg-slate-50/40 dark:bg-slate-900/30 text-slate-300 dark:text-slate-600'
+                        ? 'bg-slate-50/70 dark:bg-slate-950/60 text-slate-300 dark:text-slate-600'
                         : hasHoliday
-                        ? 'bg-rose-50/40 dark:bg-rose-950/25 text-slate-700 dark:text-slate-200 hover:bg-rose-50/70'
+                        ? 'bg-rose-50/70 dark:bg-rose-950/40 text-slate-800 dark:text-slate-100 hover:bg-rose-100/70'
                         : hasMuhammadiyah
-                        ? 'bg-sky-50/40 dark:bg-sky-950/25 text-slate-700 dark:text-slate-200 hover:bg-sky-50/70'
+                        ? 'bg-sky-50/70 dark:bg-sky-950/40 text-slate-800 dark:text-slate-100 hover:bg-sky-100/70'
                         : hasIslamic
-                        ? 'bg-amber-50/40 dark:bg-amber-950/25 text-slate-700 dark:text-slate-200 hover:bg-amber-50/70'
+                        ? 'bg-amber-50/70 dark:bg-amber-950/40 text-slate-800 dark:text-slate-100 hover:bg-amber-100/70'
                         : hasAgenda
-                        ? 'bg-emerald-50/40 dark:bg-emerald-950/25 text-slate-700 dark:text-slate-200 hover:bg-emerald-50/70'
-                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        ? 'bg-emerald-50/70 dark:bg-emerald-950/40 text-slate-800 dark:text-slate-100 hover:bg-emerald-100/70'
+                        : 'text-slate-800 dark:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/60'
                     } ${isSelected ? 'ring-2 ring-blue-500 z-10' : ''}`}
                   >
                     {/* Top Date: Gregorian (Masehi) on Top-Left */}
-                    <div className="w-full flex items-center justify-start px-0.5">
+                    <div className="w-full flex items-center justify-between px-0.5">
                       <span
-                        className={`text-[10px] sm:text-[11px] font-bold w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full ${
+                        className={`text-[10.5px] font-bold w-4 h-4 flex items-center justify-center rounded-full leading-none ${
                           isToday
                             ? 'bg-blue-600 text-white font-black shadow-xs'
                             : isRedDay && cell.isCurrentMonth
                             ? 'text-rose-600 dark:text-rose-400 font-black'
                             : hasEvents
-                            ? 'text-slate-900 dark:text-white font-black'
-                            : ''
+                            ? 'text-slate-950 dark:text-white font-black'
+                            : 'text-slate-800 dark:text-slate-200'
                         }`}
                       >
                         {cell.day}
                       </span>
+                      {cell.hijri && (
+                        <span className="text-[8px] font-bold font-mono text-amber-700/80 dark:text-amber-400/80 leading-none">
+                          {cell.hijri.day}
+                        </span>
+                      )}
                     </div>
 
                     {/* Event indicators (colored badges/dots) */}
                     {hasEvents ? (
-                      <div className="w-full mt-0.5 space-y-0.5">
+                      <div className="w-full space-y-0.5">
                         {cell.events.slice(0, 1).map((ev, evIdx) => (
                           <div
                             key={evIdx}
                             title={ev.title}
-                            className={`text-[7px] sm:text-[8px] font-bold truncate px-1 py-0.5 rounded text-left leading-none ${
+                            className={`text-[7px] font-bold truncate px-0.5 py-0.2 rounded text-left leading-tight ${
                               ev.type === 'LIBUR_NASIONAL'
-                                ? 'bg-rose-500/20 text-rose-800 dark:text-rose-200 border border-rose-500/30'
+                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200 border border-rose-300'
                                 : ev.type === 'CUTI_BERSAMA'
-                                ? 'bg-orange-500/20 text-orange-800 dark:text-orange-200 border border-orange-500/30'
+                                ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/60 dark:text-orange-200 border border-orange-300'
                                 : ev.type === 'ISLAMIC_EVENT'
-                                ? 'bg-amber-500/20 text-amber-800 dark:text-amber-200 border border-amber-500/30'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300'
                                 : ev.type === 'MUHAMMADIYAH_EVENT'
-                                ? 'bg-sky-500/20 text-sky-800 dark:text-sky-200 border border-sky-500/30'
+                                ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-200 border border-sky-300'
                               : ev.type === 'PERINGATAN_NASIONAL'
-                                ? 'bg-indigo-500/20 text-indigo-800 dark:text-indigo-200 border border-indigo-500/30'
-                              : 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-500/30'
+                                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-200 border border-indigo-300'
+                              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-300'
                             }`}
                           >
                             {ev.title}
                           </div>
                         ))}
-                        {cell.events.length > 1 && (
-                          <span className="text-[7px] font-bold text-slate-500 block text-right pr-0.5">
-                            +{cell.events.length - 1}
-                          </span>
-                        )}
                       </div>
-                    ) : (
-                      /* Category Dots for Quick Visual */
-                      <div className="flex items-center justify-center gap-0.5 h-1.5 my-auto">
-                        {hasHoliday && <span className="w-1 h-1 rounded-full bg-rose-500" />}
-                        {cell.allEvents.some(e => e.type === 'PERINGATAN_NASIONAL') && <span className="w-1 h-1 rounded-full bg-indigo-500" />}
-                        {hasIslamic && <span className="w-1 h-1 rounded-full bg-amber-500" />}
-                        {hasMuhammadiyah && <span className="w-1 h-1 rounded-full bg-sky-500" />}
-                        {hasAgenda && <span className="w-1 h-1 rounded-full bg-emerald-500" />}
-                      </div>
-                    )}
-
-                    {/* Bottom: Hijri Day on Bottom-Right */}
-                    <div className="w-full flex items-center justify-end px-0.5 mt-auto pt-0.5">
-                      {cell.hijri && (
-                        <span
-                          title={`${cell.hijri.hijriDay ?? cell.hijri.day} ${cell.hijri.hijriMonthName || cell.hijri.monthName} ${cell.hijri.hijriYear || cell.hijri.year} H`}
-                          className={`text-[8px] sm:text-[9px] font-mono font-bold leading-none ${
-                            cell.isCurrentMonth
-                              ? 'text-amber-700 dark:text-amber-400'
-                              : 'text-slate-300 dark:text-slate-600'
-                          }`}
-                        >
-                          {cell.hijri.hijriDay ?? cell.hijri.day}
-                        </span>
-                      )}
-                    </div>
+                    ) : null}
                   </button>
                 )
               })}

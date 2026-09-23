@@ -2227,22 +2227,23 @@ function ManualCashPaymentModal({
               </div>
             ) : (
               <div className="space-y-2.5">
-                {/* Search Bar & Multi Filter Bar */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                  <div className="relative sm:col-span-2 lg:col-span-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                {/* Search Bar & Multi Filter Bar - Highlighted & Clean */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                  {/* Highlighted Search Bar */}
+                  <div className="relative sm:col-span-12 md:col-span-5">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <Input
-                      placeholder="Cari nama / NISN / NIS..."
+                      placeholder="Ketik nama / NISN / NIS siswa..."
                       value={studentSearch}
                       onChange={(e) => setStudentSearch(e.target.value)}
-                      className="pl-8.5 h-9 sm:h-10 bg-white dark:bg-slate-950 font-medium text-xs rounded-xl border-slate-200 dark:border-slate-800"
+                      className="pl-9 h-9 bg-white dark:bg-slate-950 font-bold text-xs rounded-xl border-emerald-400/80 dark:border-emerald-500/80 ring-2 ring-emerald-500/15 focus-visible:ring-emerald-500 focus-visible:border-emerald-600 shadow-xs"
                     />
                   </div>
 
                   {/* Filter Kelas */}
-                  <div>
+                  <div className="sm:col-span-4 md:col-span-3">
                     <Select value={filterKelas || 'all'} onValueChange={(v) => setFilterKelas(!v || v === 'all' ? '' : v)}>
-                      <SelectTrigger className="h-9 sm:h-10 bg-white dark:bg-slate-950 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                      <SelectTrigger className="h-9 bg-white dark:bg-slate-950 font-semibold text-xs rounded-xl border-slate-200 dark:border-slate-800">
                         <SelectValue placeholder="Semua Kelas">
                           {filterKelas ? `Kelas ${filterKelas}` : 'Semua Kelas'}
                         </SelectValue>
@@ -2255,11 +2256,11 @@ function ManualCashPaymentModal({
                   </div>
 
                   {/* Filter Program */}
-                  <div>
+                  <div className="sm:col-span-4 md:col-span-2">
                     <Select value={filterProgram || 'all'} onValueChange={(v) => setFilterProgram(!v || v === 'all' ? '' : v)}>
-                      <SelectTrigger className="h-9 sm:h-10 bg-white dark:bg-slate-950 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                      <SelectTrigger className="h-9 bg-white dark:bg-slate-950 font-semibold text-xs rounded-xl border-slate-200 dark:border-slate-800">
                         <SelectValue placeholder="Semua Program">
-                          {filterProgram ? `Program: ${filterProgram}` : 'Semua Program'}
+                          {filterProgram ? filterProgram : 'Semua Program'}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -2270,22 +2271,22 @@ function ManualCashPaymentModal({
                   </div>
 
                   {/* Filter Status Tagihan */}
-                  <div>
+                  <div className="sm:col-span-4 md:col-span-2">
                     <Select value={filterStatusTunggakan} onValueChange={(v: any) => setFilterStatusTunggakan(v)}>
-                      <SelectTrigger className="h-9 sm:h-10 bg-white dark:bg-slate-950 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                      <SelectTrigger className="h-9 bg-white dark:bg-slate-950 font-semibold text-xs rounded-xl border-slate-200 dark:border-slate-800">
                         <SelectValue placeholder="Status Tagihan" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ALL">Semua Status</SelectItem>
-                        <SelectItem value="HANYA_TUNGGAKAN">Hanya Menunggak</SelectItem>
-                        <SelectItem value="LUNAS">Bebas Tunggakan</SelectItem>
+                        <SelectItem value="ALL">Semua</SelectItem>
+                        <SelectItem value="HANYA_TUNGGAKAN">Menunggak</SelectItem>
+                        <SelectItem value="LUNAS">Lunas</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
                 {/* List Siswa Terfilter */}
-                <div className="max-h-52 sm:max-h-60 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-950 shadow-inner custom-scrollbar">
+                <div className="max-h-56 sm:max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800/80 bg-white dark:bg-slate-950 shadow-inner custom-scrollbar">
                   {filteredStudents.length === 0 ? (
                     <div className="p-4 text-center text-xs text-slate-400 font-medium">
                       Tidak ada siswa yang sesuai dengan filter atau kata kunci pencarian.
@@ -2303,23 +2304,23 @@ function ManualCashPaymentModal({
                             setCashAmount('')
                             setCashDiscountPct(0)
                           }}
-                          className="w-full text-left p-2.5 sm:p-3 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 transition-colors flex items-center justify-between group gap-2"
+                          className="w-full text-left p-2 sm:p-2.5 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 transition-colors flex items-center justify-between group gap-2"
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
                               {s.name.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-black text-slate-900 dark:text-white text-xs sm:text-sm group-hover:text-emerald-700 dark:group-hover:text-emerald-400 truncate">
+                              <p className="font-bold text-slate-900 dark:text-white text-xs group-hover:text-emerald-700 dark:group-hover:text-emerald-400 truncate">
                                 {s.name}
                               </p>
-                              <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate">
-                                {s.nisn} · <span className="font-bold text-slate-600 dark:text-slate-300">{s.className}</span> {s.program ? `· ${s.program}` : ''}
+                              <p className="text-[10px] text-slate-400 font-mono truncate">
+                                {s.nisn} · <span className="font-semibold text-slate-600 dark:text-slate-300">{s.className}</span> {s.program ? `· ${s.program}` : ''}
                               </p>
                             </div>
                           </div>
                           <div className="text-right shrink-0">
-                            <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border ${sisa > 0 ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900/60' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${sisa > 0 ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900/60' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
                               {sisa > 0 ? currency(sisa) : 'Lunas'}
                             </span>
                           </div>
@@ -2328,7 +2329,7 @@ function ManualCashPaymentModal({
                     })
                   )}
                   {filteredStudents.length > 40 && (
-                    <div className="p-2 text-center text-[10px] text-slate-400 font-semibold bg-slate-50 dark:bg-slate-900">
+                    <div className="p-1.5 text-center text-[10px] text-slate-400 font-semibold bg-slate-50 dark:bg-slate-900">
                       Menampilkan 40 dari {filteredStudents.length} siswa. Gunakan kolom pencarian / filter untuk mempersempit.
                     </div>
                   )}
@@ -2825,59 +2826,59 @@ function TabTagihan() {
   }, [filtered])
 
   return (
-    <div className="space-y-4">
-      {/* Quick Summary Metric Cards - Compact & High Contrast */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+    <div className="space-y-3">
+      {/* Quick Summary Metric Cards - Compact & Clean Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
         {!isKepalaSekolah ? (
           <button
             onClick={() => setCashModalOpen(true)}
-            className="group text-left bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 border border-emerald-500 p-3 sm:p-4 rounded-2xl shadow-xs transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between"
+            className="group text-left bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 border border-emerald-500/80 p-2.5 sm:p-3 rounded-xl shadow-xs transition-all duration-150 hover:shadow cursor-pointer flex flex-col justify-between"
           >
             <div className="flex items-center justify-between w-full">
-              <p className="text-[11px] font-extrabold text-emerald-100 uppercase tracking-wider">Kasir Pembayaran</p>
-              <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
-                <Wallet className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-bold text-emerald-100 uppercase tracking-wider">Kasir Pembayaran</span>
+              <div className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center text-white group-hover:scale-105 transition-transform">
+                <Wallet className="w-3 h-3" />
               </div>
             </div>
             <div className="mt-1 flex items-baseline justify-between">
-              <p className="text-base sm:text-lg font-black text-white">Kasir Tunai</p>
-              <span className="text-[11px] font-bold text-emerald-200 group-hover:underline">Buka Loket &rarr;</span>
+              <span className="text-sm sm:text-base font-black text-white">Kasir Tunai</span>
+              <span className="text-[10px] font-bold text-emerald-200 group-hover:underline">Buka Loket &rarr;</span>
             </div>
           </button>
         ) : (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 sm:p-4 rounded-2xl shadow-xs">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Siswa Terfilter</p>
-            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">{stats.totalSiswa} <span className="text-xs font-semibold text-slate-400">Siswa</span></p>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 rounded-xl shadow-xs">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Siswa</span>
+            <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">{stats.totalSiswa} <span className="text-[11px] font-normal text-slate-400">Siswa</span></p>
           </div>
         )}
-        <div className="bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 p-3 sm:p-4 rounded-2xl shadow-xs">
-          <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">Bebas Tunggakan</p>
-          <p className="text-xl sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-0.5">{stats.siswaLunas} <span className="text-xs font-semibold text-emerald-600/70">Lunas</span></p>
+        <div className="bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 p-2.5 sm:p-3 rounded-xl shadow-xs">
+          <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">Bebas Tunggakan</span>
+          <p className="text-base sm:text-lg font-black text-emerald-700 dark:text-emerald-400 mt-0.5">{stats.siswaLunas} <span className="text-[11px] font-normal text-emerald-600/70">Lunas</span></p>
         </div>
-        <div className="bg-rose-50/70 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 p-3 sm:p-4 rounded-2xl shadow-xs">
-          <p className="text-[11px] font-bold text-rose-800 dark:text-rose-300 uppercase tracking-wider">Memiliki Tagihan</p>
-          <p className="text-xl sm:text-2xl font-black text-rose-700 dark:text-rose-400 mt-0.5">{stats.siswaMenunggak} <span className="text-xs font-semibold text-rose-600/70">Siswa</span></p>
+        <div className="bg-rose-50/70 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-800/60 p-2.5 sm:p-3 rounded-xl shadow-xs">
+          <span className="text-[10px] font-bold text-rose-800 dark:text-rose-300 uppercase tracking-wider">Ada Tagihan</span>
+          <p className="text-base sm:text-lg font-black text-rose-700 dark:text-rose-400 mt-0.5">{stats.siswaMenunggak} <span className="text-[11px] font-normal text-rose-600/70">Siswa</span></p>
         </div>
-        <div className="bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 p-3 sm:p-4 rounded-2xl shadow-xs">
-          <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">Total Sisa Tagihan</p>
-          <p className="text-base sm:text-xl font-black text-amber-900 dark:text-amber-300 mt-0.5 truncate">{currency(stats.totalTunggakan)}</p>
+        <div className="bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 p-2.5 sm:p-3 rounded-xl shadow-xs">
+          <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">Total Sisa Tagihan</span>
+          <p className="text-sm sm:text-base font-black text-amber-900 dark:text-amber-300 mt-0.5 truncate">{currency(stats.totalTunggakan)}</p>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 sm:p-4 rounded-2xl shadow-xs flex flex-col lg:flex-row gap-3 justify-between items-stretch lg:items-center">
-        <div className="flex flex-wrap sm:flex-nowrap gap-2 flex-1">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      {/* Toolbar / Search & Actions Filter (Responsive Wrap on Zoom) */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 sm:p-2.5 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-[240px]">
+          <div className="relative flex-1 min-w-[140px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <Input
-              placeholder="Cari nama, NISN, NIS, kelas..."
-              className="pl-9 h-10 text-xs sm:text-sm font-semibold bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl"
+              placeholder="Cari siswa/kelas..."
+              className="pl-7.5 h-8 text-xs font-medium bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
           <Select value={filterKelas || 'all'} onValueChange={(v) => setFilterKelas(!v || v === 'all' ? '' : v)}>
-            <SelectTrigger className="w-[140px] sm:w-[160px] h-10 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl">
+            <SelectTrigger className="w-[115px] sm:w-[130px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
               <SelectValue placeholder="Semua Kelas" />
             </SelectTrigger>
             <SelectContent>
@@ -2887,12 +2888,12 @@ function TabTagihan() {
           </Select>
         </div>
 
-        <div className="flex flex-wrap gap-2 shrink-0 justify-end">
+        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
           {!isKepalaSekolah && (
             <>
               <Button onClick={() => setMassalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 h-10 px-3.5 text-xs font-extrabold rounded-xl shadow-xs">
-                <Layers className="w-4 h-4" /> Rilis 1 Tahun
+                className="bg-blue-600 hover:bg-blue-700 text-white gap-1 h-8 px-2.5 text-xs font-bold rounded-lg shadow-xs">
+                <Layers className="w-3.5 h-3.5" /> Rilis 1 Th
               </Button>
               <Button
                 variant="outline"
@@ -2904,55 +2905,56 @@ function TabTagihan() {
                   openResetModal(filtered.map(s => s.id));
                 }}
                 disabled={filtered.length === 0}
-                className="border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 h-10 px-3.5 text-xs font-extrabold rounded-xl shadow-xs gap-1.5"
+                className="border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 h-8 px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1"
                 title={filterKelas ? `Reset Tagihan untuk Kelas ${filterKelas} (${filtered.length} Siswa)` : `Reset Tagihan Seluruh Siswa Terfilter (${filtered.length} Siswa)`}
               >
-                <RotateCcw className="w-4 h-4 text-rose-600" />
-                {filterKelas ? `Reset Kelas ${filterKelas}` : search ? `Reset Hasil Cari (${filtered.length})` : 'Reset Semua Siswa'}
+                <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                {filterKelas ? `Reset ${filterKelas}` : search ? `Reset (${filtered.length})` : 'Reset Semua'}
               </Button>
             </>
           )}
           <Button variant="outline" onClick={handleExportRekapKelas}
-            className="border-indigo-300 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 h-10 px-3 text-xs font-bold rounded-xl"
+            className="border-indigo-200 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 h-8 px-2 text-xs font-bold rounded-lg"
             title="Eksport Excel Rekap Keuangan Per Kelas">
-            <FileSpreadsheet className="w-4 h-4 text-indigo-600" /> Excel Kelas
+            <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" /> Excel
           </Button>
           <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}
-            className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 h-10 px-3 text-xs font-bold rounded-xl">
-            <Download className="w-4 h-4" /> Export All
+            className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 h-8 px-2 text-xs font-bold rounded-lg"
+            title="Export Seluruh Data">
+            <Download className="w-3.5 h-3.5" /> Export
           </Button>
         </div>
       </div>
 
       {/* Floating / Top Action Bar When Students Are Selected */}
       {selectedStudentIds.length > 0 && (
-        <div className="bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/40 dark:to-pink-950/40 border border-rose-200 dark:border-rose-900/60 p-3 sm:p-3.5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200">
-          <div className="flex items-center gap-3">
-            <span className="font-extrabold text-xs text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 border border-rose-200 dark:border-rose-800 px-3 py-1 rounded-full flex items-center gap-1.5">
+        <div className="bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/40 dark:to-pink-950/40 border border-rose-200 dark:border-rose-900/60 p-2 rounded-xl flex flex-wrap items-center justify-between gap-1.5 shadow-xs animate-in fade-in duration-150">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-xs text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 border border-rose-200 dark:border-rose-800 px-2 py-0.5 rounded-full flex items-center gap-1">
               <CheckSquare className="w-3.5 h-3.5 text-rose-600" />
-              {selectedStudentIds.length} Siswa Terpilih
+              {selectedStudentIds.length} Terpilih
             </span>
             {filterKelas && (
-              <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">
-                (Kelas: {filterKelas})
+              <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                (Kelas {filterKelas})
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-1.5">
             <Button
               size="sm"
               onClick={() => openResetModal(selectedStudentIds)}
-              className="flex-1 sm:flex-none bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs gap-1.5 h-9 rounded-xl shadow-md"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Reset Tagihan ({selectedStudentIds.length} Siswa)
+              Reset ({selectedStudentIds.length})
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => setSelectedStudentIds([])}
-              className="text-xs h-9 rounded-xl border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-100/50"
+              className="text-xs h-7.5 px-2 rounded-lg border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-100/50"
             >
               Batal
             </Button>
@@ -2961,104 +2963,104 @@ function TabTagihan() {
       )}
 
       {/* Table */}
-      <Card className="shadow-sm border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+      <Card className="shadow-xs border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
         <CardContent className="p-0 overflow-x-auto max-w-full">
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-extrabold text-xs">
-                <TableRow>
+            <Table className="w-full text-xs">
+              <TableHeader className="bg-slate-50 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 font-bold text-[11px]">
+                <TableRow className="border-b border-slate-200 dark:border-slate-800">
                   {!isKepalaSekolah && (
-                    <TableHead className="w-10 text-center px-3 py-3 whitespace-nowrap">
+                    <TableHead className="w-7 text-center px-1 py-1.5 whitespace-nowrap">
                       <button
                         type="button"
                         onClick={toggleSelectAll}
-                        className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
+                        className="p-0.5 rounded text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
                         title={isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua Siswa'}
                       >
-                        {isAllSelected ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4" />}
+                        {isAllSelected ? <CheckSquare className="w-3.5 h-3.5 text-blue-600" /> : <Square className="w-3.5 h-3.5" />}
                       </button>
                     </TableHead>
                   )}
-                  <TableHead className="w-12 text-center whitespace-nowrap">No</TableHead>
-                  <TableHead className="whitespace-nowrap">Nama Siswa</TableHead>
-                  <TableHead className="text-center whitespace-nowrap">Status Tagihan</TableHead>
-                  <TableHead className="text-center whitespace-nowrap">SPP Lunas</TableHead>
-                  <TableHead className="text-right whitespace-nowrap">Total Sisa Tagihan</TableHead>
-                  <TableHead className="text-center whitespace-nowrap">Aksi</TableHead>
+                  <TableHead className="w-8 text-center py-1.5 px-1 whitespace-nowrap">No</TableHead>
+                  <TableHead className="py-1.5 px-2 max-w-[200px] whitespace-nowrap">Nama Siswa</TableHead>
+                  <TableHead className="w-24 text-center py-1.5 px-1 whitespace-nowrap">Status</TableHead>
+                  <TableHead className="w-20 text-center py-1.5 px-1 whitespace-nowrap">SPP</TableHead>
+                  <TableHead className="w-28 text-right py-1.5 px-2 whitespace-nowrap">Sisa Tagihan</TableHead>
+                  <TableHead className="w-24 text-center py-1.5 px-1 whitespace-nowrap sticky right-0 bg-slate-50 dark:bg-slate-800 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-16">
-                      <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto mb-2" />
-                      <p className="text-slate-500 text-sm">Memuat data...</p>
+                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-8">
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-600 mx-auto mb-1" />
+                      <p className="text-slate-500 text-[11px]">Memuat data...</p>
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-16 text-slate-400 font-medium">
+                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-8 text-slate-400 text-xs font-medium">
                       {search || filterKelas ? 'Tidak ada siswa yang sesuai kriteria filter.' : 'Belum ada data siswa.'}
                     </TableCell>
                   </TableRow>
                 ) : filtered.map((s, i) => {
                   const isChecked = selectedStudentIds.includes(s.id);
                   return (
-                    <TableRow key={s.id} className={`transition-colors ${isChecked ? 'bg-blue-50/50 dark:bg-blue-950/20' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/50'}`}>
+                    <TableRow key={s.id} className={`transition-colors border-b border-slate-100 dark:border-slate-800/60 ${isChecked ? 'bg-blue-50/50 dark:bg-blue-950/20' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/50'}`}>
                       {!isKepalaSekolah && (
-                        <TableCell className="text-center px-3 py-3 whitespace-nowrap">
+                        <TableCell className="text-center px-1 py-1 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => toggleSelectStudent(s.id)}
-                            className="p-1 rounded-md text-slate-400 hover:text-blue-600 transition-colors"
+                            className="p-0.5 rounded text-slate-400 hover:text-blue-600 transition-colors"
                           >
-                            {isChecked ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4" />}
+                            {isChecked ? <CheckSquare className="w-3.5 h-3.5 text-blue-600" /> : <Square className="w-3.5 h-3.5" />}
                           </button>
                         </TableCell>
                       )}
-                      <TableCell className="text-center text-slate-400 font-medium text-xs whitespace-nowrap">{i + 1}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                      <TableCell className="text-center text-slate-400 font-medium text-[11px] px-1 py-1 whitespace-nowrap">{i + 1}</TableCell>
+                      <TableCell className="py-1 px-2 max-w-[200px]">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div className={`w-5.5 h-5.5 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
                             {s.name.charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <p className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm leading-tight">{s.name}</p>
-                            <p className="text-[11px] text-slate-400 font-mono mt-0.5">NISN: {s.nisn} · <span className="font-bold text-slate-600 dark:text-slate-300">Kelas {s.className}</span></p>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-slate-900 dark:text-white text-xs leading-tight truncate" title={s.name}>{s.name}</p>
+                            <p className="text-[10px] text-slate-400 font-mono leading-tight truncate">NISN: {s.nisn} · <span className="font-semibold text-slate-600 dark:text-slate-300">{s.className}</span></p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-center whitespace-nowrap">
+                      <TableCell className="text-center py-1 px-1 whitespace-nowrap">
                         {s.belumLunasCount > 0
-                          ? <span className="font-extrabold px-2.5 py-1 rounded-lg text-xs bg-red-50 text-red-700 border border-red-200 inline-block whitespace-nowrap">{s.belumLunasCount} Tagihan</span>
-                          : <span className="text-emerald-700 font-extrabold text-xs bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> LUNAS</span>
+                          ? <span className="font-bold px-1.5 py-0.5 rounded text-[10px] bg-red-50 text-red-700 border border-red-200 inline-block whitespace-nowrap">{s.belumLunasCount} Tagihan</span>
+                          : <span className="text-emerald-700 font-bold text-[10px] bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5 whitespace-nowrap"><CheckCircle2 className="w-3 h-3 text-emerald-600" /> LUNAS</span>
                         }
                       </TableCell>
-                      <TableCell className="text-center whitespace-nowrap">
-                        <span className={`font-extrabold px-2.5 py-1 rounded-lg text-xs inline-block whitespace-nowrap ${s.sppLunasCount >= 12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : s.sppLunasCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
-                          {s.sppLunasCount}/12 Bulan
+                      <TableCell className="text-center py-1 px-1 whitespace-nowrap">
+                        <span className={`font-semibold px-1.5 py-0.5 rounded text-[10px] inline-block whitespace-nowrap ${s.sppLunasCount >= 12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : s.sppLunasCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
+                          {s.sppLunasCount}/12 Bln
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm whitespace-nowrap">
+                      <TableCell className="text-right font-bold text-slate-900 dark:text-white text-xs py-1 px-2 whitespace-nowrap">
                         {s.sisaTagihan !== undefined && s.sisaTagihan > 0 ? (
                           <span className="text-rose-600 dark:text-rose-400">{currency(s.sisaTagihan)}</span>
                         ) : (
-                          <span className="text-emerald-600 font-bold">Rp 0 (Lunas)</span>
+                          <span className="text-emerald-600 font-semibold">Rp 0 (Lunas)</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center whitespace-nowrap">
-                        <div className="flex justify-center items-center gap-1.5">
+                      <TableCell className="text-center py-1 px-1 whitespace-nowrap sticky right-0 bg-white dark:bg-slate-900 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
+                        <div className="flex justify-center items-center gap-1">
                           <Button size="sm" variant="outline"
-                            className="border-blue-300 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-xs gap-1.5 h-8 px-3 rounded-xl font-extrabold"
+                            className="border-blue-200 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-[10px] gap-1 h-6 px-1.5 rounded-md font-bold"
                             onClick={() => openModal(s)}>
-                            <Receipt className="w-3.5 h-3.5" /> {isKepalaSekolah ? 'Detail' : 'Kelola'}
+                            <Receipt className="w-3 h-3" /> {isKepalaSekolah ? 'Detail' : 'Kelola'}
                           </Button>
                           {!isKepalaSekolah && (
                             <Button size="sm" variant="outline"
                               title="Reset Tagihan Siswa (Otorisasi Password)"
-                              className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 text-xs gap-1 h-8 px-2.5 rounded-xl"
+                              className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 text-xs h-6 w-6 p-0 rounded-md"
                               onClick={() => openResetModal([s.id])}>
-                              <RotateCcw className="w-3.5 h-3.5" />
+                              <RotateCcw className="w-2.5 h-2.5" />
                             </Button>
                           )}
                         </div>
@@ -3702,26 +3704,29 @@ export default function KeuanganMasukPage() {
 
   return (
     <KeuanganRoleContext.Provider value={{ isKepalaSekolah }}>
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-xs shrink-0">
-            <Wallet className="w-5 h-5 text-white" />
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-xs shrink-0">
+            <Wallet className="w-4 h-4 text-white" />
           </div>
-          Keuangan Masuk
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1 ml-0.5">Pembuatan tagihan, verifikasi pembayaran, & rekapitulasi keuangan sekolah</p>
-      </div>
+          <div>
+            <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white">
+              Keuangan Masuk
+            </h1>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">Tagihan, verifikasi pembayaran, & rekapitulasi</p>
+          </div>
+        </div>
 
-      <div className="border-b border-slate-200">
-        <div className="flex gap-0 overflow-x-auto">
+        {/* Tab Navigation Compact Pill Style */}
+        <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80 gap-1 overflow-x-auto self-start sm:self-auto">
           {TABS.map(tab => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${isActive ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
-                <Icon className="w-4 h-4" />
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap transition-all ${isActive ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-white/50'}`}>
+                <Icon className="w-3.5 h-3.5" />
                 {tab.label}
               </button>
             )

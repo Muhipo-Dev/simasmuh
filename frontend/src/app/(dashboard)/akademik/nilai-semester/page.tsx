@@ -62,36 +62,40 @@ export default function NilaiSemesterPage() {
   const [selectedMapel, setSelectedMapel] = useState('ALL')
   const [selectedTipe, setSelectedTipe] = useState('ALL')
   const [selectedStatus, setSelectedStatus] = useState('ALL')
+  const [selectedClass, setSelectedClass] = useState('ALL')
 
   const user = session?.user as any
   const studentNis = user?.username || user?.nis || ''
 
-  // 1. Fetch data profil siswa aktif SIMASMUH
+  const userRole = String(user?.role || '').toUpperCase()
+  const userRolesList = [userRole, user?.subRole, user?.subRole2].filter(Boolean)
+  const isExecutiveSupervisor = userRolesList.some(r => ['KEPALA_SEKOLAH', 'SUPERADMIN', 'ADMIN_IT', 'KURIKULUM', 'ADMIN_TU', 'BAU'].includes(r))
+  const isStudentOrParent = (userRole === 'SISWA' || userRole.includes('WALI')) && !isExecutiveSupervisor
+
+  // 1. Fetch data profil siswa aktif SIMASMUH (hanya jika siswa/wali murid)
   const { data: activeStudent } = useQuery({
     queryKey: ['active-student-profile', user?.id],
     queryFn: async () => {
-      if (!user?.id) return null
+      if (!user?.id || !isStudentOrParent) return null
       const res = await authenticatedFetch(`/api-backend/students/by-user/${user.id}`)
       if (!res.ok) return null
       return res.json()
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && isStudentOrParent,
   })
 
-  // NIS efektif yang digunakan (dari student profile atau session)
-  const effectiveNis = activeStudent?.nis || studentNis
+  // NIS efektif yang digunakan
+  const effectiveNis = isStudentOrParent ? (activeStudent?.nis || studentNis) : ''
 
-  // 2. Fetch data nilai semester dari CBT MUHIPO Engine
+  // 2. Fetch data nilai semester dari CBT MUHIPO Engine atau fallback Grade lokal SIMASMUH
   const {
     data: nilaiData,
     isLoading,
     isRefetching,
     refetch,
   } = useQuery<{ success: boolean; total: number; data: CbtNilaiItem[] }>({
-    queryKey: ['cbt-nilai-semester', effectiveNis],
+    queryKey: ['cbt-nilai-semester', isExecutiveSupervisor ? 'all' : effectiveNis],
     queryFn: async () => {
-      // Panggil ke CBT endpoint (Port 3010 atau relative endpoint)
-      // Menggunakan resolusi host adaptif mengikuti IP/domain akses (Rule 10)
       let cbtHost = process.env.NEXT_PUBLIC_CBT_URL
       if (!cbtHost) {
         if (typeof window !== 'undefined') {
@@ -102,8 +106,6 @@ export default function NilaiSemesterPage() {
           cbtHost = 'http://localhost:3010'
         }
       }
-      const userRole = String(user?.role || '').toUpperCase()
-      const isStudentOrParent = userRole === 'SISWA' || userRole.includes('WALI')
       const apiUrl = isStudentOrParent && effectiveNis
         ? `${cbtHost}/api/external/simasmuh/nilai-semester?nis=${effectiveNis}`
         : `${cbtHost}/api/external/simasmuh/nilai-semester`
@@ -118,17 +120,20 @@ export default function NilaiSemesterPage() {
         if (!res.ok) throw new Error('Gagal mengambil data dari CBT')
         return res.json()
       } catch {
-        // Fallback: Jika pemanggilan langsung cross-origin gagal, ambil dari data tabel Grade lokal SIMASMUH
-        const fallbackRes = await authenticatedFetch(`/api-backend/grades?nis=${effectiveNis}`)
+        // Fallback: Jika CBT offline/cross-origin gagal, ambil dari data tabel Grade lokal SIMASMUH
+        const fallbackUrl = isStudentOrParent && effectiveNis 
+          ? `/api-backend/grades?nis=${effectiveNis}` 
+          : '/api-backend/grades'
+        const fallbackRes = await authenticatedFetch(fallbackUrl)
         if (fallbackRes.ok) {
           const rawGrades = await fallbackRes.json()
           const mappedData: CbtNilaiItem[] = (rawGrades || []).map((g: any) => ({
             idPesertaUjian: g.id,
-            nis: g.student?.nis || effectiveNis,
+            nis: g.student?.nis || effectiveNis || '-',
             nisn: g.student?.nisn || null,
-            namaSiswa: g.student?.name || user?.name || 'Siswa',
+            namaSiswa: g.student?.name || (isStudentOrParent ? user?.name : 'Siswa'),
             jenisKelamin: g.student?.gender || null,
-            kelas: g.student?.class?.name || activeStudent?.class?.name || '-',
+            kelas: g.student?.class?.name || (isStudentOrParent ? activeStudent?.class?.name : '-') || '-',
             tingkat: g.student?.class?.gradeLevel || 10,
             jurusan: g.student?.class?.program || 'Reguler',
             kodeUjian: `${g.type}-CBT`,
@@ -157,14 +162,11 @@ export default function NilaiSemesterPage() {
         return { success: false, total: 0, data: [] }
       }
     },
-    enabled: !!effectiveNis,
+    enabled: isExecutiveSupervisor || (isStudentOrParent && !!effectiveNis),
     staleTime: 1000 * 30, // 30 detik
   })
 
-  const userRole = String(user?.role || '').toUpperCase()
-  const isStudentOrParent = userRole === 'SISWA' || userRole.includes('WALI')
-
-  // Pastikan isolasi data: jika siswa/wali murid, hanya tampilkan NIS bersangkutan. Jika guru/admin, tampilkan seluruh nilai
+  // Pastikan isolasi data: jika siswa/wali murid, hanya tampilkan NIS bersangkutan. Jika supervisor, tampilkan seluruh nilai
   const rawList = (nilaiData?.data || []).filter((item) => {
     if (isStudentOrParent) {
       if (!effectiveNis) return false
@@ -173,8 +175,9 @@ export default function NilaiSemesterPage() {
     return true
   })
 
-  // Ekstrak daftar mapel unik untuk dropdown filter
+  // Ekstrak daftar mapel & kelas unik untuk dropdown filter
   const mapelOptions = Array.from(new Set(rawList.map((item) => item.namaMapel))).filter(Boolean)
+  const classOptions = Array.from(new Set(rawList.map((item) => item.kelas))).filter(Boolean)
 
   // Filter list data berdasarkan search & dropdown
   const filteredList = rawList.filter((item) => {
@@ -182,13 +185,16 @@ export default function NilaiSemesterPage() {
       item.namaMapel.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.judulUjian.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.kodeMapel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.guruPengampu.toLowerCase().includes(searchTerm.toLowerCase())
+      item.guruPengampu.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.namaSiswa && item.namaSiswa.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.nis && item.nis.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchMapel = selectedMapel === 'ALL' || item.namaMapel === selectedMapel
     const matchTipe = selectedTipe === 'ALL' || item.jenisPenilaian === selectedTipe
     const matchStatus = selectedStatus === 'ALL' || item.statusKetuntasan === selectedStatus
+    const matchClass = selectedClass === 'ALL' || item.kelas === selectedClass
 
-    return matchSearch && matchMapel && matchTipe && matchStatus
+    return matchSearch && matchMapel && matchTipe && matchStatus && matchClass
   })
 
   // Kalkulasi statistik ringkas
@@ -199,41 +205,52 @@ export default function NilaiSemesterPage() {
       : '0.0'
   const totalTuntas = rawList.filter((n) => n.statusKetuntasan === 'TUNTAS').length
   const totalBelumTuntas = totalUjian - totalTuntas
+  const persentaseKetuntasan = totalUjian > 0 ? ((totalTuntas / totalUjian) * 100).toFixed(0) : '0'
   const nilaiTertinggi =
     totalUjian > 0 ? Math.max(...rawList.map((n) => Number(n.nilaiTotal) || 0)).toFixed(1) : '0.0'
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300">
-      {/* 1. Header Banner & Identitas Peserta Didik */}
+      {/* 1. Header Banner & Identitas Peserta Didik / Supervisi Eksekutif */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-700 p-6 sm:p-8 text-white shadow-xl">
         <div className="absolute -right-8 -bottom-8 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-xs font-bold backdrop-blur-md">
               <Award className="w-3.5 h-3.5 text-amber-300" />
-              <span>Rekapitulasi Asesmen CBT MUHIPO Terintegrasi</span>
+              <span>
+                {isExecutiveSupervisor ? 'Supervisi Nilai Asesmen Sekolah' : 'Rekapitulasi Asesmen CBT MUHIPO Terintegrasi'}
+              </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Nilai Semester Siswa
+              {isExecutiveSupervisor ? 'Rekap Nilai Semester Sekolah' : 'Nilai Semester Siswa'}
             </h1>
             <p className="text-blue-100 text-xs sm:text-sm max-w-2xl font-medium leading-relaxed">
-              Daftar perolehan nilai hasil pengerjaan ujian berbasis komputer (CBT) yang tersinkronisasi otomatis dengan basis data kurikulum dan penilaian SIMASMUH.
+              {isExecutiveSupervisor
+                ? 'Monitoring capaian hasil ujian CBT seluruh siswa, rekap ketuntasan KKM per kelas dan mata pelajaran, serta evaluasi hasil penilaian terintegrasi.'
+                : 'Daftar perolehan nilai hasil pengerjaan ujian berbasis komputer (CBT) yang tersinkronisasi otomatis dengan basis data kurikulum dan penilaian SIMASMUH.'}
             </p>
           </div>
 
-          {/* Kartu Profil Siswa Ringkas */}
+          {/* Kartu Profil / Status Supervisor */}
           <div className="bg-white/15 border border-white/20 backdrop-blur-md rounded-2xl p-4 min-w-[260px] space-y-2 text-xs">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center font-black text-sm text-white">
-                {user?.name ? user.name.charAt(0).toUpperCase() : 'S'}
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div className="min-w-0">
-                <h4 className="font-bold text-white text-sm truncate">{user?.name || 'Siswa'}</h4>
-                <p className="text-blue-200 font-mono text-[11px]">NIS: {effectiveNis || '-'}</p>
+                <h4 className="font-bold text-white text-sm truncate">{user?.name || 'Pengguna'}</h4>
+                <p className="text-blue-200 font-mono text-[11px]">
+                  {isExecutiveSupervisor ? `Peran: ${userRole}` : `NIS: ${effectiveNis || '-'}`}
+                </p>
               </div>
             </div>
             <div className="pt-2 border-t border-white/15 flex items-center justify-between text-[11px] text-blue-100 font-medium">
-              <span>Kelas: <strong>{activeStudent?.class?.name || (rawList[0]?.kelas ?? '-')}</strong></span>
+              <span>
+                {isExecutiveSupervisor
+                  ? `Total Peserta Ujian: ${rawList.length}`
+                  : `Kelas: ${activeStudent?.class?.name || (rawList[0]?.kelas ?? '-')}`}
+              </span>
               <span>Semester: <strong>Ganjil</strong></span>
             </div>
           </div>
@@ -357,6 +374,23 @@ export default function NilaiSemesterPage() {
                 </SelectContent>
               </Select>
 
+              {/* Filter Kelas (Khusus Supervisor / Guru) */}
+              {isExecutiveSupervisor && (
+                <Select value={selectedClass} onValueChange={(v) => setSelectedClass(v || 'ALL')}>
+                  <SelectTrigger className="w-full sm:w-[130px] rounded-xl text-xs h-10 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+                    <SelectValue placeholder="Semua Kelas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Semua Kelas</SelectItem>
+                    {classOptions.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        Kelas {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
               {/* Filter Status Ketuntasan */}
               <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v || 'ALL')}>
                 <SelectTrigger className="w-full sm:w-[130px] rounded-xl text-xs h-10 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
@@ -393,7 +427,7 @@ export default function NilaiSemesterPage() {
           <div>
             <CardTitle className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
               <FileCheck2 className="w-5 h-5 text-blue-600" />
-              Daftar Hasil Nilai Asesmen CBT
+              {isExecutiveSupervisor ? 'Rekapitulasi Nilai Asesmen Sekolah' : 'Daftar Hasil Nilai Asesmen CBT'}
             </CardTitle>
             <CardDescription className="text-xs text-slate-500 mt-0.5">
               Menampilkan {filteredList.length} dari {totalUjian} catatan penilaian ujian semester
@@ -402,7 +436,7 @@ export default function NilaiSemesterPage() {
 
           <div className="flex items-center gap-2 text-xs">
             <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" /> Tuntas
+              <span className="w-2 h-2 rounded-full bg-emerald-500" /> Tuntas ({persentaseKetuntasan}%)
             </span>
             <span className="text-slate-300">•</span>
             <span className="flex items-center gap-1.5 text-rose-600 font-bold">
@@ -426,9 +460,9 @@ export default function NilaiSemesterPage() {
                 Belum Ada Catatan Nilai
               </h4>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                {searchTerm || selectedMapel !== 'ALL' || selectedTipe !== 'ALL'
+                {searchTerm || selectedMapel !== 'ALL' || selectedTipe !== 'ALL' || selectedClass !== 'ALL'
                   ? 'Tidak ada hasil penilaian yang sesuai dengan filter pencarian Anda.'
-                  : 'Belum ada data nilai ujian CBT yang tersinkronisasi untuk akun ini.'}
+                  : 'Belum ada data nilai ujian CBT yang tersinkronisasi untuk kriteria ini.'}
               </p>
             </div>
           ) : (
@@ -437,6 +471,7 @@ export default function NilaiSemesterPage() {
                 <TableHeader className="bg-slate-50/70 dark:bg-slate-800/40 text-[11px] uppercase tracking-wider font-extrabold">
                   <TableRow>
                     <TableHead className="w-12 text-center">No</TableHead>
+                    {isExecutiveSupervisor && <TableHead>Siswa & Kelas</TableHead>}
                     <TableHead>Mata Pelajaran & Ujian</TableHead>
                     <TableHead>Guru Pengampu</TableHead>
                     <TableHead className="text-center">Tipe Ujian</TableHead>
@@ -458,6 +493,26 @@ export default function NilaiSemesterPage() {
                         <TableCell className="text-center font-bold text-slate-400">
                           {index + 1}
                         </TableCell>
+                        {isExecutiveSupervisor && (
+                          <TableCell>
+                            <div className="space-y-0.5">
+                              <span className="font-bold text-slate-900 dark:text-white block text-xs">
+                                {item.namaSiswa}
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-[10px] text-slate-500">
+                                  NIS: {item.nis}
+                                </span>
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[9px] px-1.5 py-0 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900"
+                                >
+                                  Kelas {item.kelas}
+                                </Badge>
+                              </div>
+                            </div>
+                          </TableCell>
+                        )}
                         <TableCell>
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-1.5">

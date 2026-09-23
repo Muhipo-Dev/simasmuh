@@ -43,6 +43,24 @@ function TambahJurnalContent() {
     notes: ''
   })
 
+  const userRolesList = [userRole, (session?.user as any)?.subRole, (session?.user as any)?.subRole2].filter(Boolean)
+  const isExecutiveSupervisor = userRolesList.some(r => ['KEPALA_SEKOLAH', 'SUPERADMIN', 'ADMIN_IT', 'KURIKULUM'].includes(r))
+  const isKepalaSekolah = userRolesList.includes('KEPALA_SEKOLAH')
+
+  // Lindungi agar Kepala Sekolah tidak memiliki hak mengisi jurnal
+  useEffect(() => {
+    if (isKepalaSekolah) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Akses Supervisi',
+        text: 'Kepala Sekolah bertindak sebagai supervisor monitoring dan tidak memiliki hak mengisi jurnal KBM kelas.',
+        confirmButtonColor: '#2563eb'
+      }).then(() => {
+        router.replace('/akademik/jurnal-mengajar')
+      })
+    }
+  }, [isKepalaSekolah, router])
+
   // 1. Ambil jadwal eksklusif untuk guru yang sedang login
   const { data: rawSchedules, isLoading: loadingSchedules } = useQuery<any[]>({
     queryKey: ['schedules', userId, userRole],
@@ -51,7 +69,8 @@ function TambahJurnalContent() {
       const res = await authenticatedFetch(url)
       if (!res.ok) throw new Error('Gagal memuat jadwal')
       return res.json()
-    }
+    },
+    enabled: !isKepalaSekolah
   })
 
   const schedules = (Array.isArray(rawSchedules) ? rawSchedules : []).filter(s => {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSession } from 'next-auth/react'
 import { 
   ShieldCheck, Award, HeartHandshake, Sparkles, CheckCircle2, 
   AlertTriangle, BookOpen, Clock, Users, FileText, Info, ShieldAlert,
@@ -11,25 +12,77 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
+import { InteractiveCharacterAssessmentManagement } from '@/components/academic/InteractiveCharacterAssessmentManagement'
 
 export default function EtikaTatibPage() {
+  const { data: session } = useSession()
   const authenticatedFetch = useAuthenticatedFetch()
+  const authenticatedQuery = useAuthenticatedQuery()
   const [selectedChildIndex, setSelectedChildIndex] = useState(0)
 
-  // Ambil data dashboard wali murid / siswa
-  const { data: dashboardData, isLoading } = useQuery({
+  // Ambil profil akun pengguna saat ini untuk verifikasi peran
+  const { data: userProfile, isLoading: isProfileLoading } = useQuery<any>({
+    queryKey: ['my-user-profile-etika-tatib-page'],
+    queryFn: () => authenticatedQuery('/api-backend/users/me'),
+  })
+
+  // Evaluasi daftar peran pengguna (Role & Multi Sub-Role)
+  const userRoles = [
+    userProfile?.role,
+    userProfile?.subRole,
+    userProfile?.subRole2,
+    userProfile?.subRole3,
+    userProfile?.subRole4,
+    userProfile?.subRole5,
+    (session?.user as any)?.role,
+    (session?.user as any)?.subRole,
+    (session?.user as any)?.subRole2,
+    (session?.user as any)?.subRole3,
+    (session?.user as any)?.subRole4,
+    (session?.user as any)?.subRole5,
+  ].filter(Boolean)
+
+  const isStaffOrManagement = userRoles.some((r: string) => 
+    [
+      'KEPALA_SEKOLAH', 
+      'SUPERADMIN', 
+      'ADMIN_IT', 
+      'BAU', 
+      'ADMIN_TU', 
+      'KETERTIBAN', 
+      'BK_BP', 
+      'BK', 
+      'GURU', 
+      'GURU_MAPEL', 
+      'WALI_KELAS', 
+      'KURIKULUM', 
+      'SARPRAS', 
+      'HUMAS'
+    ].includes(r)
+  )
+
+  // Ambil data dashboard wali murid / siswa (jika role siswa/wali)
+  const { data: dashboardData } = useQuery({
     queryKey: ['parent-dashboard-etika'],
     queryFn: async () => {
       const res = await authenticatedFetch('/api-backend/parents/my-dashboard')
       if (!res.ok) {
-        // Fallback untuk akun siswa langsung
         const resSiswa = await authenticatedFetch('/api-backend/users/me')
         return resSiswa.json()
       }
       return res.json()
     },
+    enabled: !isStaffOrManagement,
   })
+
+  // Jika akun adalah Manajemen / Kepala Sekolah / Guru / Tatib / BK, tampilkan antarmuka statistik & rekap seluruh siswa
+  if (isStaffOrManagement) {
+    const isBk = userRoles.includes('BK_BP') || userRoles.includes('BK')
+    const isTatib = userRoles.includes('KETERTIBAN')
+    const mode = isBk ? 'BK' : isTatib ? 'KETERTIBAN' : 'ALL'
+    return <InteractiveCharacterAssessmentManagement mode={mode} />
+  }
 
   const students = dashboardData?.students || []
   const currentStudent = students[selectedChildIndex] || students[0]

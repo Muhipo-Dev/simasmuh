@@ -110,26 +110,27 @@ export const pegawaiLinks = [
   { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
-// 7. Kepala Sekolah
+// 7. Kepala Sekolah (Supervisi Log Aktivitas Sekolah & E-Sign Persuratan)
 export const kepalaSekolahLinks = [
   { name: 'Dashboard Eksekutif', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Scan QR Absen', href: '/presensi/scan-qr', icon: QrCode },
-  { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
-  { name: 'E-Sign & Persuratan', href: '/fitur/persuratan', icon: FileCheck, group: 'Supervisi Pimpinan' },
-  { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award, group: 'Supervisi Pimpinan' },
-  { name: 'Supervisi Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Akademik & KBM' },
-  { name: 'Data Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen, group: 'Master Data' },
-  { name: 'Data Guru & Pegawai', href: '/master-data/guru', icon: Users, group: 'Master Data' },
-  { name: 'Data Siswa & Induk', href: '/master-data/siswa', icon: UserSquare2, group: 'Master Data' },
-  { name: 'Data Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap, group: 'Master Data' },
-  { name: 'Inventaris & Sarpras', href: '/fitur/inventaris', icon: Package, group: 'Sarana & Prasarana' },
-  { name: 'Kepegawaian & HRD', href: '/fitur/kepegawaian', icon: UserCheck, group: 'Kepegawaian' },
-  { name: 'Kegiatan Sekolah', href: '/fitur/kegiatan-sekolah', icon: CalendarDays, group: 'Agenda & Kegiatan' },
-  { name: 'Buku Nilai Semester', href: '/akademik/nilai-semester', icon: GraduationCap, group: 'Akademik & KBM' },
-  { name: 'Jurnal Mengajar Guru', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Akademik & KBM' },
-  { name: 'Jurnal Wali Kelas', href: '/akademik/jurnal-wali-kelas', icon: BookOpen, group: 'Akademik & KBM' },
-  { name: 'Etika & Tata Tertib', href: '/akademik/etika-tatib', icon: ShieldCheck, group: 'Karakter & Tatib' },
-  { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: Wallet, group: 'Keuangan' },
+  { name: 'Log Presensi Guru & Staf', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck, group: 'Supervisi Log Presensi' },
+  { name: 'Log Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck, group: 'Supervisi Log Presensi' },
+  { name: 'Disposisi Surat', href: '/fitur/disposisi', icon: FileCheck, group: 'Supervisi & E-Sign' },
+  { name: 'E-Sign & Persuratan', href: '/fitur/persuratan', icon: Mail, group: 'Supervisi & E-Sign' },
+  { name: 'Supervisi Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Supervisi Akademik' },
+  { name: 'Supervisi Jurnal Guru', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Supervisi Akademik' },
+  { name: 'Supervisi Jurnal Wali Kelas', href: '/akademik/jurnal-wali-kelas', icon: BookOpen, group: 'Supervisi Akademik' },
+  { name: 'Rekap Nilai Semester', href: '/akademik/nilai-semester', icon: GraduationCap, group: 'Supervisi Akademik' },
+  { name: 'Log Karakter & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck, group: 'Supervisi Kesiswaan' },
+  { name: 'Data Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen, group: 'Supervisi Data' },
+  { name: 'Data Guru & Pegawai', href: '/master-data/guru', icon: Users, group: 'Supervisi Data' },
+  { name: 'Data Siswa & Induk', href: '/master-data/siswa', icon: UserSquare2, group: 'Supervisi Data' },
+  { name: 'Data Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap, group: 'Supervisi Data' },
+  { name: 'Supervisi Sarpras & Aset', href: '/fitur/inventaris', icon: Package, group: 'Supervisi Umum' },
+  { name: 'Supervisi Kepegawaian', href: '/fitur/kepegawaian', icon: UserCheck, group: 'Supervisi Umum' },
+  { name: 'Agenda & Kegiatan', href: '/fitur/kegiatan-sekolah', icon: CalendarDays, group: 'Supervisi Umum' },
+  { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: Wallet, group: 'Supervisi Keuangan' },
   { name: 'Slip Gaji Pribadi', href: '/keuangan/slip-gaji', icon: Banknote },
   { name: 'Izin Keluar Kampus', href: '/presensi/izin-keluar', icon: DoorOpen },
   { name: 'Izin Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays },
@@ -205,9 +206,9 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     if (pathname.startsWith('/keuangan/penggajian')) {
       return isKeuanganAll || roles.includes('KEUANGAN')
     }
-    // Laporan Keuangan — Keuangan All, Masuk, Keluar
+    // Laporan Keuangan — Keuangan All, Masuk, Keluar, dan Kepala Sekolah (Supervisi Eksekutif)
     if (pathname.startsWith('/keuangan/laporan')) {
-      return isKeuanganPure
+      return isKeuanganPure || roles.includes('KEPALA_SEKOLAH')
     }
     return isKeuanganPure
   }
@@ -229,11 +230,7 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
 
   const isKepalaSekolah = roles.includes('KEPALA_SEKOLAH')
   const isBau = roles.includes('ADMIN_TU') || roles.includes('BAU') || roles.includes('TATA_USAHA')
-  const isKeuanganAll = roles.includes('KEUANGAN_ALL') || roles.includes('SUPERVISOR_KEUANGAN')
-  const isKeuanganMasuk = roles.includes('KEUANGAN_MASUK')
-  const isKeuanganKeluar = roles.includes('KEUANGAN_KELUAR')
-  const isKeuanganPure = roles.includes('KEUANGAN') || isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar
-  const isGuru = roles.includes('GURU') || roles.includes('WALI_KELAS')
+  const isGuru = roles.includes('GURU')
   const isWaliKelas = roles.includes('WALI_KELAS')
   const isPegawai = roles.includes('PEGAWAI') || roles.includes('KARYAWAN')
   const isSiswa = roles.includes('SISWA')
@@ -253,7 +250,7 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isBau || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
   }
 
-  // 3. Modul Master Data Siswa, Guru, Kelas, Mapel — BAU, Superadmin & Kepala Sekolah/Guru/Wali Kelas/BK/Humas SDM/Kurikulum
+  // 2. Modul Master Data Siswa, Guru, Kelas, Mapel
   if (pathname.startsWith('/master-data/siswa')) {
     return isBau || isKepalaSekolah || isGuru || isWaliKelas || isBk || isKurikulum
   }
@@ -267,35 +264,43 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isBau
   }
 
-  // 4. Modul Akademik
+  // 3. Modul Akademik
   if (pathname.startsWith('/akademik/jadwal-pelajaran')) {
     return isBau || isKepalaSekolah || isGuru || isSiswa || isKurikulum || isGuruPiket
   }
   if (pathname.startsWith('/akademik/nilai-semester')) {
     return isSiswa || isWaliMurid || isGuru || isWaliKelas || isBau || isKepalaSekolah || isKurikulum
   }
+  if (pathname.startsWith('/akademik/jurnal-mengajar/tambah')) {
+    // Pengisian jurnal ajar HANYA untuk Guru Pengampu
+    return isGuru
+  }
   if (pathname.startsWith('/akademik/jadwal-mengajar') || pathname.startsWith('/akademik/jurnal-mengajar') || pathname.startsWith('/akademik/penilaian')) {
-    return isGuru || isBau || isKurikulum
+    return isGuru || isBau || isKurikulum || isKepalaSekolah
   }
   if (pathname.startsWith('/akademik/jurnal-wali-kelas')) {
-    return isWaliKelas || isBau
+    return isWaliKelas || isBau || isKepalaSekolah
   }
   if (pathname.startsWith('/akademik/e-rapor')) {
-    return isGuru || isWaliKelas || isSiswa || isWaliMurid || isBau || isKurikulum
+    return isGuru || isWaliKelas || isSiswa || isWaliMurid || isBau || isKurikulum || isKepalaSekolah
   }
   if (pathname.startsWith('/akademik/etika-tatib')) {
-    return isTatib || isBk || isGuru || isSiswa || isWaliMurid || isBau
+    return isTatib || isBk || isGuru || isSiswa || isWaliMurid || isBau || isKepalaSekolah
   }
 
-  // 5. Modul Presensi
-  if (pathname.startsWith('/presensi/kehadiran-pegawai') || pathname.startsWith('/presensi/jurnal-karyawan')) {
-    return isGuru || isPegawai || isBau || isHumasSdm || isGuruPiket
+  // 4. Modul Presensi & Jurnal Harian
+  if (pathname.startsWith('/presensi/jurnal-karyawan')) {
+    // HANYA untuk Pegawai/Karyawan
+    return isPegawai || isBau
+  }
+  if (pathname.startsWith('/presensi/kehadiran-pegawai')) {
+    return isGuru || isPegawai || isBau || isHumasSdm || isGuruPiket || isKepalaSekolah
   }
   if (pathname.startsWith('/presensi/kehadiran-siswa')) {
-    return isWaliKelas || isSiswa || isWaliMurid || isBau || isGuruPiket
+    return isWaliKelas || isSiswa || isWaliMurid || isBau || isGuruPiket || isKepalaSekolah
   }
   if (pathname.startsWith('/presensi/izin-keluar')) {
-    return isGuru || isPegawai || isBau || isHumasSdm || isGuruPiket
+    return isGuru || isPegawai || isBau || isHumasSdm || isGuruPiket || isKepalaSekolah
   }
   if (pathname.startsWith('/presensi/izin-siswa')) {
     return isWaliMurid || isSiswa || isWaliKelas || isTatib || isBk || isGuruPiket
@@ -304,18 +309,18 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isTatib || isBau || isKepalaSekolah || isSiswa || isWaliMurid || isWaliKelas || isBk
   }
   if (pathname.startsWith('/presensi/cuti')) {
-    return isGuru || isPegawai || isBau || isTatib || isWaliKelas || isHumasSdm
+    return isGuru || isPegawai || isBau || isTatib || isWaliKelas || isHumasSdm || isKepalaSekolah
   }
 
-  // 6. Modul Fitur Sub-Role Khusus (/fitur/[slug])
+  // 5. Modul Fitur Sub-Role Khusus (/fitur/[slug])
   if (pathname.startsWith('/fitur/')) {
     const slug = pathname.replace('/fitur/', '').split('/')[0]
     if (slug === 'disposisi') return isGuru || isPegawai || isBau || isKepalaSekolah
-    if (slug === 'persuratan') return isPersuratan || isBau || isKepalaSekolah || isGuru || isPegawai
+    if (slug === 'persuratan') return isPersuratan || isBau || isKepalaSekolah
     if (slug === 'inventaris') return isBau || isKepalaSekolah
     if (slug === 'kepegawaian') return isHumasSdm || isBau || isKepalaSekolah
     if (slug === 'buku-tamu') return isHumasSdm || isBau || isKepalaSekolah
-    if (slug === 'kegiatan' || slug === 'kegiatan-sekolah') return isHumasSdm || isBau || isKepalaSekolah || isGuru || isPegawai
+    if (slug === 'kegiatan' || slug === 'kegiatan-sekolah') return isHumasSdm || isBau || isKepalaSekolah
     if (slug === 'notulensi-rapat' || slug === 'notulensi') return isHumasSdm || isBau || isKepalaSekolah
     if (slug === 'ketertiban' || slug === 'catatan-kedisiplinan') return isTatib || isBk || isGuru || isWaliKelas || isBau
     if (slug === 'bk-bp') return isBk || isTatib || isBau
@@ -329,20 +334,20 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isBau
   }
 
-  // 7. Modul Informasi & Banner (Admin Web & Humas SDM)
+  // 6. Modul Informasi & Banner
   if (pathname.startsWith('/informasi/banner')) {
     return isAdminWeb || isHumasSdm || isBau
   }
   if (pathname.startsWith('/informasi/pengumuman') || pathname.startsWith('/berita')) {
-    return true // Berita/pengumuman umum & Admin Web
+    return true
   }
 
-  // 8. Modul Khusus Pengumuman Sistem — HANYA Superadmin & Admin IT
+  // 7. Modul Khusus Pengumuman Sistem — HANYA Superadmin & Admin IT
   if (pathname.startsWith('/pengaturan/pengumuman-sistem')) {
     return roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
   }
 
-  // 9. Pengaturan Notifikasi
+  // 8. Pengaturan Notifikasi
   if (pathname.startsWith('/pengaturan/notifikasi-wali')) {
     return isWaliMurid || isBau
   }

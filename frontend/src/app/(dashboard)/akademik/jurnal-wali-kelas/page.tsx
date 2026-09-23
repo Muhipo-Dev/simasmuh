@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, Pencil, Trash2, User, Users, GraduationCap } from 'lucide-react'
+import { Plus, Loader2, Pencil, Trash2, User, Users, GraduationCap, Eye, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -20,12 +20,17 @@ export default function HomeroomJournalsPage() {
   const userId = user?.id
   const userRolesList = [user?.role, user?.subRole, user?.subRole2, user?.subRole3, user?.subRole4, user?.subRole5].filter(Boolean)
   const isSuperAdmin = userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN'].includes(r))
-  const isWaliKelas = userRolesList.includes('WALI_KELAS') || userRolesList.includes('GURU')
+  const isKepalaSekolah = userRolesList.includes('KEPALA_SEKOLAH')
+  const isExecutiveSupervisor = isSuperAdmin || isKepalaSekolah || userRolesList.includes('KURIKULUM')
+  const isWaliKelas = userRolesList.includes('WALI_KELAS')
 
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [selectedDetail, setSelectedDetail] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedTeacherFilter, setSelectedTeacherFilter] = useState<string>('ALL')
   const [isEdit, setIsEdit] = useState(false)
   const [formData, setFormData] = useState({
     id: '',
@@ -211,9 +216,14 @@ export default function HomeroomJournalsPage() {
     }
   }
 
-  // Filter jurnal milik wali kelas yang login jika bukan superadmin
+  // Filter jurnal: jika supervisor (Kepala Sekolah / Superadmin), tampilkan semua jurnal wali kelas dengan opsi filter
   const displayedJournals = (journals || []).filter((j: any) => {
-    if (isSuperAdmin) return true
+    if (isExecutiveSupervisor) {
+      if (selectedTeacherFilter !== 'ALL') {
+        return j.teacherId === selectedTeacherFilter
+      }
+      return true
+    }
     if (currentTeacher?.id) return j.teacherId === currentTeacher.id
     if (user?.teacherProfile?.id) return j.teacherId === user.teacherProfile.id
     return true
@@ -226,17 +236,21 @@ export default function HomeroomJournalsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Jurnal Wali Kelas
+            {isExecutiveSupervisor ? 'Supervisi Jurnal Wali Kelas' : 'Jurnal Wali Kelas'}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-            Catatan kejadian, bimbingan, dan pembinaan siswa {myHomeroomClass ? `kelas ${myHomeroomClass.name}` : 'oleh Wali Kelas'}.
+            {isExecutiveSupervisor
+              ? 'Monitoring log catatan kejadian, bimbingan, pembinaan siswa, dan tindak lanjut seluruh Wali Kelas.'
+              : `Catatan kejadian, bimbingan, dan pembinaan siswa ${myHomeroomClass ? `kelas ${myHomeroomClass.name}` : 'oleh Wali Kelas'}.`}
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto" onClick={handleOpenAddDialog}>
-            <Plus className="w-4 h-4 mr-2" />
-            Tulis Jurnal Wali
-          </Button>
+          {(!isKepalaSekolah && (myHomeroomClass || isSuperAdmin || isWaliKelas)) && (
+            <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto" onClick={handleOpenAddDialog}>
+              <Plus className="w-4 h-4 mr-2" />
+              Tulis Jurnal Wali
+            </Button>
+          )}
 
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent className="max-w-lg">
@@ -371,16 +385,37 @@ export default function HomeroomJournalsPage() {
       <Card className="shadow-sm border-slate-200 dark:border-slate-800 dark:bg-slate-900/50">
         <CardHeader className="bg-slate-50/50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <CardTitle className="text-lg font-bold dark:text-slate-100">Daftar Catatan Wali Kelas</CardTitle>
+            <CardTitle className="text-lg font-bold dark:text-slate-100">
+              {isExecutiveSupervisor ? 'Log Supervisi Seluruh Wali Kelas' : 'Daftar Catatan Wali Kelas'}
+            </CardTitle>
             <CardDescription className="dark:text-slate-400 text-xs">
-              Log pembinaan dan evaluasi berkala siswa perwalian.
+              {isExecutiveSupervisor
+                ? `Menampilkan ${searchedJournals.length} catatan pembinaan siswa dari seluruh perwalian kelas.`
+                : 'Log pembinaan dan evaluasi berkala siswa perwalian.'}
             </CardDescription>
           </div>
-          <TableSearch
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Cari catatan / siswa / tindak lanjut..."
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            {isExecutiveSupervisor && (
+              <select
+                aria-label="Filter Wali Kelas"
+                value={selectedTeacherFilter}
+                onChange={(e) => setSelectedTeacherFilter(e.target.value)}
+                className="rounded-xl text-xs h-9 px-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-medium"
+              >
+                <option value="ALL">Semua Wali Kelas</option>
+                {teachers?.map((t: any) => (
+                  <option key={t.id} value={t.id}>
+                    {t.user?.name || t.nip || 'Guru'}
+                  </option>
+                ))}
+              </select>
+            )}
+            <TableSearch
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Cari catatan / siswa / tindak lanjut..."
+            />
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -426,23 +461,40 @@ export default function HomeroomJournalsPage() {
                     </TableCell>
                     <TableCell className="pr-6">
                       <div className="flex justify-end gap-1.5">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleOpenEditDialog(item)} 
-                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleDelete(item.id)} 
-                          disabled={deleteMutation.isPending} 
-                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+                        {isKepalaSekolah ? (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              setSelectedDetail(item)
+                              setDetailOpen(true)
+                            }}
+                            className="h-8 px-2.5 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" />
+                            Detail
+                          </Button>
+                        ) : (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleOpenEditDialog(item)} 
+                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleDelete(item.id)} 
+                              disabled={deleteMutation.isPending} 
+                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -452,6 +504,54 @@ export default function HomeroomJournalsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Dialog Detail Supervisi Jurnal Wali Kelas (Khusus Supervisor / Kepala Sekolah) */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-blue-600" />
+              Detail Jurnal Wali Kelas
+            </DialogTitle>
+            <DialogDescription>
+              Catatan pembinaan siswa oleh wali kelas bersangkutan.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedDetail && (
+            <div className="space-y-4 py-2 text-sm">
+              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span className="text-xs text-slate-500 block">Wali Kelas</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">
+                    {selectedDetail.teacher?.user?.name || '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-500 block">Tanggal</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">
+                    {new Date(selectedDetail.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Catatan Kejadian / Bimbingan</Label>
+                <div className="mt-1 p-3 bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
+                  {selectedDetail.notes}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Tindak Lanjut / Solusi</Label>
+                <div className="mt-1 p-3 bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 italic text-xs">
+                  {selectedDetail.actionTaken || 'Tidak ada tindak lanjut khusus.'}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailOpen(false)}>Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

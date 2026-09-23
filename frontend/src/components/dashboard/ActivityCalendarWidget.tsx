@@ -17,10 +17,17 @@ import {
   BookOpen,
   Maximize2,
   ExternalLink,
-  Filter
+  Filter,
+  X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   fetchNationalHolidays,
   fetchHijriMonthCalendar,
@@ -44,6 +51,7 @@ interface ActivityCalendarWidgetProps {
   title?: string
   onAddAgenda?: () => void
   showAddButton?: boolean
+  isModal?: boolean
 }
 
 export type EventCategoryType = 'AGENDA' | 'LIBUR_NASIONAL' | 'CUTI_BERSAMA' | 'ISLAMIC_EVENT' | 'MUHAMMADIYAH_EVENT' | 'PERINGATAN_NASIONAL'
@@ -60,7 +68,8 @@ export function ActivityCalendarWidget({
   announcements = [],
   title = 'Kalender & Agenda Terpadu',
   onAddAgenda,
-  showAddButton = false
+  showAddButton = false,
+  isModal = false
 }: ActivityCalendarWidgetProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [viewMode, setViewMode] = useState<'month' | 'list'>('month')
@@ -71,6 +80,7 @@ export function ActivityCalendarWidget({
   const [selectedDateEvents, setSelectedDateEvents] = useState<CalendarDayEvent[] | null>(null)
   const [selectedDateHijri, setSelectedDateHijri] = useState<HijriDayInfo | null>(null)
   const [selectedDateStr, setSelectedDateStr] = useState<string>('')
+  const [isExpanded, setIsExpanded] = useState<boolean>(false)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth() // 0-indexed (0 = Jan, 8 = Sep)
@@ -460,7 +470,7 @@ export function ActivityCalendarWidget({
           </h4>
         </div>
 
-        {/* View Mode Toggle */}
+        {/* View Mode Toggle & Maximize */}
         <div className="flex items-center gap-1 shrink-0">
           {showAddButton && onAddAgenda && (
             <Button
@@ -500,6 +510,17 @@ export function ActivityCalendarWidget({
           >
             Daftar
           </Button>
+          {!isModal && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 sm:h-6.5 px-1.5 text-[10px] font-bold rounded-lg border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              onClick={() => setIsExpanded(true)}
+              title="Perbesar Kalender (Layar Penuh / Dialog)"
+            >
+              <Maximize2 className="w-3 h-3" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -681,7 +702,9 @@ export function ActivityCalendarWidget({
                         setSelectedDateStr(cell.key)
                       }
                     }}
-                    className={`h-[38px] sm:h-[42px] p-0.5 sm:p-1 flex flex-col items-center justify-between transition-colors relative group bg-white dark:bg-slate-900 ${
+                    className={`${
+                      isModal ? 'min-h-[72px] sm:min-h-[84px] p-1.5' : 'h-[38px] sm:h-[42px] p-0.5 sm:p-1'
+                    } flex flex-col items-center justify-between transition-colors relative group bg-white dark:bg-slate-900 ${
                       !cell.isCurrentMonth
                         ? 'bg-slate-50/70 dark:bg-slate-950/60 text-slate-300 dark:text-slate-600'
                         : hasHoliday
@@ -720,11 +743,13 @@ export function ActivityCalendarWidget({
                     {/* Event indicators (colored badges/dots) */}
                     {hasEvents ? (
                       <div className="w-full space-y-0.5">
-                        {cell.events.slice(0, 1).map((ev, evIdx) => (
+                        {cell.events.slice(0, isModal ? 3 : 1).map((ev, evIdx) => (
                           <div
                             key={evIdx}
                             title={ev.title}
-                            className={`text-[7px] font-bold truncate px-0.5 py-0.2 rounded text-left leading-tight ${
+                            className={`${
+                              isModal ? 'text-[9.5px] py-0.5 px-1' : 'text-[7px] px-0.5 py-0.2'
+                            } font-bold truncate rounded text-left leading-tight ${
                               ev.type === 'LIBUR_NASIONAL'
                                 ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200 border border-rose-300'
                                 : ev.type === 'CUTI_BERSAMA'
@@ -741,6 +766,11 @@ export function ActivityCalendarWidget({
                             {ev.title}
                           </div>
                         ))}
+                        {isModal && cell.events.length > 3 && (
+                          <div className="text-[8.5px] font-bold text-slate-500 text-left px-1">
+                            +{cell.events.length - 3} lainnya
+                          </div>
+                        )}
                       </div>
                     ) : null}
                   </button>
@@ -942,6 +972,30 @@ export function ActivityCalendarWidget({
             })
           )}
         </div>
+      )}
+
+      {/* POPUP / DIALOG PERBESAR KALENDER */}
+      {!isModal && (
+        <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
+          <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] flex flex-col p-4 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto">
+            <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                <CalendarIcon className="w-5 h-5 text-blue-600" />
+                <span>{title} — Mode Tampilan Penuh</span>
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="pt-2">
+              <ActivityCalendarWidget
+                announcements={announcements}
+                title={title}
+                onAddAgenda={onAddAgenda}
+                showAddButton={showAddButton}
+                isModal={true}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

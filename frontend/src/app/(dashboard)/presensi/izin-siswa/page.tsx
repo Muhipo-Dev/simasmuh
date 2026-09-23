@@ -165,7 +165,14 @@ export function IzinSiswaManagement() {
           let homeroomClassId = ''
           if (classesRes?.ok) {
             const classesData = await classesRes.json()
-            const myClass = classesData.find((c: any) => c.homeroomTeacher?.userId === user?.id || c.homeroomTeacher?.user?.id === user?.id)
+            const myClass = classesData.find((c: any) => 
+              c.homeroomTeacher?.userId === user?.id || 
+              c.homeroomTeacher?.user?.id === user?.id ||
+              c.homeroomTeacherId === user?.teacherProfile?.id ||
+              c.homeroomTeacherId === user?.teacherId ||
+              (c.homeroomTeacher?.user?.email && user?.email && c.homeroomTeacher?.user?.email === user?.email) ||
+              (c.homeroomTeacher?.user?.name && user?.name && c.homeroomTeacher?.user?.name.trim().toLowerCase() === user?.name.trim().toLowerCase())
+            )
             if (myClass) homeroomClassId = myClass.id
           }
 

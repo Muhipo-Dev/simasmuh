@@ -360,8 +360,16 @@ export default function StudentsPage() {
   // Jika user adalah Wali Kelas, otomatis filter ke kelas perwaliannya
   useEffect(() => {
     if (isWaliKelas && classes && classes.length > 0 && filterClassId === 'ALL') {
-      const myUserId = (session?.user as any)?.id
-      const myClass = classes.find((c: any) => c.homeroomTeacher?.userId === myUserId || c.homeroomTeacher?.user?.id === myUserId)
+      const myUser = session?.user as any
+      const myUserId = myUser?.id
+      const myClass = classes.find((c: any) => 
+        c.homeroomTeacher?.userId === myUserId || 
+        c.homeroomTeacher?.user?.id === myUserId ||
+        c.homeroomTeacherId === myUser?.teacherProfile?.id ||
+        c.homeroomTeacherId === myUser?.teacherId ||
+        (c.homeroomTeacher?.user?.email && myUser?.email && c.homeroomTeacher?.user?.email === myUser?.email) ||
+        (c.homeroomTeacher?.user?.name && myUser?.name && c.homeroomTeacher?.user?.name.trim().toLowerCase() === myUser?.name.trim().toLowerCase())
+      )
       if (myClass) {
         setFilterClassId(myClass.id)
       }
@@ -1117,7 +1125,14 @@ export default function StudentsPage() {
 
     {isWaliKelas && !isSuperadmin ? (
       <WaliKelasSiswaManagement 
-        homeroomClass={classes?.find((c: any) => c.homeroomTeacher?.userId === (session?.user as any)?.id || c.homeroomTeacher?.user?.id === (session?.user as any)?.id)}
+        homeroomClass={classes?.find((c: any) => 
+          c.homeroomTeacher?.userId === (session?.user as any)?.id || 
+          c.homeroomTeacher?.user?.id === (session?.user as any)?.id ||
+          c.homeroomTeacherId === (session?.user as any)?.teacherProfile?.id ||
+          c.homeroomTeacherId === (session?.user as any)?.teacherId ||
+          (c.homeroomTeacher?.user?.email && (session?.user as any)?.email && c.homeroomTeacher?.user?.email === (session?.user as any)?.email) ||
+          (c.homeroomTeacher?.user?.name && (session?.user as any)?.name && c.homeroomTeacher?.user?.name.trim().toLowerCase() === (session?.user as any)?.name.trim().toLowerCase())
+        )}
       />
     ) : (
     <div className="space-y-6">

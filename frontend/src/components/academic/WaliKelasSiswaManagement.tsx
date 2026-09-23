@@ -65,14 +65,24 @@ interface ClassSummaryItem {
   }[]
 }
 
-export function WaliKelasSiswaManagement({ homeroomClass }: { homeroomClass?: any }) {
+export function WaliKelasSiswaManagement({ 
+  homeroomClass, 
+  initialTab = 'siswa',
+  customTitle,
+  customDescription
+}: { 
+  homeroomClass?: any; 
+  initialTab?: 'siswa' | 'presensi' | 'izin_dispensasi';
+  customTitle?: string;
+  customDescription?: string;
+}) {
   const authenticatedFetch = useAuthenticatedFetch()
   const { data: session } = useSession()
   const user = session?.user as any
   const userId = user?.id
 
   // State Tabs
-  const [activeTab, setActiveTab] = useState<'siswa' | 'presensi' | 'izin_dispensasi'>('siswa')
+  const [activeTab, setActiveTab] = useState<'siswa' | 'presensi' | 'izin_dispensasi'>(initialTab)
   const [izinSubFilter, setIzinSubFilter] = useState<'ALL' | 'IZIN' | 'DISPENSASI'>('ALL')
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily')
   const [targetDate, setTargetDate] = useState<string>(new Date().toISOString().split('T')[0])
@@ -122,12 +132,18 @@ export function WaliKelasSiswaManagement({ homeroomClass }: { homeroomClass?: an
   // Temukan semua kelas yang diwalikan oleh user saat ini
   const myClasses = useMemo(() => {
     const fromApi = classesData.filter(
-      (c: any) => c.homeroomTeacher?.userId === userId || c.homeroomTeacher?.user?.id === userId || c.homeroomTeacherId === user?.teacherId
+      (c: any) => 
+        c.homeroomTeacher?.userId === userId || 
+        c.homeroomTeacher?.user?.id === userId || 
+        c.homeroomTeacherId === user?.teacherId ||
+        c.homeroomTeacherId === user?.teacherProfile?.id ||
+        (c.homeroomTeacher?.user?.email && user?.email && c.homeroomTeacher?.user?.email === user?.email) ||
+        (c.homeroomTeacher?.user?.name && user?.name && c.homeroomTeacher?.user?.name.trim().toLowerCase() === user?.name.trim().toLowerCase())
     )
     if (fromApi.length > 0) return fromApi
     if (homeroomClass) return [homeroomClass]
     return []
-  }, [classesData, userId, user?.teacherId, homeroomClass])
+  }, [classesData, userId, user?.teacherId, user?.teacherProfile?.id, user?.email, user?.name, homeroomClass])
 
   // State Pilihan Kelas (jika wali kelas memiliki lebih dari satu kelas)
   const [selectedClassId, setSelectedClassId] = useState<string>('')
@@ -345,7 +361,7 @@ export function WaliKelasSiswaManagement({ homeroomClass }: { homeroomClass?: an
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
               <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span>Manajemen Siswa</span>
+              <span>{customTitle || (initialTab === 'presensi' ? 'Presensi Kelas Harian' : 'Manajemen Siswa')}</span>
             </h1>
 
             {/* Dropdown Pilihan Kelas jika mengampu lebih dari 1 kelas */}
@@ -375,7 +391,7 @@ export function WaliKelasSiswaManagement({ homeroomClass }: { homeroomClass?: an
             )}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Presensi realtime, verifikasi izin sakit & dispensasi terpadu {effectiveClass?.name ? `Kelas ${effectiveClass.name}` : 'kelas Anda'}.
+            {customDescription || `Presensi realtime seluruh siswa & rekap harian ${effectiveClass?.name ? `Kelas ${effectiveClass.name}` : 'kelas Anda'}.`}
           </p>
         </div>
 

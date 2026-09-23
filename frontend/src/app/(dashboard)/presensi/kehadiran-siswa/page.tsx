@@ -12,6 +12,7 @@ import { Loader2, CalendarDays, Download, UserCheck, ChevronDown } from 'lucide-
 import * as XLSX from 'xlsx'
 import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { WaliKelasSiswaManagement } from '@/components/academic/WaliKelasSiswaManagement'
 
 type LogEntry = {
   date: string
@@ -26,10 +27,10 @@ export default function LogPresensiSiswaPage() {
   const userId = (session?.user as any)?.id
   const authenticatedFetch = useAuthenticatedFetch()
   const user = session?.user as any
-  const userRole = user?.role || ''
-  const isWaliKelas = user?.subRole === 'WALI_KELAS' || user?.subRole2 === 'WALI_KELAS' || user?.subRole3 === 'WALI_KELAS'
-  const isSuperOrAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(userRole)
-  const isStaffOrGuru = isSuperOrAdmin || isWaliKelas
+  const userRolesList = [user?.role, user?.subRole, user?.subRole2, user?.subRole3, user?.subRole4, user?.subRole5].filter(Boolean)
+  const isWaliKelas = userRolesList.includes('WALI_KELAS')
+  const isSuperOrAdmin = userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(r))
+  const isStaffOrGuru = isSuperOrAdmin || isWaliKelas || userRolesList.includes('GURU')
 
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString())
@@ -71,24 +72,21 @@ export default function LogPresensiSiswaPage() {
   })
 
   // Siswa yang diwalikan oleh wali kelas saat ini
-  const homeroomClass = classesData.find((c: any) => c.homeroomTeacher?.userId === userId || c.homeroomTeacher?.user?.id === userId)
+  const homeroomClass = classesData.find((c: any) => 
+    c.homeroomTeacher?.userId === userId || 
+    c.homeroomTeacher?.user?.id === userId ||
+    c.homeroomTeacherId === user?.teacherProfile?.id ||
+    c.homeroomTeacherId === user?.teacherId ||
+    (c.homeroomTeacher?.user?.email && user?.email && c.homeroomTeacher?.user?.email === user?.email) ||
+    (c.homeroomTeacher?.user?.name && user?.name && c.homeroomTeacher?.user?.name.trim().toLowerCase() === user?.name.trim().toLowerCase())
+  )
+
   const relevantStudents = isWaliKelas && homeroomClass
     ? allStudents.filter((s: any) => s.classId === homeroomClass.id)
     : allStudents
 
   const effectiveStudentList = myStudents.length > 0 ? myStudents : relevantStudents
   const targetUserId = selectedStudentUserId || (effectiveStudentList[0]?.student?.userId || effectiveStudentList[0]?.userId || userId)
-
-  const { data: logs, isLoading } = useQuery<LogEntry[]>({
-    queryKey: ['monthly-log-siswa', targetUserId, selectedYear, selectedMonth],
-    queryFn: async () => {
-      if (!targetUserId) return []
-      const res = await authenticatedFetch(`/api-backend/daily-attendances/monthly?userId=${targetUserId}&year=${selectedYear}&month=${selectedMonth}`)
-      if (!res.ok) throw new Error('Gagal memuat log presensi siswa')
-      return res.json()
-    },
-    enabled: !!targetUserId,
-  })
 
   const months = [
     { value: '1', label: 'Januari' },
@@ -108,6 +106,20 @@ export default function LogPresensiSiswaPage() {
   const currentYear = new Date().getFullYear()
   const years = [currentYear - 1, currentYear, currentYear + 1]
 
+  const { data: logs, isLoading } = useQuery<LogEntry[]>({
+    queryKey: ['monthly-log-siswa', targetUserId, selectedYear, selectedMonth],
+    queryFn: async () => {
+      if (!targetUserId) return []
+      const res = await authenticatedFetch(`/api-backend/daily-attendances/monthly?userId=${targetUserId}&year=${selectedYear}&month=${selectedMonth}`)
+      if (!res.ok) throw new Error('Gagal memuat log presensi siswa')
+      return res.json()
+    },
+    enabled: !!targetUserId && (!isWaliKelas || isSuperOrAdmin),
+  })
+
+  const { sortConfig, handleSort, sortedItems: sortedLogs } = useSorting(logs || [])
+  const searchedLogs = filterDataBySearch(sortedLogs, searchQuery)
+
   const handleExportExcel = () => {
     if (!logs || logs.length === 0) return;
     
@@ -125,8 +137,10 @@ export default function LogPresensiSiswaPage() {
     XLSX.writeFile(wb, `Log_Kehadiran_Siswa_${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}.xlsx`);
   }
 
-  const { sortConfig, handleSort, sortedItems: sortedLogs } = useSorting(logs || [])
-  const searchedLogs = filterDataBySearch(sortedLogs, searchQuery)
+  // Jika user adalah Wali Kelas, tampilkan tampilan presensi kelas harian perwalian secara penuh
+  if (isWaliKelas && !isSuperOrAdmin) {
+    return <WaliKelasSiswaManagement homeroomClass={homeroomClass} initialTab="presensi" />
+  }
 
   return (
     <div className="space-y-6">

@@ -75,21 +75,34 @@ export default function HomeroomJournalsPage() {
   // Cari Guru & Kelas Perwalian yang terhubung dengan Akun yang Login
   const currentTeacher = teachers?.find((t: any) => 
     t.userId === userId || 
+    t.id === user?.teacherProfile?.id ||
+    t.id === user?.teacherId ||
     t.user?.id === userId || 
-    t.user?.email === user?.email ||
-    (t.user?.username && t.user?.username === user?.username)
+    (t.user?.email && user?.email && t.user?.email === user?.email) ||
+    (t.user?.username && user?.username && t.user?.username === user?.username) ||
+    (t.user?.name && user?.name && t.user?.name.trim().toLowerCase() === user?.name.trim().toLowerCase())
   )
 
   const myHomeroomClass = classes?.find((c: any) => 
-    c.homeroomTeacherId === currentTeacher?.id ||
+    (currentTeacher?.id && c.homeroomTeacherId === currentTeacher.id) ||
     c.homeroomTeacher?.userId === userId ||
-    c.homeroomTeacher?.user?.email === user?.email
+    c.homeroomTeacher?.user?.id === userId ||
+    (c.homeroomTeacher?.user?.email && user?.email && c.homeroomTeacher?.user?.email === user?.email) ||
+    (c.homeroomTeacher?.user?.name && user?.name && c.homeroomTeacher?.user?.name.trim().toLowerCase() === user?.name.trim().toLowerCase())
   )
 
-  // Filter siswa: jika wali kelas, tampilkan siswa di kelas perwaliannya; jika superadmin, tampilkan semua siswa
+  // Kelas yang sedang aktif untuk form (jika superadmin memilih guru lain, gunakan kelas guru tersebut)
+  const selectedTeacher = formData.teacherId ? teachers?.find((t: any) => t.id === formData.teacherId) : currentTeacher
+  const activeHomeroomClass = myHomeroomClass || classes?.find((c: any) => 
+    (selectedTeacher?.id && c.homeroomTeacherId === selectedTeacher.id) ||
+    c.homeroomTeacher?.userId === selectedTeacher?.userId ||
+    c.homeroomTeacher?.user?.id === selectedTeacher?.userId
+  )
+
+  // Filter siswa: jika wali kelas / ada kelas perwalian aktif, tampilkan siswa di kelas perwaliannya
   const availableStudents = (allStudents || []).filter((s: any) => {
+    if (activeHomeroomClass) return s.classId === activeHomeroomClass.id
     if (isSuperAdmin && !myHomeroomClass) return true
-    if (myHomeroomClass) return s.classId === myHomeroomClass.id
     return true
   })
 
@@ -139,12 +152,13 @@ export default function HomeroomJournalsPage() {
 
   const handleOpenAddDialog = () => {
     setIsEdit(false)
+    const initialTeacherId = currentTeacher?.id || (myHomeroomClass?.homeroomTeacherId) || (teachers && teachers.length > 0 ? teachers[0].id : '')
     setFormData({
       id: '',
       date: new Date().toISOString().split('T')[0],
       notes: '',
       actionTaken: '',
-      teacherId: currentTeacher?.id || teachers?.[0]?.id || '',
+      teacherId: initialTeacherId,
       studentName: ''
     })
     setOpen(true)
@@ -201,6 +215,7 @@ export default function HomeroomJournalsPage() {
   const displayedJournals = (journals || []).filter((j: any) => {
     if (isSuperAdmin) return true
     if (currentTeacher?.id) return j.teacherId === currentTeacher.id
+    if (user?.teacherProfile?.id) return j.teacherId === user.teacherProfile.id
     return true
   })
 
@@ -235,16 +250,16 @@ export default function HomeroomJournalsPage() {
 
                 <div className="grid gap-4 py-4">
                   {/* Info Wali Kelas & Kelas Terhubung */}
-                  {myHomeroomClass ? (
+                  {activeHomeroomClass ? (
                     <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center justify-between text-xs sm:text-sm">
                       <div className="flex items-center gap-2">
                         <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <span className="font-semibold text-blue-900 dark:text-blue-200">
-                          Kelas Perwalian: <span className="font-bold underline">{myHomeroomClass.name}</span>
+                          Kelas Perwalian: <span className="font-bold underline">{activeHomeroomClass.name}</span>
                         </span>
                       </div>
                       <div className="text-blue-700 dark:text-blue-300 font-medium">
-                        {currentTeacher?.user?.name || user?.name}
+                        {activeHomeroomClass.homeroomTeacher?.user?.name || selectedTeacher?.user?.name || currentTeacher?.user?.name || user?.name}
                       </div>
                     </div>
                   ) : null}
@@ -288,7 +303,7 @@ export default function HomeroomJournalsPage() {
                         <Label className="text-xs font-semibold">Wali Kelas Pengampu</Label>
                         <Input 
                           disabled 
-                          value={currentTeacher?.user?.name || user?.name || 'Wali Kelas'} 
+                          value={activeHomeroomClass?.homeroomTeacher?.user?.name || currentTeacher?.user?.name || user?.name || 'Wali Kelas'} 
                           className="bg-slate-100 dark:bg-slate-800 font-medium cursor-not-allowed text-xs" 
                         />
                       </div>

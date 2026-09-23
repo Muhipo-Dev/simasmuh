@@ -8,7 +8,7 @@ import {
   HeartHandshake, Library, BookMarked, Mail, Clock, 
   ArrowLeft, CheckCircle2, Construction, Sparkle, Layers, ChevronRight,
   Contact, Package, Boxes, Search, PlusCircle, Download, FileText, Pencil, Trash2,
-  Building2, Users, Loader2, Phone, Calendar
+  Building2, Users, Loader2, Phone, Calendar, GraduationCap
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -293,6 +293,36 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
       { title: 'Kajian Selasa Pagi', desc: 'Pencatatan materi kajian rutin dan presensi kehadiran.', status: 'DALAM_PENGEMBANGAN' },
       { title: 'QR Code Generator', desc: 'Generate QR dinamis untuk scan absensi pegawai.', status: 'DALAM_PENGEMBANGAN' },
       { title: 'Presensi Live & Rekap', desc: 'Daftar hadir realtime, ekspor excel, dan cetak PDF.', status: 'DALAM_PENGEMBANGAN' },
+    ]
+  },
+  kurikulum: {
+    title: 'Manajemen Kurikulum',
+    roleName: 'Kurikulum',
+    category: 'Akademik & Kurikulum',
+    icon: GraduationCap,
+    gradient: 'from-fuchsia-600 via-purple-600 to-indigo-700',
+    badgeColor: 'bg-fuchsia-500/10 text-fuchsia-600 border-fuchsia-500/20 dark:bg-fuchsia-400/10 dark:text-fuchsia-400',
+    description: 'Pusat tata kelola kurikulum, perangkat ajar, supervisi jadwal KBM, dan rekapitulasi penilaian capaian pembelajaran.',
+    modules: [
+      { title: 'Struktur Kurikulum & Mapel', desc: 'Pengaturan beban jam pelajaran dan mata pelajaran.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Jadwal Pembelajaran KBM', desc: 'Penyusunan dan distribusi jadwal pelajaran kelas.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Supervisi Perangkat Ajar', desc: 'Pemantauan RPP, Modul Ajar, dan Jurnal Mengajar Guru.', status: 'SEGERA_HADIR' },
+      { title: 'Rekap Capaian Nilai', desc: 'Monitoring nilai asesmen dan capaian hasil belajar siswa.', status: 'DALAM_PENGEMBANGAN' },
+    ]
+  },
+  'guru-piket': {
+    title: 'Guru Piket',
+    roleName: 'Guru Piket',
+    category: 'Operasional Harian',
+    icon: Clock,
+    gradient: 'from-lime-600 via-emerald-600 to-teal-700',
+    badgeColor: 'bg-lime-500/10 text-lime-600 border-lime-500/20 dark:bg-lime-400/10 dark:text-lime-400',
+    description: 'Pusat pemantauan KBM harian, perizinan siswa di gerbang, presensi kedatangan, dan penanganan kelas kosong.',
+    modules: [
+      { title: 'Log Piket Harian', desc: 'Pencatatan kejadian dan kondisi ketertiban harian.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Validasi Izin Keluar Masuk', desc: 'Pemberian dan pengecekan izin keluar siswa saat jam KBM.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Penanganan Kelas Kosong', desc: 'Tugas guru pengganti dan modul mandiri kelas kosong.', status: 'SEGERA_HADIR' },
+      { title: 'Rekap Presensi KBM', desc: 'Monitoring ketertiban jam masuk guru dan siswa.', status: 'DALAM_PENGEMBANGAN' },
     ]
   }
 }

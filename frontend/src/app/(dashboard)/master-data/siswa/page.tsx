@@ -2380,7 +2380,7 @@ export default function StudentsPage() {
                   <SelectContent className="rounded-xl">
                     <SelectItem value="ALL">Semua Status</SelectItem>
                     <SelectItem value="ACTIVE">Aktif</SelectItem>
-                    <SelectItem value="INACTIVE">Nonaktif / Purna</SelectItem>
+                    <SelectItem value="INACTIVE">Nonaktif</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -2474,7 +2474,7 @@ export default function StudentsPage() {
                             : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800'
                         }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${item.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                          {item.isActive !== false ? 'Aktif' : 'Nonaktif / Purna'}
+                          {item.isActive !== false ? 'Aktif' : 'Nonaktif'}
                         </span>
                       </TableCell>
                       <TableCell>

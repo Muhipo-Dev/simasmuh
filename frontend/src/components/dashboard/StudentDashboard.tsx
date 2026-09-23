@@ -471,36 +471,49 @@ export function StudentDashboard({
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Left: Avatar & Identity Details */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5 sm:gap-4">
-            {/* Circle Avatar */}
-            <div className="relative shrink-0">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-100 dark:bg-slate-800 border-3 border-white/20 shadow-inner flex items-center justify-center overflow-hidden">
-                {(session?.user as any)?.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={(session?.user as any)?.avatarUrl}
-                    alt={session?.user?.name || 'Siswa'}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white text-2xl font-black">
-                    {(session?.user?.name || 'S').charAt(0).toUpperCase()}
-                  </div>
-                )}
+              <div className="relative shrink-0">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-100 dark:bg-slate-800 border-3 border-white/20 shadow-inner flex items-center justify-center overflow-hidden">
+                  {(session?.user as any)?.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={(session?.user as any)?.avatarUrl}
+                      alt={session?.user?.name || 'Siswa'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white text-2xl font-black">
+                      {(session?.user?.name || 'S').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div 
+                  className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-slate-900 flex items-center justify-center ${
+                    activeStudent?.isActive !== false && (session?.user as any)?.isActive !== false
+                      ? 'bg-emerald-500'
+                      : 'bg-rose-500'
+                  }`} 
+                  title={activeStudent?.isActive !== false && (session?.user as any)?.isActive !== false ? 'Akun Siswa Aktif' : 'Akun Siswa Nonaktif'} 
+                />
               </div>
-              <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-900 flex items-center justify-center" title="Akun Aktif" />
-            </div>
 
-            {/* Student Info */}
-            <div className="space-y-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
-                  {clock.greeting}, <span className="text-blue-300">{session?.user?.name || 'MUH NAILAR RAZA'}</span>
-                </h2>
-                <Badge className="bg-emerald-500/90 text-white font-bold text-[9.5px] px-2 py-0.2 rounded-full border-none shadow-xs flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                  Siswa Aktif
-                </Badge>
-              </div>
+              {/* Student Info */}
+              <div className="space-y-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
+                    {clock.greeting}, <span className="text-blue-300">{session?.user?.name || 'MUH NAILAR RAZA'}</span>
+                  </h2>
+                  {activeStudent?.isActive !== false && (session?.user as any)?.isActive !== false ? (
+                    <Badge className="bg-emerald-500/90 text-white font-bold text-[9.5px] px-2 py-0.2 rounded-full border-none shadow-xs flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      Aktif
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-rose-500/90 text-white font-bold text-[9.5px] px-2 py-0.2 rounded-full border-none shadow-xs flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                      Nonaktif
+                    </Badge>
+                  )}
+                </div>
 
               {/* Subtitle Details: NISN, Class, Program, Homeroom Teacher */}
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] sm:text-xs text-blue-100/90 font-medium">

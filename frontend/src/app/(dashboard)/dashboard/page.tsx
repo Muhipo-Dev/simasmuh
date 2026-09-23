@@ -990,7 +990,6 @@ export default function DashboardPage() {
               role={role}
               activeStudent={activeStudent}
               profileAvatarUrl={(session?.user as any)?.avatarUrl}
-              statusLabel={`Wali: ${activeStudent?.name || 'Siswa'}`}
             />
             <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
           </div>
@@ -2896,7 +2895,6 @@ export default function DashboardPage() {
             role={role}
             subRole={subRole}
             profileAvatarUrl={(session?.user as any)?.avatarUrl}
-            statusLabel={isSuperadminRole ? 'Superadmin: Online' : 'Staff/Guru: Aktif'}
           />
           <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
         </div>

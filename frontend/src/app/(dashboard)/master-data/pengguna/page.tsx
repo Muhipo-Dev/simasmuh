@@ -827,7 +827,7 @@ export default function UsersPage() {
                     : 'text-rose-700 dark:text-rose-400 hover:text-rose-900'
                 }`}
               >
-                Nonaktif / Purna ({users?.filter(u => !['WALI_MURID', 'SISWA'].includes(u.role) && u.isActive === false).length || 0})
+                Nonaktif ({users?.filter(u => !['WALI_MURID', 'SISWA'].includes(u.role) && u.isActive === false).length || 0})
               </button>
             </div>
 
@@ -1022,7 +1022,7 @@ export default function UsersPage() {
                           }`}
                         >
                           <span className={`w-2 h-2 rounded-full ${item.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                          {item.isActive !== false ? 'Aktif' : 'Nonaktif / Purna'}
+                          {item.isActive !== false ? 'Aktif' : 'Nonaktif'}
                         </button>
                       </TableCell>
                       <TableCell className="text-right pr-4">
@@ -1032,7 +1032,7 @@ export default function UsersPage() {
                             size="sm"
                             className={`h-8 w-8 p-0 ${item.isActive !== false ? 'text-emerald-600 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
                             onClick={() => handleToggleUserStatus(item)}
-                            title={item.isActive !== false ? 'Nonaktifkan Akun (Purna Tugas)' : 'Aktifkan Akun Kembali'}
+                            title={item.isActive !== false ? 'Nonaktifkan Akun' : 'Aktifkan Akun Kembali'}
                           >
                             <Power className="w-4 h-4" />
                           </Button>

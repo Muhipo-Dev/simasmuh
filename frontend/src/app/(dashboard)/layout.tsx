@@ -58,8 +58,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!isAccountActive && pathname !== '/dashboard' && pathname !== '/pengaturan/profil') {
         Swal.fire({
           icon: 'warning',
-          title: 'Status Akun Nonaktif / Purna',
-          text: 'Akun Anda saat ini berstatus nonaktif atau telah purna tugas. Anda hanya dapat melihat informasi dan widget di Dashboard.',
+          title: 'Status Akun Nonaktif',
+          text: 'Akun Anda saat ini berstatus nonaktif. Anda hanya dapat melihat informasi dan widget di Dashboard.',
           confirmButtonColor: '#4f46e5',
         })
         router.replace('/dashboard')

@@ -33,7 +33,7 @@ export function UserAccountCard({
   const authenticatedQuery = useAuthenticatedQuery()
 
   // Real-time fetch live profile avatar bila avatarUrl berubah di halaman profile
-  const { data: liveProfile } = useQuery<{ name?: string; avatarUrl?: string }>({
+  const { data: liveProfile } = useQuery<{ name?: string; avatarUrl?: string; isActive?: boolean }>({
     queryKey: ['profile', userId],
     queryFn: () => userId ? authenticatedQuery(`/api-backend/users/${userId}/profile`) : Promise.resolve(null),
     enabled: !!userId,
@@ -50,17 +50,13 @@ export function UserAccountCard({
     ? (studentNis ? `NIS: ${studentNis}` : (user?.email || user?.username || '-'))
     : (user?.email || user?.username || '-')
   const userRole = subRole ? `${role} • ${subRole}` : role
-  const isAccountActive = user?.isActive !== false
+  const isAccountActive = liveProfile?.isActive !== undefined ? liveProfile.isActive !== false : user?.isActive !== false
 
-  const effectiveStatus = isAccountActive ? (statusLabel || (
-    role === 'SISWA' ? `Siswa (${studentClass?.name || 'Kelas'})` :
-    role === 'WALI_MURID' ? `Wali Murid (${activeStudent?.name || 'Siswa'})` :
-    'Status: Aktif'
-  )) : 'Akun Nonaktif / Purna'
+  const effectiveStatus = isAccountActive ? 'Aktif' : 'Nonaktif'
 
-  const effectiveStatusColor = !isAccountActive
-    ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
-    : statusColor
+  const effectiveStatusColor = isAccountActive
+    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+    : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
 
   // Resolusi adaptif URL CBT Ujian (Port 3010)
   const getCbtUrl = () => {

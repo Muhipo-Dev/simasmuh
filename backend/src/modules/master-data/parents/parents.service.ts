@@ -56,6 +56,7 @@ export class ParentsService {
         phone: u.phone || parentProfile?.phone || '-',
         email: u.email,
         role: u.role,
+        isActive: u.isActive !== false,
         occupation: parentProfile?.occupation || null,
         address: parentProfile?.address || u.address || null,
         connectedStudents,
@@ -111,6 +112,7 @@ export class ParentsService {
       phone: user.phone || user.parentProfile?.phone,
       email: user.email,
       role: user.role,
+      isActive: user.isActive !== false,
       occupation: user.parentProfile?.occupation,
       address: user.parentProfile?.address || user.address,
       connectedStudents,
@@ -398,6 +400,38 @@ export class ParentsService {
       await this.remove(id).catch(() => null);
     }
     return { success: true, count: ids.length };
+  }
+
+  async toggleActive(id: string, isActive: boolean) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, role: 'WALI_MURID' },
+    });
+    if (!user) {
+      throw new NotFoundException('Data wali murid tidak ditemukan');
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: { isActive },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        role: true,
+        isActive: true,
+      },
+    });
+  }
+
+  async bulkToggleActive(ids: string[], isActive: boolean) {
+    let successCount = 0;
+    for (const id of ids) {
+      try {
+        await this.toggleActive(id, isActive);
+        successCount++;
+      } catch {}
+    }
+    return { success: true, count: successCount, total: ids.length, isActive };
   }
 
   async getAvailableStudents() {

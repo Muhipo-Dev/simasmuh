@@ -51,7 +51,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (session && pathname) {
       const u = session.user as any
+      const isAccountActive = u?.isActive !== false
       const roles = [u?.role, u?.subRole, u?.subRole2, u?.subRole3, u?.subRole4, u?.subRole5].filter(Boolean) as string[]
+
+      // Jika akun dinonaktifkan / purna tugas, batasi hanya boleh melihat /dashboard
+      if (!isAccountActive && pathname !== '/dashboard' && pathname !== '/pengaturan/profil') {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Status Akun Nonaktif / Purna',
+          text: 'Akun Anda saat ini berstatus nonaktif atau telah purna tugas. Anda hanya dapat melihat informasi dan widget di Dashboard.',
+          confirmButtonColor: '#4f46e5',
+        })
+        router.replace('/dashboard')
+        return
+      }
 
       // Cek ketat otorisasi rute
       const allowed = isPathAllowedForRoles(pathname, roles)

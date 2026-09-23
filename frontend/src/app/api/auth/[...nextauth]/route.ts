@@ -58,6 +58,7 @@ const authOptions = {
               username: user.user.username,
               nipNbm: user.user.nipNbm,
               role: user.user.role,
+              isActive: user.user.isActive !== false,
               subRole: user.user.subRole,
               subRole2: user.user.subRole2,
               subRole3: user.user.subRole3,
@@ -82,6 +83,7 @@ const authOptions = {
         token.username = (user as any).username;
         token.nipNbm = (user as any).nipNbm;
         token.role = (user as any).role;
+        token.isActive = (user as any).isActive !== false;
         token.subRole = (user as any).subRole;
         token.subRole2 = (user as any).subRole2;
         token.subRole3 = (user as any).subRole3;
@@ -98,6 +100,7 @@ const authOptions = {
         ;(session.user as any).username = (token as any).username
         ;(session.user as any).nipNbm = (token as any).nipNbm
         ;(session.user as any).role = (token as any).role
+        ;(session.user as any).isActive = (token as any).isActive !== false
         ;(session.user as any).subRole = (token as any).subRole
         ;(session.user as any).subRole2 = (token as any).subRole2
         ;(session.user as any).subRole3 = (token as any).subRole3

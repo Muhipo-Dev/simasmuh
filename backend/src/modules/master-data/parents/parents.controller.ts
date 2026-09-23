@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -69,6 +70,24 @@ export class ParentsController {
   @Put(':id')
   update(@Param('id') id: string, @Body() data: any) {
     return this.parentsService.update(id, data);
+  }
+
+  @Patch(':id/toggle-active')
+  @UseGuards(JwtAuthGuard)
+  toggleActive(
+    @Param('id') id: string,
+    @Body('isActive') isActive: boolean,
+  ) {
+    return this.parentsService.toggleActive(id, isActive);
+  }
+
+  @Post('bulk-toggle-active')
+  @UseGuards(JwtAuthGuard)
+  bulkToggleActive(
+    @Body('ids') ids: string[],
+    @Body('isActive') isActive: boolean,
+  ) {
+    return this.parentsService.bulkToggleActive(ids, isActive);
   }
 
   @Post('bulk-delete')

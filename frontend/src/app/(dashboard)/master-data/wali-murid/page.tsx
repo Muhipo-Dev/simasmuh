@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
   Plus, Loader2, Pencil, Trash2, Search, Users, UserCheck, 
   Phone, Key, RefreshCw, Sparkles, AlertCircle, 
-  GraduationCap, CheckCircle2
+  GraduationCap, CheckCircle2, Power, PowerOff, ShieldCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import Swal from 'sweetalert2'
 
 type ConnectedStudent = {
   id: string
@@ -35,6 +36,7 @@ type ParentUser = {
   phone: string
   email?: string
   role: string
+  isActive?: boolean
   occupation?: string
   address?: string
   connectedStudents: ConnectedStudent[]
@@ -66,6 +68,7 @@ export default function WaliMuridPage() {
   const [open, setOpen] = useState(false)
   const [isEdit, setIsEdit] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [filterActive, setFilterActive] = useState<string>('ALL')
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
   const [studentSearch, setStudentSearch] = useState('')
   
@@ -232,6 +235,77 @@ export default function WaliMuridPage() {
     },
   })
 
+  // Mutation Toggle Aktif / Nonaktif Akun Wali Murid
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const res = await authenticatedFetch(`/api-backend/parents/${id}/toggle-active`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.message || 'Gagal mengubah status akun wali murid')
+      }
+      return res.json()
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengubah Status',
+        text: err.message || 'Terjadi kesalahan sistem',
+        confirmButtonColor: '#4f46e5',
+      })
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['parents'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      Swal.fire({
+        icon: 'success',
+        title: data.isActive ? 'Akun Wali Murid Diaktifkan' : 'Akun Wali Murid Dinonaktifkan',
+        text: `Status akun wali murid ${data.name || ''} berhasil diperbarui.`,
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    },
+  })
+
+  // Mutation Bulk Toggle Aktif / Nonaktif Akun Wali Murid
+  const bulkToggleActiveMutation = useMutation({
+    mutationFn: async ({ ids, isActive }: { ids: string[]; isActive: boolean }) => {
+      const res = await authenticatedFetch('/api-backend/parents/bulk-toggle-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, isActive }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.message || 'Gagal mengubah status akun terpilih')
+      }
+      return res.json()
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengubah Status Masal',
+        text: err.message || 'Terjadi kesalahan sistem',
+        confirmButtonColor: '#4f46e5',
+      })
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['parents'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setSelectedParentIds([])
+      Swal.fire({
+        icon: 'success',
+        title: data.isActive ? 'Akun Berhasil Diaktifkan' : 'Akun Berhasil Dinonaktifkan',
+        text: `${data.count} akun wali murid telah diperbarui statusnya.`,
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    },
+  })
+
   // Handlers
   const handleOpenAddDialog = () => {
     setIsEdit(false)
@@ -325,21 +399,30 @@ export default function WaliMuridPage() {
 
   // Filtered Parents
   const filteredParents = useMemo(() => {
-    if (!searchQuery.trim()) return parents
-    const q = searchQuery.toLowerCase()
     return parents.filter((p) => {
-      const matchName = p.name?.toLowerCase().includes(q)
-      const matchPhone = p.phone?.toLowerCase().includes(q) || p.username?.toLowerCase().includes(q)
-      const matchStudents = p.connectedStudents?.some(
-        (st) =>
-          st.name.toLowerCase().includes(q) ||
-          st.nis.toLowerCase().includes(q) ||
-          st.nisn?.toLowerCase().includes(q) ||
-          st.className.toLowerCase().includes(q)
+      const q = searchQuery.toLowerCase().trim()
+      const matchSearch = !q || (
+        p.name?.toLowerCase().includes(q) ||
+        p.phone?.toLowerCase().includes(q) ||
+        p.username?.toLowerCase().includes(q) ||
+        p.connectedStudents?.some(
+          (st) =>
+            st.name.toLowerCase().includes(q) ||
+            st.nis.toLowerCase().includes(q) ||
+            st.nisn?.toLowerCase().includes(q) ||
+            st.className.toLowerCase().includes(q)
+        )
       )
-      return matchName || matchPhone || matchStudents
+
+      const matchActive = !filterActive || filterActive === 'ALL'
+        ? true
+        : filterActive === 'ACTIVE'
+          ? p.isActive !== false
+          : p.isActive === false
+
+      return matchSearch && matchActive
     })
-  }, [parents, searchQuery])
+  }, [parents, searchQuery, filterActive])
 
   // Filtered Students for Modal Selection
   const filteredAvailableStudents = useMemo(() => {
@@ -394,17 +477,37 @@ export default function WaliMuridPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {selectedParentIds.length > 0 && (
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setIsBulkDeleteMode(true)
-                setDeleteDialogOpen(true)
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white gap-2 font-bold text-xs h-9 rounded-xl shadow-xs"
-            >
-              <Trash2 className="w-4 h-4" />
-              Hapus ({selectedParentIds.length}) Terpilih
-            </Button>
+            <>
+              <Button
+                size="sm"
+                onClick={() => bulkToggleActiveMutation.mutate({ ids: selectedParentIds, isActive: true })}
+                disabled={bulkToggleActiveMutation.isPending}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 font-bold text-xs h-9 rounded-xl shadow-xs"
+              >
+                <Power className="w-3.5 h-3.5" />
+                Aktifkan ({selectedParentIds.length})
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => bulkToggleActiveMutation.mutate({ ids: selectedParentIds, isActive: false })}
+                disabled={bulkToggleActiveMutation.isPending}
+                className="bg-slate-700 hover:bg-slate-800 text-white gap-1.5 font-bold text-xs h-9 rounded-xl shadow-xs"
+              >
+                <PowerOff className="w-3.5 h-3.5" />
+                Nonaktifkan ({selectedParentIds.length})
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setIsBulkDeleteMode(true)
+                  setDeleteDialogOpen(true)
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white gap-2 font-bold text-xs h-9 rounded-xl shadow-xs"
+              >
+                <Trash2 className="w-4 h-4" />
+                Hapus ({selectedParentIds.length}) Terpilih
+              </Button>
+            </>
           )}
           <Button
             variant="outline"
@@ -414,7 +517,7 @@ export default function WaliMuridPage() {
             <Sparkles className="w-4 h-4 text-indigo-500" />
             Sinkronkan dari Siswa
           </Button>
-          <Button onClick={handleOpenAddDialog} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
+          <Button onClick={handleOpenAddDialog} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 font-bold text-xs h-9 rounded-xl">
             <Plus className="w-4 h-4" />
             Tambah Wali Murid
           </Button>
@@ -486,14 +589,32 @@ export default function WaliMuridPage() {
                 Username login berupa No. WhatsApp aktif, dengan kata sandi default berupa NIS siswa.
               </CardDescription>
             </div>
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="Cari wali, no HP, NIS, siswa..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-slate-50 dark:bg-slate-900"
-              />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Cari wali, no HP, NIS, siswa..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-slate-50 dark:bg-slate-900"
+                />
+              </div>
+
+              {/* Filter Status Akun */}
+              <div className="flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 shadow-2xs">
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Status:</span>
+                <Select value={filterActive} onValueChange={(v) => setFilterActive(v || 'ALL')}>
+                  <SelectTrigger className="w-[125px] h-7 text-xs border-0 shadow-none focus:ring-0 p-0">
+                    <SelectValue placeholder="Semua Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="ALL">Semua Status</SelectItem>
+                    <SelectItem value="ACTIVE">Aktif</SelectItem>
+                    <SelectItem value="INACTIVE">Nonaktif / Purna</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -512,6 +633,7 @@ export default function WaliMuridPage() {
                     />
                   </TableHead>
                   <TableHead>Nama Wali Murid</TableHead>
+                  <TableHead>Status Akun</TableHead>
                   <TableHead>No. WhatsApp / Username</TableHead>
                   <TableHead>Siswa Terhubung</TableHead>
                   <TableHead>Password Awal</TableHead>
@@ -563,6 +685,16 @@ export default function WaliMuridPage() {
                           )}
                         </TableCell>
                         <TableCell>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                            parent.isActive !== false
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                              : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${parent.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                            {parent.isActive !== false ? 'Aktif' : 'Nonaktif / Purna'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-sm font-semibold text-slate-800 dark:text-slate-200">
                               {parent.phone || parent.username}
@@ -609,6 +741,38 @@ export default function WaliMuridPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title={parent.isActive !== false ? 'Klik untuk Nonaktifkan Akun Wali Murid' : 'Klik untuk Aktifkan Akun Wali Murid'}
+                              onClick={() => {
+                                const nextState = parent.isActive === false
+                                Swal.fire({
+                                  title: nextState ? 'Aktifkan Akun Wali Murid?' : 'Nonaktifkan Akun Wali Murid?',
+                                  text: nextState
+                                    ? `Akun wali murid ${parent.name} akan diaktifkan kembali.`
+                                    : `Akun wali murid ${parent.name} akan dinonaktifkan (akses aplikasi dibatasi ke dashboard widget).`,
+                                  icon: 'question',
+                                  showCancelButton: true,
+                                  confirmButtonColor: nextState ? '#10b981' : '#f43f5e',
+                                  cancelButtonColor: '#64748b',
+                                  confirmButtonText: nextState ? 'Ya, Aktifkan' : 'Ya, Nonaktifkan',
+                                  cancelButtonText: 'Batal',
+                                }).then((res) => {
+                                  if (res.isConfirmed) {
+                                    toggleActiveMutation.mutate({ id: parent.id, isActive: nextState })
+                                  }
+                                })
+                              }}
+                              disabled={toggleActiveMutation.isPending}
+                              className={`h-8 w-8 p-0 ${
+                                parent.isActive !== false
+                                  ? 'text-emerald-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50'
+                                  : 'text-rose-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50'
+                              }`}
+                            >
+                              {parent.isActive !== false ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"

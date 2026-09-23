@@ -50,12 +50,17 @@ export function UserAccountCard({
     ? (studentNis ? `NIS: ${studentNis}` : (user?.email || user?.username || '-'))
     : (user?.email || user?.username || '-')
   const userRole = subRole ? `${role} • ${subRole}` : role
+  const isAccountActive = user?.isActive !== false
 
-  const effectiveStatus = statusLabel || (
+  const effectiveStatus = isAccountActive ? (statusLabel || (
     role === 'SISWA' ? `Siswa (${studentClass?.name || 'Kelas'})` :
     role === 'WALI_MURID' ? `Wali Murid (${activeStudent?.name || 'Siswa'})` :
     'Status: Aktif'
-  )
+  )) : 'Akun Nonaktif / Purna'
+
+  const effectiveStatusColor = !isAccountActive
+    ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+    : statusColor
 
   // Resolusi adaptif URL CBT Ujian (Port 3010)
   const getCbtUrl = () => {
@@ -75,7 +80,7 @@ export function UserAccountCard({
           <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
           <span>My Account</span>
         </div>
-        <Badge variant="outline" className={`text-[10px] font-bold px-2 py-0.5 max-w-[150px] truncate ${statusColor}`}>
+        <Badge variant="outline" className={`text-[10px] font-bold px-2 py-0.5 max-w-[150px] truncate ${effectiveStatusColor}`}>
           {effectiveStatus}
         </Badge>
       </div>

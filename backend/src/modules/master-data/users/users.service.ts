@@ -28,6 +28,7 @@ export class UsersService {
         nipNbm: true,
         role: true,
         employmentStatus: true,
+        isActive: true,
         subRole: true,
         subRole2: true,
         subRole3: true,
@@ -227,6 +228,10 @@ export class UsersService {
       updateData.employmentStatus = data.employmentStatus;
     }
 
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive === true || data.isActive === 'true';
+    }
+
     // Validasi Keamanan Tunggal (Single Role) Kepala Sekolah pada Update
     const isAssigningKepalaSekolah =
       data.role === 'KEPALA_SEKOLAH' ||
@@ -379,6 +384,7 @@ export class UsersService {
         phone: true,
         nipNbm: true,
         role: true,
+        isActive: true,
         subRole: true,
         subRole2: true,
         subRole3: true,
@@ -485,6 +491,61 @@ export class UsersService {
     return { success: true, count: ids.length };
   }
 
+  async toggleActive(id: string, isActive: boolean) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { student: true },
+    });
+    if (!user) {
+      throw new NotFoundException('Pengguna tidak ditemukan');
+    }
+
+    // Proteksi Superadmin tunggal agar tidak dinonaktifkan secara keliru
+    if (user.role === 'SUPERADMIN' && !isActive) {
+      const activeSuperadmins = await this.prisma.user.count({
+        where: { role: 'SUPERADMIN', isActive: true },
+      });
+      if (activeSuperadmins <= 1) {
+        throw new BadRequestException(
+          'Tidak dapat menonaktifkan Superadmin terakhir dalam sistem.',
+        );
+      }
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { isActive },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    // Jika memiliki relasi siswa, sinkronkan juga status Student
+    if (user.student) {
+      await this.prisma.student.update({
+        where: { id: user.student.id },
+        data: { isActive },
+      });
+    }
+
+    return updated;
+  }
+
+  async bulkToggleActive(ids: string[], isActive: boolean) {
+    let successCount = 0;
+    for (const id of ids) {
+      try {
+        await this.toggleActive(id, isActive);
+        successCount++;
+      } catch {}
+    }
+    return { success: true, count: successCount, total: ids.length, isActive };
+  }
+
   async getProfile(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
@@ -495,6 +556,7 @@ export class UsersService {
         username: true,
         nipNbm: true,
         role: true,
+        isActive: true,
         subRole: true,
         subRole2: true,
         subRole3: true,

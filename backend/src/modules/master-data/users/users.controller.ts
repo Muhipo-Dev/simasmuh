@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -127,6 +128,26 @@ export class UsersController {
   @Put(':id')
   update(@Param('id') id: string, @Body() data: any) {
     return this.usersService.update(id, data);
+  }
+
+  @Patch(':id/toggle-active')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, 'ADMIN_TU', 'BAU', 'TATA_USAHA')
+  toggleActive(
+    @Param('id') id: string,
+    @Body('isActive') isActive: boolean,
+  ) {
+    return this.usersService.toggleActive(id, isActive);
+  }
+
+  @Post('bulk-toggle-active')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, 'ADMIN_TU', 'BAU', 'TATA_USAHA')
+  bulkToggleActive(
+    @Body('ids') ids: string[],
+    @Body('isActive') isActive: boolean,
+  ) {
+    return this.usersService.bulkToggleActive(ids, isActive);
   }
 
   @Post('bulk-delete')

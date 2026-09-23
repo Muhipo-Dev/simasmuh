@@ -101,6 +101,24 @@ export class StudentsController {
     );
   }
 
+  @Patch(':id/toggle-active')
+  @UseGuards(JwtAuthGuard)
+  toggleActive(
+    @Param('id') id: string,
+    @Body('isActive') isActive: boolean,
+  ) {
+    return this.studentsService.toggleActive(id, isActive);
+  }
+
+  @Post('bulk-toggle-active')
+  @UseGuards(JwtAuthGuard)
+  bulkToggleActive(
+    @Body('ids') ids: string[],
+    @Body('isActive') isActive: boolean,
+  ) {
+    return this.studentsService.bulkToggleActive(ids, isActive);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.studentsService.remove(id);

@@ -3,7 +3,7 @@ import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useSession } from 'next-auth/react'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent, Info, UserPlus, RotateCcw } from 'lucide-react'
+import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent, Info, UserPlus, RotateCcw, Power, PowerOff, UserCheck, ShieldCheck } from 'lucide-react'
 import Swal from 'sweetalert2'
 import { confirmDelete } from '@/lib/swal-helper'
 
@@ -149,6 +149,7 @@ type Student = {
   name: string
   gender: string
   classId: string
+  isActive?: boolean
   program?: string | null
   gelombang?: string | null
   jalurPendaftaran?: string | null
@@ -198,6 +199,7 @@ export default function StudentsPage() {
   const [filterGender, setFilterGender] = useState<string>('ALL')
   const [filterGelombang, setFilterGelombang] = useState<string>('ALL')
   const [filterJalur, setFilterJalur] = useState<string>('ALL')
+  const [filterActive, setFilterActive] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [fromClassId, setFromClassId] = useState<string>('')
   const [toClassId, setToClassId] = useState<string>('')
@@ -497,6 +499,77 @@ export default function StudentsPage() {
     }
   })
 
+  // Mutation Toggle Aktif / Nonaktif Akun Siswa (Superadmin / Admin IT)
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const res = await authenticatedFetch(`/api-backend/students/${id}/toggle-active`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal mengubah status akun siswa')
+      }
+      return res.json()
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengubah Status',
+        text: err.message || 'Terjadi kesalahan sistem',
+        confirmButtonColor: '#4f46e5',
+      })
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      Swal.fire({
+        icon: 'success',
+        title: data.isActive ? 'Akun Siswa Diaktifkan' : 'Akun Siswa Dinonaktifkan',
+        text: `Status akun siswa ${data.name || ''} berhasil diperbarui.`,
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    },
+  })
+
+  // Mutation Bulk Toggle Aktif / Nonaktif Akun Siswa
+  const bulkToggleActiveMutation = useMutation({
+    mutationFn: async ({ ids, isActive }: { ids: string[]; isActive: boolean }) => {
+      const res = await authenticatedFetch('/api-backend/students/bulk-toggle-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, isActive }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal mengubah status akun siswa terpilih')
+      }
+      return res.json()
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengubah Status Masal',
+        text: err.message || 'Terjadi kesalahan sistem',
+        confirmButtonColor: '#4f46e5',
+      })
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setSelectedStudentIds([])
+      Swal.fire({
+        icon: 'success',
+        title: data.isActive ? 'Akun Berhasil Diaktifkan' : 'Akun Berhasil Dinonaktifkan',
+        text: `${data.count} akun siswa telah diperbarui statusnya.`,
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    },
+  })
+
   // Chunked upload handler untuk siswa
   const runChunkedUpload = async (allRows: any[]) => {
     const totalRows = allRows.length
@@ -704,6 +777,7 @@ export default function StudentsPage() {
     (filterGender && filterGender !== 'ALL') ||
     (filterGelombang && filterGelombang !== 'ALL') ||
     (filterJalur && filterJalur !== 'ALL') ||
+    (filterActive && filterActive !== 'ALL') ||
     searchQuery.trim() !== ''
 
   const handleResetFilters = () => {
@@ -712,6 +786,7 @@ export default function StudentsPage() {
     setFilterGender('ALL')
     setFilterGelombang('ALL')
     setFilterJalur('ALL')
+    setFilterActive('ALL')
     setSearchQuery('')
   }
 
@@ -738,7 +813,13 @@ export default function StudentsPage() {
       ? true
       : s.jalurPendaftaran === filterJalur
 
-    return classOk && programOk && genderOk && gelombangOk && jalurOk
+    const activeOk = !filterActive || filterActive === 'ALL'
+      ? true
+      : filterActive === 'ACTIVE'
+        ? s.isActive !== false
+        : s.isActive === false
+
+    return classOk && programOk && genderOk && gelombangOk && jalurOk && activeOk
   })
 
   const filteredStudents = filterDataBySearch(rawFiltered, searchQuery, [
@@ -2120,17 +2201,37 @@ export default function StudentsPage() {
               Edit Serentak
             </Button>
             {isSuperOrAdmin && (
-              <Button 
-                size="sm" 
-                onClick={() => {
-                  setPromoteMode('SELECTED')
-                  setPromoteOpen(true)
-                }}
-                className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-xs"
-              >
-                <GraduationCap className="w-4 h-4 mr-1.5" />
-                Naik / Pindah Kelas
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => bulkToggleActiveMutation.mutate({ ids: selectedStudentIds, isActive: true })}
+                  disabled={bulkToggleActiveMutation.isPending}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs text-xs"
+                >
+                  <Power className="w-3.5 h-3.5 mr-1.5" />
+                  Aktifkan ({selectedStudentIds.length})
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => bulkToggleActiveMutation.mutate({ ids: selectedStudentIds, isActive: false })}
+                  disabled={bulkToggleActiveMutation.isPending}
+                  className="bg-slate-700 hover:bg-slate-800 text-white font-bold shadow-xs text-xs"
+                >
+                  <PowerOff className="w-3.5 h-3.5 mr-1.5" />
+                  Nonaktifkan ({selectedStudentIds.length})
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    setPromoteMode('SELECTED')
+                    setPromoteOpen(true)
+                  }}
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-xs"
+                >
+                  <GraduationCap className="w-4 h-4 mr-1.5" />
+                  Naik / Pindah Kelas
+                </Button>
+              </>
             )}
             <Button 
               size="sm" 
@@ -2268,6 +2369,22 @@ export default function StudentsPage() {
                 </Select>
               </div>
 
+              {/* Filter Status Akun */}
+              <div className="flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 shadow-2xs">
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Status:</span>
+                <Select value={filterActive} onValueChange={(v) => setFilterActive(v || 'ALL')}>
+                  <SelectTrigger className="w-[125px] h-7 text-xs border-0 shadow-none focus:ring-0 p-0">
+                    <SelectValue placeholder="Semua Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="ALL">Semua Status</SelectItem>
+                    <SelectItem value="ACTIVE">Aktif</SelectItem>
+                    <SelectItem value="INACTIVE">Nonaktif / Purna</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Reset Filter Button */}
               {isAnyFilterActive && (
                 <Button
@@ -2302,6 +2419,7 @@ export default function StudentsPage() {
                 <TableHead className="w-[60px] pl-4">No</TableHead>
                 <TableHead>NISN / NIS</TableHead>
                 <TableHead>Nama Siswa</TableHead>
+                <TableHead>Status Akun</TableHead>
                 <TableHead>Gelombang</TableHead>
                 <TableHead>Program</TableHead>
                 <TableHead>Jalur Pendaftaran</TableHead>
@@ -2350,6 +2468,16 @@ export default function StudentsPage() {
                       </TableCell>
                       <TableCell className="font-semibold">{item.name}</TableCell>
                       <TableCell>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                          item.isActive !== false
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                            : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${item.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                          {item.isActive !== false ? 'Aktif' : 'Nonaktif / Purna'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
                           {item.gelombang || 'Gelombang 1'}
                         </span>
@@ -2384,11 +2512,43 @@ export default function StudentsPage() {
                       </TableCell>
                       {isSuperOrAdmin && (
                         <TableCell className="text-right pr-6">
-                          <div className="flex justify-end gap-1.5">
-                            <Button variant="ghost" size="icon" title="Kelola / Edit Data Siswa" onClick={() => handleOpenEditDialog(item)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                          <div className="flex justify-end gap-1.5 items-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={item.isActive !== false ? 'Klik untuk Nonaktifkan Akun Siswa' : 'Klik untuk Aktifkan Akun Siswa'}
+                              onClick={() => {
+                                const nextState = item.isActive === false
+                                Swal.fire({
+                                  title: nextState ? 'Aktifkan Akun Siswa?' : 'Nonaktifkan Akun Siswa?',
+                                  text: nextState
+                                    ? `Akun siswa ${item.name} akan diaktifkan kembali.`
+                                    : `Akun siswa ${item.name} akan dinonaktifkan (akses aplikasi dibatasi ke dashboard widget).`,
+                                  icon: 'question',
+                                  showCancelButton: true,
+                                  confirmButtonColor: nextState ? '#10b981' : '#f43f5e',
+                                  cancelButtonColor: '#64748b',
+                                  confirmButtonText: nextState ? 'Ya, Aktifkan' : 'Ya, Nonaktifkan',
+                                  cancelButtonText: 'Batal',
+                                }).then((res) => {
+                                  if (res.isConfirmed) {
+                                    toggleActiveMutation.mutate({ id: item.id, isActive: nextState })
+                                  }
+                                })
+                              }}
+                              disabled={toggleActiveMutation.isPending}
+                              className={`h-8 w-8 ${
+                                item.isActive !== false
+                                  ? 'text-emerald-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50'
+                                  : 'text-rose-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50'
+                              }`}
+                            >
+                              {item.isActive !== false ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                            </Button>
+                            <Button variant="ghost" size="icon" title="Kelola / Edit Data Siswa" onClick={() => handleOpenEditDialog(item)} className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                               <Pencil className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" title="Hapus Siswa" onClick={() => handleDelete(item.id)} disabled={deleteMutation.isPending} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                            <Button variant="ghost" size="icon" title="Hapus Siswa" onClick={() => handleDelete(item.id)} disabled={deleteMutation.isPending} className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50">
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>

@@ -235,12 +235,14 @@ export class StudentsService {
         ...(data.beasiswaDppPct !== undefined && {
           beasiswaDppPct: Number(data.beasiswaDppPct),
         }),
+        ...(data.isActive !== undefined && { isActive: data.isActive === true || data.isActive === 'true' }),
         ...(data.classId && { class: { connect: { id: data.classId } } }),
         ...(student.userId && {
           user: {
             update: {
               name: data.name,
               username: data.nis,
+              ...(data.isActive !== undefined && { isActive: data.isActive === true || data.isActive === 'true' }),
               ...(finalPassword && { password: finalPassword }),
             },
           },
@@ -747,5 +749,40 @@ export class StudentsService {
     // Generate buffer
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
+  }
+
+  async toggleActive(id: string, isActive: boolean) {
+    const student = await this.prisma.student.findUnique({
+      where: { id },
+    });
+    if (!student) {
+      throw new NotFoundException('Data siswa tidak ditemukan');
+    }
+
+    const updated = await this.prisma.student.update({
+      where: { id },
+      data: { isActive },
+      include: { user: true, class: true },
+    });
+
+    if (student.userId) {
+      await this.prisma.user.update({
+        where: { id: student.userId },
+        data: { isActive },
+      });
+    }
+
+    return updated;
+  }
+
+  async bulkToggleActive(ids: string[], isActive: boolean) {
+    let successCount = 0;
+    for (const id of ids) {
+      try {
+        await this.toggleActive(id, isActive);
+        successCount++;
+      } catch {}
+    }
+    return { success: true, count: successCount, total: ids.length, isActive };
   }
 }

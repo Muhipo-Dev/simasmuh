@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, Pencil, Trash2, AlertTriangle, ShieldCheck, UserCheck, Info } from 'lucide-react'
+import { Plus, Loader2, Pencil, Trash2, AlertTriangle, ShieldCheck, UserCheck, Info, Power, CheckCircle, XCircle, UserX } from 'lucide-react'
 import Swal from 'sweetalert2'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,6 +28,7 @@ type User = {
   subRole3?: string
   subRole4?: string
   subRole5?: string
+  isActive?: boolean
   createdAt: string
 }
 
@@ -235,6 +236,113 @@ export default function UsersPage() {
     }
   })
 
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const res = await authenticatedFetch(`/api-backend/users/${id}/toggle-active`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.message || 'Gagal mengubah status akun')
+      }
+      return res.json()
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengubah Status',
+        text: err.message || 'Terjadi kesalahan sistem',
+        confirmButtonColor: '#4f46e5',
+      })
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      Swal.fire({
+        icon: 'success',
+        title: data.isActive ? 'Akun Diaktifkan' : 'Akun Dinonaktifkan',
+        text: `Status akun ${data.name || ''} berhasil diperbarui.`,
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    },
+  })
+
+  const bulkToggleActiveMutation = useMutation({
+    mutationFn: async ({ ids, isActive }: { ids: string[]; isActive: boolean }) => {
+      const res = await authenticatedFetch('/api-backend/users/bulk-toggle-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, isActive }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.message || 'Gagal mengubah status akun terpilih')
+      }
+      return res.json()
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengubah Status Masal',
+        text: err.message || 'Terjadi kesalahan sistem',
+        confirmButtonColor: '#4f46e5',
+      })
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setSelectedUserIds([])
+      Swal.fire({
+        icon: 'success',
+        title: data.isActive ? 'Akun Berhasil Diaktifkan' : 'Akun Berhasil Dinonaktifkan',
+        text: `${data.count} akun pengguna telah diperbarui statusnya.`,
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    },
+  })
+
+  const handleToggleUserStatus = (user: User) => {
+    const nextStatus = user.isActive === false ? true : false
+    const actionText = nextStatus ? 'mengaktifkan' : 'menonaktifkan (purna tugas)'
+    
+    Swal.fire({
+      title: `${nextStatus ? 'Aktifkan' : 'Nonaktifkan'} Akun?`,
+      html: `Apakah Anda yakin ingin ${actionText} akun <strong>${user.name}</strong> (@${user.username})?<br/><br/><span class="text-xs text-slate-500">${nextStatus ? 'Akun akan dapat kembali mengakses seluruh modul operasional.' : 'Akun tetap dapat login ke aplikasi namun hanya dapat melihat widget dashboard tanpa akses modul operasional.'}</span>`,
+      icon: nextStatus ? 'question' : 'warning',
+      showCancelButton: true,
+      confirmButtonColor: nextStatus ? '#10b981' : '#f43f5e',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: `Ya, ${nextStatus ? 'Aktifkan' : 'Nonaktifkan'}`,
+      cancelButtonText: 'Batal',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        toggleActiveMutation.mutate({ id: user.id, isActive: nextStatus })
+      }
+    })
+  }
+
+  const handleBulkToggleStatus = (isActive: boolean) => {
+    if (selectedUserIds.length === 0) return
+    const actionText = isActive ? 'mengaktifkan' : 'menonaktifkan (purna tugas)'
+    
+    Swal.fire({
+      title: `${isActive ? 'Aktifkan' : 'Nonaktifkan'} ${selectedUserIds.length} Akun?`,
+      html: `Apakah Anda yakin ingin ${actionText} <strong>${selectedUserIds.length}</strong> akun terpilih?`,
+      icon: isActive ? 'question' : 'warning',
+      showCancelButton: true,
+      confirmButtonColor: isActive ? '#10b981' : '#f43f5e',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: `Ya, ${isActive ? 'Aktifkan' : 'Nonaktifkan'}`,
+      cancelButtonText: 'Batal',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        bulkToggleActiveMutation.mutate({ ids: selectedUserIds, isActive })
+      }
+    })
+  }
+
   const handleOpenAddDialog = () => {
     setIsEdit(false)
     setFormData({ id: '', name: '', username: '', nipNbm: '', phone: '', email: '', password: '', role: 'GURU', subRole: 'NONE', subRole2: 'NONE', subRole3: 'NONE', subRole4: 'NONE', subRole5: 'NONE' })
@@ -360,8 +468,15 @@ export default function UsersPage() {
   }
 
   const isPending = createMutation.isPending || updateMutation.isPending
+  const [filterStatus, setFilterStatus] = useState<string>('ALL')
+
   // Filter khusus akun pegawai, guru, admin, dan pengelola internal (tidak menampilkan wali murid atau siswa)
-  const staffUsers = (users || []).filter(u => !['WALI_MURID', 'SISWA'].includes(u.role))
+  const staffUsers = (users || []).filter(u => {
+    if (['WALI_MURID', 'SISWA'].includes(u.role)) return false
+    if (filterStatus === 'ACTIVE') return u.isActive !== false
+    if (filterStatus === 'INACTIVE') return u.isActive === false
+    return true
+  })
   const filteredUsers = filterDataBySearch(staffUsers, searchQuery) || []
   const isAllSelected = filteredUsers.length > 0 && filteredUsers.every(u => selectedUserIds.includes(u.id))
 
@@ -429,14 +544,34 @@ export default function UsersPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {selectedUserIds.length > 0 && (
-            <Button
-              variant="destructive"
-              onClick={handleOpenBulkDeleteDialog}
-              className="bg-red-600 hover:bg-red-700 text-white gap-2 font-bold text-xs h-9 rounded-xl shadow-xs"
-            >
-              <Trash2 className="w-4 h-4" />
-              Hapus ({selectedUserIds.length}) Terpilih
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkToggleStatus(true)}
+                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 gap-1.5 font-bold text-xs h-9 rounded-xl shadow-xs"
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                Aktifkan ({selectedUserIds.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkToggleStatus(false)}
+                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800 gap-1.5 font-bold text-xs h-9 rounded-xl shadow-xs"
+              >
+                <UserX className="w-3.5 h-3.5" />
+                Nonaktifkan ({selectedUserIds.length})
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleOpenBulkDeleteDialog}
+                className="bg-red-600 hover:bg-red-700 text-white gap-2 font-bold text-xs h-9 rounded-xl shadow-xs"
+              >
+                <Trash2 className="w-4 h-4" />
+                Hapus ({selectedUserIds.length})
+              </Button>
+            </>
           )}
           <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700 font-bold text-xs h-9 rounded-xl shadow-xs">
             <Plus className="w-4 h-4 mr-1.5" />
@@ -653,16 +788,55 @@ export default function UsersPage() {
       </Dialog>
 
       <Card className="shadow-sm border-slate-200">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <CardTitle>Daftar Akun Pegawai & Pengelola</CardTitle>
             <CardDescription>Menampilkan daftar akun guru, karyawan/staf, dan admin pengelola sekolah.</CardDescription>
           </div>
-          <TableSearch
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Cari pegawai (nama/email/username/NIP)..."
-          />
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Filter Status Akun */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setFilterStatus('ALL')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  filterStatus === 'ALL'
+                    ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Semua ({users?.filter(u => !['WALI_MURID', 'SISWA'].includes(u.role)).length || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterStatus('ACTIVE')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  filterStatus === 'ACTIVE'
+                    ? 'bg-emerald-500 text-white shadow-xs'
+                    : 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-900'
+                }`}
+              >
+                Aktif ({users?.filter(u => !['WALI_MURID', 'SISWA'].includes(u.role) && u.isActive !== false).length || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterStatus('INACTIVE')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  filterStatus === 'INACTIVE'
+                    ? 'bg-rose-500 text-white shadow-xs'
+                    : 'text-rose-700 dark:text-rose-400 hover:text-rose-900'
+                }`}
+              >
+                Nonaktif / Purna ({users?.filter(u => !['WALI_MURID', 'SISWA'].includes(u.role) && u.isActive === false).length || 0})
+              </button>
+            </div>
+
+            <TableSearch
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Cari pegawai (nama/email/username/NIP)..."
+            />
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <Table className="w-full table-auto">
@@ -680,6 +854,7 @@ export default function UsersPage() {
                 <TableHead>Pengguna & Akun</TableHead>
                 <TableHead className="hidden md:table-cell">NIP / NBM</TableHead>
                 <TableHead>Role & Hak Akses</TableHead>
+                <TableHead className="text-center">Status Akun</TableHead>
                 <TableHead className="text-right pr-4">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -834,8 +1009,33 @@ export default function UsersPage() {
                           })()}
                         </div>
                       </TableCell>
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleUserStatus(item)}
+                          disabled={toggleActiveMutation.isPending}
+                          title={item.isActive !== false ? 'Klik untuk nonaktifkan akun' : 'Klik untuk aktifkan akun'}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-2xs ${
+                            item.isActive !== false
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                              : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${item.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                          {item.isActive !== false ? 'Aktif' : 'Nonaktif / Purna'}
+                        </button>
+                      </TableCell>
                       <TableCell className="text-right pr-4">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-8 w-8 p-0 ${item.isActive !== false ? 'text-emerald-600 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
+                            onClick={() => handleToggleUserStatus(item)}
+                            title={item.isActive !== false ? 'Nonaktifkan Akun (Purna Tugas)' : 'Aktifkan Akun Kembali'}
+                          >
+                            <Power className="w-4 h-4" />
+                          </Button>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleOpenEditDialog(item)}>
                             <Pencil className="w-4 h-4 text-slate-500 hover:text-blue-600" />
                           </Button>

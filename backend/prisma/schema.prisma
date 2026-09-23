@@ -38,6 +38,7 @@ model User {
   characterAssessments CharacterAssessment[]
   student           Student?
   employmentStatus  String?           @default("GTTP") // PTTP, GTTP, GTP, PTP
+  isActive          Boolean           @default(true)
   bankName          String?           // misal: BNI, BRI, BSI, Mandiri, BCA, Jateng Syariah
   bankAccountNumber String?           // Nomor rekening bank
   bankAccountHolder String?           // Nama pemilik rekening bank
@@ -134,6 +135,7 @@ model Student {
   program            String?
   gelombang          String?        @default("Gelombang 1")
   jalurPendaftaran   String?        @default("Mandiri")
+  isActive           Boolean        @default(true)
   beasiswaPercentage Int            @default(0) @map("discountPercentage")
   beasiswaReason     String?        @map("discountReason")
   beasiswaSeragamPct Int            @default(0)

@@ -79,12 +79,12 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
 
   return (
     <div className="space-y-4">
-      {/* KELOMPOK 1: MODUL UTAMA / AKSES KHUSUS ROLE (ATAS) */}
+      {/* KELOMPOK 1: MODUL LAYANAN (ATAS) */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
             <Briefcase className="w-3 h-3 text-blue-600" />
-            Layanan & Tugas Utama ({roleSpecificLinks.length})
+            Layanan ({roleSpecificLinks.length})
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
@@ -92,12 +92,12 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
         </div>
       </div>
 
-      {/* KELOMPOK 2: AKSES CEPAT UMUM PEGAWAI (BAWAH) */}
+      {/* KELOMPOK 2: AKTIVITAS (BAWAH) */}
       <div className="space-y-2 pt-1 border-t border-slate-200/80 dark:border-slate-800">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
             <Layers className="w-3 h-3 text-slate-500" />
-            Aktivitas & Presensi Pegawai ({commonLinks.length})
+            Aktivitas ({commonLinks.length})
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">

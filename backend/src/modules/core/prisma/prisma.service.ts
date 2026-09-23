@@ -22,13 +22,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
     const poolConfig: any = {
       connectionString,
-      max: isRemoteDb ? 30 : 25, // Dioptimasi untuk konkurensi tinggi
-      min: 4, // Menjaga koneksi aktif tetap siap melayani request mendadak
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
-      statement_timeout: 15000, // Cegah slow query memblokir thread pool
+      max: isRemoteDb ? 35 : 25, // Dioptimasi untuk konkurensi tinggi & throughput cepat
+      min: isRemoteDb ? 5 : 3, // Menjaga hot-connections aktif siap melayani request mendadak tanpa latency handshake
+      idleTimeoutMillis: 20000, // Recycle koneksi idle lebih cepat untuk mencegah stale connections
+      connectionTimeoutMillis: 8000, // Fail-fast connection timeout
+      statement_timeout: 12000, // Cegah slow query memblokir thread pool
+      query_timeout: 12000,
       keepAlive: true,
-      keepAliveInitialDelayMillis: 10000,
+      keepAliveInitialDelayMillis: 5000,
     };
 
     if (isRemoteDb) {
@@ -36,6 +37,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     }
 
     const pool = new Pool(poolConfig);
+    
+    // Handle pool errors gracefully to avoid unhandled crashes
+    pool.on('error', (err) => {
+      this.logger.warn(`Postgres pool background error: ${err?.message || err}`);
+    });
+
     const adapter = new PrismaPg(pool);
     super({ adapter });
   }

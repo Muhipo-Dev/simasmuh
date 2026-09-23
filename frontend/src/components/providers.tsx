@@ -39,15 +39,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 0, // always refetch on mount/refetch to show latest data
-        gcTime: 1000 * 60 * 30, // 30 minutes
+        staleTime: 1000 * 15, // 15 detik data dianggap fresh: navigasi antar tab & menu terasa instan tanpa re-fetch berulang
+        gcTime: 1000 * 60 * 30, // 30 menit data disimpan di cache memori
+        refetchOnWindowFocus: false, // Hindari beban request berulang saat berganti window/tab browser
+        refetchOnReconnect: 'always', // Otomatis sync ulang jika koneksi internet/LAN sempat terputus
         retry: (failureCount, error: any) => {
           // Don't retry on 4xx errors
           if (error?.status >= 400 && error?.status < 500) {
             return false;
           }
-          // Retry up to 3 times for other errors
-          return failureCount < 3;
+          // Retry up to 2 times for network glitches
+          return failureCount < 2;
         },
       },
       mutations: {

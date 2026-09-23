@@ -54,25 +54,25 @@ import { AdaptiveThrottlerGuard } from './modules/core/guards/adaptive-throttler
       maxListeners: 20,
     }),
     // 🛡️ Global Rate Limiter: Proteksi longgar & adaptif
-    // - Luar Jaringan/Internet: 60 req/detik (burst) & 300 req/menit
-    // - Lokal Jaringan/LAN: 5x lebih besar (300 req/detik & 1500 req/menit)
+    // - Luar Jaringan/Internet: 120 req/detik (burst) & 600 req/menit
+    // - Lokal Jaringan/LAN: 5x lebih besar (600 req/detik & 3000 req/menit)
     ThrottlerModule.forRoot([
       {
         name: 'short',
         ttl: 1000,
-        limit: 60, // Internet: 60 req/dtk | Lokal: 300 req/dtk
+        limit: 120, // Internet: 120 req/dtk | Lokal: 600 req/dtk
       },
       {
         name: 'medium',
         ttl: 60000,
-        limit: 300, // Internet: 300 req/menit | Lokal: 1500 req/menit
+        limit: 600, // Internet: 600 req/menit | Lokal: 3000 req/menit
       },
     ]),
-    // ⚡ In-Memory Cache Global: Caching respon database untuk performa tinggi
+    // ⚡ In-Memory Cache Global: Caching respon database untuk performa tinggi & respons instan
     CacheModule.register({
       isGlobal: true,
-      ttl: 30000, // 30 detik default
-      max: 500, // max 500 cached keys
+      ttl: 60000, // 60 detik default
+      max: 2000, // Menampung hingga 2000 entitas cache aktif
     }),
     ServeStaticModule.forRoot({
       rootPath: STORAGE_ROOT,

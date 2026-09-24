@@ -500,7 +500,7 @@ export default function StudentsPage() {
             top: 17.32%;
             width: 35.58%;
             height: 33.07%;
-            border-radius: 2.2mm;
+            border-radius: 1.2mm;
             overflow: hidden;
             background: #ffffff;
             display: flex;
@@ -3317,7 +3317,7 @@ export default function StudentsPage() {
                   {/* Layer Elemen Dinamis Sisi Depan */}
                   <div className="relative z-10 w-full h-full pointer-events-none">
                     {/* Foto Siswa (Menempati persis bingkai kotak foto template) */}
-                    <div className="absolute left-[15.20%] top-[17.32%] w-[35.58%] h-[33.07%] rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-2xs">
+                    <div className="absolute left-[15.20%] top-[17.32%] w-[35.58%] h-[33.07%] rounded-[5px] overflow-hidden flex items-center justify-center bg-white shadow-2xs">
                       {targetCardStudent?.user?.avatarUrl ? (
                         <img 
                           src={targetCardStudent.user.avatarUrl.startsWith('/uploads') ? `/api-backend${targetCardStudent.user.avatarUrl}` : targetCardStudent.user.avatarUrl} 

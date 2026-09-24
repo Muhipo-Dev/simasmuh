@@ -533,7 +533,7 @@ export default function StudentsPage() {
             position: absolute;
             left: 4%;
             right: 4%;
-            top: 51.3%;
+            top: 52.8%;
             text-align: center;
             font-size: 7.2pt;
             font-weight: 800;
@@ -547,8 +547,8 @@ export default function StudentsPage() {
           }
           .nisn-val {
             position: absolute;
-            left: 51.5%;
-            top: 50.2%;
+            left: 44.2%;
+            top: 58.7%;
             font-size: 6.5pt;
             font-family: monospace;
             font-weight: bold;
@@ -3344,14 +3344,14 @@ export default function StudentsPage() {
                     </div>
 
                     {/* Nama Siswa */}
-                    <div className="absolute left-[4%] right-[4%] top-[51.3%] text-center">
+                    <div className="absolute left-[4%] right-[4%] top-[52.8%] text-center">
                       <h3 className="font-extrabold text-[12px] sm:text-[13px] text-slate-900 uppercase tracking-tight line-clamp-1 leading-none">
                         {targetCardStudent?.name || '[NAMA LENGKAP]'}
                       </h3>
                     </div>
 
                     {/* Nilai NISN (Sejajar tepat di sebelah tulisan NISN :) */}
-                    <div className="absolute left-[51.5%] top-[50.2%] text-left">
+                    <div className="absolute left-[44.2%] top-[58.7%] text-left">
                       <span className="font-mono font-bold text-[10.5px] text-[#931553] tracking-wider leading-none">
                         {targetCardStudent?.nisn || '[NISN]'}
                       </span>

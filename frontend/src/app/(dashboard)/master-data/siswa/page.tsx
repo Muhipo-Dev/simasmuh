@@ -547,8 +547,8 @@ export default function StudentsPage() {
           }
           .nisn-val {
             position: absolute;
-            left: 44.2%;
-            top: 58.7%;
+            left: 44.5%;
+            top: 58.1%;
             font-size: 6.5pt;
             font-family: monospace;
             font-weight: bold;
@@ -3351,8 +3351,8 @@ export default function StudentsPage() {
                     </div>
 
                     {/* Nilai NISN (Sejajar tepat di sebelah tulisan NISN :) */}
-                    <div className="absolute left-[44.2%] top-[58.7%] text-left">
-                      <span className="font-mono font-bold text-[10.5px] text-[#931553] tracking-wider leading-none">
+                    <div className="absolute left-[44.5%] top-[58.0%] flex items-center text-left pointer-events-none">
+                      <span className="font-mono font-bold text-[10px] sm:text-[10.5px] text-[#931553] tracking-wider leading-none">
                         {targetCardStudent?.nisn || '[NISN]'}
                       </span>
                     </div>

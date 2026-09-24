@@ -425,7 +425,10 @@ export default function StudentsPage() {
     const frontBgUrl = globalSettings?.studentCardTemplateUrl
       ? (globalSettings.studentCardTemplateUrl.startsWith('/uploads') ? `/api-backend${globalSettings.studentCardTemplateUrl}` : globalSettings.studentCardTemplateUrl)
       : '/images/kartu-pelajar-depan.png'
-    const qrSvgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" width="64" height="64"><rect width="29" height="29" fill="#fff" opacity="0"/><path d="M0 0h7v7H0zM2 2h3v3H2zM9 0h2v1H9zM12 0h1v1h-1zM14 0h1v1h-1zM16 0h1v2h1v1h-1v1h2v1h-1v2h-1V6h-1v1h-1V5h1V3h-1V2h-1V1h-1V0h1zM22 0h7v7h-7zM24 2h3v3h-3zM9 2h1v3H9zM11 2h1v2h-1zM14 2h1v1h-1zM0 9h1v1H0zM2 9h1v1H2zM4 9h2v1H4zM7 9h1v3H7v1H6v-1H5v2H4v1H3v-1H1v-1h1v-1H0v-1h2v-1H1V9h1V8h1v1h1V8h1v1h1V8h1v1zM9 9h1v1H9zM11 9h1v2h-1zM13 9h1v1h-1zM18 9h1v2h-1zM20 9h1v2h-1zM22 9h1v1h-1zM25 9h1v2h-1zM27 9h2v2h-2zM10 10h1v2h-1zM14 10h1v1h-1zM16 10h1v1h-1zM22 10h2v1h-2zM9 11h1v1H9zM12 11h2v1h-2zM15 11h1v1h-1zM24 11h1v2h-1zM26 11h1v1h-1zM28 11h1v1h-1zM0 13h1v1H0zM2 13h1v1H2zM9 13h1v1H9zM11 13h1v2h-1zM13 13h1v2h-1zM16 13h2v1h-2zM19 13h1v1h-1zM21 13h1v1h-1zM26 13h1v2h-1zM28 13h1v2h-1zM8 14h1v1H8zM10 14h1v1h-1zM15 14h1v1h-1zM18 14h1v1h-1zM22 14h2v1h-2zM25 14h1v1h-1zM0 15h1v1H0zM3 15h1v1H3zM5 15h2v1H5zM8 15h1v1H8zM14 15h1v2h-1zM17 15h1v1h-1zM20 15h1v2h-1zM23 15h2v1h-2zM1 16h1v1H1zM4 16h1v1H4zM9 16h2v1H9zM12 16h2v1h-2zM16 16h1v1h-1zM18 16h2v1h-2zM22 16h1v1h-1zM27 16h1v1h-1zM0 17h1v1H0zM2 17h2v1H2zM6 17h1v1H6zM8 17h1v1H8zM11 17h1v1h-1zM15 17h1v1h-1zM17 17h1v1h-1zM25 17h1v1h-1zM28 17h1v1h-1zM1 18h1v1H1zM3 18h2v1H3zM7 18h1v1H7zM9 18h2v1H9zM12 18h1v1h-1zM14 18h1v1h-1zM18 18h2v1h-2zM21 18h2v1h-2zM24 18h1v1h-1zM26 18h2v1h-2zM2 19h1v1H2zM5 19h1v1H5zM8 19h1v1H8zM11 19h1v1h-1zM13 19h1v1h-1zM16 19h1v1h-1zM20 19h1v1h-1zM23 19h1v1h-1zM28 19h1v1h-1zM0 20h2v1H0zM3 20h1v1H3zM6 20h1v1H6zM9 20h1v1H9zM12 20h1v1h-1zM14 20h2v1h-2zM17 20h1v1h-1zM19 20h1v1h-1zM21 20h2v1h-2zM24 20h1v1h-1zM27 20h1v1h-1zM0 22h7v7H0zM2 24h3v3H2zM9 22h1v1H9zM12 22h1v1h-1zM14 22h1v1h-1zM16 22h1v2h1v1h-1v1h2v1h-1v2h-1v-2h-1v1h-1v-2h1v-2h-1v-1h-1v-1h-1v-1h1zM9 24h1v3H9zM11 24h1v2h-1zM14 24h1v1h-1zM8 28h1v1H8zM10 28h1v1h-1zM13 28h1v1h-1zM15 28h1v1h-1zM18 28h1v1h-1zM20 28h1v1h-1zM22 28h1v1h-1zM24 28h1v1h-1zM26 28h1v1h-1zM28 28h1v1h-1z" fill="#0f172a"/></svg>`
+    const studentNis = student.nis || '-'
+    const studentNisn = student.nisn || '[NISN]'
+    const qrElement = document.getElementById('student-card-qr-master')
+    const qrSvgString = qrElement ? qrElement.innerHTML : ''
 
     const doc = iframe.contentWindow?.document
     if (!doc) return
@@ -3331,13 +3334,15 @@ export default function StudentsPage() {
 
                     {/* Barcode QR Code NIS (Tanpa bingkai) */}
                     <div className="absolute left-[60.5%] top-[22.5%] flex flex-col items-center justify-center">
-                      <QRCodeSVG 
-                        value={targetCardStudent?.nis || '13154'} 
-                        size={64}
-                        level="M"
-                        includeMargin={false}
-                        bgColor="transparent"
-                      />
+                      <div id="student-card-qr-master">
+                        <QRCodeSVG 
+                          value={targetCardStudent?.nis || '13154'} 
+                          size={64}
+                          level="M"
+                          includeMargin={false}
+                          bgColor="transparent"
+                        />
+                      </div>
                       <span className="text-[7.5px] font-mono font-bold text-slate-800 tracking-wider mt-1">
                         {targetCardStudent?.nis || '-'}
                       </span>

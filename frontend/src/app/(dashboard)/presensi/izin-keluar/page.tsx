@@ -44,7 +44,7 @@ interface IzinKeluarPegawai {
   }
 }
 
-export default function IzinKeluarPegawaiPage() {
+export function IzinKeluarPegawaiManagement() {
   const authenticatedFetch = useAuthenticatedFetch()
   const { data: session } = useSession()
   const user = session?.user as any
@@ -411,4 +411,8 @@ export default function IzinKeluarPegawaiPage() {
       )}
     </div>
   )
+}
+
+export default function IzinKeluarPegawaiPage() {
+  return <IzinKeluarPegawaiManagement />
 }

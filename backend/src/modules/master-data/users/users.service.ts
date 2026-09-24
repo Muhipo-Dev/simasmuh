@@ -576,10 +576,14 @@ export class UsersService {
         },
         student: {
           select: {
+            id: true,
             nisn: true,
             nis: true,
+            gender: true,
+            bioData: true,
             class: {
               select: {
+                id: true,
                 name: true,
               },
             },
@@ -1106,6 +1110,28 @@ export class UsersService {
       });
       if (teacherProfile) {
         updateData.teacherProfile = { update: tpFields };
+      }
+    }
+
+    // Jika siswa mengubah alamat, sinkronkan juga ke bioData Student
+    if (data.address !== undefined) {
+      const student = await this.prisma.student.findUnique({
+        where: { userId: id },
+      });
+      if (student) {
+        let currentBio: any = {};
+        if (student.bioData) {
+          try {
+            currentBio = typeof student.bioData === 'string' ? JSON.parse(student.bioData) : student.bioData;
+          } catch (e) {
+            currentBio = {};
+          }
+        }
+        currentBio.alamat = data.address;
+        await this.prisma.student.update({
+          where: { id: student.id },
+          data: { bioData: JSON.stringify(currentBio) },
+        });
       }
     }
 

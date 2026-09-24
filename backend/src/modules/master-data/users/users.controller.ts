@@ -132,7 +132,7 @@ export class UsersController {
 
   @Patch(':id/toggle-active')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, 'ADMIN_TU', 'BAU', 'TATA_USAHA')
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, 'ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEPEGAWAIAN', 'SDM', 'WAKA_HUMAS_SDM', 'HUMAS_SDM')
   toggleActive(
     @Param('id') id: string,
     @Body('isActive') isActive: boolean,
@@ -142,7 +142,7 @@ export class UsersController {
 
   @Post('bulk-toggle-active')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPERADMIN', UserRole.ADMIN_IT, 'ADMIN_TU', 'BAU', 'TATA_USAHA')
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, 'ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEPEGAWAIAN', 'SDM', 'WAKA_HUMAS_SDM', 'HUMAS_SDM')
   bulkToggleActive(
     @Body('ids') ids: string[],
     @Body('isActive') isActive: boolean,

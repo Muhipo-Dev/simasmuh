@@ -50,11 +50,13 @@ import {
   FileBadge,
   Sparkles,
   Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  DoorOpen
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import Link from 'next/link'
 import { CutiPegawaiManagement } from '@/app/(dashboard)/presensi/cuti/page'
+import { IzinKeluarPegawaiManagement } from '@/app/(dashboard)/presensi/izin-keluar/page'
 import { compressImageFile } from '@/utils/imageCompressor'
 
 // Interfaces
@@ -226,7 +228,7 @@ export function KepegawaianManagement() {
   const user = session?.user as any
 
   // Tab Active State
-  const [activeTab, setActiveTab] = useState<'database' | 'rekrutmen' | 'cuti' | 'evaluasi'>('database')
+  const [activeTab, setActiveTab] = useState<'database' | 'rekrutmen' | 'cuti' | 'izin-keluar' | 'evaluasi'>('database')
 
   // Datasets
   const [pelamarList, setPelamarList] = useState<PelamarItem[]>(INITIAL_PELAMAR)
@@ -799,24 +801,24 @@ export function KepegawaianManagement() {
       {/* Navigation Buttons Tab Utama Kepegawaian */}
       <div className="w-full space-y-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100 dark:bg-slate-900/60 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <div className="bg-transparent h-auto p-0 gap-1 grid grid-cols-2 sm:grid-cols-4 w-full sm:w-auto">
+          <div className="bg-transparent h-auto p-0 gap-1 grid grid-cols-2 sm:grid-cols-5 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setActiveTab('database')}
-              className={`rounded-xl py-2 px-3.5 text-xs font-bold transition-all flex items-center gap-1.5 justify-center ${
+              className={`rounded-xl py-2 px-3 text-xs font-bold transition-all flex items-center gap-1.5 justify-center ${
                 activeTab === 'database'
                   ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-purple-600'
               }`}
             >
               <Users className="w-4 h-4" />
-              <span>Database Pegawai ({staffList.length})</span>
+              <span>Database ({staffList.length})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('rekrutmen')}
-              className={`rounded-xl py-2 px-3.5 text-xs font-bold transition-all flex items-center gap-1.5 justify-center ${
+              className={`rounded-xl py-2 px-3 text-xs font-bold transition-all flex items-center gap-1.5 justify-center ${
                 activeTab === 'rekrutmen'
                   ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-purple-600'
@@ -834,27 +836,40 @@ export function KepegawaianManagement() {
             <button
               type="button"
               onClick={() => setActiveTab('cuti')}
-              className={`rounded-xl py-2 px-3.5 text-xs font-bold transition-all flex items-center gap-1.5 justify-center ${
+              className={`rounded-xl py-2 px-3 text-xs font-bold transition-all flex items-center gap-1.5 justify-center ${
                 activeTab === 'cuti'
                   ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-purple-600'
               }`}
             >
               <CalendarDays className="w-4 h-4" />
-              <span>Cuti & Izin</span>
+              <span>Izin Cuti</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('izin-keluar')}
+              className={`rounded-xl py-2 px-3 text-xs font-bold transition-all flex items-center gap-1.5 justify-center ${
+                activeTab === 'izin-keluar'
+                  ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-purple-600'
+              }`}
+            >
+              <DoorOpen className="w-4 h-4" />
+              <span>Izin Keluar</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('evaluasi')}
-              className={`rounded-xl py-2 px-3.5 text-xs font-bold transition-all flex items-center gap-1.5 justify-center ${
+              className={`rounded-xl py-2 px-3 text-xs font-bold transition-all flex items-center gap-1.5 justify-center ${
                 activeTab === 'evaluasi'
                   ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-purple-600'
               }`}
             >
               <Award className="w-4 h-4" />
-              <span>Evaluasi Kinerja</span>
+              <span>Evaluasi</span>
             </button>
           </div>
 
@@ -1182,7 +1197,26 @@ export function KepegawaianManagement() {
           </div>
         )}
 
-        {/* TAB 4: EVALUASI KINERJA PEGAWAI (KINERJA MUHIPO - COMING SOON) */}
+        {/* TAB 4: IZIN KELUAR & DINAS LUAR PEGAWAI */}
+        {activeTab === 'izin-keluar' && (
+          <div className="space-y-4">
+            <div className="bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-extrabold text-purple-950 dark:text-purple-200 text-sm sm:text-base flex items-center gap-2">
+                  <DoorOpen className="w-5 h-5 text-purple-600" />
+                  Pusat Monitoring & Izin Keluar / Dinas Luar Pegawai
+                </h3>
+                <p className="text-xs text-purple-800/80 dark:text-purple-300/80 mt-0.5">
+                  Rekap dan pencatatan izin keluar kampus, urusan dinas luar kantor, dan keperluan mendesak guru maupun staf.
+                </p>
+              </div>
+            </div>
+
+            <IzinKeluarPegawaiManagement />
+          </div>
+        )}
+
+        {/* TAB 5: EVALUASI KINERJA PEGAWAI (KINERJA MUHIPO - COMING SOON) */}
         {activeTab === 'evaluasi' && (
           <div className="space-y-4">
             {/* Banner Khusus Kinerja Muhipo */}

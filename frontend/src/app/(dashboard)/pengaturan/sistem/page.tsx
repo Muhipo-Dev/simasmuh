@@ -29,6 +29,7 @@ type Setting = {
   email: string | null
   logoUrl: string | null
   backgroundUrl?: string | null
+  studentCardTemplateUrl?: string | null
   academicYear: string | null
   semester: string | null
   helpdeskPhone?: string | null
@@ -55,6 +56,7 @@ export default function SettingsPage() {
     email: '',
     logoUrl: '',
     backgroundUrl: '',
+    studentCardTemplateUrl: '',
     helpdeskPhone: '088293733330',
     academicYear: '2026/2027',
     semester: 'Ganjil',
@@ -94,6 +96,7 @@ export default function SettingsPage() {
         email: settings.email || '',
         logoUrl: settings.logoUrl || '',
         backgroundUrl: settings.backgroundUrl || '',
+        studentCardTemplateUrl: settings.studentCardTemplateUrl || '',
         helpdeskPhone: settings.helpdeskPhone || '088293733330',
         academicYear: settings.academicYear || '2026/2027',
         semester: settings.semester || 'Ganjil',
@@ -143,7 +146,19 @@ export default function SettingsPage() {
         backgroundUrl = uploadData.url;
       }
 
-      const payload = { ...updatedSettings, logoUrl, backgroundUrl };
+      let studentCardTemplateUrl = updatedSettings.studentCardTemplateUrl;
+      if (studentCardTemplateUrl && studentCardTemplateUrl.startsWith('data:image')) {
+        const uploadRes = await authenticatedFetch('/api-backend/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: studentCardTemplateUrl, folder: 'card_templates' })
+        });
+        if (!uploadRes.ok) throw new Error('Gagal mengunggah template kartu pelajar');
+        const uploadData = await uploadRes.json();
+        studentCardTemplateUrl = uploadData.url;
+      }
+
+      const payload = { ...updatedSettings, logoUrl, backgroundUrl, studentCardTemplateUrl };
       const res = await authenticatedFetch('/api-backend/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -159,7 +174,7 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['navbar-public-settings'] })
       Swal.fire({
         title: 'Berhasil Disimpan!',
-        text: `Pengaturan identitas sekolah, logo, dan background master berhasil diperbarui ke seluruh aplikasi.`,
+        text: `Pengaturan identitas sekolah, template kartu pelajar, dan background master berhasil diperbarui.`,
         icon: 'success',
       })
     },
@@ -219,6 +234,18 @@ export default function SettingsPage() {
     }
   }
 
+  const handleStudentCardTemplateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const compressed = await compressImageFile(file, { maxWidth: 1920, maxHeight: 1200, quality: 0.9 })
+      setFormData(prev => ({ ...prev, studentCardTemplateUrl: compressed.dataUrl }))
+    } catch (err) {
+      console.error('Gagal memproses template kartu pelajar:', err)
+      Swal.fire('Gagal', 'Terjadi kesalahan saat memproses template kartu pelajar.', 'error')
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     mutation.mutate(formData)
@@ -251,7 +278,7 @@ export default function SettingsPage() {
             Pengaturan Sistem & Sekolah
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
-            Kelola informasi dasar sekolah, rekening pembayaran, dan sinkronisasi waktu server.
+            Kelola informasi dasar sekolah, template kartu pelajar, rekening pembayaran, dan sinkronisasi waktu server.
           </p>
         </div>
       </div>
@@ -263,10 +290,10 @@ export default function SettingsPage() {
             <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 sm:p-6">
               <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-extrabold">
                 <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                Identitas Sekolah
+                Identitas Sekolah & Desain Kartu Pelajar
               </CardTitle>
               <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">
-                Informasi identitas, logo resmi, dan wallpaper latar belakang sistem.
+                Informasi identitas, logo resmi, wallpaper, dan template background kartu pelajar siswa.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
@@ -324,6 +351,41 @@ export default function SettingsPage() {
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
                     Wallpaper latar belakang yang diselaraskan di seluruh halaman aplikasi.
+                  </p>
+                </div>
+
+                <div className="space-y-2 p-3.5 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="cardTemplate" className="font-bold text-indigo-900 dark:text-indigo-200 text-xs flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      Template Desain Kartu Pelajar (Master Template)
+                    </Label>
+                    <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">Cetak Mandiri Siswa</span>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2">
+                    {formData.studentCardTemplateUrl ? (
+                      <div className="relative w-24 h-15 rounded-lg overflow-hidden border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-800 shrink-0 shadow-xs">
+                        <img 
+                          src={formData.studentCardTemplateUrl.startsWith('/uploads') ? `/api-backend${formData.studentCardTemplateUrl}` : formData.studentCardTemplateUrl} 
+                          alt="Preview Template Kartu" 
+                          className="w-full h-full object-cover" 
+                        />
+                      </div>
+                    ) : (
+                      <div className="relative w-24 h-15 rounded-lg overflow-hidden border border-dashed border-indigo-300 dark:border-indigo-800 bg-indigo-50/50 dark:bg-slate-800/50 flex flex-col items-center justify-center p-2 text-center shrink-0">
+                        <span className="text-[10px] text-indigo-500 font-bold">Template Standar SIMASMUH</span>
+                      </div>
+                    )}
+                    <Input 
+                      id="cardTemplate" 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleStudentCardTemplateChange}
+                      className="bg-white dark:bg-slate-900"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                    Template desain ini akan otomatis dipakai siswa di Profil Siswa untuk menggabungkan foto & mencetak kartu pelajar secara mandiri.
                   </p>
                 </div>
                 

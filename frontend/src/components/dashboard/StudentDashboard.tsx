@@ -61,42 +61,7 @@ export function StudentDashboard({
   // Identifiers
   const effectiveNis = activeStudent?.nis || activeStudent?.nisn || (session?.user as any)?.username || (session?.user as any)?.nis || ''
 
-  // 1. LIVE CBT MUHIPO API DATA FETCHING (Rule 10: Adaptive Host)
-  const cbtHost = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname || 'localhost'
-      const protocol = window.location.protocol || 'http:'
-      return process.env.NEXT_PUBLIC_CBT_URL || `${protocol}//${hostname}:3010`
-    }
-    return process.env.NEXT_PUBLIC_CBT_URL || 'http://localhost:3010'
-  }, [])
-
-  const { data: cbtNilaiResponse } = useQuery<{ success: boolean; total: number; data: any[] }>({
-    queryKey: ['cbt-student-grades-live', effectiveNis],
-    queryFn: async () => {
-      if (!effectiveNis) return { success: false, total: 0, data: [] }
-      try {
-        const res = await fetch(`${cbtHost}/api/external/simasmuh/nilai-semester?nis=${effectiveNis}`, {
-          headers: {
-            'x-api-key': 'muhipo-simasmuh-sync-secret-2026',
-          },
-          cache: 'no-store',
-        })
-        if (!res.ok) throw new Error('CBT offline')
-        return res.json()
-      } catch {
-        return { success: false, total: 0, data: [] }
-      }
-    },
-    enabled: !!effectiveNis,
-    staleTime: 30000,
-  })
-
-  const cbtList = useMemo(() => {
-    return cbtNilaiResponse?.data || []
-  }, [cbtNilaiResponse])
-
-  // 2. LIVE SIMASMUH SUBJECTS FETCHING
+  // 1. LIVE SIMASMUH SUBJECTS FETCHING
   const { data: subjectsFromDb = [] } = useQuery<any[]>({
     queryKey: ['simasmuh-subjects-list'],
     queryFn: async () => {
@@ -247,19 +212,14 @@ export function StudentDashboard({
 
     const list = Array.from(map.values())
     return list.map((sub) => {
-      const cbtMatch = cbtList.find((c: any) => 
-        (c.kodeMapel && c.kodeMapel.toLowerCase() === sub.code?.toLowerCase()) ||
-        (c.namaMapel && c.namaMapel.toLowerCase() === sub.name?.toLowerCase()) ||
-        (c.judulUjian && c.judulUjian.toLowerCase().includes(sub.name?.toLowerCase()))
-      )
       const gradeMatch = (grades || []).find((g: any) => 
         g.subjectId === sub.id || 
         g.subject?.code === sub.code ||
         g.subject?.name?.toLowerCase() === sub.name?.toLowerCase()
       )
 
-      const score = cbtMatch ? Number(cbtMatch.nilaiTotal) : (gradeMatch ? Number(gradeMatch.score) : 0)
-      const kkm = cbtMatch?.kkm || 75
+      const score = gradeMatch ? Number(gradeMatch.score) : 0
+      const kkm = 75
       const hasScore = score > 0
       const isTuntas = score >= kkm
 
@@ -282,7 +242,7 @@ export function StudentDashboard({
         statusKetuntasan: hasScore ? (isTuntas ? 'TUNTAS' : 'BELUM_TUNTAS') : 'BERJALAN'
       }
     })
-  }, [schedules, studentClass, subjectsFromDb, homeroomTeacherName, cbtList, grades])
+  }, [schedules, studentClass, subjectsFromDb, homeroomTeacherName, grades])
 
   // Academic Grade Stats & Semesters (Live dynamic calculation)
   const semesterScores = useMemo(() => {
@@ -302,14 +262,6 @@ export function StudentDashboard({
       const sem = g.semester || currentSemester
       if (bySem[sem] && typeof g.score === 'number' && g.score > 0) {
         bySem[sem].push(g.score)
-      }
-    })
-
-    // Add CBT assessment scores
-    cbtList.forEach((c: any) => {
-      const val = Number(c.nilaiTotal)
-      if (val > 0 && bySem[currentSemester]) {
-        bySem[currentSemester].push(val)
       }
     })
 
@@ -341,7 +293,7 @@ export function StudentDashboard({
         isReal: false,
       }
     })
-  }, [grades, cbtList, currentSemester, classSubjects])
+  }, [grades, currentSemester, classSubjects])
 
   // Current Average Score & Predicate
   const currentAvgScore = useMemo(() => {
@@ -582,8 +534,8 @@ export function StudentDashboard({
       {/* JADWAL SHOLAT & KHGT MUHAMMADIYAH REALTIME BANNER */}
       <PrayerTimesWidget variant="banner" />
 
-      {/* 3. TOP 6 METRIC SUMMARY CARDS (COMPACT RESPONSIVE) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+      {/* 3. TOP 5 METRIC SUMMARY CARDS (COMPACT RESPONSIVE) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
         {/* Card 1: Mapel & Jam Hari Ini */}
         <Card className="border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-all rounded-xl p-3 flex flex-col justify-between">
           <div className="flex items-start justify-between">
@@ -628,7 +580,7 @@ export function StudentDashboard({
           </div>
         </Card>
 
-        {/* Card 3: Rata-rata Nilai & IP */}
+        {/* Card 3: Rata-rata Nilai */}
         <Card className="border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-all rounded-xl p-3 flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div>
@@ -696,31 +648,9 @@ export function StudentDashboard({
             </span>
           </div>
         </Card>
-
-        {/* Card 6: Ujian & CBT Online */}
-        <Card className="border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-all rounded-xl p-3 flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-tight block">
-                Ujian / CBT
-              </span>
-              <h3 className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
-                {cbtList.length > 0 ? `${cbtList.length} Asesmen` : 'Siap'}
-              </h3>
-            </div>
-            <div className="w-7.5 h-7.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 flex items-center justify-center shrink-0">
-              <Laptop className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-            <span className="text-[10px] text-indigo-600 dark:text-indigo-300 font-semibold truncate block">
-              CBT MUHIPO Aktif
-            </span>
-          </div>
-        </Card>
       </div>
 
-      {/* 4. PINTASAN LAYANAN AKADEMIK SISWA (6 SERVICE SHORTCUT CARDS) */}
+      {/* 4. PINTASAN LAYANAN AKADEMIK SISWA (5 SERVICE SHORTCUT CARDS) */}
       <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3 sm:p-4">
         <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-1.5">
@@ -736,7 +666,7 @@ export function StudentDashboard({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5">
           {/* Shortcut 1: Presensi Siswa */}
           <Link
             href="/presensi/kehadiran-siswa"
@@ -769,23 +699,7 @@ export function StudentDashboard({
             </span>
           </Link>
 
-          {/* Shortcut 3: Rapor & Nilai */}
-          <Link
-            href="/akademik/nilai-semester"
-            className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
-          >
-            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-              <Award className="w-4 h-4" />
-            </div>
-            <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
-              Rapor & Nilai
-            </h4>
-            <span className="text-[9.5px] text-slate-400 font-medium mt-0.2">
-              Penilaian & CBT
-            </span>
-          </Link>
-
-          {/* Shortcut 4: Konseling & Izin */}
+          {/* Shortcut 3: Konseling & Izin */}
           <Link
             href="/presensi/izin-siswa"
             className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
@@ -801,7 +715,7 @@ export function StudentDashboard({
             </span>
           </Link>
 
-          {/* Shortcut 5: Ujian CBT Online */}
+          {/* Shortcut 4: Ujian CBT Online */}
           <Link
             href="/demo-waiting-room"
             className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
@@ -817,7 +731,7 @@ export function StudentDashboard({
             </span>
           </Link>
 
-          {/* Shortcut 6: Tagihan & Keuangan */}
+          {/* Shortcut 5: Tagihan & Keuangan */}
           <button
             onClick={() => setShowPaymentPopup(true)}
             className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center w-full"

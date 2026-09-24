@@ -146,6 +146,10 @@ export class SettingsController {
     UserRole.TATA_USAHA,
     SubRole.ADMIN_TU,
     SubRole.BAU,
+    SubRole.KURIKULUM,
+    'KURIKULUM',
+    'KESISWAAN',
+    'ADMIN',
   )
   getSettings() {
     return this.settingsService.getSettings();
@@ -161,11 +165,16 @@ export class SettingsController {
     'KEUANGAN_ALL',
     'KEUANGAN_MASUK',
     'KEUANGAN_KELUAR',
+    'KEPALA_SEKOLAH',
     UserRole.ADMIN_TU,
     UserRole.BAU,
     UserRole.TATA_USAHA,
     SubRole.ADMIN_TU,
     SubRole.BAU,
+    SubRole.KURIKULUM,
+    'KURIKULUM',
+    'KESISWAAN',
+    'ADMIN',
   )
   upsertSettings(@Body() data: any) {
     return this.settingsService.upsertSettings(data);

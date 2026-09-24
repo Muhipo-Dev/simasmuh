@@ -5,7 +5,7 @@ import {
   Banknote, FileText, Image as ImageIcon, Award, FileCheck,
   ShieldAlert, Sparkles, ShieldCheck, UserCheck, HeartHandshake,
   Library, BookMarked, Mail, Contact, Package, Boxes, Camera, BellRing, Database,
-  Clock
+  Clock, CreditCard
 } from 'lucide-react'
 
 // 1. Superadmin & Admin IT (Kontrol Penuh Sistem & Master Data)
@@ -19,10 +19,10 @@ export const superadminLinks = [
   { name: 'Kelas', href: '/master-data/kelas', icon: BookOpen, group: 'Master Data' },
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap, group: 'Master Data' },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Master Data' },
+  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
+  { name: 'Izin Keluar Pegawai', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Pegawai' },
+  { name: 'Izin Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Pegawai' },
   { name: 'Layar QR Presensi', href: '/presensi/manajemen-qr', icon: QrCode, group: 'Pengaturan Sistem' },
-  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Pengaturan Sistem' },
-  { name: 'Izin Keluar Pegawai', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Pengaturan Sistem' },
-  { name: 'Izin Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays, group: 'Pengaturan Sistem' },
   { name: 'Berita & Informasi', href: '/informasi/pengumuman', icon: Megaphone, group: 'Pengaturan Sistem' },
   { name: 'Banner Utama', href: '/informasi/banner', icon: ImageIcon, group: 'Pengaturan Sistem' },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog, group: 'Pengaturan Sistem' },
@@ -48,10 +48,10 @@ export const bauLinks = [
   { name: 'Kelas', href: '/master-data/kelas', icon: BookOpen, group: 'Master Data' },
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap, group: 'Master Data' },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Master Data' },
+  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
+  { name: 'Izin Keluar Pegawai', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Pegawai' },
+  { name: 'Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Pegawai' },
   { name: 'Layar QR Presensi', href: '/presensi/manajemen-qr', icon: QrCode, group: 'Administrasi' },
-  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Administrasi' },
-  { name: 'Izin Keluar Pegawai', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Administrasi' },
-  { name: 'Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays, group: 'Administrasi' },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog, group: 'Administrasi' },
   { name: 'Notifikasi Email', href: '/pengaturan/notifikasi', icon: Mail, group: 'Administrasi' },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings, group: 'Administrasi' },
@@ -65,9 +65,9 @@ export const guruLinks = [
   { name: 'Disposisi Surat', href: '/fitur/disposisi', icon: FileCheck },
   { name: 'Jurnal Mengajar', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Tugas Guru' },
   { name: 'Catatan Kedisiplinan', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Tugas Guru' },
-  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote },
-  { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen },
-  { name: 'Izin Cuti', href: '/presensi/cuti', icon: CalendarDays },
+  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
+  { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Pegawai' },
+  { name: 'Izin Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Pegawai' },
   { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
@@ -75,9 +75,9 @@ export const guruLinks = [
 export const siswaLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Scan QR Absen', href: '/presensi/scan-qr', icon: QrCode },
+  { name: 'Kartu Pelajar', href: '/pengaturan/profil#kartu-pelajar', icon: CreditCard },
   { name: 'Log Presensi', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
-  { name: 'Nilai Semester', href: '/akademik/nilai-semester', icon: GraduationCap },
   { name: 'Log Izin Saya', href: '/presensi/izin-siswa', icon: ClipboardCheck },
   { name: 'Log Dispensasi', href: '/presensi/dispensasi', icon: Award },
   { name: 'Keuangan', href: '/keuangan/laporan', icon: Wallet },
@@ -89,7 +89,6 @@ export const siswaLinks = [
 export const waliMuridLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
-  { name: 'Nilai Semester', href: '/akademik/nilai-semester', icon: GraduationCap },
   { name: 'Izin Sakit / Siswa', href: '/presensi/izin-siswa', icon: ClipboardCheck },
   { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award },
   { name: 'Tagihan & SPP', href: '/keuangan/laporan', icon: Wallet },
@@ -104,9 +103,9 @@ export const pegawaiLinks = [
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Disposisi Surat', href: '/fitur/disposisi', icon: FileCheck },
   { name: 'Jurnal Pegawai', href: '/presensi/jurnal-karyawan', icon: BookOpen, group: 'Tugas Pegawai' },
-  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote },
-  { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen },
-  { name: 'Izin Cuti', href: '/presensi/cuti', icon: CalendarDays },
+  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
+  { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Pegawai' },
+  { name: 'Izin Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Pegawai' },
   { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
@@ -121,7 +120,6 @@ export const kepalaSekolahLinks = [
   { name: 'Supervisi Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Supervisi Akademik' },
   { name: 'Supervisi Jurnal Guru', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Supervisi Akademik' },
   { name: 'Supervisi Jurnal Wali Kelas', href: '/akademik/jurnal-wali-kelas', icon: BookOpen, group: 'Supervisi Akademik' },
-  { name: 'Rekap Nilai Semester', href: '/akademik/nilai-semester', icon: GraduationCap, group: 'Supervisi Akademik' },
   { name: 'Log Karakter & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck, group: 'Supervisi Kesiswaan' },
   { name: 'Data Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen, group: 'Supervisi Data' },
   { name: 'Data Guru & Pegawai', href: '/master-data/guru', icon: Users, group: 'Supervisi Data' },
@@ -131,9 +129,9 @@ export const kepalaSekolahLinks = [
   { name: 'Supervisi Kepegawaian', href: '/fitur/kepegawaian', icon: UserCheck, group: 'Supervisi Umum' },
   { name: 'Agenda & Kegiatan', href: '/fitur/kegiatan-sekolah', icon: CalendarDays, group: 'Supervisi Umum' },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: Wallet, group: 'Supervisi Keuangan' },
-  { name: 'Slip Gaji Pribadi', href: '/keuangan/slip-gaji', icon: Banknote },
-  { name: 'Izin Keluar Kampus', href: '/presensi/izin-keluar', icon: DoorOpen },
-  { name: 'Izin Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays },
+  { name: 'Slip Gaji Pribadi', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
+  { name: 'Izin Keluar Kampus', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Pegawai' },
+  { name: 'Izin Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Pegawai' },
   { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
@@ -148,7 +146,9 @@ export const keuanganAllLinks = [
   { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote, group: 'Keuangan Sekolah' },
   { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings, group: 'Keuangan Sekolah' },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText, group: 'Keuangan Sekolah' },
-  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote },
+  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
+  { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Pegawai' },
+  { name: 'Izin Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Pegawai' },
   { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
@@ -161,7 +161,9 @@ export const keuanganMasukLinks = [
   { name: 'Virtual Account BNI', href: '/keuangan/virtual-account', icon: Database, group: 'Keuangan Masuk' },
   { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings, group: 'Keuangan Masuk' },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText, group: 'Keuangan Masuk' },
-  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote },
+  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
+  { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Pegawai' },
+  { name: 'Izin Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Pegawai' },
   { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
@@ -172,7 +174,9 @@ export const keuanganKeluarLinks = [
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt, group: 'Keuangan Keluar' },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText, group: 'Keuangan Keluar' },
-  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote },
+  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
+  { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Pegawai' },
+  { name: 'Izin Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Pegawai' },
   { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
 ]
 
@@ -245,8 +249,11 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   const isKurikulum = roles.includes('KURIKULUM')
   const isGuruPiket = roles.includes('GURU_PIKET')
 
-  // 1. Modul Manajemen Akun & Pengaturan Sistem — HANYA Admin TU / BAU & Superadmin
-  if (pathname.startsWith('/master-data/pengguna') || pathname.startsWith('/pengaturan/sistem') || pathname.startsWith('/presensi/manajemen-qr') || pathname.startsWith('/presensi/camera')) {
+  // 1. Modul Manajemen Akun & Pengaturan Sistem — Admin TU / BAU, Humas SDM & Superadmin
+  if (pathname.startsWith('/master-data/pengguna')) {
+    return isBau || isHumasSdm || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
+  }
+  if (pathname.startsWith('/pengaturan/sistem') || pathname.startsWith('/presensi/manajemen-qr') || pathname.startsWith('/presensi/camera')) {
     return isBau || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
   }
 
@@ -267,9 +274,6 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   // 3. Modul Akademik
   if (pathname.startsWith('/akademik/jadwal-pelajaran')) {
     return isBau || isKepalaSekolah || isGuru || isSiswa || isKurikulum || isGuruPiket
-  }
-  if (pathname.startsWith('/akademik/nilai-semester')) {
-    return isSiswa || isWaliMurid || isGuru || isWaliKelas || isBau || isKepalaSekolah || isKurikulum
   }
   if (pathname.startsWith('/akademik/jurnal-mengajar/tambah')) {
     // Pengisian jurnal ajar HANYA untuk Guru Pengampu
@@ -425,6 +429,7 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
     } else if (roleName === 'KEPEGAWAIAN' || roleName === 'SDM' || roleName === 'WAKA_HUMAS_SDM' || roleName === 'HUMAS_SDM') {
       addLinks([
         { name: 'Kepegawaian & SDM', href: '/fitur/kepegawaian', icon: UserCheck, group: 'Humas & Kepegawaian' },
+        { name: 'Akun Guru & Pegawai', href: '/master-data/pengguna', icon: ShieldCheck, group: 'Humas & Kepegawaian' },
         { name: 'Buku Tamu', href: '/fitur/buku-tamu', icon: Contact, group: 'Humas & Kepegawaian' },
         { name: 'Kegiatan Sekolah', href: '/fitur/kegiatan', icon: Sparkles, group: 'Humas & Kepegawaian' },
         { name: 'Notulensi Rapat', href: '/fitur/notulensi-rapat', icon: FileText, group: 'Humas & Kepegawaian' },
@@ -438,7 +443,6 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
         { name: 'Manajemen Kurikulum', href: '/fitur/kurikulum', icon: GraduationCap, group: 'Tim Kurikulum' },
         { name: 'Struktur Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: BookOpen, group: 'Tim Kurikulum' },
         { name: 'Jadwal Pelajaran KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Tim Kurikulum' },
-        { name: 'Rekap Nilai Semester', href: '/akademik/nilai-semester', icon: Award, group: 'Tim Kurikulum' },
       ])
     } else if (roleName === 'GURU_PIKET') {
       addLinks([

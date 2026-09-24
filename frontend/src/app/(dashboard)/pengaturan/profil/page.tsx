@@ -13,11 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Camera, Loader2, CheckCircle2, User, MapPin, Mail, Shield, Pencil, X, 
   GraduationCap, Award, Key, Lock, AlertCircle, Laptop, Clock, Globe, ShieldCheck, RefreshCw,
-  Smartphone, Monitor, Calendar, LogOut, ShieldAlert, Sparkles, LogOut as DisconnectIcon, Trash2, Server, Activity
+  Smartphone, Monitor, Calendar, LogOut, ShieldAlert, Sparkles, LogOut as DisconnectIcon, Trash2, Server, Activity,
+  Printer, CreditCard, Download, QrCode
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 
 import { compressImageFile } from '@/utils/imageCompressor'
+import { QRCodeSVG } from 'qrcode.react'
 
 const EDUCATION_OPTIONS = ['S3', 'S2', 'S1', 'D4', 'D3', 'D2', 'D1', 'SMA/SMK/MA', 'Lainnya']
 const CERTIFICATION_OPTIONS = [
@@ -161,6 +163,15 @@ export default function ProfilePage() {
     enabled: !!userId
   })
 
+  const { data: schoolSettings } = useQuery<any>({
+    queryKey: ['public-settings'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/settings/public')
+      if (!res.ok) return null
+      return res.json()
+    }
+  })
+
   const { data: loginHistory, isLoading: isHistoryLoading, refetch: refetchHistory } = useQuery<any[]>({
     queryKey: ['login-history', userId],
     queryFn: async () => {
@@ -220,6 +231,251 @@ export default function ProfilePage() {
       setTimeout(() => setUnlinkMsg(''), 4000)
     }
   })
+
+  const printStudentCardDirect = () => {
+    if (!profile) return
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+
+    let bio: any = {}
+    try {
+      bio = typeof profile.student?.bioData === 'string' ? JSON.parse(profile.student.bioData) : profile.student?.bioData
+    } catch { bio = {} }
+
+    const tmpt = bio?.tempatLahir || ''
+    const tgl = bio?.tglLahir || ''
+    const ttlStr = tmpt && tgl ? `${tmpt}, ${tgl}` : tmpt || tgl || '-'
+    const alamatStr = form.address || profile.address || '-'
+    const genderStr = profile.student?.gender === 'L' ? 'Laki-laki' : profile.student?.gender === 'P' ? 'Perempuan' : profile.student?.gender || '-'
+    const avatarUrl = form.avatarUrl || profile.avatarUrl || ''
+    const frontBgUrl = schoolSettings?.studentCardTemplateUrl
+      ? (schoolSettings.studentCardTemplateUrl.startsWith('/uploads') ? `/api-backend${schoolSettings.studentCardTemplateUrl}` : schoolSettings.studentCardTemplateUrl)
+      : '/images/kartu-pelajar-depan.png'
+    const studentNis = profile.student?.nis || profile.username || '-'
+    const studentNisn = profile.student?.nisn || '[NISN]'
+    const qrSvgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" width="64" height="64"><rect width="29" height="29" fill="#fff" opacity="0"/><path d="M0 0h7v7H0zM2 2h3v3H2zM9 0h2v1H9zM12 0h1v1h-1zM14 0h1v1h-1zM16 0h1v2h1v1h-1v1h2v1h-1v2h-1V6h-1v1h-1V5h1V3h-1V2h-1V1h-1V0h1zM22 0h7v7h-7zM24 2h3v3h-3zM9 2h1v3H9zM11 2h1v2h-1zM14 2h1v1h-1zM0 9h1v1H0zM2 9h1v1H2zM4 9h2v1H4zM7 9h1v3H7v1H6v-1H5v2H4v1H3v-1H1v-1h1v-1H0v-1h2v-1H1V9h1V8h1v1h1V8h1v1h1V8h1v1zM9 9h1v1H9zM11 9h1v2h-1zM13 9h1v1h-1zM18 9h1v2h-1zM20 9h1v2h-1zM22 9h1v1h-1zM25 9h1v2h-1zM27 9h2v2h-2zM10 10h1v2h-1zM14 10h1v1h-1zM16 10h1v1h-1zM22 10h2v1h-2zM9 11h1v1H9zM12 11h2v1h-2zM15 11h1v1h-1zM24 11h1v2h-1zM26 11h1v1h-1zM28 11h1v1h-1zM0 13h1v1H0zM2 13h1v1H2zM9 13h1v1H9zM11 13h1v2h-1zM13 13h1v2h-1zM16 13h2v1h-2zM19 13h1v1h-1zM21 13h1v1h-1zM26 13h1v2h-1zM28 13h1v2h-1zM8 14h1v1H8zM10 14h1v1h-1zM15 14h1v1h-1zM18 14h1v1h-1zM22 14h2v1h-2zM25 14h1v1h-1zM0 15h1v1H0zM3 15h1v1H3zM5 15h2v1H5zM8 15h1v1H8zM14 15h1v2h-1zM17 15h1v1h-1zM20 15h1v2h-1zM23 15h2v1h-2zM1 16h1v1H1zM4 16h1v1H4zM9 16h2v1H9zM12 16h2v1h-2zM16 16h1v1h-1zM18 16h2v1h-2zM22 16h1v1h-1zM27 16h1v1h-1zM0 17h1v1H0zM2 17h2v1H2zM6 17h1v1H6zM8 17h1v1H8zM11 17h1v1h-1zM15 17h1v1h-1zM17 17h1v1h-1zM25 17h1v1h-1zM28 17h1v1h-1zM1 18h1v1H1zM3 18h2v1H3zM7 18h1v1H7zM9 18h2v1H9zM12 18h1v1h-1zM14 18h1v1h-1zM18 18h2v1h-2zM21 18h2v1h-2zM24 18h1v1h-1zM26 18h2v1h-2zM2 19h1v1H2zM5 19h1v1H5zM8 19h1v1H8zM11 19h1v1h-1zM13 19h1v1h-1zM16 19h1v1h-1zM20 19h1v1h-1zM23 19h1v1h-1zM28 19h1v1h-1zM0 20h2v1H0zM3 20h1v1H3zM6 20h1v1H6zM9 20h1v1H9zM12 20h1v1h-1zM14 20h2v1h-2zM17 20h1v1h-1zM19 20h1v1h-1zM21 20h2v1h-2zM24 20h1v1h-1zM27 20h1v1h-1zM0 22h7v7H0zM2 24h3v3H2zM9 22h1v1H9zM12 22h1v1h-1zM14 22h1v1h-1zM16 22h1v2h1v1h-1v1h2v1h-1v2h-1v-2h-1v1h-1v-2h1v-2h-1v-1h-1v-1h-1v-1h1zM9 24h1v3H9zM11 24h1v2h-1zM14 24h1v1h-1zM8 28h1v1H8zM10 28h1v1h-1zM13 28h1v1h-1zM15 28h1v1h-1zM18 28h1v1h-1zM20 28h1v1h-1zM22 28h1v1h-1zM24 28h1v1h-1zM26 28h1v1h-1zM28 28h1v1h-1z" fill="#0f172a"/></svg>`
+
+    const doc = iframe.contentWindow?.document
+    if (!doc) return
+
+    doc.open()
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Cetak Kartu Pelajar - ${profile.name}</title>
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+          }
+          html, body {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .page-container {
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 15mm;
+            padding-top: 25mm;
+          }
+          .card-item {
+            position: relative;
+            width: 53.98mm;
+            height: 85.6mm;
+            border-radius: 3.2mm;
+            overflow: hidden;
+            border: 0.5px solid #e2e8f0;
+            background: #ffffff;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            flex-shrink: 0;
+          }
+          .card-bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            z-index: 0;
+          }
+          .card-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+          }
+          .photo-box {
+            position: absolute;
+            left: 15.20%;
+            top: 17.32%;
+            width: 35.58%;
+            height: 33.07%;
+            border-radius: 2.2mm;
+            overflow: hidden;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .photo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+          .qr-box {
+            position: absolute;
+            left: 60.5%;
+            top: 22.5%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+          }
+          .qr-box svg {
+            width: 16mm;
+            height: 16mm;
+          }
+          .qr-text {
+            font-size: 5.5pt;
+            font-family: monospace;
+            font-weight: bold;
+            color: #1e293b;
+            margin-top: 1mm;
+          }
+          .student-name {
+            position: absolute;
+            left: 4%;
+            right: 4%;
+            top: 51.3%;
+            text-align: center;
+            font-size: 7.2pt;
+            font-weight: 800;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: -0.2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1;
+          }
+          .nisn-val {
+            position: absolute;
+            left: 51.5%;
+            top: 50.2%;
+            font-size: 6.5pt;
+            font-family: monospace;
+            font-weight: bold;
+            color: #931553;
+            letter-spacing: 0.5px;
+            line-height: 1;
+          }
+          .ttl-val {
+            position: absolute;
+            left: 5.0%;
+            top: 67.8%;
+            width: 42%;
+            font-size: 5.2pt;
+            font-weight: bold;
+            color: #1e293b;
+            line-height: 1.2;
+            text-align: left;
+          }
+          .alamat-val {
+            position: absolute;
+            left: 50.0%;
+            top: 67.8%;
+            width: 44%;
+            font-size: 5.2pt;
+            font-weight: bold;
+            color: #1e293b;
+            line-height: 1.2;
+            text-align: left;
+          }
+          .nis-val {
+            position: absolute;
+            left: 5.0%;
+            top: 81.8%;
+            width: 42%;
+            font-size: 5.8pt;
+            font-family: monospace;
+            font-weight: 900;
+            color: #0f172a;
+            line-height: 1;
+            text-align: left;
+          }
+          .gender-val {
+            position: absolute;
+            left: 50.0%;
+            top: 81.8%;
+            width: 44%;
+            font-size: 5.2pt;
+            font-weight: bold;
+            color: #1e293b;
+            line-height: 1;
+            text-align: left;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="page-container">
+          <!-- SISI DEPAN -->
+          <div class="card-item">
+            <img class="card-bg" src="${frontBgUrl}" alt="Kartu Depan" />
+            <div class="card-content">
+              <div class="photo-box">
+                ${avatarUrl ? `<img src="${avatarUrl}" alt="Foto" />` : `<div style="font-size: 5pt; color: #94a3b8; font-weight: bold;">Foto Siswa</div>`}
+              </div>
+              <div class="qr-box">
+                ${qrSvgString}
+                <div class="qr-text">${studentNis}</div>
+              </div>
+              <div class="student-name">${profile.name || '[NAMA LENGKAP]'}</div>
+              <div class="nisn-val">${studentNisn}</div>
+              <div class="ttl-val">${ttlStr}</div>
+              <div class="alamat-val">${alamatStr}</div>
+              <div class="nis-val">${studentNis}</div>
+              <div class="gender-val">${genderStr}</div>
+            </div>
+          </div>
+          <!-- SISI BELAKANG -->
+          <div class="card-item">
+            <img class="card-bg" src="/images/kartu-pelajar-belakang.png" alt="Kartu Belakang" />
+          </div>
+        </div>
+      </body>
+      </html>
+    `)
+    doc.close()
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus()
+      iframe.contentWindow?.print()
+      setTimeout(() => {
+        document.body.removeChild(iframe)
+      }, 1000)
+    }, 400)
+  }
 
   const clearAllLogsMutation = useMutation({
     mutationFn: async () => {
@@ -667,6 +923,369 @@ export default function ProfilePage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Student-only Card: Modul Edit & Cetak Mandiri Kartu Pelajar */}
+      {(role === 'SISWA' || profile?.student) && (
+        <div id="kartu-pelajar" className="grid grid-cols-1 xl:grid-cols-12 gap-6 scroll-mt-6">
+          {/* Card Kiri: Edit Data Kartu Pelajar */}
+          <Card className="xl:col-span-5 border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 rounded-2xl overflow-hidden flex flex-col justify-between">
+            <div>
+              <CardHeader className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800/80 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
+                      Data Kartu Pelajar
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-500">
+                      Sesuaikan alamat dan unggah pas foto resmi Anda.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-5 space-y-4">
+                {/* Baris 1: Nama & Jenis Kelamin */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Nama</Label>
+                    <Input 
+                      value={profile?.name || ''} 
+                      disabled 
+                      readOnly 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                    />
+                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Jenis Kelamin</Label>
+                    <Input 
+                      value={profile?.student?.gender === 'L' ? 'Laki-laki' : profile?.student?.gender === 'P' ? 'Perempuan' : profile?.student?.gender || 'Laki-laki'} 
+                      disabled 
+                      readOnly 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                    />
+                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
+                  </div>
+                </div>
+
+                {/* Baris 2: NIS & NISN */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">NIS (No. Induk)</Label>
+                    <Input 
+                      value={profile?.student?.nis || profile?.username || ''} 
+                      disabled 
+                      readOnly 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-mono font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                    />
+                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">NISN</Label>
+                    <Input 
+                      value={profile?.student?.nisn || '-'} 
+                      disabled 
+                      readOnly 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-mono font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                    />
+                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
+                  </div>
+                </div>
+
+                {/* Baris 3: Tempat Lahir & Tanggal Lahir */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Tempat Lahir</Label>
+                    <Input 
+                      value={(() => {
+                        try {
+                          const bio = typeof profile?.student?.bioData === 'string' ? JSON.parse(profile?.student?.bioData) : profile?.student?.bioData
+                          return bio?.tempatLahir || '-'
+                        } catch { return '-' }
+                      })()} 
+                      disabled 
+                      readOnly 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                    />
+                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Tanggal Lahir</Label>
+                    <Input 
+                      value={(() => {
+                        try {
+                          const bio = typeof profile?.student?.bioData === 'string' ? JSON.parse(profile?.student?.bioData) : profile?.student?.bioData
+                          return bio?.tglLahir || '-'
+                        } catch { return '-' }
+                      })()} 
+                      disabled 
+                      readOnly 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                    />
+                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
+                  </div>
+                </div>
+
+                {/* Baris 4: Alamat & Pas Foto */}
+                <div className="space-y-3 pt-1 border-t border-slate-100 dark:border-slate-800">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                      <span>Alamat Domisili</span>
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">Dapat Diubah</span>
+                    </Label>
+                    <Input 
+                      value={form.address} 
+                      onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
+                      placeholder="Contoh: Jl. Diponegoro No. 12, Ponorogo" 
+                      className="border-indigo-200 dark:border-indigo-800 focus:border-indigo-500 text-xs h-9 bg-white dark:bg-slate-900" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                      <span>Unggah Pas Foto Resmi</span>
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">Dapat Diupload</span>
+                    </Label>
+                    <Input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleAvatarChange}
+                      className="text-xs h-9 cursor-pointer file:cursor-pointer file:text-xs file:bg-slate-100 file:border-0 file:rounded-md file:mr-2 bg-white dark:bg-slate-900" 
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </div>
+
+            <div className="p-5 bg-slate-50/70 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                Klik simpan setelah memperbarui foto atau alamat.
+              </p>
+              <Button 
+                type="button"
+                onClick={handleSave} 
+                disabled={mutation.isPending}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-xs shrink-0"
+              >
+                {mutation.isPending ? (
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> Menyimpan...</>
+                ) : (
+                  'Simpan Perubahan'
+                )}
+              </Button>
+            </div>
+          </Card>
+
+          {/* Card Kanan: Cetak Kartu Pelajar Simulator */}
+          <Card className="xl:col-span-7 border-slate-200 dark:border-slate-800 shadow-sm bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl overflow-hidden flex flex-col justify-between">
+            <CardHeader className="bg-white/5 border-b border-white/10 px-5 py-3.5 flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-indigo-400" />
+                <CardTitle className="text-sm sm:text-base font-bold text-white">
+                  Pratinjau & Cetak Kartu Pelajar
+                </CardTitle>
+              </div>
+              <span className="text-[11px] text-indigo-300 font-mono bg-white/10 px-2.5 py-0.5 rounded-full">
+                ISO/IEC 7810 ID-1
+              </span>
+            </CardHeader>
+
+            <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center flex-1 space-y-5">
+              {/* Composite Card Frame Container */}
+              <div className="print-area w-full flex justify-center">
+                <style jsx global>{`
+                  @media print {
+                    @page {
+                      size: A4 portrait;
+                      margin: 10mm;
+                    }
+                    html, body {
+                      background: #ffffff !important;
+                      color: #000000 !important;
+                      margin: 0 !important;
+                      padding: 0 !important;
+                      height: auto !important;
+                      min-height: 100% !important;
+                    }
+                    body * {
+                      visibility: hidden !important;
+                    }
+                    .print-area, .print-area * {
+                      visibility: visible !important;
+                    }
+                    .print-area {
+                      position: absolute !important;
+                      left: 0 !important;
+                      top: 0 !important;
+                      right: 0 !important;
+                      width: 100% !important;
+                      display: flex !important;
+                      justify-content: center !important;
+                      align-items: flex-start !important;
+                      padding-top: 20mm !important;
+                      margin: 0 !important;
+                      z-index: 999999 !important;
+                      -webkit-print-color-adjust: exact !important;
+                      print-color-adjust: exact !important;
+                      color-adjust: exact !important;
+                    }
+                    .print-card-row {
+                      display: flex !important;
+                      flex-direction: row !important;
+                      align-items: center !important;
+                      justify-content: center !important;
+                      gap: 15mm !important;
+                      page-break-inside: avoid !important;
+                      break-inside: avoid !important;
+                    }
+                    .print-card-item {
+                      width: 53.98mm !important;
+                      height: 85.6mm !important;
+                      aspect-ratio: 638/1018 !important;
+                      border: 1px solid #cbd5e1 !important;
+                      border-radius: 3.5mm !important;
+                      box-shadow: none !important;
+                      overflow: hidden !important;
+                      page-break-inside: avoid !important;
+                      break-inside: avoid !important;
+                      print-color-adjust: exact !important;
+                      -webkit-print-color-adjust: exact !important;
+                    }
+                  }
+                `}</style>
+
+                {/* Kartu Preview Area (2 Sisi: Sisi Depan & Sisi Belakang) */}
+                <div className="print-card-row flex flex-col md:flex-row items-center justify-center gap-6 sm:gap-8 w-full">
+                  {/* SISI DEPAN KARTU (ISO/IEC 7810 ID-1) */}
+                  <div className="print-card-item relative w-[250px] sm:w-[270px] aspect-[638/1016] rounded-2xl overflow-hidden shadow-lg border border-slate-200/90 select-none bg-white text-slate-900 flex flex-col justify-between transition-transform duration-300 hover:scale-[1.01] shrink-0">
+                    {/* Background Template Kustom Sekolah atau Template Bawaan kartu-pelajar-depan.png */}
+                    <img 
+                      src={schoolSettings?.studentCardTemplateUrl 
+                        ? (schoolSettings.studentCardTemplateUrl.startsWith('/uploads') ? `/api-backend${schoolSettings.studentCardTemplateUrl}` : schoolSettings.studentCardTemplateUrl)
+                        : '/images/kartu-pelajar-depan.png'
+                      } 
+                      alt="Template Kartu Pelajar Depan" 
+                      className="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none" 
+                    />
+
+                    {/* Layer Elemen Dinamis Sisi Depan */}
+                    <div className="relative z-10 w-full h-full pointer-events-none">
+                      {/* Foto Siswa (Menempati persis bingkai kotak foto template) */}
+                      <div className="absolute left-[15.20%] top-[17.32%] w-[35.58%] h-[33.07%] rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-2xs">
+                        {form.avatarUrl ? (
+                          <img 
+                            src={form.avatarUrl} 
+                            alt={profile?.name || 'Foto Siswa'} 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
+                            <User className="w-8 h-8 opacity-40" />
+                            <span className="text-[8px] font-bold mt-1">Foto Siswa</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Barcode QR Code NIS */}
+                      <div className="absolute left-[60.5%] top-[22.5%] flex flex-col items-center justify-center">
+                        <QRCodeSVG 
+                          value={profile?.student?.nis || profile?.username || '13154'} 
+                          size={66}
+                          level="M"
+                          includeMargin={false}
+                          bgColor="transparent"
+                        />
+                        <span className="text-[7.5px] font-mono font-bold text-slate-800 tracking-wider mt-1">
+                          {profile?.student?.nis || profile?.username || '-'}
+                        </span>
+                      </div>
+
+                      {/* Nama Siswa */}
+                      <div className="absolute left-[4%] right-[4%] top-[51.3%] text-center">
+                        <h3 className="font-extrabold text-[12px] sm:text-[13px] text-slate-900 uppercase tracking-tight line-clamp-1 leading-none">
+                          {profile?.name || '[NAMA LENGKAP]'}
+                        </h3>
+                      </div>
+
+                      {/* Nilai NISN (Sejajar tepat di sebelah tulisan NISN :) */}
+                      <div className="absolute left-[51.5%] top-[50.2%] text-left">
+                        <span className="font-mono font-bold text-[10.5px] text-[#931553] tracking-wider leading-none">
+                          {profile?.student?.nisn || '[NISN]'}
+                        </span>
+                      </div>
+
+                      {/* Data Grid Kolom Bawah */}
+                      {/* TTL (Rata kiri tepat di bawah label TTL) */}
+                      <div className="absolute left-[5.0%] top-[67.8%] w-[42%] text-left">
+                        <p className="font-bold text-[8.5px] text-slate-800 leading-snug line-clamp-2">
+                          {(() => {
+                            try {
+                              const bio = typeof profile?.student?.bioData === 'string' ? JSON.parse(profile?.student?.bioData) : profile?.student?.bioData
+                              const tmpt = bio?.tempatLahir || ''
+                              const tgl = bio?.tglLahir || ''
+                              if (tmpt && tgl) return `${tmpt}, ${tgl}`
+                              if (tmpt) return tmpt
+                              if (tgl) return tgl
+                              return '-'
+                            } catch { return '-' }
+                          })()}
+                        </p>
+                      </div>
+
+                      {/* ALAMAT (Rata kiri tepat di bawah label ALAMAT) */}
+                      <div className="absolute left-[50.0%] top-[67.8%] w-[44%] text-left">
+                        <p className="font-bold text-[8.5px] text-slate-800 leading-snug line-clamp-2">
+                          {form.address || profile?.address || '-'}
+                        </p>
+                      </div>
+
+                      {/* NO. INDUK (NIS) (Rata kiri tepat di bawah label NO. INDUK) */}
+                      <div className="absolute left-[5.0%] top-[81.8%] w-[42%] text-left">
+                        <p className="font-black font-mono text-[9.5px] text-slate-900 leading-none">
+                          {profile?.student?.nis || profile?.username || '-'}
+                        </p>
+                      </div>
+
+                      {/* GENDER (Rata kiri tepat di bawah label GENDER) */}
+                      <div className="absolute left-[50.0%] top-[81.8%] w-[44%] text-left">
+                        <p className="font-bold text-[8.5px] text-slate-800 leading-none">
+                          {profile?.student?.gender === 'L' ? 'Laki-laki' : profile?.student?.gender === 'P' ? 'Perempuan' : profile?.student?.gender || '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SISI BELAKANG KARTU (ISO/IEC 7810 ID-1) */}
+                  <div className="print-card-item relative w-[250px] sm:w-[270px] aspect-[638/1016] rounded-2xl overflow-hidden shadow-lg border border-slate-200/90 select-none bg-white text-slate-900 flex flex-col justify-between transition-transform duration-300 hover:scale-[1.01] shrink-0">
+                    {/* Background Template Sisi Belakang Resmi */}
+                    <img 
+                      src="/images/kartu-pelajar-belakang.png" 
+                      alt="Template Kartu Pelajar Belakang" 
+                      className="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none" 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-white/10">
+                <p className="text-[11px] text-indigo-200/90 text-center sm:text-left">
+                  Gunakan browser printer dialog untuk menyimpan sebagai PDF atau cetak langsung.
+                </p>
+
+                <Button
+                  type="button"
+                  onClick={printStudentCardDirect}
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg cursor-pointer flex items-center gap-2 shrink-0"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  Cetak / Download Kartu
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Security & Password Card */}

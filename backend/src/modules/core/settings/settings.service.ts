@@ -102,6 +102,7 @@ export class SettingsService {
         defaultInfaq: true,
         defaultSeragam: true,
         helpdeskPhone: true,
+        studentCardTemplateUrl: true,
       } as any,
     });
     if (!settings) {
@@ -114,6 +115,7 @@ export class SettingsService {
         semester: 'Ganjil',
         logoUrl: null,
         backgroundUrl: null,
+        studentCardTemplateUrl: null,
         timezone: 'Asia/Jakarta',
         serverLocation: 'Ponorogo, Jawa Timur',
         defaultDpp: 1500000,

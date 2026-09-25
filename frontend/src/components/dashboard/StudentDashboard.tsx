@@ -7,7 +7,7 @@ import {
   CalendarDays, ClipboardCheck, BookOpen, Receipt, CreditCard,
   GraduationCap, Award, Sparkles, TrendingUp, CheckCircle2,
   Laptop, Clock, Users, QrCode, HeartHandshake, X, Search, User, Info,
-  ShieldCheck, AlertTriangle, FileText, ShieldAlert
+  ShieldCheck, AlertTriangle, FileText, ShieldAlert, BookMarked
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -497,17 +497,35 @@ export function StudentDashboard({
             </div>
           </div>
 
-          {/* Right: Prominent Actions (ABSENSI SISWA & Secondary Buttons) */}
+          {/* Right: Prominent Actions (ABSENSI SISWA, BUKU INDUK, KARTU PELAJAR & Secondary Buttons) */}
           <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-2 shrink-0">
-            <Button
-              onClick={handleQuickPresensi}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs sm:text-sm h-9 sm:h-10 px-5 rounded-xl shadow-md shadow-emerald-600/30 border border-emerald-400/40 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 uppercase tracking-wide"
-            >
-              <QrCode className="w-4 h-4" />
-              <span>Absensi Siswa</span>
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <Button
+                onClick={handleQuickPresensi}
+                className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs sm:text-sm h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl shadow-md shadow-emerald-600/30 border border-emerald-400/40 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-1.5 uppercase tracking-wide"
+              >
+                <QrCode className="w-4 h-4" />
+                <span>Absensi</span>
+              </Button>
 
-            <div className="flex items-center gap-1.5">
+              <Link
+                href="/siswa/buku-induk"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 h-9 sm:h-10 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-teal-600/20 border border-teal-400/40 transition-all transform hover:-translate-y-0.5"
+              >
+                <BookMarked className="w-4 h-4" />
+                <span>Buku Induk</span>
+              </Link>
+
+              <Link
+                href="/pengaturan/profil#kartu-pelajar"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 h-9 sm:h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 border border-blue-400/40 transition-all transform hover:-translate-y-0.5"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Kartu Pelajar</span>
+              </Link>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-start sm:justify-end">
               <Button
                 variant="outline"
                 size="sm"
@@ -650,7 +668,7 @@ export function StudentDashboard({
         </Card>
       </div>
 
-      {/* 4. PINTASAN LAYANAN AKADEMIK SISWA (5 SERVICE SHORTCUT CARDS) */}
+      {/* 4. PINTASAN LAYANAN AKADEMIK SISWA (7 SERVICE SHORTCUT CARDS) */}
       <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3 sm:p-4">
         <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-1.5">
@@ -666,8 +684,40 @@ export function StudentDashboard({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5">
-          {/* Shortcut 1: Presensi Siswa */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-2.5">
+          {/* Shortcut 1: Buku Induk Siswa */}
+          <Link
+            href="/siswa/buku-induk"
+            className="group p-2.5 sm:p-3 rounded-xl border border-teal-200/80 dark:border-teal-900/60 bg-teal-50/50 dark:bg-teal-950/30 hover:bg-white dark:hover:bg-slate-800 hover:border-teal-400 dark:hover:border-teal-600 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
+          >
+            <div className="w-9 h-9 rounded-xl bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
+              <BookMarked className="w-4 h-4" />
+            </div>
+            <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-teal-600 transition-colors">
+              Buku Induk
+            </h4>
+            <span className="text-[9.5px] text-teal-600 dark:text-teal-400 font-medium mt-0.2">
+              Biodata 57 Butir & F4
+            </span>
+          </Link>
+
+          {/* Shortcut 2: Kartu Pelajar */}
+          <Link
+            href="/pengaturan/profil#kartu-pelajar"
+            className="group p-2.5 sm:p-3 rounded-xl border border-blue-200/80 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 hover:bg-white dark:hover:bg-slate-800 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
+          >
+            <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+              Kartu Pelajar
+            </h4>
+            <span className="text-[9.5px] text-blue-600 dark:text-blue-400 font-medium mt-0.2">
+              ID Card Digital
+            </span>
+          </Link>
+
+          {/* Shortcut 3: Presensi Siswa */}
           <Link
             href="/presensi/kehadiran-siswa"
             className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
@@ -683,7 +733,7 @@ export function StudentDashboard({
             </span>
           </Link>
 
-          {/* Shortcut 2: Jadwal Pelajaran */}
+          {/* Shortcut 4: Jadwal Pelajaran */}
           <Link
             href="/akademik/jadwal-pelajaran"
             className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
@@ -692,14 +742,14 @@ export function StudentDashboard({
               <BookOpen className="w-4 h-4" />
             </div>
             <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors">
-              Jadwal Pelajaran
+              Jadwal KBM
             </h4>
             <span className="text-[9.5px] text-slate-400 font-medium mt-0.2">
-              Jadwal KBM Mingguan
+              Jadwal Mingguan
             </span>
           </Link>
 
-          {/* Shortcut 3: Konseling & Izin */}
+          {/* Shortcut 5: Konseling & Izin */}
           <Link
             href="/presensi/izin-siswa"
             className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
@@ -708,14 +758,14 @@ export function StudentDashboard({
               <HeartHandshake className="w-4 h-4" />
             </div>
             <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-amber-600 transition-colors">
-              Bimbingan & Izin
+              Izin & BK
             </h4>
             <span className="text-[9.5px] text-slate-400 font-medium mt-0.2">
-              Konseling & Izin Sakit
+              Konseling & Izin
             </span>
           </Link>
 
-          {/* Shortcut 4: Ujian CBT Online */}
+          {/* Shortcut 6: Ujian CBT Online */}
           <Link
             href="/demo-waiting-room"
             className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
@@ -724,26 +774,26 @@ export function StudentDashboard({
               <Laptop className="w-4 h-4" />
             </div>
             <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-rose-600 transition-colors">
-              Ujian CBT Online
+              Ujian CBT
             </h4>
             <span className="text-[9.5px] text-slate-400 font-medium mt-0.2">
-              Asesmen Berbasis CBT
+              Asesmen Online
             </span>
           </Link>
 
-          {/* Shortcut 5: Tagihan & Keuangan */}
+          {/* Shortcut 7: Tagihan & Keuangan */}
           <button
             onClick={() => setShowPaymentPopup(true)}
             className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center w-full"
           >
             <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-              <CreditCard className="w-4 h-4" />
+              <Receipt className="w-4 h-4" />
             </div>
             <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors">
               Tagihan SPP
             </h4>
             <span className="text-[9.5px] text-slate-400 font-medium mt-0.2">
-              Rincian Pembayaran
+              Rincian Keuangan
             </span>
           </button>
         </div>

@@ -55,6 +55,7 @@ export class StudentsService {
       where: { userId },
       include: {
         class: true,
+        user: true,
         grades: {
           include: {
             subject: true,

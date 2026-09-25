@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -10,11 +10,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import Link from 'next/link'
 import { 
   Camera, Loader2, CheckCircle2, User, MapPin, Mail, Shield, Pencil, X, 
   GraduationCap, Award, Key, Lock, AlertCircle, Laptop, Clock, Globe, ShieldCheck, RefreshCw,
   Smartphone, Monitor, Calendar, LogOut, ShieldAlert, Sparkles, LogOut as DisconnectIcon, Trash2, Server, Activity,
-  Printer, CreditCard, Download, QrCode
+  Printer, CreditCard, Download, QrCode, BookMarked, ArrowRight
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 
@@ -109,6 +110,7 @@ export default function ProfilePage() {
   const [demoPosition, setDemoPosition] = useState(14)
   const [demoWait, setDemoWait] = useState(25)
   const [sessionTab, setSessionTab] = useState<'active' | 'logs'>('active')
+  const [cardPreviewSide, setCardPreviewSide] = useState<'both' | 'front' | 'back'>('both')
 
   const pwdMutation = useMutation({
     mutationFn: async (data: { oldPassword: string; newPassword: string }) => {
@@ -232,6 +234,31 @@ export default function ProfilePage() {
     }
   })
 
+  const profileParsedBio = useMemo(() => {
+    if (!profile) return { tempatLahir: '', tglLahirFormatted: '' }
+    try {
+      const bio = typeof profile.student?.bioData === 'string' ? JSON.parse(profile.student.bioData) : profile.student?.bioData
+      const tmpt = bio?.tempatLahir || ''
+      const tglRaw = bio?.tglLahir || ''
+      let tglFormatted = ''
+      if (tglRaw) {
+        const cleanTgl = tglRaw.trim()
+        if (/^\d{4}-\d{2}-\d{2}$/.test(cleanTgl)) {
+          const [yyyy, mm, dd] = cleanTgl.split('-')
+          tglFormatted = `${dd}-${mm}-${yyyy}`
+        } else {
+          tglFormatted = cleanTgl
+        }
+      }
+      return {
+        tempatLahir: tmpt,
+        tglLahirFormatted: tglFormatted
+      }
+    } catch {
+      return { tempatLahir: '', tglLahirFormatted: '' }
+    }
+  }, [profile])
+
   const printStudentCardDirect = () => {
     if (!profile) return
     const iframe = document.createElement('iframe')
@@ -249,8 +276,24 @@ export default function ProfilePage() {
     } catch { bio = {} }
 
     const tmpt = bio?.tempatLahir || ''
-    const tgl = bio?.tglLahir || ''
-    const ttlStr = tmpt && tgl ? `${tmpt}, ${tgl}` : tmpt || tgl || '-'
+    const tglRaw = bio?.tglLahir || ''
+    let tglFormatted = ''
+    if (tglRaw) {
+      const cleanTgl = tglRaw.trim()
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cleanTgl)) {
+        const [yyyy, mm, dd] = cleanTgl.split('-')
+        tglFormatted = `${dd}-${mm}-${yyyy}`
+      } else {
+        tglFormatted = cleanTgl
+      }
+    }
+    const ttlStr = tmpt && tglFormatted 
+      ? `<div>${tmpt}</div><div style="font-family: inherit;">${tglFormatted}</div>` 
+      : tmpt 
+        ? `<div>${tmpt}</div>` 
+        : tglFormatted 
+          ? `<div>${tglFormatted}</div>` 
+          : '<div>-</div>'
     const alamatStr = form.address || profile.address || '-'
     const genderStr = profile.student?.gender === 'L' ? 'Laki-laki' : profile.student?.gender === 'P' ? 'Perempuan' : profile.student?.gender || '-'
     const avatarUrl = form.avatarUrl || profile.avatarUrl || ''
@@ -259,6 +302,9 @@ export default function ProfilePage() {
       : '/images/kartu-pelajar-depan.png'
     const studentNis = profile.student?.nis || profile.username || '-'
     const studentNisn = profile.student?.nisn || '[NISN]'
+    const studentName = profile.name || '[NAMA LENGKAP]'
+    const nameLen = studentName.trim().length
+    const nameFontSizePt = nameLen > 32 ? '6.0pt' : nameLen > 26 ? '6.8pt' : nameLen > 20 ? '7.5pt' : '8.5pt'
     const qrElement = document.getElementById('student-card-qr-profil')
     const qrSvgString = qrElement ? qrElement.innerHTML : ''
 
@@ -271,6 +317,9 @@ export default function ProfilePage() {
       <html>
       <head>
         <title>Cetak Kartu Pelajar - ${profile.name}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700&display=swap" rel="stylesheet">
         <style>
           @page {
             size: A4 portrait;
@@ -284,7 +333,7 @@ export default function ProfilePage() {
           html, body {
             background: #ffffff !important;
             color: #0f172a !important;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             width: 100%;
             height: 100%;
             overflow: hidden;
@@ -325,6 +374,7 @@ export default function ProfilePage() {
             width: 100%;
             height: 100%;
             z-index: 10;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
           }
           .photo-box {
             position: absolute;
@@ -357,83 +407,74 @@ export default function ProfilePage() {
             width: 16mm;
             height: 16mm;
           }
-          .qr-text {
-            font-size: 5.5pt;
-            font-family: monospace;
-            font-weight: bold;
-            color: #1e293b;
-            margin-top: 1mm;
-          }
           .student-name {
             position: absolute;
-            left: 4%;
-            right: 4%;
+            left: 4.7%;
+            right: 4.7%;
             top: 52.8%;
             text-align: center;
-            font-size: 7.2pt;
+            font-size: ${nameFontSizePt};
             font-weight: 800;
-            color: #0f172a;
+            color: #1e1b4b;
             text-transform: uppercase;
-            letter-spacing: -0.2px;
+            letter-spacing: -0.1px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            line-height: 1;
+            line-height: 1.1;
           }
           .nisn-val {
             position: absolute;
-            left: 44.5%;
+            left: 44.0%;
             top: 58.1%;
-            font-size: 6.5pt;
-            font-family: monospace;
-            font-weight: bold;
-            color: #931553;
-            letter-spacing: 0.5px;
+            font-size: 5.4pt;
+            font-weight: 800;
+            color: #9d174d;
+            letter-spacing: 0px;
             line-height: 1;
           }
           .ttl-val {
             position: absolute;
-            left: 5.0%;
-            top: 67.8%;
+            left: 4.7%;
+            top: 68.4%;
             width: 42%;
-            font-size: 5.2pt;
-            font-weight: bold;
-            color: #1e293b;
-            line-height: 1.2;
+            font-size: 6pt;
+            font-weight: 700;
+            color: #1e1b4b;
+            line-height: 1.25;
             text-align: left;
           }
           .alamat-val {
             position: absolute;
-            left: 50.0%;
-            top: 67.8%;
-            width: 44%;
-            font-size: 5.2pt;
-            font-weight: bold;
-            color: #1e293b;
-            line-height: 1.2;
+            left: 49.5%;
+            top: 68.4%;
+            width: 45%;
+            font-size: 6pt;
+            font-weight: 700;
+            color: #1e1b4b;
+            line-height: 1.25;
             text-align: left;
           }
           .nis-val {
             position: absolute;
-            left: 5.0%;
-            top: 81.8%;
+            left: 4.7%;
+            top: 83.0%;
             width: 42%;
-            font-size: 5.8pt;
-            font-family: monospace;
-            font-weight: 900;
-            color: #0f172a;
-            line-height: 1;
+            font-size: 6.8pt;
+            font-weight: 800;
+            color: #1e1b4b;
+            line-height: 1.1;
             text-align: left;
           }
           .gender-val {
             position: absolute;
-            left: 50.0%;
-            top: 81.8%;
-            width: 44%;
-            font-size: 5.2pt;
-            font-weight: bold;
-            color: #1e293b;
-            line-height: 1;
+            left: 49.5%;
+            top: 83.0%;
+            width: 45%;
+            font-size: 6pt;
+            font-weight: 700;
+            color: #1e1b4b;
+            line-height: 1.1;
             text-align: left;
           }
         </style>
@@ -449,7 +490,6 @@ export default function ProfilePage() {
               </div>
               <div class="qr-box">
                 ${qrSvgString}
-                <div class="qr-text">${studentNis}</div>
               </div>
               <div class="student-name">${profile.name || '[NAMA LENGKAP]'}</div>
               <div class="nisn-val">${studentNisn}</div>
@@ -632,15 +672,34 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-10">
+    <div className="max-w-7xl mx-auto space-y-6 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 backdrop-blur-xl shadow-xs">
         <div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">
             Akun & Identitas Pengguna
           </span>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Profil Saya</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">Kelola informasi profil, foto identitas, dan preferensi akun Anda.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">Kelola informasi profil, data diri, foto identitas, dan preferensi akun Anda.</p>
         </div>
+
+        {role === 'SISWA' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/siswa/buku-induk"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-sm transition-all"
+            >
+              <BookMarked className="w-4 h-4" />
+              <span>Buku Induk Saya</span>
+            </Link>
+            <a
+              href="#kartu-pelajar"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Kartu Pelajar</span>
+            </a>
+          </div>
+        )}
       </div>
 
       {successMsg && (
@@ -651,16 +710,20 @@ export default function ProfilePage() {
       )}
 
       {/* Main Info Card */}
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader className="pb-4">
+      <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 rounded-2xl overflow-hidden">
+        <CardHeader className="pb-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Informasi Profil</CardTitle>
-              <CardDescription>Foto, nama lengkap, dan alamat Anda</CardDescription>
+              <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                Informasi Profil & Identitas
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Foto profil, biodata lengkap, dan kredensial akun SIMASMUH
+              </CardDescription>
             </div>
             {!editing ? (
-              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                <Pencil className="w-4 h-4 mr-2" /> Edit
+              <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-1.5 text-xs font-semibold">
+                <Pencil className="w-3.5 h-3.5" /> Edit Profil
               </Button>
             ) : (
               <Button variant="ghost" size="sm" onClick={() => {
@@ -672,148 +735,203 @@ export default function ProfilePage() {
                   certificationStatus: profile.teacherProfile?.certificationStatus || '',
                   certificationYear: profile.teacherProfile?.certificationYear?.toString() || '',
                 })
-              }}>
-                <X className="w-4 h-4 mr-2" /> Batal
+              }} className="gap-1.5 text-xs">
+                <X className="w-3.5 h-3.5" /> Batal
               </Button>
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Avatar */}
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                {form.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={form.avatarUrl} alt="Foto Profil" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-14 h-14 text-blue-400" />
-                )}
-              </div>
-              {editing && (
-                <>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 w-9 h-9 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow-md transition-colors"
-                  >
-                    <Camera className="w-4 h-4 text-white" />
-                  </button>
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-                </>
-              )}
-            </div>
-            {editing && <p className="text-xs text-slate-500">Klik ikon kamera untuk mengganti foto</p>}
-
-
-          </div>
-
-          {/* Basic Fields */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-slate-700">
-                <User className="w-4 h-4" /> Nama Lengkap
-              </Label>
-              {editing ? (
-                <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Nama lengkap" className="border-slate-200" />
-              ) : (
-                <p className="text-slate-900 font-medium bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">{profile?.name || '-'}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-slate-700">
-                <MapPin className="w-4 h-4" /> Alamat
-              </Label>
-              {editing ? (
-                <Textarea value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="Alamat lengkap" className="border-slate-200 resize-none" rows={3} />
-              ) : (
-                <p className="text-slate-900 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100 min-h-[60px]">
-                  {profile?.address || <span className="text-slate-400 text-sm">Belum diisi</span>}
-                </p>
-              )}
-            </div>
-
-            {/* Read-only */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-              <div className="space-y-1">
-                <Label className="flex items-center gap-2 text-slate-500 text-xs font-normal">
-                  <Mail className="w-3.5 h-3.5" /> Email
-                </Label>
-                {editing ? (
-                  <Input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="Alamat email" className="border-slate-200 mt-1 h-9" />
-                ) : (
-                  <p className="text-sm text-slate-700 mt-1.5">{profile?.email || '-'}</p>
-                )}
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="flex items-center gap-2 text-slate-500 text-xs font-normal">
-                  <Key className="w-3.5 h-3.5" /> {role === 'SISWA' ? 'NIS / NISN' : 'NIP / NBM'}
-                </Label>
-                <p className="text-sm text-slate-700 mt-1.5 font-medium">
-                  {role === 'SISWA' 
-                    ? `${profile?.student?.nis || '-'} / ${profile?.student?.nisn || '-'}`
-                    : profile?.nipNbm || '-'}
-                </p>
-              </div>
-
-              {role === 'SISWA' && (
-                <div className="space-y-1">
-                  <Label className="flex items-center gap-2 text-slate-500 text-xs font-normal">
-                    <GraduationCap className="w-3.5 h-3.5" /> Kelas
-                  </Label>
-                  <p className="text-sm text-slate-700 mt-1.5 font-medium">
-                    {profile?.student?.class?.name || '-'}
-                  </p>
+        <CardContent className="p-5 sm:p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            {/* Kolom Kiri: Avatar & Status Akun */}
+            <div className="md:col-span-4 flex flex-col items-center text-center p-5 bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+              <div className="relative mb-3">
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-4 border-white dark:border-slate-700 shadow-md bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+                  {form.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.avatarUrl} alt="Foto Profil" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-14 h-14 text-blue-400" />
+                  )}
                 </div>
-              )}
+                {editing && (
+                  <>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 w-9 h-9 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow-md transition-colors text-white"
+                      title="Ganti Foto"
+                    >
+                      <Camera className="w-4 h-4" />
+                    </button>
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                  </>
+                )}
+              </div>
 
-              <div className="space-y-1">
-                <Label className="flex items-center gap-2 text-slate-500 text-xs font-normal">
-                  <Shield className="w-3.5 h-3.5" /> Peran
-                </Label>
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="inline-block text-sm px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 font-medium">
-                    {roleLabels[profile?.role] || profile?.role || '-'}
+              <h2 className="text-base font-bold text-slate-900 dark:text-white mt-1">
+                {profile?.name || '-'}
+              </h2>
+              <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                {role === 'SISWA' ? `NIS: ${profile?.student?.nis || profile?.username || '-'}` : (profile?.nipNbm ? `NIP/NBM: ${profile.nipNbm}` : `@${profile?.username || '-'}`)}
+              </span>
+
+              <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
+                <span className="inline-block text-xs px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-semibold">
+                  {roleLabels[profile?.role] || profile?.role || '-'}
+                </span>
+                {role === 'SISWA' && profile?.student?.class?.name && (
+                  <span className="inline-block text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold">
+                    Kelas {profile.student.class.name}
                   </span>
-                  {profile?.subRole && (
-                    <span className="inline-block text-sm px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100 font-medium">
-                      {roleLabels[profile?.subRole] || profile?.subRole}
-                    </span>
-                  )}
-                  {profile?.subRole2 && (
-                    <span className="inline-block text-sm px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-medium">
-                      {roleLabels[profile?.subRole2] || profile?.subRole2}
-                    </span>
-                  )}
-                  {profile?.subRole3 && (
-                    <span className="inline-block text-sm px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 font-medium">
-                      {roleLabels[profile?.subRole3] || profile?.subRole3}
-                    </span>
-                  )}
-                  {profile?.subRole4 && (
-                    <span className="inline-block text-sm px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-100 font-medium">
-                      {roleLabels[profile?.subRole4] || profile?.subRole4}
-                    </span>
-                  )}
-                  {profile?.subRole5 && (
-                    <span className="inline-block text-sm px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100 font-medium">
-                      {roleLabels[profile?.subRole5] || profile?.subRole5}
-                    </span>
+                )}
+              </div>
+
+              {/* Banner Shortcut Buku Induk khusus Siswa */}
+              {role === 'SISWA' && (
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 w-full text-left">
+                  <div className="p-3 bg-teal-50 dark:bg-teal-950/40 rounded-xl border border-teal-200 dark:border-teal-800">
+                    <div className="flex items-center gap-2 text-teal-800 dark:text-teal-200 font-bold text-xs">
+                      <BookMarked className="w-4 h-4 text-teal-600" />
+                      <span>Lembar Buku Induk</span>
+                    </div>
+                    <p className="text-[11px] text-teal-700 dark:text-teal-300 mt-1 leading-snug">
+                      Lengkapi 57 butir biodata dan cetak lembar F4 resmi.
+                    </p>
+                    <Link
+                      href="/siswa/buku-induk"
+                      className="mt-2.5 inline-flex items-center justify-center gap-1 w-full py-1.5 px-3 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs transition-colors"
+                    >
+                      <span>Buka Buku Induk</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Kolom Kanan: Rincian Data Diri & Form */}
+            <div className="md:col-span-8 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <User className="w-3.5 h-3.5 text-blue-600" /> Nama Lengkap Sesuai Dokumen
+                  </Label>
+                  {editing ? (
+                    <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Nama lengkap" className="border-slate-200 dark:border-slate-700 text-xs sm:text-sm h-9.5" />
+                  ) : (
+                    <div className="text-slate-900 dark:text-white font-semibold bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3.5 py-2 border border-slate-100 dark:border-slate-800 text-xs sm:text-sm">
+                      {profile?.name || '-'}
+                    </div>
                   )}
                 </div>
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <MapPin className="w-3.5 h-3.5 text-blue-600" /> Alamat Domisili
+                  </Label>
+                  {editing ? (
+                    <Textarea value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="Alamat lengkap" className="border-slate-200 dark:border-slate-700 text-xs sm:text-sm resize-none" rows={2} />
+                  ) : (
+                    <div className="text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3.5 py-2 border border-slate-100 dark:border-slate-800 min-h-[42px] text-xs sm:text-sm flex items-center">
+                      {profile?.address || <span className="text-slate-400">Belum diisi</span>}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    <Mail className="w-3.5 h-3.5" /> Alamat Email
+                  </Label>
+                  {editing ? (
+                    <Input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="Alamat email" className="border-slate-200 dark:border-slate-700 text-xs h-9.5" />
+                  ) : (
+                    <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3.5 py-2 border border-slate-100 dark:border-slate-800">
+                      {profile?.email || '-'}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    <Key className="w-3.5 h-3.5" /> {role === 'SISWA' ? 'Nomor Induk Siswa (NIS)' : 'NIP / NBM'}
+                  </Label>
+                  <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-mono bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3.5 py-2 border border-slate-100 dark:border-slate-800">
+                    {role === 'SISWA' ? (profile?.student?.nis || profile?.username || '-') : (profile?.nipNbm || '-')}
+                  </div>
+                </div>
+
+                {role === 'SISWA' && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <Key className="w-3.5 h-3.5" /> Nomor Induk Siswa Nasional (NISN)
+                      </Label>
+                      <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-mono bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3.5 py-2 border border-slate-100 dark:border-slate-800">
+                        {profile?.student?.nisn || '-'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <GraduationCap className="w-3.5 h-3.5" /> Kelas & Program
+                      </Label>
+                      <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-semibold bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3.5 py-2 border border-slate-100 dark:border-slate-800">
+                        {profile?.student?.class?.name || '-'} ({profile?.student?.program || 'Reguler'})
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <User className="w-3.5 h-3.5" /> Jenis Kelamin
+                      </Label>
+                      <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3.5 py-2 border border-slate-100 dark:border-slate-800">
+                        {profile?.student?.gender === 'L' || profile?.student?.gender === 'LAKI_LAKI' ? 'Laki-laki' : 'Perempuan'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <Calendar className="w-3.5 h-3.5" /> Tempat, Tanggal Lahir
+                      </Label>
+                      <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3.5 py-2 border border-slate-100 dark:border-slate-800">
+                        {profileParsedBio.tempatLahir ? `${profileParsedBio.tempatLahir}, ${profileParsedBio.tglLahirFormatted || '-'}` : (profileParsedBio.tglLahirFormatted || '-')}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    <Shield className="w-3.5 h-3.5" /> Hak Akses & Peran Sistem
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    <span className="inline-block text-xs px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-semibold">
+                      {roleLabels[profile?.role] || profile?.role || '-'}
+                    </span>
+                    {profile?.subRole && (
+                      <span className="inline-block text-xs px-2.5 py-1 rounded-lg bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 font-semibold">
+                        {roleLabels[profile?.subRole] || profile?.subRole}
+                      </span>
+                    )}
+                    {profile?.subRole2 && (
+                      <span className="inline-block text-xs px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold">
+                        {roleLabels[profile?.subRole2] || profile?.subRole2}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {editing && (
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-2 rounded-xl" onClick={handleSave} disabled={mutation.isPending}>
+                    {mutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Menyimpan...</> : 'Simpan Perubahan Profil'}
+                  </Button>
+                  {mutation.isError && <p className="text-red-500 text-xs text-center mt-2">{(mutation.error as any)?.message}</p>}
+                </div>
+              )}
             </div>
           </div>
-
-          {editing && (
-            <div className="pt-2">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={mutation.isPending}>
-                {mutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Menyimpan...</> : 'Simpan Perubahan'}
-              </Button>
-              {mutation.isError && <p className="text-red-500 text-sm text-center mt-2">{(mutation.error as any)?.message}</p>}
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -928,78 +1046,80 @@ export default function ProfilePage() {
 
       {/* Student-only Card: Modul Edit & Cetak Mandiri Kartu Pelajar */}
       {(role === 'SISWA' || profile?.student) && (
-        <div id="kartu-pelajar" className="grid grid-cols-1 xl:grid-cols-12 gap-6 scroll-mt-6">
+        <div id="kartu-pelajar" className="grid grid-cols-1 lg:grid-cols-12 gap-6 scroll-mt-6">
           {/* Card Kiri: Edit Data Kartu Pelajar */}
-          <Card className="xl:col-span-5 border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 rounded-2xl overflow-hidden flex flex-col justify-between">
+          <Card className="lg:col-span-5 border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 rounded-2xl overflow-hidden flex flex-col justify-between">
             <div>
-              <CardHeader className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800/80 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-                    <User className="w-5 h-5" />
+              <CardHeader className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800/80 pb-3.5 px-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100">
+                        Data Kartu Pelajar
+                      </CardTitle>
+                      <CardDescription className="text-[11px] text-slate-500">
+                        Sesuaikan alamat domisili dan pas foto resmi Anda.
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
-                      Data Kartu Pelajar
-                    </CardTitle>
-                    <CardDescription className="text-xs text-slate-500">
-                      Sesuaikan alamat dan unggah pas foto resmi Anda.
-                    </CardDescription>
-                  </div>
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800/60 px-2 py-0.5 rounded-full">
+                    <ShieldCheck className="w-3 h-3" /> Terverifikasi
+                  </span>
                 </div>
               </CardHeader>
-              <CardContent className="p-5 space-y-4">
-                {/* Baris 1: Nama & Jenis Kelamin */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+
+              <CardContent className="p-4 sm:p-5 space-y-3.5">
+                {/* Info Status Proteksi Data Pokok */}
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 text-slate-600 dark:text-slate-300 text-[11px] font-medium leading-tight">
+                  <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span>Identitas pokok dikunci otomatis sesuai data resmi Buku Induk.</span>
+                </div>
+
+                {/* Grid Data Pokok (Readonly) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Nama</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Nama Siswa</Label>
                     <Input 
                       value={profile?.name || ''} 
                       disabled 
                       readOnly 
-                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-8.5" 
                     />
-                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Jenis Kelamin</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Jenis Kelamin</Label>
                     <Input 
                       value={profile?.student?.gender === 'L' ? 'Laki-laki' : profile?.student?.gender === 'P' ? 'Perempuan' : profile?.student?.gender || 'Laki-laki'} 
                       disabled 
                       readOnly 
-                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-8.5" 
                     />
-                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
                   </div>
-                </div>
 
-                {/* Baris 2: NIS & NISN */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div className="space-y-1">
-                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">NIS (No. Induk)</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">NIS (No. Induk)</Label>
                     <Input 
                       value={profile?.student?.nis || profile?.username || ''} 
                       disabled 
                       readOnly 
-                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-mono font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-mono font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-8.5" 
                     />
-                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">NISN</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">NISN</Label>
                     <Input 
                       value={profile?.student?.nisn || '-'} 
                       disabled 
                       readOnly 
-                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-mono font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-mono font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-8.5" 
                     />
-                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
                   </div>
-                </div>
 
-                {/* Baris 3: Tempat Lahir & Tanggal Lahir */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div className="space-y-1">
-                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Tempat Lahir</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Tempat Lahir</Label>
                     <Input 
                       value={(() => {
                         try {
@@ -1009,12 +1129,11 @@ export default function ProfilePage() {
                       })()} 
                       disabled 
                       readOnly 
-                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-8.5" 
                     />
-                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Tanggal Lahir</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Tanggal Lahir</Label>
                     <Input 
                       value={(() => {
                         try {
@@ -1024,18 +1143,19 @@ export default function ProfilePage() {
                       })()} 
                       disabled 
                       readOnly 
-                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-9" 
+                      className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-xs font-medium cursor-not-allowed text-slate-700 dark:text-slate-300 h-8.5" 
                     />
-                    <span className="text-[10px] text-slate-400">Oleh Admin</span>
                   </div>
                 </div>
 
-                {/* Baris 4: Alamat & Pas Foto */}
-                <div className="space-y-3 pt-1 border-t border-slate-100 dark:border-slate-800">
+                {/* Section Input yang Dapat Diubah */}
+                <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                   <div className="space-y-1">
                     <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                       <span>Alamat Domisili</span>
-                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">Dapat Diubah</span>
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
+                        Dapat Diubah
+                      </span>
                     </Label>
                     <Input 
                       value={form.address} 
@@ -1044,10 +1164,13 @@ export default function ProfilePage() {
                       className="border-indigo-200 dark:border-indigo-800 focus:border-indigo-500 text-xs h-9 bg-white dark:bg-slate-900" 
                     />
                   </div>
+
                   <div className="space-y-1">
                     <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                       <span>Unggah Pas Foto Resmi</span>
-                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">Dapat Diupload</span>
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
+                        Dapat Diupload
+                      </span>
                     </Label>
                     <Input 
                       type="file" 
@@ -1060,7 +1183,7 @@ export default function ProfilePage() {
               </CardContent>
             </div>
 
-            <div className="p-5 bg-slate-50/70 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+            <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
                 Klik simpan setelah memperbarui foto atau alamat.
               </p>
@@ -1068,7 +1191,7 @@ export default function ProfilePage() {
                 type="button"
                 onClick={handleSave} 
                 disabled={mutation.isPending}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-xs shrink-0"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-xs shrink-0 cursor-pointer"
               >
                 {mutation.isPending ? (
                   <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> Menyimpan...</>
@@ -1079,23 +1202,54 @@ export default function ProfilePage() {
             </div>
           </Card>
 
-          {/* Card Kanan: Cetak Kartu Pelajar Simulator */}
-          <Card className="xl:col-span-7 border-slate-200 dark:border-slate-800 shadow-sm bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl overflow-hidden flex flex-col justify-between">
-            <CardHeader className="bg-white/5 border-b border-white/10 px-5 py-3.5 flex flex-row items-center justify-between">
+          {/* Card Kanan: Pratinjau & Cetak Simulator Kartu Pelajar */}
+          <Card className="lg:col-span-7 border-slate-200 dark:border-slate-800 shadow-sm bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl overflow-hidden flex flex-col justify-between">
+            <CardHeader className="bg-white/5 border-b border-white/10 px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-indigo-400" />
-                <CardTitle className="text-sm sm:text-base font-bold text-white">
-                  Pratinjau & Cetak Kartu Pelajar
-                </CardTitle>
+                <div>
+                  <CardTitle className="text-sm sm:text-base font-bold text-white">
+                    Pratinjau & Cetak Kartu Pelajar
+                  </CardTitle>
+                  <p className="text-[10px] text-indigo-300 font-mono">Standar ISO/IEC 7810 ID-1 CR80</p>
+                </div>
               </div>
-              <span className="text-[11px] text-indigo-300 font-mono bg-white/10 px-2.5 py-0.5 rounded-full">
-                ISO/IEC 7810 ID-1
-              </span>
+
+              {/* View Switcher Tabs */}
+              <div className="flex items-center bg-black/30 p-0.5 rounded-lg border border-white/10 self-start sm:self-auto text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setCardPreviewSide('both')}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                    cardPreviewSide === 'both' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  Kedua Sisi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCardPreviewSide('front')}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                    cardPreviewSide === 'front' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  Depan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCardPreviewSide('back')}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                    cardPreviewSide === 'back' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  Belakang
+                </button>
+              </div>
             </CardHeader>
 
-            <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center flex-1 space-y-5">
+            <CardContent className="p-3 sm:p-5 flex flex-col items-center justify-center flex-1 space-y-4">
               {/* Composite Card Frame Container */}
-              <div className="print-area w-full flex justify-center">
+              <div className="print-area w-full flex justify-center overflow-x-auto py-2">
                 <style jsx global>{`
                   @media print {
                     @page {
@@ -1142,6 +1296,7 @@ export default function ProfilePage() {
                       break-inside: avoid !important;
                     }
                     .print-card-item {
+                      display: flex !important;
                       width: 53.98mm !important;
                       height: 85.6mm !important;
                       aspect-ratio: 638/1018 !important;
@@ -1158,131 +1313,135 @@ export default function ProfilePage() {
                 `}</style>
 
                 {/* Kartu Preview Area (2 Sisi: Sisi Depan & Sisi Belakang) */}
-                <div className="print-card-row flex flex-col md:flex-row items-center justify-center gap-6 sm:gap-8 w-full">
+                <div className="print-card-row flex flex-wrap items-center justify-center gap-4 sm:gap-6 w-full">
                   {/* SISI DEPAN KARTU (ISO/IEC 7810 ID-1) */}
-                  <div className="print-card-item relative w-[250px] sm:w-[270px] aspect-[638/1016] rounded-2xl overflow-hidden shadow-lg border border-slate-200/90 select-none bg-white text-slate-900 flex flex-col justify-between transition-transform duration-300 hover:scale-[1.01] shrink-0">
-                    {/* Background Template Kustom Sekolah atau Template Bawaan kartu-pelajar-depan.png */}
-                    <img 
-                      src={schoolSettings?.studentCardTemplateUrl 
-                        ? (schoolSettings.studentCardTemplateUrl.startsWith('/uploads') ? `/api-backend${schoolSettings.studentCardTemplateUrl}` : schoolSettings.studentCardTemplateUrl)
-                        : '/images/kartu-pelajar-depan.png'
-                      } 
-                      alt="Template Kartu Pelajar Depan" 
-                      className="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none" 
-                    />
+                  {(cardPreviewSide === 'both' || cardPreviewSide === 'front') && (
+                    <div className="print-card-item relative w-[230px] sm:w-[245px] md:w-[255px] aspect-[638/1018] rounded-[13px] overflow-hidden shadow-xl border border-slate-200/90 select-none bg-white text-slate-900 flex flex-col justify-between transition-transform duration-300 hover:scale-[1.01] shrink-0">
+                      {/* Background Template Kustom Sekolah atau Template Bawaan kartu-pelajar-depan.png */}
+                      <img 
+                        src={schoolSettings?.studentCardTemplateUrl 
+                          ? (schoolSettings.studentCardTemplateUrl.startsWith('/uploads') ? `/api-backend${schoolSettings.studentCardTemplateUrl}` : schoolSettings.studentCardTemplateUrl)
+                          : '/images/kartu-pelajar-depan.png'
+                        } 
+                        alt="Template Kartu Pelajar Depan" 
+                        className="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none" 
+                      />
 
-                    {/* Layer Elemen Dinamis Sisi Depan */}
-                    <div className="relative z-10 w-full h-full pointer-events-none">
-                      {/* Foto Siswa (Menempati persis bingkai kotak foto template) */}
-                      <div className="absolute left-[15.20%] top-[17.32%] w-[35.58%] h-[33.07%] rounded-[5px] overflow-hidden flex items-center justify-center bg-white shadow-2xs">
-                        {form.avatarUrl ? (
-                          <img 
-                            src={form.avatarUrl} 
-                            alt={profile?.name || 'Foto Siswa'} 
-                            className="w-full h-full object-cover" 
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
-                            <User className="w-8 h-8 opacity-40" />
-                            <span className="text-[8px] font-bold mt-1">Foto Siswa</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Barcode QR Code NIS */}
-                      <div className="absolute left-[60.5%] top-[22.5%] flex flex-col items-center justify-center">
-                        <div id="student-card-qr-profil">
-                          <QRCodeSVG 
-                            value={profile?.student?.nis || profile?.username || '13154'} 
-                            size={66}
-                            level="M"
-                            includeMargin={false}
-                            bgColor="transparent"
-                          />
+                      {/* Layer Elemen Dinamis Sisi Depan */}
+                      <div className="relative z-10 w-full h-full pointer-events-none">
+                        {/* Foto Siswa (Menempati persis bingkai kotak foto template) */}
+                        <div className="absolute left-[15.20%] top-[17.32%] w-[35.58%] h-[33.07%] rounded-[5px] overflow-hidden flex items-center justify-center bg-white shadow-2xs">
+                          {form.avatarUrl ? (
+                            <img 
+                              src={form.avatarUrl} 
+                              alt={profile?.name || 'Foto Siswa'} 
+                              className="w-full h-full object-cover" 
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
+                              <User className="w-8 h-8 opacity-40" />
+                              <span className="text-[8px] font-bold mt-1">Foto Siswa</span>
+                            </div>
+                          )}
                         </div>
-                        <span className="text-[7.5px] font-mono font-bold text-slate-800 tracking-wider mt-1">
-                          {profile?.student?.nis || profile?.username || '-'}
-                        </span>
-                      </div>
 
-                      {/* Nama Siswa */}
-                      <div className="absolute left-[4%] right-[4%] top-[52.8%] text-center">
-                        <h3 className="font-extrabold text-[12px] sm:text-[13px] text-slate-900 uppercase tracking-tight line-clamp-1 leading-none">
-                          {profile?.name || '[NAMA LENGKAP]'}
-                        </h3>
-                      </div>
+                        {/* Barcode QR Code NIS */}
+                        <div className="absolute left-[60.5%] top-[22.5%] flex flex-col items-center justify-center">
+                          <div id="student-card-qr-profil">
+                            <QRCodeSVG 
+                              value={profile?.student?.nis || profile?.username || '13154'} 
+                              size={64}
+                              level="M"
+                              includeMargin={false}
+                              bgColor="transparent"
+                            />
+                          </div>
+                        </div>
 
-                      {/* Nilai NISN (Sejajar tepat di sebelah tulisan NISN :) */}
-                      <div className="absolute left-[44.5%] top-[58.0%] flex items-center text-left pointer-events-none">
-                        <span className="font-mono font-bold text-[10px] sm:text-[10.5px] text-[#931553] tracking-wider leading-none">
-                          {profile?.student?.nisn || '[NISN]'}
-                        </span>
-                      </div>
+                        {/* Nama Siswa (Auto scale font jika nama panjang) */}
+                        <div className="absolute left-[4.7%] right-[4.7%] top-[52.8%] text-center">
+                          <h3 
+                            style={{
+                              fontSize: (() => {
+                                const len = (profile?.name || '').trim().length
+                                if (len > 32) return '9.2px'
+                                if (len > 26) return '10px'
+                                if (len > 20) return '11px'
+                                return '12.5px'
+                              })()
+                            }}
+                            className="font-extrabold text-[#1e1b4b] uppercase tracking-tight line-clamp-1 leading-tight font-sans"
+                          >
+                            {profile?.name || '[NAMA LENGKAP]'}
+                          </h3>
+                        </div>
 
-                      {/* Data Grid Kolom Bawah */}
-                      {/* TTL (Rata kiri tepat di bawah label TTL) */}
-                      <div className="absolute left-[5.0%] top-[67.8%] w-[42%] text-left">
-                        <p className="font-bold text-[8.5px] text-slate-800 leading-snug line-clamp-2">
-                          {(() => {
-                            try {
-                              const bio = typeof profile?.student?.bioData === 'string' ? JSON.parse(profile?.student?.bioData) : profile?.student?.bioData
-                              const tmpt = bio?.tempatLahir || ''
-                              const tgl = bio?.tglLahir || ''
-                              if (tmpt && tgl) return `${tmpt}, ${tgl}`
-                              if (tmpt) return tmpt
-                              if (tgl) return tgl
-                              return '-'
-                            } catch { return '-' }
-                          })()}
-                        </p>
-                      </div>
+                        {/* Nilai NISN (Sejajar tepat di sebelah tulisan NISN :) */}
+                        <div className="absolute left-[44.0%] top-[58.1%] flex items-center text-left pointer-events-none">
+                          <span className="font-extrabold text-[8px] sm:text-[8.5px] text-[#9d174d] tracking-normal leading-none font-sans">
+                            {profile?.student?.nisn || '[NISN]'}
+                          </span>
+                        </div>
 
-                      {/* ALAMAT (Rata kiri tepat di bawah label ALAMAT) */}
-                      <div className="absolute left-[50.0%] top-[67.8%] w-[44%] text-left">
-                        <p className="font-bold text-[8.5px] text-slate-800 leading-snug line-clamp-2">
-                          {form.address || profile?.address || '-'}
-                        </p>
-                      </div>
+                        {/* Data Grid Kolom Bawah */}
+                        {/* TTL */}
+                        <div className="absolute left-[4.7%] top-[68.4%] w-[42%] text-left">
+                          <div className="font-bold text-[8.8px] sm:text-[9.2px] text-[#1e1b4b] leading-tight font-sans">
+                            {profileParsedBio.tempatLahir && <div className="truncate">{profileParsedBio.tempatLahir}</div>}
+                            {profileParsedBio.tglLahirFormatted && <div>{profileParsedBio.tglLahirFormatted}</div>}
+                            {!profileParsedBio.tempatLahir && !profileParsedBio.tglLahirFormatted && <div>-</div>}
+                          </div>
+                        </div>
 
-                      {/* NO. INDUK (NIS) (Rata kiri tepat di bawah label NO. INDUK) */}
-                      <div className="absolute left-[5.0%] top-[81.8%] w-[42%] text-left">
-                        <p className="font-black font-mono text-[9.5px] text-slate-900 leading-none">
-                          {profile?.student?.nis || profile?.username || '-'}
-                        </p>
-                      </div>
+                        {/* ALAMAT */}
+                        <div className="absolute left-[49.5%] top-[68.4%] w-[45%] text-left">
+                          <p className="font-bold text-[8.8px] sm:text-[9.2px] text-[#1e1b4b] leading-tight line-clamp-2 font-sans">
+                            {form.address || profile?.address || '-'}
+                          </p>
+                        </div>
 
-                      {/* GENDER (Rata kiri tepat di bawah label GENDER) */}
-                      <div className="absolute left-[50.0%] top-[81.8%] w-[44%] text-left">
-                        <p className="font-bold text-[8.5px] text-slate-800 leading-none">
-                          {profile?.student?.gender === 'L' ? 'Laki-laki' : profile?.student?.gender === 'P' ? 'Perempuan' : profile?.student?.gender || '-'}
-                        </p>
+                        {/* NO. INDUK (NIS) */}
+                        <div className="absolute left-[4.7%] top-[83.0%] w-[42%] text-left">
+                          <p className="font-extrabold text-[10px] sm:text-[10.5px] text-[#1e1b4b] leading-none font-sans">
+                            {profile?.student?.nis || profile?.username || '-'}
+                          </p>
+                        </div>
+
+                        {/* GENDER */}
+                        <div className="absolute left-[49.5%] top-[83.0%] w-[45%] text-left">
+                          <p className="font-bold text-[8.8px] sm:text-[9.2px] text-[#1e1b4b] leading-none font-sans">
+                            {profile?.student?.gender === 'L' ? 'Laki-laki' : profile?.student?.gender === 'P' ? 'Perempuan' : profile?.student?.gender || '-'}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* SISI BELAKANG KARTU (ISO/IEC 7810 ID-1) */}
-                  <div className="print-card-item relative w-[250px] sm:w-[270px] aspect-[638/1016] rounded-2xl overflow-hidden shadow-lg border border-slate-200/90 select-none bg-white text-slate-900 flex flex-col justify-between transition-transform duration-300 hover:scale-[1.01] shrink-0">
-                    {/* Background Template Sisi Belakang Resmi */}
-                    <img 
-                      src="/images/kartu-pelajar-belakang.png" 
-                      alt="Template Kartu Pelajar Belakang" 
-                      className="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none" 
-                    />
-                  </div>
+                  {(cardPreviewSide === 'both' || cardPreviewSide === 'back') && (
+                    <div className="print-card-item relative w-[230px] sm:w-[245px] md:w-[255px] aspect-[638/1018] rounded-[13px] overflow-hidden shadow-xl border border-slate-200/90 select-none bg-white text-slate-900 flex flex-col justify-between transition-transform duration-300 hover:scale-[1.01] shrink-0">
+                      {/* Background Template Sisi Belakang Resmi */}
+                      <img 
+                        src="/images/kartu-pelajar-belakang.png" 
+                        alt="Template Kartu Pelajar Belakang" 
+                        className="absolute inset-0 w-full h-full object-fill z-0 pointer-events-none" 
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-white/10">
+              <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-white/10">
                 <p className="text-[11px] text-indigo-200/90 text-center sm:text-left">
-                  Gunakan browser printer dialog untuk menyimpan sebagai PDF atau cetak langsung.
+                  Gunakan dialog printer browser untuk menyimpan PDF atau cetak kartu ID-1.
                 </p>
 
                 <Button
                   type="button"
                   onClick={printStudentCardDirect}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg cursor-pointer flex items-center gap-2 shrink-0"
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg cursor-pointer flex items-center gap-2 shrink-0"
                 >
-                  <CreditCard className="w-4 h-4" />
+                  <Printer className="w-4 h-4" />
                   Cetak / Download Kartu
                 </Button>
               </div>

@@ -480,13 +480,11 @@
   }
 }
 
-/* Standar Mutlak Persuratan SIMASMUH: Format Ukuran Kertas A4 & Kertas HVS */
-@page {
-  size: A4 portrait;
-  margin: 15mm 15mm 15mm 15mm;
-}
-
 @media print {
+  @page {
+    margin: 0;
+  }
+
   body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;

@@ -3,11 +3,13 @@ import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useSession } from 'next-auth/react'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent, Info, UserPlus, RotateCcw, Power, PowerOff, UserCheck, ShieldCheck, CreditCard, Sparkles, Image as ImageIcon, User, Printer } from 'lucide-react'
+import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent, Info, UserPlus, RotateCcw, Power, PowerOff, UserCheck, ShieldCheck, CreditCard, Sparkles, Image as ImageIcon, User, Printer, BookOpen, Upload } from 'lucide-react'
 import Swal from 'sweetalert2'
 import { confirmDelete } from '@/lib/swal-helper'
 import { compressImageFile } from '@/utils/imageCompressor'
 import { QRCodeSVG } from 'qrcode.react'
+import { BukuIndukPrintDialog } from '@/components/academic/BukuIndukPrintDialog'
+import { BukuIndukData } from '@/components/academic/BukuIndukSheet'
 
 const currencyFormat = (num: number) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0)
@@ -44,104 +46,119 @@ const getProgramBadge = (programValue: string | null | undefined) => {
 }
 
 const defaultBioData = {
-  // A. KETERANGAN TENTANG DIRI SISWA
+  // A. KETERANGAN TENTANG DIRI PESERTA DIDIK
   namaPanggilan: '',
   tempatLahir: '',
   tglLahir: '',
   agama: 'Islam',
-  kewarganegaraan: 'Indonesia',
+  kewarganegaraan: 'WNI',
   anakKe: '',
-  jmlSaudaraKandung: '',
-  jmlSaudaraTiri: '',
-  jmlSaudaraAngkat: '',
-  statusYatim: '',
-  bahasa: '',
+  jmlSaudaraKandung: '0',
+  jmlSaudaraTiri: '0',
+  jmlSaudaraAngkat: '0',
+  statusYatim: '-',
+  bahasa: 'Indonesia / Jawa',
 
   // B. KETERANGAN TEMPAT TINGGAL
   alamat: '',
   telp: '',
-  tinggalDengan: '',
+  tinggalDengan: 'Orang Tua',
   jarakSekolah: '',
 
   // C. KETERANGAN KESEHATAN
-  golDarah: '',
-  penyakitPernah: '',
-  kelainanJasmani: '',
+  golDarah: '-',
+  penyakitPernah: 'Tidak Ada',
+  kelainanJasmani: 'Tidak Ada',
   tinggiBadan: '',
   beratBadan: '',
 
   // D. KETERANGAN PENDIDIKAN
   lulusanDari: '',
-  alamatSekolah: '',
+  tglIjazahSmp: '',
+  noIjazahSmp: '',
   noSttb: '',
   tglSttb: '',
-  lamaBelajar: '',
+  tglStlSmp: '',
+  noStlSmp: '',
   noSkhun: '',
   tglSkhun: '',
+  lamaBelajar: '3',
   pindahanDariSekolah: '',
   alasanPindah: '',
   diterimaDiKelas: '',
+  kelompokProgStudi: '',
   tglDiterima: '',
 
   // E. KETERANGAN TENTANG AYAH KANDUNG
   namaAyah: '',
   ttlAyah: '',
+  tempatLahirAyah: '',
+  tglLahirAyah: '',
   agamaAyah: 'Islam',
-  kewarganegaraanAyah: 'Indonesia',
+  kewarganegaraanAyah: 'WNI',
   pendidikanAyah: '',
   pekerjaanAyah: '',
+  pengeluaranAyah: '',
   penghasilanAyah: '',
   alamatAyah: '',
   telpAyah: '',
-  statusAyah: '',
+  statusAyah: 'Masih Hidup',
 
   // F. KETERANGAN TENTANG IBU KANDUNG
   namaIbu: '',
   ttlIbu: '',
+  tempatLahirIbu: '',
+  tglLahirIbu: '',
   agamaIbu: 'Islam',
-  kewarganegaraanIbu: 'Indonesia',
+  kewarganegaraanIbu: 'WNI',
   pendidikanIbu: '',
-  pekerjaanIbu: '',
+  pekerjaanIbu: 'Ibu Rumah Tangga',
+  pengeluaranIbu: '',
   penghasilanIbu: '',
   alamatIbu: '',
   telpIbu: '',
-  statusIbu: '',
+  statusIbu: 'Masih Hidup',
 
   // G. KETERANGAN TENTANG WALI
   namaWali: '',
   ttlWali: '',
   agamaWali: '',
-  kewarganegaraanWali: '',
+  kewarganegaraanWali: 'WNI',
   pendidikanWali: '',
   pekerjaanWali: '',
-  penghasilanWali: '',
+  pengeluaranWali: '',
   alamatWali: '',
   telpWali: '',
 
-  // H. KEGEMARAN SISWA
+  // H. KEGEMARAN PESERTA DIDIK
   kesenian: '',
   olahRaga: '',
+  organisasi: '',
   kemasyarakatan: '',
   kegemaranLain: '',
 
-  // I. KETERANGAN PERKEMBANGAN SISWA
+  // I. KETERANGAN PERKEMBANGAN PESERTA DIDIK
   menerimaBeasiswa: '',
   tglMeninggalkanSekolah: '',
   alasanMeninggalkan: '',
-  kelasMeninggalkan: '',
-  noSuratMeninggalkan: '',
-  ketMeninggalkan: '',
   tamatBelajar: '',
+  noIjazahLulus: '',
   sttbNomor: '',
-  tglIjazah: '',
-  tglTerimaIjazah: '',
+  noStlLulus: '',
+  nilaiRataRata: '',
 
   // J. KETERANGAN SETELAH SELESAI PENDIDIKAN
   melanjutkanDi: '',
   bekerja: '',
   tglMulaiBekerja: '',
   namaPerusahaan: '',
-  penghasilanKerja: ''
+  penghasilanKerja: '',
+
+  // 4 FOTO BUKU INDUK
+  fotoMendaftar: '',
+  fotoDiterima: '',
+  fotoLulus: '',
+  fotoMeninggalkan: ''
 }
 
 type Student = {
@@ -235,7 +252,7 @@ export default function StudentsPage() {
   })
   const abortRef = useRef(false)
   const [isEdit, setIsEdit] = useState(false)
-  const [activeFormTab, setActiveFormTab] = useState<'utama' | 'diri_tinggal' | 'kesehatan_pendidikan' | 'orangtua' | 'kegemaran_perkembangan'>('utama')
+  const [activeFormTab, setActiveFormTab] = useState<'utama' | 'diri_tinggal' | 'kesehatan_pendidikan' | 'orangtua' | 'kegemaran_perkembangan' | 'foto_induk'>('utama')
   const [formData, setFormData] = useState({ 
     id: '', 
     nisn: '', 
@@ -262,6 +279,74 @@ export default function StudentsPage() {
         [field]: val
       }
     }))
+  }
+
+  // Buku Induk Modal States & Helpers
+  const [isBukuIndukDialogOpen, setIsBukuIndukDialogOpen] = useState(false)
+  const [bukuIndukTargetStudents, setBukuIndukTargetStudents] = useState<BukuIndukData[]>([])
+  const [isUploadingBukuFoto, setIsUploadingBukuFoto] = useState<string | null>(null)
+
+  const convertStudentToBukuInduk = (student: Student): BukuIndukData => {
+    let parsedBio: any = {}
+    if (student.bioData) {
+      try {
+        parsedBio = typeof student.bioData === 'string' ? JSON.parse(student.bioData) : student.bioData
+      } catch (e) {}
+    }
+    return {
+      name: student.name,
+      nisn: student.nisn || '',
+      nis: student.nis || '',
+      gender: student.gender || 'L',
+      program: student.program || null,
+      className: student.class?.name || '',
+      userAvatar: student.user?.avatarUrl || null,
+      ...defaultBioData,
+      ...parsedBio
+    }
+  }
+
+  const handleViewBukuInduk = (student: Student) => {
+    const converted = convertStudentToBukuInduk(student)
+    setBukuIndukTargetStudents([converted])
+    setIsBukuIndukDialogOpen(true)
+  }
+
+  const handleBulkViewBukuInduk = () => {
+    if (selectedStudentIds.length === 0) return
+    const selectedList = (students || [])
+      .filter(s => selectedStudentIds.includes(s.id))
+      .map(s => convertStudentToBukuInduk(s))
+    setBukuIndukTargetStudents(selectedList)
+    setIsBukuIndukDialogOpen(true)
+  }
+
+  const handleUploadBukuFoto = async (field: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      setIsUploadingBukuFoto(field)
+      const compressed = await compressImageFile(file, { maxWidth: 1200, maxHeight: 1600, quality: 0.88 })
+      const uploadRes = await authenticatedFetch('/api-backend/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: compressed.dataUrl, folder: 'student_photos' })
+      })
+      if (!uploadRes.ok) throw new Error('Gagal mengunggah berkas foto')
+      const uploadData = await uploadRes.json()
+      updateBioData(field, uploadData.url)
+      Swal.fire({
+        title: 'Foto Terunggah!',
+        text: 'Foto buku induk berhasil diperbarui.',
+        icon: 'success',
+        timer: 1200,
+        showConfirmButton: false
+      })
+    } catch (err: any) {
+      Swal.fire('Gagal', err.message || 'Gagal mengunggah foto', 'error')
+    } finally {
+      setIsUploadingBukuFoto(null)
+    }
   }
 
   const [isProgramDialogOpen, setIsProgramDialogOpen] = useState(false)
@@ -393,6 +478,32 @@ export default function StudentsPage() {
   const [isCardPreviewOpen, setIsCardPreviewOpen] = useState(false)
   const [targetCardStudent, setTargetCardStudent] = useState<Student | null>(null)
 
+  const targetCardParsedBio = useMemo(() => {
+    if (!targetCardStudent) return { tempatLahir: '', tglLahirFormatted: '', alamat: '-' }
+    try {
+      const bio = typeof targetCardStudent.bioData === 'string' ? JSON.parse(targetCardStudent.bioData) : targetCardStudent.bioData
+      const tmpt = bio?.tempatLahir || ''
+      const tglRaw = bio?.tglLahir || ''
+      let tglFormatted = ''
+      if (tglRaw) {
+        const cleanTgl = tglRaw.trim()
+        if (/^\d{4}-\d{2}-\d{2}$/.test(cleanTgl)) {
+          const [yyyy, mm, dd] = cleanTgl.split('-')
+          tglFormatted = `${dd}-${mm}-${yyyy}`
+        } else {
+          tglFormatted = cleanTgl
+        }
+      }
+      return {
+        tempatLahir: tmpt,
+        tglLahirFormatted: tglFormatted,
+        alamat: bio?.alamat || targetCardStudent.user?.address || '-'
+      }
+    } catch {
+      return { tempatLahir: '', tglLahirFormatted: '', alamat: targetCardStudent.user?.address || '-' }
+    }
+  }, [targetCardStudent])
+
   const handleViewStudentCard = (student: Student) => {
     setTargetCardStudent(student)
     setIsCardPreviewOpen(true)
@@ -415,8 +526,24 @@ export default function StudentsPage() {
     } catch { bio = {} }
 
     const tmpt = bio?.tempatLahir || ''
-    const tgl = bio?.tglLahir || ''
-    const ttlStr = tmpt && tgl ? `${tmpt}, ${tgl}` : tmpt || tgl || '-'
+    const tglRaw = bio?.tglLahir || ''
+    let tglFormatted = ''
+    if (tglRaw) {
+      const cleanTgl = tglRaw.trim()
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cleanTgl)) {
+        const [yyyy, mm, dd] = cleanTgl.split('-')
+        tglFormatted = `${dd}-${mm}-${yyyy}`
+      } else {
+        tglFormatted = cleanTgl
+      }
+    }
+    const ttlStr = tmpt && tglFormatted 
+      ? `<div>${tmpt}</div><div style="font-family: inherit;">${tglFormatted}</div>` 
+      : tmpt 
+        ? `<div>${tmpt}</div>` 
+        : tglFormatted 
+          ? `<div>${tglFormatted}</div>` 
+          : '<div>-</div>'
     const alamatStr = bio?.alamat || student?.user?.address || '-'
     const genderStr = student.gender === 'L' ? 'Laki-laki' : student.gender === 'P' ? 'Perempuan' : student.gender || '-'
     const avatarUrl = student.user?.avatarUrl
@@ -427,6 +554,9 @@ export default function StudentsPage() {
       : '/images/kartu-pelajar-depan.png'
     const studentNis = student.nis || '-'
     const studentNisn = student.nisn || '[NISN]'
+    const studentName = student.name || '[NAMA LENGKAP]'
+    const nameLen = studentName.trim().length
+    const nameFontSizePt = nameLen > 32 ? '6.0pt' : nameLen > 26 ? '6.8pt' : nameLen > 20 ? '7.5pt' : '8.5pt'
     const qrElement = document.getElementById('student-card-qr-master')
     const qrSvgString = qrElement ? qrElement.innerHTML : ''
 
@@ -439,6 +569,9 @@ export default function StudentsPage() {
       <html>
       <head>
         <title>Cetak Kartu Pelajar - ${student.name}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700&display=swap" rel="stylesheet">
         <style>
           @page {
             size: A4 portrait;
@@ -452,7 +585,7 @@ export default function StudentsPage() {
           html, body {
             background: #ffffff !important;
             color: #0f172a !important;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             width: 100%;
             height: 100%;
             overflow: hidden;
@@ -493,6 +626,7 @@ export default function StudentsPage() {
             width: 100%;
             height: 100%;
             z-index: 10;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
           }
           .photo-box {
             position: absolute;
@@ -525,83 +659,74 @@ export default function StudentsPage() {
             width: 16mm;
             height: 16mm;
           }
-          .qr-text {
-            font-size: 5.5pt;
-            font-family: monospace;
-            font-weight: bold;
-            color: #1e293b;
-            margin-top: 1mm;
-          }
           .student-name {
             position: absolute;
-            left: 4%;
-            right: 4%;
+            left: 4.7%;
+            right: 4.7%;
             top: 52.8%;
             text-align: center;
-            font-size: 7.2pt;
+            font-size: ${nameFontSizePt};
             font-weight: 800;
-            color: #0f172a;
+            color: #1e1b4b;
             text-transform: uppercase;
-            letter-spacing: -0.2px;
+            letter-spacing: -0.1px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            line-height: 1;
+            line-height: 1.1;
           }
           .nisn-val {
             position: absolute;
-            left: 44.5%;
+            left: 44.0%;
             top: 58.1%;
-            font-size: 6.5pt;
-            font-family: monospace;
-            font-weight: bold;
-            color: #931553;
-            letter-spacing: 0.5px;
+            font-size: 5.4pt;
+            font-weight: 800;
+            color: #9d174d;
+            letter-spacing: 0px;
             line-height: 1;
           }
           .ttl-val {
             position: absolute;
-            left: 5.0%;
-            top: 67.8%;
+            left: 4.7%;
+            top: 68.4%;
             width: 42%;
-            font-size: 5.2pt;
-            font-weight: bold;
-            color: #1e293b;
-            line-height: 1.2;
+            font-size: 6pt;
+            font-weight: 700;
+            color: #1e1b4b;
+            line-height: 1.25;
             text-align: left;
           }
           .alamat-val {
             position: absolute;
-            left: 50.0%;
-            top: 67.8%;
-            width: 44%;
-            font-size: 5.2pt;
-            font-weight: bold;
-            color: #1e293b;
-            line-height: 1.2;
+            left: 49.5%;
+            top: 68.4%;
+            width: 45%;
+            font-size: 6pt;
+            font-weight: 700;
+            color: #1e1b4b;
+            line-height: 1.25;
             text-align: left;
           }
           .nis-val {
             position: absolute;
-            left: 5.0%;
-            top: 81.8%;
+            left: 4.7%;
+            top: 83.0%;
             width: 42%;
-            font-size: 5.8pt;
-            font-family: monospace;
-            font-weight: 900;
-            color: #0f172a;
-            line-height: 1;
+            font-size: 6.8pt;
+            font-weight: 800;
+            color: #1e1b4b;
+            line-height: 1.1;
             text-align: left;
           }
           .gender-val {
             position: absolute;
-            left: 50.0%;
-            top: 81.8%;
-            width: 44%;
-            font-size: 5.2pt;
-            font-weight: bold;
-            color: #1e293b;
-            line-height: 1;
+            left: 49.5%;
+            top: 83.0%;
+            width: 45%;
+            font-size: 6pt;
+            font-weight: 700;
+            color: #1e1b4b;
+            line-height: 1.1;
             text-align: left;
           }
         </style>
@@ -617,7 +742,6 @@ export default function StudentsPage() {
               </div>
               <div class="qr-box">
                 ${qrSvgString}
-                <div class="qr-text">${student.nis || '-'}</div>
               </div>
               <div class="student-name">${student.name || '[NAMA LENGKAP]'}</div>
               <div class="nisn-val">${student.nisn || '[NISN]'}</div>
@@ -1805,7 +1929,7 @@ export default function StudentsPage() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
-                2. Diri dan Tempat Tinggal
+                2. Diri & Tinggal (A-B)
               </button>
               <button
                 type="button"
@@ -1816,7 +1940,7 @@ export default function StudentsPage() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
-                3. Kesehatan dan Pendidikan
+                3. Kesehatan & Pendidikan (C-D)
               </button>
               <button
                 type="button"
@@ -1827,7 +1951,7 @@ export default function StudentsPage() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
-                4. Orang Tua dan Wali
+                4. Orang Tua & Wali (E-G)
               </button>
               <button
                 type="button"
@@ -1838,7 +1962,18 @@ export default function StudentsPage() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
-                5. Kegemaran dan Pasca Sekolah
+                5. Perkembangan & Pasca (H-J)
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveFormTab('foto_induk')}
+                className={`py-2 px-3 rounded-t-lg transition-all shrink-0 ${
+                  activeFormTab === 'foto_induk'
+                    ? 'bg-white dark:bg-slate-950 text-blue-600 dark:text-blue-400 font-bold border-t-2 border-blue-600 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                6. Foto Buku Induk (4 Periode)
               </button>
             </div>
 
@@ -1855,44 +1990,44 @@ export default function StudentsPage() {
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="nisn" className="text-xs font-semibold text-slate-700 dark:text-slate-300">NISN (Opsional)</Label>
+                        <Label htmlFor="nisn" className="text-xs font-semibold text-slate-700 dark:text-slate-300">NISN (Nomor Induk Siswa Nasional)</Label>
                         <Input 
                           id="nisn" 
                           value={formData.nisn}
                           onChange={(e) => setFormData({...formData, nisn: e.target.value})}
-                          placeholder="Masukkan NISN (Opsional)"
-                          className="rounded-xl border-slate-200/80 dark:border-slate-700/80"
+                          placeholder="Masukkan NISN"
+                          className="rounded-xl border-slate-200/80 dark:border-slate-700/80 font-mono"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="nis" className="text-xs font-semibold text-slate-700 dark:text-slate-300">NIS</Label>
+                        <Label htmlFor="nis" className="text-xs font-semibold text-slate-700 dark:text-slate-300">NIS (Nomor Induk Siswa) *</Label>
                         <Input 
                           id="nis" 
                           value={formData.nis}
                           onChange={(e) => setFormData({...formData, nis: e.target.value})}
                           placeholder="Masukkan NIS"
                           required 
-                          className="rounded-xl border-slate-200/80 dark:border-slate-700/80"
+                          className="rounded-xl border-slate-200/80 dark:border-slate-700/80 font-mono"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="sm:col-span-2 space-y-1.5">
-                        <Label htmlFor="name" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Lengkap</Label>
+                        <Label htmlFor="name" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Lengkap Siswa *</Label>
                         <Input 
                           id="name" 
                           value={formData.name}
                           onChange={(e) => setFormData({...formData, name: e.target.value})}
                           placeholder="Nama Lengkap Siswa"
                           required 
-                          className="rounded-xl border-slate-200/80 dark:border-slate-700/80"
+                          className="rounded-xl border-slate-200/80 dark:border-slate-700/80 uppercase font-bold"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Jenis Kelamin</Label>
+                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Jenis Kelamin *</Label>
                         <Select value={formData.gender} onValueChange={(v) => setFormData({...formData, gender: v || ''})}>
                           <SelectTrigger className="rounded-xl border-slate-200/80 dark:border-slate-700/80">
                             <SelectValue placeholder="Pilih Gender" />
@@ -1917,7 +2052,7 @@ export default function StudentsPage() {
                         <Label htmlFor="username" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Username Login</Label>
                         <Input 
                           id="username" 
-                          placeholder="Otomatis dari NISN jika kosong"
+                          placeholder="Otomatis dari NIS jika kosong"
                           value={formData.username}
                           onChange={(e) => setFormData({...formData, username: e.target.value})}
                           className="rounded-xl border-slate-200/80 dark:border-slate-700/80"
@@ -1946,7 +2081,7 @@ export default function StudentsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Penempatan Kelas</Label>
+                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Penempatan Kelas *</Label>
                         <Select value={formData.classId} onValueChange={(v) => setFormData({...formData, classId: v || ''})} required>
                           <SelectTrigger className="rounded-xl border-slate-200/80 dark:border-slate-700/80">
                             <SelectValue placeholder="Pilih Kelas">
@@ -2017,16 +2152,16 @@ export default function StudentsPage() {
                 <div className="space-y-5">
                   <div className="space-y-4">
                     <div className="bg-emerald-50 dark:bg-emerald-950/60 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                      A. KETERANGAN TENTANG DIRI SISWA
+                      A. KETERANGAN TENTANG DIRI PESERTA DIDIK
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Nama Panggilan</Label>
-                        <Input value={formData.bioData?.namaPanggilan || ''} onChange={e => updateBioData('namaPanggilan', e.target.value)} placeholder="Contoh: Dahlan" />
+                        <Label className="text-xs font-semibold">1. Nama Panggilan</Label>
+                        <Input value={formData.bioData?.namaPanggilan || ''} onChange={e => updateBioData('namaPanggilan', e.target.value)} placeholder="Contoh: Adinda" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Agama</Label>
+                        <Label className="text-xs font-semibold">4. Agama</Label>
                         <Select value={formData.bioData?.agama || 'Islam'} onValueChange={v => updateBioData('agama', v)}>
                           <SelectTrigger><SelectValue placeholder="Agama" /></SelectTrigger>
                           <SelectContent>
@@ -2043,8 +2178,8 @@ export default function StudentsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="sm:col-span-2 space-y-1.5">
-                        <Label className="text-xs font-semibold">Tempat Lahir</Label>
-                        <Input value={formData.bioData?.tempatLahir || ''} onChange={e => updateBioData('tempatLahir', e.target.value)} placeholder="Kota / Kabupaten Lahir" />
+                        <Label className="text-xs font-semibold">3. Tempat Lahir</Label>
+                        <Input value={formData.bioData?.tempatLahir || ''} onChange={e => updateBioData('tempatLahir', e.target.value)} placeholder="Ponorogo" />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold">Tanggal Lahir</Label>
@@ -2054,40 +2189,72 @@ export default function StudentsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Kewarganegaraan</Label>
-                        <Input value={formData.bioData?.kewarganegaraan || 'Indonesia'} onChange={e => updateBioData('kewarganegaraan', e.target.value)} />
+                        <Label className="text-xs font-semibold">5. Kewarganegaraan</Label>
+                        <Input value={formData.bioData?.kewarganegaraan || 'WNI'} onChange={e => updateBioData('kewarganegaraan', e.target.value)} placeholder="WNI" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Bahasa Sehari-hari di Rumah</Label>
-                        <Input value={formData.bioData?.bahasa || ''} onChange={e => updateBioData('bahasa', e.target.value)} placeholder="Contoh: Indonesia / Jawa" />
+                        <Label className="text-xs font-semibold">11. Bahasa Sehari-hari di Rumah</Label>
+                        <Select
+                          value={(() => {
+                            const b = (formData.bioData?.bahasa || '').trim()
+                            if (b === 'Bahasa Indonesia' || b === 'Bahasa Inggris' || b === 'Bahasa Arab') return b
+                            if (b) return 'DAERAH'
+                            return 'Bahasa Indonesia'
+                          })()}
+                          onValueChange={(val) => {
+                            if (val === 'DAERAH') {
+                              updateBioData('bahasa', formData.bioData?.bahasa && !['Bahasa Indonesia', 'Bahasa Inggris', 'Bahasa Arab'].includes(formData.bioData.bahasa) ? formData.bioData.bahasa : 'Bahasa Jawa')
+                            } else {
+                              updateBioData('bahasa', val)
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Pilih Bahasa" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Bahasa Indonesia">Bahasa Indonesia</SelectItem>
+                            <SelectItem value="DAERAH">Bahasa Daerah (Dapat Diisi Manual)</SelectItem>
+                            <SelectItem value="Bahasa Inggris">Bahasa Inggris</SelectItem>
+                            <SelectItem value="Bahasa Arab">Bahasa Arab</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {(!['Bahasa Indonesia', 'Bahasa Inggris', 'Bahasa Arab'].includes((formData.bioData?.bahasa || '').trim())) && (
+                          <Input
+                            value={formData.bioData?.bahasa || ''}
+                            onChange={e => updateBioData('bahasa', e.target.value)}
+                            placeholder="Ketik bahasa daerah (contoh: Bahasa Jawa / Sunda)"
+                            className="text-xs mt-1"
+                          />
+                        )}
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Anak Keberapa</Label>
-                        <Input type="number" min="1" value={formData.bioData?.anakKe || ''} onChange={e => updateBioData('anakKe', e.target.value)} placeholder="1" />
+                        <Label className="text-xs font-semibold">6. Anak Keberapa</Label>
+                        <Input type="number" min="1" value={formData.bioData?.anakKe || ''} onChange={e => updateBioData('anakKe', e.target.value)} placeholder="2" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Saudara Kandung</Label>
-                        <Input type="number" min="0" value={formData.bioData?.jmlSaudaraKandung || ''} onChange={e => updateBioData('jmlSaudaraKandung', e.target.value)} placeholder="0" />
+                        <Label className="text-xs font-semibold">7. Jml Sdr Kandung</Label>
+                        <Input type="number" min="0" value={formData.bioData?.jmlSaudaraKandung ?? '0'} onChange={e => updateBioData('jmlSaudaraKandung', e.target.value)} placeholder="1" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Saudara Tiri</Label>
-                        <Input type="number" min="0" value={formData.bioData?.jmlSaudaraTiri || ''} onChange={e => updateBioData('jmlSaudaraTiri', e.target.value)} placeholder="0" />
+                        <Label className="text-xs font-semibold">8. Jml Sdr Tiri</Label>
+                        <Input type="number" min="0" value={formData.bioData?.jmlSaudaraTiri ?? '0'} onChange={e => updateBioData('jmlSaudaraTiri', e.target.value)} placeholder="0" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Saudara Angkat</Label>
-                        <Input type="number" min="0" value={formData.bioData?.jmlSaudaraAngkat || ''} onChange={e => updateBioData('jmlSaudaraAngkat', e.target.value)} placeholder="0" />
+                        <Label className="text-xs font-semibold">9. Jml Sdr Angkat</Label>
+                        <Input type="number" min="0" value={formData.bioData?.jmlSaudaraAngkat ?? '0'} onChange={e => updateBioData('jmlSaudaraAngkat', e.target.value)} placeholder="0" />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold">Status Anak Yatim / Piatu</Label>
-                      <Select value={formData.bioData?.statusYatim || 'Orang Tua Lengkap'} onValueChange={v => updateBioData('statusYatim', v)}>
+                      <Label className="text-xs font-semibold">10. Anak Yatim / Piatu / Yatim Piatu</Label>
+                      <Select value={formData.bioData?.statusYatim || '-'} onValueChange={v => updateBioData('statusYatim', v)}>
                         <SelectTrigger><SelectValue placeholder="Pilih Status" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Orang Tua Lengkap">Orang Tua Lengkap</SelectItem>
+                          <SelectItem value="-">- (Orang Tua Lengkap)</SelectItem>
                           <SelectItem value="Yatim">Yatim (Ayah Meninggal)</SelectItem>
                           <SelectItem value="Piatu">Piatu (Ibu Meninggal)</SelectItem>
                           <SelectItem value="Yatim Piatu">Yatim Piatu (Kedua Orang Tua Meninggal)</SelectItem>
@@ -2102,30 +2269,30 @@ export default function StudentsPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold">Alamat Rumah Lengkap</Label>
-                      <Input value={formData.bioData?.alamat || ''} onChange={e => updateBioData('alamat', e.target.value)} placeholder="Jalan, RT/RW, Kelurahan, Kecamatan, Kota/Kab" />
+                      <Label className="text-xs font-semibold">12. Alamat</Label>
+                      <Input value={formData.bioData?.alamat || ''} onChange={e => updateBioData('alamat', e.target.value)} placeholder="Jl. Gajah Mada No. 45, Kel. Bangunsari" />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">No. Telepon / HP</Label>
-                        <Input value={formData.bioData?.telp || ''} onChange={e => updateBioData('telp', e.target.value)} placeholder="0812xxxxxxxx" />
+                        <Label className="text-xs font-semibold">13. Nomor Telepon / HP</Label>
+                        <Input value={formData.bioData?.telp || ''} onChange={e => updateBioData('telp', e.target.value)} placeholder="081234567890" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tinggal Dengan</Label>
+                        <Label className="text-xs font-semibold">14. Tinggal dgn Orang Tua/Saudara/Asrama/Kost</Label>
                         <Select value={formData.bioData?.tinggalDengan || 'Orang Tua'} onValueChange={v => updateBioData('tinggalDengan', v)}>
                           <SelectTrigger><SelectValue placeholder="Tinggal dengan" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Orang Tua">Orang Tua</SelectItem>
                             <SelectItem value="Saudara">Saudara</SelectItem>
                             <SelectItem value="Asrama">Asrama</SelectItem>
-                            <SelectItem value="Kos">Kos</SelectItem>
+                            <SelectItem value="Kost">Kost</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Jarak Tempat Tinggal ke Sekolah</Label>
-                        <Input value={formData.bioData?.jarakSekolah || ''} onChange={e => updateBioData('jarakSekolah', e.target.value)} placeholder="Contoh: 3 km" />
+                        <Label className="text-xs font-semibold">15. Jarak Tempat Tinggal ke Sekolah</Label>
+                        <Input value={formData.bioData?.jarakSekolah || ''} onChange={e => updateBioData('jarakSekolah', e.target.value)} placeholder="2 (atau 2 km)" />
                       </div>
                     </div>
                   </div>
@@ -2142,7 +2309,7 @@ export default function StudentsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Golongan Darah</Label>
+                        <Label className="text-xs font-semibold">16. Golongan Darah</Label>
                         <Select value={formData.bioData?.golDarah || '-'} onValueChange={v => updateBioData('golDarah', v)}>
                           <SelectTrigger><SelectValue placeholder="Golongan Darah" /></SelectTrigger>
                           <SelectContent>
@@ -2155,23 +2322,23 @@ export default function StudentsPage() {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tinggi Badan (Cm)</Label>
-                        <Input type="number" value={formData.bioData?.tinggiBadan || ''} onChange={e => updateBioData('tinggiBadan', e.target.value)} placeholder="165" />
+                        <Label className="text-xs font-semibold">19. Tinggi Badan (Cm)</Label>
+                        <Input type="number" value={formData.bioData?.tinggiBadan || ''} onChange={e => updateBioData('tinggiBadan', e.target.value)} placeholder="160" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Berat Badan (Kg)</Label>
-                        <Input type="number" value={formData.bioData?.beratBadan || ''} onChange={e => updateBioData('beratBadan', e.target.value)} placeholder="55" />
+                        <Label className="text-xs font-semibold">19. Berat Badan (Kg)</Label>
+                        <Input type="number" value={formData.bioData?.beratBadan || ''} onChange={e => updateBioData('beratBadan', e.target.value)} placeholder="50" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Penyakit yang Pernah Diderita</Label>
-                        <Input value={formData.bioData?.penyakitPernah || ''} onChange={e => updateBioData('penyakitPernah', e.target.value)} placeholder="TBC / Cacar / Malaria / Tidak Ada" />
+                        <Label className="text-xs font-semibold">17. Penyakit yang Pernah Diderita</Label>
+                        <Input value={formData.bioData?.penyakitPernah || 'Tidak Ada'} onChange={e => updateBioData('penyakitPernah', e.target.value)} placeholder="Tidak Ada" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Kelainan Jasmani</Label>
-                        <Input value={formData.bioData?.kelainanJasmani || ''} onChange={e => updateBioData('kelainanJasmani', e.target.value)} placeholder="Catatan kelainan fisik jika ada" />
+                        <Label className="text-xs font-semibold">18. Kelainan Jasmani</Label>
+                        <Input value={formData.bioData?.kelainanJasmani || 'Tidak Ada'} onChange={e => updateBioData('kelainanJasmani', e.target.value)} placeholder="Tidak Ada" />
                       </div>
                     </div>
                   </div>
@@ -2183,59 +2350,54 @@ export default function StudentsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Lulusan Dari (SMP/MTs)</Label>
-                        <Input value={formData.bioData?.lulusanDari || ''} onChange={e => updateBioData('lulusanDari', e.target.value)} placeholder="SMP N 1 / MTs N 1" />
+                        <Label className="text-xs font-semibold">20.a. Tamatan Dari (SMP/MTs)</Label>
+                        <Input value={formData.bioData?.lulusanDari || ''} onChange={e => updateBioData('lulusanDari', e.target.value)} placeholder="SMP Negeri 1 Ponorogo" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Alamat Sekolah Asal</Label>
-                        <Input value={formData.bioData?.alamatSekolah || ''} onChange={e => updateBioData('alamatSekolah', e.target.value)} placeholder="Kota / Kabupaten Sekolah" />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">No. STTB / Ijazah SMP</Label>
-                        <Input value={formData.bioData?.noSttb || ''} onChange={e => updateBioData('noSttb', e.target.value)} placeholder="DN-xx/xxxxxxx" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tanggal STTB / Ijazah</Label>
-                        <Input type="date" value={formData.bioData?.tglSttb || ''} onChange={e => updateBioData('tglSttb', e.target.value)} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Lama Belajar (Tahun)</Label>
+                        <Label className="text-xs font-semibold">20.d. Lama Belajar (Tahun)</Label>
                         <Input type="number" value={formData.bioData?.lamaBelajar || '3'} onChange={e => updateBioData('lamaBelajar', e.target.value)} placeholder="3" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">No. SKHUN</Label>
-                        <Input value={formData.bioData?.noSkhun || ''} onChange={e => updateBioData('noSkhun', e.target.value)} placeholder="Nomor SKHUN" />
+                        <Label className="text-xs font-semibold">20.b. Tanggal & Nomor Ijazah SMP</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input type="date" value={formData.bioData?.tglIjazahSmp || formData.bioData?.tglSttb || ''} onChange={e => { updateBioData('tglIjazahSmp', e.target.value); updateBioData('tglSttb', e.target.value); }} />
+                          <Input value={formData.bioData?.noIjazahSmp || formData.bioData?.noSttb || ''} onChange={e => { updateBioData('noIjazahSmp', e.target.value); updateBioData('noSttb', e.target.value); }} placeholder="DN-05/D-SMP/21/0123456" />
+                        </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tanggal SKHUN</Label>
-                        <Input type="date" value={formData.bioData?.tglSkhun || ''} onChange={e => updateBioData('tglSkhun', e.target.value)} />
+                        <Label className="text-xs font-semibold">20.c. Tanggal & Nomor STL/SKHUN</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input type="date" value={formData.bioData?.tglStlSmp || formData.bioData?.tglSkhun || ''} onChange={e => { updateBioData('tglStlSmp', e.target.value); updateBioData('tglSkhun', e.target.value); }} />
+                          <Input value={formData.bioData?.noStlSmp || formData.bioData?.noSkhun || ''} onChange={e => { updateBioData('noStlSmp', e.target.value); updateBioData('noSkhun', e.target.value); }} placeholder="Nomor STL / SKHUN" />
+                        </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Siswa Pindahan Dari Sekolah</Label>
-                        <Input value={formData.bioData?.pindahanDariSekolah || ''} onChange={e => updateBioData('pindahanDariSekolah', e.target.value)} placeholder="Nama Sekolah Pindahan" />
+                        <Label className="text-xs font-semibold">21.a. Siswa Pindahan Dari Sekolah</Label>
+                        <Input value={formData.bioData?.pindahanDariSekolah || ''} onChange={e => updateBioData('pindahanDariSekolah', e.target.value)} placeholder="Nama Sekolah Asal Pindahan" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Alasan Pindah</Label>
+                        <Label className="text-xs font-semibold">21.b. Alasan Pindah</Label>
                         <Input value={formData.bioData?.alasanPindah || ''} onChange={e => updateBioData('alasanPindah', e.target.value)} placeholder="Alasan pindah sekolah" />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Diterima di Sekolah Ini (Kelas)</Label>
-                        <Input value={formData.bioData?.diterimaDiKelas || ''} onChange={e => updateBioData('diterimaDiKelas', e.target.value)} placeholder="Contoh: X 2" />
+                        <Label className="text-xs font-semibold">22.a. Diterima di Kelas</Label>
+                        <Input value={formData.bioData?.diterimaDiKelas || ''} onChange={e => updateBioData('diterimaDiKelas', e.target.value)} placeholder="Contoh: X 1" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tanggal Diterima</Label>
+                        <Label className="text-xs font-semibold">22.b. Kelompok / PROG. STUDI</Label>
+                        <Input value={formData.bioData?.kelompokProgStudi || ''} onChange={e => updateBioData('kelompokProgStudi', e.target.value)} placeholder="Program Studi" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">22.c. Tanggal Diterima</Label>
                         <Input type="date" value={formData.bioData?.tglDiterima || ''} onChange={e => updateBioData('tglDiterima', e.target.value)} />
                       </div>
                     </div>
@@ -2254,53 +2416,59 @@ export default function StudentsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Nama Ayah Kandung</Label>
-                        <Input value={formData.bioData?.namaAyah || ''} onChange={e => updateBioData('namaAyah', e.target.value)} placeholder="Nama Lengkap Ayah" />
+                        <Label className="text-xs font-semibold">23. Nama Ayah Kandung</Label>
+                        <Input value={formData.bioData?.namaAyah || ''} onChange={e => updateBioData('namaAyah', e.target.value)} placeholder="BUDI SANTOSO" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tempat & Tanggal Lahir Ayah</Label>
-                        <Input value={formData.bioData?.ttlAyah || ''} onChange={e => updateBioData('ttlAyah', e.target.value)} placeholder="Kota, DD-MM-YYYY" />
+                        <Label className="text-xs font-semibold">24. Tempat & Tanggal Lahir Ayah</Label>
+                        <Input value={formData.bioData?.ttlAyah || ''} onChange={e => updateBioData('ttlAyah', e.target.value)} placeholder="Ponorogo, 12-08-1975" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Agama Ayah</Label>
+                        <Label className="text-xs font-semibold">25. Agama Ayah</Label>
                         <Input value={formData.bioData?.agamaAyah || 'Islam'} onChange={e => updateBioData('agamaAyah', e.target.value)} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Kewarganegaraan</Label>
-                        <Input value={formData.bioData?.kewarganegaraanAyah || 'Indonesia'} onChange={e => updateBioData('kewarganegaraanAyah', e.target.value)} />
+                        <Label className="text-xs font-semibold">26. Kewarganegaraan</Label>
+                        <Input value={formData.bioData?.kewarganegaraanAyah || 'WNI'} onChange={e => updateBioData('kewarganegaraanAyah', e.target.value)} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Pendidikan Ayah</Label>
-                        <Input value={formData.bioData?.pendidikanAyah || ''} onChange={e => updateBioData('pendidikanAyah', e.target.value)} placeholder="SD/SMP/SMA/S1/S2" />
+                        <Label className="text-xs font-semibold">27. Pendidikan Ayah</Label>
+                        <Input value={formData.bioData?.pendidikanAyah || ''} onChange={e => updateBioData('pendidikanAyah', e.target.value)} placeholder="S1 Teknik" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Pekerjaan Ayah</Label>
-                        <Input value={formData.bioData?.pekerjaanAyah || ''} onChange={e => updateBioData('pekerjaanAyah', e.target.value)} placeholder="PNS/Wiraswasta/dll" />
+                        <Label className="text-xs font-semibold">28. Pekerjaan Ayah</Label>
+                        <Input value={formData.bioData?.pekerjaanAyah || ''} onChange={e => updateBioData('pekerjaanAyah', e.target.value)} placeholder="Wiraswasta" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Penghasilan per Bulan (Rp)</Label>
-                        <Input value={formData.bioData?.penghasilanAyah || ''} onChange={e => updateBioData('penghasilanAyah', e.target.value)} placeholder="Contoh: 3.500.000" />
+                        <Label className="text-xs font-semibold">29. Pengeluaran Perbulan (Rp)</Label>
+                        <Input value={formData.bioData?.pengeluaranAyah || formData.bioData?.penghasilanAyah || ''} onChange={e => { updateBioData('pengeluaranAyah', e.target.value); updateBioData('penghasilanAyah', e.target.value); }} placeholder="Rp 5.000.000" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Status Ayah</Label>
-                        <Input value={formData.bioData?.statusAyah || ''} onChange={e => updateBioData('statusAyah', e.target.value)} placeholder="Masih Hidup / Meninggal (Tahun)" />
+                        <Label className="text-xs font-semibold">31. Masih Hidup / Meninggal</Label>
+                        <Select value={formData.bioData?.statusAyah || 'Masih Hidup'} onValueChange={v => updateBioData('statusAyah', v)}>
+                          <SelectTrigger><SelectValue placeholder="Status Ayah" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Masih Hidup">Masih Hidup</SelectItem>
+                            <SelectItem value="Meninggal">Meninggal</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Alamat Rumah Ayah</Label>
-                        <Input value={formData.bioData?.alamatAyah || ''} onChange={e => updateBioData('alamatAyah', e.target.value)} placeholder="Alamat lengkap Ayah" />
+                        <Label className="text-xs font-semibold">30. Alamat Rumah Ayah</Label>
+                        <Input value={formData.bioData?.alamatAyah || ''} onChange={e => updateBioData('alamatAyah', e.target.value)} placeholder="Jl. Gajah Mada No. 45, Ponorogo" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">No. Telepon HP Ayah</Label>
-                        <Input value={formData.bioData?.telpAyah || ''} onChange={e => updateBioData('telpAyah', e.target.value)} placeholder="08xxxxxxxx" />
+                        <Label className="text-xs font-semibold">30. No. Telepon / HP Ayah</Label>
+                        <Input value={formData.bioData?.telpAyah || ''} onChange={e => updateBioData('telpAyah', e.target.value)} placeholder="085678901234" />
                       </div>
                     </div>
                   </div>
@@ -2313,52 +2481,58 @@ export default function StudentsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Nama Ibu Kandung</Label>
-                        <Input value={formData.bioData?.namaIbu || ''} onChange={e => updateBioData('namaIbu', e.target.value)} placeholder="Nama Lengkap Ibu" />
+                        <Label className="text-xs font-semibold">32. Nama Ibu Kandung</Label>
+                        <Input value={formData.bioData?.namaIbu || ''} onChange={e => updateBioData('namaIbu', e.target.value)} placeholder="SITI AMINAH" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tempat & Tanggal Lahir Ibu</Label>
-                        <Input value={formData.bioData?.ttlIbu || ''} onChange={e => updateBioData('ttlIbu', e.target.value)} placeholder="Kota, DD-MM-YYYY" />
+                        <Label className="text-xs font-semibold">33. Tempat & Tanggal Lahir Ibu</Label>
+                        <Input value={formData.bioData?.ttlIbu || ''} onChange={e => updateBioData('ttlIbu', e.target.value)} placeholder="Madiun, 05-03-1980" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Agama Ibu</Label>
+                        <Label className="text-xs font-semibold">34. Agama Ibu</Label>
                         <Input value={formData.bioData?.agamaIbu || 'Islam'} onChange={e => updateBioData('agamaIbu', e.target.value)} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Kewarganegaraan</Label>
-                        <Input value={formData.bioData?.kewarganegaraanIbu || 'Indonesia'} onChange={e => updateBioData('kewarganegaraanIbu', e.target.value)} />
+                        <Label className="text-xs font-semibold">35. Kewarganegaraan</Label>
+                        <Input value={formData.bioData?.kewarganegaraanIbu || 'WNI'} onChange={e => updateBioData('kewarganegaraanIbu', e.target.value)} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Pendidikan Ibu</Label>
-                        <Input value={formData.bioData?.pendidikanIbu || ''} onChange={e => updateBioData('pendidikanIbu', e.target.value)} placeholder="SD/SMP/SMA/S1/S2" />
+                        <Label className="text-xs font-semibold">36. Pendidikan Ibu</Label>
+                        <Input value={formData.bioData?.pendidikanIbu || ''} onChange={e => updateBioData('pendidikanIbu', e.target.value)} placeholder="SMA" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Pekerjaan Ibu</Label>
-                        <Input value={formData.bioData?.pekerjaanIbu || ''} onChange={e => updateBioData('pekerjaanIbu', e.target.value)} placeholder="Ibu Rumah Tangga / PNS / dll" />
+                        <Label className="text-xs font-semibold">37. Pekerjaan Ibu</Label>
+                        <Input value={formData.bioData?.pekerjaanIbu || 'Ibu Rumah Tangga'} onChange={e => updateBioData('pekerjaanIbu', e.target.value)} placeholder="Ibu Rumah Tangga" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Penghasilan per Bulan (Rp)</Label>
-                        <Input value={formData.bioData?.penghasilanIbu || ''} onChange={e => updateBioData('penghasilanIbu', e.target.value)} placeholder="Contoh: 2.000.000" />
+                        <Label className="text-xs font-semibold">38. Pengeluaran Perbulan (Rp)</Label>
+                        <Input value={formData.bioData?.pengeluaranIbu || formData.bioData?.penghasilanIbu || '-'} onChange={e => { updateBioData('pengeluaranIbu', e.target.value); updateBioData('penghasilanIbu', e.target.value); }} placeholder="-" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Status Ibu</Label>
-                        <Input value={formData.bioData?.statusIbu || ''} onChange={e => updateBioData('statusIbu', e.target.value)} placeholder="Masih Hidup / Meninggal (Tahun)" />
+                        <Label className="text-xs font-semibold">40. Masih Hidup / Meninggal</Label>
+                        <Select value={formData.bioData?.statusIbu || 'Masih Hidup'} onValueChange={v => updateBioData('statusIbu', v)}>
+                          <SelectTrigger><SelectValue placeholder="Status Ibu" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Masih Hidup">Masih Hidup</SelectItem>
+                            <SelectItem value="Meninggal">Meninggal</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Alamat Rumah Ibu</Label>
-                        <Input value={formData.bioData?.alamatIbu || ''} onChange={e => updateBioData('alamatIbu', e.target.value)} placeholder="Alamat lengkap Ibu" />
+                        <Label className="text-xs font-semibold">39. Alamat Rumah Ibu</Label>
+                        <Input value={formData.bioData?.alamatIbu || ''} onChange={e => updateBioData('alamatIbu', e.target.value)} placeholder="Alamat Ibu" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">No. Telepon HP Ibu</Label>
+                        <Label className="text-xs font-semibold">39. No. Telepon / HP Ibu</Label>
                         <Input value={formData.bioData?.telpIbu || ''} onChange={e => updateBioData('telpIbu', e.target.value)} placeholder="08xxxxxxxx" />
                       </div>
                     </div>
@@ -2372,71 +2546,75 @@ export default function StudentsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Nama Wali</Label>
+                        <Label className="text-xs font-semibold">41. Nama Wali</Label>
                         <Input value={formData.bioData?.namaWali || ''} onChange={e => updateBioData('namaWali', e.target.value)} placeholder="Nama Lengkap Wali" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tempat & Tanggal Lahir Wali</Label>
+                        <Label className="text-xs font-semibold">42. Tempat & Tanggal Lahir Wali</Label>
                         <Input value={formData.bioData?.ttlWali || ''} onChange={e => updateBioData('ttlWali', e.target.value)} placeholder="Kota, DD-MM-YYYY" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Agama Wali</Label>
+                        <Label className="text-xs font-semibold">43. Agama Wali</Label>
                         <Input value={formData.bioData?.agamaWali || ''} onChange={e => updateBioData('agamaWali', e.target.value)} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Pendidikan Wali</Label>
-                        <Input value={formData.bioData?.pendidikanWali || ''} onChange={e => updateBioData('pendidikanWali', e.target.value)} />
+                        <Label className="text-xs font-semibold">44. Kewarganegaraan</Label>
+                        <Input value={formData.bioData?.kewarganegaraanWali || 'WNI'} onChange={e => updateBioData('kewarganegaraanWali', e.target.value)} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Pekerjaan Wali</Label>
-                        <Input value={formData.bioData?.pekerjaanWali || ''} onChange={e => updateBioData('pekerjaanWali', e.target.value)} />
+                        <Label className="text-xs font-semibold">45. Pendidikan Wali</Label>
+                        <Input value={formData.bioData?.pendidikanWali || ''} onChange={e => updateBioData('pendidikanWali', e.target.value)} />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Alamat Rumah / Telepon Wali</Label>
-                        <Input value={formData.bioData?.alamatWali || ''} onChange={e => updateBioData('alamatWali', e.target.value)} placeholder="Alamat Wali" />
+                        <Label className="text-xs font-semibold">46. Pekerjaan Wali</Label>
+                        <Input value={formData.bioData?.pekerjaanWali || ''} onChange={e => updateBioData('pekerjaanWali', e.target.value)} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Penghasilan per Bulan Wali (Rp)</Label>
-                        <Input value={formData.bioData?.penghasilanWali || ''} onChange={e => updateBioData('penghasilanWali', e.target.value)} placeholder="Contoh: 3.000.000" />
+                        <Label className="text-xs font-semibold">47. Pengeluaran Perbulan Wali</Label>
+                        <Input value={formData.bioData?.pengeluaranWali || ''} onChange={e => updateBioData('pengeluaranWali', e.target.value)} placeholder="Rp 3.000.000" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">48. No. Telepon / HP Wali</Label>
+                        <Input value={formData.bioData?.telpWali || ''} onChange={e => updateBioData('telpWali', e.target.value)} />
                       </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* TAB 5: H. KEGEMARAN, I. PERKEMBANGAN & J. PASCA SEKOALH */}
+              {/* TAB 5: H. KEGEMARAN, I. PERKEMBANGAN & J. PASCA SEKOLAH */}
               {activeFormTab === 'kegemaran_perkembangan' && (
                 <div className="space-y-6">
                   {/* H. KEGEMARAN */}
                   <div className="space-y-4">
                     <div className="bg-emerald-50 dark:bg-emerald-950/60 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                      H. KEGEMARAN SISWA
+                      H. KEGEMARAN PESERTA DIDIK
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Kesenian</Label>
-                        <Input value={formData.bioData?.kesenian || ''} onChange={e => updateBioData('kesenian', e.target.value)} placeholder="Contoh: Musik / Seni Rupa / Tari" />
+                        <Label className="text-xs font-semibold">49. Kesenian</Label>
+                        <Input value={formData.bioData?.kesenian || ''} onChange={e => updateBioData('kesenian', e.target.value)} placeholder="Menyanyi / Seni Musik / Lukis" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Olah Raga</Label>
-                        <Input value={formData.bioData?.olahRaga || ''} onChange={e => updateBioData('olahRaga', e.target.value)} placeholder="Contoh: Futsal / Basket / Badminton" />
+                        <Label className="text-xs font-semibold">50. Olah Raga</Label>
+                        <Input value={formData.bioData?.olahRaga || ''} onChange={e => updateBioData('olahRaga', e.target.value)} placeholder="Bulu Tangkis / Futsal / Voli" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Kemasyarakatan / Organisasi</Label>
-                        <Input value={formData.bioData?.kemasyarakatan || ''} onChange={e => updateBioData('kemasyarakatan', e.target.value)} placeholder="Contoh: IPM / Pramuka" />
+                        <Label className="text-xs font-semibold">51. Organisasi / Kemasyarakatan</Label>
+                        <Input value={formData.bioData?.organisasi || formData.bioData?.kemasyarakatan || ''} onChange={e => { updateBioData('organisasi', e.target.value); updateBioData('kemasyarakatan', e.target.value); }} placeholder="Pramuka / IPM / OSIS" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Hobi / Kegemaran Lain-Lain</Label>
+                        <Label className="text-xs font-semibold">52. Lain-lain</Label>
                         <Input value={formData.bioData?.kegemaranLain || ''} onChange={e => updateBioData('kegemaranLain', e.target.value)} placeholder="Kegemaran lainnya" />
                       </div>
                     </div>
@@ -2445,52 +2623,44 @@ export default function StudentsPage() {
                   {/* I. PERKEMBANGAN */}
                   <div className="space-y-4 pt-3 border-t border-slate-200 dark:border-slate-800">
                     <div className="bg-emerald-50 dark:bg-emerald-950/60 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                      I. KETERANGAN PERKEMBANGAN SISWA
+                      I. KETERANGAN PERKEMBANGAN PESERTA DIDIK
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold">Menerima Beasiswa (Detail / Tahun)</Label>
-                      <Input value={formData.bioData?.menerimaBeasiswa || ''} onChange={e => updateBioData('menerimaBeasiswa', e.target.value)} placeholder="Contoh: Beasiswa Prestasi 2025" />
+                      <Label className="text-xs font-semibold">53. Menerima Bea Siswa (Tahun / Kelas dari)</Label>
+                      <Input value={formData.bioData?.menerimaBeasiswa || ''} onChange={e => updateBioData('menerimaBeasiswa', e.target.value)} placeholder="Thn / Kls dari ..." />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tanggal Meninggalkan Sekolah</Label>
+                        <Label className="text-xs font-semibold">54.a. Tgl Meninggalkan Sekolah</Label>
                         <Input type="date" value={formData.bioData?.tglMeninggalkanSekolah || ''} onChange={e => updateBioData('tglMeninggalkanSekolah', e.target.value)} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Alasan Meninggalkan</Label>
+                        <Label className="text-xs font-semibold">54.b. Alasan Meninggalkan</Label>
                         <Input value={formData.bioData?.alasanMeninggalkan || ''} onChange={e => updateBioData('alasanMeninggalkan', e.target.value)} placeholder="Pindah / Lulus / dll" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Di Kelas Berapa</Label>
-                        <Input value={formData.bioData?.kelasMeninggalkan || ''} onChange={e => updateBioData('kelasMeninggalkan', e.target.value)} placeholder="Kelas XII" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">No. Surat Meninggalkan Sekolah</Label>
-                        <Input value={formData.bioData?.noSuratMeninggalkan || ''} onChange={e => updateBioData('noSuratMeninggalkan', e.target.value)} placeholder="Nomor surat resmi" />
+                        <Label className="text-xs font-semibold">55.a. Akhir Pendidikan (Tamat Belajar / Lulus)</Label>
+                        <Input value={formData.bioData?.tamatBelajar || ''} onChange={e => updateBioData('tamatBelajar', e.target.value)} placeholder="Tamat Belajar / Lulus" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Keterangan Tamat Belajar</Label>
-                        <Input value={formData.bioData?.tamatBelajar || ''} onChange={e => updateBioData('tamatBelajar', e.target.value)} placeholder="Tamat / Lulus" />
+                        <Label className="text-xs font-semibold">55.b. Ijazah (Nomor / Tgl)</Label>
+                        <Input value={formData.bioData?.noIjazahLulus || formData.bioData?.sttbNomor || ''} onChange={e => { updateBioData('noIjazahLulus', e.target.value); updateBioData('sttbNomor', e.target.value); }} placeholder="Nomor Ijazah Kelulusan" />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">STTB Nomor</Label>
-                        <Input value={formData.bioData?.sttbNomor || ''} onChange={e => updateBioData('sttbNomor', e.target.value)} />
+                        <Label className="text-xs font-semibold">55.c. Nomor STL</Label>
+                        <Input value={formData.bioData?.noStlLulus || ''} onChange={e => updateBioData('noStlLulus', e.target.value)} placeholder="Nomor STL" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tanggal Ijazah</Label>
-                        <Input type="date" value={formData.bioData?.tglIjazah || ''} onChange={e => updateBioData('tglIjazah', e.target.value)} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tanggal Terima Ijazah</Label>
-                        <Input type="date" value={formData.bioData?.tglTerimaIjazah || ''} onChange={e => updateBioData('tglTerimaIjazah', e.target.value)} />
+                        <Label className="text-xs font-semibold">55.d. Nilai Rata-rata</Label>
+                        <Input value={formData.bioData?.nilaiRataRata || ''} onChange={e => updateBioData('nilaiRataRata', e.target.value)} placeholder="85.50" />
                       </div>
                     </div>
                   </div>
@@ -2501,30 +2671,114 @@ export default function StudentsPage() {
                       J. KETERANGAN SETELAH SELESAI PENDIDIKAN
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Melanjutkan Di (PT / Instansi)</Label>
-                        <Input value={formData.bioData?.melanjutkanDi || ''} onChange={e => updateBioData('melanjutkanDi', e.target.value)} placeholder="Nama Perguruan Tinggi / Akademi" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Keterangan Bekerja</Label>
-                        <Input value={formData.bioData?.bekerja || ''} onChange={e => updateBioData('bekerja', e.target.value)} placeholder="Status Bekerja" />
-                      </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">56. Akan Melanjutkan Ke (PT / Instansi)</Label>
+                      <Input value={formData.bioData?.melanjutkanDi || ''} onChange={e => updateBioData('melanjutkanDi', e.target.value)} placeholder="Universitas / Institut / Akademi" />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Tanggal Mulai Bekerja</Label>
+                        <Label className="text-xs font-semibold">57.a. Tgl Mulai Bekerja</Label>
                         <Input type="date" value={formData.bioData?.tglMulaiBekerja || ''} onChange={e => updateBioData('tglMulaiBekerja', e.target.value)} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Nama Perusahaan / Lembaga</Label>
+                        <Label className="text-xs font-semibold">57.b. Nama Perusahaan</Label>
                         <Input value={formData.bioData?.namaPerusahaan || ''} onChange={e => updateBioData('namaPerusahaan', e.target.value)} placeholder="PT / Instansi / Usaha" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Penghasilan (Rp)</Label>
-                        <Input value={formData.bioData?.penghasilanKerja || ''} onChange={e => updateBioData('penghasilanKerja', e.target.value)} placeholder="Estimasi penghasilan" />
+                        <Label className="text-xs font-semibold">57.c. Penghasilan (Rp)</Label>
+                        <Input value={formData.bioData?.penghasilanKerja || ''} onChange={e => updateBioData('penghasilanKerja', e.target.value)} placeholder="Rp 4.000.000" />
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 6: FOTO BUKU INDUK 4 PERIODE */}
+              {activeFormTab === 'foto_induk' && (
+                <div className="space-y-5">
+                  <div className="bg-blue-50 dark:bg-blue-950/60 p-3 rounded-xl border border-blue-200 dark:border-blue-800 text-xs text-blue-900 dark:text-blue-300">
+                    <p className="font-bold">4 Foto Resmi Lembar Buku Induk Siswa</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Unggah foto untuk masing-masing periode perkembangan siswa. Foto akan otomatis ditampilkan di kolom kanan lembar cetak Buku Induk.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {/* Foto 1: Waktu Mendaftar */}
+                    <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 text-center">1. Waktu Mendaftar</span>
+                      <div className="w-[84px] h-[108px] border border-dashed border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-950 flex items-center justify-center">
+                        {formData.bioData?.fotoMendaftar ? (
+                          <img src={formData.bioData.fotoMendaftar.startsWith('/uploads') ? `/api-backend${formData.bioData.fotoMendaftar}` : formData.bioData.fotoMendaftar} alt="Mendaftar" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="text-[10px] text-slate-400 text-center p-1">Belum Ada Foto</div>
+                        )}
+                      </div>
+                      <label className="cursor-pointer">
+                        <Button type="button" size="sm" variant="outline" className="text-[11px] h-7 px-2" disabled={isUploadingBukuFoto === 'fotoMendaftar'}>
+                          <Upload className="w-3 h-3 mr-1" />
+                          {isUploadingBukuFoto === 'fotoMendaftar' ? 'Mengunggah...' : 'Pilih Foto'}
+                        </Button>
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadBukuFoto('fotoMendaftar', e)} />
+                      </label>
+                    </div>
+
+                    {/* Foto 2: Waktu Diterima */}
+                    <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 text-center">2. Waktu Diterima</span>
+                      <div className="w-[84px] h-[108px] border border-dashed border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-950 flex items-center justify-center">
+                        {formData.bioData?.fotoDiterima ? (
+                          <img src={formData.bioData.fotoDiterima.startsWith('/uploads') ? `/api-backend${formData.bioData.fotoDiterima}` : formData.bioData.fotoDiterima} alt="Diterima" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="text-[10px] text-slate-400 text-center p-1">Belum Ada Foto</div>
+                        )}
+                      </div>
+                      <label className="cursor-pointer">
+                        <Button type="button" size="sm" variant="outline" className="text-[11px] h-7 px-2" disabled={isUploadingBukuFoto === 'fotoDiterima'}>
+                          <Upload className="w-3 h-3 mr-1" />
+                          {isUploadingBukuFoto === 'fotoDiterima' ? 'Mengunggah...' : 'Pilih Foto'}
+                        </Button>
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadBukuFoto('fotoDiterima', e)} />
+                      </label>
+                    </div>
+
+                    {/* Foto 3: Waktu Lulus */}
+                    <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 text-center">3. Waktu Lulus</span>
+                      <div className="w-[84px] h-[108px] border border-dashed border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-950 flex items-center justify-center">
+                        {formData.bioData?.fotoLulus ? (
+                          <img src={formData.bioData.fotoLulus.startsWith('/uploads') ? `/api-backend${formData.bioData.fotoLulus}` : formData.bioData.fotoLulus} alt="Lulus" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="text-[10px] text-slate-400 text-center p-1">Belum Ada Foto</div>
+                        )}
+                      </div>
+                      <label className="cursor-pointer">
+                        <Button type="button" size="sm" variant="outline" className="text-[11px] h-7 px-2" disabled={isUploadingBukuFoto === 'fotoLulus'}>
+                          <Upload className="w-3 h-3 mr-1" />
+                          {isUploadingBukuFoto === 'fotoLulus' ? 'Mengunggah...' : 'Pilih Foto'}
+                        </Button>
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadBukuFoto('fotoLulus', e)} />
+                      </label>
+                    </div>
+
+                    {/* Foto 4: Waktu Meninggalkan */}
+                    <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 text-center">4. Meninggalkan</span>
+                      <div className="w-[84px] h-[108px] border border-dashed border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-950 flex items-center justify-center">
+                        {formData.bioData?.fotoMeninggalkan ? (
+                          <img src={formData.bioData.fotoMeninggalkan.startsWith('/uploads') ? `/api-backend${formData.bioData.fotoMeninggalkan}` : formData.bioData.fotoMeninggalkan} alt="Meninggalkan" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="text-[10px] text-slate-400 text-center p-1">Belum Ada Foto</div>
+                        )}
+                      </div>
+                      <label className="cursor-pointer">
+                        <Button type="button" size="sm" variant="outline" className="text-[11px] h-7 px-2" disabled={isUploadingBukuFoto === 'fotoMeninggalkan'}>
+                          <Upload className="w-3 h-3 mr-1" />
+                          {isUploadingBukuFoto === 'fotoMeninggalkan' ? 'Mengunggah...' : 'Pilih Foto'}
+                        </Button>
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadBukuFoto('fotoMeninggalkan', e)} />
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -2671,8 +2925,16 @@ export default function StudentsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Button 
               size="sm" 
+              onClick={handleBulkViewBukuInduk}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs text-xs"
+            >
+              <BookOpen className="w-3.5 h-3.5 mr-1.5" />
+              Cetak Buku Induk ({selectedStudentIds.length})
+            </Button>
+            <Button 
+              size="sm" 
               onClick={() => setBulkEditOpen(true)}
-              className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold shadow-xs"
+              className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold shadow-xs text-xs"
             >
               <Edit3 className="w-4 h-4 mr-1.5" />
               Edit Serentak
@@ -3025,13 +3287,22 @@ export default function StudentsPage() {
                             <Button 
                               variant="ghost" 
                               size="icon" 
+                              title="Cetak Lembar Buku Induk (K-Merdeka)" 
+                              onClick={() => handleViewBukuInduk(item)} 
+                              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
+                            >
+                              <BookOpen className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
                               title="Lihat / Cetak Kartu Pelajar Siswa" 
                               onClick={() => handleViewStudentCard(item)} 
                               className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/50"
                             >
                               <CreditCard className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" title="Kelola / Edit Data Siswa" onClick={() => handleOpenEditDialog(item)} className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                            <Button variant="ghost" size="icon" title="Kelola / Edit Data Siswa (Buku Induk)" onClick={() => handleOpenEditDialog(item)} className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                               <Pencil className="w-4 h-4" />
                             </Button>
                             <Button variant="ghost" size="icon" title="Hapus Siswa" onClick={() => handleDelete(item.id)} disabled={deleteMutation.isPending} className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50">
@@ -3218,18 +3489,18 @@ export default function StudentsPage() {
 
       {/* MODAL PREVIEW & CETAK KARTU PELAJAR SISWA OLEH ADMIN */}
       <Dialog open={isCardPreviewOpen} onOpenChange={setIsCardPreviewOpen}>
-        <DialogContent className="sm:max-w-[720px] max-h-[92vh] flex flex-col p-0 overflow-hidden bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900">
-          <DialogHeader className="p-4 sm:p-5 bg-gradient-to-r from-blue-900 to-indigo-950 text-white border-b border-indigo-900 shrink-0">
+        <DialogContent className="sm:max-w-[720px] max-h-[92vh] flex flex-col p-0 overflow-hidden !rounded-2xl bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900 shadow-2xl">
+          <DialogHeader className="p-5 sm:p-6 !m-0 !pb-5 bg-gradient-to-r from-blue-900 to-indigo-950 text-white border-b border-indigo-900/80 shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-white/10 text-white flex items-center justify-center font-bold">
+              <div className="flex items-center gap-3.5 pl-1">
+                <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center font-bold shrink-0 border border-white/10 shadow-xs">
                   <CreditCard className="w-5 h-5 text-indigo-300" />
                 </div>
-                <div>
-                  <DialogTitle className="text-base sm:text-lg font-extrabold text-white">
+                <div className="space-y-0.5">
+                  <DialogTitle className="text-base sm:text-lg font-extrabold text-white tracking-normal">
                     Kartu Pelajar Siswa
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-indigo-200">
+                  <DialogDescription className="text-xs text-indigo-200/90 font-normal">
                     Pratinjau data & foto profil resmi {targetCardStudent?.name}
                   </DialogDescription>
                 </div>
@@ -3289,8 +3560,8 @@ export default function StudentsPage() {
                     width: 53.98mm !important;
                     height: 85.6mm !important;
                     aspect-ratio: 638/1018 !important;
-                    border: 1px solid #cbd5e1 !important;
-                    border-radius: 3.5mm !important;
+                    border: 1px solid #e2e8f0 !important;
+                    border-radius: 3.0mm !important;
                     box-shadow: none !important;
                     overflow: hidden !important;
                     page-break-inside: avoid !important;
@@ -3303,7 +3574,7 @@ export default function StudentsPage() {
               {/* Kartu Preview Area (2 Sisi: Sisi Depan & Sisi Belakang) */}
               <div className="print-card-row flex flex-row items-center justify-center gap-4 sm:gap-6 shrink-0">
                 {/* SISI DEPAN KARTU (ISO/IEC 7810 ID-1) */}
-                <div className="print-card-item relative w-[235px] sm:w-[260px] aspect-[638/1016] rounded-2xl overflow-hidden shadow-lg border border-slate-200/90 select-none bg-white text-slate-900 flex flex-col justify-between shrink-0">
+                <div className="print-card-item relative w-[235px] sm:w-[260px] aspect-[638/1018] rounded-[13px] overflow-hidden shadow-lg border border-slate-200/90 select-none bg-white text-slate-900 flex flex-col justify-between shrink-0">
                   {/* Background Template Kustom atau Template Bawaan resmi */}
                   <img 
                     src={globalSettings?.studentCardTemplateUrl 
@@ -3343,65 +3614,60 @@ export default function StudentsPage() {
                           bgColor="transparent"
                         />
                       </div>
-                      <span className="text-[7.5px] font-mono font-bold text-slate-800 tracking-wider mt-1">
-                        {targetCardStudent?.nis || '-'}
-                      </span>
                     </div>
 
-                    {/* Nama Siswa */}
-                    <div className="absolute left-[4%] right-[4%] top-[52.8%] text-center">
-                      <h3 className="font-extrabold text-[12px] sm:text-[13px] text-slate-900 uppercase tracking-tight line-clamp-1 leading-none">
+                    {/* Nama Siswa (Auto scale font jika nama panjang) */}
+                    <div className="absolute left-[4.7%] right-[4.7%] top-[52.8%] text-center">
+                      <h3 
+                        style={{
+                          fontSize: (() => {
+                            const len = (targetCardStudent?.name || '').trim().length
+                            if (len > 32) return '9.5px'
+                            if (len > 26) return '10.5px'
+                            if (len > 20) return '11.5px'
+                            return '13px'
+                          })()
+                        }}
+                        className="font-extrabold text-[#1e1b4b] uppercase tracking-tight line-clamp-1 leading-tight font-sans"
+                      >
                         {targetCardStudent?.name || '[NAMA LENGKAP]'}
                       </h3>
                     </div>
 
                     {/* Nilai NISN (Sejajar tepat di sebelah tulisan NISN :) */}
-                    <div className="absolute left-[44.5%] top-[58.0%] flex items-center text-left pointer-events-none">
-                      <span className="font-mono font-bold text-[10px] sm:text-[10.5px] text-[#931553] tracking-wider leading-none">
+                    <div className="absolute left-[44.0%] top-[58.1%] flex items-center text-left pointer-events-none">
+                      <span className="font-extrabold text-[8.2px] sm:text-[8.5px] text-[#9d174d] tracking-normal leading-none font-sans">
                         {targetCardStudent?.nisn || '[NISN]'}
                       </span>
                     </div>
 
                     {/* Data Grid Kolom Bawah */}
-                    {/* TTL (Rata kiri tepat di bawah label TTL) */}
-                    <div className="absolute left-[5.0%] top-[67.8%] w-[42%] text-left">
-                      <p className="font-bold text-[8.5px] text-slate-800 leading-snug line-clamp-2">
-                        {(() => {
-                          try {
-                            const bio = typeof targetCardStudent?.bioData === 'string' ? JSON.parse(targetCardStudent?.bioData) : targetCardStudent?.bioData
-                            const tmpt = bio?.tempatLahir || ''
-                            const tgl = bio?.tglLahir || ''
-                            if (tmpt && tgl) return `${tmpt}, ${tgl}`
-                            if (tmpt) return tmpt
-                            if (tgl) return tgl
-                            return '-'
-                          } catch { return '-' }
-                        })()}
-                      </p>
+                    {/* TTL (Rata kiri tepat di bawah label TTL: Baris 1 Tempat Lahir, Baris 2 Tanggal Lahir HH-BB-TTTT) */}
+                    <div className="absolute left-[4.7%] top-[68.4%] w-[42%] text-left">
+                      <div className="font-bold text-[9px] sm:text-[9.5px] text-[#1e1b4b] leading-tight font-sans">
+                        {targetCardParsedBio.tempatLahir && <div className="truncate">{targetCardParsedBio.tempatLahir}</div>}
+                        {targetCardParsedBio.tglLahirFormatted && <div>{targetCardParsedBio.tglLahirFormatted}</div>}
+                        {!targetCardParsedBio.tempatLahir && !targetCardParsedBio.tglLahirFormatted && <div>-</div>}
+                      </div>
                     </div>
 
                     {/* ALAMAT (Rata kiri tepat di bawah label ALAMAT) */}
-                    <div className="absolute left-[50.0%] top-[67.8%] w-[44%] text-left">
-                      <p className="font-bold text-[8.5px] text-slate-800 leading-snug line-clamp-2">
-                        {(() => {
-                          try {
-                            const bio = typeof targetCardStudent?.bioData === 'string' ? JSON.parse(targetCardStudent?.bioData) : targetCardStudent?.bioData
-                            return bio?.alamat || targetCardStudent?.user?.address || '-'
-                          } catch { return targetCardStudent?.user?.address || '-' }
-                        })()}
+                    <div className="absolute left-[49.5%] top-[68.4%] w-[45%] text-left">
+                      <p className="font-bold text-[9px] sm:text-[9.5px] text-[#1e1b4b] leading-tight line-clamp-2 font-sans">
+                        {targetCardParsedBio.alamat}
                       </p>
                     </div>
 
                     {/* NO. INDUK (NIS) (Rata kiri tepat di bawah label NO. INDUK) */}
-                    <div className="absolute left-[5.0%] top-[81.8%] w-[42%] text-left">
-                      <p className="font-black font-mono text-[9.5px] text-slate-900 leading-none">
+                    <div className="absolute left-[4.7%] top-[83.0%] w-[42%] text-left">
+                      <p className="font-extrabold text-[10.5px] sm:text-[11px] text-[#1e1b4b] leading-none font-sans">
                         {targetCardStudent?.nis || '-'}
                       </p>
                     </div>
 
                     {/* GENDER (Rata kiri tepat di bawah label GENDER) */}
-                    <div className="absolute left-[50.0%] top-[81.8%] w-[44%] text-left">
-                      <p className="font-bold text-[8.5px] text-slate-800 leading-none">
+                    <div className="absolute left-[49.5%] top-[83.0%] w-[45%] text-left">
+                      <p className="font-bold text-[9px] sm:text-[9.5px] text-[#1e1b4b] leading-none font-sans">
                         {targetCardStudent?.gender === 'L' ? 'Laki-laki' : targetCardStudent?.gender === 'P' ? 'Perempuan' : targetCardStudent?.gender || '-'}
                       </p>
                     </div>
@@ -3409,7 +3675,7 @@ export default function StudentsPage() {
                 </div>
 
                 {/* SISI BELAKANG KARTU (ISO/IEC 7810 ID-1) */}
-                <div className="print-card-item relative w-[235px] sm:w-[260px] aspect-[638/1016] rounded-2xl overflow-hidden shadow-lg border border-slate-200/90 select-none bg-white text-slate-900 flex flex-col justify-between shrink-0">
+                <div className="print-card-item relative w-[235px] sm:w-[260px] aspect-[638/1018] rounded-[13px] overflow-hidden shadow-lg border border-slate-200/90 select-none bg-white text-slate-900 flex flex-col justify-between shrink-0">
                   {/* Background Template Sisi Belakang Resmi */}
                   <img 
                     src="/images/kartu-pelajar-belakang.png" 
@@ -3457,6 +3723,13 @@ export default function StudentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Cetak Buku Induk Kurikulum Merdeka SMA */}
+      <BukuIndukPrintDialog
+        open={isBukuIndukDialogOpen}
+        onOpenChange={setIsBukuIndukDialogOpen}
+        studentDataList={bukuIndukTargetStudents}
+      />
     </>
   )
 }

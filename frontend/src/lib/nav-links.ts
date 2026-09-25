@@ -15,6 +15,7 @@ export const superadminLinks = [
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Guru', href: '/master-data/guru', icon: Users, group: 'Master Data' },
   { name: 'Siswa', href: '/master-data/siswa', icon: UserSquare2, group: 'Master Data' },
+  { name: 'Buku Induk (Cetak)', href: '/master-data/buku-induk', icon: BookMarked, group: 'Master Data' },
   { name: 'Wali Murid', href: '/master-data/wali-murid', icon: Users, group: 'Master Data' },
   { name: 'Kelas', href: '/master-data/kelas', icon: BookOpen, group: 'Master Data' },
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap, group: 'Master Data' },
@@ -36,6 +37,7 @@ export const bauLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Scan QR Absen', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
+  { name: 'Cetak Buku Induk', href: '/master-data/buku-induk', icon: BookMarked, group: 'Tata Usaha' },
   { name: 'Arsip & Persuratan', href: '/fitur/persuratan', icon: Mail, group: 'Tata Usaha' },
   { name: 'Inventaris & Aset', href: '/fitur/inventaris', icon: Package, group: 'Tata Usaha' },
   { name: 'Buku Tamu', href: '/fitur/buku-tamu', icon: Contact, group: 'Tata Usaha' },
@@ -74,6 +76,7 @@ export const guruLinks = [
 // 4. Siswa
 export const siswaLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Buku Induk Saya', href: '/siswa/buku-induk', icon: BookMarked },
   { name: 'Scan QR Absen', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Kartu Pelajar', href: '/pengaturan/profil#kartu-pelajar', icon: CreditCard },
   { name: 'Log Presensi', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
@@ -124,6 +127,7 @@ export const kepalaSekolahLinks = [
   { name: 'Data Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen, group: 'Supervisi Data' },
   { name: 'Data Guru & Pegawai', href: '/master-data/guru', icon: Users, group: 'Supervisi Data' },
   { name: 'Data Siswa & Induk', href: '/master-data/siswa', icon: UserSquare2, group: 'Supervisi Data' },
+  { name: 'Cetak Buku Induk', href: '/master-data/buku-induk', icon: BookMarked, group: 'Supervisi Data' },
   { name: 'Data Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap, group: 'Supervisi Data' },
   { name: 'Supervisi Sarpras & Aset', href: '/fitur/inventaris', icon: Package, group: 'Supervisi Umum' },
   { name: 'Supervisi Kepegawaian', href: '/fitur/kepegawaian', icon: UserCheck, group: 'Supervisi Umum' },
@@ -257,7 +261,13 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isBau || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
   }
 
-  // 2. Modul Master Data Siswa, Guru, Kelas, Mapel
+  // 2. Modul Master Data Siswa, Guru, Kelas, Mapel, Buku Induk
+  if (pathname.startsWith('/siswa/buku-induk')) {
+    return isSiswa || isBau || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
+  }
+  if (pathname.startsWith('/master-data/buku-induk')) {
+    return isBau || isKepalaSekolah || isWaliKelas || isKurikulum || isBk
+  }
   if (pathname.startsWith('/master-data/siswa')) {
     return isBau || isKepalaSekolah || isGuru || isWaliKelas || isBk || isKurikulum
   }

@@ -74,6 +74,10 @@ model TeacherProfile {
   lastEducation       String?
   certificationStatus String?
   certificationYear   Int?
+  skUrl               String?           // File SK Pengangkatan / Penugasan Pegawai
+  cvUrl               String?           // File CV / Portofolio Pegawai
+  ijazahUrl           String?           // File Ijazah Terakhir Pegawai
+  berkasUrl           String?           // Berkas / Sertifikat Tambahan Pegawai
   userId              String            @unique
   homeroomClasses     Class[]           @relation("HomeroomTeacher")
   homeroomJournals    HomeroomJournal[]

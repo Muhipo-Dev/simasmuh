@@ -152,8 +152,28 @@ export class SuratMasukService {
     search?: string;
     sifat?: string;
     statusDisposisi?: string;
+    statusTahapan?: string;
+    forUser?: boolean;
+    userId?: string;
+    userName?: string;
+    userRole?: string;
+    userSubRole?: string;
+    userSubRole2?: string;
+    userSubRole3?: string;
   }) {
-    const { search, sifat, statusDisposisi } = query;
+    const {
+      search,
+      sifat,
+      statusDisposisi,
+      statusTahapan,
+      forUser,
+      userId,
+      userName,
+      userRole,
+      userSubRole,
+      userSubRole2,
+      userSubRole3,
+    } = query;
     const where: any = {};
 
     if (search) {
@@ -174,13 +194,136 @@ export class SuratMasukService {
       where.statusDisposisi = statusDisposisi;
     }
 
-    const items = await this.prisma.suratMasuk.findMany({
+    if (statusTahapan && statusTahapan !== 'ALL') {
+      where.statusTahapan = statusTahapan;
+    }
+
+    let items = await this.prisma.suratMasuk.findMany({
       where,
       include: {
         disposisi: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // ISOLASI PRIVASI: Jika diakses khusus modul user / peran non-admin (Guru/Pegawai)
+    const isAdmin =
+      [
+        'SUPERADMIN',
+        'ADMIN_IT',
+        'ADMIN_TU',
+        'BAU',
+        'TATA_USAHA',
+        'KEPALA_SEKOLAH',
+      ].includes(userRole || '') ||
+      ['SUPERADMIN', 'ADMIN_TU', 'BAU', 'KEPALA_SEKOLAH'].includes(
+        userSubRole || '',
+      );
+
+    if (forUser && !isAdmin) {
+      const myNameLower = (userName || '').trim().toLowerCase();
+      const myRoles = ([
+        userRole,
+        userSubRole,
+        userSubRole2,
+        userSubRole3,
+      ] as (string | undefined | null)[])
+        .filter((r): r is string => Boolean(r))
+        .map((r) => r.toLowerCase());
+
+      items = items.filter((item) => {
+        if (!item.disposisi) return false;
+        const disp = item.disposisi;
+        const diteruskan = (disp.diteruskanKepada as any) || {};
+        const targets: string[] = Array.isArray(diteruskan.targets)
+          ? diteruskan.targets
+          : [];
+        const guruNama = (diteruskan.guruNama || '').toLowerCase();
+        const bagianNama = (diteruskan.bagianNama || '').toLowerCase();
+        const stafNama = (diteruskan.stafNama || '').toLowerCase();
+        const targetUserIds = Array.isArray(diteruskan.targetUserIds)
+          ? diteruskan.targetUserIds
+          : [];
+
+        if (userId && targetUserIds.includes(userId)) return true;
+
+        const matchName =
+          (guruNama &&
+            myNameLower &&
+            (myNameLower.includes(guruNama) ||
+              guruNama.includes(myNameLower))) ||
+          (stafNama &&
+            myNameLower &&
+            (myNameLower.includes(stafNama) ||
+              stafNama.includes(myNameLower))) ||
+          (bagianNama &&
+            myNameLower &&
+            (myNameLower.includes(bagianNama) ||
+              bagianNama.includes(myNameLower)));
+
+        if (matchName) return true;
+
+        // Role & Subrole mapping
+        const isKurikulum = myRoles.some((r) => r.includes('kurikulum'));
+        const isKesiswaan = myRoles.some(
+          (r) =>
+            r.includes('kesiswaan') ||
+            r.includes('tatib') ||
+            r.includes('ketertiban'),
+        );
+        const isSarpras = myRoles.some(
+          (r) => r.includes('sarpras') || r.includes('inventaris'),
+        );
+        const isHumas = myRoles.some(
+          (r) => r.includes('humas') || r.includes('sdm'),
+        );
+        const isIsmuba = myRoles.some((r) => r.includes('ismuba'));
+        const isKeuangan = myRoles.some(
+          (r) => r.includes('bendahara') || r.includes('keuangan'),
+        );
+        const isBau = myRoles.some(
+          (r) =>
+            r.includes('bau') ||
+            r.includes('tata_usaha') ||
+            r.includes('admin_tu'),
+        );
+        const isGuru = userRole === 'GURU' || myRoles.some((r) => r === 'guru');
+        const isPegawai =
+          userRole === 'PEGAWAI' || myRoles.some((r) => r === 'pegawai');
+
+        const matchRole =
+          (isKurikulum &&
+            targets.some((t) => t.toLowerCase().includes('kurikulum'))) ||
+          (isKesiswaan &&
+            targets.some((t) => t.toLowerCase().includes('kesiswaan'))) ||
+          (isSarpras &&
+            targets.some(
+              (t) =>
+                t.toLowerCase().includes('sarana') ||
+                t.toLowerCase().includes('sarpras'),
+            )) ||
+          (isHumas &&
+            targets.some(
+              (t) =>
+                t.toLowerCase().includes('humas') ||
+                t.toLowerCase().includes('sdm'),
+            )) ||
+          (isIsmuba &&
+            targets.some((t) => t.toLowerCase().includes('ismuba'))) ||
+          (isKeuangan &&
+            targets.some((t) => t.toLowerCase().includes('keuangan'))) ||
+          (isBau &&
+            targets.some(
+              (t) =>
+                t.toLowerCase().includes('administrasi umum') ||
+                t.toLowerCase().includes('bau'),
+            )) ||
+          (isGuru && targets.includes('Guru') && !guruNama) ||
+          (isPegawai && targets.includes('Staf') && !stafNama);
+
+        return matchRole;
+      });
+    }
 
     return { success: true, data: items };
   }
@@ -343,7 +486,7 @@ export class SuratMasukService {
   }
 
   /**
-   * Helper Pengiriman Notifikasi WhatsApp Otomatis ke Penerima Disposisi
+   * Helper Pengiriman Notifikasi In-App & Email Otomatis ke Penerima Disposisi
    */
   private async sendDisposisiNotifications(
     disposisi: any,
@@ -361,22 +504,145 @@ export class SuratMasukService {
       if (diteruskan.bagianNama) recipientNames.push(diteruskan.bagianNama);
       if (diteruskan.stafNama) recipientNames.push(diteruskan.stafNama);
 
-      // Gabungkan target unit & nama individu
-      const allTargetLabels = [...targets, ...recipientNames].filter(Boolean);
-      if (allTargetLabels.length === 0) return;
+      const targetUserIds: string[] = Array.isArray(diteruskan.targetUserIds)
+        ? diteruskan.targetUserIds
+        : [];
 
-      const recipientStr = allTargetLabels.join(', ');
-
-      // Cari user terdaftar di database yang sesuai dengan nama target
-      const matchedUsers = await this.prisma.user.findMany({
-        where: {
-          name: { in: recipientNames, mode: 'insensitive' },
-          email: { contains: '@' },
+      // Ambil user aktif dari basis data
+      const allUsers = await this.prisma.user.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          subRole: true,
+          subRole2: true,
+          subRole3: true,
         },
-        take: 5,
       });
 
-      for (const u of matchedUsers) {
+      const matchedUserMap = new Map<string, any>();
+
+      for (const u of allUsers) {
+        const uNameLower = (u.name || '').toLowerCase();
+        const uRoles = ([u.role, u.subRole, u.subRole2, u.subRole3] as (string | undefined | null)[])
+          .filter((r): r is string => Boolean(r))
+          .map((r) => r.toLowerCase());
+
+        let isMatch = false;
+
+        // 1. Match by ID
+        if (targetUserIds.includes(u.id)) {
+          isMatch = true;
+        }
+
+        // 2. Match by Name (guruNama / stafNama / bagianNama)
+        if (!isMatch) {
+          for (const name of recipientNames) {
+            const cleanTarget = name.trim().toLowerCase();
+            if (
+              cleanTarget &&
+              (uNameLower.includes(cleanTarget) ||
+                cleanTarget.includes(uNameLower))
+            ) {
+              isMatch = true;
+              break;
+            }
+          }
+        }
+
+        // 3. Match by Target Roles / Units
+        if (!isMatch) {
+          for (const target of targets) {
+            const tLower = target.toLowerCase();
+            if (
+              tLower.includes('kurikulum') &&
+              uRoles.some((r) => r.includes('kurikulum'))
+            ) {
+              isMatch = true;
+              break;
+            }
+            if (
+              tLower.includes('kesiswaan') &&
+              uRoles.some(
+                (r) =>
+                  r.includes('kesiswaan') ||
+                  r.includes('tatib') ||
+                  r.includes('ketertiban'),
+              )
+            ) {
+              isMatch = true;
+              break;
+            }
+            if (
+              (tLower.includes('sarana') || tLower.includes('sarpras')) &&
+              uRoles.some(
+                (r) => r.includes('sarpras') || r.includes('inventaris'),
+              )
+            ) {
+              isMatch = true;
+              break;
+            }
+            if (
+              (tLower.includes('humas') || tLower.includes('sdm')) &&
+              uRoles.some((r) => r.includes('humas') || r.includes('sdm'))
+            ) {
+              isMatch = true;
+              break;
+            }
+            if (
+              tLower.includes('ismuba') &&
+              uRoles.some((r) => r.includes('ismuba'))
+            ) {
+              isMatch = true;
+              break;
+            }
+            if (
+              tLower.includes('keuangan') &&
+              uRoles.some(
+                (r) => r.includes('bendahara') || r.includes('keuangan'),
+              )
+            ) {
+              isMatch = true;
+              break;
+            }
+            if (
+              (tLower.includes('administrasi umum') ||
+                tLower.includes('bau')) &&
+              uRoles.some(
+                (r) =>
+                  r.includes('bau') ||
+                  r.includes('tata_usaha') ||
+                  r.includes('admin_tu'),
+              )
+            ) {
+              isMatch = true;
+              break;
+            }
+            if (
+              tLower.includes('kerumahtanggaan') &&
+              uRoles.some(
+                (r) =>
+                  r.includes('kebersihan') ||
+                  r.includes('sarpras') ||
+                  r.includes('bau'),
+              )
+            ) {
+              isMatch = true;
+              break;
+            }
+          }
+        }
+
+        if (isMatch) {
+          matchedUserMap.set(u.id, u);
+        }
+      }
+
+      const recipients = Array.from(matchedUserMap.values());
+
+      for (const u of recipients) {
         // 1. In-App Notification SIMASMUH
         try {
           await this.notificationsService.createNotification({
@@ -399,11 +665,14 @@ export class SuratMasukService {
             },
           });
         } catch (inAppErr) {
-          console.error('Gagal membuat In-App Notification Disposisi:', inAppErr);
+          console.error(
+            'Gagal membuat In-App Notification Disposisi:',
+            inAppErr,
+          );
         }
 
         // 2. Official Email Notification
-        if (u.email) {
+        if (u.email && u.email.includes('@')) {
           this.emailNotificationService
             .sendEmailNotification({
               to: u.email,
@@ -414,12 +683,25 @@ export class SuratMasukService {
               recipientName: u.name,
               contentText: `Anda menerima disposisi surat masuk dari Kepala Sekolah (${signerName}).`,
               metaDetails: [
-                { label: 'No. Agenda', value: disposisi.nomorAgenda || surat.nomorAgenda },
+                {
+                  label: 'No. Agenda',
+                  value: disposisi.nomorAgenda || surat.nomorAgenda,
+                },
                 { label: 'Instansi Pengirim', value: surat.instansi },
                 { label: 'No. Surat', value: surat.nomorSurat },
                 { label: 'Perihal', value: surat.perihal },
-                { label: 'Instruksi', value: Array.isArray(disposisi.instruksi) ? disposisi.instruksi.join(', ') : 'Ditindak Lanjuti' },
-                { label: 'Catatan Pimpinan', value: disposisi.catatan || 'Segera koordinasikan dan tindak lanjuti.' },
+                {
+                  label: 'Instruksi',
+                  value: Array.isArray(disposisi.instruksi)
+                    ? disposisi.instruksi.join(', ')
+                    : 'Ditindak Lanjuti',
+                },
+                {
+                  label: 'Catatan Pimpinan',
+                  value:
+                    disposisi.catatan ||
+                    'Segera koordinasikan dan tindak lanjuti.',
+                },
               ],
               actionUrl: `${process.env.FRONTEND_URL || ''}/fitur/disposisi`,
               actionText: 'Lihat Disposisi',
@@ -436,18 +718,39 @@ export class SuratMasukService {
    * Verifikasi & E-Sign Disposisi oleh Kepala Sekolah (APPROVE / REJECT)
    */
   async approveOrRejectDisposisi(disposisiId: string, dto: UpdateDisposisiDto) {
-    const disposisi = await this.prisma.suratDisposisi.findUnique({
-      where: { id: disposisiId },
+    let disposisi = await this.prisma.suratDisposisi.findFirst({
+      where: {
+        OR: [{ id: disposisiId }, { suratMasukId: disposisiId }],
+      },
       include: { suratMasuk: true },
     });
 
     if (!disposisi) {
-      throw new NotFoundException('Lembar Disposisi tidak ditemukan.');
+      const surat = await this.prisma.suratMasuk.findUnique({
+        where: { id: disposisiId },
+      });
+      if (!surat) {
+        throw new NotFoundException('Lembar Disposisi tidak ditemukan.');
+      }
+      disposisi = await this.prisma.suratDisposisi.create({
+        data: {
+          suratMasukId: surat.id,
+          nomorAgenda: surat.nomorAgenda,
+          sifat: surat.sifat,
+          statusTahapan: 'DITERIMA',
+          tanggalDiterima: surat.tanggalDiterima,
+          instruksi: dto.instruksi || ['Ditindak Lanjuti'],
+          diteruskanKepada: dto.diteruskanKepada || { targets: ['Guru'] },
+          catatan: dto.catatan || null,
+          statusEsign: 'MENUNGGU_VERIFIKASI',
+        },
+        include: { suratMasuk: true },
+      });
     }
 
     if (dto.action === 'REJECT') {
       const updated = await this.prisma.suratDisposisi.update({
-        where: { id: disposisiId },
+        where: { id: disposisi.id },
         data: {
           statusEsign: 'DITOLAK',
           catatanPenolak:
@@ -486,7 +789,7 @@ export class SuratMasukService {
     const signerNbm = dto.signerNbm || 'NBM. 974.501';
 
     const updated = await this.prisma.suratDisposisi.update({
-      where: { id: disposisiId },
+      where: { id: disposisi.id },
       data: {
         statusEsign: 'DISETUJUI',
         eSignToken: newToken,
@@ -494,25 +797,31 @@ export class SuratMasukService {
         signerName,
         signerNbm,
         signatureImage: dto.signatureImage || dto.signatureDataUrl || null,
+        instruksi:
+          dto.instruksi !== undefined ? dto.instruksi : disposisi.instruksi,
+        diteruskanKepada:
+          dto.diteruskanKepada !== undefined
+            ? dto.diteruskanKepada
+            : disposisi.diteruskanKepada,
+        catatan: dto.catatan !== undefined ? dto.catatan : disposisi.catatan,
+        statusTahapan: 'DISAMPAIKAN',
       },
     });
 
     await this.prisma.suratMasuk.update({
       where: { id: disposisi.suratMasukId },
-      data: { statusDisposisi: 'DISPOSISI_DISETUJUI' },
+      data: {
+        statusDisposisi: 'DISPOSISI_DISETUJUI',
+        statusTahapan: 'DISAMPAIKAN',
+      },
     });
 
-    // Otomatis Kirim Notifikasi WhatsApp ke Pihak Diberi Kuasa / Diteruskan Kepada
-    const instruksiArr = Array.isArray(disposisi.instruksi)
-      ? disposisi.instruksi
-      : [];
-    if (instruksiArr.includes('Ditindak Lanjuti') || instruksiArr.length > 0) {
-      await this.sendDisposisiNotifications(
-        updated,
-        disposisi.suratMasuk,
-        signerName,
-      );
-    }
+    // Otomatis Kirim Notifikasi ke Pihak Diberi Kuasa / Diteruskan Kepada
+    await this.sendDisposisiNotifications(
+      updated,
+      disposisi.suratMasuk,
+      signerName,
+    );
 
     try {
       await this.systemLogService.log({
@@ -529,6 +838,83 @@ export class SuratMasukService {
       message:
         '✓ Lembar Disposisi berhasil diverifikasi, di-E-Sign, & Notifikasi Otomatis dikirim ke Pihak Terkait.',
       data: updated,
+    };
+  }
+
+  /**
+   * Update Status Progres Tindak Lanjut oleh Guru / Pegawai / TU
+   */
+  async updateProgresStatus(
+    id: string,
+    body: {
+      statusDisposisi: string;
+      statusTahapan?: string;
+      catatanTindakLanjut?: string;
+    },
+    userId?: string,
+  ) {
+    const surat = await this.prisma.suratMasuk.findFirst({
+      where: {
+        OR: [{ id }, { disposisi: { id } }],
+      },
+      include: { disposisi: true },
+    });
+
+    if (!surat) {
+      throw new NotFoundException('Surat Masuk / Disposisi tidak ditemukan.');
+    }
+
+    const newStatusDisposisi = body.statusDisposisi || surat.statusDisposisi;
+    let newStatusTahapan = body.statusTahapan || surat.statusTahapan;
+
+    if (!body.statusTahapan) {
+      if (
+        newStatusDisposisi === 'DILAKSANAKAN' ||
+        newStatusDisposisi === 'SELESAI'
+      ) {
+        newStatusTahapan = 'PENYELESAIAN';
+      } else if (newStatusDisposisi === 'PROSES') {
+        newStatusTahapan = 'PENGECEKAN';
+      } else if (newStatusDisposisi === 'PENDING') {
+        newStatusTahapan = 'DISAMPAIKAN';
+      }
+    }
+
+    const updatedSurat = await this.prisma.suratMasuk.update({
+      where: { id: surat.id },
+      data: {
+        statusDisposisi: newStatusDisposisi,
+        statusTahapan: newStatusTahapan,
+      },
+      include: { disposisi: true },
+    });
+
+    if (surat.disposisi) {
+      await this.prisma.suratDisposisi.update({
+        where: { id: surat.disposisi.id },
+        data: {
+          statusTahapan: newStatusTahapan,
+          catatan: body.catatanTindakLanjut
+            ? `${surat.disposisi.catatan || ''}\n[Tindak Lanjut]: ${body.catatanTindakLanjut}`.trim()
+            : surat.disposisi.catatan,
+        },
+      });
+    }
+
+    try {
+      await this.systemLogService.log({
+        category: 'SISTEM',
+        action: 'DISPOSISI_STATUS_UPDATED',
+        message: `Status disposisi agenda "${surat.nomorAgenda}" diperbarui menjadi ${newStatusDisposisi} (${newStatusTahapan}).`,
+      });
+    } catch (e) {
+      // Ignore log error
+    }
+
+    return {
+      success: true,
+      message: `Status disposisi berhasil diperbarui menjadi ${newStatusDisposisi}.`,
+      data: updatedSurat,
     };
   }
 }

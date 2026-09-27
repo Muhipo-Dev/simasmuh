@@ -160,6 +160,23 @@ const defaultBioData = {
   fotoMeninggalkan: '',
 }
 
+const PENDIDIKAN_ORTU_OPTIONS = ['SD', 'SMP', 'SMA/SMK', 'D3', 'D4', 'S1', 'S2', 'S3', 'Lainnya']
+
+const normalizePendidikanOrangTua = (edu?: string | null): string => {
+  if (!edu) return ''
+  const trimmed = edu.trim()
+  if (trimmed === 'SD / Sederajat' || trimmed === 'SD / MI' || trimmed === 'SD') return 'SD'
+  if (trimmed === 'SMP / Sederajat' || trimmed === 'SMP / MTs' || trimmed === 'SMP') return 'SMP'
+  if (trimmed === 'SMA / SMK / Sederajat' || trimmed === 'SMA / SMK' || trimmed === 'SMA/SMK/MA' || trimmed === 'SMA') return 'SMA/SMK'
+  if (trimmed === 'Diploma (D1-D3)' || trimmed === 'D3 / Ahli Madya' || trimmed === 'Diploma' || trimmed === 'D3') return 'D3'
+  if (trimmed === 'D4 / Sarjana Terapan' || trimmed === 'Diploma IV (D4)' || trimmed === 'D4') return 'D4'
+  if (trimmed === 'Sarjana (S1)' || trimmed === 'S1 / Sarjana' || trimmed === 'S1 Pendidikan' || trimmed === 'S1') return 'S1'
+  if (trimmed === 'Magister (S2)' || trimmed === 'S2 / Magister' || trimmed === 'S2') return 'S2'
+  if (trimmed === 'Doktor (S3)' || trimmed === 'S3 / Doktoral' || trimmed === 'S3 / Doktor' || trimmed === 'S3') return 'S3'
+  if (trimmed === 'Lainnya') return 'Lainnya'
+  return trimmed
+}
+
 export default function SiswaBukuIndukPage() {
   const { data: session } = useSession()
   const authenticatedFetch = useAuthenticatedFetch()
@@ -1096,21 +1113,16 @@ export default function SiswaBukuIndukPage() {
                 <div>
                   <Label className="text-xs font-semibold text-slate-700">24. Pendidikan Tertinggi Ayah</Label>
                   <Select
-                    value={formData.pendidikanAyah || ''}
+                    value={normalizePendidikanOrangTua(formData.pendidikanAyah)}
                     onValueChange={(val) => handleInputChange('pendidikanAyah', val)}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Pilih Pendidikan..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SD / Sederajat">SD / Sederajat</SelectItem>
-                      <SelectItem value="SMP / Sederajat">SMP / Sederajat</SelectItem>
-                      <SelectItem value="SMA / SMK / Sederajat">SMA / SMK / Sederajat</SelectItem>
-                      <SelectItem value="Diploma (D1-D3)">Diploma (D1-D3)</SelectItem>
-                      <SelectItem value="Sarjana (S1)">Sarjana (S1)</SelectItem>
-                      <SelectItem value="Magister (S2)">Magister (S2)</SelectItem>
-                      <SelectItem value="Doktor (S3)">Doktor (S3)</SelectItem>
-                      <SelectItem value="Lainnya">Lainnya</SelectItem>
+                      {PENDIDIKAN_ORTU_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1229,21 +1241,16 @@ export default function SiswaBukuIndukPage() {
                 <div>
                   <Label className="text-xs font-semibold text-slate-700">33. Pendidikan Tertinggi Ibu</Label>
                   <Select
-                    value={formData.pendidikanIbu || ''}
+                    value={normalizePendidikanOrangTua(formData.pendidikanIbu)}
                     onValueChange={(val) => handleInputChange('pendidikanIbu', val)}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Pilih Pendidikan..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SD / Sederajat">SD / Sederajat</SelectItem>
-                      <SelectItem value="SMP / Sederajat">SMP / Sederajat</SelectItem>
-                      <SelectItem value="SMA / SMK / Sederajat">SMA / SMK / Sederajat</SelectItem>
-                      <SelectItem value="Diploma (D1-D3)">Diploma (D1-D3)</SelectItem>
-                      <SelectItem value="Sarjana (S1)">Sarjana (S1)</SelectItem>
-                      <SelectItem value="Magister (S2)">Magister (S2)</SelectItem>
-                      <SelectItem value="Doktor (S3)">Doktor (S3)</SelectItem>
-                      <SelectItem value="Lainnya">Lainnya</SelectItem>
+                      {PENDIDIKAN_ORTU_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

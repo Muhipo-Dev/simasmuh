@@ -50,151 +50,12 @@ export interface LokasiRuangan {
   jumlahAset: number
 }
 
-// Initial Mock Data Inventaris SMA MUHIPO
-const INITIAL_INVENTARIS: ItemInventaris[] = [
-  {
-    id: 'AST-001',
-    kodeAset: 'AST/TIK/LAB-KOMP1/2025/001',
-    namaBarang: 'Komputer PC All-in-One Core i7 16GB SSD 512GB',
-    kategori: 'ELEKTRONIK_TIK',
-    merkModel: 'Lenovo IdeaCentre AIO 3',
-    jumlah: 36,
-    satuan: 'Unit',
-    kondisi: 'BAIK',
-    lokasiRuangan: 'Laboratorium Komputer 1 (Gd. Ismuba Lt. 2)',
-    penanggungJawab: 'Deni Setiawan, S.Kom (Kepala Lab Komputer)',
-    tahunPerolehan: '2025',
-    sumberDana: 'RAPBS_KOMITE',
-    hargaPerolehan: 11500000,
-    statusPenggunaan: 'DIGUNAKAN',
-    catatan: 'Digunakan aktif untuk Praktik IT, CBT, dan Ujian e-Rapor'
-  },
-  {
-    id: 'AST-002',
-    kodeAset: 'AST/TIK/AULA/2024/014',
-    namaBarang: 'Videotron LED Display P2.5 Indoor (4 x 2.5 Meter)',
-    kategori: 'ELEKTRONIK_TIK',
-    merkModel: 'Absen Opto D2.5 Series',
-    jumlah: 1,
-    satuan: 'Set',
-    kondisi: 'BAIK',
-    lokasiRuangan: 'Aula Utama KH. Ahmad Dahlan',
-    penanggungJawab: 'Staf Sarpras & Audio Visual',
-    tahunPerolehan: '2024',
-    sumberDana: 'HIBAH_PEMERINTAH',
-    hargaPerolehan: 85000000,
-    statusPenggunaan: 'DIGUNAKAN',
-    catatan: 'Layar presentasi utama seminar, wisuda, dan kajian'
-  },
-  {
-    id: 'AST-003',
-    kodeAset: 'AST/FURN/R-GURU/2024/022',
-    namaBarang: 'Meja Kerja & Kursi Ergonomis Guru',
-    kategori: 'FURNITUR_MEUBELAIR',
-    merkModel: 'Chitose Office Series',
-    jumlah: 48,
-    satuan: 'Set',
-    kondisi: 'BAIK',
-    lokasiRuangan: 'Ruang Guru & Pendidik Utama',
-    penanggungJawab: 'Ahmad Fauzi, S.E (Kepala TU)',
-    tahunPerolehan: '2024',
-    sumberDana: 'BOS_REGULER',
-    hargaPerolehan: 1450000,
-    statusPenggunaan: 'DIGUNAKAN',
-    catatan: 'Fasilitas kerja guru mata pelajaran'
-  },
-  {
-    id: 'AST-004',
-    kodeAset: 'AST/LAB/IPA-BIO/2023/008',
-    namaBarang: 'Mikroskop Binokuler LED 1600x Pembesaran',
-    kategori: 'ALAT_LABORATORIUM',
-    merkModel: 'Olympus CX23',
-    jumlah: 12,
-    satuan: 'Unit',
-    kondisi: 'RUSAK_RINGAN',
-    lokasiRuangan: 'Laboratorium Biologi & IPA',
-    penanggungJawab: 'Nurul Hidayah, S.Si (Laboran IPA)',
-    tahunPerolehan: '2023',
-    sumberDana: 'BOS_REGULER',
-    hargaPerolehan: 7800000,
-    statusPenggunaan: 'DALAM_PERBAIKAN',
-    catatan: '2 unit lensa objektif 100x memerlukan kalibrasi dan pembersihan optik'
-  },
-  {
-    id: 'AST-005',
-    kodeAset: 'AST/KND/OPR/2022/001',
-    namaBarang: 'Mobil Operasional Sekolah Toyota HiAce Commuter 16 Seat',
-    kategori: 'KENDARAAN_DINAS',
-    merkModel: 'Toyota HiAce 2.5 Manual',
-    jumlah: 1,
-    satuan: 'Unit',
-    kondisi: 'BAIK',
-    lokasiRuangan: 'Garasi Utama Kampus',
-    penanggungJawab: 'Bagian Sarpras & Pengemudi Dinas',
-    tahunPerolehan: '2022',
-    sumberDana: 'YAYASAN_PDM',
-    hargaPerolehan: 460000000,
-    statusPenggunaan: 'DIGUNAKAN',
-    catatan: 'Mobil dinas delegasi lomba, studi tiru, dan antar-jemput tamu'
-  },
-  {
-    id: 'AST-006',
-    kodeAset: 'AST/OR/LAP-UTM/2024/005',
-    namaBarang: 'Ring Basket Hidrolik Portable Standar PERBASI',
-    kategori: 'SARANA_OLAHRAGA',
-    merkModel: 'Trisensa Pro Hydro',
-    jumlah: 2,
-    satuan: 'Unit',
-    kondisi: 'BAIK',
-    lokasiRuangan: 'Lapangan Olahraga & Upacara Utama',
-    penanggungJawab: 'Guru PJOK & Pembina Basket',
-    tahunPerolehan: '2024',
-    sumberDana: 'RAPBS_KOMITE',
-    hargaPerolehan: 32000000,
-    statusPenggunaan: 'DIGUNAKAN',
-    catatan: 'Fasilitas olahraga dan turnamen basket'
-  }
-]
+// Data Awal Bersih Repositori Inventaris SMA MUHIPO
+const INITIAL_INVENTARIS: ItemInventaris[] = []
 
-// Initial Data Ruangan
-const INITIAL_RUANGAN: LokasiRuangan[] = [
-  {
-    id: 'R-01',
-    namaRuangan: 'Laboratorium Komputer 1',
-    gedung: 'Gedung Ismuba Lt. 2',
-    penanggungJawab: 'Deni Setiawan, S.Kom',
-    kontakPJ: '0812-3344-5566',
-    kapasitas: 40,
-    jumlahAset: 38
-  },
-  {
-    id: 'R-02',
-    namaRuangan: 'Aula Utama KH. Ahmad Dahlan',
-    gedung: 'Gedung Pusat Lt. 3',
-    penanggungJawab: 'Staf Sarpras & Audio Visual',
-    kontakPJ: '0857-1122-3344',
-    kapasitas: 600,
-    jumlahAset: 15
-  },
-  {
-    id: 'R-03',
-    namaRuangan: 'Ruang Guru & Pendidik Utama',
-    gedung: 'Gedung Utama Lt. 1',
-    penanggungJawab: 'Ahmad Fauzi, S.E (Kepala TU)',
-    kontakPJ: '0813-9988-7766',
-    kapasitas: 65,
-    jumlahAset: 62
-  },
-  {
-    id: 'R-04',
-    namaRuangan: 'Laboratorium Biologi & IPA',
-    gedung: 'Gedung Sains Terpadu Lt. 1',
-    penanggungJawab: 'Nurul Hidayah, S.Si',
-    kontakPJ: '0896-7788-9900',
-    kapasitas: 36,
-    jumlahAset: 24
-  }
-]
+// Data Awal Bersih Ruangan
+const INITIAL_RUANGAN: LokasiRuangan[] = []
+
 
 export function InventarisManagement() {
   const { data: session } = useSession()
@@ -660,14 +521,14 @@ export function InventarisManagement() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50 dark:bg-slate-900/80 text-xs">
-                        <TableHead className="w-[50px] text-center">No</TableHead>
-                        <TableHead>Kode Aset & Nama Barang</TableHead>
-                        <TableHead>Kategori & Spesifikasi</TableHead>
-                        <TableHead className="text-center">Jumlah & Nilai</TableHead>
-                        <TableHead>Lokasi & Penanggung Jawab</TableHead>
-                        <TableHead className="text-center">Kondisi</TableHead>
-                        <TableHead className="text-right">Aksi & Label QR</TableHead>
+                      <TableRow className="bg-slate-50/80 dark:bg-slate-900/80 text-xs">
+                        <TableHead className="w-12 px-3 text-center font-bold">No</TableHead>
+                        <TableHead className="min-w-[240px] max-w-[380px] px-3 font-bold">Kode Aset & Nama Barang</TableHead>
+                        <TableHead className="w-44 min-w-[150px] px-3 font-bold">Kategori & Spesifikasi</TableHead>
+                        <TableHead className="w-32 text-center px-3 font-bold">Jumlah & Nilai</TableHead>
+                        <TableHead className="w-44 min-w-[150px] px-3 font-bold">Lokasi & PJ</TableHead>
+                        <TableHead className="w-28 text-center px-3 font-bold">Kondisi</TableHead>
+                        <TableHead className="w-40 text-right px-3 font-bold">Aksi & Label QR</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

@@ -22,7 +22,20 @@ import Swal from 'sweetalert2'
 import { compressImageFile } from '@/utils/imageCompressor'
 import { QRCodeSVG } from 'qrcode.react'
 
-const EDUCATION_OPTIONS = ['S3', 'S2', 'S1', 'D4', 'D3', 'D2', 'D1', 'SMA/SMK/MA', 'Lainnya']
+const EDUCATION_OPTIONS = ['S3', 'S2', 'S1', 'D4', 'D3', 'D2', 'D1', 'SMA/SMK', 'Lainnya']
+
+const normalizeEducation = (edu?: string | null): string => {
+  if (!edu) return ''
+  const trimmed = edu.trim()
+  if (trimmed === 'S1 / Sarjana' || trimmed === 'S1 Pendidikan' || trimmed === 'Sarjana (S1)') return 'S1'
+  if (trimmed === 'S2 / Magister' || trimmed === 'Magister (S2)') return 'S2'
+  if (trimmed === 'S3 / Doktoral' || trimmed === 'Doktor (S3)' || trimmed === 'S3 / Doktor') return 'S3'
+  if (trimmed === 'D4 / Sarjana Terapan' || trimmed === 'Diploma IV (D4)') return 'D4'
+  if (trimmed === 'D3 / Ahli Madya' || trimmed === 'Diploma III (D3)') return 'D3'
+  if (trimmed === 'SMA / SMK / Sederajat' || trimmed === 'SMA / SMK' || trimmed === 'SMA/SMK/MA') return 'SMA/SMK'
+  return trimmed
+}
+
 const CERTIFICATION_OPTIONS = [
   { value: 'BERSERTIFIKAT', label: 'Sudah Bersertifikasi' },
   { value: 'BELUM_BERSERTIFIKAT', label: 'Belum Bersertifikasi' },
@@ -599,7 +612,7 @@ export default function ProfilePage() {
         email: profile.email || '',
         address: profile.address || '',
         avatarUrl: profile.avatarUrl || '',
-        lastEducation: profile.teacherProfile?.lastEducation || '',
+        lastEducation: normalizeEducation(profile.teacherProfile?.lastEducation),
         certificationStatus: profile.teacherProfile?.certificationStatus || '',
         certificationYear: profile.teacherProfile?.certificationYear?.toString() || '',
       })
@@ -731,7 +744,7 @@ export default function ProfilePage() {
                 if (profile) setForm({
                   name: profile.name, email: profile.email || '', address: profile.address || '',
                   avatarUrl: profile.avatarUrl || '',
-                  lastEducation: profile.teacherProfile?.lastEducation || '',
+                  lastEducation: normalizeEducation(profile.teacherProfile?.lastEducation),
                   certificationStatus: profile.teacherProfile?.certificationStatus || '',
                   certificationYear: profile.teacherProfile?.certificationYear?.toString() || '',
                 })
@@ -954,7 +967,7 @@ export default function ProfilePage() {
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Pendidikan Terakhir</p>
                   <p className="font-semibold text-slate-900 text-lg">
-                    {profile?.teacherProfile?.lastEducation || <span className="text-slate-400 font-normal text-sm">Belum diisi</span>}
+                    {normalizeEducation(profile?.teacherProfile?.lastEducation) || <span className="text-slate-400 font-normal text-sm">Belum diisi</span>}
                   </p>
                 </div>
                 <div className="space-y-1">

@@ -8,7 +8,8 @@ import {
   HeartHandshake, Library, BookMarked, Mail, Clock, 
   ArrowLeft, CheckCircle2, Construction, Sparkle, Layers, ChevronRight,
   Contact, Package, Boxes, Search, PlusCircle, Download, FileText, Pencil, Trash2,
-  Building2, Users, Loader2, Phone, Calendar, GraduationCap
+  Building2, Users, Loader2, Phone, Calendar, GraduationCap,
+  Inbox, Send, Archive
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -231,10 +232,63 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
     badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400',
     description: 'Modul pembuat surat resmi, penomoran otomatis, surat masuk/keluar, dan arsip digital.',
     modules: [
+      { title: 'Surat Masuk', desc: 'Pencatatan naskah surat dinas masuk.', status: 'DALAM_PENGEMBANGAN' },
       { title: 'Surat Keluar', desc: 'Penomoran otomatis terstandar surat sekolah.', status: 'DALAM_PENGEMBANGAN' },
       { title: 'Template Surat', desc: 'Generator surat keterangan dan rekomendasi.', status: 'TAHAP_DESAIN' },
-      { title: 'Disposisi Digital', desc: 'Alur penerusan surat masuk ke unit kerja.', status: 'SEGERA_HADIR' },
       { title: 'E-Archive', desc: 'Penyimpanan arsip dokumen penting sekolah.', status: 'DALAM_PENGEMBANGAN' },
+    ]
+  },
+  'surat-masuk': {
+    title: 'Buku Agenda Surat Masuk',
+    roleName: 'Tata Usaha',
+    category: 'Administrasi Sekolah',
+    icon: Inbox,
+    gradient: 'from-blue-600 via-indigo-600 to-sky-700',
+    badgeColor: 'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-400/10 dark:text-blue-400',
+    description: 'Pencatatan surat masuk, OCR analisis dokumen cerdas, dan penerbitan lembar disposisi pimpinan.',
+    modules: [
+      { title: 'Agenda Surat Masuk', desc: 'Pencatatan nomor agenda dan instansi pengirim.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Lembar Disposisi', desc: 'Distribusi tindak lanjut arahan pimpinan.', status: 'DALAM_PENGEMBANGAN' },
+    ]
+  },
+  'surat-keluar': {
+    title: 'Penerbitan Surat Keluar Resmi',
+    roleName: 'Tata Usaha',
+    category: 'Administrasi Sekolah',
+    icon: Send,
+    gradient: 'from-amber-600 via-orange-600 to-yellow-600',
+    badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400',
+    description: 'Penomoran otomatis surat keluar, generator naskah template dinas, dan pengesahan E-Sign Kepala Sekolah.',
+    modules: [
+      { title: 'Penomoran Otomatis', desc: 'Auto numbering terstandar persuratan dinas.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Template Naskah', desc: 'Generator surat dinas, ST, dan rekomendasi.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'E-Sign Kepsek', desc: 'Pengesahan tanda tangan elektronik sah.', status: 'DALAM_PENGEMBANGAN' },
+    ]
+  },
+  arsip: {
+    title: 'Arsip Surat & E-Archive Digital',
+    roleName: 'Tata Usaha',
+    category: 'Administrasi Sekolah',
+    icon: Archive,
+    gradient: 'from-emerald-600 via-teal-600 to-green-700',
+    badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
+    description: 'Pusat penyimpanan digital dokumen penting, SK Kepala Sekolah, register berkas, dan MoU sekolah.',
+    modules: [
+      { title: 'Katalog E-Archive', desc: 'Penyimpanan dokumen terindeks dan aman.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Pengesahan SK', desc: 'E-Sign dan QR code sah dokumen arsip.', status: 'DALAM_PENGEMBANGAN' },
+    ]
+  },
+  'e-archive': {
+    title: 'Arsip Surat & E-Archive Digital',
+    roleName: 'Tata Usaha',
+    category: 'Administrasi Sekolah',
+    icon: Archive,
+    gradient: 'from-emerald-600 via-teal-600 to-green-700',
+    badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
+    description: 'Pusat penyimpanan digital dokumen penting, SK Kepala Sekolah, register berkas, dan MoU sekolah.',
+    modules: [
+      { title: 'Katalog E-Archive', desc: 'Penyimpanan dokumen terindeks dan aman.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Pengesahan SK', desc: 'E-Sign dan QR code sah dokumen arsip.', status: 'DALAM_PENGEMBANGAN' },
     ]
   },
   'notulensi-rapat': {
@@ -327,61 +381,9 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
   }
 }
 
-// Initial Mock Data for Guestbook BAU
-const INITIAL_GUESTS: GuestEntry[] = [
-  {
-    id: '1',
-    namaTamu: 'Dr. H. Ahmad Dahlan, M.Pd',
-    instansi: 'Dinas Pendidikan & Dikdasmen Muhammadiyah',
-    kategori: 'PEJABAT',
-    tujuan: 'Kunjungan Monitoring Mutu & Supervisi Kurikulum',
-    dituju: 'Kepala Sekolah & Tim Tata Usaha',
-    tanggal: new Date().toISOString().split('T')[0],
-    waktu: '08:30 WIB',
-    status: 'PROSES',
-    kontak: '0812-3456-7890',
-    catatan: 'Diterima di Ruang Tamu Utama Kepala Sekolah'
-  },
-  {
-    id: '2',
-    namaTamu: 'Tim Rombongan SMA Muh 2 Yogyakarta (15 Orang)',
-    instansi: 'SMA Muhammadiyah 2 Yogyakarta',
-    kategori: 'STUDI_TIRU',
-    tujuan: 'Studi Tiru Sistem Manajemen Digital & e-Rapor',
-    dituju: 'Tim Tata Usaha & Admin IT',
-    tanggal: new Date().toISOString().split('T')[0],
-    waktu: '09:45 WIB',
-    status: 'TIBA',
-    kontak: '0857-1122-3344',
-    catatan: 'Persiapan Aula Pertemuan & Cinderamata'
-  },
-  {
-    id: '3',
-    namaTamu: 'Rizal Prasetyo, S.Kom (Alumni 2020)',
-    instansi: 'Alumni SMA Muhipo',
-    kategori: 'ALUMNI_IJAZAH',
-    tujuan: 'Pengurusan Penyerahan Ijazah & Legalisir Transkrip Nilai',
-    dituju: 'Staf Tata Usaha / BAU',
-    tanggal: new Date().toISOString().split('T')[0],
-    waktu: '10:15 WIB',
-    status: 'SELESAI',
-    kontak: '0896-5544-3322',
-    catatan: 'Telah diserahkan 5 lembar legalisir stempel basah'
-  },
-  {
-    id: '4',
-    namaTamu: 'Bambang Sudarmo',
-    instansi: 'PT Media Edukasi Nusantara',
-    kategori: 'VENDOR_UMUM',
-    tujuan: 'Penawaran Kerjasama Buku Bahan Ajar & Alat Lab Computer',
-    dituju: 'Kepala Tata Usaha & Sarpras',
-    tanggal: new Date().toISOString().split('T')[0],
-    waktu: '11:00 WIB',
-    status: 'TIBA',
-    kontak: '0813-9988-7766',
-    catatan: 'Penyerahan berkas proposal penawaran'
-  }
-]
+// Data Awal Bersih Buku Tamu BAU
+const INITIAL_GUESTS: GuestEntry[] = []
+
 
 function InteractiveGuestBook() {
   const [guests, setGuests] = useState<GuestEntry[]>(INITIAL_GUESTS)
@@ -824,8 +826,10 @@ export default function FiturSubRolePage() {
       </div>
 
       {/* Render Interaktif khusus Persuratan, Disposisi Guru/Pegawai, Kepegawaian, Inventaris, Buku Tamu, Kegiatan, Notulensi, Ketertiban & BK/BP */}
-      {slug === 'persuratan' ? (
-        <PersuratanManagement />
+      {slug === 'persuratan' || slug === 'surat-masuk' || slug === 'surat-keluar' || slug === 'arsip' || slug === 'e-archive' ? (
+        <PersuratanManagement 
+          forcedMode={slug === 'surat-masuk' ? 'surat-masuk' : slug === 'surat-keluar' ? 'surat-keluar' : (slug === 'arsip' || slug === 'e-archive') ? 'e-archive' : 'all'} 
+        />
       ) : slug === 'disposisi' ? (
         <DisposisiUserManagement />
       ) : slug === 'kepegawaian' ? (

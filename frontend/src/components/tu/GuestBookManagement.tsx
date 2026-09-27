@@ -869,15 +869,15 @@ export function GuestBookManagement() {
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
-                  <TableRow>
-                    <TableHead className="w-12 text-center text-xs">No</TableHead>
-                    <TableHead className="text-xs">Nama Tamu & Instansi</TableHead>
-                    <TableHead className="text-xs">Kategori & Dituju</TableHead>
-                    <TableHead className="text-xs">Keperluan / Tujuan</TableHead>
-                    <TableHead className="text-xs">Waktu Kedatangan</TableHead>
-                    <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-xs text-right">Aksi</TableHead>
+                <TableHeader className="bg-slate-50/80 dark:bg-slate-900/80">
+                  <TableRow className="text-xs">
+                    <TableHead className="w-12 px-3 text-center font-bold">No</TableHead>
+                    <TableHead className="min-w-[180px] max-w-[280px] px-3 font-bold">Nama Tamu & Instansi</TableHead>
+                    <TableHead className="w-40 min-w-[140px] px-3 font-bold">Kategori & Dituju</TableHead>
+                    <TableHead className="min-w-[200px] max-w-[350px] px-3 font-bold">Keperluan / Tujuan</TableHead>
+                    <TableHead className="w-32 text-center px-3 font-bold">Waktu Kedatangan</TableHead>
+                    <TableHead className="w-28 text-center px-3 font-bold">Status</TableHead>
+                    <TableHead className="w-32 text-right px-3 font-bold">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

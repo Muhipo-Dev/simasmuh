@@ -38,8 +38,23 @@ export class SuratMasukController {
     @Query('search') search?: string,
     @Query('sifat') sifat?: string,
     @Query('statusDisposisi') statusDisposisi?: string,
+    @Query('statusTahapan') statusTahapan?: string,
+    @Query('forUser') forUser?: string,
+    @Request() req?: any,
   ) {
-    return this.suratMasukService.findAll({ search, sifat, statusDisposisi });
+    return this.suratMasukService.findAll({
+      search,
+      sifat,
+      statusDisposisi,
+      statusTahapan,
+      forUser: forUser === 'true' || forUser === '1',
+      userId: req?.user?.id,
+      userName: req?.user?.name,
+      userRole: req?.user?.role,
+      userSubRole: req?.user?.subRole,
+      userSubRole2: req?.user?.subRole2,
+      userSubRole3: req?.user?.subRole3,
+    });
   }
 
   /**
@@ -58,6 +73,24 @@ export class SuratMasukController {
   @UseGuards(JwtAuthGuard)
   create(@Body() createDto: CreateSuratMasukDto) {
     return this.suratMasukService.create(createDto);
+  }
+
+  /**
+   * Endpoint Terproteksi: Update Status Progres Tindak Lanjut oleh Penerima Disposisi
+   */
+  @Patch(':id/status-tindak-lanjut')
+  @UseGuards(JwtAuthGuard)
+  updateProgresStatus(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      statusDisposisi: string;
+      statusTahapan?: string;
+      catatanTindakLanjut?: string;
+    },
+    @Request() req: any,
+  ) {
+    return this.suratMasukService.updateProgresStatus(id, body, req?.user?.id);
   }
 
   /**

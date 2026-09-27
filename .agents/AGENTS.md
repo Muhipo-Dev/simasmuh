@@ -2,6 +2,8 @@
 
 ## Direct Execution & Concise Output Standard
 
+0. **Standar Mutlak Pembacaan Aturan (MANDATORY STEP 0)**:
+   - **Wajib Membaca & Menegakkan AGENTS.md**: Secara *default*, sebelum memulai mengubah, mengedit, memperbaiki, atau membuat kode baru pada modul/fitur apapun di proyek SIMASMUH, AI Agent **MUTLAK WAJIB MEMBACA & MEMATUHI SELURUH ATURAN DI `AGENTS.md` TERLEBIH DAHULU** sebelum mengeksekusi instruksi dan membuat kode aplikasinya.
 1. **Langsung Eksekusi**: Setiap perintah permintaan perubahan/fitur/desain/database harus segera dieksekusi secara langsung.
 2. **Tanpa Code Snippet di Chat**: Untuk menghemat konsumsi kredit/token, **TIDAK PERLU** menampilkan potongan kode / diff di pesan percakapan chat.
 3. **Format Ringkasan**: Cukup tampilkan update status pekerjaan, laporan ringkas, tautan file yang diubah (`[filename](file:///path/to/file)`), artefak, dan hasil terminal.
@@ -17,9 +19,10 @@
      - **Backend API NestJS**: `http://localhost:3001`
      - **Prisma Studio**: `http://localhost:51212`
      - **Supabase Studio (Docker)**: `http://localhost:54323` (Database: `54322`, API: `54321`)
-7. **Standar Notifikasi Resmi (In-App & Email)**:
-   - Setiap fitur yang mengharuskan adanya notifikasi (seperti presensi/absen, tagihan keuangan, bukti & verifikasi pembayaran, informasi berita/pengumuman, perizinan, ataupun fitur lainnya), seluruh notifikasi dikirimkan ke akun pengguna di sistem (In-App notification) dan dikirimkan secara langsung melalui Email.
-   - Pengiriman email notifikasi diproses secara handal dan aman melalui layanan SMTP Email resmi SIMASMUH.
+7. **Standar Mutlak Notifikasi Resmi (In-App Dashboard & Email SMTP - Tanpa WhatsApp) (STRICT)**:
+   - **Tampil di Dashboard Seluruh Pengguna**: Setiap notifikasi (presensi/absen, lembar disposisi persuratan, tagihan & bukti verifikasi keuangan, perizinan, update akademik/rapor, jurnal mengajar, dan pengumuman resmi) **MUTLAK DITAMPILKAN LANGSUNG DI DASHBOARD PENGGUNA** sesuai perannya (Pegawai, Guru, Siswa, dan Wali Murid) secara *real-time*.
+   - **Pengiriman Melalui Email Resmi (SMTP)**: Seluruh notifikasi sistem dikirimkan langsung ke alamat email aktif pengguna secara handal dan aman melalui layanan SMTP Email resmi SIMASMUH.
+   - **Peniadaan WhatsApp (Zero WhatsApp)**: Notifikasi resmi sistem berfokus penuh pada integrasi In-App Dashboard dan Email resmi, serta **TIDAK LAGI MENGGUNAKAN WHATSAPP**.
 8. **Standar Akun & Peran Pengguna Wali Murid (Orang Tua / Wali)**:
    - **Peran & Relasi**: Pengguna dengan role `WALI_MURID` adalah akun orang tua/wali murid yang dapat terhubung dengan 1 atau lebih siswa di sistem melalui relasi `ParentProfile` dan `ParentStudent`.
    - **Koneksi Identitas Siswa**: No. NIS atau NISN menjadi kunci penghubung antara data wali murid dan siswa yang diwalikan.
@@ -38,4 +41,22 @@
     - **Format Resmi**: Seluruh data kelas untuk data jangka panjang dan data relasi di sistem SIMASMUH dan CBT MUHIPO wajib menggunakan format: `[Romawi Kelas] [Angka Kelas]` (contoh: `X 1`, `X 2`, `XI 2`, `XII 2`, dst).
     - **Konsistensi Relasi & Sinkronisasi**: Dilarang menggunakan pemisah tanda hubung (seperti `X-1`), format penjurusan lama pada nama kelas (seperti `X IPA 1`), atau format lainnya.
     - **Placeholder & Template Excel**: Seluruh placeholder input, modal form, parser Excel, contoh baris template import siswa & kelas, serta sinkronisasi nilai/asesmen wajib seragam mengacu pada format standar ini.
+13. **Standar Mutlak Peniadaan Data Dummy & Sinkronisasi Dinamis Basis Data (STRICT)**:
+    - **Peniadaan Data Tiruan / Dummy**: Dilarang keras menyematkan data tiruan/dummy, array statis mock, atau angka hardcoded di frontend maupun backend untuk fitur apapun (termasuk fitur baru yang sedang dikembangkan).
+    - **100% Sinkronisasi Dinamis Supabase / PostgreSQL**: Seluruh elemen antarmuka (tabel data, kartu statistik/widget count, grafik chart, kurva analitik, diagram tren, dropdown relasi, filter, dan riwayat) wajib 100% dikalkulasi dan tersinkronisasi dinamis secara langsung dari data riil basis data melalui endpoint API NestJS resmi.
+    - **Grafik & Kurva Data Riil**: Seluruh visualisasi grafik (garis kurva, bar chart, donat distribusi, tren presensi, analitik keuangan, performa akademik, dll) wajib mengolah data riil di database. Jika belum terdapat riwayat atau transaksi, visualisasi wajib menampilkan titik awal nol (`0`) atau *empty state chart* tanpa kurva ilustratif/fiktif.
+    - **Empty State yang Bersih**: Jika belum ada data yang dibuat atau dicatat oleh pengguna, sistem wajib menyajikan angka `0` atau *empty state* yang bersih (contoh: "Belum ada data surat tercatat") tanpa menyisipkan data rekaan atau angka perkiraan.
+14. **Standar Mutlak UI/UX Presisi, Tata Letak Rapi, & Multi-Perangkat Responsif Layar Sentuh (STRICT)**:
+    - **Presisi Tata Letak & Visual Rapi**: Seluruh tata letak antarmuka wajib rapi, konsisten, proporsional, dan presisi tinggi. Menggunakan hierarki visual yang jelas, jarak elemen (*spacing/gap*) yang harmonis, serta keterbacaan tipografi dan kontras warna yang nyaman di semua mode (Light & Dark Mode).
+    - **Ergonomi & Kesempurnaan Multi-Perangkat (Desktop, Tablet, Mobile)**:
+      - **Desktop**: Pemanfaatan ruang kerja yang luas secara efisien dengan grid multi-kolom dan tabel interaktif yang kaya fungsi.
+      - **Tablet**: Transisi layout 2–3 kolom yang adaptif dan nyaman digunakan baik pada orientasi potret maupun lanskap.
+      - **Mobile (Smartphone)**: Tata letak vertikal padat, drawer/sheet yang mulus, tabel dengan scroll horizontal lembut atau kartu responsif, serta bebas dari elemen yang terpotong/overflow horizontal.
+    - **Optimalisasi Layar Sentuh (Touchscreen & Mobile-Friendly)**:
+      - Seluruh elemen interaktif (tombol, badge filter, toggle switcher, tab, dan ikon aksi) wajib memiliki area sentuh yang nyaman untuk jari (*touch target* minimal 40–44px) dengan jarak aman antar elemen guna mencegah salah tekan.
+      - Input form, modal, dropdown select, dan dialog dirancang ergonomis serta responsif terhadap ketukan layar sentuh di smartphone maupun tablet.
+15. **Standar Mutlak Presisi Tabel Data & Proporsi Kolom-Baris Multi-Perangkat (STRICT)**:
+    - **Proporsionalitas Lebar Kotak Kolom & Baris**: Seluruh tabel data wajib mengalokasikan lebar kolom secara presisi dan proporsional sesuai jenis data (contoh: kolom nomor `w-12`, tanggal & badge status `w-28`, tombol aksi `w-32/w-36`, sedangkan teks nama/perihal `min-w-[200px] max-w-[400px] flex-1`).
+    - **Peniadaan Area Kosong Berlebih & Offset**: Dilarang membiarkan kolom melar berlebihan (*wasted whitespace*) ataupun kolom tertekan sempit tidak wajar yang menyebabkan offset layout. Teks panjang wajib dibatasi dengan `truncate` / `line-clamp` dan dilengkapi tooltip `title`.
+    - **Scroll Horizontal Halus & Responsif di Semua Perangkat**: Pembungkus tabel wajib menggunakan container `overflow-x-auto` yang lembut dan presisi tanpa memotong konten pada perangkat mobile, tablet, maupun layar desktop lebar.
 

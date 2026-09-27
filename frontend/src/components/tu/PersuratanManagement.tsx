@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -231,7 +232,13 @@ const KLASIFIKASI_SURAT = [
   { kode: 'MOU', nama: 'Kerjasama / Nota Kesepahaman' }
 ]
 
-export function PersuratanManagement() {
+export function PersuratanManagement({ 
+  forcedMode = 'all', 
+  initialTab 
+}: { 
+  forcedMode?: 'surat-masuk' | 'surat-keluar' | 'e-archive' | 'all'
+  initialTab?: string 
+} = {}) {
   const { data: session } = useSession()
   const user = session?.user as any
 
@@ -296,15 +303,39 @@ export function PersuratanManagement() {
       }))
   }, [usersList])
 
-  // State Management - Default Tab Sesuai Peran Pengakses
-  const [activeTab, setActiveTab] = useState(isKepalaSekolah ? 'surat-keluar' : 'surat-masuk')
+  const searchParams = useSearchParams()
+  const tabParam = searchParams?.get('tab')
 
-  // Auto-set tab jika status login / role berubah
+  // State Management - Default Tab Sesuai Query Param, Mode Terpisah, & Peran Pengakses
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (forcedMode === 'surat-masuk') return 'surat-masuk'
+    if (forcedMode === 'surat-keluar') return initialTab || (tabParam === 'template-resmi' ? 'template-resmi' : 'surat-keluar')
+    if (forcedMode === 'e-archive') return 'e-archive'
+    if (tabParam === 'e-archive' || tabParam === 'arsip') return 'e-archive'
+    if (tabParam === 'surat-keluar' || tabParam === 'keluar') return 'surat-keluar'
+    if (tabParam === 'template-resmi' || tabParam === 'template') return 'template-resmi'
+    if (tabParam === 'surat-masuk' || tabParam === 'masuk') return 'surat-masuk'
+    return isKepalaSekolah ? 'surat-keluar' : 'surat-masuk'
+  })
+
+  // Auto-set tab jika query param, status login, atau forcedMode berubah
   useEffect(() => {
-    if (isKepalaSekolah) {
+    if (forcedMode === 'surat-masuk') {
+      setActiveTab('surat-masuk')
+    } else if (forcedMode === 'surat-keluar') {
+      if (tabParam === 'template-resmi' || tabParam === 'template') setActiveTab('template-resmi')
+      else setActiveTab('surat-keluar')
+    } else if (forcedMode === 'e-archive') {
+      setActiveTab('e-archive')
+    } else if (tabParam) {
+      if (tabParam === 'e-archive' || tabParam === 'arsip') setActiveTab('e-archive')
+      else if (tabParam === 'surat-keluar' || tabParam === 'keluar') setActiveTab('surat-keluar')
+      else if (tabParam === 'template-resmi' || tabParam === 'template') setActiveTab('template-resmi')
+      else if (tabParam === 'surat-masuk' || tabParam === 'masuk') setActiveTab('surat-masuk')
+    } else if (isKepalaSekolah) {
       setActiveTab('surat-keluar')
     }
-  }, [isKepalaSekolah])
+  }, [tabParam, isKepalaSekolah, forcedMode])
 
   const [suratMasukList, setSuratMasukList] = useState<SuratMasuk[]>(INITIAL_SURAT_MASUK)
   const [suratKeluarList, setSuratKeluarList] = useState<SuratKeluar[]>(INITIAL_SURAT_KELUAR)
@@ -470,6 +501,9 @@ export function PersuratanManagement() {
     sifat: SuratMasuk['sifat']
     kategori: SuratMasuk['kategori']
     ringkasan: string
+    rekomendasiInstruksi: string[]
+    rekomendasiTargets: string[]
+    rekomendasiCatatan: string
     confidenceScore: number
   } | null>(null)
 
@@ -599,16 +633,16 @@ export function PersuratanManagement() {
 
   // Form State: Surat Masuk Baru
   const [formSuratMasuk, setFormSuratMasuk] = useState({
-    nomorAgenda: '266.d',
-    nomorSurat: '400.3/2067/101.6.19/2026',
-    pengirim: 'Cabang Dinas Pendidikan Wilayah Ponorogo',
-    instansi: 'Cabang Dinas Pendidikan Wilayah Ponorogo',
-    perihal: 'Jatim Cybersecurity Competitron (JCC) bagi Pelajar SMA dan SMK',
-    tanggalSurat: '2026-08-07',
-    tanggalDiterima: '2026-08-11',
-    sifat: 'PENTING' as SuratMasuk['sifat'],
+    nomorAgenda: '',
+    nomorSurat: '',
+    pengirim: '',
+    instansi: '',
+    perihal: '',
+    tanggalSurat: new Date().toISOString().split('T')[0],
+    tanggalDiterima: new Date().toISOString().split('T')[0],
+    sifat: 'RUTIN' as SuratMasuk['sifat'],
     kategori: 'DINAS_DIKNAS' as SuratMasuk['kategori'],
-    ringkasan: 'Perihal Pelaksanaan Jatim Cybersecurity Competitron (JCC) bagi Pelajar SMA dan SMK',
+    ringkasan: '',
     fileUrl: ''
   })
 
@@ -626,10 +660,10 @@ export function PersuratanManagement() {
   }>({
     sifat: 'PENTING',
     statusTahapan: 'DITERIMA',
-    tanggalDiterima: '2026-08-11',
+    tanggalDiterima: new Date().toISOString().split('T')[0],
     instruksi: ['Ditindak Lanjuti'],
-    targets: ['Wakasek Kurikulum', 'Guru'],
-    guruNama: 'M. Raza',
+    targets: [],
+    guruNama: '',
     bagianNama: '',
     stafNama: '',
     catatan: ''
@@ -922,6 +956,41 @@ export function PersuratanManagement() {
     }, 100)
   }
 
+  // Handler Buka Modal Lembar Disposisi & Sinkronisasi Draf Disposisi Eksisting
+  const handleOpenModalDisposisi = (s: SuratMasuk) => {
+    setSelectedSuratMasuk(s)
+    if (s.disposisi) {
+      setFormDisposisi({
+        sifat: (s.disposisi.sifat === 'RAHASIA' || s.disposisi.sifat === 'PENTING' || s.disposisi.sifat === 'RUTIN') 
+          ? s.disposisi.sifat 
+          : ((s.sifat === 'RAHASIA' || s.sifat === 'PENTING' || s.sifat === 'RUTIN') ? s.sifat : 'PENTING'),
+        statusTahapan: (s.disposisi.statusTahapan === 'DITERIMA' || s.disposisi.statusTahapan === 'DISAMPAIKAN' || s.disposisi.statusTahapan === 'PENGECEKAN' || s.disposisi.statusTahapan === 'PENYELESAIAN')
+          ? s.disposisi.statusTahapan
+          : ((s.statusTahapan === 'DITERIMA' || s.statusTahapan === 'DISAMPAIKAN' || s.statusTahapan === 'PENGECEKAN' || s.statusTahapan === 'PENYELESAIAN') ? s.statusTahapan : 'DITERIMA'),
+        tanggalDiterima: s.disposisi.tanggalDiterima ? s.disposisi.tanggalDiterima.split('T')[0] : (s.tanggalDiterima || new Date().toISOString().split('T')[0]),
+        instruksi: Array.isArray(s.disposisi.instruksi) && s.disposisi.instruksi.length > 0 ? s.disposisi.instruksi : ['Ditindak Lanjuti'],
+        targets: Array.isArray(s.disposisi.diteruskanKepada?.targets) && s.disposisi.diteruskanKepada.targets.length > 0 ? s.disposisi.diteruskanKepada.targets : ['Wakasek Kurikulum'],
+        guruNama: s.disposisi.diteruskanKepada?.guruNama || '',
+        bagianNama: s.disposisi.diteruskanKepada?.bagianNama || '',
+        stafNama: s.disposisi.diteruskanKepada?.stafNama || '',
+        catatan: s.disposisi.catatan || ''
+      })
+    } else {
+      setFormDisposisi({
+        sifat: (s.sifat === 'RAHASIA' || s.sifat === 'PENTING' || s.sifat === 'RUTIN') ? s.sifat : 'PENTING',
+        statusTahapan: (s.statusTahapan === 'DITERIMA' || s.statusTahapan === 'DISAMPAIKAN' || s.statusTahapan === 'PENGECEKAN' || s.statusTahapan === 'PENYELESAIAN') ? s.statusTahapan : 'DITERIMA',
+        tanggalDiterima: s.tanggalDiterima || new Date().toISOString().split('T')[0],
+        instruksi: ['Ditindak Lanjuti'],
+        targets: ['Wakasek Kurikulum', 'Guru'],
+        guruNama: '',
+        bagianNama: '',
+        stafNama: '',
+        catatan: ''
+      })
+    }
+    setIsModalDisposisiOpen(true)
+  }
+
   // Handler Kepala Sekolah: Buka Modal Tanda Tangan Digital Pad untuk Disposisi Surat Masuk
   const handleOpenDisposisiTtdCanvas = (surat: SuratMasuk) => {
     setSelectedSuratMasukForDisposisiESign(surat)
@@ -958,7 +1027,16 @@ export function PersuratanManagement() {
             action: 'APPROVE',
             signerName: signerForm.nama || 'Sugeng Riadi, M.Pd.',
             signerNbm: signerForm.nbm || 'NBM. 974.501',
-            signatureImage: signatureDataUrl
+            signatureImage: signatureDataUrl,
+            instruksi: formDisposisi.instruksi,
+            diteruskanKepada: {
+              targets: formDisposisi.targets,
+              guruNama: formDisposisi.guruNama,
+              bagianNama: formDisposisi.bagianNama,
+              stafNama: formDisposisi.stafNama
+            },
+            catatan: formDisposisi.catatan,
+            sifat: formDisposisi.sifat
           })
         })
         queryClient.invalidateQueries({ queryKey: ['persuratan-surat-masuk-list'] })
@@ -972,18 +1050,32 @@ export function PersuratanManagement() {
             id: dispId,
             suratMasukId: surat.id,
             nomorAgenda: surat.nomorAgenda,
-            sifat: 'PENTING',
+            sifat: formDisposisi.sifat || 'PENTING',
             statusTahapan: 'DITERIMA',
-            tanggalDiterima: surat.tanggalDiterima,
-            instruksi: ['Ditindak Lanjuti'],
-            diteruskanKepada: { targets: ['Wakasek Kurikulum', 'Guru'], guruNama: 'M. Raza' },
-            catatan: 'Disetujui dan ditindaklanjuti.'
+            tanggalDiterima: formDisposisi.tanggalDiterima || surat.tanggalDiterima,
+            instruksi: formDisposisi.instruksi,
+            diteruskanKepada: {
+              targets: formDisposisi.targets,
+              guruNama: formDisposisi.guruNama,
+              bagianNama: formDisposisi.bagianNama,
+              stafNama: formDisposisi.stafNama
+            },
+            catatan: formDisposisi.catatan
           }
           return {
             ...item,
             statusDisposisi: 'DISPOSISI_DISETUJUI' as const,
             disposisi: {
               ...currentDisp,
+              sifat: formDisposisi.sifat,
+              instruksi: formDisposisi.instruksi,
+              diteruskanKepada: {
+                targets: formDisposisi.targets,
+                guruNama: formDisposisi.guruNama,
+                bagianNama: formDisposisi.bagianNama,
+                stafNama: formDisposisi.stafNama
+              },
+              catatan: formDisposisi.catatan,
               statusEsign: 'DISETUJUI' as const,
               eSignToken: tokenEsign,
               eSignSignedAt: new Date().toISOString(),
@@ -1566,7 +1658,7 @@ export function PersuratanManagement() {
     const nextId = `SM-${Date.now().toString().slice(-4)}`
     const newSurat: SuratMasuk = {
       id: nextId,
-      nomorAgenda: formSuratMasuk.nomorAgenda || '266.d',
+      nomorAgenda: formSuratMasuk.nomorAgenda || '-',
       nomorSurat: formSuratMasuk.nomorSurat,
       pengirim: formSuratMasuk.pengirim || formSuratMasuk.instansi,
       instansi: formSuratMasuk.instansi,
@@ -1821,7 +1913,6 @@ export function PersuratanManagement() {
 
       // 6. Algoritma Cerdas: Ekstraksi Ringkasan Surat dari Paragraf Isi Surat
       let ringkasan = ''
-      // Ambil paragraf setelah kop & nomor (baris indeks ke-5 sampai ke-15)
       const bodyLines = lines.filter((l, idx) => {
         if (idx < 2) return false
         if (/^(nomor|no|lampiran|perihal|hal|sifat|kepada|yth|assalamu|dengan hormat)/i.test(l)) return false
@@ -1829,7 +1920,6 @@ export function PersuratanManagement() {
       })
 
       if (bodyLines.length > 0) {
-        // Rangkum 2-3 kalimat pertama isi pokok surat
         ringkasan = bodyLines.slice(0, 3).join(' ').replace(/\s+/g, ' ').substring(0, 250)
       } else {
         ringkasan = `Surat dinas resmi dari ${instansi} perihal ${perihal} untuk ditindaklanjuti pimpinan SMA Muhammadiyah 1 Ponorogo.`
@@ -1849,8 +1939,54 @@ export function PersuratanManagement() {
         tanggalSurat = `${year}-${month}-${day}`
       }
 
+      // 8. Algoritma Cerdas: Analisis Kebutuhan Disposisi (Rekomendasi Instruksi, Target Unit, & Catatan Pimpinan)
+      const combinedAnalysisText = `${perihal} ${ringkasan} ${fullText}`.toLowerCase()
+      
+      // Rekomendasi Instruksi
+      const rekomendasiInstruksi: string[] = []
+      if (/undangan|kehadiran|menghadap|rapat|workshop|seminar|lokakarya|konferensi|webinar/i.test(combinedAnalysisText)) {
+        rekomendasiInstruksi.push('Dihadiri', 'Ditindak Lanjuti')
+      } else if (/lomba|olimpiade|turnamen|kejuaraan|festival|tanding|kompetisi|ajang/i.test(combinedAnalysisText)) {
+        rekomendasiInstruksi.push('Berpartisipasi', 'Ditindak Lanjuti')
+      } else if (/permohonan bantuan|proposal|dana|anggaran|sarana|fasilitas|peminjaman|alat/i.test(combinedAnalysisText)) {
+        rekomendasiInstruksi.push('Dicukupi', 'Dipertimbangkan')
+      } else if (/izin|permohonan izin|dispensasi|rekomendasi/i.test(combinedAnalysisText)) {
+        rekomendasiInstruksi.push('Diijinkan', 'Ditindak Lanjuti')
+      } else if (/edaran|pemberitahuan|sosialisasi|himbauan|pengumuman/i.test(combinedAnalysisText)) {
+        rekomendasiInstruksi.push('Ditindak Lanjuti', 'Arsip')
+      } else {
+        rekomendasiInstruksi.push('Ditindak Lanjuti')
+      }
+
+      // Rekomendasi Target Penugasan Unit / Waka
+      const rekomendasiTargets: string[] = []
+      if (/kurikulum|pembelajaran|kbm|asesmen|ujian|raport|mgmp|pelatihan guru|workshop guru|jadwal/i.test(combinedAnalysisText)) {
+        rekomendasiTargets.push('Wakasek Kurikulum', 'Guru')
+      }
+      if (/kesiswaan|siswa|osis|ekstrakurikuler|lomba|kemah|pramuka|olimpiade|beasiswa|prestasi/i.test(combinedAnalysisText)) {
+        rekomendasiTargets.push('Wakasek Kesiswaan')
+      }
+      if (/sarana|prasarana|gedung|bangunan|perbaikan|renovasi|lab|inventaris|peminjaman tempat|kebersihan/i.test(combinedAnalysisText)) {
+        rekomendasiTargets.push('Wakasek Sarana Prasarana', 'Biro Kerumahtanggaan')
+      }
+      if (/humas|kerjasama|ptn|universitas|kemitraan|kunjungan|studi banding|mou|media|publikasi|sdm/i.test(combinedAnalysisText)) {
+        rekomendasiTargets.push('Waka Humas dan SDM')
+      }
+      if (/ismuba|pesantren|ramadhan|baitul arqam|idul adha|idul fitri|pengajian|ibadah|keislaman|pdm|muhammadiyah|aisyiyah/i.test(combinedAnalysisText)) {
+        rekomendasiTargets.push('Waka ISMUBA')
+      }
+      if (/keuangan|tagihan|iuran|bop|bos|anggaran|dana|biaya|pembayaran|faktur|kwitansi|pajak/i.test(combinedAnalysisText)) {
+        rekomendasiTargets.push('Biro Administrasi Keuangan')
+      }
+      if (rekomendasiTargets.length === 0 || /umum|persuratan|arsip|pendataan|kepegawaian|dinas/i.test(combinedAnalysisText)) {
+        rekomendasiTargets.push('Biro Administrasi Umum')
+      }
+
+      // Rekomendasi Catatan Arahan Pimpinan
+      const rekomendasiCatatan = `Mohon ditindaklanjuti dan dikoordinasikan dengan unit terkait mengenai: ${perihal}.`
+
       const todayStr = new Date().toISOString().split('T')[0]
-      const autoNomorAgenda = `${(suratMasukList.length + 267)}.d`
+      const autoNomorAgenda = String(suratMasukList.length + 1)
 
       setAiStepProgress(4)
 
@@ -1865,13 +2001,15 @@ export function PersuratanManagement() {
         sifat: sifat,
         kategori: kategori,
         ringkasan: ringkasan,
+        rekomendasiInstruksi: Array.from(new Set(rekomendasiInstruksi)),
+        rekomendasiTargets: Array.from(new Set(rekomendasiTargets)),
+        rekomendasiCatatan: rekomendasiCatatan,
         confidenceScore: extractedText.length > 20 ? 98.2 : 94.5
       })
 
     } catch (err) {
       console.error('AI OCR processing error:', err)
-      // Fallback aman
-      const autoNomorAgenda = `${(suratMasukList.length + 267)}.d`
+      const autoNomorAgenda = String(suratMasukList.length + 1)
       const todayStr = new Date().toISOString().split('T')[0]
       setAiExtractedForm({
         nomorAgenda: autoNomorAgenda,
@@ -1884,6 +2022,9 @@ export function PersuratanManagement() {
         sifat: 'PENTING',
         kategori: 'DINAS_DIKNAS',
         ringkasan: 'Surat dinas resmi perihal koordinasi dan pelaksanaan program kegiatan pendidikan SMA Muhammadiyah 1 Ponorogo.',
+        rekomendasiInstruksi: ['Ditindak Lanjuti'],
+        rekomendasiTargets: ['Wakasek Kurikulum', 'Wakasek Kesiswaan'],
+        rekomendasiCatatan: 'Mohon dikoordinasikan dan ditindaklanjuti dengan baik.',
         confidenceScore: 92.0
       })
     } finally {
@@ -1925,6 +2066,7 @@ export function PersuratanManagement() {
         if (json.data) {
           newSurat.id = json.data.id
         }
+        queryClient.invalidateQueries({ queryKey: ['persuratan-surat-masuk-list'] })
       }
     } catch (e) {
       console.log('Backend API fallback to local state:', e)
@@ -1949,6 +2091,81 @@ export function PersuratanManagement() {
         </div>
       `,
       confirmButtonText: 'Selesai'
+    })
+  }
+
+  // Handler Simpan Hasil AI dan Langsung Buka Form Lembar Disposisi
+  const handleSimpanDanBukaDisposisiAi = async () => {
+    if (!aiExtractedForm) return
+
+    const nextId = `SM-${Date.now().toString().slice(-4)}`
+    const newSurat: SuratMasuk = {
+      id: nextId,
+      nomorAgenda: aiExtractedForm.nomorAgenda,
+      nomorSurat: aiExtractedForm.nomorSurat,
+      pengirim: aiExtractedForm.pengirim,
+      instansi: aiExtractedForm.instansi,
+      perihal: aiExtractedForm.perihal,
+      tanggalSurat: aiExtractedForm.tanggalSurat,
+      tanggalDiterima: aiExtractedForm.tanggalDiterima,
+      sifat: aiExtractedForm.sifat,
+      kategori: aiExtractedForm.kategori,
+      fileUrl: aiPreviewUrl || undefined,
+      ringkasan: aiExtractedForm.ringkasan,
+      statusTahapan: 'DITERIMA',
+      statusDisposisi: 'BELUM_DISPOSISI',
+      disposisiList: []
+    }
+
+    try {
+      const res = await authenticatedFetch('/api-backend/surat-masuk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(aiExtractedForm)
+      })
+      if (res.ok) {
+        const json = await res.json()
+        if (json.data) {
+          newSurat.id = json.data.id
+        }
+        queryClient.invalidateQueries({ queryKey: ['persuratan-surat-masuk-list'] })
+      }
+    } catch (e) {
+      console.log('Backend API fallback to local state:', e)
+    }
+
+    setSuratMasukList([newSurat, ...suratMasukList])
+    setIsModalAiSuratMasukOpen(false)
+    setAiFileSuratMasuk(null)
+    setAiPreviewUrl(null)
+
+    // Pre-populate Form Lembar Disposisi dengan Rekomendasi AI
+    setSelectedSuratMasuk(newSurat)
+    setFormDisposisi({
+      sifat: (newSurat.sifat === 'RAHASIA' || newSurat.sifat === 'PENTING' || newSurat.sifat === 'RUTIN') ? newSurat.sifat : 'PENTING',
+      statusTahapan: 'DITERIMA',
+      tanggalDiterima: newSurat.tanggalDiterima || new Date().toISOString().split('T')[0],
+      instruksi: aiExtractedForm.rekomendasiInstruksi && aiExtractedForm.rekomendasiInstruksi.length > 0
+        ? aiExtractedForm.rekomendasiInstruksi
+        : ['Ditindak Lanjuti'],
+      targets: aiExtractedForm.rekomendasiTargets && aiExtractedForm.rekomendasiTargets.length > 0
+        ? aiExtractedForm.rekomendasiTargets
+        : ['Wakasek Kurikulum'],
+      guruNama: '',
+      bagianNama: '',
+      stafNama: '',
+      catatan: aiExtractedForm.rekomendasiCatatan || ''
+    })
+
+    setAiExtractedForm(null)
+    setIsModalDisposisiOpen(true)
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Disposisi Terisi Otomatis oleh AI',
+      text: `Surat Masuk #${newSurat.nomorAgenda} berhasil dicatat dan lembar disposisi telah siap ditelaah.`,
+      timer: 2000,
+      showConfirmButton: false
     })
   }
 
@@ -2188,7 +2405,7 @@ export function PersuratanManagement() {
           </div>
 
           <div class="agenda-box">
-            NOMOR AGENDA : ${surat.nomorAgenda || disp?.nomorAgenda || '266.d'}
+            NOMOR AGENDA : ${surat.nomorAgenda || disp?.nomorAgenda || '-'}
           </div>
 
           <div class="title">LEMBAR DISPOSISI</div>
@@ -2360,6 +2577,7 @@ export function PersuratanManagement() {
           createdDisposisi = json.data
         }
       }
+      queryClient.invalidateQueries({ queryKey: ['persuratan-surat-masuk-list'] })
     } catch (e) {
       console.log('Backend API fallback to local state:', e)
     }
@@ -2407,7 +2625,22 @@ export function PersuratanManagement() {
   }
 
   // Handler Pihak Penerus / Admin TU: Konfirmasi Pelaksanaan Disposisi
-  const handleKonfirmasiPelaksanaanDisposisi = (surat: SuratMasuk) => {
+  const handleKonfirmasiPelaksanaanDisposisi = async (surat: SuratMasuk) => {
+    try {
+      await authenticatedFetch(`/api-backend/surat-masuk/${surat.id}/status-tindak-lanjut`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          statusDisposisi: 'DILAKSANAKAN',
+          statusTahapan: 'PENYELESAIAN',
+          catatanTindakLanjut: 'Disposisi telah disetujui & dikonfirmasi selesai dilaksanakan.'
+        })
+      })
+      queryClient.invalidateQueries({ queryKey: ['persuratan-surat-masuk-list'] })
+    } catch (e) {
+      console.log('Backend fallback:', e)
+    }
+
     const updatedList = suratMasukList.map(item => {
       if (item.id === surat.id) {
         return {
@@ -2462,9 +2695,19 @@ export function PersuratanManagement() {
         body: JSON.stringify({
           action: 'APPROVE',
           signerName: signerForm.nama || 'Sugeng Riadi, M.Pd.',
-          signerNbm: signerForm.nbm || 'NBM. 974.501'
+          signerNbm: signerForm.nbm || 'NBM. 974.501',
+          instruksi: formDisposisi.instruksi,
+          diteruskanKepada: {
+            targets: formDisposisi.targets,
+            guruNama: formDisposisi.guruNama,
+            bagianNama: formDisposisi.bagianNama,
+            stafNama: formDisposisi.stafNama
+          },
+          catatan: formDisposisi.catatan,
+          sifat: formDisposisi.sifat
         })
       })
+      queryClient.invalidateQueries({ queryKey: ['persuratan-surat-masuk-list'] })
     } catch (e) {
       console.log('Backend API fallback to local state:', e)
     }
@@ -2475,18 +2718,32 @@ export function PersuratanManagement() {
           id: dispId,
           suratMasukId: surat.id,
           nomorAgenda: surat.nomorAgenda,
-          sifat: 'PENTING',
+          sifat: formDisposisi.sifat || 'PENTING',
           statusTahapan: 'DITERIMA',
-          tanggalDiterima: surat.tanggalDiterima,
-          instruksi: ['Ditindak Lanjuti'],
-          diteruskanKepada: { targets: ['Wakasek Kurikulum', 'Guru'], guruNama: 'M. Raza' },
-          catatan: 'Disetujui dan ditindaklanjuti.'
+          tanggalDiterima: formDisposisi.tanggalDiterima || surat.tanggalDiterima,
+          instruksi: formDisposisi.instruksi,
+          diteruskanKepada: {
+            targets: formDisposisi.targets,
+            guruNama: formDisposisi.guruNama,
+            bagianNama: formDisposisi.bagianNama,
+            stafNama: formDisposisi.stafNama
+          },
+          catatan: formDisposisi.catatan
         }
         return {
           ...item,
           statusDisposisi: 'DISPOSISI_DISETUJUI' as const,
           disposisi: {
             ...currentDisp,
+            sifat: formDisposisi.sifat,
+            instruksi: formDisposisi.instruksi,
+            diteruskanKepada: {
+              targets: formDisposisi.targets,
+              guruNama: formDisposisi.guruNama,
+              bagianNama: formDisposisi.bagianNama,
+              stafNama: formDisposisi.stafNama
+            },
+            catatan: formDisposisi.catatan,
             statusEsign: 'DISETUJUI' as const,
             eSignToken: tokenEsign,
             eSignSignedAt: new Date().toISOString(),
@@ -3256,7 +3513,7 @@ export function PersuratanManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Dynamic Header Banner berdasarkan Role Pengakses */}
+      {/* Dynamic Header Banner berdasarkan Mode dan Role Pengakses */}
       {isKepalaSekolah ? (
         <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/90 via-indigo-900/80 to-blue-900/90 border border-purple-500/30 text-white backdrop-blur-xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -3265,186 +3522,245 @@ export function PersuratanManagement() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold">Panel Eksekutif & E-Sign Kepala Sekolah</h2>
+                <h2 className="text-base font-bold">
+                  {forcedMode === 'surat-masuk' && 'Disposisi Surat Masuk Pimpinan'}
+                  {forcedMode === 'surat-keluar' && 'Panel Persetujuan & E-Sign Kepala Sekolah'}
+                  {forcedMode === 'e-archive' && 'E-Archive & Arsip Surat Pimpinan'}
+                  {forcedMode === 'all' && 'Panel Eksekutif & E-Sign Kepala Sekolah'}
+                </h2>
               </div>
               <p className="text-xs text-purple-200/80 mt-0.5">
-                Kelola persetujuan naskah dinas, bubuhkan tanda tangan digital (E-Sign) canvas, dan verifikasi disposisi surat masuk pimpinan.
+                {forcedMode === 'surat-masuk' && 'Telaah surat masuk pimpinan dan terbitkan instruksi disposisi kepada staf/guru terkait.'}
+                {forcedMode === 'surat-keluar' && 'Kelola persetujuan naskah dinas dan bubuhkan tanda tangan digital (E-Sign) resmi.'}
+                {forcedMode === 'e-archive' && 'Telusuri berkas arsip surat dinas digital dan dokumen penting sekolah.'}
+                {forcedMode === 'all' && 'Kelola persetujuan naskah dinas, bubuhkan tanda tangan digital (E-Sign), dan verifikasi disposisi surat masuk.'}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              size="sm"
-              onClick={() => {
-                setActiveTab('surat-keluar')
-                setFilterStatusTtd('MENUNGGU_TTD')
-              }}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-md gap-1.5 cursor-pointer"
-            >
-              <FileCheck className="w-4 h-4" /> Antrian E-Sign ({suratKeluarList.filter(s => s.status === 'MENUNGGU_TTD').length})
-            </Button>
+            {(forcedMode === 'surat-keluar' || forcedMode === 'all') && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setActiveTab('surat-keluar')
+                  setFilterStatusTtd('MENUNGGU_TTD')
+                }}
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-md gap-1.5 cursor-pointer"
+              >
+                <FileCheck className="w-4 h-4" /> Antrian E-Sign ({suratKeluarList.filter(s => s.status === 'MENUNGGU_TTD').length})
+              </Button>
+            )}
           </div>
         </div>
       ) : (
         <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-900/90 via-slate-900/90 to-indigo-900/90 border border-blue-500/30 text-white backdrop-blur-xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-500/20 rounded-xl border border-blue-400/40 text-blue-300 shrink-0">
-              <Mail className="w-6 h-6" />
+              {forcedMode === 'surat-masuk' && <Inbox className="w-6 h-6" />}
+              {forcedMode === 'surat-keluar' && <Send className="w-6 h-6" />}
+              {forcedMode === 'e-archive' && <Archive className="w-6 h-6" />}
+              {forcedMode === 'all' && <Mail className="w-6 h-6" />}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold">Manajemen Persuratan & Agenda Tata Usaha</h2>
+                <h2 className="text-base font-bold">
+                  {forcedMode === 'surat-masuk' && 'Buku Agenda Surat Masuk & Disposisi'}
+                  {forcedMode === 'surat-keluar' && 'Penerbitan Surat Keluar & Template Resmi'}
+                  {forcedMode === 'e-archive' && 'E-Archive & Pengarsipan Surat Digital'}
+                  {forcedMode === 'all' && 'Manajemen Persuratan & Agenda Tata Usaha'}
+                </h2>
               </div>
               <p className="text-xs text-blue-200/80 mt-0.5">
-                Penerbitan surat keluar, penomoran agenda otomatis, pencatatan surat masuk, dan pembuatan lembar disposisi pimpinan.
+                {forcedMode === 'surat-masuk' && 'Pencatatan surat masuk, penomoran agenda otomatis, scan OCR/AI, dan pembuatan lembar disposisi.'}
+                {forcedMode === 'surat-keluar' && 'Penerbitan surat keluar dinas, Surat Keputusan (SK), dan pengelolaan template resmi sekolah.'}
+                {forcedMode === 'e-archive' && 'Penyimpanan arsip digital, pencarian cepat berkas, dan penataan kategori surat.'}
+                {forcedMode === 'all' && 'Penerbitan surat keluar, penomoran agenda otomatis, pencatatan surat masuk, dan pembuatan lembar disposisi.'}
               </p>
             </div>
           </div>
         </div>
       )}
-      {/* Top Header Summary Widget */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="border-blue-200/80 dark:border-blue-900/50 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 dark:from-blue-950/40 dark:to-indigo-950/20 shadow-xs">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">Surat Masuk</p>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white">{suratMasukList.length}</h3>
-              <p className="text-[10px] text-slate-500">Bulan Ini: 18 surat</p>
-            </div>
-            <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-md">
-              <Inbox className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="border-amber-200/80 dark:border-amber-900/50 bg-gradient-to-br from-amber-50/70 to-orange-50/50 dark:from-amber-950/40 dark:to-orange-950/20 shadow-xs">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">Surat Keluar</p>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white">{suratKeluarList.length}</h3>
-              <p className="text-[10px] text-slate-500">Auto-number Aktif</p>
-            </div>
-            <div className="p-3 bg-amber-600 text-white rounded-2xl shadow-md">
-              <Send className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Top Header Summary Widget Sesuai Mode */}
+      <div className={`grid gap-3 sm:gap-4 ${
+        forcedMode === 'all' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+      }`}>
+        {(forcedMode === 'surat-masuk' || forcedMode === 'all') && (
+          <Card className="border-blue-200/80 dark:border-blue-900/50 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 dark:from-blue-950/40 dark:to-indigo-950/20 shadow-xs">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">Total Surat Masuk</p>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">{suratMasukList.length}</h3>
+                <p className="text-[10px] text-slate-500">Agenda Otomatis Terindeks</p>
+              </div>
+              <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-md">
+                <Inbox className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card className="border-purple-200/80 dark:border-purple-900/50 bg-gradient-to-br from-purple-50/70 to-violet-50/50 dark:from-purple-950/40 dark:to-violet-950/20 shadow-xs">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">Disposisi Pimpinan</p>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white">
-                {suratMasukList.reduce((acc, s) => acc + s.disposisiList.length, 0)}
-              </h3>
-              <p className="text-[10px] text-slate-500">Terdistribusi Realtime</p>
-            </div>
-            <div className="p-3 bg-purple-600 text-white rounded-2xl shadow-md">
-              <CornerDownRight className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
+        {(forcedMode === 'surat-masuk' || forcedMode === 'all') && (
+          <Card className="border-purple-200/80 dark:border-purple-900/50 bg-gradient-to-br from-purple-50/70 to-violet-50/50 dark:from-purple-950/40 dark:to-violet-950/20 shadow-xs">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">Disposisi Terbit</p>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+                  {suratMasukList.reduce((acc, s) => acc + (s.disposisiList?.length || 0), 0)}
+                </h3>
+                <p className="text-[10px] text-slate-500">Terdistribusi Realtime</p>
+              </div>
+              <div className="p-3 bg-purple-600 text-white rounded-2xl shadow-md">
+                <CornerDownRight className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card className="border-emerald-200/80 dark:border-emerald-900/50 bg-gradient-to-br from-emerald-50/70 to-teal-50/50 dark:from-emerald-950/40 dark:to-teal-950/20 shadow-xs">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">E-Archive Digital</p>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white">{archiveList.length}</h3>
-              <p className="text-[10px] text-slate-500">Berkas Terindeks</p>
-            </div>
-            <div className="p-3 bg-emerald-600 text-white rounded-2xl shadow-md">
-              <Archive className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
+        {(forcedMode === 'surat-keluar' || forcedMode === 'all') && (
+          <Card className="border-amber-200/80 dark:border-amber-900/50 bg-gradient-to-br from-amber-50/70 to-orange-50/50 dark:from-amber-950/40 dark:to-orange-950/20 shadow-xs">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">Total Surat Keluar</p>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">{suratKeluarList.length}</h3>
+                <p className="text-[10px] text-slate-500">Auto-number & Klasifikasi</p>
+              </div>
+              <div className="p-3 bg-amber-600 text-white rounded-2xl shadow-md">
+                <Send className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {(forcedMode === 'surat-keluar' || forcedMode === 'all') && (
+          <Card className="border-indigo-200/80 dark:border-indigo-900/50 bg-gradient-to-br from-indigo-50/70 to-blue-50/50 dark:from-indigo-950/40 dark:to-blue-950/20 shadow-xs">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Surat Keputusan (SK)</p>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+                  {suratKeluarList.filter(s => s.jenisSurat === 'SURAT_KEPUTUSAN' || s.perihal?.toLowerCase().includes('keputusan')).length}
+                </h3>
+                <p className="text-[10px] text-slate-500">Naskah SK Resmi</p>
+              </div>
+              <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-md">
+                <FileText className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {(forcedMode === 'e-archive' || forcedMode === 'all') && (
+          <Card className="border-emerald-200/80 dark:border-emerald-900/50 bg-gradient-to-br from-emerald-50/70 to-teal-50/50 dark:from-emerald-950/40 dark:to-teal-950/20 shadow-xs">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">E-Archive Digital</p>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">{archiveList.length}</h3>
+                <p className="text-[10px] text-slate-500">Berkas Terindeks</p>
+              </div>
+              <div className="p-3 bg-emerald-600 text-white rounded-2xl shadow-md">
+                <Archive className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
       {/* Main Tabs Persuratan */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl flex-wrap">
-            {isKepalaSekolah ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('surat-masuk')}
-                  className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all ${
-                    activeTab === 'surat-masuk'
-                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Inbox className="w-4 h-4 text-blue-600" /> Disposisi Surat Masuk
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('surat-keluar')}
-                  className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all ${
-                    activeTab === 'surat-keluar'
-                      ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Send className="w-4 h-4 text-amber-600" /> Persetujuan & E-Sign Surat
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('e-archive')}
-                  className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all ${
-                    activeTab === 'e-archive'
-                      ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Archive className="w-4 h-4 text-emerald-600" /> E-Archive Digital
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('surat-masuk')}
-                  className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all ${
-                    activeTab === 'surat-masuk'
-                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Inbox className="w-4 h-4 text-blue-600" /> Surat Masuk
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('surat-keluar')}
-                  className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all ${
-                    activeTab === 'surat-keluar'
-                      ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Send className="w-4 h-4 text-amber-600" /> Surat Keluar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('template-resmi')}
-                  className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all ${
-                    activeTab === 'template-resmi'
-                      ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <FileText className="w-4 h-4 text-indigo-600" /> Template Surat
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('e-archive')}
-                  className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all ${
-                    activeTab === 'e-archive'
-                      ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Archive className="w-4 h-4 text-emerald-600" /> E-Archive
-                </button>
-              </>
+            {forcedMode === 'surat-masuk' && (
+              <div className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs">
+                <Inbox className="w-4 h-4 text-blue-600" /> {isKepalaSekolah ? 'Disposisi Surat Masuk Pimpinan' : 'Buku Agenda Surat Masuk'}
+              </div>
+            )}
+
+            {forcedMode === 'surat-keluar' && (
+              <div className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-xs">
+                <Send className="w-4 h-4 text-amber-600" /> {isKepalaSekolah ? 'Persetujuan & E-Sign Surat' : 'Surat Keluar & Penerbitan SK'}
+              </div>
+            )}
+
+            {forcedMode === 'e-archive' && (
+              <div className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs">
+                <Archive className="w-4 h-4 text-emerald-600" /> E-Archive Digital
+              </div>
+            )}
+
+            {forcedMode === 'all' && (
+              isKepalaSekolah ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('surat-masuk')}
+                    className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all cursor-pointer ${
+                      activeTab === 'surat-masuk'
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Inbox className="w-4 h-4 text-blue-600" /> Disposisi Surat Masuk
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('surat-keluar')}
+                    className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all cursor-pointer ${
+                      activeTab === 'surat-keluar'
+                        ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Send className="w-4 h-4 text-amber-600" /> Persetujuan & E-Sign Surat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('e-archive')}
+                    className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all cursor-pointer ${
+                      activeTab === 'e-archive'
+                        ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Archive className="w-4 h-4 text-emerald-600" /> E-Archive Digital
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('surat-masuk')}
+                    className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all cursor-pointer ${
+                      activeTab === 'surat-masuk'
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Inbox className="w-4 h-4 text-blue-600" /> Surat Masuk
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('surat-keluar')}
+                    className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all cursor-pointer ${
+                      activeTab === 'surat-keluar'
+                        ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Send className="w-4 h-4 text-amber-600" /> Surat Keluar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('e-archive')}
+                    className={`rounded-xl font-bold text-xs flex items-center gap-1.5 px-3 py-2 transition-all cursor-pointer ${
+                      activeTab === 'e-archive'
+                        ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Archive className="w-4 h-4 text-emerald-600" /> E-Archive
+                  </button>
+                </>
+              )
             )}
           </div>
 
@@ -3591,13 +3907,13 @@ export function PersuratanManagement() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 dark:bg-slate-900/80 text-[11px]">
-                      <TableHead className="w-[36px] px-2 text-center">No</TableHead>
-                      <TableHead className="px-2 w-[150px]">Surat Masuk & Instansi</TableHead>
-                      <TableHead className="px-2 max-w-[280px]">Perihal & Ringkasan</TableHead>
-                      <TableHead className="px-2 text-center w-[95px]">Tanggal & Sifat</TableHead>
-                      <TableHead className="px-2 text-center w-[100px]">Status Disposisi</TableHead>
-                      <TableHead className="px-2 text-right w-[100px]">Aksi</TableHead>
+                    <TableRow className="bg-slate-50/80 dark:bg-slate-900/80 text-xs">
+                      <TableHead className="w-12 px-3 text-center font-bold">No</TableHead>
+                      <TableHead className="w-44 min-w-[160px] px-3 font-bold">Nomor & Instansi</TableHead>
+                      <TableHead className="min-w-[220px] max-w-[380px] px-3 font-bold">Perihal & Ringkasan</TableHead>
+                      <TableHead className="w-28 text-center px-3 font-bold">Tanggal & Sifat</TableHead>
+                      <TableHead className="w-32 text-center px-3 font-bold">Status Disposisi</TableHead>
+                      <TableHead className="w-48 text-right px-3 font-bold">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -3664,28 +3980,25 @@ export function PersuratanManagement() {
                             </span>
                           </TableCell>
                           <TableCell className="text-right px-2">
-                            <div className="flex items-center justify-end gap-1 flex-wrap">
+                            <div className="flex items-center justify-end gap-1.5 flex-wrap">
                               {s.statusDisposisi === 'DISPOSISI_DISETUJUI' && (
                                 <Button
                                   size="sm"
                                   onClick={() => handleKonfirmasiPelaksanaanDisposisi(s)}
-                                  className="h-7 px-2 text-[10px] font-bold gap-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white shadow-xs"
+                                  className="min-h-[34px] px-2.5 text-[11px] font-bold gap-1 rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow-xs cursor-pointer"
                                   title="Konfirmasi bahwa disposisi telah disetujui & siap dilaksanakan pihak penerus"
                                 >
-                                  <CheckCircle2 className="w-3 h-3" /> Dilaksanakan
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> Dilaksanakan
                                 </Button>
                               )}
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => {
-                                  setSelectedSuratMasuk(s)
-                                  setIsModalDisposisiOpen(true)
-                                }}
-                                className="h-7 px-2 text-[10px] font-bold gap-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800"
+                                onClick={() => handleOpenModalDisposisi(s)}
+                                className="min-h-[34px] px-2.5 text-[11px] font-bold gap-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800 cursor-pointer"
                                 title={isKepalaSekolah ? "Verifikasi & E-Sign Disposisi Pimpinan" : "Kelola Disposisi Surat"}
                               >
-                                <CornerDownRight className="w-3 h-3" /> Disposisi ({s.disposisiList.length})
+                                <CornerDownRight className="w-3.5 h-3.5" /> Disposisi ({s.disposisiList?.length || 0})
                               </Button>
                               {!isKepalaSekolah && (
                                 <>
@@ -3693,19 +4006,19 @@ export function PersuratanManagement() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => handleStartEditSuratMasuk(s)}
-                                    className="h-7 px-2 text-[10px] font-bold gap-1 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950 border-amber-200"
+                                    className="min-h-[34px] px-2.5 text-[11px] font-bold gap-1 rounded-xl text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950 border-amber-200 cursor-pointer"
                                     title="Edit / Benarkan Data Surat Masuk"
                                   >
-                                    <Edit3 className="w-3 h-3" /> Edit
+                                    <Edit3 className="w-3.5 h-3.5" /> Edit
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => handleDeleteSuratMasukWithPassword(s)}
-                                    className="h-7 px-2 text-[10px] font-bold gap-1 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950"
+                                    className="min-h-[34px] px-2 text-[11px] font-bold gap-1 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 cursor-pointer"
                                     title="Hapus Surat Masuk"
                                   >
-                                    <Trash2 className="w-3 h-3" /> Hapus
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </Button>
                                 </>
                               )}
@@ -3801,14 +4114,14 @@ export function PersuratanManagement() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 dark:bg-slate-900/80 text-[11px]">
-                      <TableHead className="w-[36px] px-2 text-center">No</TableHead>
-                      <TableHead className="px-2 w-[150px]">Nomor & Sumber</TableHead>
-                      <TableHead className="px-2 w-[160px]">Tujuan & Instansi</TableHead>
-                      <TableHead className="px-2 max-w-[260px]">Perihal Dokumen</TableHead>
-                      <TableHead className="px-2 text-center w-[95px]">Tahun & Jenis</TableHead>
-                      <TableHead className="px-2 text-center w-[100px]">Status TTD</TableHead>
-                      <TableHead className="px-2 text-right w-[140px]">Aksi</TableHead>
+                    <TableRow className="bg-slate-50/80 dark:bg-slate-900/80 text-xs">
+                      <TableHead className="w-12 px-3 text-center font-bold">No</TableHead>
+                      <TableHead className="w-44 min-w-[160px] px-3 font-bold">Nomor & Sumber</TableHead>
+                      <TableHead className="w-44 min-w-[150px] px-3 font-bold">Tujuan & Instansi</TableHead>
+                      <TableHead className="min-w-[220px] max-w-[380px] px-3 font-bold">Perihal Dokumen</TableHead>
+                      <TableHead className="w-28 text-center px-3 font-bold">Tanggal & Jenis</TableHead>
+                      <TableHead className="w-32 text-center px-3 font-bold">Status E-Sign</TableHead>
+                      <TableHead className="w-48 text-right px-3 font-bold">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -4797,7 +5110,7 @@ export function PersuratanManagement() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                       {/* Tombol E-Sign Pengesahan Kepala Sekolah */}
                       {isKepalaSekolah && !doc.isESigned && (
                         <Button
@@ -4806,7 +5119,7 @@ export function PersuratanManagement() {
                             setSelectedArchiveForESign(doc)
                             setIsModalESignArchiveOpen(true)
                           }}
-                          className="h-7 px-2.5 text-[10px] font-bold gap-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white shadow-xs"
+                          className="min-h-[36px] px-3 text-xs font-bold gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-xs cursor-pointer"
                           title="Sahkan & E-Sign Digital Kepala Sekolah"
                         >
                           <ShieldCheck className="w-3.5 h-3.5" /> Sahkan SK (E-Sign)
@@ -4822,7 +5135,7 @@ export function PersuratanManagement() {
                             setSelectedArchiveForESign(doc)
                             setIsModalVerifyArchiveESignOpen(true)
                           }}
-                          className="h-7 px-2 text-[10px] font-bold gap-1 rounded-lg text-emerald-700 border-emerald-300 bg-emerald-50 hover:bg-emerald-100"
+                          className="min-h-[36px] px-3 text-xs font-bold gap-1.5 rounded-xl text-emerald-700 border-emerald-300 bg-emerald-50 hover:bg-emerald-100 cursor-pointer"
                           title="Lihat Bukti Pengesahan E-Sign & QR Code"
                         >
                           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Bukti QR
@@ -4833,10 +5146,10 @@ export function PersuratanManagement() {
                         size="sm"
                         variant="outline"
                         onClick={() => handleDownloadArchiveFile(doc)}
-                        className="h-7 w-7 p-0 rounded-lg text-emerald-700 border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:border-emerald-800"
+                        className="min-h-[36px] min-w-[36px] p-2 rounded-xl text-emerald-700 border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:border-emerald-800 cursor-pointer"
                         title="Unduh Berkas Arsip"
                       >
-                        <Download className="w-3.5 h-3.5" />
+                        <Download className="w-4 h-4" />
                       </Button>
 
                       {!isKepalaSekolah && (
@@ -4845,19 +5158,19 @@ export function PersuratanManagement() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleOpenEditArchiveModal(doc)}
-                            className="h-7 w-7 p-0 rounded-lg text-amber-700 border-amber-200 bg-amber-50/60 hover:bg-amber-100 dark:bg-amber-950/40 dark:border-amber-800"
+                            className="min-h-[36px] min-w-[36px] p-2 rounded-xl text-amber-700 border-amber-200 bg-amber-50/60 hover:bg-amber-100 dark:bg-amber-950/40 dark:border-amber-800 cursor-pointer"
                             title="Edit Dokumen Arsip"
                           >
-                            <Edit3 className="w-3.5 h-3.5" />
+                            <Edit3 className="w-4 h-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleDeleteArchiveWithPassword(doc)}
-                            className="h-7 w-7 p-0 rounded-lg text-rose-600 border-rose-200 bg-rose-50/60 hover:bg-rose-100 dark:bg-rose-950/40 dark:border-rose-800"
+                            className="min-h-[36px] min-w-[36px] p-2 rounded-xl text-rose-600 border-rose-200 bg-rose-50/60 hover:bg-rose-100 dark:bg-rose-950/40 dark:border-rose-800 cursor-pointer"
                             title="Hapus Dokumen Arsip (Password)"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </>
                       )}
@@ -4887,7 +5200,7 @@ export function PersuratanManagement() {
             <div className="space-y-1">
               <Label className="text-xs font-bold">Nomor Agenda <span className="text-rose-500">*</span></Label>
               <Input
-                placeholder="266.d"
+                placeholder="Nomor agenda..."
                 value={formSuratMasuk.nomorAgenda}
                 onChange={(e) => setFormSuratMasuk({ ...formSuratMasuk, nomorAgenda: e.target.value })}
                 className="h-8 text-xs rounded-xl font-mono font-bold"
@@ -4897,7 +5210,7 @@ export function PersuratanManagement() {
             <div className="space-y-1">
               <Label className="text-xs font-bold">Nomor Surat Asal <span className="text-rose-500">*</span></Label>
               <Input
-                placeholder="400.3/2067/101.6.19/2026"
+                placeholder="Nomor surat pengirim..."
                 value={formSuratMasuk.nomorSurat}
                 onChange={(e) => setFormSuratMasuk({ ...formSuratMasuk, nomorSurat: e.target.value })}
                 className="h-8 text-xs rounded-xl font-mono"
@@ -4907,7 +5220,7 @@ export function PersuratanManagement() {
             <div className="sm:col-span-2 space-y-1">
               <Label className="text-xs font-bold">Perihal Surat <span className="text-rose-500">*</span></Label>
               <Input
-                placeholder="Jatim Cybersecurity Competitron (JCC) bagi Pelajar SMA dan SMK"
+                placeholder="Perihal atau subjek surat..."
                 value={formSuratMasuk.perihal}
                 onChange={(e) => setFormSuratMasuk({ ...formSuratMasuk, perihal: e.target.value })}
                 className="h-8 text-xs rounded-xl"
@@ -4917,7 +5230,7 @@ export function PersuratanManagement() {
             <div className="sm:col-span-2 space-y-1">
               <Label className="text-xs font-bold">Asal Surat / Instansi Pengirim <span className="text-rose-500">*</span></Label>
               <Input
-                placeholder="Cabang Dinas Pendidikan Wilayah Ponorogo"
+                placeholder="Instansi / lembaga pengirim surat..."
                 value={formSuratMasuk.instansi}
                 onChange={(e) => setFormSuratMasuk({ ...formSuratMasuk, instansi: e.target.value, pengirim: e.target.value })}
                 className="h-8 text-xs rounded-xl"
@@ -5013,7 +5326,7 @@ export function PersuratanManagement() {
               <Label className="text-xs">Ringkasan / Catatan Isi Surat</Label>
               <Textarea
                 rows={2}
-                placeholder="Perihal Pelaksanaan Jatim Cybersecurity Competitron (JCC) bagi Pelajar SMA dan SMK"
+                placeholder="Ringkasan atau catatan pokok isi surat..."
                 value={formSuratMasuk.ringkasan}
                 onChange={(e) => setFormSuratMasuk({ ...formSuratMasuk, ringkasan: e.target.value })}
                 className="text-xs rounded-xl"
@@ -5047,7 +5360,7 @@ export function PersuratanManagement() {
               </div>
               {selectedSuratMasuk && (
                 <Badge className="bg-slate-900 text-white font-mono font-bold text-xs px-3 py-1 rounded-xl">
-                  NOMOR AGENDA: {selectedSuratMasuk.nomorAgenda || '266.d'}
+                  NOMOR AGENDA: {selectedSuratMasuk.nomorAgenda || '-'}
                 </Badge>
               )}
             </div>
@@ -5075,14 +5388,13 @@ export function PersuratanManagement() {
                   <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">SIFAT SURAT / KERAHASIAAN:</Label>
                   <div className="flex items-center gap-4">
                     {['RAHASIA', 'PENTING', 'RUTIN'].map((item) => (
-                      <label key={item} className={`flex items-center gap-1.5 font-bold ${isKepalaSekolah ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}>
+                      <label key={item} className="flex items-center gap-1.5 font-bold cursor-pointer">
                         <input
                           type="radio"
                           name="sifatDisposisi"
-                          disabled={isKepalaSekolah}
                           checked={formDisposisi.sifat === item}
                           onChange={() => setFormDisposisi({ ...formDisposisi, sifat: item as any })}
-                          className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                          className="w-4 h-4 text-purple-600 focus:ring-purple-500 cursor-pointer"
                         />
                         <span>{item}</span>
                       </label>
@@ -5122,14 +5434,13 @@ export function PersuratanManagement() {
                       return (
                         <label 
                           key={item} 
-                          className={`flex items-center justify-between p-2 rounded-xl border text-xs transition-colors ${
+                          className={`flex items-center justify-between p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
                             isChecked ? 'bg-purple-50 border-purple-300 dark:bg-purple-950/40 dark:border-purple-800 font-bold text-purple-950 dark:text-purple-200' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 text-slate-700 dark:text-slate-300'
-                          } ${isKepalaSekolah ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                          }`}
                         >
                           <span>{item}</span>
                           <input
                             type="checkbox"
-                            disabled={isKepalaSekolah}
                             checked={isChecked}
                             onChange={(e) => {
                               if (e.target.checked) {
@@ -5138,7 +5449,7 @@ export function PersuratanManagement() {
                                 setFormDisposisi({ ...formDisposisi, instruksi: formDisposisi.instruksi.filter(i => i !== item) })
                               }
                             }}
-                            className="w-4 h-4 text-purple-600 rounded"
+                            className="w-4 h-4 text-purple-600 rounded cursor-pointer"
                           />
                         </label>
                       )
@@ -5169,14 +5480,13 @@ export function PersuratanManagement() {
                       return (
                         <div key={target.key} className="space-y-1">
                           <label 
-                            className={`flex items-center justify-between p-2 rounded-xl border text-xs transition-colors ${
+                            className={`flex items-center justify-between p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
                               isChecked ? 'bg-indigo-50 border-indigo-300 dark:bg-indigo-950/40 dark:border-indigo-800 font-bold text-indigo-950 dark:text-indigo-200' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 text-slate-700 dark:text-slate-300'
-                            } ${isKepalaSekolah ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                            }`}
                           >
                             <span>{target.label}</span>
                             <input
                               type="checkbox"
-                              disabled={isKepalaSekolah}
                               checked={isChecked}
                               onChange={(e) => {
                                 if (e.target.checked) {
@@ -5185,7 +5495,7 @@ export function PersuratanManagement() {
                                   setFormDisposisi({ ...formDisposisi, targets: formDisposisi.targets.filter(t => t !== target.key) })
                                 }
                               }}
-                              className="w-4 h-4 text-indigo-600 rounded"
+                              className="w-4 h-4 text-indigo-600 rounded cursor-pointer"
                             />
                           </label>
 
@@ -5193,10 +5503,9 @@ export function PersuratanManagement() {
                           {isChecked && target.key === 'Guru' && (
                             <div className="ml-2 w-[calc(100%-8px)] space-y-1">
                               <select
-                                disabled={isKepalaSekolah}
                                 value={formDisposisi.guruNama}
                                 onChange={(e) => setFormDisposisi({ ...formDisposisi, guruNama: e.target.value })}
-                                className="w-full h-8 text-xs rounded-lg border border-indigo-300 bg-white px-2 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:opacity-80"
+                                className="w-full h-8 text-xs rounded-lg border border-indigo-300 bg-white px-2 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                               >
                                 <option value="">-- Pilih Guru Terdaftar --</option>
                                 {guruPegawaiOptions.map((g: any, idx: number) => (
@@ -5210,10 +5519,9 @@ export function PersuratanManagement() {
                           {isChecked && target.key === 'Bagian' && (
                             <div className="ml-2 w-[calc(100%-8px)] space-y-1">
                               <select
-                                disabled={isKepalaSekolah}
                                 value={formDisposisi.bagianNama}
                                 onChange={(e) => setFormDisposisi({ ...formDisposisi, bagianNama: e.target.value })}
-                                className="w-full h-8 text-xs rounded-lg border border-indigo-300 bg-white px-2 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:opacity-80"
+                                className="w-full h-8 text-xs rounded-lg border border-indigo-300 bg-white px-2 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                               >
                                 <option value="">-- Pilih Penanggung Jawab Bagian --</option>
                                 {guruPegawaiOptions.map((g: any, idx: number) => (
@@ -5227,10 +5535,9 @@ export function PersuratanManagement() {
                           {isChecked && target.key === 'Staf' && (
                             <div className="ml-2 w-[calc(100%-8px)] space-y-1">
                               <select
-                                disabled={isKepalaSekolah}
                                 value={formDisposisi.stafNama}
                                 onChange={(e) => setFormDisposisi({ ...formDisposisi, stafNama: e.target.value })}
-                                className="w-full h-8 text-xs rounded-lg border border-indigo-300 bg-white px-2 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:opacity-80"
+                                className="w-full h-8 text-xs rounded-lg border border-indigo-300 bg-white px-2 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                               >
                                 <option value="">-- Pilih Staf / Pegawai --</option>
                                 {guruPegawaiOptions.map((g: any, idx: number) => (
@@ -5253,11 +5560,10 @@ export function PersuratanManagement() {
                 <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">CATATAN PIMPINAN / PETUNJUK KHUSUS:</Label>
                 <Textarea
                   rows={2}
-                  disabled={isKepalaSekolah}
                   placeholder="Catatan arahan pimpinan (misal: Segera koordinasikan partisipasi siswa SMA Muhipo pada ajang JCC 2026)..."
                   value={formDisposisi.catatan}
                   onChange={(e) => setFormDisposisi({ ...formDisposisi, catatan: e.target.value })}
-                  className="text-xs rounded-xl disabled:bg-slate-100 disabled:opacity-80"
+                  className="text-xs rounded-xl"
                 />
               </div>
 
@@ -6907,7 +7213,7 @@ export function PersuratanManagement() {
                     Hasil Identifikasi Dokumen Otomatis
                   </span>
                   <Badge variant="outline" className="text-[9px] bg-emerald-100 text-emerald-800 border-emerald-300">
-                    Siap Disimpan / Disesuaikan
+                    Akurasi {aiExtractedForm.confidenceScore}% • Siap Diproses
                   </Badge>
                 </div>
 
@@ -7007,22 +7313,79 @@ export function PersuratanManagement() {
                     className="text-xs rounded-xl bg-white dark:bg-slate-900"
                   />
                 </div>
+
+                {/* Rekomendasi Disposisi Otomatis AI */}
+                <div className="p-3 bg-purple-50/80 dark:bg-purple-950/40 rounded-xl border border-purple-200 dark:border-purple-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                      Rekomendasi AI untuk Lembar Disposisi
+                    </span>
+                    <Badge className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-[9px] border border-purple-300 font-semibold">
+                      Otomatis Terintegrasi
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                    <div className="space-y-1 bg-white dark:bg-slate-900 p-2 rounded-lg border border-purple-100 dark:border-purple-900">
+                      <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300">Instruksi AI:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {aiExtractedForm.rekomendasiInstruksi?.map((ins, idx) => (
+                          <Badge key={idx} variant="outline" className="bg-purple-50 text-purple-800 border-purple-200 text-[9px] font-bold">
+                            ✓ {ins}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 bg-white dark:bg-slate-900 p-2 rounded-lg border border-purple-100 dark:border-purple-900">
+                      <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300">Diteruskan Kepada:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {aiExtractedForm.rekomendasiTargets?.map((tgt, idx) => (
+                          <Badge key={idx} variant="outline" className="bg-indigo-50 text-indigo-800 border-indigo-200 text-[9px] font-bold">
+                            👥 {tgt}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">Draf Arahan Pimpinan:</span>
+                    <Input
+                      value={aiExtractedForm.rekomendasiCatatan}
+                      onChange={(e) => setAiExtractedForm({ ...aiExtractedForm, rekomendasiCatatan: e.target.value })}
+                      className="h-7 text-xs bg-white dark:bg-slate-900 rounded-lg"
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
-          <DialogFooter className="gap-2 border-t pt-3">
+          <DialogFooter className="gap-2 border-t pt-3 flex-col sm:flex-row">
             <Button variant="outline" size="sm" onClick={() => setIsModalAiSuratMasukOpen(false)} className="rounded-xl">
               Batal
             </Button>
-            <Button
-              size="sm"
-              disabled={!aiExtractedForm || isAnalyzingAi}
-              onClick={handleSimpanAiSuratMasuk}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold shadow-md gap-1.5"
-            >
-              <Check className="w-4 h-4" /> Simpan & Masukkan ke Tabel Surat Masuk
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!aiExtractedForm || isAnalyzingAi}
+                onClick={handleSimpanAiSuratMasuk}
+                className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-100 font-bold gap-1 text-xs"
+              >
+                <Check className="w-3.5 h-3.5 text-emerald-600" /> Simpan ke Tabel Surat Masuk
+              </Button>
+              <Button
+                size="sm"
+                disabled={!aiExtractedForm || isAnalyzingAi}
+                onClick={handleSimpanDanBukaDisposisiAi}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold shadow-md gap-1.5 text-xs"
+              >
+                <Sparkles className="w-4 h-4" /> Simpan & Langsung Buat Disposisi
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -7047,7 +7410,7 @@ export function PersuratanManagement() {
                 <Input
                   value={formEditSuratMasuk.nomorAgenda}
                   onChange={(e) => setFormEditSuratMasuk({ ...formEditSuratMasuk, nomorAgenda: e.target.value })}
-                  placeholder="Misal: 266.d"
+                  placeholder="Nomor agenda..."
                   className="h-8 text-xs font-mono rounded-xl"
                 />
               </div>

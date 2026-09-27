@@ -5,7 +5,7 @@ import {
   Banknote, FileText, Image as ImageIcon, Award, FileCheck,
   ShieldAlert, Sparkles, ShieldCheck, UserCheck, HeartHandshake,
   Library, BookMarked, Mail, Contact, Package, Boxes, Camera, BellRing, Database,
-  Clock, CreditCard
+  Clock, CreditCard, Archive, Inbox, Send
 } from 'lucide-react'
 
 // 1. Superadmin & Admin IT (Kontrol Penuh Sistem & Master Data)
@@ -38,7 +38,10 @@ export const bauLinks = [
   { name: 'Scan QR Absen', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Cetak Buku Induk', href: '/master-data/buku-induk', icon: BookMarked, group: 'Tata Usaha' },
-  { name: 'Arsip & Persuratan', href: '/fitur/persuratan', icon: Mail, group: 'Tata Usaha' },
+  { name: 'Surat Masuk', href: '/fitur/surat-masuk', icon: Inbox, group: 'Tata Usaha' },
+  { name: 'Disposisi Surat', href: '/fitur/disposisi', icon: FileCheck, group: 'Tata Usaha' },
+  { name: 'Surat Keluar', href: '/fitur/surat-keluar', icon: Send, group: 'Tata Usaha' },
+  { name: 'Arsip Surat Digital', href: '/fitur/arsip', icon: Archive, group: 'Tata Usaha' },
   { name: 'Inventaris & Aset', href: '/fitur/inventaris', icon: Package, group: 'Tata Usaha' },
   { name: 'Buku Tamu', href: '/fitur/buku-tamu', icon: Contact, group: 'Tata Usaha' },
   { name: 'Kegiatan Sekolah', href: '/fitur/kegiatan', icon: Sparkles, group: 'Tata Usaha' },
@@ -117,9 +120,10 @@ export const kepalaSekolahLinks = [
   { name: 'Dashboard Eksekutif', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Scan QR Absen', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi Guru & Staf', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck, group: 'Supervisi Log Presensi' },
-  { name: 'Log Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck, group: 'Supervisi Log Presensi' },
+  { name: 'Surat Masuk', href: '/fitur/surat-masuk', icon: Inbox, group: 'Supervisi & E-Sign' },
   { name: 'Disposisi Surat', href: '/fitur/disposisi', icon: FileCheck, group: 'Supervisi & E-Sign' },
-  { name: 'E-Sign & Persuratan', href: '/fitur/persuratan', icon: Mail, group: 'Supervisi & E-Sign' },
+  { name: 'Surat Keluar (E-Sign)', href: '/fitur/surat-keluar', icon: Send, group: 'Supervisi & E-Sign' },
+  { name: 'Arsip Dokumen Sekolah', href: '/fitur/arsip', icon: Archive, group: 'Supervisi & E-Sign' },
   { name: 'Supervisi Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Supervisi Akademik' },
   { name: 'Supervisi Jurnal Guru', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Supervisi Akademik' },
   { name: 'Supervisi Jurnal Wali Kelas', href: '/akademik/jurnal-wali-kelas', icon: BookOpen, group: 'Supervisi Akademik' },
@@ -330,7 +334,7 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   if (pathname.startsWith('/fitur/')) {
     const slug = pathname.replace('/fitur/', '').split('/')[0]
     if (slug === 'disposisi') return isGuru || isPegawai || isBau || isKepalaSekolah
-    if (slug === 'persuratan') return isPersuratan || isBau || isKepalaSekolah
+    if (slug === 'persuratan' || slug === 'surat-masuk' || slug === 'surat-keluar' || slug === 'arsip' || slug === 'e-archive') return isPersuratan || isBau || isKepalaSekolah
     if (slug === 'inventaris') return isBau || isKepalaSekolah
     if (slug === 'kepegawaian') return isHumasSdm || isBau || isKepalaSekolah
     if (slug === 'buku-tamu') return isHumasSdm || isBau || isKepalaSekolah
@@ -462,7 +466,10 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
       ])
     } else if (roleName === 'PERSURATAN') {
       addLinks([
-        { name: 'Arsip & Persuratan', href: '/fitur/persuratan', icon: Mail, group: 'Layanan Persuratan' },
+        { name: 'Surat Masuk', href: '/fitur/surat-masuk', icon: Inbox, group: 'Layanan Persuratan' },
+        { name: 'Disposisi Surat', href: '/fitur/disposisi', icon: FileCheck, group: 'Layanan Persuratan' },
+        { name: 'Surat Keluar', href: '/fitur/surat-keluar', icon: Send, group: 'Layanan Persuratan' },
+        { name: 'Arsip Surat Digital', href: '/fitur/arsip', icon: Archive, group: 'Layanan Persuratan' },
       ])
     } else if (roleName === 'PUSTAKAWAN') {
       addLinks([

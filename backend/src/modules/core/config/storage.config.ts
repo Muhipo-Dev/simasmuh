@@ -35,6 +35,7 @@ export const STORAGE_DIRS = {
   profiles: path.join(STORAGE_ROOT, 'profiles'),
   paymentProofs: path.join(STORAGE_ROOT, 'payment-proofs'),
   journals: path.join(STORAGE_ROOT, 'journals'),
+  sdm_docs: path.join(STORAGE_ROOT, 'sdm_docs'),
   temp: path.join(STORAGE_ROOT, 'temp'),
   quarantine: path.join(STORAGE_ROOT, 'quarantine'),
 };

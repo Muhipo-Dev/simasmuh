@@ -1398,14 +1398,14 @@ export function KegiatanSekolahManagement() {
               {/* Tabel Daftar Hadir Live */}
               <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-slate-50 dark:bg-slate-900">
-                    <TableRow>
-                      <TableHead className="w-10 text-center text-xs">No</TableHead>
-                      <TableHead className="text-xs">Nama Pegawai</TableHead>
-                      <TableHead className="text-xs text-center">NIP / NBM</TableHead>
-                      <TableHead className="text-xs text-center">Waktu Presensi</TableHead>
-                      <TableHead className="text-xs text-center">Metode</TableHead>
-                      {isHumasOrTu && <TableHead className="text-xs text-right">Aksi</TableHead>}
+                  <TableHeader className="bg-slate-50/80 dark:bg-slate-900/80">
+                    <TableRow className="text-xs">
+                      <TableHead className="w-12 text-center px-3 font-bold">No</TableHead>
+                      <TableHead className="min-w-[180px] max-w-[300px] px-3 font-bold">Nama Pegawai</TableHead>
+                      <TableHead className="w-32 text-center px-3 font-bold">NIP / NBM</TableHead>
+                      <TableHead className="w-32 text-center px-3 font-bold">Waktu Presensi</TableHead>
+                      <TableHead className="w-28 text-center px-3 font-bold">Metode</TableHead>
+                      {isHumasOrTu && <TableHead className="w-24 text-right px-3 font-bold">Aksi</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>

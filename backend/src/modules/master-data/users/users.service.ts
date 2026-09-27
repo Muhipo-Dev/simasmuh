@@ -155,6 +155,7 @@ export class UsersService {
         password: hashedPassword,
         role: data.role || 'GURU',
         employmentStatus: data.employmentStatus || (data.role === 'GURU' || data.subRole === 'GURU' ? 'GTTP' : 'PTTP'),
+        isActive: data.isActive !== undefined ? (data.isActive === true || data.isActive === 'true') : true,
         subRole: data.subRole || null,
         subRole2: data.subRole2 || null,
         subRole3: data.subRole3 || null,
@@ -171,13 +172,25 @@ export class UsersService {
         data.subRole3 === 'GURU' ||
         data.subRole4 === 'GURU' ||
         data.subRole5 === 'GURU' ||
-        data.lastEducation
+        data.role === 'PEGAWAI' ||
+        data.role === 'ADMIN_TU' ||
+        data.role === 'KEPALA_SEKOLAH' ||
+        data.role === 'ADMIN_IT' ||
+        data.lastEducation ||
+        data.skUrl ||
+        data.cvUrl ||
+        data.ijazahUrl ||
+        data.berkasUrl
           ? {
               teacherProfile: {
                 create: {
                   ...(nipNbmValue ? { nip: nipNbmValue } : {}),
                   phone: phoneValue,
-                  lastEducation: data.lastEducation || 'S1 Pendidikan',
+                  lastEducation: data.lastEducation || 'S1',
+                  skUrl: data.skUrl || null,
+                  cvUrl: data.cvUrl || null,
+                  ijazahUrl: data.ijazahUrl || null,
+                  berkasUrl: data.berkasUrl || null,
                 },
               },
             }
@@ -348,8 +361,16 @@ export class UsersService {
       data.subRole3 === 'GURU' ||
       data.subRole4 === 'GURU' ||
       data.subRole5 === 'GURU' ||
+      data.role === 'PEGAWAI' ||
+      data.role === 'ADMIN_TU' ||
+      data.role === 'KEPALA_SEKOLAH' ||
+      data.role === 'ADMIN_IT' ||
       data.lastEducation !== undefined ||
-      data.certificationStatus !== undefined
+      data.certificationStatus !== undefined ||
+      data.skUrl !== undefined ||
+      data.cvUrl !== undefined ||
+      data.ijazahUrl !== undefined ||
+      data.berkasUrl !== undefined
     ) {
       const existingProfile = await this.prisma.teacherProfile.findUnique({
         where: { userId: id },
@@ -360,6 +381,10 @@ export class UsersService {
       if (data.lastEducation !== undefined) profileData.lastEducation = data.lastEducation;
       if (data.certificationStatus !== undefined) profileData.certificationStatus = data.certificationStatus;
       if (data.certificationYear !== undefined) profileData.certificationYear = Number(data.certificationYear) || null;
+      if (data.skUrl !== undefined) profileData.skUrl = data.skUrl;
+      if (data.cvUrl !== undefined) profileData.cvUrl = data.cvUrl;
+      if (data.ijazahUrl !== undefined) profileData.ijazahUrl = data.ijazahUrl;
+      if (data.berkasUrl !== undefined) profileData.berkasUrl = data.berkasUrl;
 
       if (!existingProfile) {
         updateData.teacherProfile = {
@@ -1103,6 +1128,10 @@ export class UsersService {
         : null;
     if (data.nipNbm !== undefined)
       tpFields.nip = data.nipNbm ? data.nipNbm.trim() : null;
+    if (data.skUrl !== undefined) tpFields.skUrl = data.skUrl;
+    if (data.cvUrl !== undefined) tpFields.cvUrl = data.cvUrl;
+    if (data.ijazahUrl !== undefined) tpFields.ijazahUrl = data.ijazahUrl;
+    if (data.berkasUrl !== undefined) tpFields.berkasUrl = data.berkasUrl;
 
     if (Object.keys(tpFields).length > 0) {
       const teacherProfile = await this.prisma.teacherProfile.findUnique({

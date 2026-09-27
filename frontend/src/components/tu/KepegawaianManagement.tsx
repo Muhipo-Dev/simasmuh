@@ -51,7 +51,11 @@ import {
   Sparkles,
   Layers,
   ArrowUpRight,
-  DoorOpen
+  DoorOpen,
+  Power,
+  UserX,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import Link from 'next/link'
@@ -84,6 +88,7 @@ interface PegawaiUserItem {
   phone?: string
   nipNbm?: string
   role: string
+  isActive?: boolean
   subRole?: string
   subRole2?: string
   subRole3?: string
@@ -103,6 +108,10 @@ interface PegawaiUserItem {
     lastEducation?: string
     certificationStatus?: string
     certificationYear?: number
+    skUrl?: string
+    cvUrl?: string
+    ijazahUrl?: string
+    berkasUrl?: string
   }
 }
 
@@ -122,75 +131,10 @@ interface EvaluasiKinerjaItem {
   tanggalEvaluasi: string
 }
 
-// Initial Datasets for Pelamar & Evaluasi
-const INITIAL_PELAMAR: PelamarItem[] = [
-  {
-    id: 'PEL-001',
-    nama: 'Ahmad Fauzi, S.Pd',
-    posisi: 'Guru Matematika (SMA)',
-    pendidikanTerakhir: 'S1 Pendidikan Matematika - UNY',
-    noHp: '081234567890',
-    email: 'fauzi.mat@gmail.com',
-    tanggalLamar: '2026-08-20',
-    status: 'SELEKSI_ADMINISTRASI',
-    catatan: 'IPK 3.82, Sertifikat Microteaching & TOEFL 520.',
-  },
-  {
-    id: 'PEL-002',
-    nama: 'Siti Aminah, M.Pd',
-    posisi: 'Guru Bahasa Inggris',
-    pendidikanTerakhir: 'S2 Pendidikan Bahasa Inggris - UAD',
-    noHp: '085712345678',
-    email: 'siti.aminah@gmail.com',
-    tanggalLamar: '2026-08-18',
-    status: 'WAWANCARA',
-    catatan: 'Jadwal wawancara dengan Kepala Sekolah & Humas SDM.',
-  },
-  {
-    id: 'PEL-003',
-    nama: 'Budi Santoso, A.Md.Kom',
-    posisi: 'Staf IT & Laboran Komputer',
-    pendidikanTerakhir: 'D3 Teknik Informatika - Vokasi UGM',
-    noHp: '088293733330',
-    email: 'budi.laboran@gmail.com',
-    tanggalLamar: '2026-08-15',
-    status: 'DITERIMA',
-    catatan: 'SK Pengangkatan Kontrak sedang diproses Administrasi TU.',
-  }
-]
+// Data Awal Bersih Pelamar & Evaluasi Kinerja
+const INITIAL_PELAMAR: PelamarItem[] = []
+const INITIAL_EVALUASI: EvaluasiKinerjaItem[] = []
 
-const INITIAL_EVALUASI: EvaluasiKinerjaItem[] = [
-  {
-    id: 'EV-001',
-    pegawaiId: 'PEG-001',
-    pegawaiNama: 'Drs. H. Muhammad Nailar, M.Pd',
-    periode: 'Semester Genap 2025/2026',
-    skorPedagogik: 92,
-    skorKepribadian: 95,
-    skorSosial: 90,
-    skorProfesional: 94,
-    totalSkor: 92.75,
-    predikat: 'SANGAT_BAIK',
-    evaluator: 'Tim Asesor Humas SDM & Kepala Sekolah',
-    catatanPembinaan: 'Kinerja kepemimpinan dan pengajaran sangat memuaskan.',
-    tanggalEvaluasi: '2026-06-20'
-  },
-  {
-    id: 'EV-002',
-    pegawaiId: 'PEG-002',
-    pegawaiNama: 'Rina Wulandari, S.Si',
-    periode: 'Semester Genap 2025/2026',
-    skorPedagogik: 88,
-    skorKepribadian: 90,
-    skorSosial: 87,
-    skorProfesional: 89,
-    totalSkor: 88.5,
-    predikat: 'BAIK',
-    evaluator: 'Tim Asesor Kurikulum',
-    catatanPembinaan: 'Pertahankan inovasi pembelajaran berbasis laboratorium.',
-    tanggalEvaluasi: '2026-06-18'
-  }
-]
 
 const ROLE_OPTIONS = [
   { value: 'GURU', label: 'Guru / Tenaga Pendidik' },
@@ -221,6 +165,27 @@ const SUB_ROLE_OPTIONS = [
   { value: 'GURU_PIKET', label: 'Guru Piket' },
 ]
 
+const EDUCATION_OPTIONS = [
+  { value: 'S3', label: 'S3' },
+  { value: 'S2', label: 'S2' },
+  { value: 'S1', label: 'S1' },
+  { value: 'D4', label: 'D4' },
+  { value: 'D3', label: 'D3' },
+  { value: 'SMA/SMK', label: 'SMA/SMK' },
+]
+
+const normalizeEducation = (edu?: string | null): string => {
+  if (!edu) return 'S1'
+  const trimmed = edu.trim()
+  if (trimmed === 'S1 / Sarjana' || trimmed === 'S1 Pendidikan' || trimmed === 'Sarjana (S1)') return 'S1'
+  if (trimmed === 'S2 / Magister' || trimmed === 'Magister (S2)') return 'S2'
+  if (trimmed === 'S3 / Doktoral' || trimmed === 'Doktor (S3)' || trimmed === 'S3 / Doktor') return 'S3'
+  if (trimmed === 'D4 / Sarjana Terapan' || trimmed === 'Diploma IV (D4)') return 'D4'
+  if (trimmed === 'D3 / Ahli Madya' || trimmed === 'Diploma III (D3)') return 'D3'
+  if (trimmed === 'SMA / SMK / Sederajat' || trimmed === 'SMA / SMK' || trimmed === 'SMA/SMK/MA') return 'SMA/SMK'
+  return trimmed
+}
+
 export function KepegawaianManagement() {
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
@@ -237,6 +202,7 @@ export function KepegawaianManagement() {
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [filterRole, setFilterRole] = useState<'ALL' | 'GURU' | 'PEGAWAI' | 'TU'>('ALL')
+  const [filterActiveStatus, setFilterActiveStatus] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL')
   const [filterPelamarStatus, setFilterPelamarStatus] = useState<string>('ALL')
 
   // Dialog States
@@ -289,6 +255,7 @@ export function KepegawaianManagement() {
     subRole: 'NONE',
     employmentStatus: 'GTTP',
     lastEducation: 'S1',
+    isActive: true,
     address: '',
     avatarUrl: ''
   })
@@ -306,6 +273,7 @@ export function KepegawaianManagement() {
     subRole: 'NONE',
     employmentStatus: 'GTTP',
     lastEducation: 'S1',
+    isActive: true,
     address: '',
     avatarUrl: ''
   })
@@ -334,20 +302,28 @@ export function KepegawaianManagement() {
   // Filter hanya staf internal (Guru, Pegawai, Admin TU, Kepala Sekolah, dll, bukan siswa / wali murid)
   const staffList = allUsers.filter(u => u.role !== 'SISWA' && u.role !== 'WALI_MURID')
 
-  // Upload Handler helper
+  // Upload Handler helper dengan batas maksimal 20 MB
   const handleFileUpload = async (file: File, folder: string = 'sdm_docs'): Promise<string> => {
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+    if (file.size > MAX_FILE_SIZE) {
+      throw new Error(`Ukuran file "${file.name}" (${(file.size / (1024 * 1024)).toFixed(1)} MB) melebihi batas maksimal 20 MB`);
+    }
+
     if (file.type.startsWith('image/')) {
-      const compressed = await compressImageFile(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 })
+      const compressed = await compressImageFile(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.88 })
       const res = await authenticatedFetch('/api-backend/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: compressed.dataUrl, folder })
       })
-      if (!res.ok) throw new Error('Gagal mengunggah foto')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.message || 'Gagal mengunggah foto berkas')
+      }
       const data = await res.json()
       return data.url
     } else {
-      // Handle PDF or document via base64
+      // Handle PDF, DOC, DOCX or document via base64
       return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = async (e) => {
@@ -358,14 +334,17 @@ export function KepegawaianManagement() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ image: base64Str, folder })
             })
-            if (!res.ok) throw new Error('Gagal mengunggah dokumen')
+            if (!res.ok) {
+              const errJson = await res.json().catch(() => null)
+              throw new Error(errJson?.message || 'Gagal mengunggah dokumen')
+            }
             const data = await res.json()
             resolve(data.url)
           } catch (err) {
             reject(err)
           }
         }
-        reader.onerror = () => reject(new Error('Gagal membaca file'))
+        reader.onerror = () => reject(new Error('Gagal membaca file berkas'))
         reader.readAsDataURL(file)
       })
     }
@@ -401,8 +380,13 @@ export function KepegawaianManagement() {
           subRole: payload.subRole !== 'NONE' ? payload.subRole : null,
           employmentStatus: payload.employmentStatus,
           lastEducation: payload.lastEducation,
+          isActive: payload.isActive,
           address: payload.address || undefined,
-          avatarUrl: finalAvatarUrl || undefined
+          avatarUrl: finalAvatarUrl || undefined,
+          skUrl: (payload as any).skUrl || uploadedDocs.skUrl || null,
+          cvUrl: (payload as any).cvUrl || uploadedDocs.cvUrl || uploadedDocs.otherUrl || null,
+          ijazahUrl: (payload as any).ijazahUrl || uploadedDocs.ijazahUrl || null,
+          berkasUrl: (payload as any).berkasUrl || uploadedDocs.otherUrl || null,
         })
       })
       if (!res.ok) {
@@ -426,6 +410,7 @@ export function KepegawaianManagement() {
         subRole: 'NONE',
         employmentStatus: 'GTTP',
         lastEducation: 'S1',
+        isActive: true,
         address: '',
         avatarUrl: ''
       })
@@ -468,8 +453,13 @@ export function KepegawaianManagement() {
         subRole: payload.subRole !== 'NONE' ? payload.subRole : null,
         employmentStatus: payload.employmentStatus,
         lastEducation: payload.lastEducation,
+        isActive: payload.isActive,
         address: payload.address,
-        avatarUrl: finalAvatarUrl || null
+        avatarUrl: finalAvatarUrl || null,
+        skUrl: uploadedDocs.skUrl || null,
+        cvUrl: uploadedDocs.cvUrl || uploadedDocs.otherUrl || null,
+        ijazahUrl: uploadedDocs.ijazahUrl || null,
+        berkasUrl: uploadedDocs.otherUrl || null,
       }
 
       if (payload.password && payload.password.trim() !== '') {
@@ -490,6 +480,9 @@ export function KepegawaianManagement() {
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setShowEditPegawaiModal(false)
+      if (selectedPegawai && selectedPegawai.id === updated.id) {
+        setSelectedPegawai(prev => prev ? { ...prev, ...updated } : null)
+      }
       Swal.fire({
         icon: 'success',
         title: 'Data Pegawai Diperbarui',
@@ -502,6 +495,60 @@ export function KepegawaianManagement() {
       Swal.fire('Gagal Memperbarui Pegawai', err.message || 'Terjadi kesalahan sistem', 'error')
     }
   })
+
+  // Mutation Toggle Aktif / Nonaktif Akun Pegawai (Tersinkronisasi 100% dengan Manajemen Akun)
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const res = await authenticatedFetch(`/api-backend/users/${id}/toggle-active`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.message || 'Gagal mengubah status keaktifan akun')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      if (selectedPegawai && selectedPegawai.id === data.id) {
+        setSelectedPegawai(prev => prev ? { ...prev, isActive: data.isActive } : null)
+      }
+      Swal.fire({
+        icon: 'success',
+        title: data.isActive ? 'Akun Pegawai Diaktifkan' : 'Akun Pegawai Dinonaktifkan',
+        text: `Status akun ${data.name || 'pegawai'} resmi ${data.isActive ? 'Aktif (dapat login)' : 'Nonaktif (akses dikunci)'}.`,
+        timer: 1800,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal Mengubah Status', err.message || 'Terjadi kesalahan sistem', 'error')
+    }
+  })
+
+  // Handler Quick Toggle Active / Inactive
+  const handleToggleActive = (peg: PegawaiUserItem) => {
+    const isCurrentlyActive = peg.isActive !== false
+    const newStatus = !isCurrentlyActive
+    Swal.fire({
+      title: newStatus ? 'Aktifkan Akun Pegawai?' : 'Nonaktifkan Akun Pegawai?',
+      html: newStatus
+        ? `Aktifkan kembali akun login <strong>"${peg.name}"</strong>?<br/><span class="text-xs text-emerald-600">Pegawai akan dapat kembali login ke SIMASMUH.</span>`
+        : `Nonaktifkan akun <strong>"${peg.name}"</strong>?<br/><span class="text-xs text-rose-500">Akses login akan dinonaktifkan sementara tanpa menghapus data kepegawaian.</span>`,
+      icon: newStatus ? 'question' : 'warning',
+      showCancelButton: true,
+      confirmButtonColor: newStatus ? '#10b981' : '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: newStatus ? 'Ya, Aktifkan Akun' : 'Ya, Nonaktifkan Akun',
+      cancelButtonText: 'Batal'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        toggleActiveMutation.mutate({ id: peg.id, isActive: newStatus })
+      }
+    })
+  }
 
   // Mutation Hapus Pegawai
   const deletePegawaiMutation = useMutation({
@@ -561,11 +608,21 @@ export function KepegawaianManagement() {
       role: peg.role || 'GURU',
       subRole: peg.subRole || 'NONE',
       employmentStatus: peg.employmentStatus || (peg.role === 'GURU' ? 'GTTP' : 'PTTP'),
-      lastEducation: peg.teacherProfile?.lastEducation || 'S1',
+      lastEducation: normalizeEducation(peg.teacherProfile?.lastEducation),
+      isActive: peg.isActive !== false,
       address: peg.address || '',
       avatarUrl: peg.avatarUrl || ''
     })
-    setUploadedDocs({})
+    setUploadedDocs({
+      skUrl: peg.teacherProfile?.skUrl || '',
+      skName: peg.teacherProfile?.skUrl ? 'SK Tersimpan di SIMASMUH ✓' : '',
+      ijazahUrl: peg.teacherProfile?.ijazahUrl || '',
+      ijazahName: peg.teacherProfile?.ijazahUrl ? 'Ijazah Tersimpan di SIMASMUH ✓' : '',
+      otherUrl: peg.teacherProfile?.berkasUrl || peg.teacherProfile?.cvUrl || '',
+      otherName: (peg.teacherProfile?.berkasUrl || peg.teacherProfile?.cvUrl) ? 'CV/Berkas Tersimpan ✓' : '',
+      cvUrl: peg.teacherProfile?.cvUrl || '',
+      cvName: peg.teacherProfile?.cvUrl ? 'CV Tersimpan ✓' : '',
+    })
     setShowEditPegawaiModal(true)
   }
 
@@ -653,8 +710,12 @@ export function KepegawaianManagement() {
             employmentStatus: isTeacher ? 'GTTP' : 'PTTP',
             lastEducation: pelamar.pendidikanTerakhir,
             address: '',
-            avatarUrl: ''
-          })
+            avatarUrl: '',
+            skUrl: pelamar.skUrl,
+            cvUrl: pelamar.cvUrl,
+            ijazahUrl: pelamar.ijazahUrl,
+            berkasUrl: pelamar.berkasUrl,
+          } as any)
           handleUpdateStatusPelamar(pelamar.id, 'DITERIMA')
         } catch {
           // Handled by mutation onError
@@ -741,7 +802,12 @@ export function KepegawaianManagement() {
       filterRole === 'PEGAWAI' ? p.role === 'PEGAWAI' || p.role === 'KARYAWAN' :
       filterRole === 'TU' ? ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEPEGAWAIAN', 'SDM', 'WAKA_HUMAS_SDM', 'HUMAS_SDM'].includes(p.role) || ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEPEGAWAIAN', 'SDM', 'WAKA_HUMAS_SDM', 'HUMAS_SDM'].includes(p.subRole || '') : true
 
-    return matchSearch && matchRole
+    const matchActive =
+      filterActiveStatus === 'ALL' ? true :
+      filterActiveStatus === 'ACTIVE' ? p.isActive !== false :
+      p.isActive === false
+
+    return matchSearch && matchRole && matchActive
   })
 
   const filteredPelamar = pelamarList.filter(p => {
@@ -754,6 +820,9 @@ export function KepegawaianManagement() {
     e.pegawaiNama.toLowerCase().includes(searchQuery.toLowerCase()) ||
     e.periode.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const activeStaffCount = staffList.filter(u => u.isActive !== false).length
+  const inactiveStaffCount = staffList.filter(u => u.isActive === false).length
 
   return (
     <div className="space-y-6">
@@ -771,24 +840,26 @@ export function KepegawaianManagement() {
               Pusat Layanan Humas & SDM
             </h2>
             <p className="text-xs sm:text-sm text-purple-200/80 max-w-2xl">
-              Tata kelola profesional guru & staf (biodata, jabatan, SK, ijazah & rekrutmen). Ranah payroll gaji diatur oleh Bagian Keuangan.
+              Tata kelola profesional guru & staf (biodata, jabatan, SK, ijazah, status keaktifan akun & rekrutmen). Ranah payroll gaji diatur Bagian Keuangan.
             </p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center shrink-0">
             <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-white/10">
-              <div className="text-lg font-black text-amber-300">{pelamarList.length}</div>
-              <div className="text-[10px] text-slate-300 uppercase tracking-wider font-semibold">Pelamar</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-white/10">
               <div className="text-lg font-black text-emerald-400">
-                {isLoadingUsers ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : staffList.length}
+                {isLoadingUsers ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : activeStaffCount}
               </div>
               <div className="text-[10px] text-slate-300 uppercase tracking-wider font-semibold">Pegawai Aktif</div>
             </div>
             <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-white/10">
-              <div className="text-lg font-black text-purple-300">Active</div>
-              <div className="text-[10px] text-slate-300 uppercase tracking-wider font-semibold">Cuti System</div>
+              <div className="text-lg font-black text-rose-300">
+                {isLoadingUsers ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : inactiveStaffCount}
+              </div>
+              <div className="text-[10px] text-slate-300 uppercase tracking-wider font-semibold">Nonaktif</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-white/10">
+              <div className="text-lg font-black text-amber-300">{pelamarList.length}</div>
+              <div className="text-[10px] text-slate-300 uppercase tracking-wider font-semibold">Pelamar</div>
             </div>
             <div className="bg-white/10 backdrop-blur-xs p-2.5 rounded-xl border border-white/10">
               <div className="text-lg font-black text-cyan-300">{evaluasiList.length}</div>
@@ -908,7 +979,7 @@ export function KepegawaianManagement() {
                   Database Pegawai & Tenaga Pendidik (Ranah Profesional SDM)
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Dikelola Bagian Humas SDM & Admin TU. Pengaturan nominal gaji & rekening payroll dikelola tersendiri di Penggajian Keuangan.
+                  Dikelola Humas SDM & Admin TU. Terhubung langsung dengan Manajemen Akun & Berkas Resmi SIMASMUH.
                 </p>
               </div>
 
@@ -941,6 +1012,34 @@ export function KepegawaianManagement() {
                   </button>
                 </div>
 
+                {/* Filter Status Keaktifan Akun */}
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs">
+                  <button
+                    onClick={() => setFilterActiveStatus('ALL')}
+                    className={`px-2 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                      filterActiveStatus === 'ALL' ? 'bg-white dark:bg-slate-900 text-purple-600 shadow-2xs' : 'text-slate-500'
+                    }`}
+                  >
+                    Semua
+                  </button>
+                  <button
+                    onClick={() => setFilterActiveStatus('ACTIVE')}
+                    className={`px-2 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                      filterActiveStatus === 'ACTIVE' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 shadow-2xs' : 'text-slate-500'
+                    }`}
+                  >
+                    Aktif ({activeStaffCount})
+                  </button>
+                  <button
+                    onClick={() => setFilterActiveStatus('INACTIVE')}
+                    className={`px-2 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                      filterActiveStatus === 'INACTIVE' ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 shadow-2xs' : 'text-slate-500'
+                    }`}
+                  >
+                    Nonaktif ({inactiveStaffCount})
+                  </button>
+                </div>
+
                 <Button
                   onClick={() => {
                     setUploadedDocs({})
@@ -969,7 +1068,7 @@ export function KepegawaianManagement() {
                 {filteredPegawai.map(peg => {
                   const nip = peg.nipNbm || peg.teacherProfile?.nip || '-'
                   const phone = peg.phone || peg.teacherProfile?.phone || '-'
-                  const education = peg.teacherProfile?.lastEducation || 'S1 / Sarjana'
+                  const education = normalizeEducation(peg.teacherProfile?.lastEducation)
                   const status = peg.employmentStatus || (peg.role === 'GURU' ? 'GTTP' : 'PTTP')
 
                   return (
@@ -1001,11 +1100,20 @@ export function KepegawaianManagement() {
                           </div>
                         </div>
 
-                        <Badge className={`text-[10px] uppercase font-bold shrink-0 ${
-                          status.includes('GTP') || status.includes('GTY') ? 'bg-emerald-500/10 text-emerald-600' : 'bg-blue-500/10 text-blue-600'
-                        }`}>
-                          {status}
-                        </Badge>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <Badge className={`text-[10px] uppercase font-bold shrink-0 ${
+                            status.includes('GTP') || status.includes('GTY') ? 'bg-emerald-500/10 text-emerald-600' : 'bg-blue-500/10 text-blue-600'
+                          }`}>
+                            {status}
+                          </Badge>
+                          <Badge variant="outline" className={`text-[9px] font-bold px-1.5 py-0 ${
+                            peg.isActive !== false 
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-300' 
+                              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border-rose-300'
+                          }`}>
+                            {peg.isActive !== false ? '● Aktif' : '● Nonaktif'}
+                          </Badge>
+                        </div>
                       </CardHeader>
                       <CardContent className="p-4 pt-2 text-xs space-y-2">
                         <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-[11px]">
@@ -1026,18 +1134,34 @@ export function KepegawaianManagement() {
                           </div>
                         )}
 
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] gap-1">
                           <Button 
                             onClick={() => handleOpenDetail(peg)} 
                             size="sm" 
                             variant="outline" 
-                            className="h-7 text-[10px] rounded-lg gap-1 border-slate-200 text-slate-700 hover:bg-purple-50 hover:text-purple-700"
+                            className="h-7 text-[10px] rounded-lg gap-1 border-slate-200 text-slate-700 hover:bg-purple-50 hover:text-purple-700 shrink-0"
                           >
                             <Eye className="w-3 h-3 text-purple-600" />
-                            <span>Detail SDM</span>
+                            <span>Detail</span>
                           </Button>
 
                           <div className="flex items-center gap-1">
+                            <Button 
+                              onClick={() => handleToggleActive(peg)} 
+                              size="sm" 
+                              variant="outline" 
+                              className={`h-7 px-2 text-[10px] rounded-lg gap-1 ${
+                                peg.isActive !== false
+                                  ? 'border-slate-200 text-slate-600 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700'
+                                  : 'border-emerald-200 bg-emerald-50/80 text-emerald-700 hover:bg-emerald-100'
+                              }`}
+                              title={peg.isActive !== false ? 'Nonaktifkan Akun Pegawai (Kunci Akses Login)' : 'Aktifkan Akun Pegawai (Beri Akses Login)'}
+                              disabled={toggleActiveMutation.isPending}
+                            >
+                              <Power className={`w-3 h-3 ${peg.isActive !== false ? 'text-slate-400' : 'text-emerald-600'}`} />
+                              <span>{peg.isActive !== false ? 'Nonaktifkan' : 'Aktifkan'}</span>
+                            </Button>
+
                             <Button 
                               onClick={() => handleOpenEdit(peg)} 
                               size="sm" 
@@ -1145,8 +1269,45 @@ export function KepegawaianManagement() {
 
                   <CardContent className="p-4 pt-2 text-xs space-y-3">
                     <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-[11px] space-y-1">
-                      <div><span className="text-slate-400">Pendidikan:</span> <span className="font-semibold">{pel.pendidikanTerakhir}</span></div>
+                      <div><span className="text-slate-400">Pendidikan:</span> <span className="font-semibold">{normalizeEducation(pel.pendidikanTerakhir)}</span></div>
                       <div><span className="text-slate-400">Kontak/WA:</span> <span className="font-semibold">{pel.noHp} ({pel.email})</span></div>
+                      
+                      {/* Tautan Berkas Dokumen Pelamar */}
+                      {(pel.skUrl || pel.ijazahUrl || pel.cvUrl) && (
+                        <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/50 flex-wrap">
+                          {pel.skUrl && (
+                            <a
+                              href={pel.skUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 rounded text-[9px] font-bold border border-purple-200"
+                            >
+                              <Eye className="w-2.5 h-2.5" /> SK
+                            </a>
+                          )}
+                          {pel.ijazahUrl && (
+                            <a
+                              href={pel.ijazahUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 rounded text-[9px] font-bold border border-emerald-200"
+                            >
+                              <Eye className="w-2.5 h-2.5" /> Ijazah
+                            </a>
+                          )}
+                          {pel.cvUrl && (
+                            <a
+                              href={pel.cvUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded text-[9px] font-bold border border-blue-200"
+                            >
+                              <Eye className="w-2.5 h-2.5" /> CV
+                            </a>
+                          )}
+                        </div>
+                      )}
+
                       {pel.catatan && (
                         <div className="text-purple-800 dark:text-purple-300 pt-1 italic border-t border-slate-200/50 mt-1">
                           "{pel.catatan}"
@@ -1354,12 +1515,9 @@ export function KepegawaianManagement() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="S3">S3 / Doktoral</SelectItem>
-                    <SelectItem value="S2">S2 / Magister</SelectItem>
-                    <SelectItem value="S1">S1 / Sarjana</SelectItem>
-                    <SelectItem value="D4">D4 / Sarjana Terapan</SelectItem>
-                    <SelectItem value="D3">D3 / Ahli Madya</SelectItem>
-                    <SelectItem value="SMA/SMK">SMA / SMK</SelectItem>
+                    {EDUCATION_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1393,6 +1551,55 @@ export function KepegawaianManagement() {
                 onChange={(e) => setFormPelamar({ ...formPelamar, catatan: e.target.value })}
                 className="mt-1 rounded-xl text-xs h-16"
               />
+            </div>
+
+            {/* SEKSI UPLOAD BERKAS PELAMAR */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <FileBadge className="w-3.5 h-3.5 text-purple-600" />
+                  Lampiran Berkas (Maks. 20 MB / Berkas)
+                </span>
+                {isUploadingDoc && <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-600" />}
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-[10px]">
+                {/* Upload SK */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => skDocInputRef.current?.click()}
+                  className={`h-7 text-[10px] rounded-lg gap-1 w-full ${uploadedDocs.skUrl ? 'border-emerald-300 text-emerald-700 bg-emerald-50' : ''}`}
+                >
+                  <FileUp className="w-3 h-3" />
+                  <span className="truncate">{uploadedDocs.skUrl ? 'SK Terupload ✓' : 'Upload SK'}</span>
+                </Button>
+
+                {/* Upload Ijazah */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => ijazahDocInputRef.current?.click()}
+                  className={`h-7 text-[10px] rounded-lg gap-1 w-full ${uploadedDocs.ijazahUrl ? 'border-emerald-300 text-emerald-700 bg-emerald-50' : ''}`}
+                >
+                  <FileUp className="w-3 h-3" />
+                  <span className="truncate">{uploadedDocs.ijazahUrl ? 'Ijazah ✓' : 'Upload Ijazah'}</span>
+                </Button>
+
+                {/* Upload CV */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => otherDocInputRef.current?.click()}
+                  className={`h-7 text-[10px] rounded-lg gap-1 w-full ${uploadedDocs.cvUrl || uploadedDocs.otherUrl ? 'border-blue-300 text-blue-700 bg-blue-50' : ''}`}
+                >
+                  <FileUp className="w-3 h-3" />
+                  <span className="truncate">{uploadedDocs.cvUrl || uploadedDocs.otherUrl ? 'CV/Berkas ✓' : 'Upload CV'}</span>
+                </Button>
+              </div>
             </div>
 
             <DialogFooter className="pt-2">
@@ -1582,12 +1789,9 @@ export function KepegawaianManagement() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="S3">S3 / Doktoral</SelectItem>
-                    <SelectItem value="S2">S2 / Magister</SelectItem>
-                    <SelectItem value="S1">S1 / Sarjana</SelectItem>
-                    <SelectItem value="D4">D4 / Sarjana Terapan</SelectItem>
-                    <SelectItem value="D3">D3 / Ahli Madya</SelectItem>
-                    <SelectItem value="SMA/SMK">SMA / SMK / Sederajat</SelectItem>
+                    {EDUCATION_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1615,14 +1819,31 @@ export function KepegawaianManagement() {
               </div>
             </div>
 
-            <div>
-              <Label className="text-xs font-bold">Alamat Lengkap</Label>
-              <Input
-                placeholder="Jl. Raya Timur No. 12, Ponorogo"
-                value={formPegawai.address}
-                onChange={(e) => setFormPegawai({ ...formPegawai, address: e.target.value })}
-                className="mt-1 h-9 rounded-xl text-xs"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <Label className="text-xs font-bold">Alamat Lengkap</Label>
+                <Input
+                  placeholder="Jl. Raya Timur No. 12, Ponorogo"
+                  value={formPegawai.address}
+                  onChange={(e) => setFormPegawai({ ...formPegawai, address: e.target.value })}
+                  className="mt-1 h-9 rounded-xl text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-bold">Status Keaktifan Akun</Label>
+                <Select
+                  value={formPegawai.isActive ? 'ACTIVE' : 'INACTIVE'}
+                  onValueChange={(val: string | null) => setFormPegawai({ ...formPegawai, isActive: val !== 'INACTIVE' })}
+                >
+                  <SelectTrigger className="mt-1 h-9 rounded-xl text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Aktif (Dapat Login)</SelectItem>
+                    <SelectItem value="INACTIVE">Nonaktif (Akses Dikunci)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* SEKSI UPLOAD BERKAS KEPERLUAN SDM (SK, IJAZAH, SERTIFIKAT) */}
@@ -1952,12 +2173,9 @@ export function KepegawaianManagement() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="S3">S3 / Doktoral</SelectItem>
-                    <SelectItem value="S2">S2 / Magister</SelectItem>
-                    <SelectItem value="S1">S1 / Sarjana</SelectItem>
-                    <SelectItem value="D4">D4 / Sarjana Terapan</SelectItem>
-                    <SelectItem value="D3">D3 / Ahli Madya</SelectItem>
-                    <SelectItem value="SMA/SMK">SMA / SMK / Sederajat</SelectItem>
+                    {EDUCATION_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1985,14 +2203,31 @@ export function KepegawaianManagement() {
               </div>
             </div>
 
-            <div>
-              <Label className="text-xs font-bold">Alamat Lengkap</Label>
-              <Input
-                placeholder="Jl. Raya Timur No. 12, Ponorogo"
-                value={editFormPegawai.address}
-                onChange={(e) => setEditFormPegawai({ ...editFormPegawai, address: e.target.value })}
-                className="mt-1 h-9 rounded-xl text-xs"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <Label className="text-xs font-bold">Alamat Lengkap</Label>
+                <Input
+                  placeholder="Jl. Raya Timur No. 12, Ponorogo"
+                  value={editFormPegawai.address}
+                  onChange={(e) => setEditFormPegawai({ ...editFormPegawai, address: e.target.value })}
+                  className="mt-1 h-9 rounded-xl text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-bold">Status Keaktifan Akun</Label>
+                <Select
+                  value={editFormPegawai.isActive ? 'ACTIVE' : 'INACTIVE'}
+                  onValueChange={(val: string | null) => setEditFormPegawai({ ...editFormPegawai, isActive: val !== 'INACTIVE' })}
+                >
+                  <SelectTrigger className="mt-1 h-9 rounded-xl text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Aktif (Dapat Login)</SelectItem>
+                    <SelectItem value="INACTIVE">Nonaktif (Akses Dikunci)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* SEKSI UPLOAD BERKAS KEPERLUAN SDM (SK, IJAZAH, SERTIFIKAT) */}
@@ -2176,11 +2411,40 @@ export function KepegawaianManagement() {
                   <div className="flex items-center gap-1.5 pt-0.5">
                     <Badge className="text-[9px] bg-purple-600 text-white uppercase">{selectedPegawai.role}</Badge>
                     <Badge variant="outline" className="text-[9px] font-bold text-slate-600">{selectedPegawai.employmentStatus || 'GTTP'}</Badge>
+                    <Badge variant="outline" className={`text-[9px] font-bold px-1.5 py-0 ${
+                      selectedPegawai.isActive !== false
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-300'
+                        : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border-rose-300'
+                    }`}>
+                      {selectedPegawai.isActive !== false ? '● Aktif' : '● Nonaktif'}
+                    </Badge>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 text-[11px]">
+                <div className="flex items-center justify-between py-1 border-b border-slate-200/50">
+                  <span className="text-slate-400">Status Akun Login:</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`font-bold ${selectedPegawai.isActive !== false ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {selectedPegawai.isActive !== false ? 'Aktif (Dapat Login)' : 'Nonaktif (Akses Dikunci)'}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleToggleActive(selectedPegawai)}
+                      className={`h-6 px-2 text-[10px] rounded-lg gap-1 ${
+                        selectedPegawai.isActive !== false
+                          ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
+                          : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                      }`}
+                      disabled={toggleActiveMutation.isPending}
+                    >
+                      <Power className="w-2.5 h-2.5" />
+                      <span>{selectedPegawai.isActive !== false ? 'Nonaktifkan' : 'Aktifkan'}</span>
+                    </Button>
+                  </div>
+                </div>
                 <div className="flex justify-between py-1 border-b border-slate-200/50">
                   <span className="text-slate-400">Kontak WhatsApp:</span>
                   <span className="font-semibold text-slate-700 dark:text-slate-200">{selectedPegawai.phone || selectedPegawai.teacherProfile?.phone || '-'}</span>
@@ -2191,7 +2455,7 @@ export function KepegawaianManagement() {
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-200/50">
                   <span className="text-slate-400">Pendidikan Terakhir:</span>
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">{selectedPegawai.teacherProfile?.lastEducation || 'S1 / Sarjana'}</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">{normalizeEducation(selectedPegawai.teacherProfile?.lastEducation)}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-200/50">
                   <span className="text-slate-400">Alamat:</span>
@@ -2200,6 +2464,87 @@ export function KepegawaianManagement() {
                 <div className="flex justify-between py-1">
                   <span className="text-slate-400">Ranah Payroll Gaji:</span>
                   <span className="font-semibold text-emerald-600">Dikelola Penggajian Keuangan</span>
+                </div>
+              </div>
+
+              {/* Berkas Dokumen Kepegawaian (SK, Ijazah, CV) */}
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 text-[11px] space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <FileBadge className="w-3.5 h-3.5 text-purple-600" />
+                    Berkas Dokumen Pegawai
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">Maks. 20 MB / File</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  {/* SK Pengangkatan */}
+                  <div className="p-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">SK Pengangkatan</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-200 block truncate">
+                        {selectedPegawai.teacherProfile?.skUrl ? 'SK Terlampir' : 'Belum Diunggah'}
+                      </span>
+                    </div>
+                    {selectedPegawai.teacherProfile?.skUrl ? (
+                      <a
+                        href={selectedPegawai.teacherProfile.skUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center justify-center gap-1 px-2 py-1 bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900 rounded-lg text-[10px] font-bold border border-purple-200 dark:border-purple-800 transition-colors"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>Lihat SK</span>
+                      </a>
+                    ) : (
+                      <span className="mt-2 text-[10px] text-slate-400 italic block">-</span>
+                    )}
+                  </div>
+
+                  {/* Fotocopy Ijazah */}
+                  <div className="p-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Fotocopy Ijazah</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-200 block truncate">
+                        {selectedPegawai.teacherProfile?.ijazahUrl ? 'Ijazah Terlampir' : 'Belum Diunggah'}
+                      </span>
+                    </div>
+                    {selectedPegawai.teacherProfile?.ijazahUrl ? (
+                      <a
+                        href={selectedPegawai.teacherProfile.ijazahUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center justify-center gap-1 px-2 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900 rounded-lg text-[10px] font-bold border border-emerald-200 dark:border-emerald-800 transition-colors"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>Lihat Ijazah</span>
+                      </a>
+                    ) : (
+                      <span className="mt-2 text-[10px] text-slate-400 italic block">-</span>
+                    )}
+                  </div>
+
+                  {/* CV / Dokumen Lain */}
+                  <div className="p-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">CV / Sertifikat</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-200 block truncate">
+                        {(selectedPegawai.teacherProfile?.cvUrl || selectedPegawai.teacherProfile?.berkasUrl) ? 'Dokumen Terlampir' : 'Belum Diunggah'}
+                      </span>
+                    </div>
+                    {(selectedPegawai.teacherProfile?.cvUrl || selectedPegawai.teacherProfile?.berkasUrl) ? (
+                      <a
+                        href={selectedPegawai.teacherProfile?.cvUrl || selectedPegawai.teacherProfile?.berkasUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center justify-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg text-[10px] font-bold border border-blue-200 dark:border-blue-800 transition-colors"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>Lihat Berkas</span>
+                      </a>
+                    ) : (
+                      <span className="mt-2 text-[10px] text-slate-400 italic block">-</span>
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -23,10 +23,33 @@ export class UploadService {
 
     const mimeType = matches[1].toLowerCase();
     const buffer = Buffer.from(matches[2], 'base64');
+
+    // Validasi batas ukuran file maksimal 20 MB (20 * 1024 * 1024 bytes)
+    const MAX_FILE_SIZE = 20 * 1024 * 1024;
+    if (buffer.length > MAX_FILE_SIZE) {
+      throw new Error('Ukuran file melebihi batas maksimal 20 MB');
+    }
     
+    let extension = 'bin';
     const isPdf = mimeType.includes('pdf');
     const isImage = mimeType.includes('image');
-    const extension = isPdf ? 'pdf' : 'webp';
+    const isDocx = mimeType.includes('wordprocessingml') || mimeType.includes('docx');
+    const isDoc = mimeType.includes('msword') || mimeType.includes('doc');
+
+    if (isPdf) {
+      extension = 'pdf';
+    } else if (isDocx) {
+      extension = 'docx';
+    } else if (isDoc) {
+      extension = 'doc';
+    } else if (isImage) {
+      extension = 'webp';
+    } else {
+      // Fallback ekstensi dari mimeType
+      const subType = mimeType.split('/')[1]?.split(';')[0]?.replace(/[^a-z0-9]/g, '');
+      extension = subType || 'dat';
+    }
+
     const filename = `${uuidv4()}-${Date.now()}.${extension}`;
 
     // Tentukan direktori penyimpanan target
@@ -48,9 +71,7 @@ export class UploadService {
 
     const filePath = path.join(targetDir, filename);
 
-    if (isPdf) {
-      await fs.promises.writeFile(filePath, buffer);
-    } else if (isImage) {
+    if (isImage) {
       try {
         // Optimasi kompresi WebP dengan mempertahankan kualitas visual tinggi & ukuran file ringan
         await sharp(buffer)
@@ -63,6 +84,7 @@ export class UploadService {
         await fs.promises.writeFile(filePath, buffer);
       }
     } else {
+      // Dokumen PDF, Word, atau berkas arsip lainnya disimpan utuh dan aman
       await fs.promises.writeFile(filePath, buffer);
     }
 

@@ -191,7 +191,7 @@ export class UsersService {
                   cvUrl: data.cvUrl || null,
                   ijazahUrl: data.ijazahUrl || null,
                   berkasUrl: data.berkasUrl || null,
-                },
+                } as any,
               },
             }
           : {}),

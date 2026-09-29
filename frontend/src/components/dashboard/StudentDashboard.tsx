@@ -7,7 +7,8 @@ import {
   CalendarDays, ClipboardCheck, BookOpen, Receipt, CreditCard,
   GraduationCap, Award, Sparkles, TrendingUp, CheckCircle2,
   Laptop, Clock, Users, QrCode, HeartHandshake, X, Search, User, Info,
-  ShieldCheck, AlertTriangle, FileText, ShieldAlert, BookMarked
+  ShieldCheck, AlertTriangle, FileText, ShieldAlert, BookMarked,
+  Table as TableIcon, LayoutGrid, Printer
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -162,6 +163,48 @@ export function StudentDashboard({
     }
     return 'Drs. H. Bambang S., M.Pd.'
   }, [studentClass])
+
+  // Schedule view switcher (table matriks mingguan default vs hari ini)
+  const [scheduleViewTab, setScheduleViewTab] = useState<'table' | 'today'>('table')
+
+  // All schedules for student's class
+  const studentClassSchedules = useMemo(() => {
+    return (schedules || []).filter((sch: any) => sch.classId === studentClass?.id)
+  }, [schedules, studentClass])
+
+  // Unique time slots for student's class
+  const studentWeeklySlots = useMemo(() => {
+    const map = new Map<string, { startTime: string; endTime: string; startMinutes: number; endMinutes: number }>()
+    studentClassSchedules.forEach((sch: any) => {
+      if (!sch.startTime || !sch.endTime) return
+      const s = sch.startTime.trim()
+      const e = sch.endTime.trim()
+      const key = `${s}-${e}`
+      if (!map.has(key)) {
+        map.set(key, {
+          startTime: s,
+          endTime: e,
+          startMinutes: parseTimeToMinutes(s),
+          endMinutes: parseTimeToMinutes(e)
+        })
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.startMinutes !== b.startMinutes) return a.startMinutes - b.startMinutes
+      return a.endMinutes - b.endMinutes
+    })
+  }, [studentClassSchedules])
+
+  // Grouped by day (1..6)
+  const studentGroupedWeekly = useMemo(() => {
+    const grouped: Record<number, any[]> = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] }
+    studentClassSchedules.forEach((sch: any) => {
+      const day = sch.dayOfWeek ?? 1
+      if (!grouped[day]) grouped[day] = []
+      grouped[day].push(sch)
+    })
+    return grouped
+  }, [studentClassSchedules])
 
   // Financial tagihans
   const allUnpaid = (studentTagihans?.tagihans || []).filter(
@@ -803,37 +846,165 @@ export function StudentDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-stretch">
         {/* LEFT COLUMN (8 COLS): JADWAL PELAJARAN (ATAS) & POIN KETERTIBAN SISWA (BAWAH) */}
         <div className="lg:col-span-8 flex flex-col gap-3.5 sm:gap-4">
-          {/* Card 1: Jadwal Pelajaran Hari Ini (Posisi di Atas) */}
+          {/* Card 1: Jadwal Pelajaran (Tabel Matriks Mingguan Default & Hari Ini) */}
           <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl overflow-hidden">
-            <CardHeader className="p-3.5 sm:p-4 pb-2.5 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
+            <CardHeader className="p-3 sm:p-4 pb-2.5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <CardTitle className="text-xs sm:text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
                   <CalendarDays className="w-4 h-4 text-purple-600" />
-                  Jadwal Pelajaran Hari Ini ({daysMap[todayDayIndex]})
+                  Jadwal Pelajaran Kelas {studentClass?.name || 'X 1'}
                 </CardTitle>
                 <CardDescription className="text-[11px] mt-0.5 text-slate-500">
-                  Kelas {studentClass?.name || 'X 1'} • Semester {currentSemester}
+                  {scheduleViewTab === 'table' ? 'Tabel Jadwal Mingguan' : `Jadwal Hari Ini (${daysMap[todayDayIndex]})`} • Semester {currentSemester}
                 </CardDescription>
               </div>
-              <Link href="/akademik/jadwal-pelajaran">
-                <Button variant="ghost" size="sm" className="text-xs font-bold text-purple-600 h-7 px-2">
-                  Mingguan &rarr;
+
+              <div className="flex items-center gap-2">
+                <div className="inline-flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200/80 dark:border-slate-700">
+                  <button
+                    onClick={() => setScheduleViewTab('table')}
+                    className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-md transition-all ${
+                      scheduleViewTab === 'table'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <TableIcon className="w-3 h-3" />
+                    <span>Tabel Mingguan</span>
+                  </button>
+                  <button
+                    onClick={() => setScheduleViewTab('today')}
+                    className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-md transition-all ${
+                      scheduleViewTab === 'today'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <LayoutGrid className="w-3 h-3" />
+                    <span>Hari Ini</span>
+                  </button>
+                </div>
+
+                <Button
+                  onClick={() => window.print()}
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs font-bold text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-100"
+                  title="Cetak Jadwal Pelajaran (A4)"
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1 text-blue-600" />
+                  <span>Cetak</span>
                 </Button>
-              </Link>
+
+                <Link href="/akademik/jadwal-pelajaran">
+                  <Button variant="ghost" size="sm" className="text-xs font-bold text-purple-600 h-7 px-2">
+                    Lengkap &rarr;
+                  </Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent className="p-3 sm:p-3.5">
-              {todaySchedules.length === 0 ? (
+              {scheduleViewTab === 'table' ? (
+                studentWeeklySlots.length === 0 ? (
+                  <div className="py-8 text-center text-slate-400 text-xs border border-dashed rounded-xl space-y-1">
+                    <BookOpen className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                    <p className="font-bold">Belum ada jadwal mingguan untuk kelas {studentClass?.name || 'Anda'}.</p>
+                    <p className="text-[11px]">Jadwal pelajaran akan muncul setelah dikonfigurasi oleh tim Kurikulum.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60">
+                    <table className="w-full text-left border-collapse min-w-[650px] text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                          <th className="py-2.5 px-2.5 w-24 text-center border-r border-slate-200/80 dark:border-slate-800">
+                            <div className="flex items-center justify-center gap-1">
+                              <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                              <span>Waktu</span>
+                            </div>
+                          </th>
+                          {[1, 2, 3, 4, 5, 6].map((dayNum) => {
+                            const isToday = todayDayIndex === dayNum
+                            return (
+                              <th
+                                key={dayNum}
+                                className={`py-2.5 px-2 text-center border-r last:border-r-0 border-slate-200/80 dark:border-slate-800 ${
+                                  isToday ? 'bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : ''
+                                }`}
+                              >
+                                <div className="flex items-center justify-center gap-1">
+                                  <span>{daysMap[dayNum]}</span>
+                                  {isToday && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />}
+                                </div>
+                              </th>
+                            )
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-[11px]">
+                        {studentWeeklySlots.map((slot, slotIdx) => (
+                          <tr key={slotIdx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                            <td className="py-2 px-1.5 text-center font-mono font-bold text-slate-700 dark:text-slate-300 bg-slate-50/40 dark:bg-slate-800/20 border-r border-slate-200/80 dark:border-slate-800 whitespace-nowrap">
+                              <div className="text-[9px] text-slate-400 uppercase">Jam {slotIdx + 1}</div>
+                              <div className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                                {slot.startTime} - {slot.endTime}
+                              </div>
+                            </td>
+                            {[1, 2, 3, 4, 5, 6].map((dayNum) => {
+                              const dayLessons = (studentGroupedWeekly[dayNum] || []).filter((sch: any) => {
+                                return (sch.startTime || '').trim() === slot.startTime || 
+                                  (parseTimeToMinutes(sch.startTime) <= slot.startMinutes && parseTimeToMinutes(sch.endTime) > slot.startMinutes)
+                              })
+                              const isToday = todayDayIndex === dayNum
+
+                              return (
+                                <td
+                                  key={dayNum}
+                                  className={`p-1.5 border-r last:border-r-0 border-slate-200/80 dark:border-slate-800 align-top ${
+                                    isToday ? 'bg-blue-50/20 dark:bg-blue-950/10' : ''
+                                  }`}
+                                >
+                                  {dayLessons.length === 0 ? (
+                                    <div className="h-full min-h-[38px] flex items-center justify-center text-slate-300 dark:text-slate-700 text-xs">
+                                      —
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1">
+                                      {dayLessons.map((sch: any) => (
+                                        <div
+                                          key={sch.id}
+                                          className="p-1.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/40"
+                                        >
+                                          <div className="font-extrabold text-[10.5px] text-slate-900 dark:text-white leading-tight line-clamp-1">
+                                            {sch.subject?.name || 'Mapel'}
+                                          </div>
+                                          <div className="text-[9.5px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                            {sch.teacher?.user?.name || 'Guru'}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              ) : todaySchedules.length === 0 ? (
                 <div className="py-8 text-center text-slate-400 text-xs border border-dashed rounded-xl space-y-1">
                   <BookOpen className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                   <p className="font-bold">Tidak ada jadwal mata pelajaran hari ini ({daysMap[todayDayIndex]}).</p>
-                  <p className="text-[11px]">Silakan periksa jadwal mingguan Anda pada menu Jadwal Pelajaran.</p>
+                  <p className="text-[11px]">Silakan klik tab "Tabel Mingguan" untuk melihat seluruh jadwal kelas.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {todaySchedules.map((sch: any, idx: number) => (
                     <div
                       key={sch.id || idx}
-                      className="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/30 flex items-center justify-between gap-3 hover:shadow-xs transition-shadow"
+                      className="p-3 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/30 flex items-center justify-between gap-2.5 hover:shadow-xs transition-shadow"
                     >
                       <div className="space-y-0.5 min-w-0">
                         <span className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-indigo-100">

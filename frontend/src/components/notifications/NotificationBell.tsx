@@ -20,6 +20,7 @@ const priorityColors = {
 }
 
 const typeIcons = {
+  DISPOSISI_ASSIGNED: '📝',
   PAYMENT_DUE: '💰',
   PAYMENT_OVERDUE: '⚠️',
   PAYMENT_UPLOADED: '📤',

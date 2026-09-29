@@ -14,9 +14,10 @@ export class TeachingJournalsService {
       where.teacherId = query.teacherId;
     }
     if (query?.userId) {
-      where.schedule = {
-        teacher: { userId: query.userId },
-      };
+      where.OR = [
+        { schedule: { teacher: { userId: query.userId } } },
+        { teacher: { userId: query.userId } },
+      ];
     }
     if (query?.date) {
       const startOfDay = new Date(query.date);

@@ -114,6 +114,65 @@ export class FinanceController {
     );
   }
 
+  @Delete('payroll/record/:userId')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  async resetPayrollRecord(
+    @Req() req: any,
+    @Param('userId') userId: string,
+    @Query('year') year: string,
+    @Query('month') month: string,
+  ) {
+    const userSubRoles = [
+      req.user?.subRole,
+      req.user?.subRole2,
+      req.user?.subRole3,
+      req.user?.subRole4,
+      req.user?.subRole5,
+      req.user?.role,
+    ];
+    const isKeuanganAll = userSubRoles.some((r) =>
+      ['KEUANGAN_ALL', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+    );
+
+    if (!isKeuanganAll) {
+      throw new ForbiddenException(
+        'Akses ditolak. Reset data penggajian hanya dapat dilakukan oleh Keuangan All / Superadmin.',
+      );
+    }
+
+    const targetYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const targetMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
+
+    return this.financeService.resetPayrollRecord(userId, targetYear, targetMonth);
+  }
+
+  @Post('payroll/reset-bulk')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  async resetBulkPayrollRecords(
+    @Req() req: any,
+    @Body() body: { userIds?: string[]; year: number; month: number },
+  ) {
+    const userSubRoles = [
+      req.user?.subRole,
+      req.user?.subRole2,
+      req.user?.subRole3,
+      req.user?.subRole4,
+      req.user?.subRole5,
+      req.user?.role,
+    ];
+    const isKeuanganAll = userSubRoles.some((r) =>
+      ['KEUANGAN_ALL', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+    );
+
+    if (!isKeuanganAll) {
+      throw new ForbiddenException(
+        'Akses ditolak. Reset data penggajian hanya dapat dilakukan oleh Keuangan All / Superadmin.',
+      );
+    }
+
+    return this.financeService.resetBulkPayrollRecords(body.userIds, body.year, body.month);
+  }
+
   @Patch('payroll/employment-status/:userId')
   @RequirePermissions(PaymentPermission.CREATE_BILLS)
   async updateStaffEmploymentStatus(

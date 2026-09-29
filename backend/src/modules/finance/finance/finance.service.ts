@@ -429,6 +429,38 @@ export class FinanceService {
     };
   }
 
+  /** Reset Catatan Penggajian Pegawai */
+  async resetPayrollRecord(userId: string, year: number, month: number) {
+    await this.prisma.payrollRecord.deleteMany({
+      where: {
+        userId,
+        year,
+        month,
+      },
+    });
+    return { success: true, message: 'Data penggajian pegawai berhasil direset.' };
+  }
+
+  /** Reset Catatan Penggajian Massal / Seluruh Periode */
+  async resetBulkPayrollRecords(userIds: string[] | undefined, year: number, month: number) {
+    const whereClause: any = {
+      year,
+      month,
+    };
+    if (userIds && userIds.length > 0) {
+      whereClause.userId = { in: userIds };
+    }
+
+    const deleteRes = await this.prisma.payrollRecord.deleteMany({
+      where: whereClause,
+    });
+    return {
+      success: true,
+      count: deleteRes.count,
+      message: `Berhasil mereset ${deleteRes.count} catatan penggajian periode ${month}/${year}.`,
+    };
+  }
+
   /** Update data rekening bank pegawai */
   async updateStaffBankAccount(
     userId: string,

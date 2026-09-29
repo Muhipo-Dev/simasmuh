@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -10,18 +10,40 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Calendar, BookOpen, Users, Clock, User, CheckCircle2, Plus, Pencil, Trash2, Upload, FileCode, Sparkles, ShieldCheck } from 'lucide-react'
+import { 
+  Loader2, 
+  Calendar, 
+  BookOpen, 
+  Users, 
+  Clock, 
+  User, 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  Upload, 
+  FileCode, 
+  Sparkles, 
+  ShieldCheck, 
+  Table as TableIcon, 
+  LayoutGrid, 
+  Printer, 
+  GraduationCap,
+  Sparkle
+} from 'lucide-react'
 import { parseAscTimetableXml } from '@/utils/ascParser'
+import { sortClasses } from '@/lib/class-helper'
 
-const DAYS_MAP = [
-  'Minggu',
-  'Senin',
-  'Selasa',
-  'Rabu',
-  'Kamis',
-  'Jumat',
-  'Sabtu'
-]
+const DAYS_MAP: Record<number, string> = {
+  1: 'Senin',
+  2: 'Selasa',
+  3: 'Rabu',
+  4: 'Kamis',
+  5: 'Jumat',
+  6: 'Sabtu',
+  0: 'Minggu'
+}
+
+const ACTIVE_DAYS = [1, 2, 3, 4, 5, 6]
 
 type ScheduleForm = {
   dayOfWeek: string
@@ -42,14 +64,22 @@ export default function JadwalPelajaranPage() {
   const subRole2 = (session?.user as any)?.subRole2
   const subRole3 = (session?.user as any)?.subRole3
 
-  const isSuperAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(role) || ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole || '') || ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole2 || '') || ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole3 || '')
-  const isKepalaSekolah = [role, subRole, subRole2, subRole3].includes('KEPALA_SEKOLAH')
+  const isSuperAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(role) || 
+    ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole || '') || 
+    ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole2 || '') || 
+    ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole3 || '')
 
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
 
-  // Selected Class state for Superadmin filter
-  const [selectedClassId, setSelectedClassId] = useState<string>('ALL')
+  // View Mode: 'table' (Default: Tabel Matriks Mingguan) or 'cards' (Kartu Harian)
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
+
+  // Grade filter tab: 'ALL' | 'X' | 'XI' | 'XII'
+  const [gradeFilter, setGradeFilter] = useState<string>('ALL')
+
+  // Selected Class state
+  const [selectedClassId, setSelectedClassId] = useState<string>('')
 
   // Modal State for Single Create / Edit
   const [openModal, setOpenModal] = useState(false)
@@ -70,13 +100,13 @@ export default function JadwalPelajaranPage() {
   const [parsedPreview, setParsedPreview] = useState<any[] | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Modal State for Delete All Schedules with Admin Authorization
+  // Modal State for Delete All Schedules
   const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false)
   const [authPassword, setAuthPassword] = useState('')
   const [authError, setAuthError] = useState('')
 
   // 1. Fetch Daftar Kelas
-  const { data: classes, isLoading: loadingClasses } = useQuery<any[]>({
+  const { data: rawClasses, isLoading: loadingClasses } = useQuery<any[]>({
     queryKey: ['classes'],
     queryFn: async () => {
       const res = await authenticatedFetch('/api-backend/classes')
@@ -84,6 +114,8 @@ export default function JadwalPelajaranPage() {
       return res.json()
     }
   })
+
+  const classes = useMemo(() => sortClasses(rawClasses || []), [rawClasses])
 
   // 2. Fetch Daftar Siswa
   const { data: students, isLoading: loadingStudents } = useQuery<any[]>({
@@ -127,6 +159,32 @@ export default function JadwalPelajaranPage() {
 
   const isLoading = loadingClasses || loadingStudents || loadingSchedules || loadingSubjects || loadingTeachers || status === 'loading'
 
+  // Deteksi kelas siswa yang sedang login
+  const myProfile = students?.find((s: any) => 
+    s.userId === userId || 
+    (s.user && (s.user.id === userId || s.user.username === username || s.user.email === userEmail)) ||
+    s.nisn === username || 
+    s.nis === username ||
+    s.nisn === userEmail ||
+    s.nis === userEmail ||
+    (s.parentRelations && s.parentRelations.some((pr: any) => pr.parent?.userId === userId))
+  )
+  const myClassId = myProfile?.classId
+  const activeStudentClass = classes?.find((c: any) => c.id === myClassId) || myProfile?.class || (classes && classes.length > 0 ? classes[0] : null)
+
+  // Default selected class: auto-select first available class for admin/guru or student's class
+  useEffect(() => {
+    if (classes && classes.length > 0) {
+      if (role === 'SISWA' || role === 'WALI_MURID') {
+        if (activeStudentClass?.id) {
+          setSelectedClassId(activeStudentClass.id)
+        }
+      } else if (!selectedClassId) {
+        setSelectedClassId(classes[0].id)
+      }
+    }
+  }, [classes, role, activeStudentClass, selectedClassId])
+
   // Single Mutations
   const createMutation = useMutation({
     mutationFn: async (payload: ScheduleForm) => {
@@ -147,9 +205,6 @@ export default function JadwalPelajaranPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] })
-      queryClient.invalidateQueries({ queryKey: ['teachers'] })
-      queryClient.invalidateQueries({ queryKey: ['classes'] })
-      queryClient.invalidateQueries({ queryKey: ['subjects'] })
       setOpenModal(false)
       resetForm()
     }
@@ -174,9 +229,6 @@ export default function JadwalPelajaranPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] })
-      queryClient.invalidateQueries({ queryKey: ['teachers'] })
-      queryClient.invalidateQueries({ queryKey: ['classes'] })
-      queryClient.invalidateQueries({ queryKey: ['subjects'] })
       setOpenModal(false)
       resetForm()
     }
@@ -192,7 +244,6 @@ export default function JadwalPelajaranPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] })
-      queryClient.invalidateQueries({ queryKey: ['teachers'] })
     }
   })
 
@@ -210,9 +261,6 @@ export default function JadwalPelajaranPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] })
-      queryClient.invalidateQueries({ queryKey: ['teachers'] })
-      queryClient.invalidateQueries({ queryKey: ['classes'] })
-      queryClient.invalidateQueries({ queryKey: ['subjects'] })
       setDeleteAllModalOpen(false)
       setAuthPassword('')
       setAuthError('')
@@ -243,7 +291,7 @@ export default function JadwalPelajaranPage() {
       queryClient.invalidateQueries({ queryKey: ['subjects'] })
       queryClient.invalidateQueries({ queryKey: ['teachers'] })
       queryClient.invalidateQueries({ queryKey: ['students'] })
-      alert(`Berhasil mengimpor ${data?.length || 0} jadwal dari aSc Timetables! Data jadwal lama telah ditumpuk/digantikan secara rapi dan otomatis.`)
+      alert(`Berhasil mengimpor ${data?.length || 0} jadwal dari aSc Timetables! Data jadwal telah disinkronkan secara rapi dan otomatis.`)
       setImportModalOpen(false)
       setXmlFile(null)
       setParsedPreview(null)
@@ -260,7 +308,7 @@ export default function JadwalPelajaranPage() {
       dayOfWeek: '1',
       startTime: '07:00',
       endTime: '08:30',
-      classId: classes && classes.length > 0 ? classes[0].id : '',
+      classId: selectedClassId && selectedClassId !== 'ALL' ? selectedClassId : (classes && classes.length > 0 ? classes[0].id : ''),
       subjectId: subjects && subjects.length > 0 ? subjects[0].id : '',
       teacherId: teachers && teachers.length > 0 ? teachers[0].id : ''
     })
@@ -332,19 +380,6 @@ export default function JadwalPelajaranPage() {
     bulkImportMutation.mutate(parsedPreview)
   }
 
-  // Deteksi mutlak kelas siswa yang sedang login
-  const myProfile = students?.find((s: any) => 
-    s.userId === userId || 
-    (s.user && (s.user.id === userId || s.user.username === username || s.user.email === userEmail)) ||
-    s.nisn === username || 
-    s.nis === username ||
-    s.nisn === userEmail ||
-    s.nis === userEmail ||
-    (s.parentRelations && s.parentRelations.some((pr: any) => pr.parent?.userId === userId))
-  )
-  const myClassId = myProfile?.classId
-  const activeStudentClass = classes?.find((c: any) => c.id === myClassId) || myProfile?.class || (classes && classes.length > 0 ? classes[0] : null)
-
   const parseTimeToMinutes = (t: string | undefined | null): number => {
     if (!t) return 0
     const clean = t.replace('.', ':').trim()
@@ -354,253 +389,643 @@ export default function JadwalPelajaranPage() {
     return hours * 60 + minutes
   }
 
-  // Filter jadwal
-  const filteredSchedules = (schedules || []).filter((sch: any) => {
-    if (isSuperAdmin) {
-      if (selectedClassId === 'ALL') return true
-      return sch.classId === selectedClassId
-    }
+  // Active target class object
+  const currentSelectedClass = useMemo(() => {
     if (role === 'SISWA' || role === 'WALI_MURID') {
-      return sch.classId === activeStudentClass?.id
+      return activeStudentClass
     }
-    // Guru / Pegawai view
-    if (selectedClassId !== 'ALL') {
-      return sch.classId === selectedClassId
-    }
-    return true
-  }).sort((a: any, b: any) => {
-    if ((a.dayOfWeek ?? 1) !== (b.dayOfWeek ?? 1)) {
-      return (a.dayOfWeek ?? 1) - (b.dayOfWeek ?? 1)
-    }
-    const timeA = parseTimeToMinutes(a.startTime)
-    const timeB = parseTimeToMinutes(b.startTime)
-    if (timeA !== timeB) return timeA - timeB
-    return parseTimeToMinutes(a.endTime) - parseTimeToMinutes(b.endTime)
-  })
+    if (selectedClassId === 'ALL') return null
+    return classes.find((c: any) => c.id === selectedClassId) || classes[0] || null
+  }, [classes, selectedClassId, role, activeStudentClass])
 
-  // Kelompokkan jadwal berdasarkan hari (Senin - Sabtu: 1 - 6)
-  const groupedSchedules: Record<number, any[]> = {
-    1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 0: []
+  // Filtered classes by grade tab
+  const filteredClasses = useMemo(() => {
+    if (gradeFilter === 'ALL') return classes
+    return classes.filter((c: any) => {
+      const name = (c.name || '').toUpperCase()
+      if (gradeFilter === 'X') return name.startsWith('X ') || name.startsWith('KELAS X ') || name === 'X'
+      if (gradeFilter === 'XI') return name.startsWith('XI ') || name.startsWith('KELAS XI ') || name === 'XI'
+      if (gradeFilter === 'XII') return name.startsWith('XII ') || name.startsWith('KELAS XII ') || name === 'XII'
+      return true
+    })
+  }, [classes, gradeFilter])
+
+  // Schedules for currently selected class or all
+  const activeClassSchedules = useMemo(() => {
+    if (!currentSelectedClass) {
+      return (schedules || []).filter((s: any) => {
+        if (selectedClassId === 'ALL') return true
+        return s.classId === selectedClassId
+      })
+    }
+    return (schedules || []).filter((s: any) => s.classId === currentSelectedClass.id)
+  }, [schedules, currentSelectedClass, selectedClassId])
+
+  // Generate unique sorted time slots for matrix table
+  const timeSlots = useMemo(() => {
+    const map = new Map<string, { startTime: string; endTime: string; startMinutes: number; endMinutes: number }>()
+    activeClassSchedules.forEach((sch: any) => {
+      if (!sch.startTime || !sch.endTime) return
+      const s = sch.startTime.trim()
+      const e = sch.endTime.trim()
+      const key = `${s}-${e}`
+      if (!map.has(key)) {
+        map.set(key, {
+          startTime: s,
+          endTime: e,
+          startMinutes: parseTimeToMinutes(s),
+          endMinutes: parseTimeToMinutes(e)
+        })
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.startMinutes !== b.startMinutes) return a.startMinutes - b.startMinutes
+      return a.endMinutes - b.endMinutes
+    })
+  }, [activeClassSchedules])
+
+  // Grouped schedules by day (1..6)
+  const groupedByDay = useMemo(() => {
+    const grouped: Record<number, any[]> = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] }
+    activeClassSchedules.forEach((sch: any) => {
+      const day = sch.dayOfWeek ?? 1
+      if (!grouped[day]) grouped[day] = []
+      grouped[day].push(sch)
+    })
+    Object.keys(grouped).forEach((key) => {
+      const d = Number(key)
+      grouped[d].sort((a: any, b: any) => {
+        const timeA = parseTimeToMinutes(a.startTime)
+        const timeB = parseTimeToMinutes(b.startTime)
+        if (timeA !== timeB) return timeA - timeB
+        return parseTimeToMinutes(a.endTime) - parseTimeToMinutes(b.endTime)
+      })
+    })
+    return grouped
+  }, [activeClassSchedules])
+
+  // Summary statistics for active class
+  const classStats = useMemo(() => {
+    const uniqueSubjects = new Set(activeClassSchedules.map((s: any) => s.subjectId || s.subject?.name)).size
+    const uniqueTeachers = new Set(activeClassSchedules.map((s: any) => s.teacherId || s.teacher?.id)).size
+    return {
+      totalSessions: activeClassSchedules.length,
+      totalSubjects: uniqueSubjects,
+      totalTeachers: uniqueTeachers
+    }
+  }, [activeClassSchedules])
+
+  // Get color palette for subject badge based on string hash
+  const getSubjectColorStyle = (name: string) => {
+    const colors = [
+      { bg: 'bg-blue-50 dark:bg-blue-950/60', border: 'border-blue-200 dark:border-blue-800', text: 'text-blue-900 dark:text-blue-200', dot: 'bg-blue-500' },
+      { bg: 'bg-indigo-50 dark:bg-indigo-950/60', border: 'border-indigo-200 dark:border-indigo-800', text: 'text-indigo-900 dark:text-indigo-200', dot: 'bg-indigo-500' },
+      { bg: 'bg-emerald-50 dark:bg-emerald-950/60', border: 'border-emerald-200 dark:border-emerald-800', text: 'text-emerald-900 dark:text-emerald-200', dot: 'bg-emerald-500' },
+      { bg: 'bg-amber-50 dark:bg-amber-950/60', border: 'border-amber-200 dark:border-amber-800', text: 'text-amber-900 dark:text-amber-200', dot: 'bg-amber-500' },
+      { bg: 'bg-purple-50 dark:bg-purple-950/60', border: 'border-purple-200 dark:border-purple-800', text: 'text-purple-900 dark:text-purple-200', dot: 'bg-purple-500' },
+      { bg: 'bg-rose-50 dark:bg-rose-950/60', border: 'border-rose-200 dark:border-rose-800', text: 'text-rose-900 dark:text-rose-200', dot: 'bg-rose-500' },
+      { bg: 'bg-teal-50 dark:bg-teal-950/60', border: 'border-teal-200 dark:border-teal-800', text: 'text-teal-900 dark:text-teal-200', dot: 'bg-teal-500' },
+      { bg: 'bg-cyan-50 dark:bg-cyan-950/60', border: 'border-cyan-200 dark:border-cyan-800', text: 'text-cyan-900 dark:text-cyan-200', dot: 'bg-cyan-500' }
+    ]
+    let hash = 0
+    for (let i = 0; i < (name || '').length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    const index = Math.abs(hash) % colors.length
+    return colors[index]
   }
 
-  filteredSchedules.forEach((sch: any) => {
-    const day = sch.dayOfWeek ?? 1
-    if (!groupedSchedules[day]) groupedSchedules[day] = []
-    groupedSchedules[day].push(sch)
-  })
-
-  // Pastikan setiap hari selalu terurut dari jam pagi ke jam terakhir numerik
-  Object.keys(groupedSchedules).forEach((key) => {
-    const dayNum = Number(key)
-    groupedSchedules[dayNum].sort((a: any, b: any) => {
-      const timeA = parseTimeToMinutes(a.startTime)
-      const timeB = parseTimeToMinutes(b.startTime)
-      if (timeA !== timeB) return timeA - timeB
-      return parseTimeToMinutes(a.endTime) - parseTimeToMinutes(b.endTime)
-    })
-  })
+  const handlePrint = () => {
+    window.print()
+  }
 
   return (
-    <div className="space-y-8 pb-10">
-      {/* Banner Header Eksklusif & Estetik */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 p-6 sm:p-8 rounded-3xl text-white shadow-xl relative overflow-hidden border border-white/10">
+    <div className="space-y-6 pb-12 print:p-0 print:space-y-3 print:bg-white print:text-black">
+      {/* Print Specific CSS Rules (Standar A4 Margin Standar) */}
+      <style jsx global>{`
+        @page {
+          size: A4 landscape;
+          margin: 10mm 12mm 10mm 12mm;
+        }
+        @media print {
+          html, body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            font-size: 10pt !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .print-break-inside-avoid {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+        }
+      `}</style>
+
+      {/* KOP RESMI CETAK JADWAL PELAJARAN (HANYA MUNCUL DI PRINT A4) */}
+      <div className="hidden print:block text-black border-b-[2.5px] border-black pb-2 mb-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="w-16 h-16 flex items-center justify-center shrink-0">
+            <img 
+              src="/images/logo-muhammadiyah.png" 
+              alt="Logo" 
+              className="w-16 h-16 object-contain" 
+              onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none' }} 
+            />
+          </div>
+          <div className="text-center flex-1 space-y-0.5">
+            <h4 className="text-[10.5px] font-bold tracking-wider uppercase text-black">
+              MAJELIS PENDIDIKAN DASAR MENENGAH DAN PENDIDIKAN NONFORMAL
+            </h4>
+            <h3 className="text-xs font-bold tracking-wider uppercase text-black">
+              PIMPINAN DAERAH MUHAMMADIYAH PONOROGO
+            </h3>
+            <h2 className="text-base font-black tracking-wide uppercase text-black">
+              SMA MUHAMMADIYAH 1 PONOROGO
+            </h2>
+            <p className="text-[9.5px] text-gray-800">
+              Alamat: Jl. Batoro Katong No. 130 Ponorogo, Jawa Timur 63411 • Telp. (0352) 481521 • Website: smamuhipo.sch.id
+            </p>
+          </div>
+          <div className="w-16 shrink-0"></div>
+        </div>
+
+        <div className="mt-2 pt-1.5 border-t border-black flex items-center justify-between text-xs">
+          <span className="font-extrabold uppercase text-sm underline tracking-wide">
+            JADWAL PELAJARAN KELAS {currentSelectedClass?.name || ''}
+          </span>
+          <span className="font-bold text-[11px]">
+            Tahun Ajaran: {currentSelectedClass?.academicYear || '2026/2027'}
+          </span>
+        </div>
+      </div>
+
+      {/* Header Eksklusif */}
+      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 p-5 sm:p-7 rounded-3xl text-white shadow-xl relative overflow-hidden border border-white/10 print:hidden">
         <div className="absolute right-0 top-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-blue-200 text-xs font-semibold uppercase tracking-wider">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-blue-200 text-xs font-semibold uppercase tracking-wider">
               <BookOpen className="w-3.5 h-3.5" />
               <span>Manajemen Kurikulum & aSc TimeTables</span>
             </div>
-            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white flex items-center gap-3">
-              <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-300 drop-shadow-md" />
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+              <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-emerald-300 drop-shadow-md" />
               Jadwal Pelajaran Sekolah
             </h1>
-            <p className="text-blue-100/90 text-sm sm:text-base max-w-2xl leading-relaxed">
+            <p className="text-blue-100/90 text-xs sm:text-sm max-w-2xl leading-relaxed">
               {isSuperAdmin
-                ? 'Import jadwal langsung dari aSc TimeTables XML untuk mengisi jadwal pelajaran seluruh kelas & siswa secara otomatis dan terstruktur.'
-                : 'Daftar jadwal pelajaran mingguan yang ditetapkan oleh Kurikulum sekolah dan tersinkronisasi secara real-time.'}
+                ? 'Tabel jadwal pelajaran mingguan per kelas tersinkronisasi otomatis dari kurikulum dan file aSc TimeTables.'
+                : 'Tabel jadwal pelajaran mingguan yang terstruktur per kelas dan tersinkronisasi secara real-time.'}
             </p>
           </div>
 
-          {/* Akses Cepat Tombol Superadmin: Import aSc Timetables, Tambah Manual, & Hapus Semua */}
-          {isSuperAdmin && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <Button
-                onClick={() => setImportModalOpen(true)}
-                className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold px-4 py-5 rounded-2xl shadow-lg hover:shadow-amber-400/20 transition-all flex items-center justify-center gap-2 border border-amber-300 text-xs sm:text-sm"
-              >
-                <FileCode className="w-4 h-4 text-indigo-900" />
-                <span>Import aSc (XML)</span>
-              </Button>
-              <Button
-                onClick={handleOpenAdd}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-5 rounded-2xl shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Tambah Manual</span>
-              </Button>
-              <Button
-                onClick={() => {
-                  setAuthPassword('')
-                  setAuthError('')
-                  setDeleteAllModalOpen(true)
-                }}
-                className="bg-rose-500/90 hover:bg-rose-600 text-white font-bold px-4 py-5 rounded-2xl shadow-lg hover:shadow-rose-500/20 transition-all flex items-center justify-center gap-2 border border-rose-400/50 text-xs sm:text-sm"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Hapus Semua Jadwal</span>
-              </Button>
-            </div>
-          )}
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              onClick={handlePrint}
+              variant="outline"
+              className="bg-white/10 hover:bg-white/20 text-white border-white/20 font-semibold px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm shadow-sm"
+              title="Cetak Jadwal Pelajaran (A4 Landscape)"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Cetak Jadwal A4</span>
+            </Button>
+
+            {isSuperAdmin && (
+              <>
+                <Button
+                  onClick={() => setImportModalOpen(true)}
+                  className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold px-3.5 py-2 rounded-xl shadow-md hover:shadow-amber-400/20 transition-all flex items-center justify-center gap-2 border border-amber-300 text-xs"
+                >
+                  <FileCode className="w-4 h-4 text-indigo-900" />
+                  <span>Import aSc (XML)</span>
+                </Button>
+                <Button
+                  onClick={handleOpenAdd}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3.5 py-2 rounded-xl shadow-md hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 text-xs"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Tambah Manual</span>
+                </Button>
+                <Button
+                  onClick={() => {
+                    setAuthPassword('')
+                    setAuthError('')
+                    setDeleteAllModalOpen(true)
+                  }}
+                  className="bg-rose-500/90 hover:bg-rose-600 text-white font-bold px-3.5 py-2 rounded-xl shadow-md hover:shadow-rose-500/20 transition-all flex items-center justify-center gap-2 border border-rose-400/40 text-xs"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Hapus Semua</span>
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Filter Kelas & Kontrol Pilihan */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Filter Tampilan Kelas:</span>
+      {/* Control Bar: Pilihan Kelas & Mode Tampilan */}
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5 print:hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Sisi Kiri: Filter Tingkat & Pilihan Kelas */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+              <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span>Pilih Kelas:</span>
+            </div>
+
+            {role === 'SISWA' ? (
+              <div className="px-3.5 py-1.5 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 rounded-xl text-blue-700 dark:text-blue-300 text-xs font-extrabold flex items-center gap-2">
+                <Users className="w-3.5 h-3.5" />
+                <span>Kelas Saya: <strong>{activeStudentClass?.name || 'Belum Terdaftar'}</strong></span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Tingkat Tabs (Semua / X / XI / XII) */}
+                <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700">
+                  {['ALL', 'X', 'XI', 'XII'].map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setGradeFilter(g)}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
+                        gradeFilter === g
+                          ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {g === 'ALL' ? 'Semua Tingkat' : `Tingkat ${g}`}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Select Dropdown Kelas */}
+                <Select 
+                  value={selectedClassId || (classes[0]?.id || '')} 
+                  onValueChange={(val) => val && setSelectedClassId(val)}
+                >
+                  <SelectTrigger className="w-[180px] sm:w-[220px] bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-bold text-xs h-9">
+                    <SelectValue placeholder="Pilih Kelas">
+                      {classes.find((c: any) => c.id === selectedClassId)?.name 
+                        ? `Kelas ${classes.find((c: any) => c.id === selectedClassId)?.name}`
+                        : 'Pilih Kelas'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {filteredClasses.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id} className="text-xs font-semibold">
+                        Kelas {c.name} {c.academicYear ? `(${c.academicYear})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {/* Sisi Kanan: Switcher Mode Tampilan (Tabel Matriks vs Kartu Hari) */}
+          <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">
+              Mode Tampilan:
+            </span>
+            <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  viewMode === 'table'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <TableIcon className="w-3.5 h-3.5" />
+                <span>Tabel Jadwal</span>
+              </button>
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  viewMode === 'cards'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Kartu Harian</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          {role === 'SISWA' ? (
-            <div className="px-4 py-2 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 rounded-xl text-blue-700 dark:text-blue-300 text-xs font-extrabold">
-              Kelas Saya: {activeStudentClass?.name || 'Belum Terdaftar'}
-            </div>
-          ) : (
-            <Select value={selectedClassId} onValueChange={(val) => val && setSelectedClassId(val)}>
-              <SelectTrigger className="w-full sm:w-[240px] bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-medium">
-                <SelectValue placeholder="Pilih Kelas">
-                  {selectedClassId === 'ALL'
-                    ? 'Semua Kelas'
-                    : classes?.find((c: any) => c.id === selectedClassId)?.name || 'Pilih Kelas'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Semua Kelas</SelectItem>
-                {(classes || []).map((c: any) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name} ({c.academicYear || 'Aktif'})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        {/* Quick Kelas Chips (Horizontal Scroll) */}
+        {role !== 'SISWA' && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 no-scrollbar text-xs">
+            <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap mr-1">
+              Akses Cepat:
+            </span>
+            {filteredClasses.map((c: any) => {
+              const isSelected = (selectedClassId || classes[0]?.id) === c.id
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedClassId(c.id)}
+                  className={`px-3 py-1 rounded-lg font-bold whitespace-nowrap transition-all border text-xs ${
+                    isSelected
+                      ? 'bg-blue-50 dark:bg-blue-950/80 border-blue-500 text-blue-700 dark:text-blue-300 shadow-sm ring-1 ring-blue-500/20'
+                      : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  {c.name}
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Konten Jadwal Mingguan Per Kelas */}
+      {/* Info Ringkas Kelas Terpilih */}
+      {currentSelectedClass && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-800/40 p-3.5 px-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs print:hidden">
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              Jadwal Kelas {currentSelectedClass.name}
+            </span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              Tahun Ajaran {currentSelectedClass.academicYear || '2026/2027'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
+            <span>Total: <strong className="text-blue-600 dark:text-blue-400 font-bold">{classStats.totalSessions}</strong> Sesi</span>
+            <span>•</span>
+            <span><strong className="text-slate-900 dark:text-white font-bold">{classStats.totalSubjects}</strong> Mapel</span>
+            <span>•</span>
+            <span><strong className="text-slate-900 dark:text-white font-bold">{classStats.totalTeachers}</strong> Guru</span>
+
+            <Button
+              onClick={handlePrint}
+              size="sm"
+              variant="outline"
+              className="ml-2 h-7 px-2.5 text-xs font-bold rounded-lg border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50"
+            >
+              <Printer className="w-3.5 h-3.5 mr-1" />
+              Cetak Kelas Ini
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Konten Utama Jadwal Pelajaran */}
       {isLoading ? (
         <div className="flex flex-col h-[40vh] items-center justify-center text-slate-500 dark:text-slate-400">
           <Loader2 className="w-10 h-10 animate-spin text-blue-600 dark:text-blue-400 mb-3" />
-          <p className="font-semibold text-lg">Memuat Jadwal Pelajaran...</p>
+          <p className="font-semibold text-base">Memuat Jadwal Pelajaran...</p>
         </div>
-      ) : filteredSchedules.length === 0 ? (
+      ) : activeClassSchedules.length === 0 ? (
         <Card className="border-dashed border-slate-200 dark:border-slate-800 shadow-sm p-12 text-center bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl">
-          <Calendar className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4 stroke-[1.2]" />
-          <h3 className="text-xl font-bold text-slate-700 dark:text-slate-200">Belum Ada Jadwal Pelajaran</h3>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto text-sm">
+          <Calendar className="w-14 h-14 text-slate-300 dark:text-slate-600 mx-auto mb-3 stroke-[1.2]" />
+          <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">
+            Belum Ada Jadwal Pelajaran untuk Kelas {currentSelectedClass?.name || ''}
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto text-xs">
             {isSuperAdmin
-              ? 'Belum ada jadwal pelajaran. Impor dari file aSc TimeTables XML atau tambahkan jadwal manual.'
-              : 'Jadwal pelajaran belum ditambahkan oleh Kurikulum.'}
+              ? 'Silakan impor jadwal dari aSc TimeTables XML atau tambahkan jadwal mata pelajaran secara manual.'
+              : 'Jadwal pelajaran untuk kelas ini belum ditentukan oleh Kurikulum.'}
           </p>
+          {isSuperAdmin && (
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <Button
+                onClick={handleOpenAdd}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Tambah Jadwal Kelas Ini
+              </Button>
+            </div>
+          )}
         </Card>
+      ) : viewMode === 'table' ? (
+        /* TABEL MATRIKS JADWAL MINGGUAN PER KELAS (DEFAULT) */
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden print:border print:border-black print:rounded-none print:shadow-none">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[850px] print:min-w-full print:border print:border-black">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 print:bg-gray-100 print:text-black print:border-b-2 print:border-black">
+                  <th className="py-2.5 px-3 w-24 sm:w-28 text-center border-r border-slate-200/80 dark:border-slate-800 print:border-r print:border-black print:w-24">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 print:hidden" />
+                      <span className="print:font-bold">Waktu</span>
+                    </div>
+                  </th>
+                  {ACTIVE_DAYS.map((dayNum) => {
+                    const isToday = new Date().getDay() === dayNum
+                    return (
+                      <th 
+                        key={dayNum} 
+                        className={`py-2.5 px-2.5 text-center border-r last:border-r-0 border-slate-200/80 dark:border-slate-800 print:border-r print:border-black ${
+                          isToday ? 'bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 print:bg-gray-100 print:text-black' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span>{DAYS_MAP[dayNum]}</span>
+                          {isToday && (
+                            <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse print:hidden" title="Hari Ini" />
+                          )}
+                        </div>
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs print:divide-black">
+                {timeSlots.map((slot, slotIdx) => (
+                  <tr 
+                    key={slotIdx} 
+                    className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors print:hover:bg-transparent"
+                  >
+                    {/* Kolom Jam / Waktu */}
+                    <td className="py-2.5 px-2 text-center font-mono font-bold text-slate-700 dark:text-slate-300 bg-slate-50/40 dark:bg-slate-800/20 border-r border-slate-200/80 dark:border-slate-800 print:border-r print:border-black print:bg-transparent print:text-black whitespace-nowrap">
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase mb-0.5 print:text-gray-600">
+                        Jam ke-{slotIdx + 1}
+                      </div>
+                      <div className="text-xs font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/50 py-0.5 px-1.5 rounded border border-indigo-100 dark:border-indigo-900 inline-block print:border-none print:bg-transparent print:text-black print:p-0">
+                        {slot.startTime} - {slot.endTime}
+                      </div>
+                    </td>
+
+                    {/* Kolom Tiap Hari (Senin - Sabtu) */}
+                    {ACTIVE_DAYS.map((dayNum) => {
+                      const dayLessons = (groupedByDay[dayNum] || []).filter((sch: any) => {
+                        return (sch.startTime || '').trim() === slot.startTime || 
+                          (parseTimeToMinutes(sch.startTime) <= slot.startMinutes && parseTimeToMinutes(sch.endTime) > slot.startMinutes)
+                      })
+
+                      const isToday = new Date().getDay() === dayNum
+
+                      return (
+                        <td 
+                          key={dayNum} 
+                          className={`p-2 border-r last:border-r-0 border-slate-200/80 dark:border-slate-800 print:border-r print:border-black align-top ${
+                            isToday ? 'bg-blue-50/20 dark:bg-blue-950/10 print:bg-transparent' : ''
+                          }`}
+                        >
+                          {dayLessons.length === 0 ? (
+                            <div className="h-full min-h-[48px] flex items-center justify-center text-slate-300 dark:text-slate-700 text-xs select-none print:text-gray-300">
+                              —
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {dayLessons.map((sch: any) => {
+                                const style = getSubjectColorStyle(sch.subject?.name || '')
+                                return (
+                                  <div
+                                    key={sch.id}
+                                    className={`p-2 rounded-xl border ${style.border} ${style.bg} transition-all group relative print:border-none print:bg-transparent print:p-0.5`}
+                                  >
+                                    <div className="flex items-start justify-between gap-1">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="font-extrabold text-xs text-slate-900 dark:text-white leading-tight line-clamp-2 print:text-black print:text-[11px] print:line-clamp-none">
+                                          {sch.subject?.name || 'Mata Pelajaran'}
+                                        </div>
+                                        <div className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 print:text-gray-800 print:text-[10px]">
+                                          <User className="w-3 h-3 text-blue-500 shrink-0 print:hidden" />
+                                          <span className="truncate font-medium print:whitespace-normal" title={sch.teacher?.user?.name || sch.teacher?.nip || ''}>
+                                            {sch.teacher?.user?.name || sch.teacher?.nip || 'Guru Pengampu'}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Superadmin Actions */}
+                                      {isSuperAdmin && (
+                                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 print:hidden">
+                                          <button
+                                            onClick={() => handleOpenEdit(sch)}
+                                            className="p-1 text-slate-500 hover:text-blue-600 rounded hover:bg-white/80 dark:hover:bg-slate-700"
+                                            title="Edit"
+                                          >
+                                            <Pencil className="w-3 h-3" />
+                                          </button>
+                                          <button
+                                            onClick={() => handleDelete(sch.id)}
+                                            className="p-1 text-slate-500 hover:text-rose-600 rounded hover:bg-white/80 dark:hover:bg-slate-700"
+                                            title="Hapus"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((dayIndex) => {
-            const daySchedules = groupedSchedules[dayIndex] || []
+        /* TAMPILAN KARTU HARIAN (HARI PER HARI) */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 print:hidden">
+          {ACTIVE_DAYS.map((dayIndex) => {
+            const daySchedules = groupedByDay[dayIndex] || []
             const isToday = new Date().getDay() === dayIndex
 
             return (
               <Card 
                 key={dayIndex} 
-                className={`flex flex-col transition-all duration-300 rounded-2xl border ${
+                className={`flex flex-col rounded-2xl border transition-all ${
                   isToday 
-                    ? 'border-blue-500/80 dark:border-blue-500/80 shadow-lg shadow-blue-500/10 bg-gradient-to-b from-blue-50/40 via-white to-white dark:from-slate-800/80 dark:via-slate-900 dark:to-slate-900 ring-2 ring-blue-500/20' 
-                    : 'border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md bg-white dark:bg-slate-900/60'
+                    ? 'border-blue-500/80 dark:border-blue-500/80 shadow-md bg-gradient-to-b from-blue-50/40 via-white to-white dark:from-slate-800/80 dark:via-slate-900 dark:to-slate-900 ring-1 ring-blue-500/20' 
+                    : 'border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900'
                 }`}
               >
-                <CardHeader className={`pb-3 border-b ${isToday ? 'border-blue-100 dark:border-blue-900/50' : 'border-slate-100 dark:border-slate-800/80'}`}>
+                <CardHeader className={`p-4 pb-3 border-b ${isToday ? 'border-blue-100 dark:border-blue-900/50' : 'border-slate-100 dark:border-slate-800/80'}`}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-3 h-3 rounded-full ${isToday ? 'bg-blue-600 dark:bg-blue-400 animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
-                      <CardTitle className={`text-lg font-bold ${isToday ? 'text-blue-700 dark:text-blue-300' : 'text-slate-800 dark:text-slate-200'}`}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2.5 h-2.5 rounded-full ${isToday ? 'bg-blue-600 dark:bg-blue-400 animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
+                      <CardTitle className={`text-base font-bold ${isToday ? 'text-blue-700 dark:text-blue-300' : 'text-slate-800 dark:text-slate-200'}`}>
                         {DAYS_MAP[dayIndex]}
                       </CardTitle>
                     </div>
                     {isToday && (
-                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-sm tracking-wider">
+                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-sm">
                         Hari Ini
                       </span>
                     )}
                   </div>
                   <CardDescription className="text-xs font-medium dark:text-slate-400">
-                    {daySchedules.length > 0 ? `${daySchedules.length} Sesi Mata Pelajaran` : 'Tidak ada kelas di hari ini'}
+                    {daySchedules.length > 0 ? `${daySchedules.length} Sesi Mata Pelajaran` : 'Tidak ada pelajaran'}
                   </CardDescription>
                 </CardHeader>
                 
-                <CardContent className="p-4 flex-1 space-y-3">
+                <CardContent className="p-3.5 flex-1 space-y-2.5">
                   {daySchedules.length === 0 ? (
-                    <div className="h-28 flex flex-col items-center justify-center text-center p-4 border border-dashed border-slate-200/80 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 text-slate-400 dark:text-slate-500">
-                      <Clock className="w-6 h-6 mb-1.5 opacity-40" />
+                    <div className="h-24 flex flex-col items-center justify-center text-center p-3 border border-dashed border-slate-200/80 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 text-slate-400 dark:text-slate-500">
+                      <Clock className="w-5 h-5 mb-1 opacity-40" />
                       <span className="text-xs font-medium">Bebas Pelajaran / Libur</span>
                     </div>
                   ) : (
-                    daySchedules.map((sch: any, idx: number) => (
-                      <div 
-                        key={sch.id || idx} 
-                        className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/90 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/60 dark:hover:bg-slate-800/70 transition-colors group relative overflow-hidden"
-                      >
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 dark:bg-indigo-400 group-hover:w-1.5 transition-all"></div>
-                        <div className="pl-2 space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-900">
+                    daySchedules.map((sch: any, idx: number) => {
+                      const style = getSubjectColorStyle(sch.subject?.name || '')
+                      return (
+                        <div 
+                          key={sch.id || idx} 
+                          className={`p-3 rounded-xl border ${style.border} ${style.bg} transition-colors group relative overflow-hidden`}
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <span className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-white/70 dark:bg-slate-800/70 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900">
                               <Clock className="w-3 h-3 text-indigo-500" />
                               {sch.startTime} - {sch.endTime}
                             </span>
-                            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-2 py-0.5 rounded">
-                              {sch.class?.name || 'Kelas'}
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-slate-800/60 px-1.5 py-0.5 rounded">
+                              {sch.class?.name || currentSelectedClass?.name || 'Kelas'}
                             </span>
                           </div>
 
                           <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <h4 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base leading-snug">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm leading-snug">
                                 {sch.subject?.name || 'Mata Pelajaran'}
                               </h4>
-                              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+                              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-1.5">
                                 <User className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
-                                <span>Guru: <strong className="text-slate-700 dark:text-slate-200 font-semibold">{sch.teacher?.user?.name || sch.teacher?.nip || 'Guru Pengampu'}</strong></span>
+                                <span className="truncate">Guru: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{sch.teacher?.user?.name || sch.teacher?.nip || 'Guru Pengampu'}</strong></span>
                               </p>
                             </div>
 
                             {/* Action edit/delete untuk Superadmin */}
                             {isSuperAdmin && (
-                              <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                  className="h-6 w-6 text-slate-500 hover:text-blue-600"
                                   onClick={() => handleOpenEdit(sch)}
                                   title="Edit Jadwal"
                                 >
-                                  <Pencil className="w-3.5 h-3.5" />
+                                  <Pencil className="w-3 h-3" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                                  className="h-6 w-6 text-slate-500 hover:text-rose-600"
                                   onClick={() => handleDelete(sch.id)}
                                   title="Hapus Jadwal"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Trash2 className="w-3 h-3" />
                                 </Button>
                               </div>
                             )}
                           </div>
                         </div>
-                      </div>
-                    ))
+                      )
+                    })
                   )}
                 </CardContent>
               </Card>
@@ -609,11 +1034,46 @@ export default function JadwalPelajaranPage() {
         </div>
       )}
 
+      {/* Tanda Tangan Resmi Pengesahan Kurikulum (HANYA MUNCUL DI PRINT A4) */}
+      {currentSelectedClass && (
+        <div className="hidden print:block mt-6 text-xs text-black print-break-inside-avoid">
+          <div className="grid grid-cols-3 text-center gap-4">
+            <div>
+              <p className="font-medium">Mengetahui,</p>
+              <p className="font-bold">Kepala Sekolah</p>
+              <div className="h-14"></div>
+              <p className="font-extrabold underline">Drs. M. Dahron, M.Pd.</p>
+              <p className="text-[10px] text-gray-800">NBM. 19680512 199403 1 002</p>
+            </div>
+            <div>
+              <p className="font-medium">Menyetujui,</p>
+              <p className="font-bold">Waka Kurikulum</p>
+              <div className="h-14"></div>
+              <p className="font-extrabold underline">Anik Yulaika, M.Pd.</p>
+              <p className="text-[10px] text-gray-800">NBM. 19750820 200212 2 001</p>
+            </div>
+            <div>
+              <p className="font-medium">
+                Ponorogo, {new Intl.DateTimeFormat('id-ID', { dateStyle: 'long' }).format(new Date())}
+              </p>
+              <p className="font-bold">Wali Kelas {currentSelectedClass?.name}</p>
+              <div className="h-14"></div>
+              <p className="font-extrabold underline">
+                {currentSelectedClass?.homeroomTeacher?.user?.name || '( .............................................. )'}
+              </p>
+              <p className="text-[10px] text-gray-800">
+                NIP/NBM. {currentSelectedClass?.homeroomTeacher?.nipNbm || '-'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Dialog Import aSc TimeTables XML */}
       <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
         <DialogContent className="sm:max-w-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <FileCode className="w-5 h-5 text-amber-500" />
               Import Jadwal dari aSc TimeTables (XML)
             </DialogTitle>
@@ -625,10 +1085,10 @@ export default function JadwalPelajaranPage() {
           <div className="space-y-4 py-3">
             <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <Upload className="w-10 h-10 text-amber-500 mx-auto mb-2 opacity-80" />
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                 {xmlFile ? xmlFile.name : 'Pilih atau Drag File aSc TimeTables (.xml)'}
               </p>
-              <p className="text-xs text-slate-400 mt-1">Format file yang didukung: XML (.xml)</p>
+              <p className="text-[11px] text-slate-400 mt-1">Format file yang didukung: XML (.xml)</p>
               
               <input
                 type="file"
@@ -643,7 +1103,7 @@ export default function JadwalPelajaranPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
-                className="mt-4 border-slate-300 dark:border-slate-700 font-semibold"
+                className="mt-3 border-slate-300 dark:border-slate-700 font-semibold text-xs rounded-xl"
               >
                 {xmlFile ? 'Ganti File XML' : 'Pilih File XML'}
               </Button>
@@ -651,8 +1111,8 @@ export default function JadwalPelajaranPage() {
 
             {/* Preview Hasil Parse XML */}
             {parsedPreview && (
-              <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 space-y-2">
-                <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-sm">
+              <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3.5 space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
                   <Sparkles className="w-4 h-4 text-emerald-600" />
                   <span>File XML Berhasil Dibaca!</span>
                 </div>
@@ -668,7 +1128,7 @@ export default function JadwalPelajaranPage() {
               type="button"
               variant="outline"
               onClick={() => setImportModalOpen(false)}
-              className="border-slate-200 dark:border-slate-700"
+              className="border-slate-200 dark:border-slate-700 text-xs rounded-xl"
             >
               Batal
             </Button>
@@ -676,7 +1136,7 @@ export default function JadwalPelajaranPage() {
               type="button"
               onClick={handleConfirmImport}
               disabled={!parsedPreview || parsedPreview.length === 0 || bulkImportMutation.isPending}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold shadow-sm"
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold shadow-sm text-xs rounded-xl"
             >
               {bulkImportMutation.isPending && (
                 <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
@@ -692,16 +1152,16 @@ export default function JadwalPelajaranPage() {
         <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <form onSubmit={handleSubmit}>
             <DialogHeader>
-              <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                {isEdit ? 'Edit Jadwal Pelajaran' : 'Tambah Jadwal Pelajaran Baru'}
+              <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                {isEdit ? 'Edit Jadwal Pelajaran' : 'Tambah Jadwal Pelajaran'}
               </DialogTitle>
               <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs">
-                Pilih Kelas, Mata Pelajaran, Guru Pengampu, Hari, dan Jam Pelajaran.
+                Tentukan Kelas, Mata Pelajaran, Guru Pengampu, Hari, dan Jam Pelajaran.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
+            <div className="space-y-3.5 py-3">
               {/* Select Kelas */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kelas Target</Label>
@@ -709,17 +1169,17 @@ export default function JadwalPelajaranPage() {
                   value={formData.classId}
                   onValueChange={(val) => val && setFormData(prev => ({ ...prev, classId: val }))}
                 >
-                  <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                  <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-xs">
                     <SelectValue placeholder="Pilih Kelas">
                       {classes?.find((c: any) => c.id === formData.classId)
-                        ? `${classes.find((c: any) => c.id === formData.classId).name} (${classes.find((c: any) => c.id === formData.classId).academicYear || 'Aktif'})`
+                        ? `Kelas ${classes.find((c: any) => c.id === formData.classId).name}`
                         : undefined}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
-                    {(classes || []).map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name} ({c.academicYear || 'Aktif'})
+                  <SelectContent className="max-h-60">
+                    {classes.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id} className="text-xs font-semibold">
+                        Kelas {c.name} {c.academicYear ? `(${c.academicYear})` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -733,16 +1193,16 @@ export default function JadwalPelajaranPage() {
                   value={formData.subjectId}
                   onValueChange={(val) => val && setFormData(prev => ({ ...prev, subjectId: val }))}
                 >
-                  <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                  <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-xs">
                     <SelectValue placeholder="Pilih Mata Pelajaran">
                       {subjects?.find((s: any) => s.id === formData.subjectId)
                         ? `${subjects.find((s: any) => s.id === formData.subjectId).name} (${subjects.find((s: any) => s.id === formData.subjectId).code})`
                         : undefined}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-60">
                     {(subjects || []).map((s: any) => (
-                      <SelectItem key={s.id} value={s.id}>
+                      <SelectItem key={s.id} value={s.id} className="text-xs">
                         {s.name} ({s.code})
                       </SelectItem>
                     ))}
@@ -757,16 +1217,16 @@ export default function JadwalPelajaranPage() {
                   value={formData.teacherId}
                   onValueChange={(val) => val && setFormData(prev => ({ ...prev, teacherId: val }))}
                 >
-                  <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                  <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-xs">
                     <SelectValue placeholder="Pilih Guru Pengampu">
                       {teachers?.find((t: any) => t.id === formData.teacherId)
                         ? (teachers.find((t: any) => t.id === formData.teacherId).user?.name || teachers.find((t: any) => t.id === formData.teacherId).nipNbm || 'Guru')
                         : undefined}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-60">
                     {(teachers || []).map((t: any) => (
-                      <SelectItem key={t.id} value={t.id}>
+                      <SelectItem key={t.id} value={t.id} className="text-xs">
                         {t.user?.name || t.nipNbm || 'Guru'}
                       </SelectItem>
                     ))}
@@ -781,16 +1241,16 @@ export default function JadwalPelajaranPage() {
                   value={formData.dayOfWeek}
                   onValueChange={(val) => val && setFormData(prev => ({ ...prev, dayOfWeek: val }))}
                 >
-                  <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                  <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-xs">
                     <SelectValue placeholder="Pilih Hari" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Senin</SelectItem>
-                    <SelectItem value="2">Selasa</SelectItem>
-                    <SelectItem value="3">Rabu</SelectItem>
-                    <SelectItem value="4">Kamis</SelectItem>
-                    <SelectItem value="5">Jumat</SelectItem>
-                    <SelectItem value="6">Sabtu</SelectItem>
+                    <SelectItem value="1" className="text-xs">Senin</SelectItem>
+                    <SelectItem value="2" className="text-xs">Selasa</SelectItem>
+                    <SelectItem value="3" className="text-xs">Rabu</SelectItem>
+                    <SelectItem value="4" className="text-xs">Kamis</SelectItem>
+                    <SelectItem value="5" className="text-xs">Jumat</SelectItem>
+                    <SelectItem value="6" className="text-xs">Sabtu</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -803,7 +1263,7 @@ export default function JadwalPelajaranPage() {
                     type="time"
                     value={formData.startTime}
                     onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
-                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono text-sm"
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono text-xs"
                     required
                   />
                 </div>
@@ -813,7 +1273,7 @@ export default function JadwalPelajaranPage() {
                     type="time"
                     value={formData.endTime}
                     onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
-                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono text-sm"
+                    className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono text-xs"
                     required
                   />
                 </div>
@@ -825,14 +1285,14 @@ export default function JadwalPelajaranPage() {
                 type="button"
                 variant="outline"
                 onClick={() => setOpenModal(false)}
-                className="border-slate-200 dark:border-slate-700"
+                className="border-slate-200 dark:border-slate-700 text-xs rounded-xl"
               >
                 Batal
               </Button>
               <Button
                 type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl"
               >
                 {(createMutation.isPending || updateMutation.isPending) && (
                   <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
@@ -858,8 +1318,8 @@ export default function JadwalPelajaranPage() {
             }}
           >
             <DialogHeader>
-              <DialogTitle className="text-lg font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2">
-                <Trash2 className="w-5 h-5 text-rose-600" />
+              <DialogTitle className="text-base font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-rose-600" />
                 Otorisasi Hapus Semua Jadwal
               </DialogTitle>
               <DialogDescription className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
@@ -870,8 +1330,8 @@ export default function JadwalPelajaranPage() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
-              <div className="bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl p-3.5 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+            <div className="space-y-3.5 py-3">
+              <div className="bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl p-3 text-xs text-rose-800 dark:text-rose-300 space-y-1">
                 <div className="font-bold flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-rose-600" />
                   <span>Verifikasi Keamanan Otoritas</span>
@@ -893,7 +1353,7 @@ export default function JadwalPelajaranPage() {
                     setAuthPassword(e.target.value)
                     setAuthError('')
                   }}
-                  className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-medium"
+                  className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-xs"
                   required
                   autoFocus
                 />
@@ -914,14 +1374,14 @@ export default function JadwalPelajaranPage() {
                   setAuthPassword('')
                   setAuthError('')
                 }}
-                className="border-slate-200 dark:border-slate-700"
+                className="border-slate-200 dark:border-slate-700 text-xs rounded-xl"
               >
                 Batal
               </Button>
               <Button
                 type="submit"
                 disabled={deleteAllMutation.isPending}
-                className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl"
               >
                 {deleteAllMutation.isPending && (
                   <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
@@ -935,3 +1395,4 @@ export default function JadwalPelajaranPage() {
     </div>
   )
 }
+

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +31,7 @@ import { StudentDashboard } from '@/components/dashboard/StudentDashboard'
 import { PrayerTimesWidget } from '@/components/dashboard/PrayerTimesWidget'
 import { SignaturePadDialog } from '@/components/dashboard/SignaturePadDialog'
 import { ExecutiveStatsPanel } from '@/components/dashboard/ExecutiveStatsPanel'
+import { DisposisiAlertBanner } from '@/components/dashboard/DisposisiAlertBanner'
 
 import { useRealtimeServerClock } from '@/lib/time-sync'
 
@@ -65,6 +66,7 @@ export default function DashboardPage() {
   const subRole3 = (session?.user as any)?.subRole3
   const userId = (session?.user as any)?.id
   const authenticatedQuery = useAuthenticatedQuery()
+  const authenticatedFetch = useAuthenticatedFetch()
 
   const hasRole = (targetRole: string) => role === targetRole || subRole === targetRole || subRole2 === targetRole || subRole3 === targetRole
   const hasAnyRole = (roles: string[]) => roles.some(hasRole)
@@ -184,6 +186,79 @@ export default function DashboardPage() {
     refetchInterval: 5000 // Auto refresh realtime setiap 5 detik
   })
 
+  // Query Disposisi Aktif Khusus Pengguna (Guru / Pegawai / Staff / Waka / Kepala Sekolah)
+  const { data: myDisposisiData } = useQuery<any[]>({
+    queryKey: ['my-active-disposisi', userId, role, subRole, subRole2, subRole3],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/surat-masuk?forUser=true')
+      if (!res.ok) return []
+      const json = await res.json()
+      return json.data || []
+    },
+    enabled: !!userId && role !== 'SISWA' && role !== 'WALI_MURID',
+    refetchInterval: 15000,
+  })
+
+  const pendingUserDisposisi = useMemo(() => {
+    if (!Array.isArray(myDisposisiData) || !userId) return []
+    const myNameLower = ((session?.user as any)?.name || '').toLowerCase()
+    const myRoles = [role, subRole, subRole2, subRole3].filter(Boolean).map((r: string) => r.toLowerCase())
+
+    return myDisposisiData.filter((item: any) => {
+      if (!item.disposisi) return false
+      const disp = item.disposisi
+
+      // Khusus Kepala Sekolah jika ada disposisi yang menunggu verifikasi & E-Sign
+      if (isKepalaSekolah && (disp.statusEsign === 'MENUNGGU_VERIFIKASI' || item.statusDisposisi === 'MENUNGGU_VERIFIKASI')) {
+        return true
+      }
+
+      // Jika disposisi sudah selesai atau arsip
+      if (['SELESAI', 'ARSIP'].includes(item.statusDisposisi) || ['SELESAI', 'ARSIP'].includes(disp.statusTahapan)) {
+        return false
+      }
+
+      const diteruskan = disp.diteruskanKepada || {}
+      const targetUserIds = Array.isArray(diteruskan.targetUserIds) ? diteruskan.targetUserIds : []
+      if (targetUserIds.includes(userId)) return true
+
+      const targets = Array.isArray(diteruskan.targets) ? diteruskan.targets : []
+      const guruNama = (diteruskan.guruNama || '').toLowerCase()
+      const bagianNama = (diteruskan.bagianNama || '').toLowerCase()
+      const stafNama = (diteruskan.stafNama || '').toLowerCase()
+
+      const matchName =
+        (guruNama && myNameLower && (myNameLower.includes(guruNama) || guruNama.includes(myNameLower))) ||
+        (stafNama && myNameLower && (myNameLower.includes(stafNama) || stafNama.includes(myNameLower))) ||
+        (bagianNama && myNameLower && (myNameLower.includes(bagianNama) || bagianNama.includes(myNameLower)))
+
+      if (matchName) return true
+
+      const isKurikulum = myRoles.some((r: string) => r.includes('kurikulum'))
+      const isKesiswaan = myRoles.some((r: string) => r.includes('kesiswaan') || r.includes('tatib') || r.includes('ketertiban'))
+      const isSarpras = myRoles.some((r: string) => r.includes('sarpras') || r.includes('inventaris'))
+      const isHumas = myRoles.some((r: string) => r.includes('humas') || r.includes('sdm'))
+      const isIsmuba = myRoles.some((r: string) => r.includes('ismuba'))
+      const isKeuangan = myRoles.some((r: string) => r.includes('bendahara') || r.includes('keuangan'))
+      const isBau = myRoles.some((r: string) => r.includes('bau') || r.includes('tata_usaha') || r.includes('admin_tu'))
+      const isGuru = role === 'GURU' || myRoles.some((r: string) => r === 'guru')
+      const isPegawai = role === 'PEGAWAI' || myRoles.some((r: string) => r === 'pegawai')
+
+      const matchRole =
+        (isKurikulum && targets.some((t: string) => t.toLowerCase().includes('kurikulum'))) ||
+        (isKesiswaan && targets.some((t: string) => t.toLowerCase().includes('kesiswaan'))) ||
+        (isSarpras && targets.some((t: string) => t.toLowerCase().includes('sarana') || t.toLowerCase().includes('sarpras'))) ||
+        (isHumas && targets.some((t: string) => t.toLowerCase().includes('humas') || t.toLowerCase().includes('sdm'))) ||
+        (isIsmuba && targets.some((t: string) => t.toLowerCase().includes('ismuba'))) ||
+        (isKeuangan && targets.some((t: string) => t.toLowerCase().includes('keuangan'))) ||
+        (isBau && targets.some((t: string) => t.toLowerCase().includes('administrasi umum') || t.toLowerCase().includes('bau'))) ||
+        (isGuru && targets.includes('Guru') && !guruNama) ||
+        (isPegawai && targets.includes('Staf') && !stafNama)
+
+      return matchRole
+    })
+  }, [myDisposisiData, userId, role, subRole, subRole2, subRole3, isKepalaSekolah, session])
+
   // State untuk Real Live Speed Test & Ping Benchmark (Client PC/IP -> Server SIMASMUH)
   const [speedTesting, setSpeedTesting] = useState(false)
   const [speedTestStep, setSpeedTestStep] = useState<string>('')
@@ -300,7 +375,6 @@ export default function DashboardPage() {
     }
   }
 
-  const authenticatedFetch = useAuthenticatedFetch()
   const [terminatingSessionId, setTerminatingSessionId] = useState<string | null>(null)
   const [resettingUserId, setResettingUserId] = useState<string | null>(null)
   const [viewingUserSessions, setViewingUserSessions] = useState<any | null>(null)
@@ -2892,6 +2966,9 @@ export default function DashboardPage() {
 
       {/* JADWAL SHOLAT & KHGT MUHAMMADIYAH REALTIME BANNER */}
       <PrayerTimesWidget variant="banner" />
+
+      {/* BANNER ALERT NOTIFIKASI DISPOSISI REALTIME GURU / PEGAWAI / PIMPINAN */}
+      <DisposisiAlertBanner />
 
       {/* Panel Detail Statistika Eksekutif (Khusus Kepala Sekolah - Muncul saat tombol Statistika ditekan) */}
       {isKepalaSekolah && showExecutiveStats && (

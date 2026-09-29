@@ -44,38 +44,41 @@ function TambahJurnalContent() {
   })
 
   const userRolesList = [userRole, (session?.user as any)?.subRole, (session?.user as any)?.subRole2].filter(Boolean)
-  const isExecutiveSupervisor = userRolesList.some(r => ['KEPALA_SEKOLAH', 'SUPERADMIN', 'ADMIN_IT', 'KURIKULUM'].includes(r))
-  const isKepalaSekolah = userRolesList.includes('KEPALA_SEKOLAH')
+  const isKepalaSekolahPure = userRolesList.includes('KEPALA_SEKOLAH') && !userRolesList.includes('GURU')
 
-  // Lindungi agar Kepala Sekolah tidak memiliki hak mengisi jurnal
+  // Lindungi agar Kepala Sekolah non-guru tidak memiliki hak mengisi jurnal
   useEffect(() => {
-    if (isKepalaSekolah) {
+    if (isKepalaSekolahPure) {
       Swal.fire({
         icon: 'info',
         title: 'Akses Supervisi',
         text: 'Kepala Sekolah bertindak sebagai supervisor monitoring dan tidak memiliki hak mengisi jurnal KBM kelas.',
         confirmButtonColor: '#2563eb'
       }).then(() => {
-        router.replace('/akademik/jurnal-mengajar')
+        router.replace('/akademik/supervisi-jurnal')
       })
     }
-  }, [isKepalaSekolah, router])
+  }, [isKepalaSekolahPure, router])
 
   // 1. Ambil jadwal eksklusif untuk guru yang sedang login
   const { data: rawSchedules, isLoading: loadingSchedules } = useQuery<any[]>({
     queryKey: ['schedules', userId, userRole],
     queryFn: async () => {
-      const url = userId && userRole === 'GURU' ? `/api-backend/schedules?userId=${userId}` : '/api-backend/schedules'
+      const url = userId ? `/api-backend/schedules?userId=${userId}` : '/api-backend/schedules'
       const res = await authenticatedFetch(url)
       if (!res.ok) throw new Error('Gagal memuat jadwal')
       return res.json()
     },
-    enabled: !isKepalaSekolah
+    enabled: !isKepalaSekolahPure
   })
 
   const schedules = (Array.isArray(rawSchedules) ? rawSchedules : []).filter(s => {
-    if (userRole === 'ADMIN_IT' || userRole === 'SUPERADMIN' || !userRole) return true
-    return s?.teacher?.userId === userId || s?.teacher?.user?.email === session?.user?.email || (s?.teacher?.user?.username && s?.teacher?.user?.username === (session?.user as any)?.username)
+    if ((userRole === 'ADMIN_IT' || userRole === 'SUPERADMIN') && !userRolesList.includes('GURU')) return true
+    return (
+      s?.teacher?.userId === userId || 
+      s?.teacher?.user?.email === session?.user?.email || 
+      (s?.teacher?.user?.username && s?.teacher?.user?.username === (session?.user as any)?.username)
+    )
   })
 
   // Otomatis pilih jadwal hari ini jika tidak ada query param

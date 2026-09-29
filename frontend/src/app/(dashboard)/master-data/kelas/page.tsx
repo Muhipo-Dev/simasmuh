@@ -16,6 +16,7 @@ import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { ImportProgressDialog, ImportProgressState } from '@/components/ImportProgressDialog'
 import Swal from 'sweetalert2'
 import { confirmDelete } from '@/lib/swal-helper'
+import { sortClasses } from '@/lib/class-helper'
 
 const CHUNK_SIZE = 20
 
@@ -99,7 +100,8 @@ export default function ClassesPage() {
     queryFn: async () => {
       const res = await authenticatedFetch('/api-backend/classes')
       if (!res.ok) throw new Error('Gagal memuat data kelas')
-      return res.json()
+      const data = await res.json()
+      return sortClasses(data)
     }
   })
 

@@ -172,16 +172,16 @@ export default function KeuanganKeluarPage() {
         <CardHeader className="border-b border-slate-100 pb-4">
           <CardTitle>Riwayat Pengeluaran</CardTitle>
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto max-w-full">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-slate-50/50">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto w-full">
+            <Table className="w-full min-w-[800px] text-xs">
+              <TableHeader className="bg-slate-50/70 border-b border-slate-200">
                 <TableRow>
-                  <TableHead className="w-[120px]">Tanggal</TableHead>
-                  <TableHead>Kategori & Judul</TableHead>
-                  <TableHead>Keterangan</TableHead>
-                  <TableHead className="text-right">Nominal</TableHead>
-                  <TableHead className="text-center w-[100px]">Aksi</TableHead>
+                  <TableHead className="w-[130px] min-w-[120px] px-3 py-3">Tanggal</TableHead>
+                  <TableHead className="min-w-[220px] px-3 py-3">Kategori & Judul</TableHead>
+                  <TableHead className="min-w-[220px] px-3 py-3">Keterangan</TableHead>
+                  <TableHead className="text-right w-[150px] min-w-[140px] px-3 py-3">Nominal</TableHead>
+                  <TableHead className="text-center w-[90px] min-w-[80px] px-3 py-3">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -191,22 +191,22 @@ export default function KeuanganKeluarPage() {
                   <TableRow><TableCell colSpan={5} className="h-32 text-center text-slate-500">Belum ada data pengeluaran</TableCell></TableRow>
                 ) : (
                   filtered.map((item) => (
-                    <TableRow key={item.id} className="hover:bg-slate-50">
-                      <TableCell className="font-medium text-slate-600">{formatDate(item.date)}</TableCell>
-                      <TableCell>
+                    <TableRow key={item.id} className="hover:bg-slate-50/60 border-b border-slate-100 transition-colors">
+                      <TableCell className="font-medium text-slate-600 px-3 py-2.5 whitespace-nowrap">{formatDate(item.date)}</TableCell>
+                      <TableCell className="px-3 py-2.5">
                         <div className="flex flex-col">
-                          <span className="text-xs font-semibold text-rose-600 bg-rose-50 w-max px-2 py-0.5 rounded-md mb-1">{item.category}</span>
-                          <span className="font-semibold text-slate-900">{item.title}</span>
-                          <span className="text-xs text-slate-500">Oleh: {item.user?.name}</span>
+                          <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 w-max px-2 py-0.5 rounded mb-1">{item.category}</span>
+                          <span className="font-semibold text-slate-900 text-sm">{item.title}</span>
+                          <span className="text-[11px] text-slate-500">Oleh: {item.user?.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-slate-600 text-sm max-w-[250px] truncate" title={item.description || ''}>
+                      <TableCell className="text-slate-600 text-xs max-w-[280px] truncate px-3 py-2.5" title={item.description || ''}>
                         {item.description || '-'}
                       </TableCell>
-                      <TableCell className="text-right font-bold text-rose-600 text-base">{currency(item.amount)}</TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-right font-bold text-rose-600 text-sm px-3 py-2.5 whitespace-nowrap">{currency(item.amount)}</TableCell>
+                      <TableCell className="text-center px-3 py-2.5">
                         {!isKepalaSekolah ? (
-                          <Button variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50 hover:text-rose-700" onClick={() => handleDelete(item.id)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-700" onClick={() => handleDelete(item.id)} title="Hapus Pengeluaran">
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         ) : (

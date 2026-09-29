@@ -6,14 +6,23 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
+import { EmailNotificationService } from '../../communication/notifications/email.service';
+import {
+  NotificationsService,
+  NotificationType,
+  NotificationPriority,
+  NotificationChannel,
+} from '../../communication/notifications/notifications.service';
 import { CreateSuratKeluarDto } from './dto/create-surat-keluar.dto';
 import { UpdateSuratKeluarDto } from './dto/update-surat-keluar.dto';
 
 @Injectable()
 export class SuratKeluarService {
   constructor(
-    private prisma: PrismaService,
-    private systemLogService: SystemLogService,
+    private readonly prisma: PrismaService,
+    private readonly systemLogService: SystemLogService,
+    private readonly notificationsService: NotificationsService,
+    private readonly emailNotificationService: EmailNotificationService,
   ) {}
 
   /**
@@ -117,6 +126,10 @@ export class SuratKeluarService {
       message: `Surat Keluar baru "${surat.nomorSurat}" (${surat.perihal}) berhasil diterbitkan.`,
       details: { suratId: surat.id, nomorSurat: surat.nomorSurat },
     });
+
+    if (surat.status === 'MENUNGGU_TTD') {
+      await this.sendSuratKeluarEsignNotificationToKepsek(surat);
+    }
 
     return {
       success: true,
@@ -228,6 +241,13 @@ export class SuratKeluarService {
       details: { suratId: id, status: updated.status },
     });
 
+    if (
+      updated.status === 'MENUNGGU_TTD' &&
+      (existing.status !== 'MENUNGGU_TTD' || dto.status === 'MENUNGGU_TTD')
+    ) {
+      await this.sendSuratKeluarEsignNotificationToKepsek(updated);
+    }
+
     return {
       success: true,
       message: 'Surat Keluar berhasil diperbarui.',
@@ -270,6 +290,105 @@ export class SuratKeluarService {
     return {
       success: true,
       message: 'Surat Keluar berhasil dihapus.',
+    };
+  }
+
+  /**
+   * Helper Pengiriman Notifikasi In-App & Email ke Kepala Sekolah saat Surat Keluar Membutuhkan E-Sign
+   */
+  async sendSuratKeluarEsignNotificationToKepsek(surat: any) {
+    try {
+      const kepsekUsers = await this.prisma.user.findMany({
+        where: {
+          isActive: true,
+          OR: [
+            { role: 'KEPALA_SEKOLAH' },
+            { subRole: 'KEPALA_SEKOLAH' },
+            { subRole2: 'KEPALA_SEKOLAH' },
+            { subRole3: 'KEPALA_SEKOLAH' },
+          ],
+        },
+        select: { id: true, name: true, email: true },
+      });
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+      for (const kepsek of kepsekUsers) {
+        // 1. In-App Notification
+        try {
+          await this.notificationsService.createNotification({
+            userId: kepsek.id,
+            type: NotificationType.SURAT_KELUAR_ESIGN,
+            title: `Permohonan E-Sign Surat Keluar: ${surat.nomorSurat}`,
+            message: `Surat keluar perihal "${surat.perihal}" ditujukan kepada ${surat.tujuanPenerima} memerlukan verifikasi & tanda tangan digital (E-Sign) Kepala Sekolah.`,
+            priority: NotificationPriority.HIGH,
+            channel: [NotificationChannel.IN_APP],
+            data: {
+              suratKeluarId: surat.id,
+              nomorSurat: surat.nomorSurat,
+              perihal: surat.perihal,
+              tujuanPenerima: surat.tujuanPenerima,
+              instansiPenerima: surat.instansiPenerima,
+              actionUrl: '/fitur/persuratan?tab=surat-keluar',
+            },
+          });
+        } catch (err) {
+          // Ignore in-app error
+        }
+
+        // 2. Email Notification to Kepsek
+        if (kepsek.email && kepsek.email.includes('@')) {
+          this.emailNotificationService
+            .sendEmailNotification({
+              to: kepsek.email,
+              subject: `[Permohonan E-Sign Surat Keluar] ${surat.perihal}`,
+              title: 'Permohonan E-Sign Surat Keluar Resmi',
+              category: 'PERIZINAN',
+              badgeLabel: 'MENUNGGU E-SIGN KEPALA SEKOLAH',
+              recipientName: kepsek.name,
+              contentText: `Surat keluar resmi telah disiapkan oleh Tata Usaha dan membutuhkan verifikasi serta penandatanganan digital (E-Sign) Kepala Sekolah.`,
+              metaDetails: [
+                { label: 'No. Surat', value: surat.nomorSurat || '-' },
+                { label: 'Perihal', value: surat.perihal || '-' },
+                { label: 'Tujuan Penerima', value: surat.tujuanPenerima || '-' },
+                { label: 'Instansi Penerima', value: surat.instansiPenerima || '-' },
+                { label: 'Jenis Surat', value: surat.jenisSurat || '-' },
+                {
+                  label: 'Tanggal Surat',
+                  value: surat.tanggalSurat
+                    ? new Date(surat.tanggalSurat).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })
+                    : '-',
+                },
+              ],
+              actionUrl: `${frontendUrl}/fitur/persuratan?tab=surat-keluar`,
+              actionText: 'Tinjau & E-Sign Surat Keluar di Dashboard',
+            })
+            .catch((err) => {
+              console.error(`Gagal kirim email surat keluar ke Kepsek ${kepsek.email}:`, err);
+            });
+        }
+      }
+    } catch (e) {
+      console.error('Gagal mengirim notifikasi pengajuan surat keluar ke Kepsek:', e);
+    }
+  }
+
+  /**
+   * Resend Notifikasi E-Sign Surat Keluar ke Kepala Sekolah
+   */
+  async resendSuratKeluarNotification(id: string) {
+    const surat = await this.prisma.suratKeluar.findUnique({ where: { id } });
+    if (!surat) {
+      throw new NotFoundException('Surat Keluar tidak ditemukan.');
+    }
+    await this.sendSuratKeluarEsignNotificationToKepsek(surat);
+    return {
+      success: true,
+      message: 'Notifikasi permohonan E-Sign surat keluar berhasil dikirimkan ulang ke Kepala Sekolah.',
     };
   }
 }

@@ -12,7 +12,8 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { 
   ClipboardCheck, Lock, User, ArrowRight, Home, Info, 
   ChevronDown, ChevronUp, ShieldCheck, GraduationCap, Phone,
-  HelpCircle, MessageSquare, Sparkles, KeyRound, Globe, Layers
+  HelpCircle, MessageSquare, Sparkles, KeyRound, Globe, Layers,
+  Mail, CheckCircle2, AlertCircle, Eye, EyeOff, RefreshCw, X, ArrowLeft
 } from 'lucide-react'
 import { getPublicApiUrl } from '@/lib/api-config'
 
@@ -30,6 +31,28 @@ export default function LoginPage() {
   const [helpdeskPhone, setHelpdeskPhone] = useState('088293733330')
   const [backgroundMaster, setBackgroundMaster] = useState('/muhipo-log.jpg')
   const [logoMaster, setLogoMaster] = useState<string | null>(null)
+
+  // State Modal Reset Password via OTP
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false)
+  const [forgotStep, setForgotStep] = useState<1 | 2 | 3>(1)
+  const [forgotAccount, setForgotAccount] = useState('')
+  const [forgotOtp, setForgotOtp] = useState('')
+  const [forgotNewPassword, setForgotNewPassword] = useState('')
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('')
+  const [forgotShowPassword, setForgotShowPassword] = useState(false)
+  const [forgotMaskedEmail, setForgotMaskedEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotError, setForgotError] = useState('')
+  const [forgotSuccessMessage, setForgotSuccessMessage] = useState('')
+  const [forgotCooldown, setForgotCooldown] = useState(0)
+
+  // Timer cooldown OTP resend
+  useEffect(() => {
+    if (forgotCooldown > 0) {
+      const timer = setTimeout(() => setForgotCooldown(forgotCooldown - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [forgotCooldown])
 
   // Ambil nomor Helpdesk & Wallpaper Master dari Pengaturan Superadmin
   useEffect(() => {
@@ -158,6 +181,121 @@ export default function LoginPage() {
     }
   }
 
+  // Handler Minta OTP Reset Password
+  const handleRequestOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!forgotAccount.trim()) {
+      setForgotError('Masukkan username, NIS, atau email akun Anda.')
+      return
+    }
+
+    setForgotLoading(true)
+    setForgotError('')
+    try {
+      const res = await fetch(getPublicApiUrl('/auth/forgot-password/request-otp'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+        },
+        body: JSON.stringify({ emailOrUsername: forgotAccount.trim() }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || 'Gagal mengirim kode OTP.')
+      }
+
+      setForgotMaskedEmail(data.maskedEmail || 'email terdaftar Anda')
+      setForgotStep(2)
+      setForgotCooldown(30)
+      setForgotSuccessMessage(`Kode OTP 6-digit berhasil dikirimkan ke email ${data.maskedEmail}.`)
+    } catch (err: any) {
+      setForgotError(err.message || 'Terjadi kesalahan saat meminta kode OTP.')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  // Handler Reset Password dengan OTP
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotError('')
+
+    const cleanOtp = forgotOtp.trim().replace(/\s+/g, '')
+    if (!cleanOtp || cleanOtp.length < 4) {
+      setForgotError('Masukkan 6 digit kode OTP yang dikirimkan ke email Anda.')
+      return
+    }
+
+    if (!forgotNewPassword || forgotNewPassword.length < 6) {
+      setForgotError('Kata sandi baru minimal harus 6 karakter.')
+      return
+    }
+
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setForgotError('Konfirmasi kata sandi tidak cocok dengan kata sandi baru.')
+      return
+    }
+
+    setForgotLoading(true)
+    try {
+      const res = await fetch(getPublicApiUrl('/auth/forgot-password/reset-password'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+        },
+        body: JSON.stringify({
+          emailOrUsername: forgotAccount.trim(),
+          otpCode: cleanOtp,
+          newPassword: forgotNewPassword,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || 'Gagal mereset kata sandi.')
+      }
+
+      setForgotStep(3)
+      setForgotSuccessMessage(data.message || 'Kata sandi berhasil diperbarui!')
+    } catch (err: any) {
+      setForgotError(err.message || 'Gagal mereset kata sandi.')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  // Handler Kirim Ulang OTP
+  const handleResendOtp = async () => {
+    if (forgotCooldown > 0 || forgotLoading) return
+    setForgotLoading(true)
+    setForgotError('')
+    try {
+      const res = await fetch(getPublicApiUrl('/auth/forgot-password/request-otp'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+        },
+        body: JSON.stringify({ emailOrUsername: forgotAccount.trim() }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || 'Gagal mengirim ulang kode OTP.')
+      }
+
+      setForgotCooldown(60)
+      setForgotSuccessMessage(`Kode OTP baru telah dikirimkan ke email ${data.maskedEmail}.`)
+    } catch (err: any) {
+      setForgotError(err.message || 'Gagal mengirim ulang kode OTP.')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-[100dvh] w-full flex flex-col justify-between relative overflow-x-hidden font-sans selection:bg-blue-600 selection:text-white">
       {/* Background Wallpaper Master with Smooth Glass Overlay */}
@@ -255,12 +393,27 @@ export default function LoginPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="password" className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
-                      <div className="w-5 h-5 rounded-md bg-cyan-50 dark:bg-cyan-500/20 flex items-center justify-center border border-cyan-200 dark:border-cyan-400/30">
-                        <Lock className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                      </div>
-                      <span>Password / Kata Sandi</span>
-                    </Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password" className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-md bg-cyan-50 dark:bg-cyan-500/20 flex items-center justify-center border border-cyan-200 dark:border-cyan-400/30">
+                          <Lock className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                        </div>
+                        <span>Password / Kata Sandi</span>
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotAccount(email)
+                          setForgotError('')
+                          setForgotSuccessMessage('')
+                          setForgotStep(1)
+                          setIsForgotModalOpen(true)
+                        }}
+                        className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-all"
+                      >
+                        Lupa kata sandi?
+                      </button>
+                    </div>
                     <Input
                       id="password"
                       type="password"
@@ -422,7 +575,7 @@ export default function LoginPage() {
               <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
                 Hubungi <span className="font-bold text-slate-900 dark:text-white">Layanan Bantuan (Helpdesk)</span> WhatsApp <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{helpdeskPhone}</span> jika mengalami kendala akun.
               </p>
-              <div className="pt-0.5">
+              <div className="pt-0.5 flex flex-wrap items-center gap-2">
                 <a
                   href={`https://wa.me/${helpdeskPhone.replace(/[^0-9]/g, '').replace(/^0/, '62')}?text=Halo%20Admin%20SIMASMUH,%20saya%20membutuhkan%20bantuan%20kendala%20login%20akun.`}
                   target="_blank"
@@ -432,12 +585,277 @@ export default function LoginPage() {
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span>Hubungi Helpdesk WhatsApp</span>
                 </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotAccount(email)
+                    setForgotError('')
+                    setForgotSuccessMessage('')
+                    setForgotStep(1)
+                    setIsForgotModalOpen(true)
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Reset Kata Sandi via OTP</span>
+                </button>
               </div>
             </div>
           </div>
 
         </div>
       </main>
+
+      {/* Modal / Dialog Reset Password via Single-Use Email OTP */}
+      {isForgotModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 overflow-hidden p-6 sm:p-7 space-y-5 text-slate-900 dark:text-white relative animate-in zoom-in-95 duration-200">
+            
+            {/* Header Modal */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-600/20 border border-blue-200 dark:border-blue-400/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                    Reset Kata Sandi via Email OTP
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Kode OTP sekali pakai dikirimkan ke Email terdaftar.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsForgotModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Stepper Modal */}
+            <div className="flex items-center justify-center gap-2">
+              <div className={`h-1.5 rounded-full transition-all ${forgotStep >= 1 ? 'w-8 bg-blue-600' : 'w-4 bg-slate-200 dark:bg-slate-800'}`} />
+              <div className={`h-1.5 rounded-full transition-all ${forgotStep >= 2 ? 'w-8 bg-blue-600' : 'w-4 bg-slate-200 dark:bg-slate-800'}`} />
+              <div className={`h-1.5 rounded-full transition-all ${forgotStep === 3 ? 'w-8 bg-emerald-500' : 'w-4 bg-slate-200 dark:bg-slate-800'}`} />
+            </div>
+
+            {/* Alert Error */}
+            {forgotError && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/15 border border-red-200 dark:border-red-400/30 text-red-700 dark:text-red-200 text-xs font-semibold flex items-center gap-2.5 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{forgotError}</span>
+              </div>
+            )}
+
+            {/* Alert Success */}
+            {forgotSuccessMessage && !forgotError && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-400/30 text-emerald-700 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2.5 animate-in fade-in">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{forgotSuccessMessage}</span>
+              </div>
+            )}
+
+            {/* Step 1: Input Akun */}
+            {forgotStep === 1 && (
+              <form onSubmit={handleRequestOtp} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="forgotAccount" className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <span>Username / NIS / Email Akun</span>
+                  </Label>
+                  <Input
+                    id="forgotAccount"
+                    type="text"
+                    placeholder="Masukkan username akun atau NIS"
+                    value={forgotAccount}
+                    onChange={(e) => setForgotAccount(e.target.value)}
+                    required
+                    autoFocus
+                    className="h-11 px-3.5 rounded-xl text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-950/80 border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white"
+                  />
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Sistem akan mengirimkan 6 digit kode OTP ke alamat email resmi yang terdaftar pada akun Anda.
+                  </p>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsForgotModalOpen(false)}
+                    className="h-11 px-4 rounded-xl font-bold text-xs border-slate-300 dark:border-slate-700"
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-[0.99]"
+                  >
+                    {forgotLoading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Mengirim Kode OTP...</span>
+                      </div>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        Kirim Kode OTP
+                      </span>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* Step 2: Masukkan OTP & Kata Sandi Baru */}
+            {forgotStep === 2 && (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
+                  <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    Kode OTP terkirim ke <span className="font-bold text-slate-900 dark:text-white">{forgotMaskedEmail}</span> (Sekali Pakai).
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="forgotOtp" className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      <span>Kode OTP 6-Digit</span>
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={forgotCooldown > 0 || forgotLoading}
+                      className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline disabled:text-slate-400 transition-colors"
+                    >
+                      {forgotCooldown > 0 ? `Kirim ulang (${forgotCooldown}s)` : 'Kirim Ulang OTP'}
+                    </button>
+                  </div>
+                  <Input
+                    id="forgotOtp"
+                    type="text"
+                    maxLength={6}
+                    placeholder="Contoh: 849201"
+                    value={forgotOtp}
+                    onChange={(e) => setForgotOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                    required
+                    autoFocus
+                    className="h-12 px-3.5 rounded-xl text-center font-mono font-bold text-xl tracking-[6px] transition-all focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-950/80 border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="forgotNewPassword" className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                    <span>Kata Sandi Baru</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="forgotNewPassword"
+                      type={forgotShowPassword ? 'text' : 'password'}
+                      placeholder="Minimal 6 karakter"
+                      value={forgotNewPassword}
+                      onChange={(e) => setForgotNewPassword(e.target.value)}
+                      required
+                      className="h-11 px-3.5 pr-10 rounded-xl text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-950/80 border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setForgotShowPassword(!forgotShowPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {forgotShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="forgotConfirmPassword" className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Konfirmasi Kata Sandi Baru</span>
+                  </Label>
+                  <Input
+                    id="forgotConfirmPassword"
+                    type={forgotShowPassword ? 'text' : 'password'}
+                    placeholder="Ulangi kata sandi baru"
+                    value={forgotConfirmPassword}
+                    onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                    required
+                    className="h-11 px-3.5 rounded-xl text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-950/80 border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setForgotStep(1)
+                      setForgotError('')
+                    }}
+                    className="h-11 px-4 rounded-xl font-bold text-xs border-slate-300 dark:border-slate-700"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-1" />
+                    Kembali
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-[0.99]"
+                  >
+                    {forgotLoading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Menyimpan...</span>
+                      </div>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        Simpan Sandi Baru
+                        <ArrowRight className="w-4 h-4" />
+                      </span>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* Step 3: Sukses */}
+            {forgotStep === 3 && (
+              <div className="space-y-5 text-center py-3 animate-in zoom-in-95">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-md">
+                  <CheckCircle2 className="w-7 h-7" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                    Kata Sandi Berhasil Diperbarui!
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Silakan masuk kembali dengan kata sandi baru Anda.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotModalOpen(false)
+                    setEmail(forgotAccount)
+                    setPassword('')
+                  }}
+                  className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-[0.99]"
+                >
+                  Masuk dengan Sandi Baru
+                  <ArrowRight className="w-4 h-4 ml-1.5" />
+                </Button>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
 
       {/* Footer Induk dengan Kontras Jelas */}
       <AppFooter isDarkWallpaper />

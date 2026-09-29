@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { 
   Loader2, Banknote, Settings, Download, CheckCircle2, DollarSign, Calculator,
-  FileText, Printer, Plus, Trash2, Clock, Calendar, ShieldCheck, UserCheck, Eye, Sparkles
+  FileText, Printer, Plus, Trash2, Clock, Calendar, ShieldCheck, UserCheck, Eye, Sparkles, RotateCcw
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
@@ -621,6 +621,134 @@ export default function PenggajianPage() {
     }
   })
 
+  // Mutation Reset Gaji Pegawai Tunggal
+  const resetPayrollMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await authenticatedFetch(
+        `/api-backend/finance/payroll/record/${userId}?year=${selectedYear}&month=${selectedMonth}`,
+        { method: 'DELETE' }
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.message || 'Gagal mereset data penggajian pegawai')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-summary'] })
+      setShowEditModal(false)
+      Swal.fire({
+        title: 'Berhasil Direset',
+        text: data?.message || 'Data penggajian berhasil dikembalikan ke nilai awal.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        title: 'Gagal Reset',
+        text: err?.message || 'Terjadi kesalahan saat mereset data penggajian.',
+        icon: 'error',
+      })
+    }
+  })
+
+  // Mutation Reset Massal / Seluruh Periode
+  const resetBulkPayrollMutation = useMutation({
+    mutationFn: async (userIds?: string[]) => {
+      const res = await authenticatedFetch(
+        '/api-backend/finance/payroll/reset-bulk',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userIds,
+            year: parseInt(selectedYear, 10),
+            month: parseInt(selectedMonth, 10),
+          })
+        }
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.message || 'Gagal mereset penggajian periode ini')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-summary'] })
+      setSelectedStaffIds([])
+      Swal.fire({
+        title: 'Reset Selesai',
+        text: data?.message || 'Catatan penggajian periode ini telah berhasil direset.',
+        icon: 'success',
+        timer: 2200,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        title: 'Gagal Reset',
+        text: err?.message || 'Terjadi kesalahan saat mereset.',
+        icon: 'error',
+      })
+    }
+  })
+
+  // Reset Isian Form Modal
+  const handleResetFormValues = () => {
+    setFormHours('0')
+    setFormHourlyRate('0')
+    setFormKelebihanJam('0')
+    setAllowanceValues({})
+    setDeductionValues({})
+    setCustomAllowances([])
+    setCustomDeductions([])
+    setFormNotes('')
+  }
+
+  // Handler Konfirmasi Reset Pegawai
+  const handleConfirmResetStaff = (staff: PayrollStaff) => {
+    Swal.fire({
+      title: 'Reset Gaji Pegawai?',
+      html: `Apakah Anda yakin ingin mereset seluruh parameter dan komponen gaji <b>${staff.name}</b> periode ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear} ke nilai awal?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Reset ke Awal',
+      cancelButtonText: 'Batal',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        resetPayrollMutation.mutate(staff.id)
+      }
+    })
+  }
+
+  // Handler Konfirmasi Reset Periode / Terpilih
+  const handleConfirmResetBulk = (isBulkSelected: boolean) => {
+    const targetCount = isBulkSelected ? selectedStaffIds.length : searchedPayroll.length
+    const title = isBulkSelected ? `Reset ${targetCount} Pegawai Terpilih?` : `Reset Seluruh Penggajian Periode Ini?`
+    const desc = isBulkSelected
+      ? `Seluruh komponen gaji manual untuk <b>${targetCount} pegawai terpilih</b> akan dikembalikan ke kondisi default.`
+      : `Seluruh catatan gaji yang telah diset pada periode <b>${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}</b> akan direset ke kondisi awal.`
+
+    Swal.fire({
+      title,
+      html: desc,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Reset Data',
+      cancelButtonText: 'Batal',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        resetBulkPayrollMutation.mutate(isBulkSelected ? selectedStaffIds : undefined)
+      }
+    })
+  }
+
   const months = [
     { value: '1', label: 'Januari' },
     { value: '2', label: 'Februari' },
@@ -880,6 +1008,30 @@ export default function PenggajianPage() {
               <Download className="w-3.5 h-3.5 mr-1.5" />
               Export Excel
             </Button>
+
+            {selectedStaffIds.length > 0 ? (
+              <Button 
+                onClick={() => handleConfirmResetBulk(true)} 
+                variant="outline" 
+                className="border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100 font-bold text-xs h-9 animate-in fade-in"
+                disabled={resetBulkPayrollMutation.isPending}
+                title="Reset seluruh parameter gaji untuk pegawai yang dipilih"
+              >
+                {resetBulkPayrollMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5 mr-1.5" />}
+                Reset Terpilih ({selectedStaffIds.length})
+              </Button>
+            ) : (
+              <Button 
+                onClick={() => handleConfirmResetBulk(false)} 
+                variant="outline" 
+                className="border-slate-300 text-slate-700 bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 font-bold text-xs h-9"
+                disabled={!payroll || payroll.length === 0 || isLoading || resetBulkPayrollMutation.isPending}
+                title="Reset seluruh kalkulasi penggajian periode ini ke kondisi awal"
+              >
+                {resetBulkPayrollMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5 mr-1.5" />}
+                Reset Periode
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -957,11 +1109,11 @@ export default function PenggajianPage() {
         </CardHeader>
 
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-slate-50">
+          <div className="overflow-x-auto w-full">
+            <Table className="w-full text-xs">
+              <TableHeader className="bg-slate-50/80 border-b border-slate-200">
                 <TableRow>
-                  <TableHead className="w-[45px] text-center">
+                  <TableHead className="w-9 min-w-[36px] text-center px-1.5 py-3">
                     <input 
                       type="checkbox"
                       className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer h-4 w-4"
@@ -976,22 +1128,21 @@ export default function PenggajianPage() {
                       title="Pilih Semua Pegawai"
                     />
                   </TableHead>
-                  <TableHead className="w-[45px] text-center">No</TableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="name">Pegawai / NIP</SortableTableHead>
-                  <TableHead className="text-center w-[130px]">Status Jabatan</TableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="totalHadir" className="text-center">Presensi</SortableTableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="baseSalary" className="text-right">Gaji Pokok</SortableTableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="totalAllowance" className="text-right">Tunjangan</SortableTableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="totalDeduction" className="text-right">Potongan</SortableTableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="netSalary" className="text-right">Gaji Bersih</SortableTableHead>
-                  <TableHead className="text-center w-[150px]">Aksi</TableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="name" className="w-[190px] max-w-[210px] px-2.5 py-3">Pegawai / NIP</SortableTableHead>
+                  <TableHead className="text-center w-[95px] px-1 py-3">Status Jabatan</TableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="totalHadir" className="text-center w-[90px] px-1.5 py-3">Presensi</SortableTableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="baseSalary" className="text-right w-[100px] px-2 py-3">Gaji Pokok</SortableTableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="totalAllowance" className="text-right w-[100px] px-2 py-3">Tunjangan</SortableTableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="totalDeduction" className="text-right w-[90px] px-2 py-3">Potongan</SortableTableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="netSalary" className="text-right w-[105px] px-2 py-3">Gaji Bersih</SortableTableHead>
+                  <TableHead className="text-center w-[105px] px-2 py-3">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12">
+                    <TableCell colSpan={9} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-slate-500">
                         <Loader2 className="w-6 h-6 animate-spin mb-2 text-emerald-600" />
                         Memuat data penggajian...
@@ -1000,16 +1151,16 @@ export default function PenggajianPage() {
                   </TableRow>
                 ) : searchedPayroll.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-slate-500">
+                    <TableCell colSpan={9} className="text-center py-12 text-slate-500">
                       {searchQuery ? 'Tidak ada data pegawai yang sesuai dengan pencarian.' : 'Tidak ada data pegawai.'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  searchedPayroll.map((item, index) => {
+                  searchedPayroll.map((item) => {
                     const isSelected = selectedStaffIds.includes(item.id)
                     return (
-                      <TableRow key={item.id} className={`hover:bg-slate-50/60 transition-colors ${isSelected ? 'bg-emerald-50/40' : ''}`}>
-                        <TableCell className="text-center">
+                      <TableRow key={item.id} className={`hover:bg-slate-50/60 transition-colors border-b border-slate-100 ${isSelected ? 'bg-emerald-50/40' : ''}`}>
+                        <TableCell className="text-center px-1.5 py-2.5">
                           <input 
                             type="checkbox"
                             className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer h-4 w-4"
@@ -1023,36 +1174,35 @@ export default function PenggajianPage() {
                             }}
                           />
                         </TableCell>
-                        <TableCell className="text-center font-medium text-slate-500 text-xs">{index + 1}</TableCell>
                         
                         {/* Nama Pegawai & NIP & Rekening Bank */}
-                        <TableCell>
-                          <p className="font-bold text-slate-900 text-sm">{item.name}</p>
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                            <span>NIP: {item.nip}</span>
+                        <TableCell className="w-[190px] max-w-[210px] px-2.5 py-2.5">
+                          <p className="font-bold text-slate-900 text-sm leading-tight truncate" title={item.name}>{item.name}</p>
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
+                            <span className="shrink-0">NIP: {item.nip || '-'}</span>
                             <span>•</span>
-                            <span className="truncate max-w-[140px]">{item.roles}</span>
+                            <span className="truncate" title={item.roles}>{item.roles}</span>
                           </div>
                           {item.bankAccountNumber ? (
-                            <div className="mt-0.5 text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded inline-block font-mono">
-                              💳 {item.bankName || 'BANK'}: {item.bankAccountNumber} ({item.bankAccountHolder || item.name})
+                            <div className="mt-1 text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded inline-block font-mono truncate max-w-full" title={`${item.bankName || 'BANK'}: ${item.bankAccountNumber} (${item.bankAccountHolder || item.name})`}>
+                              💳 {item.bankName || 'BANK'}: {item.bankAccountNumber}
                             </div>
                           ) : (
-                            <div className="mt-0.5 text-[10px] text-slate-400 italic">
+                            <div className="mt-1 text-[10px] text-slate-400 italic">
                               Rekening belum diisi
                             </div>
                           )}
                         </TableCell>
 
                         {/* Status Jabatan Dropdown Inline */}
-                        <TableCell className="text-center">
+                        <TableCell className="text-center px-1 py-2.5">
                           <Select 
                             value={item.employmentStatus || 'GTTP'} 
                             onValueChange={(val) => {
                               if (val) updateStatusMutation.mutate({ userId: item.id, status: val })
                             }}
                           >
-                            <SelectTrigger className="h-7 text-xs font-bold w-full bg-white">
+                            <SelectTrigger className="h-7 text-xs font-bold w-full bg-white px-2">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1066,69 +1216,69 @@ export default function PenggajianPage() {
                         </TableCell>
 
                         {/* Kehadiran & Jam */}
-                        <TableCell className="text-center">
+                        <TableCell className="text-center px-1.5 py-2.5">
                           <div className="flex flex-col items-center">
-                            <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-xs">
+                            <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-xs whitespace-nowrap">
                               {item.totalHadir} Hari
                             </span>
-                            <span className="text-[10px] text-slate-500 mt-0.5">
+                            <span className="text-[10px] text-slate-500 mt-0.5 whitespace-nowrap">
                               {item.totalHours} Jam • MK: {item.masaKerja ?? 0}
                             </span>
                           </div>
                         </TableCell>
 
                         {/* Gaji Pokok (Jam x Tarif) */}
-                        <TableCell className="text-right">
-                          <span className="font-semibold text-slate-900 text-xs">
+                        <TableCell className="text-right px-2 py-2.5">
+                          <span className="font-semibold text-slate-900 text-xs whitespace-nowrap">
                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.baseSalary || 0)}
                           </span>
                           {item.totalHours > 0 && item.hourlyRate > 0 && (
-                            <p className="text-[10px] text-slate-400">
+                            <p className="text-[10px] text-slate-400 whitespace-nowrap">
                               {item.totalHours} jam × Rp{new Intl.NumberFormat('id-ID').format(item.hourlyRate)}
                             </p>
                           )}
                         </TableCell>
 
                         {/* Tunjangan (Transport + Makan + Manual) */}
-                        <TableCell className="text-right">
-                          <span className="font-semibold text-emerald-700 text-xs">
+                        <TableCell className="text-right px-2 py-2.5">
+                          <span className="font-semibold text-emerald-700 text-xs whitespace-nowrap">
                             +{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.totalAllowance || 0)}
                           </span>
                           <div className="flex flex-col items-end gap-0.5 text-[9px] text-slate-500">
                             {item.mealAllowance > 0 && (
-                              <span>Abs Mkn: {new Intl.NumberFormat('id-ID').format(item.mealAllowance)}</span>
+                              <span className="whitespace-nowrap">Abs Mkn: {new Intl.NumberFormat('id-ID').format(item.mealAllowance)}</span>
                             )}
                             {item.transportAllowance > 0 && (
-                              <span>Transport: {new Intl.NumberFormat('id-ID').format(item.transportAllowance)}</span>
+                              <span className="whitespace-nowrap">Transport: {new Intl.NumberFormat('id-ID').format(item.transportAllowance)}</span>
                             )}
                           </div>
                         </TableCell>
 
                         {/* Potongan Manual */}
-                        <TableCell className="text-right">
+                        <TableCell className="text-right px-2 py-2.5">
                           {item.totalDeduction > 0 ? (
-                            <span className="font-semibold text-rose-600 text-xs">
+                            <span className="font-semibold text-rose-600 text-xs whitespace-nowrap">
                               -{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.totalDeduction || 0)}
                             </span>
                           ) : (
-                            <span className="text-slate-400 text-xs font-medium">Rp0</span>
+                            <span className="text-slate-400 text-xs font-medium whitespace-nowrap">Rp0</span>
                           )}
                         </TableCell>
 
                         {/* Gaji Bersih Netto */}
-                        <TableCell className="text-right">
-                          <span className="font-extrabold text-slate-900 text-sm">
+                        <TableCell className="text-right px-2 py-2.5">
+                          <span className="font-extrabold text-slate-900 text-sm whitespace-nowrap">
                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.netSalary || 0)}
                           </span>
                         </TableCell>
 
-                        {/* Aksi: Atur Gaji & Slip Gaji */}
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1.5">
+                        {/* Aksi: Atur Gaji, Slip Gaji, & Reset */}
+                        <TableCell className="text-center px-2 py-2.5">
+                          <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-purple-300 text-purple-700 bg-purple-50/60 hover:bg-purple-100 text-xs font-semibold h-8 px-2.5"
+                              className="border-purple-300 text-purple-700 bg-purple-50/60 hover:bg-purple-100 text-xs font-semibold h-8 px-2.5 shrink-0 shadow-2xs"
                               onClick={() => handleOpenEdit(item)}
                               title="Atur Komponen Gaji Lengkap"
                             >
@@ -1139,12 +1289,25 @@ export default function PenggajianPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-blue-300 text-blue-700 bg-blue-50/60 hover:bg-blue-100 text-xs font-semibold h-8 px-2"
+                              className="border-blue-300 text-blue-700 bg-blue-50/60 hover:bg-blue-100 text-xs font-semibold h-8 px-2 shrink-0 shadow-2xs"
                               onClick={() => handleOpenSlip(item.id)}
                               title="Lihat & Cetak Slip Gaji Resmi"
                             >
                               <FileText className="w-3.5 h-3.5" />
                             </Button>
+
+                            {(item.isConfigured || item.baseSalary > 0 || item.totalDeduction > 0) && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-7 text-rose-500 hover:bg-rose-50 hover:text-rose-700 p-0 shrink-0"
+                                onClick={() => handleConfirmResetStaff(item)}
+                                disabled={resetPayrollMutation.isPending}
+                                title="Reset Data Gaji Pegawai Ini"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1159,7 +1322,7 @@ export default function PenggajianPage() {
 
       {/* Modal Dialog Atur Komponen Gaji Pegawai (Lengkap Sesuai Slip Fisik) */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl lg:max-w-5xl w-[95vw] max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-slate-900">
               <Calculator className="w-5 h-5 text-emerald-600" />
@@ -1172,7 +1335,7 @@ export default function PenggajianPage() {
 
           <div className="space-y-5 py-2 text-xs">
             {/* Status Jabatan & Masa Kerja & Rekening Bank */}
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-3">
+            <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-bold text-slate-700">Status Jabatan Pegawai</Label>
@@ -1243,7 +1406,7 @@ export default function PenggajianPage() {
             </div>
 
             {/* 1. Gaji Pokok & Kelebihan Jam */}
-            <div className="border border-slate-200 rounded-lg p-3 space-y-3 bg-white">
+            <div className="border border-slate-200 rounded-lg p-3.5 space-y-3 bg-white">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-emerald-600" />
@@ -1290,48 +1453,119 @@ export default function PenggajianPage() {
             </div>
 
             {/* 3. Tunjangan (Standard Sesuai Slip Fisik + Absen Makan Auto) */}
-            <div className="border border-slate-200 rounded-lg p-3 bg-white space-y-3">
+            <div className="border border-slate-200 rounded-lg p-3.5 bg-white space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
-                  3. Rincian Tunjangan Resmi
+                  3. Rincian Tunjangan Resmi (1 s/d 8)
                 </h4>
                 <span className="text-xs font-bold text-emerald-700">
                   Total Tunjangan: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(previewTotalAllowance)}
                 </span>
               </div>
 
-              {/* Absen Makan & Transport Otomatis Presensi */}
-              <div className="p-2.5 bg-emerald-50/60 rounded-md border border-emerald-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div>
-                  <span className="font-bold text-emerald-900">6. Abs mkn (Absen Makan & Transport Presensi)</span>
-                  <p className="text-[10px] text-slate-500">
-                    Otomatis dari {selectedStaff?.totalHadir || 0} hari kehadiran ({selectedStaff?.dailyDetails?.length || 0} log presensi sistem)
-                  </p>
+              {/* List Komponen Tunjangan Resmi (1 s/d 8) Sejajar Sesuai Slip */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {/* 1. Jabatan */}
+                <div className="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="font-semibold text-slate-800 text-xs">1. Jabatan</span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={allowanceValues['Jabatan'] ?? ''}
+                    onChange={(e) => setAllowanceValues({ ...allowanceValues, Jabatan: parseInt(e.target.value, 10) || 0 })}
+                    className="h-8 w-36 sm:w-40 text-right text-xs bg-white font-medium"
+                  />
                 </div>
-                <span className="font-extrabold text-emerald-800 text-xs bg-white px-2.5 py-1 rounded border border-emerald-300">
-                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(previewAbsenMakan + previewTransport)}
-                </span>
-              </div>
 
-              {/* List Komponen Tunjangan Manual Resmi */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                {STANDARD_ALLOWANCES.map((name, idx) => (
-                  <div key={name} className="flex items-center justify-between gap-2 p-1.5 bg-slate-50 rounded border border-slate-200">
-                    <span className="font-medium text-slate-700 text-xs">{idx + (idx >= 5 ? 2 : 1)}. {name}</span>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={allowanceValues[name] ?? ''}
-                      onChange={(e) => setAllowanceValues({ ...allowanceValues, [name]: parseInt(e.target.value, 10) || 0 })}
-                      className="h-7 w-32 text-right text-xs bg-white"
-                    />
+                {/* 2. Berkala */}
+                <div className="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="font-semibold text-slate-800 text-xs">2. Berkala</span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={allowanceValues['Berkala'] ?? ''}
+                    onChange={(e) => setAllowanceValues({ ...allowanceValues, Berkala: parseInt(e.target.value, 10) || 0 })}
+                    className="h-8 w-36 sm:w-40 text-right text-xs bg-white font-medium"
+                  />
+                </div>
+
+                {/* 3. Keluarga */}
+                <div className="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="font-semibold text-slate-800 text-xs">3. Keluarga</span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={allowanceValues['Keluarga'] ?? ''}
+                    onChange={(e) => setAllowanceValues({ ...allowanceValues, Keluarga: parseInt(e.target.value, 10) || 0 })}
+                    className="h-8 w-36 sm:w-40 text-right text-xs bg-white font-medium"
+                  />
+                </div>
+
+                {/* 4. Sembako */}
+                <div className="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="font-semibold text-slate-800 text-xs">4. Sembako</span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={allowanceValues['Sembako'] ?? ''}
+                    onChange={(e) => setAllowanceValues({ ...allowanceValues, Sembako: parseInt(e.target.value, 10) || 0 })}
+                    className="h-8 w-36 sm:w-40 text-right text-xs bg-white font-medium"
+                  />
+                </div>
+
+                {/* 5. Kom/Kin */}
+                <div className="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="font-semibold text-slate-800 text-xs">5. Kom/Kin</span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={allowanceValues['Kom/Kin'] ?? ''}
+                    onChange={(e) => setAllowanceValues({ ...allowanceValues, 'Kom/Kin': parseInt(e.target.value, 10) || 0 })}
+                    className="h-8 w-36 sm:w-40 text-right text-xs bg-white font-medium"
+                  />
+                </div>
+
+                {/* 6. Abs mkn (Otomatis Presensi) */}
+                <div className="flex items-center justify-between gap-3 p-2 bg-emerald-50/70 rounded-lg border border-emerald-200">
+                  <div className="flex flex-col min-w-0 pr-1">
+                    <span className="font-bold text-emerald-950 text-xs">6. Abs mkn (Absen Makan & Transport)</span>
+                    <span className="text-[10px] text-emerald-700">
+                      Auto presensi ({selectedStaff?.totalHadir || 0} hari kehadiran)
+                    </span>
                   </div>
-                ))}
+                  <div className="h-8 min-w-[140px] px-3 flex items-center justify-end font-bold text-xs text-emerald-800 bg-white rounded-md border border-emerald-300 shrink-0">
+                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(previewAbsenMakan + previewTransport)}
+                  </div>
+                </div>
+
+                {/* 7. Jarak */}
+                <div className="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="font-semibold text-slate-800 text-xs">7. Jarak</span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={allowanceValues['Jarak'] ?? ''}
+                    onChange={(e) => setAllowanceValues({ ...allowanceValues, Jarak: parseInt(e.target.value, 10) || 0 })}
+                    className="h-8 w-36 sm:w-40 text-right text-xs bg-white font-medium"
+                  />
+                </div>
+
+                {/* 8. Fungsional */}
+                <div className="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="font-semibold text-slate-800 text-xs">8. Fungsional</span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={allowanceValues['Fungsional'] ?? ''}
+                    onChange={(e) => setAllowanceValues({ ...allowanceValues, Fungsional: parseInt(e.target.value, 10) || 0 })}
+                    className="h-8 w-36 sm:w-40 text-right text-xs bg-white font-medium"
+                  />
+                </div>
               </div>
             </div>
 
             {/* 4. Rincian Potongan (Standard Sesuai Slip Fisik 1-15) */}
-            <div className="border border-slate-200 rounded-lg p-3 bg-white space-y-3">
+            <div className="border border-slate-200 rounded-lg p-3.5 bg-white space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold text-rose-800 uppercase tracking-wider">
                   4. Rincian Potongan Resmi (1 s/d 15)
@@ -1341,16 +1575,16 @@ export default function PenggajianPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {STANDARD_DEDUCTIONS.map((name, idx) => (
-                  <div key={name} className="flex items-center justify-between gap-2 p-1.5 bg-rose-50/40 rounded border border-rose-100">
-                    <span className="font-medium text-rose-900 text-[11px] truncate">{idx + 1}. {name}</span>
+                  <div key={name} className="flex items-center justify-between gap-2 p-2 bg-rose-50/40 rounded-lg border border-rose-100">
+                    <span className="font-semibold text-rose-950 text-xs truncate" title={`${idx + 1}. ${name}`}>{idx + 1}. {name}</span>
                     <Input
                       type="number"
                       placeholder="0"
                       value={deductionValues[name] ?? ''}
                       onChange={(e) => setDeductionValues({ ...deductionValues, [name]: parseInt(e.target.value, 10) || 0 })}
-                      className="h-7 w-28 text-right text-xs bg-white"
+                      className="h-8 w-28 text-right text-xs bg-white font-medium shrink-0"
                     />
                   </div>
                 ))}
@@ -1358,7 +1592,7 @@ export default function PenggajianPage() {
             </div>
 
             {/* Ringkasan Kalkulasi Real-Time */}
-            <div className="p-3.5 bg-slate-900 text-white rounded-lg space-y-1.5 text-xs">
+            <div className="p-4 bg-slate-900 text-white rounded-xl space-y-2 text-xs">
               <div className="flex justify-between text-slate-300">
                 <span>TOTAL PENGHASILAN (Gaji Pokok + Kelebihan + Tunjangan):</span>
                 <span className="font-bold">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(previewGross)}</span>
@@ -1367,32 +1601,60 @@ export default function PenggajianPage() {
                 <span>TOTAL POTONGAN:</span>
                 <span className="font-bold">-{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(previewTotalDeduction)}</span>
               </div>
-              <div className="border-t border-slate-700 pt-1.5 flex justify-between font-extrabold text-sm text-amber-300">
+              <div className="border-t border-slate-700 pt-2 flex justify-between font-extrabold text-sm text-amber-300">
                 <span>GAJI BERSIH (TOTAL GAJI - TOTAL POTONGAN):</span>
                 <span>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(previewNet)}</span>
               </div>
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowEditModal(false)}>
-              Batal
-            </Button>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-              onClick={handleSaveStaffPayroll}
-              disabled={savePayrollMutation.isPending}
-            >
-              {savePayrollMutation.isPending ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : null}
-              Simpan Penggajian
-            </Button>
+          <DialogFooter className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-2 border-t border-slate-200">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-slate-300 text-slate-700 bg-white hover:bg-slate-100 text-xs font-semibold h-9"
+                onClick={handleResetFormValues}
+                title="Kosongkan seluruh isian formulir ini ke nilai 0"
+              >
+                <RotateCcw className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                Reset Formulir
+              </Button>
+              {selectedStaff && (selectedStaff.isConfigured || selectedStaff.baseSalary > 0 || selectedStaff.totalDeduction > 0) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100 text-xs font-bold h-9"
+                  onClick={() => selectedStaff && handleConfirmResetStaff(selectedStaff)}
+                  disabled={resetPayrollMutation.isPending}
+                  title="Hapus data gaji tersimpan di database untuk pegawai ini"
+                >
+                  {resetPayrollMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-1 text-rose-600" />}
+                  Reset Data DB
+                </Button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                Batal
+              </Button>
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                onClick={handleSaveStaffPayroll}
+                disabled={savePayrollMutation.isPending}
+              >
+                {savePayrollMutation.isPending ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : null}
+                Simpan Penggajian
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Modal Dialog Pratinjau & Cetak Slip Gaji (PERSIS 100% SLIP FISIK) */}
       <Dialog open={showSlipModal} onOpenChange={setShowSlipModal}>
-        <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl lg:max-w-3xl w-[95vw] max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-slate-900">
               <FileText className="w-5 h-5 text-emerald-600" />

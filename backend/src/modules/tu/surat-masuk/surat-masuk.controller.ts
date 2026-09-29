@@ -138,4 +138,13 @@ export class SuratMasukController {
       updateDisposisiDto,
     );
   }
+
+  /**
+   * Endpoint Terproteksi: Kirim Ulang Notifikasi In-App & Email Disposisi
+   */
+  @Post('disposisi/:id/kirim-ulang-notifikasi')
+  @UseGuards(JwtAuthGuard)
+  resendDisposisiNotification(@Param('id') id: string) {
+    return this.suratMasukService.resendDisposisiNotification(id);
+  }
 }

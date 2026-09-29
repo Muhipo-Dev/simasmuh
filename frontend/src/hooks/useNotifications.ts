@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNotificationSocket } from './useSocket';
 import { useAuthenticatedFetch } from './useAuthenticatedFetch';
@@ -232,6 +233,8 @@ export function useNotifications(options: NotificationHookOptions = {}) {
     queryClient,
   ]);
 
+  const router = useRouter();
+
   // Handle notification click
   const handleNotificationClick = useCallback(async (notification: Notification) => {
     // Mark as read if not already read
@@ -239,14 +242,25 @@ export function useNotifications(options: NotificationHookOptions = {}) {
       markAsReadMutation.mutate(notification.id);
     }
 
-    // Handle notification actions based on type
-    if (notification.type === 'PAYMENT_DUE' && notification.data?.tagihanId) {
-      // You can emit events or use router to navigate
-      console.log('Navigate to payment for tagihan:', notification.data.tagihanId);
-    } else if (notification.type === 'PAYMENT_UPLOADED' && notification.data?.proofId) {
-      console.log('Navigate to payment proof:', notification.data.proofId);
+    // Handle notification actions based on actionUrl or type
+    if (notification.data?.actionUrl) {
+      router.push(notification.data.actionUrl);
+      return;
     }
-  }, [markAsReadMutation]);
+
+    if (notification.type === 'DISPOSISI_ASSIGNED') {
+      router.push('/fitur/disposisi');
+      return;
+    }
+
+    if (notification.type === 'PAYMENT_DUE' && notification.data?.tagihanId) {
+      router.push('/keuangan/tagihan');
+      return;
+    } else if (notification.type === 'PAYMENT_UPLOADED' && notification.data?.proofId) {
+      router.push('/keuangan/pembayaran');
+      return;
+    }
+  }, [markAsReadMutation, router]);
 
   // Format time ago helper
   const formatTimeAgo = useCallback((dateString: string) => {

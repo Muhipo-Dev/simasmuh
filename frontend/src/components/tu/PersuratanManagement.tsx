@@ -11,7 +11,8 @@ import {
   ChevronRight, Calendar, User, Building2, Tag, ArrowUpRight, 
   FileCheck, Shield, ShieldCheck, Sparkles, RefreshCw, FileSpreadsheet, Share2, 
   CornerDownRight, Check, X, QrCode, FileDown, Layers, BookOpen,
-  HelpCircle, MoreHorizontal, ExternalLink, Trash2, Edit3, Lock, UploadCloud, Upload, Sliders
+  HelpCircle, MoreHorizontal, ExternalLink, Trash2, Edit3, Lock, UploadCloud, Upload, Sliders,
+  BellRing
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -58,8 +59,12 @@ export interface SuratDisposisiDetail {
   diteruskanKepada: {
     targets: string[]
     guruNama?: string
+    guruId?: string
     bagianNama?: string
+    bagianId?: string
     stafNama?: string
+    stafId?: string
+    targetUserIds?: string[]
   }
   catatan?: string
   statusEsign: 'MENUNGGU_VERIFIKASI' | 'DISETUJUI' | 'DITOLAK'
@@ -654,8 +659,12 @@ export function PersuratanManagement({
     instruksi: string[]
     targets: string[]
     guruNama: string
+    guruId?: string
     bagianNama: string
+    bagianId?: string
     stafNama: string
+    stafId?: string
+    targetUserIds?: string[]
     catatan: string
   }>({
     sifat: 'PENTING',
@@ -664,8 +673,12 @@ export function PersuratanManagement({
     instruksi: ['Ditindak Lanjuti'],
     targets: [],
     guruNama: '',
+    guruId: '',
     bagianNama: '',
+    bagianId: '',
     stafNama: '',
+    stafId: '',
+    targetUserIds: [],
     catatan: ''
   })
 
@@ -971,8 +984,12 @@ export function PersuratanManagement({
         instruksi: Array.isArray(s.disposisi.instruksi) && s.disposisi.instruksi.length > 0 ? s.disposisi.instruksi : ['Ditindak Lanjuti'],
         targets: Array.isArray(s.disposisi.diteruskanKepada?.targets) && s.disposisi.diteruskanKepada.targets.length > 0 ? s.disposisi.diteruskanKepada.targets : ['Wakasek Kurikulum'],
         guruNama: s.disposisi.diteruskanKepada?.guruNama || '',
+        guruId: s.disposisi.diteruskanKepada?.guruId || '',
         bagianNama: s.disposisi.diteruskanKepada?.bagianNama || '',
+        bagianId: s.disposisi.diteruskanKepada?.bagianId || '',
         stafNama: s.disposisi.diteruskanKepada?.stafNama || '',
+        stafId: s.disposisi.diteruskanKepada?.stafId || '',
+        targetUserIds: Array.isArray(s.disposisi.diteruskanKepada?.targetUserIds) ? s.disposisi.diteruskanKepada.targetUserIds : [],
         catatan: s.disposisi.catatan || ''
       })
     } else {
@@ -983,8 +1000,12 @@ export function PersuratanManagement({
         instruksi: ['Ditindak Lanjuti'],
         targets: ['Wakasek Kurikulum', 'Guru'],
         guruNama: '',
+        guruId: '',
         bagianNama: '',
+        bagianId: '',
         stafNama: '',
+        stafId: '',
+        targetUserIds: [],
         catatan: ''
       })
     }
@@ -2551,8 +2572,12 @@ export function PersuratanManagement({
       diteruskanKepada: {
         targets: formDisposisi.targets,
         guruNama: formDisposisi.guruNama,
+        guruId: formDisposisi.guruId,
         bagianNama: formDisposisi.bagianNama,
-        stafNama: formDisposisi.stafNama
+        bagianId: formDisposisi.bagianId,
+        stafNama: formDisposisi.stafNama,
+        stafId: formDisposisi.stafId,
+        targetUserIds: formDisposisi.targetUserIds || []
       },
       catatan: formDisposisi.catatan,
       statusEsign: 'MENUNGGU_VERIFIKASI'
@@ -2683,6 +2708,31 @@ export function PersuratanManagement({
     })
   }
 
+  // Handler Kirim Ulang Notifikasi In-App & Email ke Penerima Disposisi
+  const handleKirimUlangNotifikasiDisposisi = async (surat: SuratMasuk) => {
+    const dispId = surat.disposisi?.id || surat.id
+    try {
+      const res = await authenticatedFetch(`/api-backend/surat-masuk/disposisi/${dispId}/kirim-ulang-notifikasi`, {
+        method: 'POST',
+      })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Notifikasi Terkirim',
+          text: json.message || `Notifikasi resmi In-App & Email berhasil dikirimkan ke penerima disposisi.`,
+          timer: 2500,
+          showConfirmButton: false,
+        })
+      } else {
+        Swal.fire('Gagal', json.message || 'Gagal mengirimkan notifikasi.', 'error')
+      }
+    } catch (e) {
+      console.error(e)
+      Swal.fire('Error', 'Terjadi kesalahan sistem saat mengirim notifikasi.', 'error')
+    }
+  }
+
   // Handle Approve / E-Sign Disposisi oleh Kepala Sekolah
   const handleApproveDisposisi = async (surat: SuratMasuk, disposisiId?: string) => {
     const dispId = disposisiId || surat.disposisi?.id || `DSP-${surat.id}`
@@ -2700,8 +2750,12 @@ export function PersuratanManagement({
           diteruskanKepada: {
             targets: formDisposisi.targets,
             guruNama: formDisposisi.guruNama,
+            guruId: formDisposisi.guruId,
             bagianNama: formDisposisi.bagianNama,
-            stafNama: formDisposisi.stafNama
+            bagianId: formDisposisi.bagianId,
+            stafNama: formDisposisi.stafNama,
+            stafId: formDisposisi.stafId,
+            targetUserIds: formDisposisi.targetUserIds || []
           },
           catatan: formDisposisi.catatan,
           sifat: formDisposisi.sifat
@@ -5504,7 +5558,18 @@ export function PersuratanManagement({
                             <div className="ml-2 w-[calc(100%-8px)] space-y-1">
                               <select
                                 value={formDisposisi.guruNama}
-                                onChange={(e) => setFormDisposisi({ ...formDisposisi, guruNama: e.target.value })}
+                                onChange={(e) => {
+                                  const name = e.target.value
+                                  const selectedObj = guruPegawaiOptions.find((g: any) => g.name === name)
+                                  const curIds = formDisposisi.targetUserIds || []
+                                  const nextIds = selectedObj ? Array.from(new Set([...curIds, selectedObj.id])) : curIds
+                                  setFormDisposisi({
+                                    ...formDisposisi,
+                                    guruNama: name,
+                                    guruId: selectedObj?.id,
+                                    targetUserIds: nextIds
+                                  })
+                                }}
                                 className="w-full h-8 text-xs rounded-lg border border-indigo-300 bg-white px-2 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                               >
                                 <option value="">-- Pilih Guru Terdaftar --</option>
@@ -5520,7 +5585,19 @@ export function PersuratanManagement({
                             <div className="ml-2 w-[calc(100%-8px)] space-y-1">
                               <select
                                 value={formDisposisi.bagianNama}
-                                onChange={(e) => setFormDisposisi({ ...formDisposisi, bagianNama: e.target.value })}
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                  const nameOnly = val.split(' - ')[0]
+                                  const selectedObj = guruPegawaiOptions.find((g: any) => g.name === nameOnly || g.name === val)
+                                  const curIds = formDisposisi.targetUserIds || []
+                                  const nextIds = selectedObj ? Array.from(new Set([...curIds, selectedObj.id])) : curIds
+                                  setFormDisposisi({
+                                    ...formDisposisi,
+                                    bagianNama: val,
+                                    bagianId: selectedObj?.id,
+                                    targetUserIds: nextIds
+                                  })
+                                }}
                                 className="w-full h-8 text-xs rounded-lg border border-indigo-300 bg-white px-2 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                               >
                                 <option value="">-- Pilih Penanggung Jawab Bagian --</option>
@@ -5536,7 +5613,18 @@ export function PersuratanManagement({
                             <div className="ml-2 w-[calc(100%-8px)] space-y-1">
                               <select
                                 value={formDisposisi.stafNama}
-                                onChange={(e) => setFormDisposisi({ ...formDisposisi, stafNama: e.target.value })}
+                                onChange={(e) => {
+                                  const name = e.target.value
+                                  const selectedObj = guruPegawaiOptions.find((g: any) => g.name === name)
+                                  const curIds = formDisposisi.targetUserIds || []
+                                  const nextIds = selectedObj ? Array.from(new Set([...curIds, selectedObj.id])) : curIds
+                                  setFormDisposisi({
+                                    ...formDisposisi,
+                                    stafNama: name,
+                                    stafId: selectedObj?.id,
+                                    targetUserIds: nextIds
+                                  })
+                                }}
                                 className="w-full h-8 text-xs rounded-lg border border-indigo-300 bg-white px-2 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                               >
                                 <option value="">-- Pilih Staf / Pegawai --</option>
@@ -5601,6 +5689,18 @@ export function PersuratanManagement({
                       className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-md gap-1.5"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" /> Tandai Dilaksanakan Pihak Penerus
+                    </Button>
+                  )}
+
+                  {(selectedSuratMasuk.disposisi || selectedSuratMasuk.statusDisposisi === 'DISPOSISI_DISETUJUI') && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleKirimUlangNotifikasiDisposisi(selectedSuratMasuk)}
+                      className="rounded-xl text-xs font-bold border-amber-300 text-amber-700 hover:bg-amber-100/60 dark:border-amber-700 dark:text-amber-300 gap-1.5"
+                      title="Kirim ulang notifikasi alert dashboard dan email resmi ke pihak penerus"
+                    >
+                      <BellRing className="w-3.5 h-3.5 text-amber-600 animate-pulse" /> Notifikasi Ulang (App & Email)
                     </Button>
                   )}
 

@@ -47,6 +47,25 @@ model User {
   parentProfile     ParentProfile?
   sessions          UserSession[]
   presensiKegiatans PresensiKegiatan[]
+  passwordResetOtps PasswordResetOtp[]
+}
+
+model PasswordResetOtp {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  otpCode   String
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([email])
+  @@index([otpCode])
 }
 
 model UserSession {

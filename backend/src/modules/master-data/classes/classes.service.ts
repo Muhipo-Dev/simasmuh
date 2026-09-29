@@ -1,12 +1,56 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 
+export function sortClasses<T extends { name: string; gradeLevel?: number | null }>(classes: T[]): T[] {
+  const romanToNumber = (val: string): number => {
+    const v = val.trim().toUpperCase();
+    if (v === 'I') return 1;
+    if (v === 'II') return 2;
+    if (v === 'III') return 3;
+    if (v === 'IV') return 4;
+    if (v === 'V') return 5;
+    if (v === 'VI') return 6;
+    if (v === 'VII') return 7;
+    if (v === 'VIII') return 8;
+    if (v === 'IX') return 9;
+    if (v === 'X') return 10;
+    if (v === 'XI') return 11;
+    if (v === 'XII') return 12;
+    if (v === 'XIII') return 13;
+    const num = parseInt(v, 10);
+    return isNaN(num) ? 999 : num;
+  };
+
+  const getEffectiveGrade = (cls: T): number => {
+    if (typeof cls.gradeLevel === 'number' && cls.gradeLevel > 0) {
+      return cls.gradeLevel;
+    }
+    const match = cls.name?.match(/^(?:KELAS\s+)?(XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I|\d+)/i);
+    if (match && match[1]) {
+      return romanToNumber(match[1]);
+    }
+    return 999;
+  };
+
+  return [...classes].sort((a, b) => {
+    const gradeA = getEffectiveGrade(a);
+    const gradeB = getEffectiveGrade(b);
+    if (gradeA !== gradeB) {
+      return gradeA - gradeB;
+    }
+    return (a.name || '').localeCompare(b.name || '', undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    });
+  });
+}
+
 @Injectable()
 export class ClassesService {
   constructor(private prisma: PrismaService) {}
 
   async findAll() {
-    return this.prisma.class.findMany({
+    const classes = await this.prisma.class.findMany({
       include: {
         _count: {
           select: { students: true },
@@ -17,7 +61,13 @@ export class ClassesService {
           },
         },
       },
+      orderBy: [
+        { gradeLevel: 'asc' },
+        { name: 'asc' },
+      ],
     });
+
+    return sortClasses(classes);
   }
 
   async findOne(id: string) {

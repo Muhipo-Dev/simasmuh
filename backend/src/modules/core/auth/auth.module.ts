@@ -12,9 +12,12 @@ import {
 } from './permission.guard';
 import { PrismaService } from '../prisma/prisma.service';
 
+import { NotificationsModule } from '../../communication/notifications/notifications.module';
+
 @Module({
   imports: [
     PassportModule,
+    NotificationsModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'secretKey',
       signOptions: { expiresIn: '365d' },

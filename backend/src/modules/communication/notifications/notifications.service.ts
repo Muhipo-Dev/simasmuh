@@ -38,8 +38,10 @@ export enum NotificationType {
   SUSPICIOUS_ACTIVITY = 'SUSPICIOUS_ACTIVITY',
   FILE_QUARANTINED = 'FILE_QUARANTINED',
 
-  // Persuratan & Disposisi
+  // Persuratan, Disposisi & E-Sign
   DISPOSISI_ASSIGNED = 'DISPOSISI_ASSIGNED',
+  SURAT_KELUAR_ESIGN = 'SURAT_KELUAR_ESIGN',
+  ESIGN_REQUEST = 'ESIGN_REQUEST',
 }
 
 export enum NotificationPriority {

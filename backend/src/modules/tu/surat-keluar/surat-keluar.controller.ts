@@ -79,4 +79,13 @@ export class SuratKeluarController {
   ) {
     return this.suratKeluarService.remove(id, body?.password, req?.user?.id);
   }
+
+  /**
+   * Endpoint Terproteksi: Kirim Ulang Notifikasi In-App & Email ke Kepala Sekolah untuk E-Sign
+   */
+  @Post(':id/kirim-ulang-notifikasi')
+  @UseGuards(JwtAuthGuard)
+  resendNotification(@Param('id') id: string) {
+    return this.suratKeluarService.resendSuratKeluarNotification(id);
+  }
 }

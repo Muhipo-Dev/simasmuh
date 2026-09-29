@@ -5,7 +5,7 @@ import {
   Banknote, FileText, Image as ImageIcon, Award, FileCheck,
   ShieldAlert, Sparkles, ShieldCheck, UserCheck, HeartHandshake,
   Library, BookMarked, Mail, Contact, Package, Boxes, Camera, BellRing, Database,
-  Clock, CreditCard, Archive, Inbox, Send
+  Clock, CreditCard, Archive, Inbox, Send, BookCheck
 } from 'lucide-react'
 
 // 1. Superadmin & Admin IT (Kontrol Penuh Sistem & Master Data)
@@ -125,7 +125,7 @@ export const kepalaSekolahLinks = [
   { name: 'Surat Keluar (E-Sign)', href: '/fitur/surat-keluar', icon: Send, group: 'Supervisi & E-Sign' },
   { name: 'Arsip Dokumen Sekolah', href: '/fitur/arsip', icon: Archive, group: 'Supervisi & E-Sign' },
   { name: 'Supervisi Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Supervisi Akademik' },
-  { name: 'Supervisi Jurnal Guru', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Supervisi Akademik' },
+  { name: 'Supervisi Jurnal Guru', href: '/akademik/supervisi-jurnal', icon: BookOpen, group: 'Supervisi Akademik' },
   { name: 'Supervisi Jurnal Wali Kelas', href: '/akademik/jurnal-wali-kelas', icon: BookOpen, group: 'Supervisi Akademik' },
   { name: 'Log Karakter & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck, group: 'Supervisi Kesiswaan' },
   { name: 'Data Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen, group: 'Supervisi Data' },
@@ -288,6 +288,9 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   // 3. Modul Akademik
   if (pathname.startsWith('/akademik/jadwal-pelajaran')) {
     return isBau || isKepalaSekolah || isGuru || isSiswa || isKurikulum || isGuruPiket
+  }
+  if (pathname.startsWith('/akademik/supervisi-jurnal')) {
+    return isKurikulum || isKepalaSekolah || isBau || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
   }
   if (pathname.startsWith('/akademik/jurnal-mengajar/tambah')) {
     // Pengisian jurnal ajar HANYA untuk Guru Pengampu
@@ -455,6 +458,7 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
     } else if (roleName === 'KURIKULUM') {
       addLinks([
         { name: 'Manajemen Kurikulum', href: '/fitur/kurikulum', icon: GraduationCap, group: 'Tim Kurikulum' },
+        { name: 'Supervisi KBM & Jurnal', href: '/akademik/supervisi-jurnal', icon: BookCheck, group: 'Tim Kurikulum' },
         { name: 'Struktur Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: BookOpen, group: 'Tim Kurikulum' },
         { name: 'Jadwal Pelajaran KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Tim Kurikulum' },
       ])

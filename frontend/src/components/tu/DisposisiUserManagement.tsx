@@ -72,30 +72,45 @@ export function DisposisiUserManagement() {
       const disp = item.disposisi
       const diteruskan = disp.diteruskanKepada || {}
       const targets = Array.isArray(diteruskan.targets) ? diteruskan.targets : []
-      const guruNama = (diteruskan.guruNama || '').toLowerCase()
-      const bagianNama = (diteruskan.bagianNama || '').toLowerCase()
-      const stafNama = (diteruskan.stafNama || '').toLowerCase()
-      const targetUserIds = Array.isArray(diteruskan.targetUserIds) ? diteruskan.targetUserIds : []
-      const myNameLower = userName.toLowerCase()
+      const targetUserIds = Array.isArray(diteruskan.targetUserIds) ? [...diteruskan.targetUserIds] : []
+      if (diteruskan.guruId && !targetUserIds.includes(diteruskan.guruId)) targetUserIds.push(diteruskan.guruId)
+      if (diteruskan.stafId && !targetUserIds.includes(diteruskan.stafId)) targetUserIds.push(diteruskan.stafId)
+      if (diteruskan.bagianId && !targetUserIds.includes(diteruskan.bagianId)) targetUserIds.push(diteruskan.bagianId)
+      if (diteruskan.userId && !targetUserIds.includes(diteruskan.userId)) targetUserIds.push(diteruskan.userId)
+      if (diteruskan.pegawaiId && !targetUserIds.includes(diteruskan.pegawaiId)) targetUserIds.push(diteruskan.pegawaiId)
+
+      const myNameLower = userName.toLowerCase().trim()
 
       if (user?.id && targetUserIds.includes(user.id)) return true
 
-      // Cek apakah ditugaskan ke nama user login atau bagian role terkait
-      const matchName = 
-        (guruNama && myNameLower && (myNameLower.includes(guruNama) || guruNama.includes(myNameLower))) ||
-        (stafNama && myNameLower && (myNameLower.includes(stafNama) || stafNama.includes(myNameLower))) ||
-        (bagianNama && myNameLower && (myNameLower.includes(bagianNama) || bagianNama.includes(myNameLower)))
+      // Kumpulkan nama penerima dan bersihkan dari sufiks (misal: "Nama - Guru" -> "Nama")
+      const recipientNames: string[] = []
+      for (const raw of [diteruskan.guruNama, diteruskan.bagianNama, diteruskan.stafNama, diteruskan.penerimaNama, diteruskan.nama]) {
+        if (raw && typeof raw === 'string' && raw.trim().length > 0) {
+          const clean = raw.split('-')[0].split('(')[0].trim().toLowerCase()
+          if (clean.length >= 2 && !recipientNames.includes(clean)) {
+            recipientNames.push(clean)
+          }
+        }
+      }
 
-      const myRoles = [userRole, userSubRole, userSubRole2, userSubRole3].filter(Boolean).map(r => r.toLowerCase())
-      const isKurikulum = myRoles.some(r => r.includes('kurikulum'))
+      // Cek apakah ditugaskan ke nama user login
+      const matchName = recipientNames.some(name => myNameLower.includes(name) || name.includes(myNameLower))
+
+      const myRoles = [userRole, userSubRole, userSubRole2, userSubRole3, user?.subRole4, user?.subRole5].filter(Boolean).map(r => r.toLowerCase().trim())
+      const isKurikulum = myRoles.some(r => r.includes('kurikulum') || r.includes('kur'))
       const isKesiswaan = myRoles.some(r => r.includes('kesiswaan') || r.includes('tatib') || r.includes('ketertiban'))
-      const isSarpras = myRoles.some(r => r.includes('sarpras') || r.includes('inventaris'))
+      const isSarpras = myRoles.some(r => r.includes('sarpras') || r.includes('sarana') || r.includes('inventaris'))
       const isHumas = myRoles.some(r => r.includes('humas') || r.includes('sdm'))
-      const isIsmuba = myRoles.some(r => r.includes('ismuba'))
+      const isIsmuba = myRoles.some(r => r.includes('ismuba') || r.includes('agama'))
       const isKeuangan = myRoles.some(r => r.includes('bendahara') || r.includes('keuangan'))
       const isBau = myRoles.some(r => r.includes('bau') || r.includes('tata_usaha') || r.includes('admin_tu'))
+      const isPerpus = myRoles.some(r => r.includes('perpus') || r.includes('perpustakaan'))
+      const isLab = myRoles.some(r => r.includes('lab') || r.includes('laboratorium'))
+      const isBk = myRoles.some(r => r.includes('bk') || r.includes('konseling'))
+      const isWaliKelas = myRoles.some(r => r.includes('wali_kelas'))
       const isGuru = userRole === 'GURU' || myRoles.some(r => r === 'guru')
-      const isPegawai = userRole === 'PEGAWAI' || myRoles.some(r => r === 'pegawai')
+      const isPegawai = userRole === 'PEGAWAI' || myRoles.some(r => r === 'pegawai' || r === 'staf' || r === 'karyawan' || r === 'admin_tu' || r === 'bau')
 
       const matchRole = 
         (isKurikulum && targets.some((t: string) => t.toLowerCase().includes('kurikulum'))) ||
@@ -104,9 +119,13 @@ export function DisposisiUserManagement() {
         (isHumas && targets.some((t: string) => t.toLowerCase().includes('humas') || t.toLowerCase().includes('sdm'))) ||
         (isIsmuba && targets.some((t: string) => t.toLowerCase().includes('ismuba'))) ||
         (isKeuangan && targets.some((t: string) => t.toLowerCase().includes('keuangan'))) ||
-        (isBau && targets.some((t: string) => t.toLowerCase().includes('administrasi umum') || t.toLowerCase().includes('bau'))) ||
-        (isGuru && targets.includes('Guru') && !guruNama) ||
-        (isPegawai && targets.includes('Staf') && !stafNama)
+        (isBau && targets.some((t: string) => t.toLowerCase().includes('administrasi umum') || t.toLowerCase().includes('bau') || t.toLowerCase().includes('tata usaha'))) ||
+        (isPerpus && targets.some((t: string) => t.toLowerCase().includes('perpustakaan'))) ||
+        (isLab && targets.some((t: string) => t.toLowerCase().includes('lab'))) ||
+        (isBk && targets.some((t: string) => t.toLowerCase().includes('bk'))) ||
+        (isWaliKelas && targets.some((t: string) => t.toLowerCase().includes('wali kelas'))) ||
+        (isGuru && targets.includes('Guru') && !diteruskan.guruNama && !diteruskan.guruId) ||
+        (isPegawai && targets.includes('Staf') && !diteruskan.stafNama && !diteruskan.stafId)
 
       // Jika Superadmin/Kepsek/TU ingin melihat disposisi milik mereka di tab aktif/arsip
       if (isSuperOrAdmin) return true

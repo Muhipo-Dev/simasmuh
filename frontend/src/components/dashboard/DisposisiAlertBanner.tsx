@@ -168,10 +168,10 @@ export function DisposisiAlertBanner() {
   }
 
   const alertTitle = isKepalaSekolah
-    ? 'Antrian Verifikasi & Tanda Tangan Digital (E-Sign) Kepala Sekolah'
+    ? 'Antrian E-Sign Dokumen'
     : isTU
-    ? 'Surat Masuk Baru Menunggu Pembuatan Lembar Disposisi'
-    : 'Tugas Disposisi Resmi (Telah Ditandatangani Kepala Sekolah)'
+    ? 'Surat Masuk Baru'
+    : 'Tugas Disposisi'
 
   const targetLink = isKepalaSekolah || isTU
     ? '/fitur/persuratan?tab=surat-masuk'
@@ -202,27 +202,27 @@ export function DisposisiAlertBanner() {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {activeDisposisiList.length > 0 && (
                       <Badge className="bg-amber-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-full shadow-2xs">
-                        {activeDisposisiList.length} Disposisi Menunggu E-Sign
+                        {activeDisposisiList.length} Disposisi
                       </Badge>
                     )}
                     {pendingSuratKeluar.length > 0 && (
                       <Badge className="bg-indigo-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-full shadow-2xs">
-                        {pendingSuratKeluar.length} Surat Keluar Menunggu E-Sign
+                        {pendingSuratKeluar.length} Surat Keluar
                       </Badge>
                     )}
                   </div>
                 ) : (
                   <Badge className="bg-amber-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-full shadow-2xs">
-                    {activeDisposisiList.length} Disposisi Aktif
+                    {activeDisposisiList.length} Disposisi
                   </Badge>
                 )}
               </div>
               <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 font-medium">
                 {isKepalaSekolah
-                  ? `Terdapat ${activeDisposisiList.length > 0 ? `${activeDisposisiList.length} lembar disposisi` : ''}${activeDisposisiList.length > 0 && pendingSuratKeluar.length > 0 ? ' dan ' : ''}${pendingSuratKeluar.length > 0 ? `${pendingSuratKeluar.length} surat keluar` : ''} yang membutuhkan verifikasi & penandatanganan digital (E-Sign) Anda.`
+                  ? 'Dokumen menunggu verifikasi & E-Sign Anda.'
                   : isTU
-                  ? 'Daftar surat masuk yang belum dibuatkan lembar disposisi pimpinan.'
-                  : 'Kepala Sekolah telah menyetujui dan menandatangani lembar disposisi resmi berikut untuk segera Anda tindak lanjuti.'}
+                  ? 'Surat masuk belum diproses lembar disposisinya.'
+                  : 'Segera tindak lanjuti instruksi disposisi berikut.'}
               </p>
             </div>
           </div>
@@ -233,7 +233,7 @@ export function DisposisiAlertBanner() {
                 size="sm"
                 className="h-8 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs gap-1.5"
               >
-                <span>{isKepalaSekolah || isTU ? 'Kelola Antrian Persuratan' : 'Buka Semua Disposisi'}</span>
+                <span>{isKepalaSekolah || isTU ? 'Kelola Surat' : 'Semua Disposisi'}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </Button>
             </Link>
@@ -322,11 +322,11 @@ export function DisposisiAlertBanner() {
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5">
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                     {isKepalaSekolah
-                      ? 'Menunggu E-Sign Kepsek'
+                      ? 'Menunggu E-Sign'
                       : item.statusDisposisi === 'PROSES'
                       ? 'Sedang Diproses'
                       : item.statusDisposisi === 'DISPOSISI_DISETUJUI'
-                      ? 'Telah Ditandatangani Kepsek'
+                      ? 'Perlu Ditindaklanjuti'
                       : item.statusDisposisi}
                   </span>
 
@@ -411,7 +411,7 @@ export function DisposisiAlertBanner() {
 
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5">
                 <span className="text-[10px] text-indigo-700 dark:text-indigo-400 font-bold">
-                  Menunggu E-Sign Kepsek
+                  Menunggu E-Sign
                 </span>
 
                 <Link href="/fitur/persuratan?tab=surat-keluar">
@@ -420,7 +420,7 @@ export function DisposisiAlertBanner() {
                     className="h-7 text-[10.5px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white p-1 px-2.5 gap-1 rounded-lg shadow-xs"
                   >
                     <ShieldCheck className="w-3 h-3" />
-                    <span>E-Sign Surat Keluar</span>
+                    <span>Tinjau & E-Sign</span>
                   </Button>
                 </Link>
               </div>

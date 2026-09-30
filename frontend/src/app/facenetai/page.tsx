@@ -1123,7 +1123,7 @@ export default function FaceNetAiStandalonePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative text-slate-900 dark:text-slate-100 overflow-x-hidden font-sans">
+    <div className="min-h-screen lg:h-screen lg:max-h-screen flex flex-col relative text-slate-100 bg-slate-950 overflow-x-hidden lg:overflow-hidden font-sans select-none">
       {/* Background Image & Overlay */}
       <div className="fixed inset-0 -z-30 w-full h-full overflow-hidden pointer-events-none">
         <NextImage
@@ -1133,1392 +1133,1200 @@ export default function FaceNetAiStandalonePage() {
           priority
           unoptimized
           sizes="100vw"
-          className="object-cover object-center w-full h-full scale-105"
+          className="object-cover object-center w-full h-full scale-105 opacity-20"
         />
       </div>
-      <div className="fixed inset-0 bg-slate-900/85 dark:bg-slate-950/90 backdrop-blur-[4px] -z-20" />
+      <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-[6px] -z-20" />
 
-      {/* Navbar Induk Terpadu */}
-      <PublicNavbar />
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-5 md:p-6 lg:p-8 space-y-4 md:space-y-6">
-        {/* Header Banner: Smart School Gate Attendance */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 p-4 sm:p-6 rounded-3xl text-white shadow-2xl border border-indigo-500/30">
-          {/* Subtle Cyber Glow Decoration */}
-          <div className="absolute -top-24 -right-24 w-72 h-72 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            {/* Left: School Identity & Dynamic Greeting */}
-            <div className="space-y-1.5 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/25 text-indigo-300 text-xs font-bold border border-indigo-400/40 shadow-inner">
-                  <Radio className="w-3.5 h-3.5 text-rose-400 animate-ping" />
-                  PRESENSI BIOMETRIK AI
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-semibold border border-emerald-500/30">
-                  <Sparkles className="w-3 h-3 text-emerald-400" />
-                  FaceNet 512-D BLAS Vector
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-semibold border border-blue-500/30">
-                  <Users className="w-3 h-3 text-blue-400" />
-                  Anti-Lookalike AI
-                </span>
-                {!isAuthenticated && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-semibold border border-amber-500/30">
-                    <Lock className="w-3 h-3" /> Mode Publik Gerbang
-                  </span>
-                )}
-              </div>
-
-              <div className="pt-0.5">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white flex items-center gap-2 flex-wrap">
-                  <span>SMA MUHAMMADIYAH 1 PONOROGO</span>
-                </h1>
-                <p className="text-slate-300 text-xs sm:text-sm font-medium mt-0.5">
-                  {greetingText}, Selamat Datang di Presensi Biometrik Wajah Cepat & Akurat.
-                </p>
-              </div>
+      {/* TOPBAR / HEADER KOMPAK TERTATA (Height: ~50px) */}
+      <header className="shrink-0 px-3 sm:px-4 py-1.5 bg-slate-900/90 border-b border-slate-800 backdrop-blur-md flex flex-wrap items-center justify-between gap-2 z-30 shadow-md">
+        {/* Kiri: Identitas Sekolah & Link Beranda */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Link 
+            href="/"
+            title="Kembali ke Beranda Utama"
+            className="w-8 h-8 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 flex items-center justify-center shrink-0 transition-all cursor-pointer"
+          >
+            <Radio className="w-4 h-4 text-emerald-400 animate-ping" />
+          </Link>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-xs sm:text-sm font-black tracking-tight text-white truncate">
+                PRESENSI BIOMETRIK AI
+              </h1>
+              <span className="hidden xl:inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
+                <Sparkles className="w-3 h-3 text-emerald-400" />
+                512-D BLAS
+              </span>
             </div>
-
-            {/* Right: Big Digital Clock & AI Status */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-              {/* Giant Gate Digital Clock */}
-              <div className="px-4 py-2.5 bg-slate-900/90 rounded-2xl border border-indigo-500/40 backdrop-blur-md shadow-xl text-center sm:text-right space-y-0.5 min-w-[200px]">
-                <div className="text-2xl sm:text-3xl font-black font-mono tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 animate-pulse">
-                  {currentClock || '--:--:--'}
-                </div>
-                <div className="text-[11px] sm:text-xs font-semibold text-slate-300">
-                  {currentDateStr || 'Memuat Waktu...'}
-                </div>
-              </div>
-
-              {/* AI Engine Status & Power Button */}
-              <div className="flex items-center justify-between sm:justify-start gap-2.5 px-3.5 py-2.5 bg-slate-900/90 rounded-2xl border border-slate-800 text-xs shadow-lg">
-                <div className="flex items-center gap-2">
-                  <span className={`w-3 h-3 rounded-full ${
-                    serviceStatus?.isOnline && serviceStatus?.is_running ? 'bg-emerald-400 animate-ping' : serviceStatus?.isOnline ? 'bg-amber-400' : 'bg-slate-500'
-                  }`} />
-                  <div className="text-left">
-                    <p className="font-extrabold text-white text-xs">
-                      {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'AI ENGINE AKTIF' : 'AI STANDBY') : 'AI OFFLINE'}
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-mono">Kecepatan &lt; 0.05ms</p>
-                  </div>
-                </div>
-
-                {isAuthenticated && isSuperAdmin ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
-                    disabled={isStartingWorker || isStoppingWorker}
-                    className={`h-8 px-3 text-xs font-bold rounded-xl ml-2 ${
-                      serviceStatus?.is_running 
-                        ? 'bg-rose-500/30 hover:bg-rose-500/50 text-rose-200' 
-                        : 'bg-emerald-500/30 hover:bg-emerald-500/50 text-emerald-200'
-                    }`}
-                  >
-                    <Power className="w-3.5 h-3.5 mr-1" />
-                    {isStartingWorker ? '...' : isStoppingWorker ? '...' : serviceStatus?.is_running ? 'Matikan' : 'Nyalakan'}
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => promptSuperadminAuth(() => {
-                      startServiceWorker()
-                    })}
-                    disabled={isStartingWorker || isStoppingWorker}
-                    className="h-8 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl ml-2 shadow-sm"
-                  >
-                    <Power className="w-3.5 h-3.5 mr-1" /> Nyalakan AI
-                  </Button>
-                )}
-              </div>
-            </div>
+            <p className="text-[10px] text-slate-400 font-medium truncate">
+              SMA MUHAMMADIYAH 1 PONOROGO
+            </p>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex overflow-x-auto no-scrollbar gap-1.5 p-1.5 bg-slate-950/80 border border-slate-800 rounded-xl">
+        {/* Tengah: 4 Tab Navigasi Terpadu */}
+        <div className="flex items-center gap-1 p-0.5 bg-slate-950/90 border border-slate-800 rounded-xl overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('monitor')}
-            className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
-              activeTab === 'monitor' ? 'bg-indigo-600 shadow text-white font-bold' : 'text-slate-400 hover:text-white'
+            className={`flex items-center gap-1.5 py-1 px-2.5 sm:px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              activeTab === 'monitor' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Video className="w-4 h-4 shrink-0" />
-            <span>Live Monitor & Scanner</span>
+            <Video className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Live Monitor</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('config')}
-            className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
-              activeTab === 'config' ? 'bg-indigo-600 shadow text-white font-bold' : 'text-slate-400 hover:text-white'
+            className={`flex items-center gap-1.5 py-1 px-2.5 sm:px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              activeTab === 'config' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Sliders className="w-4 h-4 shrink-0" />
-            <span>Konfigurasi Stream</span>
+            <Sliders className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Konfigurasi Stream</span>
             {!isSuperAdmin && (
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 ml-1">
-                Lihat Saja
-              </span>
+              <Lock className="w-3 h-3 text-slate-400 ml-0.5 shrink-0" />
             )}
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('dataset')}
-            className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
-              activeTab === 'dataset' ? 'bg-indigo-600 shadow text-white font-bold' : 'text-slate-400 hover:text-white'
+            className={`flex items-center gap-1.5 py-1 px-2.5 sm:px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              activeTab === 'dataset' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Users className="w-4 h-4 shrink-0" />
-            <span>Dataset Profil Wajah</span>
-            {!isSuperAdmin && (
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 ml-1">
-                Lihat Saja
-              </span>
-            )}
+            <Users className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Dataset Profil</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('logs')}
-            className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
-              activeTab === 'logs' ? 'bg-indigo-600 shadow text-white font-bold' : 'text-slate-400 hover:text-white'
+            className={`flex items-center gap-1.5 py-1 px-2.5 sm:px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              activeTab === 'logs' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Activity className="w-4 h-4 shrink-0" />
-            <span>Riwayat Log</span>
+            <Activity className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Riwayat Log</span>
             {logsData && logsData.length > 0 && (
-              <Badge variant="secondary" className="ml-1 px-1.5 py-0.2 text-[10px] bg-indigo-100 text-indigo-700">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-indigo-500/30 text-indigo-300 font-mono">
                 {logsData.length}
-              </Badge>
+              </span>
             )}
           </button>
         </div>
 
+        {/* Kanan: Ringkasan Presensi, Jam Digital, & Status AI */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Badge Statistik Cepat */}
+          <div className="hidden md:flex items-center gap-1.5">
+            <div className="px-2 py-0.5 rounded-lg bg-emerald-950/60 border border-emerald-800/60 text-[11px] font-bold text-emerald-300 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              <span>Masuk: {logStats.masuk}</span>
+            </div>
+            <div className="px-2 py-0.5 rounded-lg bg-blue-950/60 border border-blue-800/60 text-[11px] font-bold text-blue-300 flex items-center gap-1">
+              <Clock className="w-3 h-3 text-blue-400" />
+              <span>Pulang: {logStats.pulang}</span>
+            </div>
+            <div className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-bold text-slate-300 flex items-center gap-1">
+              <Activity className="w-3 h-3 text-indigo-400" />
+              <span>Total: {logStats.total}</span>
+            </div>
+          </div>
+
+          {/* Jam Digital Ringkas */}
+          <div className="px-2.5 py-0.5 bg-slate-950/90 rounded-xl border border-indigo-500/30 text-center font-mono space-y-0 min-w-[110px]">
+            <div className="text-xs sm:text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 animate-pulse">
+              {currentClock || '--:--:--'}
+            </div>
+            <div className="text-[9px] font-medium text-slate-400 truncate">
+              {currentDateStr || 'Memuat Waktu...'}
+            </div>
+          </div>
+
+          {/* AI Status Pill & Power Button */}
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-900 rounded-xl border border-slate-800 text-xs">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${
+              serviceStatus?.isOnline && serviceStatus?.is_running ? 'bg-emerald-400 animate-ping' : serviceStatus?.isOnline ? 'bg-amber-400' : 'bg-slate-500'
+            }`} />
+            <span className="font-bold text-[10px] sm:text-[11px] text-slate-200 hidden lg:inline">
+              {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'AI AKTIF' : 'STANDBY') : 'OFFLINE'}
+            </span>
+            {isAuthenticated && isSuperAdmin ? (
+              <button
+                type="button"
+                onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
+                disabled={isStartingWorker || isStoppingWorker}
+                className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md ml-0.5 cursor-pointer ${
+                  serviceStatus?.is_running 
+                    ? 'bg-rose-500/30 text-rose-300 hover:bg-rose-500/50' 
+                    : 'bg-emerald-500/30 text-emerald-300 hover:bg-emerald-500/50'
+                }`}
+              >
+                <Power className="w-3 h-3 inline mr-0.5" />
+                {serviceStatus?.is_running ? 'Off' : 'On'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => promptSuperadminAuth(() => startServiceWorker())}
+                className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white ml-0.5 cursor-pointer"
+              >
+                <Power className="w-3 h-3 inline mr-0.5" /> Start
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* MAIN CONTAINER (Fit 100vh on 1080p Desktop) */}
+      <main className="flex-1 min-h-0 w-full p-2 sm:p-2.5 flex flex-col gap-1.5 overflow-hidden">
         {/* TAB 1: LIVE MONITOR & SCANNER LOG */}
         {activeTab === 'monitor' && (
-          <div className="space-y-4 md:space-y-6">
-            {/* Quick Stats Bar */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              <div className="bg-gradient-to-br from-emerald-600 to-teal-800 rounded-2xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-emerald-500/20">
-                <div>
-                  <p className="text-[11px] sm:text-xs font-bold text-emerald-100 uppercase tracking-wider">Hadir Masuk</p>
-                  <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.masuk}</p>
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2 overflow-hidden">
+            {/* KIRI: VIDEO STREAM 16:9 + ACTION CAPTURE PANEL (7 COLS) */}
+            <div className="lg:col-span-7 flex flex-col h-full overflow-hidden bg-slate-950/95 border border-slate-800 rounded-2xl shadow-xl">
+              {/* Header Stream Bar (Compact) */}
+              <div className="px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="flex h-2.5 w-2.5 relative shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                  </span>
+                  <span className="text-xs font-bold text-slate-100 truncate">
+                    {currentConfig?.cameraName || 'Kamera Gerbang Depan'}
+                  </span>
+                  <Badge variant="outline" className="text-[9px] py-0 px-1 border-slate-700 text-indigo-300 font-mono shrink-0">
+                    {currentConfig?.streamSourceType || 'RTSP'}
+                  </Badge>
+                  <span className="text-[10px] text-slate-400 truncate hidden sm:inline">
+                    {currentConfig?.location || 'Gerbang Utama'}
+                  </span>
                 </div>
-                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
-                  <CheckCircle2 className="w-5 h-5 text-white" />
+
+                <div className="flex items-center gap-1 shrink-0">
+                  {isBrowserMode && videoDevices.length > 1 && (
+                    <select
+                      aria-label="Pilih Perangkat Kamera"
+                      value={selectedDeviceId}
+                      onChange={(e) => {
+                        setSelectedDeviceId(e.target.value)
+                        startBrowserWebcam(e.target.value)
+                      }}
+                      className="h-6 text-[10px] bg-slate-800 text-slate-200 border border-slate-700 rounded px-1 max-w-[120px] truncate"
+                    >
+                      {videoDevices.map((dev, idx) => (
+                        <option key={dev.deviceId || idx} value={dev.deviceId}>
+                          {dev.label || `Kamera ${idx + 1}`}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleReconnectStream}
+                    title="Hubungkan Ulang Stream"
+                    className="text-slate-400 hover:text-white hover:bg-slate-800 h-6 w-6 p-0"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleFullscreen}
+                    title="Layar Penuh"
+                    className="text-slate-400 hover:text-white hover:bg-slate-800 h-6 w-6 p-0"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                  </Button>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-800 rounded-2xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-blue-500/20">
-                <div>
-                  <p className="text-[11px] sm:text-xs font-bold text-blue-100 uppercase tracking-wider">Presensi Pulang</p>
-                  <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.pulang}</p>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
-                  <Clock className="w-5 h-5 text-white" />
-                </div>
-              </div>
+              {/* Video Box Canvas (Expands to fill 100% available viewport height) */}
+              <div 
+                ref={videoContainerRef}
+                onClick={() => {
+                  if (isBrowserMode && isBrowserCamStreaming && !isCapturing && !captureResult) {
+                    executeFaceCapture()
+                  }
+                }}
+                className="flex-1 min-h-0 relative w-full bg-black flex items-center justify-center overflow-hidden group select-none cursor-pointer"
+                title="Sentuh Layar / Tekan Tombol untuk Scan Wajah"
+              >
+                {/* Shutter Flash Visual Animation Effect */}
+                {captureFlash && (
+                  <div className="absolute inset-0 bg-white/95 z-40 pointer-events-none transition-opacity duration-150" />
+                )}
 
-              <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-2xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-slate-700">
-                <div>
-                  <p className="text-[11px] sm:text-xs font-bold text-slate-300 uppercase tracking-wider">Total Scan</p>
-                  <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.total}</p>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-xs shrink-0">
-                  <Activity className="w-5 h-5 text-indigo-400" />
-                </div>
-              </div>
+                {isBrowserMode ? (
+                  <div className="relative w-full h-full flex items-center justify-center bg-black">
+                    <video
+                      ref={setVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className={`w-full h-full object-contain ${capturedSnapshotUrl ? 'hidden' : 'block'}`}
+                      onPlay={() => setIsBrowserCamStreaming(true)}
+                    />
+                    {capturedSnapshotUrl && (
+                      <img
+                        src={capturedSnapshotUrl}
+                        alt="Captured Freeze Frame"
+                        className="w-full h-full object-contain select-none"
+                      />
+                    )}
+                    <canvas
+                      ref={overlayCanvasRef}
+                      className="absolute inset-0 w-full h-full pointer-events-none object-contain z-10"
+                    />
 
-              <div className="bg-gradient-to-br from-purple-800 to-indigo-950 rounded-2xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-purple-600/30">
-                <div className="min-w-0">
-                  <p className="text-[11px] sm:text-xs font-bold text-purple-200 uppercase tracking-wider truncate">Biometrik AI</p>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${serviceStatus?.isOnline && serviceStatus?.is_running ? 'bg-emerald-400 animate-pulse' : serviceStatus?.isOnline ? 'bg-amber-400' : 'bg-slate-400'}`} />
-                    <span className="font-bold text-xs sm:text-sm truncate">
-                      {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'SIAP SCAN' : 'STANDBY') : 'OFFLINE'}
-                    </span>
+                    {/* Biometric Framing Guide (Idle State) */}
+                    {!isCapturing && !captureResult && isBrowserCamStreaming && (
+                      <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10">
+                        {/* Face Oval Framing Target */}
+                        <div className="relative w-40 h-52 sm:w-48 sm:h-60 rounded-[50%/45%] border-2 border-dashed border-emerald-400/60 shadow-[0_0_30px_rgba(16,185,129,0.25)] flex items-center justify-center animate-pulse">
+                          <div className="absolute -top-2.5 -left-2.5 w-5 h-5 border-t-2 border-l-2 border-emerald-400 rounded-tl-lg" />
+                          <div className="absolute -top-2.5 -right-2.5 w-5 h-5 border-t-2 border-r-2 border-emerald-400 rounded-tr-lg" />
+                          <div className="absolute -bottom-2.5 -left-2.5 w-5 h-5 border-b-2 border-l-2 border-emerald-400 rounded-bl-lg" />
+                          <div className="absolute -bottom-2.5 -right-2.5 w-5 h-5 border-b-2 border-r-2 border-emerald-400 rounded-br-lg" />
+                          <div className="w-2 h-2 rounded-full bg-emerald-400/80 shadow-[0_0_8px_#34d399]" />
+                        </div>
+                        
+                        <div className="mt-3 px-3.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-emerald-500/40 text-[11px] sm:text-xs font-bold text-emerald-300 flex items-center gap-1.5 shadow-xl">
+                          <Aperture className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                          <span>Posisikan Wajah & Sentuh Tombol Scan</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Laser Scanner Animation saat Memproses Frame */}
+                    {isCapturing && (
+                      <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center bg-black/50 backdrop-blur-xs">
+                        <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] animate-bounce top-1/3" />
+                        
+                        <div className="px-4 py-2 rounded-2xl bg-slate-950/95 border border-cyan-500/60 shadow-2xl text-center space-y-1">
+                          <div className="flex items-center justify-center gap-2 text-cyan-400">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span className="text-xs sm:text-sm font-extrabold tracking-wide">Menganalisis Biometrik FaceNet...</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-mono">Pencocokan Cepat BLAS Matrix Vector</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Floating Result Feedback HUD Card */}
+                    {captureResult && (
+                      <div className="absolute inset-x-2 sm:inset-x-3 bottom-2 z-30 pointer-events-auto animate-in fade-in slide-in-from-bottom-3 duration-200">
+                        {captureResult.type === 'TWIN_AMBIGUOUS' ? (
+                          <div className="p-3 rounded-2xl bg-slate-950/95 border-2 border-amber-500/80 shadow-2xl backdrop-blur-2xl text-white space-y-2">
+                            <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 pb-1.5">
+                              <div className="flex items-center gap-1.5 text-amber-400">
+                                <AlertTriangle className="w-4 h-4 animate-bounce" />
+                                <div>
+                                  <h3 className="text-xs font-extrabold text-amber-300">Deteksi Siswa Kembar / Wajah Mirip</h3>
+                                  <p className="text-[10px] text-slate-300">Ketuk nama Anda untuk memverifikasi:</p>
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setCaptureResult(null)
+                                  setCapturedSnapshotUrl(null)
+                                }}
+                                className="h-6 text-[10px] text-slate-400 hover:text-white"
+                              >
+                                Tutup
+                              </Button>
+                            </div>
+
+                            {/* Twin candidate list */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {captureResult.twinCandidates?.map((cand, cIdx) => (
+                                <button
+                                  key={cand.userId || cIdx}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleConfirmTwinAttendance(cand)
+                                  }}
+                                  className="flex items-center gap-2 p-2 rounded-xl bg-slate-900/90 hover:bg-indigo-950/80 border border-slate-700 hover:border-emerald-500 text-left transition-all cursor-pointer"
+                                >
+                                  <div className="w-9 h-9 rounded-lg bg-slate-800 overflow-hidden shrink-0 border border-slate-600 flex items-center justify-center">
+                                    {cand.avatarUrl ? (
+                                      <img src={cand.avatarUrl} alt={cand.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="font-extrabold text-slate-300 text-xs">{cand.name.charAt(0)}</span>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-bold text-white truncate">{cand.name}</p>
+                                    <p className="text-[9px] text-slate-400 font-mono">{cand.role} • {cand.identifier}</p>
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-400 mt-0.5">
+                                      <CheckCircle className="w-2.5 h-2.5" /> Ketuk Presensi
+                                    </span>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className={`p-3 rounded-2xl backdrop-blur-2xl border-2 shadow-2xl transition-all duration-200 ${
+                            captureResult.type === 'SUCCESS' 
+                              ? 'bg-slate-950/95 border-emerald-500 shadow-emerald-950/70' 
+                              : captureResult.type === 'UNKNOWN' 
+                                ? 'bg-slate-950/95 border-amber-500 shadow-amber-950/70' 
+                                : 'bg-slate-950/95 border-rose-500 shadow-rose-950/70'
+                          }`}>
+                            <div className="flex items-center justify-between gap-2.5">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold shadow-lg ${
+                                  captureResult.type === 'SUCCESS'
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/50'
+                                    : captureResult.type === 'UNKNOWN'
+                                      ? 'bg-amber-500/20 text-amber-400 border border-amber-400/50'
+                                      : 'bg-rose-500/20 text-rose-400 border border-rose-400/50'
+                                }`}>
+                                  {captureResult.type === 'SUCCESS' ? (
+                                    <CheckCircle className="w-6 h-6" />
+                                  ) : captureResult.type === 'UNKNOWN' ? (
+                                    <AlertTriangle className="w-6 h-6" />
+                                  ) : (
+                                    <AlertCircle className="w-6 h-6" />
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  {captureResult.type === 'SUCCESS' ? (
+                                    <>
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <h3 className="text-xs sm:text-sm font-black text-white truncate">{captureResult.name}</h3>
+                                        <Badge className="bg-emerald-500/25 text-emerald-300 border-emerald-400/40 text-[10px] py-0 px-1.5 font-mono font-bold">
+                                          {captureResult.confidence}% Akurat
+                                        </Badge>
+                                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-slate-700 text-slate-300">
+                                          {captureResult.role} {captureResult.identifier ? `• ${captureResult.identifier}` : ''}
+                                        </Badge>
+                                      </div>
+                                      <p className="text-[11px] text-emerald-300 font-bold mt-0.5 truncate">
+                                        {captureResult.attendanceMsg}
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <h3 className={`text-xs sm:text-sm font-bold ${
+                                        captureResult.type === 'UNKNOWN' ? 'text-amber-300' : 'text-rose-300'
+                                      }`}>
+                                        {captureResult.message}
+                                      </h3>
+                                      <p className="text-[10px] text-slate-300 mt-0.5 line-clamp-1">
+                                        {captureResult.attendanceMsg}
+                                      </p>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCaptureResult(null)
+                                    setCapturedSnapshotUrl(null)
+                                    const canvas = overlayCanvasRef.current
+                                    if (canvas) {
+                                      const cCtx = canvas.getContext('2d')
+                                      if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+                                    }
+                                  }}
+                                  className="h-7 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg px-2"
+                                >
+                                  Tutup
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCapturedSnapshotUrl(null)
+                                    executeFaceCapture()
+                                  }}
+                                  disabled={isCapturing}
+                                  className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1 shadow-md rounded-lg px-2.5 cursor-pointer"
+                                >
+                                  <Camera className="w-3.5 h-3.5" />
+                                  <span>Scan Lagi</span>
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {browserCamError && (
+                      <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-4 text-center space-y-2 z-30 pointer-events-auto">
+                        <Camera className="w-8 h-8 text-rose-400 animate-pulse" />
+                        <p className="text-xs font-bold text-white">Gagal Mengakses Webcam Browser</p>
+                        <p className="text-[11px] text-slate-300 max-w-sm">{browserCamError}</p>
+                        <Button size="sm" onClick={() => startBrowserWebcam()} className="bg-indigo-600 text-white text-xs h-7">
+                          <RefreshCw className="w-3 h-3 mr-1" /> Coba Lagi
+                        </Button>
+                      </div>
+                    )}
                   </div>
+                ) : !streamError && serviceStatus?.is_running ? (
+                  <div className="relative w-full h-full flex items-center justify-center bg-black">
+                    {isStreamLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 z-10">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                          <span className="text-[11px] text-slate-300 font-medium">Menghubungkan Sinyal Kamera...</span>
+                        </div>
+                      </div>
+                    )}
+                    <img
+                      key={streamKey}
+                      src={`/api/face-stream?t=${streamKey}`}
+                      alt="Live Capture FaceNet Camera Stream"
+                      className="w-full h-full object-contain"
+                      onLoad={handleStreamImgLoad}
+                      onError={handleStreamImgError}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center p-4 space-y-2 max-w-md select-none z-10 pointer-events-auto">
+                    <div className="w-10 h-10 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
+                      <Video className="w-5 h-5 animate-pulse" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-xs text-slate-200">
+                        {serviceStatus?.isOnline 
+                          ? (serviceStatus?.is_running ? 'Menghubungkan Sinyal Kamera...' : 'AI FaceNet Standby') 
+                          : 'Microservice AI FaceNet Standby / Offline'}
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {serviceStatus?.is_running 
+                          ? 'Menunggu sinyal frame aktif dari kamera...'
+                          : 'Nyalakan AI atau pilih Webcam Browser untuk memulai streaming deteksi.'}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center gap-1.5 pt-1">
+                      {!serviceStatus?.is_running && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (isAuthenticated && isSuperAdmin) {
+                              startServiceWorker()
+                            } else {
+                              promptSuperadminAuth(() => {
+                                startServiceWorker()
+                              })
+                            }
+                          }}
+                          disabled={isStartingWorker}
+                          className="h-6 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5"
+                        >
+                          <Power className="w-3 h-3 mr-1" /> Nyalakan AI
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleReconnectStream}
+                        className="h-6 text-[11px] border-slate-700 text-slate-300 hover:text-white bg-slate-800/80 px-2"
+                      >
+                        <RefreshCw className="w-3 h-3 mr-1" /> Hubungkan Ulang
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* HUD Badges */}
+                <div className="absolute top-2 left-2 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/75 backdrop-blur-xs text-[9px] font-mono text-emerald-400 border border-emerald-500/30 z-20 shadow-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                  <span>{isBrowserMode ? `WEBCAM (${browserFps} FPS)` : currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
                 </div>
-                <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-xs shrink-0">
-                  <Cpu className="w-5 h-5 text-purple-200" />
+
+                <div className="absolute top-2 right-2 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/75 backdrop-blur-xs text-[9px] font-mono text-slate-300 border border-white/10 z-20 shadow-md">
+                  <span className={scanMode === 'MANUAL' ? 'text-teal-300 font-bold' : 'text-amber-300 font-bold'}>
+                    {scanMode === 'MANUAL' ? 'MODE MANUAL' : 'AUTO-SCAN'}
+                  </span>
                 </div>
+
+                <div className="absolute bottom-2 right-2 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/75 backdrop-blur-xs text-[9px] font-mono text-slate-300 border border-white/10 z-20 shadow-md">
+                  <span>Threshold: {Math.round((currentConfig?.threshold || 0.70) * 100)}%</span>
+                  <span>•</span>
+                  <span>Cooldown: {currentConfig?.cooldownMinutes || 10}m</span>
+                </div>
+              </div>
+
+              {/* ACTION BUTTON BAR (Compact ~50px) */}
+              <div className="p-2 sm:p-2.5 bg-slate-900/95 border-t border-slate-800 flex items-center gap-2 shrink-0">
+                <Button
+                  onClick={() => executeFaceCapture()}
+                  disabled={isCapturing || !isBrowserCamStreaming}
+                  className="flex-1 h-11 text-xs sm:text-sm font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-lg shadow-emerald-950/60 gap-2 border border-emerald-400/40 cursor-pointer transition-all active:scale-[0.98]"
+                >
+                  {isCapturing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Menganalisis Biometrik Wajah...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4 animate-pulse text-emerald-200" />
+                      <span>SENTUH UNTUK SCAN WAJAH</span>
+                      <span className="hidden sm:inline-block ml-1 text-[9px] font-mono font-normal px-2 py-0.5 rounded bg-black/40 border border-white/20">
+                        SPASI / ENTER
+                      </span>
+                    </>
+                  )}
+                </Button>
+
+                {/* Mode Manual/Auto switcher */}
+                <div className="inline-flex p-0.5 bg-slate-950 rounded-xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setScanMode('MANUAL')}
+                    className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                      scanMode === 'MANUAL' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Mode Manual: Scan saat tombol ditekan"
+                  >
+                    Manual
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScanMode('AUTO')}
+                    className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                      scanMode === 'AUTO' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Mode Auto: Scan berkala otomatis"
+                  >
+                    Auto
+                  </button>
+                </div>
+
+                {/* Sound toggle button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className={`h-9 px-2.5 rounded-xl border-slate-800 cursor-pointer ${
+                    soundEnabled ? 'text-emerald-400 bg-emerald-950/30' : 'text-slate-500 bg-slate-950'
+                  }`}
+                  title={soundEnabled ? 'Audio Aktif' : 'Audio Senyap'}
+                >
+                  {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                </Button>
               </div>
             </div>
 
-            {/* SPLIT SCREEN: LIVE STREAM & LOGS */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
-              {/* LEFT: REALTIME LIVE CAPTURE STREAM (7 COLS) */}
-              <div className="lg:col-span-7 space-y-3">
-                <Card className="shadow-2xl border-slate-800 bg-slate-950 text-white overflow-hidden rounded-3xl">
-                  {/* Header Stream Bar */}
-                  <div className="p-3 sm:p-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="flex h-3 w-3 relative shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
-                      </span>
-                      <div className="min-w-0">
-                        <h2 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5 sm:gap-2 truncate">
-                          <span className="truncate">{currentConfig?.cameraName || 'Kamera Gerbang Depan'}</span>
-                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-slate-700 text-indigo-300 font-mono shrink-0">
-                            {currentConfig?.streamSourceType || 'RTSP'}
-                          </Badge>
-                        </h2>
-                        <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate max-w-[200px] sm:max-w-xs md:max-w-md flex items-center gap-1.5">
-                          <span>{currentConfig?.location || 'Gerbang Utama SMA MUHIPO'}</span>
-                          <span className="text-slate-600">•</span>
-                          <span className="font-mono text-slate-400">{maskStreamUrl(currentConfig?.streamUrl)}</span>
-                        </p>
-                      </div>
-                    </div>
+            {/* KANAN: REALTIME SCANNER LOGS LIST (5 COLS) */}
+            <div className="lg:col-span-5 flex flex-col h-full overflow-hidden bg-slate-950/95 border border-slate-800 rounded-2xl shadow-xl">
+              {/* Log Header */}
+              <div className="px-3.5 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-indigo-400" />
+                  <span className="text-xs font-bold text-white">Scanner Log Realtime</span>
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800/60 animate-pulse">
+                    Live Sync
+                  </span>
+                </div>
 
-                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                      {isBrowserMode && videoDevices.length > 1 && (
-                        <select
-                          aria-label="Pilih Perangkat Kamera"
-                          value={selectedDeviceId}
-                          onChange={(e) => {
-                            setSelectedDeviceId(e.target.value)
-                            startBrowserWebcam(e.target.value)
-                          }}
-                          className="h-7 text-[11px] bg-slate-800 text-slate-200 border border-slate-700 rounded-md px-1.5 max-w-[130px] truncate"
-                        >
-                          {videoDevices.map((dev, idx) => (
-                            <option key={dev.deviceId || idx} value={dev.deviceId}>
-                              {dev.label || `Kamera ${idx + 1}`}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleReconnectStream}
-                        title="Hubungkan Ulang Stream"
-                        className="text-slate-400 hover:text-white hover:bg-slate-800 h-7 sm:h-8 px-2"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={toggleFullscreen}
-                        title="Layar Penuh"
-                        className="text-slate-400 hover:text-white hover:bg-slate-800 h-7 sm:h-8 px-2"
-                      >
-                        <Maximize2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setLogFilterMode('TODAY')}
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                        logFilterMode === 'TODAY' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Hari Ini
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilterMode('ALL')}
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                        logFilterMode === 'ALL' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Semua
+                    </button>
                   </div>
 
-                  {/* Video Box Canvas */}
-                  <div 
-                    ref={videoContainerRef}
-                    onClick={() => {
-                      if (isBrowserMode && isBrowserCamStreaming && !isCapturing && !captureResult) {
-                        executeFaceCapture()
-                      }
-                    }}
-                    className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group select-none cursor-pointer"
-                    title="Sentuh Layar / Tekan Tombol untuk Scan Wajah"
-                  >
-                    {/* Shutter Flash Visual Animation Effect */}
-                    {captureFlash && (
-                      <div className="absolute inset-0 bg-white/95 z-40 pointer-events-none transition-opacity duration-150" />
-                    )}
-
-                    {isBrowserMode ? (
-                      <div className="relative w-full h-full flex items-center justify-center bg-black">
-                        <video
-                          ref={setVideoRef}
-                          autoPlay
-                          playsInline
-                          muted
-                          className={`w-full h-full object-contain ${capturedSnapshotUrl ? 'hidden' : 'block'}`}
-                          onPlay={() => setIsBrowserCamStreaming(true)}
-                        />
-                        {capturedSnapshotUrl && (
-                          <img
-                            src={capturedSnapshotUrl}
-                            alt="Captured Freeze Frame"
-                            className="w-full h-full object-contain select-none"
-                          />
-                        )}
-                        <canvas
-                          ref={overlayCanvasRef}
-                          className="absolute inset-0 w-full h-full pointer-events-none object-contain z-10"
-                        />
-
-                        {/* Biometric Framing Guide (Idle State) */}
-                        {!isCapturing && !captureResult && isBrowserCamStreaming && (
-                          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10">
-                            {/* Face Oval Framing Target */}
-                            <div className="relative w-48 h-60 sm:w-56 sm:h-72 rounded-[50%/45%] border-2 border-dashed border-emerald-400/60 shadow-[0_0_35px_rgba(16,185,129,0.25)] flex items-center justify-center animate-pulse">
-                              {/* Glowing Corner Accents */}
-                              <div className="absolute -top-3 -left-3 w-6 h-6 border-t-3 border-l-3 border-emerald-400 rounded-tl-lg" />
-                              <div className="absolute -top-3 -right-3 w-6 h-6 border-t-3 border-r-3 border-emerald-400 rounded-tr-lg" />
-                              <div className="absolute -bottom-3 -left-3 w-6 h-6 border-b-3 border-l-3 border-emerald-400 rounded-bl-lg" />
-                              <div className="absolute -bottom-3 -right-3 w-6 h-6 border-b-3 border-r-3 border-emerald-400 rounded-br-lg" />
-                              
-                              {/* Center Crosshair */}
-                              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400/80 shadow-[0_0_10px_#34d399]" />
-                            </div>
-                            
-                            <div className="mt-4 px-4 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-emerald-500/40 text-xs sm:text-sm font-bold text-emerald-300 flex items-center gap-2 shadow-2xl">
-                              <Aperture className="w-4 h-4 animate-spin text-emerald-400" />
-                              <span>Posisikan Wajah & Sentuh Tombol Scan</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Laser Scanner Animation saat Memproses Frame */}
-                        {isCapturing && (
-                          <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center bg-black/50 backdrop-blur-xs">
-                            {/* Moving Laser Line */}
-                            <div className="absolute inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_20px_#22d3ee] animate-bounce top-1/3" />
-                            
-                            <div className="px-5 py-3 rounded-2xl bg-slate-950/95 border border-cyan-500/60 shadow-2xl text-center space-y-1.5">
-                              <div className="flex items-center justify-center gap-2 text-cyan-400">
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                <span className="text-sm sm:text-base font-extrabold tracking-wide">Menganalisis Biometrik FaceNet...</span>
-                              </div>
-                              <p className="text-[11px] text-slate-400 font-mono">Pencocokan Cepat BLAS Matrix Vector</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Floating Result Feedback HUD Card */}
-                        {captureResult && (
-                          <div className="absolute inset-x-2 sm:inset-x-4 bottom-3 z-30 pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
-                            {captureResult.type === 'TWIN_AMBIGUOUS' ? (
-                              <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/95 border-2 border-amber-500/80 shadow-2xl shadow-amber-950/80 backdrop-blur-2xl text-white space-y-3">
-                                <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 pb-2.5">
-                                  <div className="flex items-center gap-2 text-amber-400">
-                                    <AlertTriangle className="w-5 h-5 animate-bounce" />
-                                    <div>
-                                      <h3 className="text-sm sm:text-base font-extrabold text-amber-300">Deteksi Siswa Kembar / Wajah Mirip</h3>
-                                      <p className="text-[11px] text-slate-300">Ketuk nama & foto Anda di bawah untuk memastikan presensi tidak tertukar:</p>
-                                    </div>
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setCaptureResult(null)
-                                      setCapturedSnapshotUrl(null)
-                                    }}
-                                    className="h-7 text-xs text-slate-400 hover:text-white"
-                                  >
-                                    Tutup
-                                  </Button>
-                                </div>
-
-                                {/* Twin candidate list */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                  {captureResult.twinCandidates?.map((cand, cIdx) => (
-                                    <button
-                                      key={cand.userId || cIdx}
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleConfirmTwinAttendance(cand)
-                                      }}
-                                      className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/90 hover:bg-indigo-950/80 border-2 border-slate-700 hover:border-emerald-500 text-left transition-all active:scale-[0.98] group cursor-pointer"
-                                    >
-                                      <div className="w-12 h-12 rounded-xl bg-slate-800 overflow-hidden shrink-0 border border-slate-600 group-hover:border-emerald-400 flex items-center justify-center">
-                                        {cand.avatarUrl ? (
-                                          <img src={cand.avatarUrl} alt={cand.name} className="w-full h-full object-cover" />
-                                        ) : (
-                                          <span className="font-extrabold text-slate-300 text-sm">{cand.name.charAt(0)}</span>
-                                        )}
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-xs sm:text-sm font-bold text-white group-hover:text-emerald-300 truncate">{cand.name}</p>
-                                        <p className="text-[10px] text-slate-400 font-mono">{cand.role} • {cand.identifier}</p>
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 mt-1">
-                                          <CheckCircle className="w-3 h-3" /> Ketuk untuk Presensi
-                                        </span>
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className={`p-4 sm:p-5 rounded-2xl backdrop-blur-2xl border-2 shadow-2xl transition-all duration-300 ${
-                                captureResult.type === 'SUCCESS' 
-                                  ? 'bg-slate-950/95 border-emerald-500 shadow-emerald-950/70' 
-                                  : captureResult.type === 'UNKNOWN' 
-                                    ? 'bg-slate-950/95 border-amber-500 shadow-amber-950/70' 
-                                    : 'bg-slate-950/95 border-rose-500 shadow-rose-950/70'
-                              }`}>
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3.5 min-w-0">
-                                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 font-bold shadow-lg ${
-                                      captureResult.type === 'SUCCESS'
-                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/50'
-                                        : captureResult.type === 'UNKNOWN'
-                                          ? 'bg-amber-500/20 text-amber-400 border border-amber-400/50'
-                                          : 'bg-rose-500/20 text-rose-400 border border-rose-400/50'
-                                    }`}>
-                                      {captureResult.type === 'SUCCESS' ? (
-                                        <CheckCircle className="w-7 h-7 sm:w-8 sm:h-8" />
-                                      ) : captureResult.type === 'UNKNOWN' ? (
-                                        <AlertTriangle className="w-7 h-7 sm:w-8 sm:h-8" />
-                                      ) : (
-                                        <AlertCircle className="w-7 h-7 sm:w-8 sm:h-8" />
-                                      )}
-                                    </div>
-                                    <div className="min-w-0">
-                                      {captureResult.type === 'SUCCESS' ? (
-                                        <>
-                                          <div className="flex items-center gap-2 flex-wrap">
-                                            <h3 className="text-base sm:text-lg font-black text-white truncate">{captureResult.name}</h3>
-                                            <Badge className="bg-emerald-500/25 text-emerald-300 border-emerald-400/40 text-[11px] py-0 px-2 font-mono font-bold">
-                                              {captureResult.confidence}% Akurat
-                                            </Badge>
-                                            <Badge variant="outline" className="text-[11px] py-0 px-2 border-slate-700 text-slate-300">
-                                              {captureResult.role} {captureResult.identifier ? `• ${captureResult.identifier}` : ''}
-                                            </Badge>
-                                          </div>
-                                          <p className="text-xs sm:text-sm text-emerald-300 font-bold mt-1 truncate">
-                                            {captureResult.attendanceMsg}
-                                          </p>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <h3 className={`text-sm sm:text-base font-bold ${
-                                            captureResult.type === 'UNKNOWN' ? 'text-amber-300' : 'text-rose-300'
-                                          }`}>
-                                            {captureResult.message}
-                                          </h3>
-                                          <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">
-                                            {captureResult.attendanceMsg}
-                                          </p>
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    <Button
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setCaptureResult(null)
-                                        setCapturedSnapshotUrl(null)
-                                        const canvas = overlayCanvasRef.current
-                                        if (canvas) {
-                                          const cCtx = canvas.getContext('2d')
-                                          if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
-                                        }
-                                      }}
-                                      className="h-9 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl"
-                                    >
-                                      Tutup
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setCapturedSnapshotUrl(null)
-                                        executeFaceCapture()
-                                      }}
-                                      disabled={isCapturing}
-                                      className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5 shadow-lg rounded-xl"
-                                    >
-                                      <Camera className="w-4 h-4" />
-                                      <span>Scan Lagi</span>
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {browserCamError && (
-                          <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center space-y-3 z-30 pointer-events-auto">
-                            <Camera className="w-10 h-10 text-rose-400 animate-pulse" />
-                            <p className="text-sm font-bold text-white">Gagal Mengakses Webcam Browser</p>
-                            <p className="text-xs text-slate-300 max-w-sm">{browserCamError}</p>
-                            <Button size="sm" onClick={() => startBrowserWebcam()} className="bg-indigo-600 text-white text-xs">
-                              <RefreshCw className="w-3.5 h-3.5 mr-1" /> Coba Lagi
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ) : !streamError && serviceStatus?.is_running ? (
-                      <div className="relative w-full h-full flex items-center justify-center bg-black">
-                        {isStreamLoading && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 z-10">
-                            <div className="flex flex-col items-center gap-2">
-                              <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                              <span className="text-xs text-slate-300 font-medium">Menghubungkan Sinyal Kamera...</span>
-                            </div>
-                          </div>
-                        )}
-                        <img
-                          key={streamKey}
-                          src={`/api/face-stream?t=${streamKey}`}
-                          alt="Live Capture FaceNet Camera Stream"
-                          className="w-full h-full object-contain"
-                          onLoad={handleStreamImgLoad}
-                          onError={handleStreamImgError}
-                        />
-                      </div>
-                    ) : (
-                      <div className="text-center p-4 sm:p-6 space-y-3 max-w-md select-none z-10 pointer-events-auto">
-                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
-                          <Video className="w-6 h-6 sm:w-7 sm:h-7 animate-pulse" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="font-bold text-xs sm:text-sm text-slate-200">
-                            {serviceStatus?.isOnline 
-                              ? (serviceStatus?.is_running ? 'Menghubungkan Sinyal Kamera...' : 'AI FaceNet Standby') 
-                              : 'Microservice AI FaceNet Standby / Offline'}
-                          </p>
-                          <p className="text-[11px] sm:text-xs text-slate-400 leading-relaxed">
-                            {serviceStatus?.is_running 
-                              ? 'Menunggu sinyal frame aktif dari perangkat kamera...'
-                              : 'Nyalakan AI atau pilih Webcam Browser untuk memulai streaming deteksi.'}
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
-                          {!serviceStatus?.is_running && (
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                if (isAuthenticated && isSuperAdmin) {
-                                  startServiceWorker()
-                                } else {
-                                  promptSuperadminAuth(() => {
-                                    startServiceWorker()
-                                  })
-                                }
-                              }}
-                              disabled={isStartingWorker}
-                              className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                            >
-                              <Power className="w-3 h-3 mr-1" /> Nyalakan AI FaceNet
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleReconnectStream}
-                            className="h-7 text-xs border-slate-700 text-slate-300 hover:text-white bg-slate-800/80"
-                          >
-                            <RefreshCw className="w-3 h-3 mr-1" /> Hubungkan Ulang
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Corner Visual HUD Targets */}
-                    <div className="absolute top-2 sm:top-3 left-2 sm:left-3 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30 z-20 shadow-md">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                      <span>{isBrowserMode ? `WEBCAM (${browserFps} FPS)` : currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
-                    </div>
-
-                    <div className="absolute top-2 sm:top-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-xs text-[10px] font-mono text-slate-300 border border-white/10 z-20 shadow-md">
-                      <span className={scanMode === 'MANUAL' ? 'text-teal-300 font-bold' : 'text-amber-300 font-bold'}>
-                        {scanMode === 'MANUAL' ? 'MODE CAPTURE CEPAT' : 'AUTO-SCAN KONTINU'}
-                      </span>
-                    </div>
-
-                    <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-xs text-[10px] sm:text-[11px] font-mono text-slate-300 border border-white/10 z-20 shadow-md">
-                      <span>Sensitivitas: {Math.round((currentConfig?.threshold || 0.48) * 100)}%</span>
-                      <span>•</span>
-                      <span>Cooldown: {currentConfig?.cooldownMinutes || 10}m</span>
-                    </div>
-                  </div>
-
-                  {/* TOMBOL CAPTURE & ACTION PANEL (OPTIMASI ANTI-BEBAN SERVER) */}
-                  <div className="p-3.5 sm:p-5 bg-slate-900/95 border-t border-slate-800 space-y-3">
-                    {/* Primary Capture Action Area */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                      <Button
-                        size="lg"
-                        onClick={() => executeFaceCapture()}
-                        disabled={isCapturing || !isBrowserCamStreaming}
-                        className="flex-1 h-14 text-sm sm:text-base font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl shadow-xl shadow-emerald-950/60 gap-3 transition-all active:scale-[0.98] border border-emerald-400/40 cursor-pointer"
-                      >
-                        {isCapturing ? (
-                          <>
-                            <Loader2 className="w-6 h-6 animate-spin" />
-                            <span className="tracking-wide">Menganalisis Biometrik Wajah...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Camera className="w-6 h-6 animate-pulse text-emerald-200" />
-                            <span className="tracking-wide">SENTUH UNTUK SCAN WAJAH</span>
-                            <span className="hidden md:inline-block ml-1.5 text-[10px] font-mono font-normal px-2.5 py-1 rounded-lg bg-black/40 border border-white/20">
-                              SPASI / ENTER
-                            </span>
-                          </>
-                        )}
-                      </Button>
-
-                      <div className="flex items-center gap-2 self-center sm:self-auto">
-                        {/* Mode Presensi Switcher */}
-                        <div className="inline-flex p-1 bg-slate-950 rounded-2xl border border-slate-800">
-                          <button
-                            type="button"
-                            onClick={() => setScanMode('MANUAL')}
-                            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all ${
-                              scanMode === 'MANUAL'
-                                ? 'bg-emerald-600 text-white shadow-md'
-                                : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                            title="Mode Manual: Scan hanya berjalan saat tombol capture ditekan (Hemat server & akurat)"
-                          >
-                            Manual
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setScanMode('AUTO')}
-                            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all ${
-                              scanMode === 'AUTO'
-                                ? 'bg-amber-600 text-white shadow-md'
-                                : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                            title="Mode Otomatis: Memindai frame secara berkala di latar belakang"
-                          >
-                            Auto-Scan
-                          </button>
-                        </div>
-
-                        {/* Sound Toggle */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSoundEnabled(!soundEnabled)}
-                          className={`h-11 px-3 rounded-2xl border-slate-800 ${
-                            soundEnabled ? 'text-emerald-400 bg-emerald-950/30' : 'text-slate-500 bg-slate-950'
-                          }`}
-                          title={soundEnabled ? 'Audio Aktif (Klik untuk Mematikan)' : 'Audio Senyap (Klik untuk Mengaktifkan)'}
-                        >
-                          {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Running Motivation / Guidance Marquee Ticker */}
-                    <div className="flex items-center justify-between text-[11px] text-slate-300 pt-2 border-t border-slate-800/80 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60">
-                      <div className="flex items-center gap-2 truncate">
-                        <Sparkles className="w-4 h-4 text-amber-400 shrink-0 animate-spin" />
-                        <span className="truncate font-medium">
-                          Awali hari dengan senyum, tertib dan disiplin • Posisikan wajah di tengah bingkai kamera.
-                        </span>
-                      </div>
-                      <span className="hidden sm:inline-block font-mono text-[10px] text-emerald-400 font-bold shrink-0 ml-2">
-                        MTCNN + FaceNet 512-D
-                      </span>
-                    </div>
-                  </div>
-                </Card>
+                  <Button variant="ghost" size="sm" onClick={() => refetchLogs()} title="Segarkan Log" className="h-6 w-6 p-0 text-slate-400 hover:text-white">
+                    <RefreshCw className="w-3 h-3" />
+                  </Button>
+                  {isSuperAdmin ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleConfirmClearLogs}
+                      disabled={isClearing}
+                      title="Reset Seluruh Log Hari Ini"
+                      className="h-6 w-6 p-0 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => promptSuperadminAuth(() => handleConfirmClearLogs())}
+                      title="Otoritas Superadmin"
+                      className="h-6 w-6 p-0 text-slate-500 hover:text-amber-400"
+                    >
+                      <Lock className="w-3 h-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
 
-              {/* RIGHT: REALTIME LIVE SCANNER LOGS (5 COLS) */}
-              <div className="lg:col-span-5 space-y-3">
-                <Card className="shadow-xs border-slate-800 flex flex-col h-[580px] rounded-2xl overflow-hidden bg-slate-950/90 text-white backdrop-blur-xl">
-                  <CardHeader className="p-4 sm:p-5 border-b border-slate-800/80 shrink-0 bg-slate-900/80">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-950 text-indigo-300 flex items-center justify-center font-bold shadow-xs border border-indigo-800/60">
-                          <Activity className="w-4.5 h-4.5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <CardTitle className="text-sm font-bold text-white">Scanner Log Realtime</CardTitle>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800/60 animate-pulse">
-                              Live Sync
+              {/* Scrollable Live Scan List */}
+              <div className="p-2.5 flex-1 min-h-0 overflow-y-auto space-y-2 custom-scrollbar">
+                {displayedLogs && displayedLogs.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-400 space-y-2">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-slate-500 border border-slate-800">
+                      <Camera className="w-5 h-5 stroke-1" />
+                    </div>
+                    <p className="text-xs font-bold text-slate-200">Belum Ada Presensi Hari Ini</p>
+                    <p className="text-[10px] text-slate-400 max-w-xs leading-relaxed">
+                      Arahkan wajah ke depan kamera. Hasil identifikasi dan foto snapshot kamera akan otomatis muncul di sini.
+                    </p>
+                  </div>
+                ) : (
+                  displayedLogs?.map((log, index) => (
+                    <div 
+                      key={log.id} 
+                      className={`p-2.5 rounded-xl transition-all border ${
+                        index === 0 
+                          ? 'bg-gradient-to-br from-indigo-950/60 via-slate-900 to-indigo-950/30 border-indigo-700/60 shadow-sm ring-1 ring-indigo-400/20' 
+                          : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 shadow-xs'
+                      }`}
+                    >
+                      {/* Header: User identity & Scan status */}
+                      <div className="flex items-start justify-between gap-2 pb-1.5 border-b border-slate-800/80">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="text-xs font-extrabold text-white truncate">{log.userName}</h4>
+                            <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                              log.userRole?.includes('SISWA') ? 'bg-blue-950 text-blue-300 border border-blue-800' :
+                              log.userRole?.includes('GURU') ? 'bg-purple-950 text-purple-300 border border-purple-800' :
+                              'bg-amber-950 text-amber-300 border border-amber-800'
+                            }`}>
+                              {log.userRole}
                             </span>
                           </div>
-                          <CardDescription className="text-[11px] text-slate-400">Verifikasi snapshot wajah & pencatatan presensi</CardDescription>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {/* Toggle Filter Hari Ini vs Semua Arsip */}
-                        <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800">
-                          <button
-                            type="button"
-                            onClick={() => setLogFilterMode('TODAY')}
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
-                              logFilterMode === 'TODAY'
-                                ? 'bg-indigo-600 text-white shadow-xs'
-                                : 'text-slate-400 hover:text-white'
-                            }`}
-                          >
-                            Hari Ini
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setLogFilterMode('ALL')}
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
-                              logFilterMode === 'ALL'
-                                ? 'bg-indigo-600 text-white shadow-xs'
-                                : 'text-slate-400 hover:text-white'
-                            }`}
-                          >
-                            Semua Arsip
-                          </button>
+                          <p className="text-[10px] font-mono text-slate-400 mt-0.5 truncate">
+                            ID: {log.identifier}
+                          </p>
                         </div>
 
-                        <Button variant="ghost" size="sm" onClick={() => refetchLogs()} title="Segarkan Log" className="h-7 w-7 p-0 text-slate-400 hover:text-white rounded-lg">
-                          <RefreshCw className="w-3.5 h-3.5" />
-                        </Button>
-                        {isSuperAdmin ? (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={handleConfirmClearLogs} 
-                            disabled={isClearing} 
-                            title="Reset Seluruh Log & Presensi Hari Ini"
-                            className="h-7 w-7 p-0 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-lg"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        ) : (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => promptSuperadminAuth(() => handleConfirmClearLogs())} 
-                            title="Otoritas Superadmin Diperlukan untuk Reset"
-                            className="h-8 w-8 p-0 text-slate-500 hover:text-amber-400 hover:bg-amber-950/30 rounded-lg"
-                          >
-                            <Lock className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="text-right">
+                            <span className={`inline-flex items-center gap-0.5 text-[9px] font-extrabold py-0.5 px-2 rounded-full ${
+                              log.scanType === 'MASUK' 
+                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' 
+                                : log.scanType === 'PULANG' 
+                                  ? 'bg-blue-950 text-blue-300 border border-blue-800' 
+                                  : 'bg-slate-800 text-slate-300'
+                            }`}>
+                              <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                              {log.scanType}
+                            </span>
+                            <p className="text-[10px] font-mono font-bold text-slate-300 mt-0.5 flex items-center justify-end gap-1 flex-wrap">
+                              <span className="text-[9px] font-semibold text-slate-400">{log.dateFormatted || log.date}</span>
+                              <span className="text-slate-600">•</span>
+                              <span className="flex items-center gap-0.5">
+                                <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                {log.timestamp}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Middle: Visual Comparison Box */}
+                      <div className="py-1.5 grid grid-cols-2 gap-2 items-center">
+                        <div className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-800/70 border border-slate-700/60 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-slate-700 overflow-hidden shrink-0 border border-slate-600 flex items-center justify-center">
+                            {log.avatarUrl ? (
+                              <img src={log.avatarUrl} alt={log.userName} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="font-extrabold text-slate-400 text-[10px]">{log.userName.charAt(0)}</span>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Database</span>
+                            <p className="text-[10px] font-semibold text-slate-200 truncate">Foto Profil</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 p-1.5 rounded-lg bg-emerald-950/30 border border-emerald-800/60 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-950 overflow-hidden shrink-0 border border-emerald-700 flex items-center justify-center">
+                            {log.snapshotUrl ? (
+                              <img src={log.snapshotUrl} alt="Snapshot Kamera" className="w-full h-full object-cover" />
+                            ) : (
+                              <Camera className="w-4 h-4 text-emerald-400" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-wider block">Realtime</span>
+                            <p className="text-[10px] font-semibold text-emerald-200 truncate">Hasil Scan</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer: Matching Confidence Bar */}
+                      <div className="pt-1 border-t border-slate-800/80 space-y-0.5">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-slate-400 font-medium flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-indigo-400" />
+                            Kemiripan AI:
+                          </span>
+                          <span className="font-extrabold text-indigo-400 font-mono">
+                            {Math.round(log.confidence * 100)}%
+                          </span>
+                        </div>
+                        <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-emerald-500 to-indigo-600 rounded-full transition-all"
+                            style={{ width: `${Math.min(100, Math.max(0, log.confidence * 100))}%` }}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </CardHeader>
-
-                  {/* Scrollable Live Scan List */}
-                  <CardContent className="p-3.5 flex-1 overflow-y-auto space-y-3">
-                    {displayedLogs && displayedLogs.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2.5">
-                        <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-slate-500 border border-slate-800">
-                          <Camera className="w-7 h-7 stroke-1" />
-                        </div>
-                        <p className="text-sm font-bold text-slate-200">Belum Ada Presensi Hari Ini</p>
-                        <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                          Arahkan wajah siswa atau guru ke depan kamera. Hasil identifikasi dan foto snapshot kamera hari ini akan otomatis muncul di sini.
-                        </p>
-                      </div>
-                    ) : (
-                      displayedLogs?.map((log, index) => (
-                        <div 
-                          key={log.id} 
-                          className={`p-3.5 rounded-2xl transition-all border ${
-                            index === 0 
-                              ? 'bg-gradient-to-br from-indigo-950/60 via-slate-900 to-indigo-950/30 border-indigo-700/60 shadow-md ring-1 ring-indigo-400/20' 
-                              : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 shadow-xs'
-                          }`}
-                        >
-                          {/* Header: User identity & Scan status */}
-                          <div className="flex items-start justify-between gap-2.5 pb-2.5 border-b border-slate-800/80">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <h4 className="text-xs sm:text-sm font-extrabold text-white truncate">{log.userName}</h4>
-                                <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                                  log.userRole?.includes('SISWA') ? 'bg-blue-950 text-blue-300 border border-blue-800' :
-                                  log.userRole?.includes('GURU') ? 'bg-purple-950 text-purple-300 border border-purple-800' :
-                                  'bg-amber-950 text-amber-300 border border-amber-800'
-                                }`}>
-                                  {log.userRole}
-                                </span>
-                              </div>
-                              <p className="text-[11px] font-mono text-slate-400 mt-0.5">
-                                ID: {log.identifier}
-                              </p>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <div className="text-right">
-                                <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold py-0.5 px-2.5 rounded-full ${
-                                  log.scanType === 'MASUK' 
-                                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' 
-                                    : log.scanType === 'PULANG' 
-                                      ? 'bg-blue-950 text-blue-300 border border-blue-800' 
-                                      : 'bg-slate-800 text-slate-300'
-                                }`}>
-                                  <CheckCircle2 className="w-3 h-3 shrink-0" />
-                                  {log.scanType}
-                                </span>
-                                <p className="text-[11px] font-mono font-bold text-slate-300 mt-0.5 flex items-center justify-end gap-1 flex-wrap">
-                                  <span className="text-[10px] font-semibold text-slate-400">{log.dateFormatted || log.date}</span>
-                                  <span className="text-slate-600">•</span>
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3 text-slate-400" />
-                                    {log.timestamp}
-                                  </span>
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Middle: Visual Comparison Box */}
-                          <div className="py-2.5 grid grid-cols-2 gap-3 items-center">
-                            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-800/70 border border-slate-700/60 min-w-0">
-                              <div className="w-11 h-11 rounded-xl bg-slate-700 overflow-hidden shrink-0 border border-slate-600 shadow-xs flex items-center justify-center">
-                                {log.avatarUrl ? (
-                                  <img src={log.avatarUrl} alt={log.userName} className="w-full h-full object-cover" />
-                                ) : (
-                                  <span className="font-extrabold text-slate-400 text-xs">{log.userName.charAt(0)}</span>
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Database</span>
-                                <p className="text-xs font-semibold text-slate-200 truncate">Foto Profil</p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-emerald-950/30 border border-emerald-800/60 min-w-0">
-                              <div className="w-11 h-11 rounded-xl bg-emerald-950 overflow-hidden shrink-0 border border-emerald-700 shadow-xs flex items-center justify-center">
-                                {log.snapshotUrl ? (
-                                  <img src={log.snapshotUrl} alt="Snapshot Kamera" className="w-full h-full object-cover" />
-                                ) : (
-                                  <Camera className="w-5 h-5 text-emerald-400" />
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider block">Realtime</span>
-                                <p className="text-xs font-semibold text-emerald-200 truncate">Hasil Scan</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Footer: Matching Confidence Bar */}
-                          <div className="pt-2 border-t border-slate-800/80 space-y-1">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-slate-400 text-[11px] font-medium flex items-center gap-1">
-                                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                                Akurasi Kemiripan AI:
-                              </span>
-                              <span className="font-extrabold text-indigo-400 font-mono text-[11px]">
-                                {Math.round(log.confidence * 100)}%
-                              </span>
-                            </div>
-
-                            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-gradient-to-r from-emerald-500 to-indigo-600 rounded-full transition-all"
-                                style={{ width: `${Math.min(100, Math.max(0, log.confidence * 100))}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </CardContent>
-                </Card>
+                  ))
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 2: KONFIGURASI STREAM & PARAMETER */}
+        {/* TAB 2: KONFIGURASI STREAM & PARAMETER (FIT 1 SCREEN 1080p) */}
         {activeTab === 'config' && (
-          <div className="space-y-6">
-            {!isSuperAdmin && (
-              <div className="p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm">
-                <div className="flex items-center gap-3">
-                  <Lock className="w-5 h-5 text-amber-400 shrink-0" />
-                  <p>
-                    Konfigurasi stream & parameter kamera hanya dapat diubah dan disimpan oleh <strong>Superadmin</strong>.
-                  </p>
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2 overflow-hidden">
+            {/* KIRI: FORM PENGATURAN KAMERA (7 COLS) */}
+            <div className="lg:col-span-7 flex flex-col h-full overflow-hidden bg-slate-950/95 border border-slate-800 rounded-2xl shadow-xl">
+              {/* Header */}
+              <div className="px-3.5 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-indigo-400" />
+                  <span className="text-xs font-bold text-white">Parameter Kamera & Stream AI</span>
                 </div>
-                {!isAuthenticated && (
-                  <Button size="sm" onClick={() => promptSuperadminAuth()} className="bg-amber-600 hover:bg-amber-700 text-white text-xs shrink-0 font-bold">
+                {!isSuperAdmin && (
+                  <span className="text-[10px] font-semibold text-amber-400 flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Mode Lihat Saja
+                  </span>
+                )}
+              </div>
+
+              {/* Body: Form Controls */}
+              <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5 custom-scrollbar">
+                {/* 1. Preset Sumber Kamera */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                    <Camera className="w-3.5 h-3.5 text-indigo-400" />
+                    Pilihan Sumber Kamera Aktif
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {STREAM_PRESETS.map((preset) => {
+                      const IconComponent = preset.icon
+                      const isSelected = formConfig?.streamSourceType === preset.id || (!formConfig?.streamSourceType && preset.id === 'RTSP')
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          disabled={!isAuthenticated || !canConfigure}
+                          onClick={() => {
+                            if (!isAuthenticated) {
+                              promptSuperadminAuth()
+                              return
+                            }
+                            if (!canConfigure) {
+                              toast.error('Hanya Superadmin yang berwenang mengubah sumber kamera')
+                              return
+                            }
+                            if (preset.id === 'BROWSER_WEBCAM') {
+                              setFormConfig((prev) => prev ? {
+                                ...prev,
+                                streamSourceType: 'BROWSER_WEBCAM',
+                                streamUrl: 'BROWSER_WEBCAM',
+                              } : null)
+                            } else {
+                              stopBrowserWebcam()
+                              setFormConfig((prev) => prev ? {
+                                ...prev,
+                                streamSourceType: preset.id as any,
+                                streamUrl: preset.example,
+                              } : null)
+                            }
+                          }}
+                          className={`flex items-center gap-2 p-2 rounded-xl text-left border transition-all text-xs disabled:opacity-50 cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white border-indigo-400 shadow-md font-bold'
+                              : 'bg-slate-800/80 text-slate-300 border-slate-700/80 hover:bg-slate-800'
+                          }`}
+                        >
+                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                            isSelected ? 'bg-white/20 text-white' : 'bg-slate-700/60 text-slate-300'
+                          }`}>
+                            <IconComponent className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-semibold text-[11px]">{preset.title}</p>
+                            <p className="text-[9px] text-slate-400 truncate">{preset.badge}</p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Dynamic Input sesuai Preset */}
+                {currentConfig?.streamSourceType === 'BROWSER_WEBCAM' && (
+                  <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-indigo-200">Kamera Web Browser Lokal (Client)</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          startBrowserWebcam(selectedDeviceId)
+                          toast.success('Memuat ulang webcam...')
+                        }}
+                        className="h-6 text-[10px] border-indigo-700 bg-indigo-900/60 text-indigo-200 hover:text-white px-2"
+                      >
+                        <RefreshCw className="w-2.5 h-2.5 mr-1" /> Segarkan
+                      </Button>
+                    </div>
+                    {videoDevices.length > 0 ? (
+                      <select
+                        value={selectedDeviceId}
+                        disabled={!isAuthenticated || !canConfigure}
+                        onChange={(e) => {
+                          setSelectedDeviceId(e.target.value)
+                          startBrowserWebcam(e.target.value)
+                        }}
+                        className="w-full h-8 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs px-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      >
+                        {videoDevices.map((dev, idx) => (
+                          <option key={dev.deviceId || idx} value={dev.deviceId}>
+                            {dev.label || `Kamera #${idx + 1}`}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-400">
+                        <span>Menggunakan Kamera Default</span>
+                        <button
+                          type="button"
+                          onClick={() => startBrowserWebcam()}
+                          className="text-indigo-400 hover:text-indigo-300 font-bold"
+                        >
+                          Deteksi Kamera
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {currentConfig?.streamSourceType === 'WEBCAM' && (
+                  <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="streamUrl" className="text-xs font-semibold text-slate-200">
+                        Indeks Port USB Kamera Server
+                      </Label>
+                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
+                        OpenCV USB
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="streamUrl"
+                        type="text"
+                        placeholder="0, 1, 2, atau /dev/video0"
+                        value={currentConfig?.streamUrl || '0'}
+                        disabled={!isAuthenticated || !canConfigure}
+                        onChange={(e) => setFormConfig((prev) => prev ? { ...prev, streamUrl: e.target.value } : null)}
+                        className="font-mono text-xs bg-slate-800 border-slate-700 text-white h-8 flex-1"
+                      />
+                      <div className="inline-flex gap-1">
+                        {['0', '1', '2'].map((idxVal) => (
+                          <button
+                            key={idxVal}
+                            type="button"
+                            disabled={!isAuthenticated || !canConfigure}
+                            onClick={() => setFormConfig((prev) => prev ? { ...prev, streamUrl: idxVal } : null)}
+                            className={`px-2 py-1 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
+                              currentConfig?.streamUrl === idxVal
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                            }`}
+                          >
+                            Port {idxVal}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentConfig?.streamSourceType === 'RTSP' && (
+                  <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="streamUrl" className="text-xs font-semibold text-slate-200">
+                        Target Link RTSP IP Camera
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => setShowStreamUrl(!showStreamUrl)}
+                        className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        {showStreamUrl ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        {showStreamUrl ? 'Sembunyikan' : 'Tampilkan'}
+                      </button>
+                    </div>
+                    <Input
+                      id="streamUrl"
+                      type={showStreamUrl ? 'text' : 'password'}
+                      placeholder="rtsp://user:pass@192.168.1.64:554/ch1"
+                      value={currentConfig?.streamUrl || ''}
+                      disabled={!isAuthenticated || !canConfigure}
+                      onChange={(e) => setFormConfig((prev) => prev ? { ...prev, streamUrl: e.target.value } : null)}
+                      className="font-mono text-xs bg-slate-800 border-slate-700 text-white h-8"
+                    />
+                  </div>
+                )}
+
+                {/* 3. Nama Titik Kamera & Lokasi (2 Kolom) */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="cameraName" className="text-[11px] font-medium text-slate-200">Nama Titik Kamera</Label>
+                    <Input
+                      id="cameraName"
+                      placeholder="Camera Gerbang Utama"
+                      value={currentConfig?.cameraName || ''}
+                      disabled={!isAuthenticated || !canConfigure}
+                      onChange={(e) => setFormConfig((prev) => prev ? { ...prev, cameraName: e.target.value } : null)}
+                      className="bg-slate-800 border-slate-700 text-white text-xs h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="location" className="text-[11px] font-medium text-slate-200">Lokasi / Area</Label>
+                    <Input
+                      id="location"
+                      placeholder="Gerbang Depan Sekolah"
+                      value={currentConfig?.location || ''}
+                      disabled={!isAuthenticated || !canConfigure}
+                      onChange={(e) => setFormConfig((prev) => prev ? { ...prev, location: e.target.value } : null)}
+                      className="bg-slate-800 border-slate-700 text-white text-xs h-8"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. Threshold Range Slider */}
+                <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-[11px] font-semibold text-slate-200">
+                      Batas Sensitivitas Presensi (Threshold)
+                    </Label>
+                    <Badge variant="outline" className="text-[10px] font-bold text-indigo-400 border-indigo-800 bg-indigo-950/50 px-2 py-0.2">
+                      {Math.round((currentConfig?.threshold || 0.70) * 100)}%
+                    </Badge>
+                  </div>
+                  <input
+                    type="range"
+                    min={30}
+                    max={95}
+                    step={1}
+                    disabled={!isSuperAdmin}
+                    value={Math.round((currentConfig?.threshold || 0.70) * 100)}
+                    onChange={(e) => {
+                      const num = Number(e.target.value)
+                      setFormConfig((prev) => prev ? { ...prev, threshold: num / 100 } : null)
+                    }}
+                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 disabled:opacity-50"
+                  />
+                  <div className="flex justify-between text-[9px] text-slate-400 font-mono">
+                    <span>30% (Sensitif)</span>
+                    <span className="text-indigo-400 font-bold">Default: 70%</span>
+                    <span>95% (Ketat)</span>
+                  </div>
+                </div>
+
+                {/* 5. Cooldown Range Slider */}
+                <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-[11px] font-semibold text-slate-200">
+                      Jeda Cooldown Presensi (Anti-Spam)
+                    </Label>
+                    <Badge variant="outline" className="text-[10px] font-bold text-indigo-400 border-indigo-800 bg-indigo-950/50 px-2 py-0.2">
+                      {currentConfig?.cooldownMinutes || 10} Menit
+                    </Badge>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={240}
+                    step={1}
+                    disabled={!isAuthenticated || !canConfigure}
+                    value={currentConfig?.cooldownMinutes || 10}
+                    onChange={(e) => {
+                      const num = Number(e.target.value)
+                      setFormConfig((prev) => prev ? { ...prev, cooldownMinutes: num } : null)
+                    }}
+                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Footer: Save Button */}
+              <div className="p-2.5 bg-slate-900/95 border-t border-slate-800 flex items-center justify-between gap-2 shrink-0">
+                <div>
+                  {saveSuccess ? (
+                    <span className="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Tersimpan!
+                    </span>
+                  ) : !isSuperAdmin ? (
+                    <span className="text-[10px] text-amber-400 font-medium">
+                      Superadmin diperlukan untuk menyimpan perubahan.
+                    </span>
+                  ) : null}
+                </div>
+                {isSuperAdmin ? (
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 font-bold text-xs px-3.5 rounded-lg cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    {isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => promptSuperadminAuth()}
+                    className="h-8 bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-600/40 gap-1.5 font-bold text-xs px-3.5 rounded-lg cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
                     Otorisasi Superadmin
                   </Button>
                 )}
               </div>
-            )}
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Form Settings */}
-              <Card className="md:col-span-2 shadow-sm border-slate-800 bg-slate-900/90 text-white">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-950 text-indigo-400 flex items-center justify-center font-bold">
-                      <Sliders className="w-5 h-5" />
-                    </div>
+            {/* KANAN: STATUS LAYANAN & PENGATURAN TAMPILAN PUBLIK (5 COLS) */}
+            <div className="lg:col-span-5 flex flex-col h-full overflow-hidden bg-slate-950/95 border border-slate-800 rounded-2xl shadow-xl">
+              <div className="px-3.5 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <Server className="w-4 h-4 text-indigo-400" />
+                  <span className="text-xs font-bold text-white">Status Layanan & Tampilan Publik</span>
+                </div>
+                <Badge className={serviceStatus?.isOnline ? 'bg-emerald-950 text-emerald-300 border-emerald-800 text-[10px] py-0' : 'bg-rose-950 text-rose-300 border-rose-800 text-[10px] py-0'}>
+                  {serviceStatus?.isOnline ? 'ONLINE' : 'OFFLINE'}
+                </Badge>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5 custom-scrollbar">
+                {/* Switches Grid */}
+                <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-lg">Parameter Kamera & Stream AI</CardTitle>
-                      <CardDescription className="text-slate-400">Tentukan sumber kamera, URL stream, serta batas sensitivitas pengenalan wajah</CardDescription>
+                      <Label className="text-xs font-medium text-slate-200">Status Aktif Presensi Kamera</Label>
+                      <p className="text-[10px] text-slate-400">Aktifkan pemrosesan stream secara global</p>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  {/* Pilihan Sumber Kamera (Hanya bisa diubah di sini oleh Superadmin) */}
-                  <div className="space-y-2.5 pb-3 border-b border-slate-800">
-                    <Label className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                      <Camera className="w-4 h-4 text-indigo-400" />
-                      Pilihan Sumber Kamera Aktif
-                    </Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      {STREAM_PRESETS.map((preset) => {
-                        const IconComponent = preset.icon
-                        const isSelected = formConfig?.streamSourceType === preset.id || (!formConfig?.streamSourceType && preset.id === 'RTSP')
-                        return (
-                          <button
-                            key={preset.id}
-                            type="button"
-                            disabled={!isAuthenticated || !canConfigure}
-                            onClick={() => {
-                              if (!isAuthenticated) {
-                                promptSuperadminAuth()
-                                return
-                              }
-                              if (!canConfigure) {
-                                toast.error('Hanya Superadmin yang berwenang mengubah sumber kamera')
-                                return
-                              }
-                              if (preset.id === 'BROWSER_WEBCAM') {
-                                setFormConfig((prev) => prev ? {
-                                  ...prev,
-                                  streamSourceType: 'BROWSER_WEBCAM',
-                                  streamUrl: 'BROWSER_WEBCAM',
-                                } : null)
-                              } else {
-                                stopBrowserWebcam()
-                                setFormConfig((prev) => prev ? {
-                                  ...prev,
-                                  streamSourceType: preset.id as any,
-                                  streamUrl: preset.example,
-                                } : null)
-                              }
-                            }}
-                            className={`flex items-center gap-2.5 p-2.5 rounded-xl text-left border transition-all text-xs disabled:opacity-50 ${
-                              isSelected
-                                ? 'bg-indigo-600 text-white border-indigo-400 shadow-md font-bold ring-1 ring-indigo-400'
-                                : 'bg-slate-800/80 text-slate-300 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600'
-                            }`}
-                          >
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                              isSelected ? 'bg-white/20 text-white' : 'bg-slate-700/60 text-slate-300'
-                            }`}>
-                              <IconComponent className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-semibold">{preset.title}</p>
-                              <p className="text-[10px] text-slate-400 truncate mt-0.5">{preset.badge}</p>
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Dynamic Stream Source Setting */}
-                  {currentConfig?.streamSourceType === 'BROWSER_WEBCAM' && (
-                    <div className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Camera className="w-4 h-4 text-indigo-400" />
-                          <span className="text-xs font-bold text-indigo-200">Kamera Web Browser Lokal (Client)</span>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            startBrowserWebcam(selectedDeviceId)
-                            toast.success('Memuat ulang koneksi webcam browser...')
-                          }}
-                          className="h-7 text-xs border-indigo-700 bg-indigo-900/60 text-indigo-200 hover:text-white"
-                        >
-                          <RefreshCw className="w-3 h-3 mr-1" /> Segarkan Kamera
-                        </Button>
-                      </div>
-                      
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-slate-300 font-medium">Pilih Perangkat Webcam Terhubung:</Label>
-                        {videoDevices.length > 0 ? (
-                          <select
-                            value={selectedDeviceId}
-                            disabled={!isAuthenticated || !canConfigure}
-                            onChange={(e) => {
-                              setSelectedDeviceId(e.target.value)
-                              startBrowserWebcam(e.target.value)
-                            }}
-                            className="w-full h-9 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs px-3 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          >
-                            {videoDevices.map((dev, idx) => (
-                              <option key={dev.deviceId || idx} value={dev.deviceId}>
-                                {dev.label || `Kamera Video #${idx + 1} (${dev.deviceId ? dev.deviceId.slice(0, 8) + '...' : 'Default'})`}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs text-slate-400">
-                            <span>Menggunakan Kamera Default Peramban</span>
-                            <button
-                              type="button"
-                              onClick={() => startBrowserWebcam()}
-                              className="text-indigo-400 hover:text-indigo-300 font-semibold text-[11px]"
-                            >
-                              Deteksi Perangkat
-                            </button>
-                          </div>
-                        )}
-                        <p className="text-[11px] text-slate-400 leading-relaxed">
-                          Tangkapan video webcam diproses langsung di browser dengan latensi nol tanpa membutuhkan konfigurasi IP RTSP.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {currentConfig?.streamSourceType === 'WEBCAM' && (
-                    <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="streamUrl" className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                          <Camera className="w-4 h-4 text-emerald-400" />
-                          Indeks Port USB Kamera Server
-                        </Label>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
-                          Direct OpenCV USB
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="streamUrl"
-                          type="text"
-                          placeholder="0, 1, 2, atau /dev/video0"
-                          value={currentConfig?.streamUrl || '0'}
-                          disabled={!isAuthenticated || !canConfigure}
-                          onChange={(e) => setFormConfig((prev) => prev ? { ...prev, streamUrl: e.target.value } : null)}
-                          className="font-mono text-sm bg-slate-800 border-slate-700 text-white flex-1"
-                        />
-                        <div className="inline-flex gap-1">
-                          {['0', '1', '2'].map((idxVal) => (
-                            <button
-                              key={idxVal}
-                              type="button"
-                              disabled={!isAuthenticated || !canConfigure}
-                              onClick={() => setFormConfig((prev) => prev ? { ...prev, streamUrl: idxVal } : null)}
-                              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
-                                currentConfig?.streamUrl === idxVal
-                                  ? 'bg-emerald-600 text-white shadow-xs'
-                                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
-                              }`}
-                            >
-                              Port {idxVal}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">
-                        Masukkan nomor port USB webcam yang dicolokkan ke komputer server (<code className="text-slate-300">0</code> = Kamera Utama / Laptop, <code className="text-slate-300">1</code> = USB Web Cam Eksternal).
-                      </p>
-                    </div>
-                  )}
-
-                  {currentConfig?.streamSourceType === 'RTSP' && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="streamUrl" className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                          <Zap className="w-4 h-4 text-amber-400" />
-                          Target Link Stream IP Camera / RTSP
-                        </Label>
-                        <button
-                          type="button"
-                          onClick={() => setShowStreamUrl(!showStreamUrl)}
-                          className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium"
-                        >
-                          {showStreamUrl ? (
-                            <>
-                              <EyeOff className="w-3.5 h-3.5" /> Sembunyikan Link
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="w-3.5 h-3.5" /> Tampilkan Link Lengkap
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                      <div className="relative">
-                        <Input
-                          id="streamUrl"
-                          type={showStreamUrl ? 'text' : 'password'}
-                          placeholder="rtsp://user:password@192.168.1.64:554/Streaming/Channels/101"
-                          value={currentConfig?.streamUrl || ''}
-                          disabled={!isAuthenticated || !canConfigure}
-                          onChange={(e) => setFormConfig((prev) => prev ? { ...prev, streamUrl: e.target.value } : null)}
-                          className="font-mono text-sm bg-slate-800 border-slate-700 text-white pr-9"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowStreamUrl(!showStreamUrl)}
-                          className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-200"
-                          title={showStreamUrl ? 'Sembunyikan' : 'Tampilkan'}
-                        >
-                          {showStreamUrl ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>
-                          Format tersamar: <span className="font-mono text-slate-300">{maskStreamUrl(currentConfig?.streamUrl)}</span>
-                        </span>
-                        <span className="text-emerald-400">Kredensial dilindungi</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="cameraName" className="text-sm font-medium text-slate-200">Nama Titik Camera</Label>
-                      <Input
-                        id="cameraName"
-                        placeholder="Contoh: Camera Gerbang Utama"
-                        value={currentConfig?.cameraName || ''}
-                        disabled={!isAuthenticated || !canConfigure}
-                        onChange={(e) => setFormConfig((prev) => prev ? { ...prev, cameraName: e.target.value } : null)}
-                        className="bg-slate-800 border-slate-700 text-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="location" className="text-sm font-medium text-slate-200">Lokasi / Area Pemasangan</Label>
-                      <Input
-                        id="location"
-                        placeholder="Contoh: Gerbang Depan Sekolah"
-                        value={currentConfig?.location || ''}
-                        disabled={!isAuthenticated || !canConfigure}
-                        onChange={(e) => setFormConfig((prev) => prev ? { ...prev, location: e.target.value } : null)}
-                        className="bg-slate-800 border-slate-700 text-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Range: Threshold */}
-                  <div className="space-y-3 pt-2">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <Label className="text-sm font-semibold text-slate-200">
-                          Batas Sensitivitas Deteksi & Presensi Wajah (*Detection Threshold*)
-                        </Label>
-                        <p className="text-[11px] text-slate-400">
-                          Batas kemiripan biometrik (*cosine similarity*) minimum untuk mendeteksi wajah dan mencatat presensi secara otomatis.
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="text-xs font-bold text-indigo-400 border-indigo-800 bg-indigo-950/50 px-2.5 py-0.5 shrink-0">
-                        {Math.round((currentConfig?.threshold || 0.70) * 100)}%
-                      </Badge>
-                    </div>
-                    <input
-                      type="range"
-                      min={30}
-                      max={95}
-                      step={1}
-                      disabled={!isSuperAdmin}
-                      value={Math.round((currentConfig?.threshold || 0.70) * 100)}
-                      onChange={(e) => {
-                        const num = Number(e.target.value)
-                        setFormConfig((prev) => prev ? { ...prev, threshold: num / 100 } : null)
-                      }}
-                      className="w-full h-2.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 disabled:opacity-50"
-                    />
-                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                      <span>30% (Sangat Sensitif)</span>
-                      <span className="text-indigo-400 font-bold">Default Optimal: 70%</span>
-                      <span>95% (Sangat Ketat)</span>
-                    </div>
-
-                    {/* Catatan Status Ambang Batas Presensi */}
-                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Batas Verifikasi Presensi: &ge; {Math.round((currentConfig?.threshold || 0.70) * 100)}%
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">
-                        Wajah terdaftar dengan tingkat kemiripan biometrik &ge; <strong className="text-emerald-400">{Math.round((currentConfig?.threshold || 0.70) * 100)}%</strong> akan langsung diverifikasi dan dicatat ke riwayat log serta database absensi resmi sekolah.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Range: Cooldown */}
-                  <div className="space-y-3 pt-2">
-                    <div className="flex justify-between items-center">
-                      <Label className="text-sm font-semibold text-slate-200">
-                        Jeda Cooldown Presensi Antar Scan (*Anti-Spam*)
-                      </Label>
-                      <Badge variant="outline" className="text-xs font-bold text-indigo-400 border-indigo-800 bg-indigo-950/50 px-2.5 py-0.5">
-                        {currentConfig?.cooldownMinutes || 10} Menit
-                      </Badge>
-                    </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={240}
-                      step={1}
+                    <Switch
                       disabled={!isAuthenticated || !canConfigure}
-                      value={currentConfig?.cooldownMinutes || 10}
-                      onChange={(e) => {
-                        const num = Number(e.target.value)
-                        setFormConfig((prev) => prev ? { ...prev, cooldownMinutes: num } : null)
-                      }}
-                      className="w-full h-2.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                      checked={currentConfig?.isActive ?? true}
+                      onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, isActive: checked } : null)}
                     />
                   </div>
 
-                  {/* Switches */}
-                  <div className="pt-3 border-t border-slate-800 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-sm font-medium text-slate-200">Status Aktif Presensi Camera</Label>
-                        <p className="text-xs text-slate-400">Nyalakan atau nonaktifkan pemrosesan stream secara global</p>
-                      </div>
-                      <Switch
-                        disabled={!isAuthenticated || !canConfigure}
-                        checked={currentConfig?.isActive ?? true}
-                        onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, isActive: checked } : null)}
-                      />
+                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/60">
+                    <div>
+                      <Label className="text-xs font-medium text-slate-200">Suara Sambutan (*Voice Greeting*)</Label>
+                      <p className="text-[10px] text-slate-400">Feedback audio saat wajah terdeteksi</p>
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-sm font-medium text-slate-200">Suara Sambutan Otomatis (*Voice Greeting*)</Label>
-                        <p className="text-xs text-slate-400">Memberikan feedback audio saat presensi siswa/guru terdeteksi</p>
-                      </div>
-                      <Switch
-                        disabled={!isAuthenticated || !canConfigure}
-                        checked={currentConfig?.welcomeVoice ?? true}
-                        onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, welcomeVoice: checked } : null)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-sm font-medium text-slate-200 flex items-center gap-1.5">
-                          <Globe className="w-3.5 h-3.5 text-blue-400" />
-                          Tampilkan Live Stream di Halaman Publik (/presensi-view)
-                        </Label>
-                        <p className="text-xs text-slate-400">Mengizinkan tamu/pengguna melihat live stream video di portal presensi umum</p>
-                      </div>
-                      <Switch
-                        disabled={!isAuthenticated || !canConfigure}
-                        checked={currentConfig?.showPublicStream ?? true}
-                        onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, showPublicStream: checked } : null)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-sm font-medium text-slate-200 flex items-center gap-1.5">
-                          <Activity className="w-3.5 h-3.5 text-indigo-400" />
-                          Tampilkan Scanner Log Realtime di Halaman Publik (/presensi-view)
-                        </Label>
-                        <p className="text-xs text-slate-400">Menampilkan feed hasil pencatatan presensi di portal presensi umum</p>
-                      </div>
-                      <Switch
-                        disabled={!isAuthenticated || !canConfigure}
-                        checked={currentConfig?.showPublicLogs ?? true}
-                        onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, showPublicLogs: checked } : null)}
-                      />
-                    </div>
+                    <Switch
+                      disabled={!isAuthenticated || !canConfigure}
+                      checked={currentConfig?.welcomeVoice ?? true}
+                      onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, welcomeVoice: checked } : null)}
+                    />
                   </div>
-                </CardContent>
-                <CardFooter className="bg-slate-950/60 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+
+                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/60">
+                    <div>
+                      <Label className="text-xs font-medium text-slate-200 flex items-center gap-1">
+                        <Globe className="w-3 h-3 text-blue-400" />
+                        Tampilkan Stream di /presensi-view
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Live stream di portal presensi umum</p>
+                    </div>
+                    <Switch
+                      disabled={!isAuthenticated || !canConfigure}
+                      checked={currentConfig?.showPublicStream ?? true}
+                      onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, showPublicStream: checked } : null)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/60">
+                    <div>
+                      <Label className="text-xs font-medium text-slate-200 flex items-center gap-1">
+                        <Activity className="w-3 h-3 text-indigo-400" />
+                        Tampilkan Scanner Log di /presensi-view
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Feed log scan di portal umum</p>
+                    </div>
+                    <Switch
+                      disabled={!isAuthenticated || !canConfigure}
+                      checked={currentConfig?.showPublicLogs ?? true}
+                      onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, showPublicLogs: checked } : null)}
+                    />
+                  </div>
+                </div>
+
+                {/* AI Microservice telemetry card */}
+                <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5 text-xs">
+                  <div className="flex justify-between py-1 border-b border-slate-800 text-[11px]">
+                    <span className="text-slate-400">Status Worker:</span>
+                    <span className="font-semibold text-slate-200">
+                      {serviceStatus?.is_running ? 'STREAMING (ACTIVE)' : 'STANDBY'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-800 text-[11px]">
+                    <span className="text-slate-400">Arsitektur AI:</span>
+                    <span className="font-semibold text-slate-200">FaceNet 512-D + MTCNN</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-800 text-[11px]">
+                    <span className="text-slate-400">Mode Komputasi:</span>
+                    <span className="font-semibold text-emerald-400">CPU Eco Mode</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-800 text-[11px]">
+                    <span className="text-slate-400">Total Scan Hari Ini:</span>
+                    <span className="font-bold text-indigo-400">{serviceStatus?.total_scans_today || 0}</span>
+                  </div>
+                </div>
+
+                {/* Quick Action Button for Dataset Sync */}
+                <div className="p-2.5 rounded-xl bg-indigo-950/30 border border-indigo-900/60 flex items-center justify-between gap-2">
                   <div>
-                    {saveSuccess ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Konfigurasi berhasil disimpan!
-                      </span>
-                    ) : !isSuperAdmin ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-amber-400 font-medium">
-                        <Lock className="w-3.5 h-3.5" />
-                        Mode Lihat Saja: Pengubahan parameter stream hanya dapat dilakukan oleh Superadmin.
-                      </span>
-                    ) : null}
+                    <p className="text-xs font-bold text-indigo-200">Sinkronisasi Database Vektor</p>
+                    <p className="text-[10px] text-indigo-400">Perbarui model 512-D dari foto profil terbaru</p>
                   </div>
-                  {isSuperAdmin ? (
-                    <Button 
-                      onClick={handleSave} 
-                      disabled={isSaving} 
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 font-bold text-xs"
-                    >
-                      <Save className="w-4 h-4" />
-                      {isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={() => promptSuperadminAuth()} 
-                      className="bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-600/40 gap-2 font-bold text-xs"
-                    >
-                      <Lock className="w-3.5 h-3.5" />
-                      Buka Akses Edit (Login Superadmin)
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-
-              {/* Server Info Card */}
-              <div className="space-y-6">
-                <Card className="shadow-sm border-slate-800 bg-slate-900/90 text-white">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <Server className="w-4 h-4 text-indigo-400" />
-                        AI Microservice
-                      </span>
-                      <Badge className={serviceStatus?.isOnline ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-rose-950 text-rose-300 border-rose-800'}>
-                        {serviceStatus?.isOnline ? 'ONLINE' : 'OFFLINE'}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div className="flex justify-between py-1.5 border-b border-slate-800 text-xs">
-                      <span className="text-slate-400">Status Worker:</span>
-                      <span className="font-semibold text-slate-200">
-                        {serviceStatus?.is_running ? 'STREAMING (ACTIVE)' : 'STANDBY'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-800 text-xs">
-                      <span className="text-slate-400">Arsitektur AI:</span>
-                      <span className="font-semibold text-slate-200">FaceNet (512-D) + MTCNN</span>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-800 text-xs">
-                      <span className="text-slate-400">Mode Komputasi:</span>
-                      <span className="font-semibold text-emerald-400">CPU Eco Mode</span>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-800 text-xs">
-                      <span className="text-slate-400">Kendali Daya:</span>
-                      <span className="font-semibold text-indigo-400">Khusus Superadmin</span>
-                    </div>
-                    <div className="flex justify-between py-1.5 text-xs">
-                      <span className="text-slate-400">Total Scan Hari Ini:</span>
-                      <span className="font-bold text-indigo-400">{serviceStatus?.total_scans_today || 0}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-sm border-indigo-900/60 bg-indigo-950/30 text-indigo-200">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-indigo-300">
-                      <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                      Otoritas & Keamanan Akses
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-xs leading-relaxed space-y-2 text-indigo-300/90">
-                    <p>
-                      • Tautan halaman <code className="bg-indigo-900/40 px-1 py-0.5 rounded font-mono">/facenetai</code> ini bersifat <strong>direct link</strong> (hanya yang mengetahui tautan yang dapat membukanya).
-                    </p>
-                    <p>
-                      • Otoritas untuk <strong>menyalakan atau mematikan AI microservice</strong> secara ketat dibatasi untuk akun <strong>SUPERADMIN</strong> dan <strong>ADMIN_IT</strong> setelah melakukan login.
-                    </p>
-                  </CardContent>
-                </Card>
+                  <Button
+                    size="sm"
+                    onClick={handleSyncDatabase}
+                    className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold shrink-0 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" /> Sync
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -2526,120 +2334,109 @@ export default function FaceNetAiStandalonePage() {
 
         {/* TAB 3: DATASET PROFIL PENGGUNA */}
         {activeTab === 'dataset' && (
-          <div className="space-y-6">
-            <Card className="shadow-sm border-slate-800 bg-slate-900/90 text-white">
-              <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Users className="w-5 h-5 text-indigo-400" />
-                      Basis Data Deteksi Wajah (Foto Profil Pengguna)
-                    </CardTitle>
-                    {!isSuperAdmin && (
-                      <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-800/80 bg-amber-950/40">
-                        Mode Lihat Saja
-                      </Badge>
+          <div className="flex-1 min-h-0 flex flex-col bg-slate-950/95 border border-slate-800 rounded-2xl shadow-xl overflow-hidden p-3 gap-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-indigo-400" />
+                <span className="text-xs font-bold text-white">Basis Data Deteksi Wajah (Foto Profil Pengguna)</span>
+                {!isSuperAdmin && (
+                  <Badge variant="outline" className="text-[9px] text-amber-400 border-amber-800/80 bg-amber-950/40">
+                    Lihat Saja
+                  </Badge>
+                )}
+              </div>
+
+              {isSuperAdmin ? (
+                <Button onClick={handleSyncDatabase} className="h-7 bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 font-bold text-xs px-2.5 rounded-lg cursor-pointer">
+                  <RefreshCw className="w-3 h-3" />
+                  Sinkronkan Vektor
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => promptSuperadminAuth()} 
+                  className="h-7 bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-600/40 gap-1 font-bold text-xs px-2.5 rounded-lg cursor-pointer"
+                >
+                  <Lock className="w-3 h-3" />
+                  Otorisasi
+                </Button>
+              )}
+            </div>
+
+            {syncSuccessMsg && (
+              <div className="p-2.5 rounded-xl bg-emerald-950/60 text-emerald-300 border border-emerald-800 flex items-center gap-2 text-xs shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{syncSuccessMsg}</span>
+              </div>
+            )}
+
+            {/* Filter Dataset */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+              <div className="relative flex-1">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Input
+                  placeholder="Cari nama, NIS, NIP, kelas..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 bg-slate-800 border-slate-700 text-white text-xs h-7 rounded-lg"
+                />
+              </div>
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0">
+                {(['ALL', 'SISWA', 'GURU', 'PEGAWAI'] as const).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRoleFilter(r)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer ${
+                      roleFilter === r
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                    }`}
+                  >
+                    {r === 'ALL' ? 'Semua' : r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Users Grid */}
+            <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 p-1 custom-scrollbar">
+              {filteredUsers.slice(0, 120).map((user) => (
+                <div key={user.userId} className="p-2 rounded-xl bg-slate-800/80 border border-slate-700/80 text-center space-y-1">
+                  <div className="w-10 h-10 rounded-xl mx-auto overflow-hidden bg-slate-700 flex items-center justify-center">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-400">{user.name.charAt(0)}</span>
                     )}
                   </div>
-                  <CardDescription className="text-slate-400">
-                    Sistem AI mencocokkan wajah kamera secara langsung dengan foto profil siswa, guru, dan karyawan.
-                  </CardDescription>
+                  <p className="text-[11px] font-bold text-slate-200 truncate">{user.name}</p>
+                  <p className="text-[9px] text-slate-400 font-mono truncate">{user.identifier}</p>
                 </div>
-                {isSuperAdmin ? (
-                  <Button onClick={handleSyncDatabase} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 self-start shrink-0 font-bold text-xs">
-                    <RefreshCw className="w-4 h-4" />
-                    Sinkronkan Vektor Wajah
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={() => promptSuperadminAuth()} 
-                    className="bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-600/40 gap-1.5 self-start shrink-0 font-bold text-xs"
-                  >
-                    <Lock className="w-3.5 h-3.5" />
-                    Buka Akses Sinkronisasi
-                  </Button>
-                )}
-              </CardHeader>
-                <CardContent className="space-y-6">
-                  {syncSuccessMsg && (
-                    <div className="p-4 rounded-xl bg-emerald-950/60 text-emerald-300 border border-emerald-800 flex items-center gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                      <span className="text-sm font-medium">{syncSuccessMsg}</span>
-                    </div>
-                  )}
-
-                  {/* Filter Dataset */}
-                  <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-                    <div className="relative flex-1">
-                      <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                      <Input
-                        placeholder="Cari berdasarkan nama, NIS, NIP, kelas..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 bg-slate-800 border-slate-700 text-white text-xs sm:text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-                      {(['ALL', 'SISWA', 'GURU', 'PEGAWAI'] as const).map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setRoleFilter(r)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                            roleFilter === r
-                              ? 'bg-indigo-600 text-white shadow-xs'
-                              : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
-                          }`}
-                        >
-                          {r === 'ALL' ? 'Semua Peran' : r}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Users Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[500px] overflow-y-auto">
-                    {filteredUsers.slice(0, 120).map((user) => (
-                      <div key={user.userId} className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-center space-y-1.5">
-                        <div className="w-12 h-12 rounded-xl mx-auto overflow-hidden bg-slate-700 flex items-center justify-center">
-                          {user.avatarUrl ? (
-                            <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-xs font-bold text-slate-400">{user.name.charAt(0)}</span>
-                          )}
-                        </div>
-                        <p className="text-xs font-bold text-slate-200 truncate">{user.name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono truncate">{user.identifier}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              ))}
+            </div>
           </div>
         )}
 
         {/* TAB 4: RIWAYAT LOG LENGKAP */}
         {activeTab === 'logs' && (
-          <Card className="shadow-sm border-slate-800 bg-slate-900/90 text-white">
-            <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex-1 min-h-0 flex flex-col bg-slate-950/95 border border-slate-800 rounded-2xl shadow-xl overflow-hidden p-3 gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
               <div>
-                <CardTitle className="text-lg">Riwayat Log Scan Wajah</CardTitle>
-                <CardDescription className="text-slate-400">
+                <span className="text-xs font-bold text-white">Riwayat Log Scan Wajah</span>
+                <p className="text-[10px] text-slate-400">
                   {logFilterMode === 'TODAY' 
-                    ? `Menampilkan pencatatan presensi biometrik hari ini (${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })})`
-                    : 'Menampilkan seluruh arsip pencatatan presensi biometrik'}
-                </CardDescription>
+                    ? `Pencatatan presensi hari ini (${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })})`
+                    : 'Seluruh arsip pencatatan presensi biometrik'}
+                </p>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Toggle Filter Hari Ini vs Semua */}
-                <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
                   <button
                     type="button"
                     onClick={() => setLogFilterMode('TODAY')}
-                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-                      logFilterMode === 'TODAY'
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-white'
+                    className={`px-2 py-0.5 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                      logFilterMode === 'TODAY' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     Hari Ini
@@ -2647,149 +2444,140 @@ export default function FaceNetAiStandalonePage() {
                   <button
                     type="button"
                     onClick={() => setLogFilterMode('ALL')}
-                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-                      logFilterMode === 'ALL'
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-white'
+                    className={`px-2 py-0.5 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                      logFilterMode === 'ALL' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Semua Arsip
+                    Semua
                   </button>
                 </div>
 
-                <Button variant="outline" size="sm" onClick={() => refetchLogs()} className="border-slate-700 text-slate-300">
-                  <RefreshCw className="w-3.5 h-3.5 mr-1" /> Segarkan
+                <Button variant="outline" size="sm" onClick={() => refetchLogs()} className="h-6 text-[10px] border-slate-700 text-slate-300 px-2">
+                  <RefreshCw className="w-2.5 h-2.5 mr-1" /> Segarkan
                 </Button>
                 {isSuperAdmin ? (
-                  <Button variant="destructive" size="sm" onClick={handleConfirmClearLogs}>
-                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Reset Semua
+                  <Button variant="destructive" size="sm" onClick={handleConfirmClearLogs} className="h-6 text-[10px] px-2">
+                    <Trash2 className="w-2.5 h-2.5 mr-1" /> Reset
                   </Button>
                 ) : (
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={() => promptSuperadminAuth()} 
-                    className="border-amber-700/60 bg-amber-950/20 text-amber-300 hover:bg-amber-900/30 text-xs"
+                    className="h-6 text-[10px] border-amber-700/60 bg-amber-950/20 text-amber-300 px-2"
                   >
-                    <Lock className="w-3 h-3 mr-1" /> Otoritas Reset
+                    <Lock className="w-2.5 h-2.5 mr-1" /> Otoritas
                   </Button>
                 )}
               </div>
-            </CardHeader>
-            <CardContent>
-              {/* Search Bar Log */}
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <Input
-                    type="text"
-                    placeholder="Cari berdasarkan nama, NIS/NIP, atau peran..."
-                    value={logSearchQuery}
-                    onChange={(e) => setLogSearchQuery(e.target.value)}
-                    className="pl-9 bg-slate-950/80 border-slate-800 text-xs text-white placeholder:text-slate-500 rounded-xl"
-                  />
-                </div>
-              </div>
+            </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="border-b border-slate-800 text-slate-400 uppercase font-mono">
+            {/* Search Bar Log */}
+            <div className="relative shrink-0">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <Input
+                type="text"
+                placeholder="Cari berdasarkan nama, NIS/NIP, atau peran..."
+                value={logSearchQuery}
+                onChange={(e) => setLogSearchQuery(e.target.value)}
+                className="pl-8 bg-slate-900 border-slate-800 text-xs text-white placeholder:text-slate-500 h-7 rounded-lg"
+              />
+            </div>
+
+            {/* Table */}
+            <div className="flex-1 min-h-0 overflow-auto border border-slate-800 rounded-xl custom-scrollbar">
+              <table className="w-full text-xs text-left">
+                <thead className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono sticky top-0 z-10">
+                  <tr>
+                    <th className="py-2 px-3">Tanggal & Waktu</th>
+                    <th className="py-2 px-3">Nama</th>
+                    <th className="py-2 px-3">Peran / ID</th>
+                    <th className="py-2 px-3">Status</th>
+                    <th className="py-2 px-3">Kemiripan</th>
+                    <th className="py-2 px-3">Titik Kamera</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {displayedLogs && displayedLogs.length === 0 ? (
                     <tr>
-                      <th className="py-2.5 px-3">Tanggal & Waktu</th>
-                      <th className="py-2.5 px-3">Nama</th>
-                      <th className="py-2.5 px-3">Peran / ID</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3">Kemiripan</th>
-                      <th className="py-2.5 px-3">Titik Kamera</th>
+                      <td colSpan={6} className="py-6 text-center text-slate-500">
+                        {logFilterMode === 'TODAY' 
+                          ? 'Belum ada data scan presensi wajah untuk hari ini.' 
+                          : 'Tidak ada data log yang sesuai pencarian.'}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {displayedLogs && displayedLogs.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="py-8 text-center text-slate-500">
-                          {logFilterMode === 'TODAY' 
-                            ? 'Belum ada data scan presensi wajah untuk hari ini.' 
-                            : 'Tidak ada data log yang sesuai pencarian.'}
+                  ) : (
+                    displayedLogs?.map((log) => (
+                      <tr key={log.id} className="hover:bg-slate-800/40">
+                        <td className="py-1.5 px-3 font-mono text-slate-300">
+                          <div className="flex flex-col">
+                            <span className="font-sans font-semibold text-slate-300 text-[10px]">{log.dateFormatted || log.date}</span>
+                            <span className="font-bold text-slate-400 text-[10px]">{log.timestamp}</span>
+                          </div>
                         </td>
+                        <td className="py-1.5 px-3 font-semibold text-white">{log.userName}</td>
+                        <td className="py-1.5 px-3 text-slate-400">{log.userRole} ({log.identifier})</td>
+                        <td className="py-1.5 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                            log.scanType === 'MASUK' ? 'bg-emerald-950 text-emerald-300' : 'bg-blue-950 text-blue-300'
+                          }`}>
+                            {log.scanType}
+                          </span>
+                        </td>
+                        <td className="py-1.5 px-3 font-mono text-indigo-400">{Math.round(log.confidence * 100)}%</td>
+                        <td className="py-1.5 px-3 text-slate-400">{log.cameraName}</td>
                       </tr>
-                    ) : (
-                      displayedLogs?.map((log) => (
-                        <tr key={log.id} className="hover:bg-slate-800/40">
-                          <td className="py-2 px-3 font-mono text-slate-300">
-                            <div className="flex flex-col">
-                              <span className="font-sans font-semibold text-slate-300 text-[11px]">{log.dateFormatted || log.date}</span>
-                              <span className="font-bold text-slate-400">{log.timestamp}</span>
-                            </div>
-                          </td>
-                          <td className="py-2 px-3 font-semibold text-white">{log.userName}</td>
-                          <td className="py-2 px-3 text-slate-400">{log.userRole} ({log.identifier})</td>
-                          <td className="py-2 px-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              log.scanType === 'MASUK' ? 'bg-emerald-950 text-emerald-300' : 'bg-blue-950 text-blue-300'
-                            }`}>
-                              {log.scanType}
-                            </span>
-                          </td>
-                          <td className="py-2 px-3 font-mono text-indigo-400">{Math.round(log.confidence * 100)}%</td>
-                          <td className="py-2 px-3 text-slate-400">{log.cameraName}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
-        {/* FOOTER INFO: ARSITEKTUR ALGORITMA AI PRESENSI AKTIF (RINGKAS & COMPACT) */}
-        <div className="pt-2 border-t border-slate-800/60 text-slate-400">
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-2.5 sm:p-3 backdrop-blur-xs flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="flex h-2 w-2 relative shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-[11px] font-bold text-slate-200 truncate">
-                Bio-Fusion AI Engine:
-              </span>
-              <span className="text-[11px] text-slate-400 truncate hidden sm:inline">
-                8 Algoritma Aktif
-              </span>
-            </div>
+        {/* BOTTOM TICKER: ARSITEKTUR ALGORITMA AI (Ultra-Compact Single Line ~28px) */}
+        <div className="shrink-0 px-3 py-1 bg-slate-950/90 border border-slate-800/80 rounded-xl text-[10px] flex items-center justify-between text-slate-400 gap-2 backdrop-blur-xs">
+          <div className="flex items-center gap-1.5 min-w-0 shrink-0">
+            <span className="flex h-1.5 w-1.5 relative shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+            </span>
+            <span className="font-bold text-slate-200 truncate">
+              Bio-Fusion AI:
+            </span>
+            <span className="text-slate-400 truncate hidden sm:inline">
+              8 Algoritma
+            </span>
+          </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-indigo-300 font-semibold" title="Multi-Task Cascaded CNN 5-Point Landmark Detector">
-                MTCNN 5-Point
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-indigo-300 font-semibold font-mono" title="Inception-ResNet-v1 512-Dimensional Deep Vector">
-                Inception-ResNet-v1 (512-D)
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-indigo-300 font-semibold" title="VGGFace2 Pretrained Biometric Feature Weights">
-                VGGFace2
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-purple-800/50 text-purple-300 font-semibold" title="Dual-Stream Periocular (Solusi Siswa Kembar / Wajah Mirip)">
-                Periocular Stream
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-teal-800/50 text-teal-300 font-semibold" title="OpenCV CLAHE Adaptive Contrast & Anti-Glare Kacamata">
-                CLAHE Anti-Glare
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-teal-800/50 text-teal-300 font-semibold" title="5-Point Similarity Affine Face Alignment">
-                Affine 5-Point
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-cyan-800/50 text-cyan-300 font-semibold font-mono" title="BLAS Matrix Vectorized Dot-Product (<0.05ms)">
-                BLAS Vector (&lt; 0.05ms)
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-cyan-800/50 text-cyan-300 font-semibold" title="YOLO Multi-Angle Vision Tracker">
-                YOLO Tracker
-              </span>
-            </div>
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar text-[9px]">
+            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-indigo-300 font-semibold" title="Multi-Task Cascaded CNN 5-Point Landmark Detector">
+              MTCNN 5-Point
+            </span>
+            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-indigo-300 font-semibold font-mono" title="Inception-ResNet-v1 512-Dimensional Deep Vector">
+              Inception-ResNet-v1 (512-D)
+            </span>
+            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-indigo-300 font-semibold" title="VGGFace2 Pretrained Biometric Feature Weights">
+              VGGFace2
+            </span>
+            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-purple-800/50 text-purple-300 font-semibold" title="Dual-Stream Periocular (Solusi Siswa Kembar / Wajah Mirip)">
+              Periocular
+            </span>
+            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-teal-800/50 text-teal-300 font-semibold" title="OpenCV CLAHE Adaptive Contrast & Anti-Glare Kacamata">
+              CLAHE Anti-Glare
+            </span>
+            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-teal-800/50 text-teal-300 font-semibold" title="5-Point Similarity Affine Face Alignment">
+              Affine 5-Point
+            </span>
+            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-cyan-800/50 text-cyan-300 font-semibold font-mono" title="BLAS Matrix Vectorized Dot-Product (<0.05ms)">
+              BLAS (&lt;0.05ms)
+            </span>
+            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-cyan-800/50 text-cyan-300 font-semibold" title="YOLO Multi-Angle Vision Tracker">
+              YOLO Tracker
+            </span>
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <AppFooter />
     </div>
   )
 }

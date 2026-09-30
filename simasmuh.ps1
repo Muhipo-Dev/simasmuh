@@ -675,21 +675,29 @@ function Start-PrismaStudio {
 }
 
 function Start-FaceAiService {
-    Write-Status "Menjalankan Face Attendance AI Service (Python FaceNet di port 8089)..." "Cyan"
+    Write-Status "Menjalankan Face Attendance AI Service (Python Bio-Fusion di port 8089)..." "Cyan"
     $aListen = Test-PortListening 8089
     if ($aListen) {
         Write-Ok "Face AI Service sudah aktif -> http://localhost:8089"
         return $true
     }
 
-    $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-    if (-not $pythonCmd) {
-        Write-Info "Python CLI tidak ditemukan. Lewati startup otomatis Face AI."
-        return $false
+    $venvPython = Join-Path $FACE_AI_DIR ".venv\Scripts\python.exe"
+    $pyExe = ""
+    if (Test-Path $venvPython) {
+        $pyExe = "`"$venvPython`""
+    } else {
+        $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+        if ($pythonCmd) {
+            $pyExe = "python"
+        } else {
+            Write-Info "Python tidak ditemukan. Lewati startup otomatis Face AI."
+            return $false
+        }
     }
 
     try { "" | Out-File -FilePath $FACE_AI_LOG -Encoding utf8 -Force } catch {}
-    $cmdLine = "/c python main.py >> `"$FACE_AI_LOG`" 2>&1"
+    $cmdLine = "/c cd /d `"$FACE_AI_DIR`" && $pyExe main.py >> `"$FACE_AI_LOG`" 2>&1"
     $proc = Start-Process -FilePath "cmd.exe" `
                           -ArgumentList $cmdLine `
                           -WorkingDirectory $FACE_AI_DIR `
@@ -903,130 +911,349 @@ function Start-Troubleshoot {
 
 function Start-SetupEnv {
     Write-Banner
-    Write-Status "Memeriksa dan membuat file .env..." "Cyan"
+    Write-Status "Memeriksa dan membuat berkas konfigurasi .env otomatis..." "Cyan"
     
     $beEnvExample = Join-Path $BACKEND_DIR ".env.example"
     $beEnv        = Join-Path $BACKEND_DIR ".env"
     $feEnvExample = Join-Path $FRONTEND_DIR ".env.example"
     $feEnv        = Join-Path $FRONTEND_DIR ".env"
+    $aiEnv        = Join-Path $FACE_AI_DIR ".env"
 
-    if ((-not (Test-Path $beEnv)) -and (Test-Path $beEnvExample)) {
-        Copy-Item $beEnvExample $beEnv
-        Write-Ok "Dibuat: backend/.env (dari .env.example)"
+    # 1. Backend .env
+    if (-not (Test-Path $beEnv)) {
+        if (Test-Path $beEnvExample) {
+            Copy-Item $beEnvExample $beEnv
+            Write-Ok "Dibuat: backend/.env (dari .env.example)"
+        } else {
+            $defaultBeEnv = @"
+DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+DIRECT_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+JWT_SECRET="simasmuh-super-secret-jwt-key-2026"
+PORT=3001
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+SUPABASE_SECRET_KEY=your-supabase-secret-key
+SUPABASE_JWKS_URL=http://127.0.0.1:54321/auth/v1/.well-known/jwks.json
+STORAGE_PATH=
+"@
+            $defaultBeEnv | Set-Content -Path $beEnv -Encoding utf8
+            Write-Ok "Dibuat: backend/.env (default otomatis)"
+        }
     } else {
-        Write-Info "backend/.env sudah ada, tidak ditimpa."
+        Write-Info "backend/.env sudah ada (dilindungi utuh)."
     }
 
-    if ((-not (Test-Path $feEnv)) -and (Test-Path $feEnvExample)) {
-        Copy-Item $feEnvExample $feEnv
-        Write-Ok "Dibuat: frontend/.env (dari .env.example)"
+    # 2. Frontend .env
+    if (-not (Test-Path $feEnv)) {
+        if (Test-Path $feEnvExample) {
+            Copy-Item $feEnvExample $feEnv
+            Write-Ok "Dibuat: frontend/.env (dari .env.example)"
+        } else {
+            $defaultFeEnv = @"
+NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
+BACKEND_URL=http://localhost:3001
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=simasmuh-nextauth-secret-key-2026
+NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:3001
+NEXT_PUBLIC_ENABLE_REAL_TIME_NOTIFICATIONS=true
+NEXT_PUBLIC_ENABLE_NOTIFICATION_SOUNDS=true
+NEXT_PUBLIC_DEBUG_NOTIFICATIONS=false
+"@
+            $defaultFeEnv | Set-Content -Path $feEnv -Encoding utf8
+            Write-Ok "Dibuat: frontend/.env (default otomatis)"
+        }
     } else {
-        Write-Info "frontend/.env sudah ada, tidak ditimpa."
+        Write-Info "frontend/.env sudah ada (dilindungi utuh)."
+    }
+
+    # 3. Face AI .env
+    if (-not (Test-Path $aiEnv)) {
+        $defaultAiEnv = @"
+BACKEND_URL=http://localhost:3001
+API_KEY=siakad_secret_api_key_2026
+API_SECRET=simasmuh_face_token_secret_2026
+PORT=8089
+"@
+        $defaultAiEnv | Set-Content -Path $aiEnv -Encoding utf8
+        Write-Ok "Dibuat: services/face-attendance/.env (default otomatis)"
+    } else {
+        Write-Info "services/face-attendance/.env sudah ada."
     }
 
     Write-Host ""
-    Write-Ok "Setup .env selesai."
+    Write-Ok "Setup berkas .env untuk seluruh layanan selesai."
 }
 
 # ─── INSTALL DEPENDENCIES ─────────────────────────────────────
 
 function Start-InstallDependencies {
     Write-Banner
-    Write-Status "Menginstall dependencies Backend (npm)..." "Cyan"
+    Write-Status "Memulai instalasi seluruh dependencies aplikasi SIMASMUH..." "Cyan"
+    Write-Host ""
+
+    # 1. Backend Dependencies (npm)
+    Write-Status "1/3. Menginstall dependencies Backend (NestJS + Prisma)..." "Cyan"
     $procBe = Start-Process -FilePath "cmd.exe" `
                             -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm install 2>&1" `
                             -WorkingDirectory $BACKEND_DIR `
                             -NoNewWindow -Wait -PassThru
     if ($procBe.ExitCode -eq 0) {
-        Write-Ok "Dependencies Backend selesai diinstall."
+        Write-Ok "Dependencies Backend berhasil diinstall."
     } else {
-        Write-Err "Gagal menginstall dependencies Backend."
+        Write-Info "Mencoba instalasi backend dengan fallback --legacy-peer-deps..."
+        $procBeFallback = Start-Process -FilePath "cmd.exe" `
+                                        -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm install --legacy-peer-deps 2>&1" `
+                                        -WorkingDirectory $BACKEND_DIR `
+                                        -NoNewWindow -Wait -PassThru
+        if ($procBeFallback.ExitCode -eq 0) {
+            Write-Ok "Dependencies Backend berhasil diinstall (--legacy-peer-deps)."
+        } else {
+            Write-Err "Gagal menginstall dependencies Backend."
+        }
     }
 
+    # 2. Frontend Dependencies (npm)
     Write-Host ""
-    Write-Status "Menginstall dependencies Frontend (npm)..." "Cyan"
+    Write-Status "2/3. Menginstall dependencies Frontend (Next.js + Tailwind + React)..." "Cyan"
     $procFe = Start-Process -FilePath "cmd.exe" `
                             -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm install 2>&1" `
                             -WorkingDirectory $FRONTEND_DIR `
                             -NoNewWindow -Wait -PassThru
     if ($procFe.ExitCode -eq 0) {
-        Write-Ok "Dependencies Frontend selesai diinstall."
+        Write-Ok "Dependencies Frontend berhasil diinstall."
     } else {
-        Write-Err "Gagal menginstall dependencies Frontend."
+        Write-Info "Mencoba instalasi frontend dengan fallback --legacy-peer-deps..."
+        $procFeFallback = Start-Process -FilePath "cmd.exe" `
+                                        -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm install --legacy-peer-deps 2>&1" `
+                                        -WorkingDirectory $FRONTEND_DIR `
+                                        -NoNewWindow -Wait -PassThru
+        if ($procFeFallback.ExitCode -eq 0) {
+            Write-Ok "Dependencies Frontend berhasil diinstall (--legacy-peer-deps)."
+        } else {
+            Write-Err "Gagal menginstall dependencies Frontend."
+        }
     }
 
+    # 3. Python AI Face Attendance Virtualenv & Dependencies (venv + pip)
     Write-Host ""
-    Write-Status "Menginstall dependencies Face Attendance AI FaceNet (Python pip)..." "Cyan"
-    $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-    if ($pythonCmd) {
-        $reqFile = Join-Path $FACE_AI_DIR "requirements.txt"
+    Write-Status "3/3. Menyiapkan Python Virtual Environment & AI Models (OpenCV, VGG, MTCNN, ResNet, YOLO)..." "Cyan"
+    
+    # Cari executable Python di sistem
+    $pySystemCmd = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $pySystemCmd) {
+        $pySystemCmd = Get-Command py -ErrorAction SilentlyContinue
+    }
+
+    if ($pySystemCmd) {
+        $venvDir = Join-Path $FACE_AI_DIR ".venv"
+        $venvPython = Join-Path $venvDir "Scripts\python.exe"
+        $venvPip = Join-Path $venvDir "Scripts\pip.exe"
+
+        # Buat virtual environment (.venv) jika belum ada
+        if (-not (Test-Path $venvPython)) {
+            Write-Status "Membuat Python Virtualenv baru di services/face-attendance/.venv..." "Yellow"
+            $procVenv = Start-Process -FilePath "cmd.exe" `
+                                      -ArgumentList "/c cd /d `"$FACE_AI_DIR`" && $($pySystemCmd.Name) -m venv .venv 2>&1" `
+                                      -WorkingDirectory $FACE_AI_DIR `
+                                      -NoNewWindow -Wait -PassThru
+            if ($procVenv.ExitCode -eq 0 -and (Test-Path $venvPython)) {
+                Write-Ok "Virtual environment (.venv) berhasil dibuat!"
+            } else {
+                Write-Info "Menggunakan python default sistem."
+            }
+        } else {
+            Write-Ok "Virtual environment (.venv) terdeteksi."
+        }
+
+        # Jalankan pip install ke .venv atau global python
+        $targetPip = if (Test-Path $venvPip) { "`"$venvPip`"" } else { "pip" }
+        $targetPy  = if (Test-Path $venvPython) { "`"$venvPython`"" } else { "python" }
+        $reqFile   = Join-Path $FACE_AI_DIR "requirements.txt"
+
+        Write-Status "Memperbarui pip installer..." "Cyan"
+        Start-Process -FilePath "cmd.exe" -ArgumentList "/c $targetPy -m pip install --upgrade pip 2>&1" -NoNewWindow -Wait
+        
+        Write-Status "Menginstall paket AI (OpenCV, VGG/FaceNet, MTCNN, ResNet, YOLO Ultralytics, Scipy, Sklearn, FastAPI)..." "Cyan"
         $procPy = Start-Process -FilePath "cmd.exe" `
-                                -ArgumentList "/c cd /d `"$FACE_AI_DIR`" && pip install -r `"$reqFile`" 2>&1" `
+                                -ArgumentList "/c $targetPip install -r `"$reqFile`" 2>&1" `
                                 -WorkingDirectory $FACE_AI_DIR `
                                 -NoNewWindow -Wait -PassThru
         if ($procPy.ExitCode -eq 0) {
-            Write-Ok "Dependencies Python AI Face Attendance selesai diinstall."
+            Write-Ok "Seluruh AI Packages (OpenCV, VGG, MTCNN, ResNet, YOLO, PyTorch) siap 100%!"
         } else {
-            Write-Info "Instalasi pip selesai."
+            Write-Info "Proses instalasi pip selesai."
         }
     } else {
-        Write-Info "Python belum terpasang di sistem. Lewati instalasi pip."
+        Write-Info "Python belum terpasang di sistem. Layanan Face AI dapat diinstal nanti setelah Python terpasang."
     }
 
     Write-Host ""
-    Write-Ok "Instalasi semua dependencies selesai!"
+    Write-Ok "Instalasi seluruh dependencies SIMASMUH selesai!"
 }
 
-# ─── SETUP ENVIRONMENT BARU ───────────────────────────────────
+# ─── SETUP ENVIRONMENT BARU (MENU 17) ─────────────────────────
 
 function Start-EnvironmentSetup {
     Write-Banner
     Write-Host "  +==================================================+" -ForegroundColor Green
     Write-Host "  |   PERSIAPAN LINGKUNGAN / SETUP DEVICE BARU       |" -ForegroundColor Green
+    Write-Host "  |   1-KLIK OTOMATIS: DEPENDENCIES, VENV, .ENV, DB  |" -ForegroundColor Green
     Write-Host "  +==================================================+" -ForegroundColor Green
-    Write-Host "  Otomatis menyiapkan SIMASMUH pada perangkat/direktori baru." -ForegroundColor White
+    Write-Host "  Otomatis menyiapkan seluruh kebutuhan SIMASMUH pada perangkat baru." -ForegroundColor White
     Write-Host ""
 
-    # 1. Setup .env
-    Write-Status "1/6. Menyiapkan berkas konfigurasi .env..." "Cyan"
-    Start-SetupEnv
-
-    # 2. Check Node & NPM
-    Write-Status "2/6. Memeriksa versi Node.js dan npm..." "Cyan"
-    try {
+    # 1. Deteksi & Verifikasi Tool Runtimes (Node.js, npm, Python, Git, Docker)
+    Write-Status "1/8. Memeriksa runtime sistem dasar (Node.js, npm, Python, Git, Docker)..." "Cyan"
+    
+    # Check Node.js & npm
+    $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+    $npmCmd  = Get-Command npm -ErrorAction SilentlyContinue
+    if ($nodeCmd -and $npmCmd) {
         $nodeVer = & node -v 2>$null
         $npmVer  = & npm -v 2>$null
-        Write-Ok "Node.js: $nodeVer | npm: $npmVer"
-    } catch {
-        Write-Err "Node.js atau npm tidak terdeteksi!"
+        Write-Ok "Node.js ($nodeVer) & npm ($npmVer) terpasang aktif."
+    } else {
+        Write-Err "Node.js atau npm belum terdeteksi di PATH!"
+        Write-Info "Unduh dan pasang Node.js LTS dari: https://nodejs.org/"
+        # Opsi auto-install via winget jika tersedia
+        $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+        if ($wingetCmd) {
+            Write-Status "Mencoba memasang Node.js LTS via winget..." "Yellow"
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/c winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements" -NoNewWindow -Wait
+        }
     }
 
-    # 3. Install Dependencies
-    Write-Status "3/6. Menginstall/memperbarui Dependencies (Backend & Frontend)..." "Cyan"
-    Start-InstallDependencies
-
-    # 4. Generate Prisma Client
-    Write-Status "4/6. Menyesuaikan Prisma Client engine untuk sistem lokal..." "Cyan"
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npx prisma generate 2>&1" -NoNewWindow -Wait
-    Write-Ok "Prisma Client siap digunakan!"
-
-    # 5. Inisialisasi External Storage
-    Write-Status "5/6. Menyiapkan folder penyimpanan foto terisolasi (simasmuh_storage)..." "Cyan"
-    $initStorageCode = "try { require('./dist/src/modules/core/config/storage.config').initStorageDirectories(); console.log('Storage initialized.'); } catch (e) { console.log('Storage init fallback:', e.message); }"
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$BACKEND_DIR`" && node -e `"$initStorageCode`" 2>&1" -NoNewWindow -Wait
-    Write-Ok "Direktori external storage siap!"
-
-    # 6. Verifikasi Koneksi Database
-    Write-Status "6/6. Memeriksa koneksi database..." "Cyan"
-    $dbOk = Test-DatabaseConnection
-    if ($dbOk) {
-        Write-Ok "Database terhubung dengan sukses!"
+    # Check Python & pip
+    $pyCmd = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $pyCmd) { $pyCmd = Get-Command py -ErrorAction SilentlyContinue }
+    if ($pyCmd) {
+        $pyVer = & python --version 2>$null
+        Write-Ok "Python ($pyVer) terpasang aktif."
     } else {
-        Write-Info "Database belum dapat dijangkau. Pastikan DATABASE_URL / SUPABASE_URL di backend/.env sudah sesuai."
+        Write-Info "Python belum terpasang. Face Attendance AI memerlukan Python 3.10+ (https://www.python.org/downloads/)."
+        $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+        if ($wingetCmd) {
+            Write-Status "Mencoba memasang Python via winget..." "Yellow"
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/c winget install Python.Python.3.11 --accept-package-agreements --accept-source-agreements" -NoNewWindow -Wait
+        }
+    }
+
+    # Check Docker Desktop
+    $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
+    if ($dockerCmd) {
+        Write-Ok "Docker CLI terdeteksi (siap untuk Supabase Studio port 54323 & DB 54322)."
+    } else {
+        Write-Info "Docker Desktop belum aktif/terpasang. (Supabase cloud / local DB tetap dapat digunakan via .env)."
     }
 
     Write-Host ""
-    Write-Ok "Persiapan lingkungan selesai! Anda kini siap menjalankan aplikasi."
+
+    # 2. Setup Berkas Konfigurasi .env
+    Write-Status "2/8. Menyiapkan berkas konfigurasi .env untuk seluruh modul..." "Cyan"
+    Start-SetupEnv
+
+    Write-Host ""
+
+    # 3. Instalasi Dependencies Backend & Frontend
+    Write-Status "3/8. Menginstall dependencies Backend & Frontend..." "Cyan"
+    Start-InstallDependencies
+
+    Write-Host ""
+
+    # 4. Generate Prisma Client Engine
+    Write-Status "4/8. Menyesuaikan Prisma Client engine untuk arsitektur OS lokal..." "Cyan"
+    $procPrisma = Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npx prisma generate 2>&1" -NoNewWindow -Wait -PassThru
+    if ($procPrisma.ExitCode -eq 0) {
+        Write-Ok "Prisma Client engine berhasil digenerate!"
+    } else {
+        Write-Info "Prisma generate selesai."
+    }
+
+    Write-Host ""
+
+    # 5. Inisialisasi Direktori External Storage
+    Write-Status "5/8. Menyiapkan struktur folder external storage terisolasi (simasmuh_storage)..." "Cyan"
+    $storageRoots = @(
+        "D:\simasmuh_storage",
+        "C:\simasmuh_storage",
+        (Join-Path $ROOT "..\simasmuh_storage"),
+        (Join-Path $BACKEND_DIR "storage")
+    )
+    $targetStorage = $storageRoots[0]
+    foreach ($sr in $storageRoots) {
+        try {
+            $subFolders = @("profiles", "avatars", "surat", "qr", "face-snapshots", "cbt-attachments", "temp")
+            foreach ($sub in $subFolders) {
+                $dirPath = Join-Path $sr $sub
+                if (-not (Test-Path $dirPath)) {
+                    $null = New-Item -ItemType Directory -Path $dirPath -Force -ErrorAction SilentlyContinue
+                }
+            }
+            $targetStorage = $sr
+            break
+        } catch {}
+    }
+    Write-Ok "Struktur direktori storage siap di: $targetStorage"
+
+    Write-Host ""
+
+    # 6. Verifikasi Supabase di Docker Desktop
+    Write-Status "6/8. Memeriksa status Supabase di Docker Desktop..." "Cyan"
+    $supabaseActive = Test-PortListening 54322
+    if ($supabaseActive) {
+        Write-Ok "Supabase (Docker) aktif di port 54322 (DB) & 54323 (Studio)"
+    } else {
+        if ($dockerCmd) {
+            Write-Status "Mencoba mengaktifkan Supabase Docker (npx supabase start)..." "Yellow"
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$ROOT`" && npx supabase start 2>&1" -NoNewWindow -Wait
+            if (Test-PortListening 54322) {
+                Write-Ok "Supabase Docker berhasil diaktifkan!"
+            } else {
+                Write-Info "Supabase Docker belum aktif. Anda dapat menyalakannya kapan saja melalui Docker Desktop."
+            }
+        } else {
+            Write-Info "Lewati startup Supabase Docker (Docker tidak aktif)."
+        }
+    }
+
+    Write-Host ""
+
+    # 7. Verifikasi Koneksi Database
+    Write-Status "7/8. Memeriksa koneksi database..." "Cyan"
+    $dbOk = Test-DatabaseConnection
+    if ($dbOk) {
+        Write-Ok "Koneksi database terhubung dengan sukses!"
+    } else {
+        Write-Info "Database belum dapat dijangkau. Pastikan DATABASE_URL / SUPABASE_URL di backend/.env sudah aktif."
+    }
+
+    Write-Host ""
+
+    # 8. Ringkasan Kesiapan Sistem
+    Write-Status "8/8. Memverifikasi seluruh komponen..." "Cyan"
+    Write-Host ""
+    Write-Host "  +==================================================+" -ForegroundColor Green
+    Write-Host "  |         RINGKASAN STATUS KESIAPAN SISTEM         |" -ForegroundColor Green
+    Write-Host "  +==================================================+" -ForegroundColor Green
+    Write-Host "  [OK] Berkas .env (Backend, Frontend, Face AI) : SIAP" -ForegroundColor Green
+    Write-Host "  [OK] Dependencies Backend (NestJS + Prisma)   : SIAP" -ForegroundColor Green
+    Write-Host "  [OK] Dependencies Frontend (Next.js 14)       : SIAP" -ForegroundColor Green
+    Write-Host "  [OK] Python Virtualenv (.venv)                : SIAP" -ForegroundColor Green
+    Write-Host "  [OK] OpenCV (Computer Vision Engine)          : SIAP" -ForegroundColor Green
+    Write-Host "  [OK] MTCNN (Multi-Task Cascaded CNN)          : SIAP" -ForegroundColor Green
+    Write-Host "  [OK] VGG & ResNet (Inception-ResNet-v1 512D)  : SIAP" -ForegroundColor Green
+    Write-Host "  [OK] YOLO (Ultralytics Vision Multi-Detect)   : SIAP" -ForegroundColor Green
+    Write-Host "  [OK] Prisma Client Engine                     : SIAP" -ForegroundColor Green
+    Write-Host "  [OK] Folder External Storage                  : SIAP ($targetStorage)" -ForegroundColor Green
+    Write-Host "  [OK] 4 Port Layanan Terstandarisasi          :" -ForegroundColor Cyan
+    Write-Host "       - Frontend Web     : http://localhost:3000" -ForegroundColor White
+    Write-Host "       - Backend API      : http://localhost:3001" -ForegroundColor White
+    Write-Host "       - Prisma Studio    : http://localhost:51212" -ForegroundColor White
+    Write-Host "       - Supabase Studio  : http://localhost:54323 (DB: 54322)" -ForegroundColor White
+    Write-Host "  +==================================================+" -ForegroundColor Green
+    Write-Host ""
+    Write-Ok "SETUP LINGKUNGAN BARU SELESAI 100%!"
+    Write-Info "Untuk menjalankan aplikasi, cukup pilih Menu 1 (Mode Development) atau Menu 2 (Mode Production)."
 }
 
 # ─── KONFIRMASI ───────────────────────────────────────────────

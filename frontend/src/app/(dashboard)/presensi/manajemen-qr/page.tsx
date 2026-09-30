@@ -144,7 +144,7 @@ export default function QrManagerPage() {
               <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed flex items-start gap-2">
                 <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
                 <span>
-                  <strong>Keamanan:</strong> Pastikan tautan hanya dibuka di browser kiosk/tablet resmi sekolah. Jika tautan diketahui pihak luar, klik <strong>Acak Ulang Tautan</strong> untuk langsung memutus akses lama.
+                  <strong>Keamanan:</strong> Pastikan tautan hanya dibuka di browser perangkat / tablet resmi sekolah. Jika tautan diketahui pihak luar, klik <strong>Acak Ulang Tautan</strong> untuk langsung memutus akses lama.
                 </span>
               </div>
             </div>

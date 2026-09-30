@@ -163,4 +163,10 @@ export class FaceAttendanceController {
   scanFrame(@Body('image') image: string) {
     return this.faceAttendanceService.scanFrame(image);
   }
+
+  @Post('confirm-attendance')
+  confirmAttendance(@Body() body: { userId: string; confidence?: number }) {
+    return this.faceAttendanceService.confirmAttendance(body);
+  }
 }
+

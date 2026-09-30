@@ -1122,4 +1122,35 @@ export class FaceAttendanceService implements OnModuleInit {
     }
     return { faces: [] };
   }
+
+  async confirmAttendance(payload: { userId: string; confidence?: number }) {
+    try {
+      const res = await fetch('http://127.0.0.1:8089/confirm_attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      // Fallback: catat langsung ke database utama jika microservice unreachable
+      const rec = await this.recordFaceAttendance({
+        userId: payload.userId,
+        confidence: payload.confidence || 0.95,
+        cameraLocation: 'Gerbang Utama (Disambiguasi Kembar)',
+      });
+      return {
+        success: true,
+        message: rec.message,
+        attendance: rec,
+      };
+    }
+    return {
+      success: false,
+      message: 'Gagal mengonfirmasi presensi',
+    };
+  }
 }
+

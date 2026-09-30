@@ -24,7 +24,7 @@ worker = AttendanceWorker(engine=engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("[INFO] SIMASMUH Face Attendance Service (FaceNet CPU Eco) Starting...")
+    print("[INFO] SIMASMUH Face Attendance Service (Bio-Fusion AI Engine) Starting...")
     import threading
     sync_thread = threading.Thread(target=engine.sync_database_from_backend, daemon=True)
     sync_thread.start()
@@ -45,8 +45,8 @@ async def lifespan(app: FastAPI):
     print("[INFO] SIMASMUH Face Attendance Service Stopped.")
 
 app = FastAPI(
-    title="SIMASMUH Face Attendance Service (FaceNet CPU Eco)",
-    version="1.1.0",
+    title="SIMASMUH Face Attendance Service (Bio-Fusion AI)",
+    version="1.2.0",
     lifespan=lifespan
 )
 
@@ -62,7 +62,7 @@ app.add_middleware(
 def root():
     return {
         "service": "SIMASMUH Face Attendance Service",
-        "model": "FaceNet Inception-ResNet-v1 (512-D) + MTCNN",
+        "model": "SIMASMUH Bio-Fusion AI (Dual-Stream Inception-ResNet-v1 + MTCNN 5-Point Alignment + Periocular Disambiguation)",
         "device": engine.device_name,
         "status": worker.stream_status,
         "is_running": worker.is_running,
@@ -183,36 +183,75 @@ def scan_frame(payload: ScanFrameRequest):
             match_res = engine.match_face(face_crop, threshold=threshold)
 
             if match_res:
-                user_rec, sim = match_res
+                user_rec = match_res["record"]
+                sim = match_res["confidence"]
+                is_twin = match_res.get("is_twin_ambiguous", False)
+                twin_candidates = match_res.get("twin_candidates")
                 pct = int(sim * 100)
-                # Catat ke log presensi sistem dengan syarat mutlak batas kemiripan >= 90% (0.90) dan jeda cooldown 2 detik per akun
-                if sim >= 0.90:
-                    worker._process_attendance(user_rec, sim, face_crop=face_crop)
+                att_res = None
+
+                # Jika bukan kasus kembar ambigu dan tingkat kemiripan >= 88%, rekam presensi otomatis
+                if not is_twin and sim >= 0.88:
+                    att_res = worker._process_attendance(user_rec, sim, face_crop=face_crop, force=True)
+
                 results.append({
                     "box": [int(x), int(y), int(w), int(h)],
                     "is_registered": True,
+                    "userId": user_rec.user_id,
                     "name": user_rec.name,
                     "role": user_rec.role,
                     "identifier": user_rec.identifier,
+                    "avatarUrl": user_rec.avatar_url,
                     "confidence": round(sim, 2),
-                    "label": f"{user_rec.name} ({pct}%)",
+                    "label": f"{user_rec.name} ({pct}%)" if not is_twin else f"{user_rec.name} (Kembar/Mirip)",
                     "sub_label": f"{user_rec.role} - {user_rec.identifier}",
+                    "attendance": att_res,
+                    "is_twin_ambiguous": is_twin,
+                    "twin_candidates": twin_candidates,
                 })
             else:
                 results.append({
                     "box": [int(x), int(y), int(w), int(h)],
                     "is_registered": False,
+                    "userId": None,
                     "name": "Tamu / Orang Asing",
                     "role": "Tamu",
                     "identifier": "",
                     "confidence": 0.0,
                     "label": "Tamu / Orang Asing",
                     "sub_label": "Wajah Belum Terdaftar",
+                    "attendance": None,
+                    "is_twin_ambiguous": False,
+                    "twin_candidates": None,
                 })
 
         return {"faces": results, "width": w_frame, "height": h_frame}
     except Exception as e:
         return {"faces": [], "error": str(e)}
+
+class ConfirmAttendanceRequest(BaseModel):
+    userId: str
+    confidence: float = 0.95
+
+@app.post("/confirm_attendance")
+def confirm_attendance(payload: ConfirmAttendanceRequest):
+    """Endpoint untuk konfirmasi presensi manual instan jika terjadi disambiguasi siswa kembar / wajah mirip."""
+    user_rec = engine.user_database.get(payload.userId)
+    if not user_rec:
+        raise HTTPException(status_code=404, detail="Profil pengguna tidak ditemukan")
+    att_res = worker._process_attendance(user_rec, payload.confidence, force=True)
+    return {
+        "success": True,
+        "message": f"Presensi {user_rec.name} berhasil diverifikasi!",
+        "attendance": att_res,
+        "user": {
+            "userId": user_rec.user_id,
+            "name": user_rec.name,
+            "role": user_rec.role,
+            "identifier": user_rec.identifier,
+            "avatarUrl": user_rec.avatar_url,
+        }
+    }
 
 @app.post("/stream/start")
 def start_stream():

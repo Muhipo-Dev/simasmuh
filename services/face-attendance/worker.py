@@ -477,9 +477,11 @@ class AttendanceWorker:
                     match_result = self.engine.match_face(face_crop, threshold=threshold)
 
                     if match_result:
-                        reg_count += 1
-                        user_record, similarity = match_result
+                        user_record = match_result["record"]
+                        similarity = match_result["confidence"]
+                        is_twin = match_result.get("is_twin_ambiguous", False)
                         pct = int(similarity * 100)
+                        reg_count += 1
                         
                         new_detections.append({
                             "box": (x, y, x + w, y + h),
@@ -489,9 +491,10 @@ class AttendanceWorker:
                             "similarity": similarity,
                             "user_record": user_record,
                             "timestamp": now,
+                            "is_twin": is_twin,
                         })
 
-                        if ai_frame_counter % 2 == 0:
+                        if not is_twin and ai_frame_counter % 2 == 0:
                             self._process_attendance(user_record, similarity, face_crop=face_crop)
                     else:
                         guest_count += 1
@@ -503,6 +506,7 @@ class AttendanceWorker:
                             "similarity": 0.0,
                             "user_record": None,
                             "timestamp": now,
+                            "is_twin": False,
                         })
 
                 with self.detection_lock:
@@ -511,10 +515,8 @@ class AttendanceWorker:
                     self.guest_count = guest_count
 
                 # Adaptive Sleep Mode (Hemat Daya & Instan Bangun):
-                # - Jika wajah terdeteksi: Bangun instan, proses presensi, lalu cooldown 2.0 detik
-                # - Jika tidak ada objek: Masuk mode sleep hemat CPU secara bertahap (0.15s - 0.25s) dan langsung aktif begitu wajah muncul
                 if faces:
-                    time.sleep(2.0)
+                    time.sleep(1.8)
                 else:
                     time.sleep(0.18)
 
@@ -551,33 +553,32 @@ class AttendanceWorker:
                        b'Content-Length: ' + str(len(frame_bytes)).encode() + b'\r\n\r\n' + frame_bytes + b'\r\n')
             time.sleep(0.025)
 
-    def _process_attendance(self, user_record, similarity: float, face_crop: Optional[np.ndarray] = None):
+    def _process_attendance(self, user_record, similarity: float, face_crop: Optional[np.ndarray] = None, force: bool = False) -> Optional[Dict]:
         user_id = user_record.user_id
         now = time.time()
         
-        # 1. Validasi syarat mutlak presensi: kemiripan biometrik terkalibrasi wajib di atas 90% (>= 0.90)
-        if similarity < 0.90:
-            return
+        # 1. Validasi syarat mutlak presensi: kemiripan biometrik terkalibrasi wajib di atas 88% (>= 0.88)
+        if similarity < 0.88 and not force:
+            return None
 
-        # 2. Cooldown Scanner Umum: 2 Detik antar pemindaian scanner aktif
+        # 2. Cooldown Scanner Umum (hanya berlaku jika bukan manual force capture)
         SCANNER_COOLDOWN_SEC = 2.0
-        if now - self.last_scan_time < SCANNER_COOLDOWN_SEC:
-            return
+        if not force and now - self.last_scan_time < SCANNER_COOLDOWN_SEC:
+            return None
 
-        # 3. Jeda Cooldown Berulang Akun Masuk Sistem: Sesuai konfigurasi (default 15 menit)
+        # 3. Jeda Cooldown Berulang Akun Masuk Sistem
         cooldown_mins = self.config.cooldown_minutes if self.config else 15
         cooldown_sec = cooldown_mins * 60
 
         last_time = self.last_attendance_time.get(user_id, 0)
-        if now - last_time < cooldown_sec:
-            return
+        if not force and now - last_time < cooldown_sec:
+            return None
 
         self.last_scan_time = now
         self.last_attendance_time[user_id] = now
         self.total_scans_today += 1
         print(f"[ATTENDANCE SCAN] Terdeteksi: {user_record.name} ({user_record.role}) | Kemiripan: {round(similarity*100, 1)}%")
 
-        # Buat snapshot thumbnail JPEG Base64 dari potongan wajah hasil deteksi realtime
         snapshot_b64 = None
         if face_crop is not None and face_crop.size > 0:
             try:
@@ -603,7 +604,23 @@ class AttendanceWorker:
             if res.status_code in (200, 201):
                 res_data = res.json()
                 print(f"[SUCCESS] Presensi tercatat: {res_data.get('message')}")
+                return {
+                    "success": True,
+                    "message": res_data.get("message", "Presensi berhasil dicatat"),
+                    "scanType": res_data.get("scanType", "HADIR"),
+                    "data": res_data,
+                }
             else:
                 print(f"[WARN] Backend status {res.status_code}: {res.text}")
+                return {
+                    "success": False,
+                    "message": f"Server merespon status {res.status_code}",
+                    "scanType": "UNKNOWN",
+                }
         except Exception as e:
             print(f"[ERROR] Gagal kirim presensi ke backend: {e}")
+            return {
+                "success": False,
+                "message": f"Gagal menghubungi server backend: {e}",
+                "scanType": "ERROR",
+            }

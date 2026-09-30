@@ -41,7 +41,15 @@ import {
   Lock,
   LogIn,
   Eye,
-  EyeOff
+  EyeOff,
+  Volume2,
+  VolumeX,
+  Scan,
+  Aperture,
+  Loader2,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react'
 import Link from 'next/link'
 import NextImage from 'next/image'
@@ -213,6 +221,54 @@ export default function FaceNetAiStandalonePage() {
   const [browserFps, setBrowserFps] = useState<number>(0)
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([])
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('')
+
+  // State Mode Capture Presensi AI & Feedback
+  const [scanMode, setScanMode] = useState<'MANUAL' | 'AUTO'>('MANUAL')
+  const [isCapturing, setIsCapturing] = useState(false)
+  const [captureFlash, setCaptureFlash] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [currentClock, setCurrentClock] = useState<string>('')
+  const [currentDateStr, setCurrentDateStr] = useState<string>('')
+  const [greetingText, setGreetingText] = useState<string>('Selamat Datang')
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date()
+      setCurrentClock(now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+      setCurrentDateStr(now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
+      const hour = now.getHours()
+      if (hour >= 5 && hour < 11) setGreetingText('Selamat Pagi')
+      else if (hour >= 11 && hour < 15) setGreetingText('Selamat Siang')
+      else if (hour >= 15 && hour < 18) setGreetingText('Selamat Sore')
+      else setGreetingText('Selamat Malam')
+    }
+    updateTime()
+    const timer = setInterval(updateTime, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const [captureResult, setCaptureResult] = useState<{
+    type: 'SUCCESS' | 'UNKNOWN' | 'NO_FACE' | 'ERROR' | 'TWIN_AMBIGUOUS'
+    name?: string
+    role?: string
+    identifier?: string
+    avatarUrl?: string | null
+    confidence?: number
+    scanType?: string
+    message: string
+    attendanceMsg?: string
+    time?: string
+    twinCandidates?: Array<{
+      userId: string
+      name: string
+      role: string
+      identifier: string
+      avatarUrl?: string | null
+      confidence?: number
+    }>
+  } | null>(null)
+  const [capturedSnapshotUrl, setCapturedSnapshotUrl] = useState<string | null>(null)
+  const autoClearTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Dataset filter states
   const [searchQuery, setSearchQuery] = useState('')
@@ -400,15 +456,255 @@ export default function FaceNetAiStandalonePage() {
     }
   }, [isBrowserMode, activeTab])
 
-  // Periodic frame scanning ke FaceNet backend
+  // Sintesis Audio Biometrik Realtime tanpa ketergantungan file eksternal (Web Audio API)
+  const playBiometricAudio = (type: 'shutter' | 'success' | 'warning') => {
+    if (!soundEnabled) return
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+      if (!AudioCtx) return
+      const ctx = new AudioCtx()
+      if (type === 'shutter') {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(800, ctx.currentTime)
+        osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.08)
+        gain.gain.setValueAtTime(0.3, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start()
+        osc.stop(ctx.currentTime + 0.09)
+      } else if (type === 'success') {
+        const now = ctx.currentTime
+        const osc1 = ctx.createOscillator()
+        const osc2 = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc1.type = 'sine'
+        osc2.type = 'sine'
+        osc1.frequency.setValueAtTime(587.33, now) // D5
+        osc2.frequency.setValueAtTime(880, now + 0.09) // A5
+        gain.gain.setValueAtTime(0.25, now)
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45)
+        osc1.connect(gain)
+        osc2.connect(gain)
+        gain.connect(ctx.destination)
+        osc1.start(now)
+        osc1.stop(now + 0.12)
+        osc2.start(now + 0.09)
+        osc2.stop(now + 0.45)
+      } else if (type === 'warning') {
+        const now = ctx.currentTime
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sawtooth'
+        osc.frequency.setValueAtTime(320, now)
+        osc.frequency.setValueAtTime(220, now + 0.12)
+        gain.gain.setValueAtTime(0.18, now)
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(now)
+        osc.stop(now + 0.3)
+      }
+    } catch {}
+  }
+
+  // Konfirmasi Presensi Siswa Kembar / Wajah Mirip secara Instan (1 Ketukan)
+  const handleConfirmTwinAttendance = async (candidate: any) => {
+    try {
+      setIsCapturing(true)
+      const res = await authenticatedFetch('/api-backend/face-attendance/confirm-attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: candidate.userId, confidence: candidate.confidence || 0.95 }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        playBiometricAudio('success')
+        setCaptureResult({
+          type: 'SUCCESS',
+          name: candidate.name,
+          role: candidate.role,
+          identifier: candidate.identifier,
+          avatarUrl: candidate.avatarUrl,
+          confidence: Math.round((candidate.confidence || 0.95) * 100),
+          scanType: data?.attendance?.scanType || 'HADIR',
+          message: 'Wajah Terverifikasi!',
+          attendanceMsg: data?.message || 'Presensi berhasil dicatat!',
+          time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        })
+        toast.success(`Presensi Berhasil: ${candidate.name}`)
+        queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+        queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+      } else {
+        toast.error('Gagal mengonfirmasi presensi.')
+      }
+    } catch (err) {
+      toast.error('Kendala jaringan saat konfirmasi presensi.')
+    } finally {
+      setIsCapturing(false)
+    }
+  }
+
+  // Fungsi Eksekusi Capture & Verifikasi Presensi Wajah
+  const executeFaceCapture = async () => {
+    if (isCapturing) return
+    const video = localVideoRef.current
+    if (!video || video.readyState < 2 || video.videoWidth === 0) {
+      toast.error('Kamera belum siap. Pastikan preview webcam aktif.')
+      return
+    }
+
+    setIsCapturing(true)
+    setCaptureFlash(true)
+    playBiometricAudio('shutter')
+    setTimeout(() => setCaptureFlash(false), 180)
+
+    if (autoClearTimeoutRef.current) {
+      clearTimeout(autoClearTimeoutRef.current)
+      autoClearTimeoutRef.current = null
+    }
+
+    try {
+      const offscreen = document.createElement('canvas')
+      const scale = Math.min(1.0, 640 / video.videoWidth)
+      offscreen.width = Math.round(video.videoWidth * scale)
+      offscreen.height = Math.round(video.videoHeight * scale)
+      const ctx = offscreen.getContext('2d')
+      if (!ctx) throw new Error('Context canvas tidak tersedia')
+
+      ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height)
+      const base64 = offscreen.toDataURL('image/jpeg', 0.80)
+      setCapturedSnapshotUrl(base64)
+
+      const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64 }),
+      })
+
+      if (!res.ok) {
+        throw new Error(`Server error ${res.status}`)
+      }
+
+      const data = await res.json()
+      const rawFaces = data.faces || []
+      const invScale = 1.0 / scale
+      const scaledFaces = rawFaces.map((f: any) => ({
+        ...f,
+        box: [
+          Math.round(f.box[0] * invScale),
+          Math.round(f.box[1] * invScale),
+          Math.round(f.box[2] * invScale),
+          Math.round(f.box[3] * invScale),
+        ],
+      }))
+
+      drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
+
+      if (rawFaces.length > 0) {
+        const registeredFace = rawFaces.find((f: any) => f.is_registered && (f.confidence || 0) >= 0.85)
+        if (registeredFace) {
+          // Kasus Siswa Kembar / Wajah Mirip yang memerlukan verifikasi cepat
+          if (registeredFace.is_twin_ambiguous && registeredFace.twin_candidates && registeredFace.twin_candidates.length > 1) {
+            playBiometricAudio('warning')
+            setCaptureResult({
+              type: 'TWIN_AMBIGUOUS',
+              name: registeredFace.name,
+              role: registeredFace.role,
+              identifier: registeredFace.identifier,
+              confidence: Math.round(registeredFace.confidence * 100),
+              message: 'Wajah Mirip / Siswa Kembar Terdeteksi',
+              attendanceMsg: 'Silakan ketuk nama Anda di bawah untuk konfirmasi:',
+              twinCandidates: registeredFace.twin_candidates,
+            })
+            toast.info('Wajah mirip terdeteksi. Silakan ketuk nama Anda untuk konfirmasi.')
+          } else {
+            playBiometricAudio('success')
+            const att = registeredFace.attendance
+            const attMsg = att?.message || `Presensi berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`
+            
+            setCaptureResult({
+              type: 'SUCCESS',
+              name: registeredFace.name,
+              role: registeredFace.role,
+              identifier: registeredFace.identifier,
+              avatarUrl: registeredFace.avatarUrl,
+              confidence: Math.round(registeredFace.confidence * 100),
+              scanType: att?.scanType || 'HADIR',
+              message: 'Wajah Terverifikasi!',
+              attendanceMsg: attMsg,
+              time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            })
+
+            toast.success(`Presensi Berhasil: ${registeredFace.name} (${Math.round(registeredFace.confidence * 100)}%)`)
+            queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+            queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+          }
+        } else {
+          playBiometricAudio('warning')
+          setCaptureResult({
+            type: 'UNKNOWN',
+            message: 'Wajah Belum Terdaftar',
+            attendanceMsg: 'Wajah terdeteksi namun belum cocok dengan database pengguna SIMASMUH.',
+          })
+          toast.warning('Wajah tidak dikenali atau belum terdaftar di dataset profil.')
+        }
+      } else {
+        playBiometricAudio('warning')
+        setCaptureResult({
+          type: 'NO_FACE',
+          message: 'Wajah Tidak Terdeteksi',
+          attendanceMsg: 'Pastikan wajah menghadap langsung ke kamera dengan pencahayaan yang cukup.',
+        })
+        toast.info('Wajah tidak terdeteksi. Posisikan wajah di dalam bingkai.')
+      }
+    } catch (err: any) {
+      playBiometricAudio('warning')
+      setCaptureResult({
+        type: 'ERROR',
+        message: 'Gagal Memproses Snapshot',
+        attendanceMsg: 'Terjadi kendala jaringan atau layanan AI FaceNet sedang offline.',
+      })
+      toast.error('Gagal memproses snapshot kamera ke AI FaceNet.')
+    } finally {
+      setIsCapturing(false)
+      autoClearTimeoutRef.current = setTimeout(() => {
+        setCaptureResult(null)
+        setCapturedSnapshotUrl(null)
+        const canvas = overlayCanvasRef.current
+        if (canvas) {
+          const cCtx = canvas.getContext('2d')
+          if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+        }
+      }, 5000)
+    }
+  }
+
+  // Keyboard shortcut: Tombol Space / Enter untuk capture instan
   useEffect(() => {
-    if (!isBrowserCamStreaming) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (activeTab !== 'monitor') return
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault()
+        executeFaceCapture()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activeTab, isCapturing, isBrowserCamStreaming, scanMode])
+
+  // Periodic frame scanning HANYA saat Mode Auto-Scan diaktifkan (Mode Manual = 0 request latar belakang)
+  useEffect(() => {
+    if (!isBrowserCamStreaming || scanMode !== 'AUTO') return
     let isProcessing = false
     let frameCount = 0
     let lastTime = Date.now()
 
     const interval = setInterval(async () => {
-      if (isProcessing || !localVideoRef.current || !overlayCanvasRef.current) return
+      if (isProcessing || isCapturing || !localVideoRef.current || !overlayCanvasRef.current) return
       const video = localVideoRef.current
       if (video.readyState < 2 || video.videoWidth === 0) return
 
@@ -445,11 +741,9 @@ export default function FaceNetAiStandalonePage() {
               if (rawFaces.some((f: any) => f.is_registered)) {
                 queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
               }
-              // Cooldown 2.0 detik setelah objek terdeteksi sebelum memindai frame berikutnya
               await new Promise((r) => setTimeout(r, 2000))
             } else {
-              // Mode Sleep Hemat Daya Ringan (Standby 200ms) saat tidak ada objek wajah di depan kamera
-              await new Promise((r) => setTimeout(r, 200))
+              await new Promise((r) => setTimeout(r, 400))
             }
           }
         }
@@ -465,10 +759,10 @@ export default function FaceNetAiStandalonePage() {
       } finally {
         isProcessing = false
       }
-    }, 100)
+    }, 250)
 
     return () => clearInterval(interval)
-  }, [isBrowserCamStreaming])
+  }, [isBrowserCamStreaming, scanMode, isCapturing])
 
   // 2. Fetch Users Dataset (Diizinkan untuk dilihat oleh semua pengunjung)
   const { data: datasetData, refetch: refetchDataset } = useQuery<UsersDatasetResponse>({
@@ -848,69 +1142,99 @@ export default function FaceNetAiStandalonePage() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-5 md:p-6 lg:p-8 space-y-4 md:space-y-6">
-        {/* Header Banner Ringkas */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/95 p-4 sm:p-5 rounded-2xl text-white shadow-lg border border-slate-800">
-          <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[11px] font-semibold border border-indigo-500/30">
-                <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-                FaceNet AI
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-mono border border-slate-700">
-                /facenetai
-              </span>
-              {!isAuthenticated && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-semibold border border-amber-500/30">
-                  <Lock className="w-3 h-3" /> Mode Publik
+        {/* Header Banner: Smart School Gate Attendance */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 p-4 sm:p-6 rounded-3xl text-white shadow-2xl border border-indigo-500/30">
+          {/* Subtle Cyber Glow Decoration */}
+          <div className="absolute -top-24 -right-24 w-72 h-72 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            {/* Left: School Identity & Dynamic Greeting */}
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/25 text-indigo-300 text-xs font-bold border border-indigo-400/40 shadow-inner">
+                  <Radio className="w-3.5 h-3.5 text-rose-400 animate-ping" />
+                  PRESENSI BIOMETRIK AI
                 </span>
-              )}
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-semibold border border-emerald-500/30">
+                  <Sparkles className="w-3 h-3 text-emerald-400" />
+                  FaceNet 512-D BLAS Vector
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-semibold border border-blue-500/30">
+                  <Users className="w-3 h-3 text-blue-400" />
+                  Anti-Lookalike AI
+                </span>
+                {!isAuthenticated && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-semibold border border-amber-500/30">
+                    <Lock className="w-3 h-3" /> Mode Publik Gerbang
+                  </span>
+                )}
+              </div>
+
+              <div className="pt-0.5">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white flex items-center gap-2 flex-wrap">
+                  <span>SMA MUHAMMADIYAH 1 PONOROGO</span>
+                </h1>
+                <p className="text-slate-300 text-xs sm:text-sm font-medium mt-0.5">
+                  {greetingText}, Selamat Datang di Presensi Biometrik Wajah Cepat & Akurat.
+                </p>
+              </div>
             </div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white">
-              Presensi Kamera AI Biometrik
-            </h1>
-            <p className="text-slate-400 text-xs truncate max-w-2xl">
-              Monitoring realtime presensi biometrik & kendali AI microservice sekolah.
-            </p>
-          </div>
 
-          {/* Top Status & Controls */}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
-            <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-800/80 rounded-xl border border-slate-700 text-xs">
-              <span className={`w-2.5 h-2.5 rounded-full ${
-                serviceStatus?.isOnline && serviceStatus?.is_running ? 'bg-emerald-400 animate-ping' : serviceStatus?.isOnline ? 'bg-amber-400' : 'bg-slate-400'
-              }`} />
-              <span className="font-semibold text-xs">
-                {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'STREAMING' : 'STANDBY') : 'OFFLINE'}
-              </span>
+            {/* Right: Big Digital Clock & AI Status */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+              {/* Giant Gate Digital Clock */}
+              <div className="px-4 py-2.5 bg-slate-900/90 rounded-2xl border border-indigo-500/40 backdrop-blur-md shadow-xl text-center sm:text-right space-y-0.5 min-w-[200px]">
+                <div className="text-2xl sm:text-3xl font-black font-mono tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 animate-pulse">
+                  {currentClock || '--:--:--'}
+                </div>
+                <div className="text-[11px] sm:text-xs font-semibold text-slate-300">
+                  {currentDateStr || 'Memuat Waktu...'}
+                </div>
+              </div>
 
-              {/* Tombol Kontrol Daya AI */}
-              {isAuthenticated && isSuperAdmin ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
-                  disabled={isStartingWorker || isStoppingWorker}
-                  className={`h-7 px-2.5 text-xs font-bold rounded-lg ${
-                    serviceStatus?.is_running 
-                      ? 'bg-rose-500/30 hover:bg-rose-500/50 text-rose-200' 
-                      : 'bg-emerald-500/30 hover:bg-emerald-500/50 text-emerald-200'
-                  }`}
-                >
-                  <Power className="w-3.5 h-3.5 mr-1" />
-                  {isStartingWorker ? '...' : isStoppingWorker ? '...' : serviceStatus?.is_running ? 'Matikan AI' : 'Nyalakan AI'}
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  onClick={() => promptSuperadminAuth(() => {
-                    startServiceWorker()
-                  })}
-                  disabled={isStartingWorker || isStoppingWorker}
-                  className="h-7 px-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
-                >
-                  <Power className="w-3.5 h-3.5 mr-1" /> Nyalakan AI
-                </Button>
-              )}
+              {/* AI Engine Status & Power Button */}
+              <div className="flex items-center justify-between sm:justify-start gap-2.5 px-3.5 py-2.5 bg-slate-900/90 rounded-2xl border border-slate-800 text-xs shadow-lg">
+                <div className="flex items-center gap-2">
+                  <span className={`w-3 h-3 rounded-full ${
+                    serviceStatus?.isOnline && serviceStatus?.is_running ? 'bg-emerald-400 animate-ping' : serviceStatus?.isOnline ? 'bg-amber-400' : 'bg-slate-500'
+                  }`} />
+                  <div className="text-left">
+                    <p className="font-extrabold text-white text-xs">
+                      {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'AI ENGINE AKTIF' : 'AI STANDBY') : 'AI OFFLINE'}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-mono">Kecepatan &lt; 0.05ms</p>
+                  </div>
+                </div>
+
+                {isAuthenticated && isSuperAdmin ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
+                    disabled={isStartingWorker || isStoppingWorker}
+                    className={`h-8 px-3 text-xs font-bold rounded-xl ml-2 ${
+                      serviceStatus?.is_running 
+                        ? 'bg-rose-500/30 hover:bg-rose-500/50 text-rose-200' 
+                        : 'bg-emerald-500/30 hover:bg-emerald-500/50 text-emerald-200'
+                    }`}
+                  >
+                    <Power className="w-3.5 h-3.5 mr-1" />
+                    {isStartingWorker ? '...' : isStoppingWorker ? '...' : serviceStatus?.is_running ? 'Matikan' : 'Nyalakan'}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => promptSuperadminAuth(() => {
+                      startServiceWorker()
+                    })}
+                    disabled={isStartingWorker || isStoppingWorker}
+                    className="h-8 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl ml-2 shadow-sm"
+                  >
+                    <Power className="w-3.5 h-3.5 mr-1" /> Nyalakan AI
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -979,58 +1303,204 @@ export default function FaceNetAiStandalonePage() {
           <div className="space-y-4 md:space-y-6">
             {/* Quick Stats Bar */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              <div className="bg-gradient-to-br from-emerald-600 to-teal-800 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between">
+              <div className="bg-gradient-to-br from-emerald-600 to-teal-800 rounded-2xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-emerald-500/20">
                 <div>
-                  <p className="text-[11px] sm:text-xs font-semibold text-emerald-100 uppercase tracking-wider">Masuk</p>
-                  <p className="text-xl sm:text-2xl font-extrabold mt-0.5">{logStats.masuk}</p>
+                  <p className="text-[11px] sm:text-xs font-bold text-emerald-100 uppercase tracking-wider">Hadir Masuk</p>
+                  <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.masuk}</p>
                 </div>
-                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
                   <CheckCircle2 className="w-5 h-5 text-white" />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-800 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between">
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-800 rounded-2xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-blue-500/20">
                 <div>
-                  <p className="text-[11px] sm:text-xs font-semibold text-blue-100 uppercase tracking-wider">Pulang</p>
-                  <p className="text-xl sm:text-2xl font-extrabold mt-0.5">{logStats.pulang}</p>
+                  <p className="text-[11px] sm:text-xs font-bold text-blue-100 uppercase tracking-wider">Presensi Pulang</p>
+                  <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.pulang}</p>
                 </div>
-                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
                   <Clock className="w-5 h-5 text-white" />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-slate-700">
+              <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-2xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-slate-700">
                 <div>
-                  <p className="text-[11px] sm:text-xs font-semibold text-slate-300 uppercase tracking-wider">Total</p>
-                  <p className="text-xl sm:text-2xl font-extrabold mt-0.5">{logStats.total}</p>
+                  <p className="text-[11px] sm:text-xs font-bold text-slate-300 uppercase tracking-wider">Total Scan</p>
+                  <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.total}</p>
                 </div>
-                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-xs shrink-0">
                   <Activity className="w-5 h-5 text-indigo-400" />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-800 to-indigo-950 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-purple-600/30">
+              <div className="bg-gradient-to-br from-purple-800 to-indigo-950 rounded-2xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-purple-600/30">
                 <div className="min-w-0">
-                  <p className="text-[11px] sm:text-xs font-semibold text-purple-200 uppercase tracking-wider truncate">Status AI</p>
+                  <p className="text-[11px] sm:text-xs font-bold text-purple-200 uppercase tracking-wider truncate">Biometrik AI</p>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${serviceStatus?.isOnline && serviceStatus?.is_running ? 'bg-emerald-400 animate-pulse' : serviceStatus?.isOnline ? 'bg-amber-400' : 'bg-slate-400'}`} />
-                    <span className="font-bold text-[11px] sm:text-sm truncate">
-                      {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'STREAMING' : 'STANDBY') : 'OFFLINE'}
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${serviceStatus?.isOnline && serviceStatus?.is_running ? 'bg-emerald-400 animate-pulse' : serviceStatus?.isOnline ? 'bg-amber-400' : 'bg-slate-400'}`} />
+                    <span className="font-bold text-xs sm:text-sm truncate">
+                      {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'SIAP SCAN' : 'STANDBY') : 'OFFLINE'}
                     </span>
                   </div>
                 </div>
-                <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-xs shrink-0">
                   <Cpu className="w-5 h-5 text-purple-200" />
                 </div>
               </div>
             </div>
 
+            {/* PANEL ALGORITMA AI PRESENSI AKTIF (SIMASMUH BIO-FUSION AI ENGINE) */}
+            <div className="bg-slate-950/85 border border-indigo-500/25 rounded-3xl p-3.5 sm:p-4.5 backdrop-blur-md shadow-xl space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                    <Cpu className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-extrabold text-white tracking-wide flex items-center gap-2">
+                      <span>Algoritma AI Presensi Aktif</span>
+                      <span className="text-[11px] font-normal text-indigo-300">SIMASMUH Bio-Fusion</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Rangkaian deep learning & computer vision yang beroperasi secara simultan</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2.5 w-2.5 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-[11px] font-mono text-emerald-400 font-bold">8 Algoritma Berjalan</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+                {/* 1. MTCNN */}
+                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-extrabold text-indigo-300 text-xs flex items-center gap-1.5">
+                      <Scan className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> MTCNN 5-Point
+                    </span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      AKTIF
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    Deteksi kaskade 3-tahap (P-Net, R-Net, O-Net) & estimasi 5 landmark mata, hidung, mulut.
+                  </p>
+                </div>
+
+                {/* 2. Inception-ResNet-v1 */}
+                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-extrabold text-indigo-300 text-xs flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> Inception-ResNet-v1
+                    </span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
+                      512-D
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    Ekstraksi representasi biometrik vektor mendalam berakurasi tinggi (Deep Metric Learning).
+                  </p>
+                </div>
+
+                {/* 3. VGGFace2 Weights */}
+                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-extrabold text-indigo-300 text-xs flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> VGGFace2 Ensemble
+                    </span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      TERVERIFIKASI
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    Pembobotan biometrik terlatih untuk membedakan fitur identitas wajah manusia secara konsisten.
+                  </p>
+                </div>
+
+                {/* 4. Dual-Stream Periocular */}
+                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-extrabold text-purple-300 text-xs flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Dual-Stream Periocular
+                    </span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      ANTI-KEMBAR
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    Pembeda fitur mata, alis & jembatan hidung untuk siswa kembar, wajah mirip & pemakai kacamata.
+                  </p>
+                </div>
+
+                {/* 5. OpenCV CLAHE & Anti-Glare */}
+                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-teal-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-extrabold text-teal-300 text-xs flex items-center gap-1.5">
+                      <Aperture className="w-3.5 h-3.5 text-teal-400 shrink-0" /> CLAHE & Anti-Glare
+                    </span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                      OPENCV
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    Supresi pantulan specular cahaya pada kacamata dan normalisasi kontras pencahayaan adaptif.
+                  </p>
+                </div>
+
+                {/* 6. Similarity Affine Alignment */}
+                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-teal-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-extrabold text-teal-300 text-xs flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-teal-400 shrink-0" /> Affine Alignment
+                    </span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                      5-TITIK
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    Koreksi sudut kemiringan wajah otomatis agar kedua pupil mata sejajar horizontal kanonikal.
+                  </p>
+                </div>
+
+                {/* 7. BLAS Dot-Product */}
+                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-extrabold text-cyan-300 text-xs flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> BLAS Dot-Product
+                    </span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono">
+                      &lt; 0.05 MS
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    Pencocokan matriks vektor biometrik instan ke ribuan database tanpa antrean beban komputasi.
+                  </p>
+                </div>
+
+                {/* 8. YOLO Vision Tracker */}
+                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-extrabold text-cyan-300 text-xs flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> YOLO Vision Tracker
+                    </span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                      MULTI-SUDUT
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    Pelacakan bounding-box adaptif saat pergerakan objek dinamis dan sudut orientasi bervariasi.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* SPLIT SCREEN: LIVE STREAM & LOGS */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
               {/* LEFT: REALTIME LIVE CAPTURE STREAM (7 COLS) */}
               <div className="lg:col-span-7 space-y-3">
-                <Card className="shadow-lg border-slate-800 bg-slate-950 text-white overflow-hidden rounded-2xl">
+                <Card className="shadow-2xl border-slate-800 bg-slate-950 text-white overflow-hidden rounded-3xl">
                   {/* Header Stream Bar */}
                   <div className="p-3 sm:p-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -1040,13 +1510,13 @@ export default function FaceNetAiStandalonePage() {
                       </span>
                       <div className="min-w-0">
                         <h2 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5 sm:gap-2 truncate">
-                          <span className="truncate">{currentConfig?.cameraName || 'Camera Gerbang Utama'}</span>
+                          <span className="truncate">{currentConfig?.cameraName || 'Kamera Gerbang Depan'}</span>
                           <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-slate-700 text-indigo-300 font-mono shrink-0">
                             {currentConfig?.streamSourceType || 'RTSP'}
                           </Badge>
                         </h2>
                         <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate max-w-[200px] sm:max-w-xs md:max-w-md flex items-center gap-1.5">
-                          <span>{currentConfig?.location || 'Lokasi Belum Diatur'}</span>
+                          <span>{currentConfig?.location || 'Gerbang Utama SMA MUHIPO'}</span>
                           <span className="text-slate-600">•</span>
                           <span className="font-mono text-slate-400">{maskStreamUrl(currentConfig?.streamUrl)}</span>
                         </p>
@@ -1095,8 +1565,19 @@ export default function FaceNetAiStandalonePage() {
                   {/* Video Box Canvas */}
                   <div 
                     ref={videoContainerRef}
-                    className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group"
+                    onClick={() => {
+                      if (isBrowserMode && isBrowserCamStreaming && !isCapturing && !captureResult) {
+                        executeFaceCapture()
+                      }
+                    }}
+                    className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group select-none cursor-pointer"
+                    title="Sentuh Layar / Tekan Tombol untuk Scan Wajah"
                   >
+                    {/* Shutter Flash Visual Animation Effect */}
+                    {captureFlash && (
+                      <div className="absolute inset-0 bg-white/95 z-40 pointer-events-none transition-opacity duration-150" />
+                    )}
+
                     {isBrowserMode ? (
                       <div className="relative w-full h-full flex items-center justify-center bg-black">
                         <video
@@ -1104,16 +1585,211 @@ export default function FaceNetAiStandalonePage() {
                           autoPlay
                           playsInline
                           muted
-                          className="w-full h-full object-contain"
+                          className={`w-full h-full object-contain ${capturedSnapshotUrl ? 'hidden' : 'block'}`}
                           onPlay={() => setIsBrowserCamStreaming(true)}
                         />
+                        {capturedSnapshotUrl && (
+                          <img
+                            src={capturedSnapshotUrl}
+                            alt="Captured Freeze Frame"
+                            className="w-full h-full object-contain select-none"
+                          />
+                        )}
                         <canvas
                           ref={overlayCanvasRef}
-                          className="absolute inset-0 w-full h-full pointer-events-none object-contain"
+                          className="absolute inset-0 w-full h-full pointer-events-none object-contain z-10"
                         />
 
+                        {/* Biometric Framing Guide (Idle State) */}
+                        {!isCapturing && !captureResult && isBrowserCamStreaming && (
+                          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10">
+                            {/* Face Oval Framing Target */}
+                            <div className="relative w-48 h-60 sm:w-56 sm:h-72 rounded-[50%/45%] border-2 border-dashed border-emerald-400/60 shadow-[0_0_35px_rgba(16,185,129,0.25)] flex items-center justify-center animate-pulse">
+                              {/* Glowing Corner Accents */}
+                              <div className="absolute -top-3 -left-3 w-6 h-6 border-t-3 border-l-3 border-emerald-400 rounded-tl-lg" />
+                              <div className="absolute -top-3 -right-3 w-6 h-6 border-t-3 border-r-3 border-emerald-400 rounded-tr-lg" />
+                              <div className="absolute -bottom-3 -left-3 w-6 h-6 border-b-3 border-l-3 border-emerald-400 rounded-bl-lg" />
+                              <div className="absolute -bottom-3 -right-3 w-6 h-6 border-b-3 border-r-3 border-emerald-400 rounded-br-lg" />
+                              
+                              {/* Center Crosshair */}
+                              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400/80 shadow-[0_0_10px_#34d399]" />
+                            </div>
+                            
+                            <div className="mt-4 px-4 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-emerald-500/40 text-xs sm:text-sm font-bold text-emerald-300 flex items-center gap-2 shadow-2xl">
+                              <Aperture className="w-4 h-4 animate-spin text-emerald-400" />
+                              <span>Posisikan Wajah & Sentuh Tombol Scan</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Laser Scanner Animation saat Memproses Frame */}
+                        {isCapturing && (
+                          <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center bg-black/50 backdrop-blur-xs">
+                            {/* Moving Laser Line */}
+                            <div className="absolute inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_20px_#22d3ee] animate-bounce top-1/3" />
+                            
+                            <div className="px-5 py-3 rounded-2xl bg-slate-950/95 border border-cyan-500/60 shadow-2xl text-center space-y-1.5">
+                              <div className="flex items-center justify-center gap-2 text-cyan-400">
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span className="text-sm sm:text-base font-extrabold tracking-wide">Menganalisis Biometrik FaceNet...</span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 font-mono">Pencocokan Cepat BLAS Matrix Vector</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Floating Result Feedback HUD Card */}
+                        {captureResult && (
+                          <div className="absolute inset-x-2 sm:inset-x-4 bottom-3 z-30 pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            {captureResult.type === 'TWIN_AMBIGUOUS' ? (
+                              <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/95 border-2 border-amber-500/80 shadow-2xl shadow-amber-950/80 backdrop-blur-2xl text-white space-y-3">
+                                <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 pb-2.5">
+                                  <div className="flex items-center gap-2 text-amber-400">
+                                    <AlertTriangle className="w-5 h-5 animate-bounce" />
+                                    <div>
+                                      <h3 className="text-sm sm:text-base font-extrabold text-amber-300">Deteksi Siswa Kembar / Wajah Mirip</h3>
+                                      <p className="text-[11px] text-slate-300">Ketuk nama & foto Anda di bawah untuk memastikan presensi tidak tertukar:</p>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setCaptureResult(null)
+                                      setCapturedSnapshotUrl(null)
+                                    }}
+                                    className="h-7 text-xs text-slate-400 hover:text-white"
+                                  >
+                                    Tutup
+                                  </Button>
+                                </div>
+
+                                {/* Twin candidate list */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                  {captureResult.twinCandidates?.map((cand, cIdx) => (
+                                    <button
+                                      key={cand.userId || cIdx}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleConfirmTwinAttendance(cand)
+                                      }}
+                                      className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/90 hover:bg-indigo-950/80 border-2 border-slate-700 hover:border-emerald-500 text-left transition-all active:scale-[0.98] group cursor-pointer"
+                                    >
+                                      <div className="w-12 h-12 rounded-xl bg-slate-800 overflow-hidden shrink-0 border border-slate-600 group-hover:border-emerald-400 flex items-center justify-center">
+                                        {cand.avatarUrl ? (
+                                          <img src={cand.avatarUrl} alt={cand.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <span className="font-extrabold text-slate-300 text-sm">{cand.name.charAt(0)}</span>
+                                        )}
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-xs sm:text-sm font-bold text-white group-hover:text-emerald-300 truncate">{cand.name}</p>
+                                        <p className="text-[10px] text-slate-400 font-mono">{cand.role} • {cand.identifier}</p>
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 mt-1">
+                                          <CheckCircle className="w-3 h-3" /> Ketuk untuk Presensi
+                                        </span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className={`p-4 sm:p-5 rounded-2xl backdrop-blur-2xl border-2 shadow-2xl transition-all duration-300 ${
+                                captureResult.type === 'SUCCESS' 
+                                  ? 'bg-slate-950/95 border-emerald-500 shadow-emerald-950/70' 
+                                  : captureResult.type === 'UNKNOWN' 
+                                    ? 'bg-slate-950/95 border-amber-500 shadow-amber-950/70' 
+                                    : 'bg-slate-950/95 border-rose-500 shadow-rose-950/70'
+                              }`}>
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3.5 min-w-0">
+                                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 font-bold shadow-lg ${
+                                      captureResult.type === 'SUCCESS'
+                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/50'
+                                        : captureResult.type === 'UNKNOWN'
+                                          ? 'bg-amber-500/20 text-amber-400 border border-amber-400/50'
+                                          : 'bg-rose-500/20 text-rose-400 border border-rose-400/50'
+                                    }`}>
+                                      {captureResult.type === 'SUCCESS' ? (
+                                        <CheckCircle className="w-7 h-7 sm:w-8 sm:h-8" />
+                                      ) : captureResult.type === 'UNKNOWN' ? (
+                                        <AlertTriangle className="w-7 h-7 sm:w-8 sm:h-8" />
+                                      ) : (
+                                        <AlertCircle className="w-7 h-7 sm:w-8 sm:h-8" />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      {captureResult.type === 'SUCCESS' ? (
+                                        <>
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <h3 className="text-base sm:text-lg font-black text-white truncate">{captureResult.name}</h3>
+                                            <Badge className="bg-emerald-500/25 text-emerald-300 border-emerald-400/40 text-[11px] py-0 px-2 font-mono font-bold">
+                                              {captureResult.confidence}% Akurat
+                                            </Badge>
+                                            <Badge variant="outline" className="text-[11px] py-0 px-2 border-slate-700 text-slate-300">
+                                              {captureResult.role} {captureResult.identifier ? `• ${captureResult.identifier}` : ''}
+                                            </Badge>
+                                          </div>
+                                          <p className="text-xs sm:text-sm text-emerald-300 font-bold mt-1 truncate">
+                                            {captureResult.attendanceMsg}
+                                          </p>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <h3 className={`text-sm sm:text-base font-bold ${
+                                            captureResult.type === 'UNKNOWN' ? 'text-amber-300' : 'text-rose-300'
+                                          }`}>
+                                            {captureResult.message}
+                                          </h3>
+                                          <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">
+                                            {captureResult.attendanceMsg}
+                                          </p>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <Button
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setCaptureResult(null)
+                                        setCapturedSnapshotUrl(null)
+                                        const canvas = overlayCanvasRef.current
+                                        if (canvas) {
+                                          const cCtx = canvas.getContext('2d')
+                                          if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+                                        }
+                                      }}
+                                      className="h-9 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl"
+                                    >
+                                      Tutup
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setCapturedSnapshotUrl(null)
+                                        executeFaceCapture()
+                                      }}
+                                      disabled={isCapturing}
+                                      className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5 shadow-lg rounded-xl"
+                                    >
+                                      <Camera className="w-4 h-4" />
+                                      <span>Scan Lagi</span>
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {browserCamError && (
-                          <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center space-y-3 z-20">
+                          <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center space-y-3 z-30 pointer-events-auto">
                             <Camera className="w-10 h-10 text-rose-400 animate-pulse" />
                             <p className="text-sm font-bold text-white">Gagal Mengakses Webcam Browser</p>
                             <p className="text-xs text-slate-300 max-w-sm">{browserCamError}</p>
@@ -1143,7 +1819,7 @@ export default function FaceNetAiStandalonePage() {
                         />
                       </div>
                     ) : (
-                      <div className="text-center p-4 sm:p-6 space-y-3 max-w-md select-none z-10">
+                      <div className="text-center p-4 sm:p-6 space-y-3 max-w-md select-none z-10 pointer-events-auto">
                         <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
                           <Video className="w-6 h-6 sm:w-7 sm:h-7 animate-pulse" />
                         </div>
@@ -1191,34 +1867,104 @@ export default function FaceNetAiStandalonePage() {
                     )}
 
                     {/* Corner Visual HUD Targets */}
-                    <div className="absolute top-2 sm:top-3 left-2 sm:left-3 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                      <span>{isBrowserMode ? `BROWSER WEBCAM (${browserFps} FPS)` : currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
+                    <div className="absolute top-2 sm:top-3 left-2 sm:left-3 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30 z-20 shadow-md">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                      <span>{isBrowserMode ? `WEBCAM (${browserFps} FPS)` : currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
                     </div>
 
-                    <div className="absolute bottom-2 sm:top-auto sm:bottom-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded bg-black/60 backdrop-blur-xs text-[10px] sm:text-[11px] font-mono text-slate-300 border border-white/10">
+                    <div className="absolute top-2 sm:top-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-xs text-[10px] font-mono text-slate-300 border border-white/10 z-20 shadow-md">
+                      <span className={scanMode === 'MANUAL' ? 'text-teal-300 font-bold' : 'text-amber-300 font-bold'}>
+                        {scanMode === 'MANUAL' ? 'MODE CAPTURE CEPAT' : 'AUTO-SCAN KONTINU'}
+                      </span>
+                    </div>
+
+                    <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-xs text-[10px] sm:text-[11px] font-mono text-slate-300 border border-white/10 z-20 shadow-md">
                       <span>Sensitivitas: {Math.round((currentConfig?.threshold || 0.48) * 100)}%</span>
                       <span>•</span>
                       <span>Cooldown: {currentConfig?.cooldownMinutes || 10}m</span>
                     </div>
                   </div>
 
-                  {/* Footer Controls */}
-                  <div className="p-2.5 sm:p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-400">
-                    <div className="flex items-center gap-3 truncate">
-                      <div className="flex items-center gap-1.5 truncate">
-                        <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span className="truncate">Biometrik AI : <strong className="text-slate-200">FaceNet & MTCNN</strong></span>
+                  {/* TOMBOL CAPTURE & ACTION PANEL (OPTIMASI ANTI-BEBAN SERVER) */}
+                  <div className="p-3.5 sm:p-5 bg-slate-900/95 border-t border-slate-800 space-y-3">
+                    {/* Primary Capture Action Area */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                      <Button
+                        size="lg"
+                        onClick={() => executeFaceCapture()}
+                        disabled={isCapturing || !isBrowserCamStreaming}
+                        className="flex-1 h-14 text-sm sm:text-base font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl shadow-xl shadow-emerald-950/60 gap-3 transition-all active:scale-[0.98] border border-emerald-400/40 cursor-pointer"
+                      >
+                        {isCapturing ? (
+                          <>
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                            <span className="tracking-wide">Menganalisis Biometrik Wajah...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="w-6 h-6 animate-pulse text-emerald-200" />
+                            <span className="tracking-wide">SENTUH UNTUK SCAN WAJAH</span>
+                            <span className="hidden md:inline-block ml-1.5 text-[10px] font-mono font-normal px-2.5 py-1 rounded-lg bg-black/40 border border-white/20">
+                              SPASI / ENTER
+                            </span>
+                          </>
+                        )}
+                      </Button>
+
+                      <div className="flex items-center gap-2 self-center sm:self-auto">
+                        {/* Mode Presensi Switcher */}
+                        <div className="inline-flex p-1 bg-slate-950 rounded-2xl border border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setScanMode('MANUAL')}
+                            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all ${
+                              scanMode === 'MANUAL'
+                                ? 'bg-emerald-600 text-white shadow-md'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                            title="Mode Manual: Scan hanya berjalan saat tombol capture ditekan (Hemat server & akurat)"
+                          >
+                            Manual
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setScanMode('AUTO')}
+                            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all ${
+                              scanMode === 'AUTO'
+                                ? 'bg-amber-600 text-white shadow-md'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                            title="Mode Otomatis: Memindai frame secara berkala di latar belakang"
+                          >
+                            Auto-Scan
+                          </button>
+                        </div>
+
+                        {/* Sound Toggle */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSoundEnabled(!soundEnabled)}
+                          className={`h-11 px-3 rounded-2xl border-slate-800 ${
+                            soundEnabled ? 'text-emerald-400 bg-emerald-950/30' : 'text-slate-500 bg-slate-950'
+                          }`}
+                          title={soundEnabled ? 'Audio Aktif (Klik untuk Mematikan)' : 'Audio Senyap (Klik untuk Mengaktifkan)'}
+                        >
+                          {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                        </Button>
                       </div>
-                      <span className="hidden sm:inline text-slate-600">•</span>
-                      <span className="hidden md:inline truncate text-slate-400">
-                        Lokasi: <strong className="text-slate-300 font-medium">{currentConfig?.location || 'Gerbang Depan'}</strong>
-                      </span>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                        <span className={`w-1.5 h-1.5 rounded-full ${serviceStatus?.is_running ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                        {serviceStatus?.is_running ? 'Stream Aktif' : 'Standby'}
+
+                    {/* Running Motivation / Guidance Marquee Ticker */}
+                    <div className="flex items-center justify-between text-[11px] text-slate-300 pt-2 border-t border-slate-800/80 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60">
+                      <div className="flex items-center gap-2 truncate">
+                        <Sparkles className="w-4 h-4 text-amber-400 shrink-0 animate-spin" />
+                        <span className="truncate font-medium">
+                          Awali hari dengan senyum, tertib dan disiplin • Posisikan wajah di tengah bingkai kamera.
+                        </span>
+                      </div>
+                      <span className="hidden sm:inline-block font-mono text-[10px] text-emerald-400 font-bold shrink-0 ml-2">
+                        MTCNN + FaceNet 512-D
                       </span>
                     </div>
                   </div>

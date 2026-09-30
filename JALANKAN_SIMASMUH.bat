@@ -13,16 +13,7 @@ cd /d "%~dp0"
 :: Cek apakah PowerShell tersedia
 where powershell.exe >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] PowerShell tidak ditemukan!
-    pause
-    exit /b 1
-)
-
-:: Cek apakah npm / Node.js tersedia
-where npm >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] npm tidak ditemukan. Pastikan Node.js sudah terinstal.
-    echo Unduh dari: https://nodejs.org/
+    echo [ERROR] PowerShell tidak ditemukan pada sistem Windows!
     pause
     exit /b 1
 )
@@ -32,7 +23,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0simasmuh.ps1" -Mod
 
 if errorlevel 1 (
     echo.
-    echo [INFO] Terjadi error atau script selesai dijalankan.
+    echo [INFO] Selesai dijalankan.
     pause
 )
-

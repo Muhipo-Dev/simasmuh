@@ -35,6 +35,7 @@ import {
   Play,
   Square,
   Volume2,
+  VolumeX,
   Clock,
   Radio,
   Eye,
@@ -43,7 +44,13 @@ import {
   Film,
   Globe,
   UserX,
-  QrCode
+  QrCode,
+  Scan,
+  Aperture,
+  Loader2,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react'
 import { QrScanner } from '@/components/QrScanner'
 import Link from 'next/link'
@@ -192,6 +199,34 @@ export default function FaceAttendanceCameraPage() {
   const [browserFps, setBrowserFps] = useState<number>(0)
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([])
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('')
+
+  // State Mode Capture Presensi AI & Feedback
+  const [scanMode, setScanMode] = useState<'MANUAL' | 'AUTO'>('MANUAL')
+  const [isCapturing, setIsCapturing] = useState(false)
+  const [captureFlash, setCaptureFlash] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [isConfirmingTwin, setIsConfirmingTwin] = useState(false)
+  const [captureResult, setCaptureResult] = useState<{
+    type: 'SUCCESS' | 'UNKNOWN' | 'NO_FACE' | 'TWIN_AMBIGUOUS' | 'ERROR'
+    name?: string
+    role?: string
+    identifier?: string
+    confidence?: number
+    scanType?: string
+    message: string
+    attendanceMsg?: string
+    time?: string
+    twinCandidates?: Array<{
+      userId: string
+      name: string
+      role: string
+      identifier: string
+      className?: string
+      confidence: number
+    }>
+  } | null>(null)
+  const [capturedSnapshotUrl, setCapturedSnapshotUrl] = useState<string | null>(null)
+  const autoClearTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Dataset filter states
   const [searchQuery, setSearchQuery] = useState('')
@@ -428,15 +463,260 @@ export default function FaceAttendanceCameraPage() {
     }
   }, [isBrowserMode, activeTab])
 
-  // Periodic frame scanning ke FaceNet backend (mode CPU Eco hemat daya ~4 FPS inferensi)
+  // Sintesis Audio Biometrik Realtime tanpa ketergantungan file eksternal (Web Audio API)
+  const playBiometricAudio = (type: 'shutter' | 'success' | 'warning') => {
+    if (!soundEnabled) return
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+      if (!AudioCtx) return
+      const ctx = new AudioCtx()
+      if (type === 'shutter') {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(800, ctx.currentTime)
+        osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.08)
+        gain.gain.setValueAtTime(0.3, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start()
+        osc.stop(ctx.currentTime + 0.09)
+      } else if (type === 'success') {
+        const now = ctx.currentTime
+        const osc1 = ctx.createOscillator()
+        const osc2 = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc1.type = 'sine'
+        osc2.type = 'sine'
+        osc1.frequency.setValueAtTime(587.33, now) // D5
+        osc2.frequency.setValueAtTime(880, now + 0.09) // A5
+        gain.gain.setValueAtTime(0.25, now)
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45)
+        osc1.connect(gain)
+        osc2.connect(gain)
+        gain.connect(ctx.destination)
+        osc1.start(now)
+        osc1.stop(now + 0.12)
+        osc2.start(now + 0.09)
+        osc2.stop(now + 0.45)
+      } else if (type === 'warning') {
+        const now = ctx.currentTime
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sawtooth'
+        osc.frequency.setValueAtTime(320, now)
+        osc.frequency.setValueAtTime(220, now + 0.12)
+        gain.gain.setValueAtTime(0.18, now)
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(now)
+        osc.stop(now + 0.3)
+      }
+    } catch {}
+  }
+
+  // Fungsi Eksekusi Capture & Verifikasi Presensi Wajah
+  const executeFaceCapture = async () => {
+    if (isCapturing) return
+    const video = localVideoRef.current
+    if (!video || video.readyState < 2 || video.videoWidth === 0) {
+      toast.error('Kamera belum siap. Pastikan preview webcam aktif.')
+      return
+    }
+
+    setIsCapturing(true)
+    setCaptureFlash(true)
+    playBiometricAudio('shutter')
+    setTimeout(() => setCaptureFlash(false), 180)
+
+    if (autoClearTimeoutRef.current) {
+      clearTimeout(autoClearTimeoutRef.current)
+      autoClearTimeoutRef.current = null
+    }
+
+    try {
+      const offscreen = document.createElement('canvas')
+      const scale = Math.min(1.0, 640 / video.videoWidth)
+      offscreen.width = Math.round(video.videoWidth * scale)
+      offscreen.height = Math.round(video.videoHeight * scale)
+      const ctx = offscreen.getContext('2d')
+      if (!ctx) throw new Error('Context canvas tidak tersedia')
+
+      ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height)
+      const base64 = offscreen.toDataURL('image/jpeg', 0.80)
+      setCapturedSnapshotUrl(base64)
+
+      const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64 }),
+      })
+
+      if (!res.ok) {
+        throw new Error(`Server error ${res.status}`)
+      }
+
+      const data = await res.json()
+      const rawFaces = data.faces || []
+      const invScale = 1.0 / scale
+      const scaledFaces = rawFaces.map((f: any) => ({
+        ...f,
+        box: [
+          Math.round(f.box[0] * invScale),
+          Math.round(f.box[1] * invScale),
+          Math.round(f.box[2] * invScale),
+          Math.round(f.box[3] * invScale),
+        ],
+      }))
+
+      drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
+
+      if (rawFaces.length > 0) {
+        const ambiguousFace = rawFaces.find((f: any) => f.is_twin_ambiguous && f.twin_candidates?.length > 1)
+        const registeredFace = rawFaces.find((f: any) => f.is_registered && (f.confidence || 0) >= 0.85)
+
+        if (ambiguousFace) {
+          playBiometricAudio('warning')
+          setCaptureResult({
+            type: 'TWIN_AMBIGUOUS',
+            message: 'Deteksi Wajah Mirip / Kembar',
+            attendanceMsg: 'Ditemukan kemiripan biometrik tinggi pada beberapa profil siswa. Silakan pilih identitas:',
+            twinCandidates: ambiguousFace.twin_candidates || [],
+          })
+          toast.warning('Terdeteksi kemiripan biometrik wajah kembar. Silakan pilih profil siswa.')
+        } else if (registeredFace) {
+          playBiometricAudio('success')
+          const att = registeredFace.attendance
+          const attMsg = att?.message || `Presensi berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`
+          
+          setCaptureResult({
+            type: 'SUCCESS',
+            name: registeredFace.name,
+            role: registeredFace.role,
+            identifier: registeredFace.identifier,
+            confidence: Math.round(registeredFace.confidence * 100),
+            scanType: att?.scanType || 'HADIR',
+            message: 'Wajah Terverifikasi!',
+            attendanceMsg: attMsg,
+            time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          })
+
+          toast.success(`Presensi Berhasil: ${registeredFace.name} (${Math.round(registeredFace.confidence * 100)}%)`)
+          queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+          queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+        } else {
+          playBiometricAudio('warning')
+          setCaptureResult({
+            type: 'UNKNOWN',
+            message: 'Wajah Belum Terdaftar',
+            attendanceMsg: 'Wajah terdeteksi namun belum cocok dengan database pengguna SIMASMUH.',
+          })
+          toast.warning('Wajah tidak dikenali atau belum terdaftar di dataset profil.')
+        }
+      } else {
+        playBiometricAudio('warning')
+        setCaptureResult({
+          type: 'NO_FACE',
+          message: 'Wajah Tidak Terdeteksi',
+          attendanceMsg: 'Pastikan wajah menghadap langsung ke kamera dengan pencahayaan yang cukup.',
+        })
+        toast.info('Wajah tidak terdeteksi. Posisikan wajah di dalam bingkai.')
+      }
+    } catch (err: any) {
+      playBiometricAudio('warning')
+      setCaptureResult({
+        type: 'ERROR',
+        message: 'Gagal Memproses Snapshot',
+        attendanceMsg: 'Terjadi kendala jaringan atau layanan AI FaceNet sedang offline.',
+      })
+      toast.error('Gagal memproses snapshot kamera ke AI FaceNet.')
+    } finally {
+      setIsCapturing(false)
+      autoClearTimeoutRef.current = setTimeout(() => {
+        setCaptureResult(null)
+        setCapturedSnapshotUrl(null)
+        const canvas = overlayCanvasRef.current
+        if (canvas) {
+          const cCtx = canvas.getContext('2d')
+          if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+        }
+      }, 5000)
+    }
+  }
+
+  // Handler Konfirmasi Manual 1-Ketukan Jika Wajah Kembar Terdeteksi
+  const handleConfirmTwinAttendance = async (candidate: {
+    userId: string
+    name: string
+    role: string
+    identifier: string
+    confidence: number
+  }) => {
+    if (isConfirmingTwin) return
+    setIsConfirmingTwin(true)
+    try {
+      const res = await authenticatedFetch('/api-backend/face-attendance/confirm-attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: candidate.userId,
+          confidence: candidate.confidence,
+          snapshot: capturedSnapshotUrl,
+        }),
+      })
+
+      if (!res.ok) {
+        throw new Error('Gagal mencatat konfirmasi presensi')
+      }
+
+      const result = await res.json()
+      playBiometricAudio('success')
+      setCaptureResult({
+        type: 'SUCCESS',
+        name: candidate.name,
+        role: candidate.role,
+        identifier: candidate.identifier,
+        confidence: Math.round((candidate.confidence || 0.95) * 100),
+        scanType: result?.scanType || 'MASUK',
+        message: 'Presensi Dikonfirmasi!',
+        attendanceMsg: result?.message || `Presensi terkonfirmasi untuk ${candidate.name}`,
+        time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      })
+      toast.success(`Presensi Terverifikasi: ${candidate.name}`)
+      queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+      queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+    } catch (err: any) {
+      toast.error(err?.message || 'Gagal mengonfirmasi presensi')
+    } finally {
+      setIsConfirmingTwin(false)
+    }
+  }
+
+  // Keyboard shortcut: Tombol Space / Enter untuk capture instan
   useEffect(() => {
-    if (!isBrowserCamStreaming) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (activeTab !== 'monitor') return
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault()
+        executeFaceCapture()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activeTab, isCapturing, isBrowserCamStreaming, scanMode])
+
+  // Periodic frame scanning HANYA saat Mode Auto-Scan diaktifkan (Mode Manual = 0 request latar belakang)
+  useEffect(() => {
+    if (!isBrowserCamStreaming || scanMode !== 'AUTO') return
     let isProcessing = false
     let frameCount = 0
     let lastTime = Date.now()
 
     const interval = setInterval(async () => {
-      if (isProcessing || !localVideoRef.current || !overlayCanvasRef.current) return
+      if (isProcessing || isCapturing || !localVideoRef.current || !overlayCanvasRef.current) return
       const video = localVideoRef.current
       if (video.readyState < 2 || video.videoWidth === 0) return
 
@@ -473,11 +753,9 @@ export default function FaceAttendanceCameraPage() {
               if (rawFaces.some((f: any) => f.is_registered)) {
                 queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
               }
-              // Cooldown 2.0 detik setelah objek terdeteksi sebelum memindai frame berikutnya
               await new Promise((r) => setTimeout(r, 2000))
             } else {
-              // Mode Sleep Hemat Daya Ringan (Standby 200ms) saat tidak ada objek wajah di depan kamera
-              await new Promise((r) => setTimeout(r, 200))
+              await new Promise((r) => setTimeout(r, 400))
             }
           }
         }
@@ -493,10 +771,10 @@ export default function FaceAttendanceCameraPage() {
       } finally {
         isProcessing = false
       }
-    }, 100)
+    }, 250)
 
     return () => clearInterval(interval)
-  }, [isBrowserCamStreaming])
+  }, [isBrowserCamStreaming, scanMode, isCapturing])
 
   // 2. Fetch Users Dataset stats
   const { data: datasetData, isLoading: isDatasetLoading, refetch: refetchDataset } = useQuery<UsersDatasetResponse>({
@@ -1114,8 +1392,19 @@ export default function FaceAttendanceCameraPage() {
                 {/* Video Box Canvas */}
                 <div 
                   ref={videoContainerRef}
-                  className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group"
+                  onClick={() => {
+                    if (isBrowserMode && isBrowserCamStreaming && !isCapturing && !captureResult) {
+                      executeFaceCapture()
+                    }
+                  }}
+                  className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group select-none cursor-pointer"
+                  title="Klik untuk Ambil Foto & Pindai Wajah"
                 >
+                  {/* Shutter Flash Visual Animation Effect */}
+                  {captureFlash && (
+                    <div className="absolute inset-0 bg-white/95 z-40 pointer-events-none transition-opacity duration-150" />
+                  )}
+
                   {isBrowserMode ? (
                     <div className="relative w-full h-full flex items-center justify-center bg-black">
                       <video
@@ -1123,16 +1412,191 @@ export default function FaceAttendanceCameraPage() {
                         autoPlay
                         playsInline
                         muted
-                        className="w-full h-full object-contain"
+                        className={`w-full h-full object-contain ${capturedSnapshotUrl ? 'hidden' : 'block'}`}
                         onPlay={() => setIsBrowserCamStreaming(true)}
                       />
+                      {capturedSnapshotUrl && (
+                        <img
+                          src={capturedSnapshotUrl}
+                          alt="Captured Freeze Frame"
+                          className="w-full h-full object-contain select-none"
+                        />
+                      )}
                       <canvas
                         ref={overlayCanvasRef}
-                        className="absolute inset-0 w-full h-full pointer-events-none object-contain"
+                        className="absolute inset-0 w-full h-full pointer-events-none object-contain z-10"
                       />
 
+                      {/* Biometric Framing Guide (Idle State) */}
+                      {!isCapturing && !captureResult && isBrowserCamStreaming && (
+                        <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10">
+                          {/* Face Oval Framing Target */}
+                          <div className="relative w-44 h-56 sm:w-52 sm:h-64 rounded-[50%/45%] border-2 border-dashed border-emerald-400/50 shadow-[0_0_25px_rgba(16,185,129,0.2)] flex items-center justify-center animate-pulse">
+                            {/* Corner Accents */}
+                            <div className="absolute -top-2 -left-2 w-5 h-5 border-t-2 border-l-2 border-emerald-400" />
+                            <div className="absolute -top-2 -right-2 w-5 h-5 border-t-2 border-r-2 border-emerald-400" />
+                            <div className="absolute -bottom-2 -left-2 w-5 h-5 border-b-2 border-l-2 border-emerald-400" />
+                            <div className="absolute -bottom-2 -right-2 w-5 h-5 border-b-2 border-r-2 border-emerald-400" />
+                            
+                            {/* Center Crosshair */}
+                            <div className="w-2 h-2 rounded-full bg-emerald-400/60" />
+                          </div>
+                          
+                          <div className="mt-3 px-3 py-1 rounded-full bg-black/70 backdrop-blur-md border border-emerald-500/30 text-[11px] sm:text-xs font-medium text-emerald-300 flex items-center gap-1.5 shadow-lg">
+                            <Aperture className="w-3.5 h-3.5 animate-spin" />
+                            <span>Arahkan Wajah ke Tengah Bingkai & Klik Capture</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Laser Scanner Animation saat Memproses Frame */}
+                      {isCapturing && (
+                        <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-xs">
+                          {/* Moving Laser Line */}
+                          <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] animate-bounce top-1/4" />
+                          
+                          <div className="px-4 py-2.5 rounded-xl bg-slate-950/90 border border-cyan-500/50 shadow-2xl text-center space-y-1.5">
+                            <div className="flex items-center justify-center gap-2 text-cyan-400">
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              <span className="text-xs sm:text-sm font-bold tracking-wide">Menganalisis Biometrik Wajah...</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-mono">Ekstraksi Vektor FaceNet 512-D</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Floating Result Feedback HUD Card */}
+                      {captureResult && (
+                        <div className="absolute inset-x-3 bottom-3 z-30 pointer-events-auto">
+                          <div className={`p-3.5 sm:p-4 rounded-xl backdrop-blur-xl border shadow-2xl transition-all duration-300 ${
+                            captureResult.type === 'SUCCESS' 
+                              ? 'bg-slate-950/95 border-emerald-500/60 shadow-emerald-950/50' 
+                              : captureResult.type === 'TWIN_AMBIGUOUS'
+                                ? 'bg-slate-950/95 border-cyan-500/60 shadow-cyan-950/50'
+                                : captureResult.type === 'UNKNOWN' 
+                                  ? 'bg-slate-950/95 border-amber-500/60 shadow-amber-950/50' 
+                                  : 'bg-slate-950/95 border-rose-500/60 shadow-rose-950/50'
+                          }`}>
+                            <div className="flex flex-col gap-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 font-bold shadow-inner ${
+                                    captureResult.type === 'SUCCESS'
+                                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                      : captureResult.type === 'TWIN_AMBIGUOUS'
+                                        ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                                        : captureResult.type === 'UNKNOWN'
+                                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                                          : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                                  }`}>
+                                    {captureResult.type === 'SUCCESS' ? (
+                                      <CheckCircle className="w-6 h-6" />
+                                    ) : captureResult.type === 'TWIN_AMBIGUOUS' ? (
+                                      <Users className="w-6 h-6" />
+                                    ) : captureResult.type === 'UNKNOWN' ? (
+                                      <AlertTriangle className="w-6 h-6" />
+                                    ) : (
+                                      <AlertCircle className="w-6 h-6" />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    {captureResult.type === 'SUCCESS' ? (
+                                      <>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <h3 className="text-sm sm:text-base font-bold text-white truncate">{captureResult.name}</h3>
+                                          <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px] py-0 px-1.5 font-mono">
+                                            {captureResult.confidence}% Akurat
+                                          </Badge>
+                                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-slate-700 text-slate-300">
+                                            {captureResult.role} {captureResult.identifier ? `• ${captureResult.identifier}` : ''}
+                                          </Badge>
+                                        </div>
+                                        <p className="text-xs text-emerald-400 font-medium mt-0.5 truncate">
+                                          {captureResult.attendanceMsg}
+                                        </p>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <h3 className={`text-sm sm:text-base font-bold ${
+                                          captureResult.type === 'TWIN_AMBIGUOUS' ? 'text-cyan-300' : captureResult.type === 'UNKNOWN' ? 'text-amber-300' : 'text-rose-300'
+                                        }`}>
+                                          {captureResult.message}
+                                        </h3>
+                                        <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">
+                                          {captureResult.attendanceMsg}
+                                        </p>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setCaptureResult(null)
+                                      setCapturedSnapshotUrl(null)
+                                      const canvas = overlayCanvasRef.current
+                                      if (canvas) {
+                                        const cCtx = canvas.getContext('2d')
+                                        if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+                                      }
+                                    }}
+                                    className="h-8 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                                  >
+                                    Tutup
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setCapturedSnapshotUrl(null)
+                                      executeFaceCapture()
+                                    }}
+                                    disabled={isCapturing}
+                                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1 shadow-sm"
+                                  >
+                                    <Camera className="w-3.5 h-3.5" />
+                                    <span>Scan Lagi</span>
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Twin Candidates Option Buttons */}
+                              {captureResult.type === 'TWIN_AMBIGUOUS' && captureResult.twinCandidates && captureResult.twinCandidates.length > 0 && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-cyan-500/20">
+                                  {captureResult.twinCandidates.map((cand) => (
+                                    <button
+                                      key={cand.userId}
+                                      type="button"
+                                      disabled={isConfirmingTwin}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleConfirmTwinAttendance(cand)
+                                      }}
+                                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/90 hover:bg-cyan-950/80 border border-cyan-500/30 hover:border-cyan-400 transition-all text-left text-xs group cursor-pointer"
+                                    >
+                                      <div className="min-w-0 pr-2">
+                                        <p className="font-bold text-white group-hover:text-cyan-300 truncate">{cand.name}</p>
+                                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">
+                                          {cand.className || cand.role} • {cand.identifier}
+                                        </p>
+                                      </div>
+                                      <span className="shrink-0 px-2 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-[10px]">
+                                        Pilih Ini →
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {browserCamError && (
-                        <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center space-y-3 z-20">
+                        <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center space-y-3 z-30 pointer-events-auto">
                           <Camera className="w-10 h-10 text-rose-400 animate-pulse" />
                           <p className="text-sm font-bold text-white">Gagal Mengakses Webcam Browser</p>
                           <p className="text-xs text-slate-300 max-w-sm">{browserCamError}</p>
@@ -1162,7 +1626,7 @@ export default function FaceAttendanceCameraPage() {
                       />
                     </div>
                   ) : (
-                    <div className="text-center p-4 sm:p-6 space-y-3 max-w-md select-none z-10">
+                    <div className="text-center p-4 sm:p-6 space-y-3 max-w-md select-none z-10 pointer-events-auto">
                       <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
                         <Video className="w-6 h-6 sm:w-7 sm:h-7 animate-pulse" />
                       </div>
@@ -1219,34 +1683,106 @@ export default function FaceAttendanceCameraPage() {
                   )}
 
                   {/* Corner Visual HUD Targets */}
-                  <div className="absolute top-2 sm:top-3 left-2 sm:left-3 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30">
+                  <div className="absolute top-2 sm:top-3 left-2 sm:left-3 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30 z-20">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>{isBrowserMode ? `BROWSER WEBCAM (${browserFps} FPS)` : currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
+                    <span>{isBrowserMode ? `WEBCAM (${browserFps} FPS)` : currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
                   </div>
 
-                  <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded bg-black/60 backdrop-blur-xs text-[10px] sm:text-[11px] font-mono text-slate-300 border border-white/10">
+                  <div className="absolute top-2 sm:top-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] font-mono text-slate-300 border border-white/10 z-20">
+                    <span className={scanMode === 'MANUAL' ? 'text-teal-300 font-bold' : 'text-amber-300 font-bold'}>
+                      {scanMode === 'MANUAL' ? 'MODE CAPTURE MANUAL' : 'AUTO-SCAN KONTINU'}
+                    </span>
+                  </div>
+
+                  <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded bg-black/70 backdrop-blur-xs text-[10px] sm:text-[11px] font-mono text-slate-300 border border-white/10 z-20">
                     <span>Sensitivitas: {Math.round((currentConfig?.threshold || 0.48) * 100)}%</span>
                     <span>•</span>
                     <span>Cooldown: {currentConfig?.cooldownMinutes || 10}m</span>
                   </div>
                 </div>
 
-                {/* Footer Controls - Clean Information Only */}
-                <div className="p-2.5 sm:p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-400">
-                  <div className="flex items-center gap-3 truncate">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span className="truncate">Biometrik AI : <strong className="text-slate-200">FaceNet & MTCNN</strong></span>
+                {/* TOMBOL CAPTURE & ACTION PANEL (OPTIMASI ANTI-BEBAN SERVER) */}
+                <div className="p-3 sm:p-4 bg-slate-900/95 border-t border-slate-800 space-y-3">
+                  {/* Primary Capture Action Area */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <Button
+                      size="lg"
+                      onClick={() => executeFaceCapture()}
+                      disabled={isCapturing || !isBrowserCamStreaming}
+                      className="flex-1 h-12 text-sm sm:text-base font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-lg shadow-emerald-950/50 gap-2.5 transition-all active:scale-[0.98] border border-emerald-400/30 cursor-pointer"
+                    >
+                      {isCapturing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Menganalisis Biometrik FaceNet...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="w-5 h-5 animate-pulse" />
+                          <span>Ambil Foto & Pindai Presensi</span>
+                          <span className="hidden md:inline-block ml-1.5 text-[10px] font-mono font-normal px-2 py-0.5 rounded bg-black/30 border border-white/20">
+                            SPASI / ENTER
+                          </span>
+                        </>
+                      )}
+                    </Button>
+
+                    <div className="flex items-center gap-2 self-center sm:self-auto">
+                      {/* Mode Presensi Switcher */}
+                      <div className="inline-flex p-1 bg-slate-950 rounded-xl border border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setScanMode('MANUAL')}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                            scanMode === 'MANUAL'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                          title="Mode Manual: Scan hanya berjalan saat tombol capture ditekan (Hemat server & akurat)"
+                        >
+                          Manual (Capture)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setScanMode('AUTO')}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                            scanMode === 'AUTO'
+                              ? 'bg-amber-600 text-white shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                          title="Mode Otomatis: Memindai frame secara berkala di latar belakang"
+                        >
+                          Auto-Scan
+                        </button>
+                      </div>
+
+                      {/* Sound Toggle */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSoundEnabled(!soundEnabled)}
+                        className={`h-9 px-2.5 rounded-xl border-slate-800 ${
+                          soundEnabled ? 'text-emerald-400 bg-emerald-950/30' : 'text-slate-500 bg-slate-950'
+                        }`}
+                        title={soundEnabled ? 'Audio Aktif (Klik untuk Mematikan)' : 'Audio Senyap (Klik untuk Mengaktifkan)'}
+                      >
+                        {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                      </Button>
                     </div>
-                    <span className="hidden sm:inline text-slate-600">•</span>
-                    <span className="hidden md:inline truncate text-slate-400">
-                      Lokasi: <strong className="text-slate-300 font-medium">{currentConfig?.location || 'Gerbang Depan'}</strong>
-                    </span>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                      <span className={`w-1.5 h-1.5 rounded-full ${serviceStatus?.is_running ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                      {serviceStatus?.is_running ? 'Stream Aktif' : 'Standby'}
+
+                  {/* Informational Sub-Bar */}
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
+                    <div className="flex items-center gap-2 truncate">
+                      <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="truncate">
+                        {scanMode === 'MANUAL' 
+                          ? 'Mode Capture Manual aktif: Data tidak membebani server & bebas dari salah scan.' 
+                          : 'Mode Auto-Scan aktif: Memindai otomatis setiap kali wajah terdeteksi.'}
+                      </span>
+                    </div>
+                    <span className="hidden sm:inline-block font-mono text-[10px] text-slate-500 shrink-0">
+                      FaceNet 512-D • MTCNN
                     </span>
                   </div>
                 </div>

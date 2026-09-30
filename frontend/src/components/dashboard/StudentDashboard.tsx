@@ -436,6 +436,231 @@ export function StudentDashboard({
     })
   }
 
+  // Cetak Jadwal Pelajaran Siswa (Dokumen Resmi A4 Landscape Terisolasi)
+  const handlePrintSchedule = () => {
+    const printWindow = window.open('', '_blank', 'width=1100,height=850')
+    if (!printWindow) {
+      window.print()
+      return
+    }
+
+    const daysHeader = [1, 2, 3, 4, 5, 6]
+      .map((d) => `<th style="border: 1px solid #000; padding: 6px 4px; text-align: center; background: #f3f4f6; font-size: 11px; font-weight: bold; text-transform: uppercase;">${daysMap[d]}</th>`)
+      .join('')
+
+    const tableRows = studentWeeklySlots.map((slot, slotIdx) => {
+      const dayCells = [1, 2, 3, 4, 5, 6].map((dayNum) => {
+        const lessons = (studentGroupedWeekly[dayNum] || []).filter((sch: any) => {
+          return (sch.startTime || '').trim() === slot.startTime || 
+            (parseTimeToMinutes(sch.startTime) <= slot.startMinutes && parseTimeToMinutes(sch.endTime) > slot.startMinutes)
+        })
+
+        if (lessons.length === 0) {
+          return `<td style="border: 1px solid #000; padding: 6px; text-align: center; color: #9ca3af; font-size: 11px;">—</td>`
+        }
+
+        const lessonContent = lessons.map((sch: any) => `
+          <div style="margin-bottom: 4px; padding: 2px;">
+            <div style="font-weight: bold; font-size: 11px; color: #000; line-height: 1.2;">${sch.subject?.name || 'Mata Pelajaran'}</div>
+            <div style="font-size: 10px; color: #374151; margin-top: 1px;">${sch.teacher?.user?.name || sch.teacher?.nip || 'Guru Pengampu'}</div>
+          </div>
+        `).join('')
+
+        return `<td style="border: 1px solid #000; padding: 6px 4px; vertical-align: top; background: #fff;">${lessonContent}</td>`
+      }).join('')
+
+      return `
+        <tr>
+          <td style="border: 1px solid #000; padding: 6px 4px; text-align: center; font-family: monospace; font-weight: bold; font-size: 10.5px; background: #fafafa; white-space: nowrap;">
+            <div style="font-size: 9.5px; color: #4b5563; text-transform: uppercase;">Jam ${slotIdx + 1}</div>
+            <div style="color: #000; margin-top: 2px; font-weight: 800;">${slot.startTime} - ${slot.endTime}</div>
+          </td>
+          ${dayCells}
+        </tr>
+      `
+    }).join('')
+
+    const todayFormatted = new Intl.DateTimeFormat('id-ID', { dateStyle: 'long' }).format(new Date())
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="id">
+        <head>
+          <meta charset="utf-8">
+          <title>Jadwal Pelajaran Kelas ${studentClass?.name || ''}</title>
+          <style>
+            @page {
+              size: A4 landscape;
+              margin: 10mm 12mm 10mm 12mm;
+            }
+            * {
+              box-sizing: border-box;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              background: #fff;
+              color: #000;
+              margin: 0;
+              padding: 0;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .kop {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 16px;
+              border-bottom: 2.5px solid #000;
+              padding-bottom: 8px;
+              margin-bottom: 12px;
+            }
+            .kop-logo {
+              width: 64px;
+              height: 64px;
+              object-fit: contain;
+            }
+            .kop-text {
+              text-align: center;
+              flex: 1;
+            }
+            .kop-text h4 {
+              margin: 0;
+              font-size: 10.5px;
+              font-weight: bold;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .kop-text h3 {
+              margin: 2px 0 0 0;
+              font-size: 12px;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .kop-text h2 {
+              margin: 2px 0 0 0;
+              font-size: 15px;
+              font-weight: 900;
+              text-transform: uppercase;
+            }
+            .kop-text p {
+              margin: 3px 0 0 0;
+              font-size: 9.5px;
+              color: #1f2937;
+            }
+            .doc-header {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              border-top: 1px solid #000;
+              padding-top: 6px;
+              margin-top: 6px;
+              font-size: 12px;
+            }
+            .doc-title {
+              font-size: 13px;
+              font-weight: 900;
+              text-transform: uppercase;
+              text-decoration: underline;
+              letter-spacing: 0.5px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 10px;
+            }
+            .signature-section {
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              text-align: center;
+              gap: 16px;
+              margin-top: 24px;
+              font-size: 11px;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .sig-title {
+              font-weight: bold;
+            }
+            .sig-space {
+              height: 55px;
+            }
+            .sig-name {
+              font-weight: 800;
+              text-decoration: underline;
+            }
+            .sig-nip {
+              font-size: 10px;
+              color: #374151;
+              margin-top: 2px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="kop">
+            <img src="/images/logo-muhammadiyah.png" alt="Logo" class="kop-logo" onerror="this.style.display='none'" />
+            <div class="kop-text">
+              <h4>MAJELIS PENDIDIKAN DASAR MENENGAH DAN PENDIDIKAN NONFORMAL</h4>
+              <h3>PIMPINAN DAERAH MUHAMMADIYAH PONOROGO</h3>
+              <h2>SMA MUHAMMADIYAH 1 PONOROGO</h2>
+              <p>Alamat: Jl. Batoro Katong No. 130 Ponorogo, Jawa Timur 63411 • Telp. (0352) 481521 • Website: smamuhipo.sch.id</p>
+            </div>
+            <div style="width: 64px;"></div>
+          </div>
+
+          <div class="doc-header">
+            <span class="doc-title">JADWAL PELAJARAN KELAS ${studentClass?.name || ''}</span>
+            <span style="font-weight: bold; font-size: 11px;">Tahun Ajaran: ${studentClass?.academicYear || '2026/2027'}</span>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="border: 1px solid #000; padding: 6px 4px; text-align: center; background: #f3f4f6; width: 110px; font-size: 11px; font-weight: bold; text-transform: uppercase;">Waktu / Jam</th>
+                ${daysHeader}
+              </tr>
+            </thead>
+            <tbody>
+              ${studentWeeklySlots.length === 0 ? `<tr><td colspan="7" style="border: 1px solid #000; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">Belum ada jadwal pelajaran untuk kelas ini.</td></tr>` : tableRows}
+            </tbody>
+          </table>
+
+          <div class="signature-section">
+            <div>
+              <p style="margin: 0;">Mengetahui,</p>
+              <p class="sig-title" style="margin: 2px 0 0 0;">Kepala Sekolah</p>
+              <div class="sig-space"></div>
+              <p class="sig-name" style="margin: 0;">Drs. M. Dahron, M.Pd.</p>
+              <p class="sig-nip">NBM. 19680512 199403 1 002</p>
+            </div>
+            <div>
+              <p style="margin: 0;">Menyetujui,</p>
+              <p class="sig-title" style="margin: 2px 0 0 0;">Waka Kurikulum</p>
+              <div class="sig-space"></div>
+              <p class="sig-name" style="margin: 0;">Anik Yulaika, M.Pd.</p>
+              <p class="sig-nip">NBM. 19750820 200212 2 001</p>
+            </div>
+            <div>
+              <p style="margin: 0;">Ponorogo, ${todayFormatted}</p>
+              <p class="sig-title" style="margin: 2px 0 0 0;">Wali Kelas ${studentClass?.name || ''}</p>
+              <div class="sig-space"></div>
+              <p class="sig-name" style="margin: 0;">${studentClass?.homeroomTeacher?.user?.name || homeroomTeacherName || '( .............................................. )'}</p>
+              <p class="sig-nip">NIP/NBM. ${studentClass?.homeroomTeacher?.nipNbm || '-'}</p>
+            </div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 300);
+            }
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+  }
+
   return (
     <div className="space-y-3.5 sm:space-y-4 w-full font-sans text-slate-800 dark:text-slate-100">
       {/* 1. TOP BREADCRUMB & TITLE BAR */}
@@ -886,7 +1111,7 @@ export function StudentDashboard({
                 </div>
 
                 <Button
-                  onClick={() => window.print()}
+                  onClick={handlePrintSchedule}
                   variant="outline"
                   size="sm"
                   className="h-7 px-2 text-xs font-bold text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-100"

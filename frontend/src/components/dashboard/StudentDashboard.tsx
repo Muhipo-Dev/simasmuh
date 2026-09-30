@@ -55,7 +55,6 @@ export function StudentDashboard({
 
   // Modals state
   const [showPaymentPopup, setShowPaymentPopup] = useState(false)
-  const [showCalendarModal, setShowCalendarModal] = useState(false)
   const [showClassmatesModal, setShowClassmatesModal] = useState(false)
   const [classmateSearch, setClassmateSearch] = useState('')
 
@@ -827,15 +826,14 @@ export function StudentDashboard({
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-start sm:justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCalendarModal(true)}
-                className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-[11px] h-7.5 px-2.5 rounded-lg font-semibold backdrop-blur-sm"
+              <Link
+                href="/agenda"
+                className="inline-flex items-center bg-white/10 hover:bg-white/20 text-white border border-white/20 text-[11px] h-7.5 px-2.5 rounded-lg font-semibold backdrop-blur-sm transition-colors"
+                title="Buka Halaman Khusus Kalender Akademik"
               >
                 <CalendarDays className="w-3 h-3 mr-1 text-blue-300" />
                 Kalender Akademik
-              </Button>
+              </Link>
               <Button
                 variant="outline"
                 size="sm"
@@ -1549,46 +1547,6 @@ export function StudentDashboard({
           />
         </div>
       </div>
-
-      {/* ============================================================ */}
-      {/* MODAL 1: KALENDER AKADEMIK & HARI LIBUR NASIONAL            */}
-      {/* ============================================================ */}
-      {showCalendarModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-3 animate-in fade-in-50 zoom-in-95 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-2.5 border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-5 h-5 text-blue-600" />
-                <h3 className="font-black text-slate-900 dark:text-white text-sm sm:text-base">
-                  Kalender Akademik & Hari Libur Nasional
-                </h3>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowCalendarModal(false)}
-                className="h-7 w-7 p-0 rounded-full"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <ActivityCalendarWidget
-              announcements={announcements}
-              title="Kalender Kegiatan & Libur"
-            />
-
-            <div className="pt-1 text-right">
-              <Button
-                onClick={() => setShowCalendarModal(false)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl h-8 px-4"
-              >
-                Tutup
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ============================================================ */}
       {/* MODAL 2: TEMAN SEKELAS LIST DIALOG                          */}

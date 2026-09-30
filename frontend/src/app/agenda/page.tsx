@@ -89,9 +89,20 @@ export default async function AgendaPage() {
       <main className="flex-1 flex flex-col py-4 sm:py-6 lg:py-8 px-3 sm:px-6 lg:px-12 bg-slate-50/90 dark:bg-slate-950/80">
         <div className="max-w-6xl mx-auto w-full space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between gap-2">
-            <Link href="/" className="inline-flex items-center text-xs font-bold text-blue-600 hover:text-blue-700">
-              <ChevronLeft className="w-4 h-4 mr-1" /> Beranda
-            </Link>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Kembali ke Dashboard
+              </Link>
+              <Link
+                href="/"
+                className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors hidden sm:inline-flex items-center"
+              >
+                Beranda Utama
+              </Link>
+            </div>
             <div className="flex items-center gap-2">
               <AgendaActionButton />
             </div>

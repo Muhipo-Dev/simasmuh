@@ -7,27 +7,16 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   Clock,
-  Flag,
   Sparkles,
   Layers,
-  GraduationCap,
-  Moon,
-  Landmark,
   Plus,
   BookOpen,
   Maximize2,
   ExternalLink,
-  Filter,
   X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   fetchNationalHolidays,
   fetchHijriMonthCalendar,
@@ -113,7 +102,6 @@ export function ActivityCalendarWidget({
 }: ActivityCalendarWidgetProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [viewMode, setViewMode] = useState<'month' | 'list'>('month')
-  const [filterType, setFilterType] = useState<'ALL' | 'AGENDA' | 'HOLIDAY' | 'ISLAMIC' | 'MUHAMMADIYAH' | 'NATIONAL'>('ALL')
   const [holidays, setHolidays] = useState<NationalHoliday[]>([])
   const [hijriCalendar, setHijriCalendar] = useState<Record<string, HijriDayInfo>>({})
   const [kegiatanList, setKegiatanList] = useState<any[]>(initialKegiatan)
@@ -121,7 +109,6 @@ export function ActivityCalendarWidget({
   const [selectedDateEvents, setSelectedDateEvents] = useState<CalendarDayEvent[] | null>(null)
   const [selectedDateHijri, setSelectedDateHijri] = useState<HijriDayInfo | null>(null)
   const [selectedDateStr, setSelectedDateStr] = useState<string>('')
-  const [isExpanded, setIsExpanded] = useState<boolean>(false)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth() // 0-indexed (0 = Jan, 8 = Sep)
@@ -296,48 +283,6 @@ export function ActivityCalendarWidget({
     return map
   }, [holidays, hijriCalendar, agendaList, kegiatanList])
 
-  // Count events for badges (Synchronized for current active month)
-  const counts = useMemo(() => {
-    const currentMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`
-
-    // 1. Libur Nasional Khusus Bulan Ini
-    const holidayCount = holidays.filter(h => h.date.startsWith(currentMonthPrefix)).length
-
-    // 2. Hari Besar Islam, Muhammadiyah, & Nasional
-    let islamicCount = 0
-    let muhammadiyahCount = 0
-    let nationalCount = 0
-
-    Object.keys(hijriCalendar).forEach(dKey => {
-      if (dKey.startsWith(currentMonthPrefix)) {
-        const h = hijriCalendar[dKey]
-        if (h.islamicHolidays) islamicCount += h.islamicHolidays.length
-        if (h.muhammadiyahEvents) muhammadiyahCount += h.muhammadiyahEvents.length
-        if (h.nationalEvents) nationalCount += h.nationalEvents.length
-      }
-    })
-
-    const scheduledKegiatan = (kegiatanList || []).filter(keg => {
-      if (keg.sifatKegiatan === 'MENDESAK' || !keg.tanggal) return false
-      const d = new Date(keg.tanggal)
-      return d.getFullYear() === year && d.getMonth() === month
-    })
-
-    const ismubaCount = scheduledKegiatan.filter(k => getKategoriInfo(k.kategori).isIsmuba).length
-    const nonIsmubaCount = scheduledKegiatan.length - ismubaCount
-
-    // 3. Agenda Sekolah Bulan Ini
-    const agendaCount = agendaList.filter(item => {
-      if (!item.eventDate) return false
-      const d = new Date(item.eventDate)
-      return d.getFullYear() === year && d.getMonth() === month
-    }).length + nonIsmubaCount
-
-    islamicCount += ismubaCount
-
-    return { holidayCount, islamicCount, muhammadiyahCount, agendaCount, nationalCount }
-  }, [holidays, hijriCalendar, agendaList, kegiatanList, year, month])
-
   // Calculate calendar grid days
   const firstDayOfMonth = new Date(year, month, 1).getDay() // 0 = Sunday
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -346,23 +291,12 @@ export function ActivityCalendarWidget({
   const calendarDays = useMemo(() => {
     const days = []
 
-    const filterEventFn = (events: CalendarDayEvent[]) => {
-      if (filterType === 'ALL') return events
-      if (filterType === 'AGENDA') return events.filter(e => e.type === 'AGENDA')
-      if (filterType === 'HOLIDAY') return events.filter(e => e.type === 'LIBUR_NASIONAL' || e.type === 'CUTI_BERSAMA')
-      if (filterType === 'ISLAMIC') return events.filter(e => e.type === 'ISLAMIC_EVENT')
-      if (filterType === 'MUHAMMADIYAH') return events.filter(e => e.type === 'MUHAMMADIYAH_EVENT')
-      if (filterType === 'NATIONAL') return events.filter(e => e.type === 'PERINGATAN_NASIONAL')
-      return events
-    }
-
     // Prev month padding
     for (let i = firstDayOfMonth - 1; i >= 0; i--) {
       const day = daysInPrevMonth - i
       const d = new Date(year, month - 1, day)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       const allEvents = eventsByDate[key] || []
-      const filteredEvents = filterEventFn(allEvents)
       const hijri = hijriCalendar[key] || calculateLocalHijriDate(d)
 
       days.push({
@@ -372,7 +306,7 @@ export function ActivityCalendarWidget({
         isCurrentMonth: false,
         isSunday: d.getDay() === 0,
         isFriday: d.getDay() === 5,
-        events: filteredEvents,
+        events: allEvents,
         allEvents,
         hijri
       })
@@ -383,7 +317,6 @@ export function ActivityCalendarWidget({
       const d = new Date(year, month, day)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       const allEvents = eventsByDate[key] || []
-      const filteredEvents = filterEventFn(allEvents)
       const hijri = hijriCalendar[key] || calculateLocalHijriDate(d)
 
       days.push({
@@ -393,7 +326,7 @@ export function ActivityCalendarWidget({
         isCurrentMonth: true,
         isSunday: d.getDay() === 0,
         isFriday: d.getDay() === 5,
-        events: filteredEvents,
+        events: allEvents,
         allEvents,
         hijri
       })
@@ -405,7 +338,6 @@ export function ActivityCalendarWidget({
       const d = new Date(year, month + 1, day)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       const allEvents = eventsByDate[key] || []
-      const filteredEvents = filterEventFn(allEvents)
       const hijri = hijriCalendar[key] || calculateLocalHijriDate(d)
 
       days.push({
@@ -415,14 +347,14 @@ export function ActivityCalendarWidget({
         isCurrentMonth: false,
         isSunday: d.getDay() === 0,
         isFriday: d.getDay() === 5,
-        events: filteredEvents,
+        events: allEvents,
         allEvents,
         hijri
       })
     }
 
     return days
-  }, [year, month, firstDayOfMonth, daysInMonth, daysInPrevMonth, eventsByDate, filterType, hijriCalendar])
+  }, [year, month, firstDayOfMonth, daysInMonth, daysInPrevMonth, eventsByDate, hijriCalendar])
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1))
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1))
@@ -548,17 +480,8 @@ export function ActivityCalendarWidget({
       })
     })
 
-    return list
-      .filter(item => {
-        if (filterType === 'AGENDA') return item.type === 'AGENDA'
-        if (filterType === 'HOLIDAY') return item.type === 'LIBUR_NASIONAL' || item.type === 'CUTI_BERSAMA'
-        if (filterType === 'ISLAMIC') return item.type === 'ISLAMIC_EVENT'
-        if (filterType === 'MUHAMMADIYAH') return item.type === 'MUHAMMADIYAH_EVENT'
-        if (filterType === 'NATIONAL') return item.type === 'PERINGATAN_NASIONAL'
-        return true
-      })
-      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
-  }, [agendaList, holidays, hijriCalendar, kegiatanList, filterType])
+    return list.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
+  }, [agendaList, holidays, hijriCalendar, kegiatanList])
 
   // Mid-month Hijri info for header
   const midMonthHijri = useMemo(() => {
@@ -569,7 +492,7 @@ export function ActivityCalendarWidget({
   return (
     <div className="space-y-2.5">
       {/* Header Widget */}
-      <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
+      <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-1.5 min-w-0">
           <CalendarIcon className="w-4 h-4 text-blue-600 shrink-0" />
           <h4 className="font-extrabold text-xs text-slate-900 dark:text-slate-100 truncate">
@@ -577,202 +500,98 @@ export function ActivityCalendarWidget({
           </h4>
         </div>
 
-        {/* View Mode Toggle & Maximize */}
-        <div className="flex items-center gap-1 shrink-0">
+        {/* View Mode Toggle & Maximize (Glass Style) */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {showAddButton && onAddAgenda && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-6 sm:h-6.5 px-2 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 hover:bg-emerald-100"
+            <button
+              type="button"
               onClick={onAddAgenda}
+              className="h-7 px-2.5 inline-flex items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg backdrop-blur-sm transition-all"
             >
               <Plus className="w-3 h-3 mr-0.5" />
               Agenda
-            </Button>
+            </button>
           )}
-          <Button
-            size="sm"
-            variant={viewMode === 'month' ? 'default' : 'ghost'}
-            className={`h-6 sm:h-6.5 px-2 text-[10px] font-semibold rounded-lg ${
-              viewMode === 'month'
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'text-slate-600 dark:text-slate-400'
-            }`}
-            onClick={() => {
-              setViewMode('month')
-              setSelectedDateEvents(null)
-            }}
-          >
-            Bulan
-          </Button>
-          <Button
-            size="sm"
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
-            className={`h-6 sm:h-6.5 px-2 text-[10px] font-semibold rounded-lg ${
-              viewMode === 'list'
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'text-slate-600 dark:text-slate-400'
-            }`}
-            onClick={() => setViewMode('list')}
-          >
-            Daftar
-          </Button>
-          {!isModal && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-6 sm:h-6.5 px-1.5 text-[10px] font-bold rounded-lg border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-              onClick={() => setIsExpanded(true)}
-              title="Perbesar Kalender (Layar Penuh / Dialog)"
+          <div className="inline-flex items-center p-0.5 rounded-lg bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/60 dark:border-white/10 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('month')
+                setSelectedDateEvents(null)
+              }}
+              className={`h-6 px-2.5 text-[10px] font-bold rounded-md transition-all ${
+                viewMode === 'month'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
             >
-              <Maximize2 className="w-3 h-3" />
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Filter Tabs / Dropdown */}
-      <div className="flex items-center justify-between gap-1.5">
-        {/* Mobile Filter: Compact Bordered Box */}
-        <div className="sm:hidden flex-1">
-          <div className="flex items-center gap-1.5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-200 shadow-2xs">
-            <Filter className="w-3 h-3 text-slate-500 shrink-0" />
-            <select
-              value={filterType}
-              onChange={e => setFilterType(e.target.value as any)}
-              className="bg-transparent text-[10px] font-bold text-slate-800 dark:text-slate-100 focus:outline-none w-full cursor-pointer pr-1"
+              Bulan
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`h-6 px-2.5 text-[10px] font-bold rounded-md transition-all ${
+                viewMode === 'list'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
             >
-              <option value="ALL" className="bg-white dark:bg-slate-900">Semua Kategori ({counts.holidayCount + counts.islamicCount + counts.muhammadiyahCount + counts.agendaCount + counts.nationalCount})</option>
-              <option value="HOLIDAY" className="bg-white dark:bg-slate-900">Libur ({counts.holidayCount})</option>
-              <option value="NATIONAL" className="bg-white dark:bg-slate-900">Nasional ({counts.nationalCount})</option>
-              <option value="ISLAMIC" className="bg-white dark:bg-slate-900">Islam ({counts.islamicCount})</option>
-              <option value="MUHAMMADIYAH" className="bg-white dark:bg-slate-900">Muhammadiyah ({counts.muhammadiyahCount})</option>
-              <option value="AGENDA" className="bg-white dark:bg-slate-900">Sekolah ({counts.agendaCount})</option>
-            </select>
+              Daftar
+            </button>
           </div>
-        </div>
-
-        {/* Desktop Filter Pills */}
-        <div className="hidden sm:flex items-center gap-1 overflow-x-auto pb-0.5 text-[9.5px] scrollbar-none">
-          <button
-            type="button"
-            onClick={() => setFilterType('ALL')}
-            className={`px-2 py-0.5 rounded-md font-bold transition-colors whitespace-nowrap ${
-              filterType === 'ALL'
-                ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
-            }`}
+          <Link
+            href="/agenda"
+            className="h-7 w-7 inline-flex items-center justify-center text-[10px] font-bold rounded-lg bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/60 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-white/75 dark:hover:bg-slate-700/60 hover:text-blue-600 dark:hover:text-blue-400 transition-all shadow-2xs"
+            title="Buka Halaman Khusus Kalender (Layar Penuh)"
           >
-            Semua
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType('HOLIDAY')}
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold transition-colors whitespace-nowrap ${
-              filterType === 'HOLIDAY'
-                ? 'bg-rose-600 text-white'
-                : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 hover:bg-rose-100'
-            }`}
-          >
-            <Flag className="w-2.5 h-2.5" />
-            Libur ({counts.holidayCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType('NATIONAL')}
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold transition-colors whitespace-nowrap ${
-              filterType === 'NATIONAL'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 hover:bg-indigo-100'
-            }`}
-          >
-            Nasional ({counts.nationalCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType('ISLAMIC')}
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold transition-colors whitespace-nowrap ${
-              filterType === 'ISLAMIC'
-                ? 'bg-amber-600 text-white'
-                : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 hover:bg-amber-100'
-            }`}
-          >
-            <Moon className="w-2.5 h-2.5" />
-            Islam ({counts.islamicCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType('MUHAMMADIYAH')}
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold transition-colors whitespace-nowrap ${
-              filterType === 'MUHAMMADIYAH'
-                ? 'bg-sky-600 text-white'
-                : 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 hover:bg-sky-100'
-            }`}
-          >
-            <Landmark className="w-2.5 h-2.5" />
-            Muhammadiyah ({counts.muhammadiyahCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType('AGENDA')}
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold transition-colors whitespace-nowrap ${
-              filterType === 'AGENDA'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 hover:bg-emerald-100'
-            }`}
-          >
-            <GraduationCap className="w-2.5 h-2.5" />
-            Sekolah ({counts.agendaCount})
-          </button>
+            <Maximize2 className="w-3.5 h-3.5" />
+          </Link>
         </div>
       </div>
 
       {viewMode === 'month' ? (
         <>
-          {/* Navigation Controls */}
-          <div className="flex items-center justify-between gap-1">
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
+          {/* Navigation Controls (Glass Style with Subtle Curves) */}
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
                 onClick={prevMonth}
-                className="h-6 w-6 rounded-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                className="h-7 w-7 inline-flex items-center justify-center rounded-lg bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/60 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-white/75 dark:hover:bg-slate-700/60 hover:text-blue-600 dark:hover:text-blue-400 transition-all shadow-2xs"
+                title="Bulan Sebelumnya"
               >
-                <ChevronLeft className="w-3 h-3" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
                 onClick={nextMonth}
-                className="h-6 w-6 rounded-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                className="h-7 w-7 inline-flex items-center justify-center rounded-lg bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/60 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-white/75 dark:hover:bg-slate-700/60 hover:text-blue-600 dark:hover:text-blue-400 transition-all shadow-2xs"
+                title="Bulan Selanjutnya"
               >
-                <ChevronRight className="w-3 h-3" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
                 onClick={goToday}
-                className="h-6 px-1.5 text-[10px] font-bold rounded-lg border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 hover:bg-blue-100"
+                className="h-7 px-2.5 inline-flex items-center justify-center text-[10.5px] font-bold rounded-lg bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/60 dark:border-white/10 text-blue-600 dark:text-blue-400 hover:bg-white/75 dark:hover:bg-slate-700/60 transition-all shadow-2xs"
               >
                 Hari Ini
-              </Button>
+              </button>
             </div>
-            <div className="text-right">
-              <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                <span className="font-black text-xs text-slate-900 dark:text-white tracking-tight">
-                  {monthNames[month]} {year}
-                </span>
-                <span className="text-[9px] font-bold text-amber-800 dark:text-amber-300 font-mono bg-amber-100/80 dark:bg-amber-950/80 px-1 py-0.2 rounded border border-amber-300/80">
-                  {midMonthHijri.monthName} {midMonthHijri.year} H
-                </span>
-              </div>
+            <div className="text-right flex items-center justify-end gap-1.5 flex-wrap">
+              <span className="font-extrabold text-xs text-slate-900 dark:text-white tracking-tight uppercase">
+                {monthNames[month]} {year}
+              </span>
+              <span className="text-[9.5px] font-bold text-amber-800 dark:text-amber-300 font-mono bg-amber-500/10 dark:bg-amber-400/10 px-1.5 py-0.5 rounded-md border border-amber-500/20 dark:border-amber-400/20 backdrop-blur-xs">
+                {midMonthHijri.monthName} {midMonthHijri.year} H
+              </span>
             </div>
           </div>
 
-          {/* Calendar Grid - Solid Background & High Legibility */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
+          {/* Calendar Grid - Semi-glass with subtle clean rounded-lg borders */}
+          <div className="border border-slate-200/70 dark:border-white/10 rounded-lg overflow-hidden bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-2xs">
             {/* Days Header */}
-            <div className="grid grid-cols-7 bg-slate-100/90 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-800 text-center py-1 text-[9.5px] font-black text-slate-600 dark:text-slate-300 uppercase">
+            <div className="grid grid-cols-7 bg-slate-100/60 dark:bg-slate-800/60 backdrop-blur-xs border-b border-slate-200/70 dark:border-white/10 text-center py-1.5 text-[9.5px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wide">
               {dayNames.map((d, i) => (
                 <div key={i} className={i === 0 ? 'text-rose-600 dark:text-rose-400' : i === 5 ? 'text-emerald-600 dark:text-emerald-400' : ''}>
                   {d}
@@ -781,7 +600,7 @@ export function ActivityCalendarWidget({
             </div>
 
             {/* Cells */}
-            <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-800 text-center text-xs">
+            <div className="grid grid-cols-7 divide-x divide-y divide-slate-200/50 dark:divide-white/5 text-center text-xs">
               {calendarDays.map((cell, idx) => {
                 const isToday = cell.key === todayKey
                 const hasEvents = cell.events.length > 0
@@ -811,18 +630,18 @@ export function ActivityCalendarWidget({
                     }}
                     className={`${
                       isModal ? 'min-h-[72px] sm:min-h-[84px] p-1.5' : 'h-[38px] sm:h-[42px] p-0.5 sm:p-1'
-                    } flex flex-col items-center justify-between transition-colors relative group bg-white dark:bg-slate-900 ${
+                    } flex flex-col items-center justify-between transition-colors relative group ${
                       !cell.isCurrentMonth
-                        ? 'bg-slate-50/70 dark:bg-slate-950/60 text-slate-300 dark:text-slate-600'
+                        ? 'bg-slate-100/25 dark:bg-slate-950/30 text-slate-400/50 dark:text-slate-600'
                         : hasHoliday
-                        ? 'bg-rose-50/70 dark:bg-rose-950/40 text-slate-800 dark:text-slate-100 hover:bg-rose-100/70'
+                        ? 'bg-rose-50/40 dark:bg-rose-950/25 text-slate-800 dark:text-slate-100 hover:bg-rose-100/50'
                         : hasMuhammadiyah
-                        ? 'bg-sky-50/70 dark:bg-sky-950/40 text-slate-800 dark:text-slate-100 hover:bg-sky-100/70'
+                        ? 'bg-sky-50/40 dark:bg-sky-950/25 text-slate-800 dark:text-slate-100 hover:bg-sky-100/50'
                         : hasIslamic
-                        ? 'bg-amber-50/70 dark:bg-amber-950/40 text-slate-800 dark:text-slate-100 hover:bg-amber-100/70'
+                        ? 'bg-amber-50/40 dark:bg-amber-950/25 text-slate-800 dark:text-slate-100 hover:bg-amber-100/50'
                         : hasAgenda
-                        ? 'bg-emerald-50/70 dark:bg-emerald-950/40 text-slate-800 dark:text-slate-100 hover:bg-emerald-100/70'
-                        : 'text-slate-800 dark:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/60'
+                        ? 'bg-emerald-50/40 dark:bg-emerald-950/25 text-slate-800 dark:text-slate-100 hover:bg-emerald-100/50'
+                        : 'bg-white/40 dark:bg-slate-900/40 text-slate-800 dark:text-slate-100 hover:bg-white/75 dark:hover:bg-slate-800/70'
                     } ${isSelected ? 'ring-2 ring-blue-500 z-10' : ''}`}
                   >
                     {/* Top Date: Gregorian (Masehi) on Top-Left */}
@@ -858,16 +677,16 @@ export function ActivityCalendarWidget({
                               isModal ? 'text-[9.5px] py-0.5 px-1' : 'text-[7px] px-0.5 py-0.2'
                             } font-bold truncate rounded text-left leading-tight ${
                               ev.type === 'LIBUR_NASIONAL'
-                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200 border border-rose-300'
+                                ? 'bg-rose-100/80 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200 border border-rose-300/80'
                                 : ev.type === 'CUTI_BERSAMA'
-                                ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/60 dark:text-orange-200 border border-orange-300'
+                                ? 'bg-orange-100/80 text-orange-800 dark:bg-orange-900/60 dark:text-orange-200 border border-orange-300/80'
                                 : ev.type === 'ISLAMIC_EVENT'
-                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300'
+                                ? 'bg-amber-100/80 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300/80'
                                 : ev.type === 'MUHAMMADIYAH_EVENT'
-                                ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-200 border border-sky-300'
+                                ? 'bg-sky-100/80 text-sky-800 dark:bg-sky-900/60 dark:text-sky-200 border border-sky-300/80'
                               : ev.type === 'PERINGATAN_NASIONAL'
-                                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-200 border border-indigo-300'
-                              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-300'
+                                ? 'bg-indigo-100/80 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-200 border border-indigo-300/80'
+                              : 'bg-emerald-100/80 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-300/80'
                             }`}
                           >
                             {ev.title}
@@ -888,7 +707,7 @@ export function ActivityCalendarWidget({
 
           {/* Selected Date Popup / Banner */}
           {selectedDateStr && (
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-xl space-y-2 animate-in fade-in">
+            <div className="p-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/70 dark:border-white/10 rounded-lg space-y-2 shadow-xs animate-in fade-in">
               <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-slate-100">
                 <span className="flex items-center gap-1.5 flex-wrap">
                   <Clock className="w-3.5 h-3.5 text-blue-600" />
@@ -979,7 +798,7 @@ export function ActivityCalendarWidget({
         /* List Mode View */
         <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
           {combinedList.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 text-xs border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+            <div className="text-center py-8 text-slate-400 text-xs border border-dashed border-slate-200 dark:border-slate-800 rounded-lg">
               Tidak ada agenda atau hari besar yang sesuai filter.
             </div>
           ) : (
@@ -1006,18 +825,18 @@ export function ActivityCalendarWidget({
               return (
                 <div
                   key={item.id || i}
-                  className={`p-2.5 rounded-xl border space-y-1 ${
+                  className={`p-2.5 rounded-lg border space-y-1 backdrop-blur-sm ${
                     isHoliday
-                      ? 'border-rose-100 dark:border-rose-900/50 bg-rose-50/40 dark:bg-rose-950/20'
+                      ? 'border-rose-200/70 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20'
                       : isCuti
-                      ? 'border-orange-100 dark:border-orange-900/50 bg-orange-50/40 dark:bg-orange-950/20'
+                      ? 'border-orange-200/70 dark:border-orange-900/50 bg-orange-50/50 dark:bg-orange-950/20'
                       : isIslamic
-                      ? 'border-amber-100 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/20'
+                      ? 'border-amber-200/70 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20'
                       : isMuhammadiyah
-                      ? 'border-sky-100 dark:border-sky-900/50 bg-sky-50/40 dark:bg-sky-950/20'
+                      ? 'border-sky-200/70 dark:border-sky-900/50 bg-sky-50/50 dark:bg-sky-950/20'
                       : isNational
-                      ? 'border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/40 dark:bg-indigo-950/20'
-                      : 'border-emerald-100 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20'
+                      ? 'border-indigo-200/70 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      : 'border-emerald-200/70 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1079,30 +898,6 @@ export function ActivityCalendarWidget({
             })
           )}
         </div>
-      )}
-
-      {/* POPUP / DIALOG PERBESAR KALENDER */}
-      {!isModal && (
-        <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
-          <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] flex flex-col p-4 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto">
-            <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
-              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                <CalendarIcon className="w-5 h-5 text-blue-600" />
-                <span>{title} — Mode Tampilan Penuh</span>
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="pt-2">
-              <ActivityCalendarWidget
-                announcements={announcements}
-                title={title}
-                onAddAgenda={onAddAgenda}
-                showAddButton={showAddButton}
-                isModal={true}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
       )}
     </div>
   )

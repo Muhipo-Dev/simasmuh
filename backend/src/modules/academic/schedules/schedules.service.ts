@@ -210,7 +210,7 @@ function normalizeSubjectString(rawName: string): string {
   if (!rawName) return '';
   const trimmed = rawName.trim();
   const lower = trimmed
-    .replace(/[._\-]/g, ' ')
+    .replace(/[._-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();

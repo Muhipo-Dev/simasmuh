@@ -96,13 +96,13 @@ export class FinanceController {
       req.user?.subRole5,
       req.user?.role,
     ];
-    const isKeuanganAll = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+    const isKeuanganAuthorized = userSubRoles.some((r) =>
+      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
 
-    if (!isKeuanganAll) {
+    if (!isKeuanganAuthorized) {
       throw new ForbiddenException(
-        'Akses ditolak. Pengaturan komponen penggajian hanya dapat diubah oleh Keuangan All / Superadmin.',
+        'Akses ditolak. Pengaturan komponen penggajian hanya dapat diubah oleh Keuangan / Superadmin.',
       );
     }
 
@@ -130,13 +130,13 @@ export class FinanceController {
       req.user?.subRole5,
       req.user?.role,
     ];
-    const isKeuanganAll = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+    const isKeuanganAuthorized = userSubRoles.some((r) =>
+      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
 
-    if (!isKeuanganAll) {
+    if (!isKeuanganAuthorized) {
       throw new ForbiddenException(
-        'Akses ditolak. Reset data penggajian hanya dapat dilakukan oleh Keuangan All / Superadmin.',
+        'Akses ditolak. Reset data penggajian hanya dapat dilakukan oleh Keuangan / Superadmin.',
       );
     }
 
@@ -160,13 +160,13 @@ export class FinanceController {
       req.user?.subRole5,
       req.user?.role,
     ];
-    const isKeuanganAll = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+    const isKeuanganAuthorized = userSubRoles.some((r) =>
+      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
 
-    if (!isKeuanganAll) {
+    if (!isKeuanganAuthorized) {
       throw new ForbiddenException(
-        'Akses ditolak. Reset data penggajian hanya dapat dilakukan oleh Keuangan All / Superadmin.',
+        'Akses ditolak. Reset data penggajian hanya dapat dilakukan oleh Keuangan / Superadmin.',
       );
     }
 
@@ -188,13 +188,13 @@ export class FinanceController {
       req.user?.subRole5,
       req.user?.role,
     ];
-    const isKeuanganAll = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+    const isKeuanganAuthorized = userSubRoles.some((r) =>
+      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
 
-    if (!isKeuanganAll) {
+    if (!isKeuanganAuthorized) {
       throw new ForbiddenException(
-        'Akses ditolak. Pengaturan status kepegawaian hanya dapat diubah oleh Keuangan All / Superadmin.',
+        'Akses ditolak. Pengaturan status kepegawaian hanya dapat diubah oleh Keuangan / Superadmin.',
       );
     }
 
@@ -219,13 +219,13 @@ export class FinanceController {
       req.user?.subRole5,
       req.user?.role,
     ];
-    const isKeuanganAll = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+    const isKeuanganAuthorized = userSubRoles.some((r) =>
+      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
 
-    if (!isKeuanganAll) {
+    if (!isKeuanganAuthorized) {
       throw new ForbiddenException(
-        'Akses ditolak. Pengaturan rekening pegawai hanya dapat diubah oleh Keuangan All / Superadmin.',
+        'Akses ditolak. Pengaturan rekening pegawai hanya dapat diubah oleh Keuangan / Superadmin.',
       );
     }
 

@@ -167,6 +167,7 @@ export const keuanganMasukLinks = [
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Keuangan Masuk', href: '/keuangan/pemasukan', icon: Wallet, group: 'Keuangan Masuk' },
   { name: 'Virtual Account BNI', href: '/keuangan/virtual-account', icon: Database, group: 'Keuangan Masuk' },
+  { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote, group: 'Keuangan Masuk' },
   { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings, group: 'Keuangan Masuk' },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText, group: 'Keuangan Masuk' },
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
@@ -214,9 +215,9 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     if (pathname.startsWith('/keuangan/pengeluaran') || pathname.startsWith('/keuangan/lpj')) {
       return isKeuanganAll || isKeuanganKeluar || roles.includes('KEUANGAN')
     }
-    // Penggajian Pegawai — HANYA Keuangan All
+    // Penggajian Pegawai — Keuangan All & Keuangan Masuk
     if (pathname.startsWith('/keuangan/penggajian')) {
-      return isKeuanganAll || roles.includes('KEUANGAN')
+      return isKeuanganAll || isKeuanganMasuk || roles.includes('KEUANGAN')
     }
     // Laporan Keuangan — Keuangan All, Masuk, Keluar, dan Kepala Sekolah (Supervisi Eksekutif)
     if (pathname.startsWith('/keuangan/laporan')) {

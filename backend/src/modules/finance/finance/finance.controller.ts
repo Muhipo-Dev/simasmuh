@@ -97,7 +97,7 @@ export class FinanceController {
       req.user?.role,
     ];
     const isKeuanganAuthorized = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
 
     if (!isKeuanganAuthorized) {
@@ -131,7 +131,7 @@ export class FinanceController {
       req.user?.role,
     ];
     const isKeuanganAuthorized = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
 
     if (!isKeuanganAuthorized) {
@@ -161,7 +161,7 @@ export class FinanceController {
       req.user?.role,
     ];
     const isKeuanganAuthorized = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
 
     if (!isKeuanganAuthorized) {
@@ -189,7 +189,7 @@ export class FinanceController {
       req.user?.role,
     ];
     const isKeuanganAuthorized = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
 
     if (!isKeuanganAuthorized) {
@@ -220,7 +220,7 @@ export class FinanceController {
       req.user?.role,
     ];
     const isKeuanganAuthorized = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
 
     if (!isKeuanganAuthorized) {

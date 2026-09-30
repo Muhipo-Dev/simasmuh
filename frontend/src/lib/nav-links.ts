@@ -182,6 +182,7 @@ export const keuanganKeluarLinks = [
   { name: 'Scan QR Absen', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt, group: 'Keuangan Keluar' },
+  { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote, group: 'Keuangan Keluar' },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText, group: 'Keuangan Keluar' },
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
   { name: 'Izin Keluar', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Pegawai' },
@@ -215,9 +216,9 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     if (pathname.startsWith('/keuangan/pengeluaran') || pathname.startsWith('/keuangan/lpj')) {
       return isKeuanganAll || isKeuanganKeluar || roles.includes('KEUANGAN')
     }
-    // Penggajian Pegawai — Keuangan All & Keuangan Masuk
+    // Penggajian Pegawai — Keuangan All, Keuangan Masuk & Keuangan Keluar
     if (pathname.startsWith('/keuangan/penggajian')) {
-      return isKeuanganAll || isKeuanganMasuk || roles.includes('KEUANGAN')
+      return isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar || roles.includes('KEUANGAN')
     }
     // Laporan Keuangan — Keuangan All, Masuk, Keluar, dan Kepala Sekolah (Supervisi Eksekutif)
     if (pathname.startsWith('/keuangan/laporan')) {

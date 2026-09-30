@@ -1349,153 +1349,6 @@ export default function FaceNetAiStandalonePage() {
               </div>
             </div>
 
-            {/* PANEL ALGORITMA AI PRESENSI AKTIF (SIMASMUH BIO-FUSION AI ENGINE) */}
-            <div className="bg-slate-950/85 border border-indigo-500/25 rounded-3xl p-3.5 sm:p-4.5 backdrop-blur-md shadow-xl space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
-                    <Cpu className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-extrabold text-white tracking-wide flex items-center gap-2">
-                      <span>Algoritma AI Presensi Aktif</span>
-                      <span className="text-[11px] font-normal text-indigo-300">SIMASMUH Bio-Fusion</span>
-                    </h3>
-                    <p className="text-[11px] text-slate-400">Rangkaian deep learning & computer vision yang beroperasi secara simultan</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="flex h-2.5 w-2.5 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                  </span>
-                  <span className="text-[11px] font-mono text-emerald-400 font-bold">8 Algoritma Berjalan</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
-                {/* 1. MTCNN */}
-                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-extrabold text-indigo-300 text-xs flex items-center gap-1.5">
-                      <Scan className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> MTCNN 5-Point
-                    </span>
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      AKTIF
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-snug">
-                    Deteksi kaskade 3-tahap (P-Net, R-Net, O-Net) & estimasi 5 landmark mata, hidung, mulut.
-                  </p>
-                </div>
-
-                {/* 2. Inception-ResNet-v1 */}
-                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-extrabold text-indigo-300 text-xs flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> Inception-ResNet-v1
-                    </span>
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
-                      512-D
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-snug">
-                    Ekstraksi representasi biometrik vektor mendalam berakurasi tinggi (Deep Metric Learning).
-                  </p>
-                </div>
-
-                {/* 3. VGGFace2 Weights */}
-                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-extrabold text-indigo-300 text-xs flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> VGGFace2 Ensemble
-                    </span>
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      TERVERIFIKASI
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-snug">
-                    Pembobotan biometrik terlatih untuk membedakan fitur identitas wajah manusia secara konsisten.
-                  </p>
-                </div>
-
-                {/* 4. Dual-Stream Periocular */}
-                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-extrabold text-purple-300 text-xs flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Dual-Stream Periocular
-                    </span>
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      ANTI-KEMBAR
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-snug">
-                    Pembeda fitur mata, alis & jembatan hidung untuk siswa kembar, wajah mirip & pemakai kacamata.
-                  </p>
-                </div>
-
-                {/* 5. OpenCV CLAHE & Anti-Glare */}
-                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-teal-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-extrabold text-teal-300 text-xs flex items-center gap-1.5">
-                      <Aperture className="w-3.5 h-3.5 text-teal-400 shrink-0" /> CLAHE & Anti-Glare
-                    </span>
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                      OPENCV
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-snug">
-                    Supresi pantulan specular cahaya pada kacamata dan normalisasi kontras pencahayaan adaptif.
-                  </p>
-                </div>
-
-                {/* 6. Similarity Affine Alignment */}
-                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-teal-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-extrabold text-teal-300 text-xs flex items-center gap-1.5">
-                      <Sliders className="w-3.5 h-3.5 text-teal-400 shrink-0" /> Affine Alignment
-                    </span>
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                      5-TITIK
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-snug">
-                    Koreksi sudut kemiringan wajah otomatis agar kedua pupil mata sejajar horizontal kanonikal.
-                  </p>
-                </div>
-
-                {/* 7. BLAS Dot-Product */}
-                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-extrabold text-cyan-300 text-xs flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> BLAS Dot-Product
-                    </span>
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono">
-                      &lt; 0.05 MS
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-snug">
-                    Pencocokan matriks vektor biometrik instan ke ribuan database tanpa antrean beban komputasi.
-                  </p>
-                </div>
-
-                {/* 8. YOLO Vision Tracker */}
-                <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 transition-all flex flex-col justify-between space-y-1.5 shadow-sm">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-extrabold text-cyan-300 text-xs flex items-center gap-1.5">
-                      <Radio className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> YOLO Vision Tracker
-                    </span>
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                      MULTI-SUDUT
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-snug">
-                    Pelacakan bounding-box adaptif saat pergerakan objek dinamis dan sudut orientasi bervariasi.
-                  </p>
-                </div>
-              </div>
-            </div>
-
             {/* SPLIT SCREEN: LIVE STREAM & LOGS */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
               {/* LEFT: REALTIME LIVE CAPTURE STREAM (7 COLS) */}
@@ -2784,6 +2637,51 @@ export default function FaceNetAiStandalonePage() {
             </CardContent>
           </Card>
         )}
+
+        {/* FOOTER INFO: ARSITEKTUR ALGORITMA AI PRESENSI AKTIF (RINGKAS & COMPACT) */}
+        <div className="pt-2 border-t border-slate-800/60 text-slate-400">
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-2.5 sm:p-3 backdrop-blur-xs flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="flex h-2 w-2 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[11px] font-bold text-slate-200 truncate">
+                Bio-Fusion AI Engine:
+              </span>
+              <span className="text-[11px] text-slate-400 truncate hidden sm:inline">
+                8 Algoritma Aktif
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-indigo-300 font-semibold" title="Multi-Task Cascaded CNN 5-Point Landmark Detector">
+                MTCNN 5-Point
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-indigo-300 font-semibold font-mono" title="Inception-ResNet-v1 512-Dimensional Deep Vector">
+                Inception-ResNet-v1 (512-D)
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-indigo-300 font-semibold" title="VGGFace2 Pretrained Biometric Feature Weights">
+                VGGFace2
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-purple-800/50 text-purple-300 font-semibold" title="Dual-Stream Periocular (Solusi Siswa Kembar / Wajah Mirip)">
+                Periocular Stream
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-teal-800/50 text-teal-300 font-semibold" title="OpenCV CLAHE Adaptive Contrast & Anti-Glare Kacamata">
+                CLAHE Anti-Glare
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-teal-800/50 text-teal-300 font-semibold" title="5-Point Similarity Affine Face Alignment">
+                Affine 5-Point
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-cyan-800/50 text-cyan-300 font-semibold font-mono" title="BLAS Matrix Vectorized Dot-Product (<0.05ms)">
+                BLAS Vector (&lt; 0.05ms)
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-cyan-800/50 text-cyan-300 font-semibold" title="YOLO Multi-Angle Vision Tracker">
+                YOLO Tracker
+              </span>
+            </div>
+          </div>
+        </div>
       </main>
 
       {/* Footer */}

@@ -599,6 +599,9 @@ export function KepegawaianManagement() {
 
   // Open Edit Modal with Pre-filled Data (Ranah Profesional SDM & TU)
   const handleOpenEdit = (peg: PegawaiUserItem) => {
+    const isCleaning = [peg.role, peg.subRole].some(
+      r => r && (['CLEANING_SERVICE', 'CS', 'KEBERSIHAN', 'PETUGAS_KEBERSIHAN'].includes(r.toUpperCase()) || r.toUpperCase().includes('KEBERSIHAN') || r.toUpperCase().includes('CLEANING'))
+    )
     setEditFormPegawai({
       id: peg.id,
       nipNbm: peg.nipNbm || peg.teacherProfile?.nip || '',
@@ -609,7 +612,7 @@ export function KepegawaianManagement() {
       password: '',
       role: peg.role || 'GURU',
       subRole: peg.subRole || 'NONE',
-      employmentStatus: peg.employmentStatus || (peg.role === 'GURU' ? 'GTTP' : 'PTTP'),
+      employmentStatus: peg.employmentStatus || (isCleaning ? 'CS' : peg.role === 'GURU' ? 'GTTP' : 'PTTP'),
       lastEducation: normalizeEducation(peg.teacherProfile?.lastEducation),
       isActive: peg.isActive !== false,
       address: peg.address || '',
@@ -1071,7 +1074,10 @@ export function KepegawaianManagement() {
                   const nip = peg.nipNbm || peg.teacherProfile?.nip || '-'
                   const phone = peg.phone || peg.teacherProfile?.phone || '-'
                   const education = normalizeEducation(peg.teacherProfile?.lastEducation)
-                  const status = peg.employmentStatus || (peg.role === 'GURU' ? 'GTTP' : 'PTTP')
+                  const isCleaning = [peg.role, peg.subRole, peg.subRole2, peg.subRole3, peg.subRole4, peg.subRole5].some(
+                    r => r && (['CLEANING_SERVICE', 'CS', 'KEBERSIHAN', 'PETUGAS_KEBERSIHAN'].includes(r.toUpperCase()) || r.toUpperCase().includes('KEBERSIHAN') || r.toUpperCase().includes('CLEANING'))
+                  )
+                  const status = peg.employmentStatus || (isCleaning ? 'CS' : peg.role === 'GURU' ? 'GTTP' : 'PTTP')
 
                   return (
                     <Card key={peg.id} className="border-slate-200 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-900 transition-all rounded-2xl shadow-xs">
@@ -1730,7 +1736,15 @@ export function KepegawaianManagement() {
                 <Label className="text-xs font-bold">Jabatan Utama (Role)</Label>
                 <Select
                   value={formPegawai.role}
-                  onValueChange={(val: string | null) => setFormPegawai({ ...formPegawai, role: val || 'GURU' })}
+                  onValueChange={(val: string | null) => {
+                    const r = val || 'GURU'
+                    const isCS = r === 'CLEANING_SERVICE'
+                    setFormPegawai({
+                      ...formPegawai,
+                      role: r,
+                      employmentStatus: isCS ? 'CS' : (r === 'GURU' ? 'GTTP' : 'PTTP')
+                    })
+                  }}
                 >
                   <SelectTrigger className="mt-1 h-9 rounded-xl text-xs">
                     <SelectValue />
@@ -1747,7 +1761,15 @@ export function KepegawaianManagement() {
                 <Label className="text-xs font-bold">Sub-Role / Penugasan Khusus</Label>
                 <Select
                   value={formPegawai.subRole}
-                  onValueChange={(val: string | null) => setFormPegawai({ ...formPegawai, subRole: val || 'NONE' })}
+                  onValueChange={(val: string | null) => {
+                    const sr = val || 'NONE'
+                    const isCS = sr === 'CLEANING_SERVICE' || sr === 'KEBERSIHAN'
+                    setFormPegawai({
+                      ...formPegawai,
+                      subRole: sr,
+                      ...(isCS ? { employmentStatus: 'CS' } : {})
+                    })
+                  }}
                 >
                   <SelectTrigger className="mt-1 h-9 rounded-xl text-xs">
                     <SelectValue />
@@ -2131,7 +2153,15 @@ export function KepegawaianManagement() {
                 <Label className="text-xs font-bold">Sub-Role / Penugasan Khusus</Label>
                 <Select
                   value={editFormPegawai.subRole}
-                  onValueChange={(val: string | null) => setEditFormPegawai({ ...editFormPegawai, subRole: val || 'NONE' })}
+                  onValueChange={(val: string | null) => {
+                    const sr = val || 'NONE'
+                    const isCS = sr === 'CLEANING_SERVICE' || sr === 'KEBERSIHAN'
+                    setEditFormPegawai({
+                      ...editFormPegawai,
+                      subRole: sr,
+                      ...(isCS ? { employmentStatus: 'CS' } : {})
+                    })
+                  }}
                 >
                   <SelectTrigger className="mt-1 h-9 rounded-xl text-xs">
                     <SelectValue />
@@ -2412,7 +2442,13 @@ export function KepegawaianManagement() {
                   </div>
                   <div className="flex items-center gap-1.5 pt-0.5">
                     <Badge className="text-[9px] bg-purple-600 text-white uppercase">{selectedPegawai.role}</Badge>
-                    <Badge variant="outline" className="text-[9px] font-bold text-slate-600">{selectedPegawai.employmentStatus || 'GTTP'}</Badge>
+                    <Badge variant="outline" className="text-[9px] font-bold text-slate-600">
+                      {selectedPegawai.employmentStatus || (
+                        [selectedPegawai.role, selectedPegawai.subRole, selectedPegawai.subRole2, selectedPegawai.subRole3, selectedPegawai.subRole4, selectedPegawai.subRole5].some(
+                          r => r && (['CLEANING_SERVICE', 'CS', 'KEBERSIHAN', 'PETUGAS_KEBERSIHAN'].includes(r.toUpperCase()) || r.toUpperCase().includes('KEBERSIHAN') || r.toUpperCase().includes('CLEANING'))
+                        ) ? 'CS' : selectedPegawai.role === 'GURU' ? 'GTTP' : 'PTTP'
+                      )}
+                    </Badge>
                     <Badge variant="outline" className={`text-[9px] font-bold px-1.5 py-0 ${
                       selectedPegawai.isActive !== false
                         ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-300'

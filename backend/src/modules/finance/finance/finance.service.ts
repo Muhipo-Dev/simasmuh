@@ -79,7 +79,7 @@ export class FinanceService {
     let validDays = 0;
     const dailyDetails: any[] = [];
 
-    // Deteksi apakah Cleaning Service
+    // Deteksi apakah Cleaning Service (CS / Kebersihan)
     const allRoles = [
       userRoleInfo?.role,
       userRoleInfo?.subRole,
@@ -92,11 +92,15 @@ export class FinanceService {
       .filter(Boolean)
       .map((r) => r!.toUpperCase());
 
-    const isCleaningService = allRoles.some((r) =>
-      ['CLEANING_SERVICE', 'CS', 'KEBERSIHAN', 'PETUGAS_KEBERSIHAN'].includes(
-        r,
-      ),
-    );
+    const isCleaningService = allRoles.some((r) => {
+      const up = r.toUpperCase();
+      return (
+        ['CLEANING_SERVICE', 'CS', 'KEBERSIHAN', 'PETUGAS_KEBERSIHAN'].includes(up) ||
+        up.includes('KEBERSIHAN') ||
+        up.includes('CLEANING') ||
+        up === 'CS'
+      );
+    });
 
     for (const att of attendances) {
       if (att.status !== 'HADIR') continue;
@@ -293,10 +297,11 @@ export class FinanceService {
 
       const savedRecord = recordMap.get(staff.id);
 
-      // Status kepegawaian default jika belum diatur
+      // Status kepegawaian default jika belum diatur (CS otomatis untuk sub-role/role kebersihan)
+      const isStaffCS = attCalc.isCleaningService;
       const defaultStatus =
         staff.employmentStatus ||
-        (staff.role === 'GURU' || staff.subRole === 'GURU' ? 'GTTP' : 'PTTP');
+        (isStaffCS ? 'CS' : staff.role === 'GURU' || staff.subRole === 'GURU' ? 'GTTP' : 'PTTP');
 
       // Jam, Masa Kerja, Kelebihan Jam & Tarif
       const totalHours = savedRecord?.totalHours ?? 0;
@@ -662,9 +667,10 @@ export class FinanceService {
       user.subRole5,
     ].filter(Boolean);
 
+    const isStaffCS = attCalc.isCleaningService;
     const defaultStatus =
       user.employmentStatus ||
-      (user.role === 'GURU' || user.subRole === 'GURU' ? 'GTTP' : 'PTTP');
+      (isStaffCS ? 'CS' : user.role === 'GURU' || user.subRole === 'GURU' ? 'GTTP' : 'PTTP');
 
     const totalHours = savedRecord?.totalHours ?? 0;
     const hourlyRate = savedRecord?.hourlyRate ?? 0;
@@ -899,13 +905,18 @@ export class FinanceService {
         staff.subRole5,
       ].filter(Boolean);
 
+      const isStaffCS = attCalc.isCleaningService;
+      const defaultStatus =
+        staff.employmentStatus ||
+        (isStaffCS ? 'CS' : staff.role === 'GURU' || staff.subRole === 'GURU' ? 'GTTP' : 'PTTP');
+
       return {
         id: staff.id,
         name: staff.name,
         nip: staff.nipNbm || staff.teacherProfile?.nip || '-',
         roles: rolesList.join(', '),
         role: staff.role,
-        employmentStatus: staff.employmentStatus || 'GTTP',
+        employmentStatus: defaultStatus,
         isCleaningService: attCalc.isCleaningService,
         attendances: attMap,
         totalHadir: staffAttendances.length,
@@ -992,6 +1003,11 @@ export class FinanceService {
         staff.subRole5,
       ].filter(Boolean);
 
+      const isStaffCS = attCalc.isCleaningService;
+      const defaultStatus =
+        staff.employmentStatus ||
+        (isStaffCS ? 'CS' : staff.role === 'GURU' || staff.subRole === 'GURU' ? 'GTTP' : 'PTTP');
+
       return {
         no: idx + 1,
         id: staff.id,
@@ -999,7 +1015,7 @@ export class FinanceService {
         nip: staff.nipNbm || staff.teacherProfile?.nip || '-',
         roles: rolesList.join(', '),
         role: staff.role,
-        employmentStatus: staff.employmentStatus || 'GTTP',
+        employmentStatus: defaultStatus,
         isCleaningService: attCalc.isCleaningService,
         totalHadir: staffAttendances.length,
         kehadiran,

@@ -219,6 +219,55 @@ export class FinanceService {
     };
   }
 
+  /**
+   * Menentukan status kepegawaian (GTTP, PTTP, CS, GTP, PTP) secara otomatis dan konsisten.
+   * Pegawai dengan role / subrole kebersihan otomatis diberikan status jabatan 'CS'.
+   */
+  public resolveStaffEmploymentStatus(
+    staff: {
+      role?: string | null;
+      subRole?: string | null;
+      subRole2?: string | null;
+      subRole3?: string | null;
+      subRole4?: string | null;
+      subRole5?: string | null;
+      employmentStatus?: string | null;
+    },
+    savedStatus?: string | null,
+  ): string {
+    const rolesList = [
+      staff.role,
+      staff.subRole,
+      staff.subRole2,
+      staff.subRole3,
+      staff.subRole4,
+      staff.subRole5,
+      staff.employmentStatus,
+    ]
+      .filter(Boolean)
+      .map((r) => r!.toUpperCase());
+
+    const isCleaningService = rolesList.some((r) =>
+      ['CLEANING_SERVICE', 'CS', 'KEBERSIHAN', 'PETUGAS_KEBERSIHAN'].includes(r) ||
+      r.includes('KEBERSIHAN') ||
+      r.includes('CLEANING') ||
+      r === 'CS'
+    );
+
+    // Otomatisasi CS untuk semua pegawai dengan role / sub-role kebersihan
+    if (isCleaningService) {
+      if (savedStatus && ['GTP', 'PTP'].includes(savedStatus)) {
+        return savedStatus;
+      }
+      return 'CS';
+    }
+
+    if (savedStatus) return savedStatus;
+    if (staff.employmentStatus) return staff.employmentStatus;
+
+    return staff.role === 'GURU' || staff.subRole === 'GURU' ? 'GTTP' : 'PTTP';
+  }
+
   async getPayrollSummary(
     year: number,
     month: number,
@@ -297,11 +346,11 @@ export class FinanceService {
 
       const savedRecord = recordMap.get(staff.id);
 
-      // Status kepegawaian default jika belum diatur (CS otomatis untuk sub-role/role kebersihan)
-      const isStaffCS = attCalc.isCleaningService;
-      const defaultStatus =
-        staff.employmentStatus ||
-        (isStaffCS ? 'CS' : staff.role === 'GURU' || staff.subRole === 'GURU' ? 'GTTP' : 'PTTP');
+      // Status kepegawaian otomatis (CS otomatis untuk seluruh role/sub-role kebersihan)
+      const resolvedStatus = this.resolveStaffEmploymentStatus(
+        staff,
+        savedRecord?.employmentStatus,
+      );
 
       // Jam, Masa Kerja, Kelebihan Jam & Tarif
       const totalHours = savedRecord?.totalHours ?? 0;
@@ -354,7 +403,7 @@ export class FinanceService {
         role: staff.role,
         nip: staff.nipNbm || staff.teacherProfile?.nip || '-',
         phone: staff.phone || staff.teacherProfile?.phone || '-',
-        employmentStatus: savedRecord?.employmentStatus || defaultStatus,
+        employmentStatus: resolvedStatus,
         masaKerja,
         bankName: staff.bankName || '',
         bankAccountNumber: staff.bankAccountNumber || '',
@@ -667,10 +716,10 @@ export class FinanceService {
       user.subRole5,
     ].filter(Boolean);
 
-    const isStaffCS = attCalc.isCleaningService;
-    const defaultStatus =
-      user.employmentStatus ||
-      (isStaffCS ? 'CS' : user.role === 'GURU' || user.subRole === 'GURU' ? 'GTTP' : 'PTTP');
+    const resolvedStatus = this.resolveStaffEmploymentStatus(
+      user,
+      savedRecord?.employmentStatus,
+    );
 
     const totalHours = savedRecord?.totalHours ?? 0;
     const hourlyRate = savedRecord?.hourlyRate ?? 0;
@@ -732,7 +781,7 @@ export class FinanceService {
         role: user.role,
         nip: user.nipNbm || user.teacherProfile?.nip || '-',
         phone: user.phone || user.teacherProfile?.phone || '-',
-        employmentStatus: savedRecord?.employmentStatus || defaultStatus,
+        employmentStatus: resolvedStatus,
         masaKerja,
         bankName: user.bankName || '',
         bankAccountNumber: user.bankAccountNumber || '',
@@ -905,10 +954,7 @@ export class FinanceService {
         staff.subRole5,
       ].filter(Boolean);
 
-      const isStaffCS = attCalc.isCleaningService;
-      const defaultStatus =
-        staff.employmentStatus ||
-        (isStaffCS ? 'CS' : staff.role === 'GURU' || staff.subRole === 'GURU' ? 'GTTP' : 'PTTP');
+      const resolvedStatus = this.resolveStaffEmploymentStatus(staff);
 
       return {
         id: staff.id,
@@ -916,7 +962,7 @@ export class FinanceService {
         nip: staff.nipNbm || staff.teacherProfile?.nip || '-',
         roles: rolesList.join(', '),
         role: staff.role,
-        employmentStatus: defaultStatus,
+        employmentStatus: resolvedStatus,
         isCleaningService: attCalc.isCleaningService,
         attendances: attMap,
         totalHadir: staffAttendances.length,
@@ -1003,10 +1049,7 @@ export class FinanceService {
         staff.subRole5,
       ].filter(Boolean);
 
-      const isStaffCS = attCalc.isCleaningService;
-      const defaultStatus =
-        staff.employmentStatus ||
-        (isStaffCS ? 'CS' : staff.role === 'GURU' || staff.subRole === 'GURU' ? 'GTTP' : 'PTTP');
+      const resolvedStatus = this.resolveStaffEmploymentStatus(staff);
 
       return {
         no: idx + 1,
@@ -1015,7 +1058,7 @@ export class FinanceService {
         nip: staff.nipNbm || staff.teacherProfile?.nip || '-',
         roles: rolesList.join(', '),
         role: staff.role,
-        employmentStatus: defaultStatus,
+        employmentStatus: resolvedStatus,
         isCleaningService: attCalc.isCleaningService,
         totalHadir: staffAttendances.length,
         kehadiran,

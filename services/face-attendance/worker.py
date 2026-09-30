@@ -472,8 +472,8 @@ class AttendanceWorker:
                     # Crop wajah berdefinisi tinggi langsung dari target_frame (High Fidelity ROI)
                     face_crop = target_frame[y1:y2, x1:x2]
 
-                    # Threshold sensitivitas deteksi (default 58% atau 0.58)
-                    threshold = self.config.threshold if (self.config and self.config.threshold is not None) else 0.58
+                    # Threshold sensitivitas deteksi (default 70% atau 0.70)
+                    threshold = self.config.threshold if (self.config and self.config.threshold is not None) else 0.70
                     match_result = self.engine.match_face(face_crop, threshold=threshold)
 
                     if match_result:
@@ -557,8 +557,9 @@ class AttendanceWorker:
         user_id = user_record.user_id
         now = time.time()
         
-        # 1. Validasi syarat mutlak presensi: kemiripan biometrik terkalibrasi wajib di atas 88% (>= 0.88)
-        if similarity < 0.88 and not force:
+        # 1. Validasi syarat presensi: kemiripan biometrik terkalibrasi wajib di atas batas threshold
+        req_threshold = self.config.threshold if (self.config and self.config.threshold is not None) else 0.70
+        if similarity < req_threshold and not force:
             return None
 
         # 2. Cooldown Scanner Umum (hanya berlaku jika bukan manual force capture)

@@ -574,8 +574,9 @@ export default function FaceAttendanceCameraPage() {
       drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
 
       if (rawFaces.length > 0) {
+        const minThresh = currentConfig?.threshold || 0.70
         const ambiguousFace = rawFaces.find((f: any) => f.is_twin_ambiguous && f.twin_candidates?.length > 1)
-        const registeredFace = rawFaces.find((f: any) => f.is_registered && (f.confidence || 0) >= 0.85)
+        const registeredFace = rawFaces.find((f: any) => f.is_registered && (f.confidence || 0) >= minThresh)
 
         if (ambiguousFace) {
           playBiometricAudio('warning')
@@ -1695,7 +1696,7 @@ export default function FaceAttendanceCameraPage() {
                   </div>
 
                   <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded bg-black/70 backdrop-blur-xs text-[10px] sm:text-[11px] font-mono text-slate-300 border border-white/10 z-20">
-                    <span>Sensitivitas: {Math.round((currentConfig?.threshold || 0.48) * 100)}%</span>
+                    <span>Sensitivitas: {Math.round((currentConfig?.threshold || 0.70) * 100)}%</span>
                     <span>•</span>
                     <span>Cooldown: {currentConfig?.cooldownMinutes || 10}m</span>
                   </div>
@@ -2053,27 +2054,181 @@ export default function FaceAttendanceCameraPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-5">
-                {/* Stream URL */}
-                <div className="space-y-2">
-                  <Label htmlFor="streamUrl" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-amber-500" />
-                    Target Link / Path Stream Camera
+                {/* Pilihan Sumber Kamera */}
+                <div className="space-y-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <Label className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <Camera className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    Pilihan Sumber Kamera Aktif
                   </Label>
-                  <Input
-                    id="streamUrl"
-                    placeholder="Contoh: rtsp://admin:pass@192.168.1.100:554/Streaming/Channels/101 atau 0 untuk webcam"
-                    value={currentConfig?.streamUrl || ''}
-                    onChange={(e) => setFormConfig((prev) => prev ? { ...prev, streamUrl: e.target.value } : null)}
-                    className="font-mono text-sm"
-                  />
-                  <p className="text-xs text-slate-500">
-                    Masukkan URL RTSP (IP Camera/CCTV), index USB webcam <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">0</code>, atau <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">BROWSER_WEBCAM</code>.
-                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {STREAM_PRESETS.map((preset) => {
+                      const IconComponent = preset.icon
+                      const isSelected = formConfig?.streamSourceType === preset.id || (!formConfig?.streamSourceType && preset.id === 'BROWSER_WEBCAM')
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => {
+                            if (preset.id === 'BROWSER_WEBCAM') {
+                              setFormConfig((prev) => prev ? {
+                                ...prev,
+                                streamSourceType: 'BROWSER_WEBCAM',
+                                streamUrl: 'BROWSER_WEBCAM',
+                              } : null)
+                            } else {
+                              stopBrowserWebcam()
+                              setFormConfig((prev) => prev ? {
+                                ...prev,
+                                streamSourceType: preset.id as any,
+                                streamUrl: preset.example,
+                              } : null)
+                            }
+                          }}
+                          className={`flex items-center gap-2.5 p-2.5 rounded-xl text-left border transition-all text-xs ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white border-indigo-400 shadow-md font-bold ring-1 ring-indigo-400'
+                              : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300'
+                          }`}>
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-semibold">{preset.title}</p>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{preset.badge}</p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
+
+                {/* Dynamic Stream Source Setting */}
+                {currentConfig?.streamSourceType === 'BROWSER_WEBCAM' && (
+                  <div className="p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Camera className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">Kamera Web Browser Lokal (Client)</span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          startBrowserWebcam(selectedDeviceId)
+                          toast.success('Memuat ulang koneksi webcam browser...')
+                        }}
+                        className="h-7 text-xs border-indigo-300 dark:border-indigo-700 bg-white dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-200 hover:text-indigo-900 dark:hover:text-white"
+                      >
+                        <RefreshCw className="w-3 h-3 mr-1" /> Segarkan Kamera
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-700 dark:text-slate-300 font-medium">Pilih Perangkat Webcam Terhubung:</Label>
+                      {videoDevices.length > 0 ? (
+                        <select
+                          value={selectedDeviceId}
+                          onChange={(e) => {
+                            setSelectedDeviceId(e.target.value)
+                            startBrowserWebcam(e.target.value)
+                          }}
+                          className="w-full h-9 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs px-3 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        >
+                          {videoDevices.map((dev, idx) => (
+                            <option key={dev.deviceId || idx} value={dev.deviceId}>
+                              {dev.label || `Kamera Video #${idx + 1} (${dev.deviceId ? dev.deviceId.slice(0, 8) + '...' : 'Default'})`}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
+                          <span>Menggunakan Kamera Default Peramban</span>
+                          <button
+                            type="button"
+                            onClick={() => startBrowserWebcam()}
+                            className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold text-[11px]"
+                          >
+                            Deteksi Perangkat
+                          </button>
+                        </div>
+                      )}
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Tangkapan video webcam diproses langsung di browser dengan latensi nol tanpa membutuhkan konfigurasi IP RTSP.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {currentConfig?.streamSourceType === 'WEBCAM' && (
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="streamUrl" className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <Camera className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        Indeks Port USB Kamera Server
+                      </Label>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/60">
+                        Direct OpenCV USB
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="streamUrl"
+                        type="text"
+                        placeholder="0, 1, 2, atau /dev/video0"
+                        value={currentConfig?.streamUrl || '0'}
+                        onChange={(e) => setFormConfig((prev) => prev ? { ...prev, streamUrl: e.target.value } : null)}
+                        className="font-mono text-sm bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 flex-1"
+                      />
+                      <div className="inline-flex gap-1">
+                        {['0', '1', '2'].map((idxVal) => (
+                          <button
+                            key={idxVal}
+                            type="button"
+                            onClick={() => setFormConfig((prev) => prev ? { ...prev, streamUrl: idxVal } : null)}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
+                              currentConfig?.streamUrl === idxVal
+                                ? 'bg-emerald-600 text-white shadow-xs'
+                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700'
+                            }`}
+                          >
+                            Port {idxVal}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Masukkan nomor port USB webcam yang dicolokkan ke komputer server (<code className="text-slate-700 dark:text-slate-300 font-semibold">0</code> = Kamera Utama / Laptop, <code className="text-slate-700 dark:text-slate-300 font-semibold">1</code> = USB Web Cam Eksternal).
+                    </p>
+                  </div>
+                )}
+
+                {currentConfig?.streamSourceType === 'RTSP' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="streamUrl" className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-500" />
+                      Target Link Stream IP Camera / RTSP
+                    </Label>
+                    <Input
+                      id="streamUrl"
+                      placeholder="rtsp://admin:pass@192.168.1.100:554/Streaming/Channels/101"
+                      value={currentConfig?.streamUrl || ''}
+                      onChange={(e) => setFormConfig((prev) => prev ? { ...prev, streamUrl: e.target.value } : null)}
+                      className="font-mono text-sm bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700"
+                    />
+                    <p className="text-xs text-slate-500">
+                      Format: <span className="font-mono text-slate-700 dark:text-slate-300">{maskStreamUrl(currentConfig?.streamUrl)}</span>
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="cameraName" className="text-sm font-medium text-slate-700">Nama Titik Camera</Label>
+                    <Label htmlFor="cameraName" className="text-sm font-medium text-slate-700 dark:text-slate-300">Nama Titik Camera</Label>
                     <Input
                       id="cameraName"
                       placeholder="Contoh: Camera Gerbang Utama"
@@ -2082,7 +2237,7 @@ export default function FaceAttendanceCameraPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="location" className="text-sm font-medium text-slate-700">Lokasi / Area Pemasangan</Label>
+                    <Label htmlFor="location" className="text-sm font-medium text-slate-700 dark:text-slate-300">Lokasi / Area Pemasangan</Label>
                     <Input
                       id="location"
                       placeholder="Contoh: Gerbang Depan Sekolah"
@@ -2097,20 +2252,22 @@ export default function FaceAttendanceCameraPage() {
                   <div className="flex justify-between items-center">
                     <div>
                       <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        Sensitivitas Deteksi Bounding Box (*Threshold*)
+                        Batas Sensitivitas Deteksi & Presensi Wajah (*Detection Threshold*)
                       </Label>
-                      <p className="text-[11px] text-slate-500">Mengatur kepekaan visual kotak deteksi (*bounding box*), sedangkan pencatatan log presensi mutlak menyaring kemiripan di atas 90%.</p>
+                      <p className="text-[11px] text-slate-500">
+                        Batas kemiripan biometrik (*cosine similarity*) minimum untuk mendeteksi wajah dan mencatat presensi secara otomatis.
+                      </p>
                     </div>
-                    <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-0.5">
-                      {Math.round((currentConfig?.threshold || 0.58) * 100)}%
+                    <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-0.5 shrink-0">
+                      {Math.round((currentConfig?.threshold || 0.70) * 100)}%
                     </Badge>
                   </div>
                   <input
                     type="range"
-                    min={40}
-                    max={85}
+                    min={30}
+                    max={95}
                     step={1}
-                    value={Math.round((currentConfig?.threshold || 0.58) * 100)}
+                    value={Math.round((currentConfig?.threshold || 0.70) * 100)}
                     onChange={(e) => {
                       const num = Number(e.target.value)
                       setFormConfig((prev) => prev ? { ...prev, threshold: num / 100 } : null)
@@ -2118,9 +2275,20 @@ export default function FaceAttendanceCameraPage() {
                     className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
                   />
                   <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                    <span>40% (Sensitif)</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rekomendasi FaceNet: 55% - 62%</span>
-                    <span>85% (Ketat)</span>
+                    <span>30% (Sangat Sensitif)</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Default Optimal: 70%</span>
+                    <span>95% (Sangat Ketat)</span>
+                  </div>
+
+                  {/* Catatan Status Ambang Batas Presensi */}
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Batas Verifikasi Presensi: &ge; {Math.round((currentConfig?.threshold || 0.70) * 100)}%
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Wajah terdaftar dengan tingkat kemiripan biometrik &ge; <strong className="text-emerald-600 dark:text-emerald-400">{Math.round((currentConfig?.threshold || 0.70) * 100)}%</strong> akan langsung diverifikasi dan dicatat ke riwayat log serta database absensi resmi sekolah.
+                    </p>
                   </div>
                 </div>
 

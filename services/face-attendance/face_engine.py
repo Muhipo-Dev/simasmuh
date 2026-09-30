@@ -583,7 +583,7 @@ class FaceRecognitionEngine:
 
         return boxes
 
-    def match_face(self, face_crop: np.ndarray, threshold: float = 0.58) -> Optional[Dict[str, Any]]:
+    def match_face(self, face_crop: np.ndarray, threshold: float = 0.70) -> Optional[Dict[str, Any]]:
         """
         Mencocokkan potongan wajah dengan database Bio-Fusion AI:
         - Vectorized BLAS Matrix Cosine Search (< 0.05ms)
@@ -644,7 +644,7 @@ class FaceRecognitionEngine:
         score_2 = float(scores[top_indices[1]]) if top_k > 1 else 0.0
         rec_2 = self.user_records_list[top_indices[1]] if top_k > 1 else None
 
-        effective_threshold = max(0.58, min(0.88, float(threshold)))
+        effective_threshold = max(0.20, min(0.98, float(threshold)))
 
         # Wajib melewati batas minimum cosine similarity dasar
         if score_1 < effective_threshold:

@@ -14,7 +14,7 @@ import { spawn } from 'child_process';
 import { STORAGE_ROOT } from '../../core/config/storage.config';
 
 export interface FaceCameraConfig {
-  streamSourceType?: 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO';
+  streamSourceType?: 'BROWSER_WEBCAM' | 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO';
   streamUrl: string;
   cameraName: string;
   location: string;
@@ -219,8 +219,8 @@ export class FaceAttendanceService implements OnModuleInit {
         const raw = readFileSync(this.configPath, 'utf8');
         const parsed = JSON.parse(raw);
         const threshold = typeof parsed.threshold === 'number' 
-          ? Math.max(0.40, Math.min(0.85, parsed.threshold)) 
-          : 0.58;
+          ? Math.max(0.10, Math.min(1.0, parsed.threshold)) 
+          : 0.70;
         return {
           showPublicStream: true,
           showPublicLogs: true,
@@ -234,8 +234,8 @@ export class FaceAttendanceService implements OnModuleInit {
         const raw = readFileSync(this.legacyConfigPath, 'utf8');
         const parsed = JSON.parse(raw);
         const threshold = typeof parsed.threshold === 'number' 
-          ? Math.max(0.40, Math.min(0.85, parsed.threshold)) 
-          : 0.58;
+          ? Math.max(0.10, Math.min(1.0, parsed.threshold)) 
+          : 0.70;
         return {
           showPublicStream: true,
           showPublicLogs: true,
@@ -245,13 +245,13 @@ export class FaceAttendanceService implements OnModuleInit {
       } catch {}
     }
     return {
-      streamSourceType: 'WEBCAM',
-      streamUrl: '0',
-      cameraName: 'Camera Gerbang Utama',
+      streamSourceType: 'BROWSER_WEBCAM',
+      streamUrl: 'BROWSER_WEBCAM',
+      cameraName: 'Camera AI Presensi',
       location: 'Gerbang Depan Sekolah',
-      threshold: 0.58,
+      threshold: 0.70,
       cooldownMinutes: 15,
-      isActive: false,
+      isActive: true,
       welcomeVoice: true,
       showPublicStream: true,
       showPublicLogs: true,
@@ -424,12 +424,12 @@ export class FaceAttendanceService implements OnModuleInit {
       throw new BadRequestException('Kunci autentikasi API kamera tidak valid');
     }
 
-    // Validasi batas mutlak input log sistem & absensi: kemiripan biometrik FaceNet terkalibrasi >= 90% (0.90)
-    const minAttendanceThreshold = 0.90;
+    // Validasi batas input log sistem & absensi: kemiripan biometrik FaceNet terkalibrasi >= config.threshold (default 0.70)
+    const minAttendanceThreshold = typeof config.threshold === 'number' ? config.threshold : 0.70;
     const confidenceValue = Number(payload.confidence) || 0;
     if (confidenceValue < minAttendanceThreshold) {
       throw new BadRequestException(
-        `Tingkat kemiripan wajah (${Math.round(confidenceValue * 100)}%) belum memenuhi syarat mutlak pencatatan presensi (minimum 90%).`,
+        `Tingkat kemiripan wajah (${Math.round(confidenceValue * 100)}%) belum memenuhi batas sensitivitas minimum presensi (${Math.round(minAttendanceThreshold * 100)}%).`,
       );
     }
 

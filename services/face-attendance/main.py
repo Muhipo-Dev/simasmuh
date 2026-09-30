@@ -78,12 +78,12 @@ def get_status():
         "is_online": True,
         "is_running": worker.is_running,
         "stream_status": worker.stream_status,
-        "stream_url": cfg.stream_url if cfg else "0",
-        "camera_name": cfg.camera_name if cfg else "Camera",
+        "stream_url": cfg.stream_url if cfg else "BROWSER_WEBCAM",
+        "camera_name": cfg.camera_name if cfg else "Camera AI Presensi",
         "device": engine.device_name,
         "fps": worker.current_fps,
-        "threshold": cfg.threshold if cfg else 0.58,
-        "cooldown_minutes": cfg.cooldown_minutes if cfg else 10,
+        "threshold": cfg.threshold if cfg else 0.70,
+        "cooldown_minutes": cfg.cooldown_minutes if cfg else 15,
         "users_cached": len(engine.user_database),
         "total_scans_today": worker.total_scans_today,
     }
@@ -167,6 +167,8 @@ def scan_frame(payload: ScanFrameRequest):
         faces = engine.detect_faces(frame)
         results = []
 
+        req_threshold = worker.config.threshold if (worker.config and worker.config.threshold is not None) else 0.70
+
         for (x, y, w, h) in faces:
             if w < 12 or h < 12:
                 continue
@@ -179,8 +181,7 @@ def scan_frame(payload: ScanFrameRequest):
             x2 = min(w_frame, x + w + pad_x)
             face_crop = frame[y1:y2, x1:x2]
 
-            threshold = worker.config.threshold if (worker.config and worker.config.threshold is not None) else 0.58
-            match_res = engine.match_face(face_crop, threshold=threshold)
+            match_res = engine.match_face(face_crop, threshold=req_threshold)
 
             if match_res:
                 user_rec = match_res["record"]
@@ -190,8 +191,8 @@ def scan_frame(payload: ScanFrameRequest):
                 pct = int(sim * 100)
                 att_res = None
 
-                # Jika bukan kasus kembar ambigu dan tingkat kemiripan >= 88%, rekam presensi otomatis
-                if not is_twin and sim >= 0.88:
+                # Jika bukan kasus kembar ambigu dan tingkat kemiripan >= req_threshold, rekam presensi otomatis
+                if not is_twin and sim >= req_threshold:
                     att_res = worker._process_attendance(user_rec, sim, face_crop=face_crop, force=True)
 
                 results.append({

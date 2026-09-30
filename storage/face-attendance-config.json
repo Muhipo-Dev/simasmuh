@@ -1,14 +1,14 @@
 {
   "showPublicStream": true,
   "showPublicLogs": true,
-  "streamUrl": "rtsp://razagopo:razagopo@192.168.3.218:554/stream1",
-  "cameraName": "Camera AI",
-  "location": "Lab Kom",
-  "threshold": 0.58,
+  "streamUrl": "BROWSER_WEBCAM",
+  "cameraName": "Camera AI Presensi",
+  "location": "Gerbang Depan Sekolah",
+  "threshold": 0.70,
   "cooldownMinutes": 15,
-  "isActive": false,
+  "isActive": true,
   "welcomeVoice": true,
   "apiKeySecret": "simasmuh_face_token_secret_2026",
-  "updatedAt": "2026-09-10T01:34:07.982Z",
-  "streamSourceType": "RTSP"
+  "updatedAt": "2026-09-30T13:20:00.000Z",
+  "streamSourceType": "BROWSER_WEBCAM"
 }

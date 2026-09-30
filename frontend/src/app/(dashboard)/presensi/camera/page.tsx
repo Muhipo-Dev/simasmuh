@@ -124,6 +124,14 @@ interface ServiceStatusResponse {
   total_scans_today?: number
 }
 
+// Fungsi masking aman untuk menyembunyikan username & password pada link RTSP
+function maskStreamUrl(url?: string): string {
+  if (!url) return '-'
+  if (url === 'BROWSER_WEBCAM') return 'Webcam Langsung Browser'
+  if (url === '0' || url === '1') return `USB Webcam Lokal (${url})`
+  return url.replace(/^(rtsp:\/\/[^:]+):([^@]+)@/i, 'rtsp://***:***@')
+}
+
 const STREAM_PRESETS = [
   {
     id: 'BROWSER_WEBCAM',

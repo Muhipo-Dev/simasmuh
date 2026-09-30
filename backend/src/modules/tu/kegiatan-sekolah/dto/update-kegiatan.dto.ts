@@ -11,6 +11,10 @@ export class UpdateKegiatanDto {
 
   @IsOptional()
   @IsString()
+  sifatKegiatan?: string;
+
+  @IsOptional()
+  @IsString()
   tanggal?: string;
 
   @IsOptional()

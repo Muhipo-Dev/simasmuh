@@ -112,6 +112,9 @@ export default function LoginPage() {
   // Cek parameter URL untuk sesi kedaluwarsa atau error sign-in
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.clear()
+      } catch {}
       const url = new URL(window.location.href)
       if (url.searchParams.get('expired') === '1') {
         setError('Sesi perangkat Anda telah diakhiri atau kedaluwarsa. Silakan masuk kembali.')
@@ -159,6 +162,11 @@ export default function LoginPage() {
       })
 
       if (result?.ok) {
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.clear()
+          } catch {}
+        }
         setLoading('Mengalihkan...')
         // Gunakan window.location.assign untuk transisi halaman penuh yang memuat state session teranyar secara instan
         window.location.assign(targetUrl)

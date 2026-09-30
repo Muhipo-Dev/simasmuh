@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -53,6 +53,39 @@ export default function SupervisiJurnalPage() {
   })
 
   const allSchedulesList = Array.isArray(rawSchedules) ? rawSchedules : []
+
+  // Menghitung Timestamp Pembaruan Terakhir Jadwal Sekolah
+  const schedulesLastUpdated = useMemo(() => {
+    if (!allSchedulesList || allSchedulesList.length === 0) return null
+    const timestamps = allSchedulesList
+      .map((s: any) => {
+        const time = new Date(s.updatedAt || s.createdAt || 0).getTime()
+        return isNaN(time) ? 0 : time
+      })
+      .filter((t: number) => t > 0)
+    if (timestamps.length === 0) return null
+    return new Date(Math.max(...timestamps))
+  }, [allSchedulesList])
+
+  const formatScheduleUpdateTime = (dateInput?: string | Date | null) => {
+    if (!dateInput) return 'Belum Diperbarui'
+    try {
+      const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+      if (isNaN(d.getTime()) || d.getTime() === 0) return 'Belum Diperbarui'
+      return (
+        new Intl.DateTimeFormat('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).format(d) + ' WIB'
+      )
+    } catch {
+      return 'Belum Diperbarui'
+    }
+  }
 
   // 2. Ambil seluruh riwayat jurnal mengajar sekolah
   const { data: rawJournals, isLoading: loadingJournals } = useQuery<any[]>({
@@ -513,8 +546,17 @@ export default function SupervisiJurnalPage() {
               <CardTitle className="text-lg">
                 Master Jadwal Mengajar Mingguan Sekolah
               </CardTitle>
-              <CardDescription>
-                Struktur jadwal alokasi guru, mata pelajaran, dan kelas dalam sepekan.
+              <CardDescription className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span>Struktur jadwal alokasi guru, mata pelajaran, dan kelas dalam sepekan.</span>
+                {schedulesLastUpdated && (
+                  <>
+                    <span>•</span>
+                    <span className="inline-flex items-center gap-1 text-slate-700 dark:text-slate-300 font-medium">
+                      <Clock className="w-3.5 h-3.5 text-blue-500" />
+                      Terakhir Diperbarui: <strong className="font-bold text-slate-900 dark:text-white">{formatScheduleUpdateTime(schedulesLastUpdated)}</strong>
+                    </span>
+                  </>
+                )}
               </CardDescription>
             </div>
             <TableSearch

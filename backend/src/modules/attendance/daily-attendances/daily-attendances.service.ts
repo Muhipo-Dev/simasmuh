@@ -407,8 +407,8 @@ export class DailyAttendancesService {
       const currentDate = new Date(year, month - 1, d);
       const dayOfWeek = currentDate.getDay();
 
-      // Only include weekdays (1 to 6)
-      if (dayOfWeek >= 1 && dayOfWeek <= 6) {
+      // Only include weekdays (Senin - Jumat: 1 to 5)
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
         const att = attendances.find((a) => new Date(a.date).getDate() === d);
         const izin = izinKeluarList.find(
           (i) => new Date(i.date).getDate() === d,
@@ -498,13 +498,13 @@ export class DailyAttendancesService {
       startDate.setHours(0, 0, 0, 0);
       endDate.setHours(23, 59, 59, 999);
     } else if (period === 'weekly') {
-      // Senin - Sabtu pekan berjalan
+      // Senin - Jumat pekan berjalan (5 Hari Kerja)
       const day = targetDate.getDay(); // 0: Sun, 1: Mon, ...
       const diffToMon = day === 0 ? -6 : 1 - day;
       startDate.setDate(targetDate.getDate() + diffToMon);
       startDate.setHours(0, 0, 0, 0);
       endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 5);
+      endDate.setDate(startDate.getDate() + 4);
       endDate.setHours(23, 59, 59, 999);
     } else if (period === 'monthly') {
       startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);

@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Put,
+  Patch,
   Delete,
   Query,
 } from '@nestjs/common';
@@ -48,7 +49,12 @@ export class SchedulesController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() data: any) {
+  updatePut(@Param('id') id: string, @Body() data: any) {
+    return this.schedulesService.update(id, data);
+  }
+
+  @Patch(':id')
+  updatePatch(@Param('id') id: string, @Body() data: any) {
     return this.schedulesService.update(id, data);
   }
 

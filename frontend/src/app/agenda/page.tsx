@@ -44,9 +44,23 @@ const getAnnouncements = async (): Promise<Announcement[]> => {
   }
 }
 
+const getKegiatanSekolah = async (): Promise<any[]> => {
+  try {
+    const res = await fetch(getPublicApiUrl('/kegiatan-sekolah/public'), { 
+      cache: 'no-store',
+      headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026' }
+    })
+    if (!res.ok) return []
+    return res.json()
+  } catch {
+    return []
+  }
+}
+
 export default async function AgendaPage() {
   const settings = await getSettings()
   const announcements = await getAnnouncements()
+  const kegiatanSekolah = await getKegiatanSekolah()
 
   const address = settings?.address || 'Jl. Batoro Katong No. 123, Ponorogo, Jawa Timur'
   const phone = settings?.phone || '(0352) 123456'
@@ -101,7 +115,7 @@ export default async function AgendaPage() {
             </div>
 
             {/* Full Interactive Dual Calendar */}
-            <FullCalendarView initialAnnouncements={announcements} />
+            <FullCalendarView initialAnnouncements={announcements} initialKegiatan={kegiatanSekolah} />
           </div>
         </div>
       </main>

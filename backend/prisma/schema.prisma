@@ -211,6 +211,8 @@ model Schedule {
   classId          String
   subjectId        String
   teacherId        String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now()) @updatedAt
   attendances      Attendance[]
   class            Class             @relation(fields: [classId], references: [id])
   subject          Subject           @relation(fields: [subjectId], references: [id])
@@ -720,7 +722,8 @@ model KegiatanSekolah {
   id               String             @id @default(uuid())
   nomorKegiatan    String?            @unique // e.g. KEG-2026-001
   namaKegiatan     String             // e.g. Kajian Selasa Pagi
-  kategori         String             @default("KAJIAN_SELASA_PAGI") // KAJIAN_SELASA_PAGI, WORKSHOP_PELATIHAN, UPACARA_APEL, PENGAJIAN_AKBAR, RAPAT_KHUSUS, KEGIATAN_LAIN
+  kategori         String             @default("KAJIAN_SELASA_PAGI") // KAJIAN_SELASA_PAGI, SHOLAT_JUMAT, MABIT_TAQWA, BAITUL_ARQAM, TADARUS_TAHFIDZ, PENGAJIAN_AKBAR, KEGIATAN_ISMUBA, WORKSHOP_PELATIHAN, UPACARA_APEL, RAPAT_KHUSUS, KEGIATAN_LAIN
+  sifatKegiatan    String             @default("TERJADWAL") // TERJADWAL (Tampil di Kalender), MENDESAK (Hanya Absensi QR, tidak tampil di Kalender)
   tanggal          DateTime           @default(now())
   waktuMulai       String?            // e.g. 06:45
   waktuSelesai     String?            // e.g. 07:30
@@ -737,6 +740,7 @@ model KegiatanSekolah {
   presensis        PresensiKegiatan[]
 
   @@index([kategori])
+  @@index([sifatKegiatan])
   @@index([status])
   @@index([tanggal])
   @@index([qrCodeToken])

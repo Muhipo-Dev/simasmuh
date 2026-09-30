@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -80,6 +80,39 @@ export default function JurnalMengajarPage() {
       (s?.teacher?.user?.username && s?.teacher?.user?.username === (session?.user as any)?.username)
     )
   })
+
+  // Menghitung Timestamp Pembaruan Terakhir Jadwal Guru
+  const schedulesLastUpdated = useMemo(() => {
+    if (!mySchedules || mySchedules.length === 0) return null
+    const timestamps = mySchedules
+      .map((s: any) => {
+        const time = new Date(s.updatedAt || s.createdAt || 0).getTime()
+        return isNaN(time) ? 0 : time
+      })
+      .filter((t: number) => t > 0)
+    if (timestamps.length === 0) return null
+    return new Date(Math.max(...timestamps))
+  }, [mySchedules])
+
+  const formatScheduleUpdateTime = (dateInput?: string | Date | null) => {
+    if (!dateInput) return 'Belum Diperbarui'
+    try {
+      const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+      if (isNaN(d.getTime()) || d.getTime() === 0) return 'Belum Diperbarui'
+      return (
+        new Intl.DateTimeFormat('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).format(d) + ' WIB'
+      )
+    } catch {
+      return 'Belum Diperbarui'
+    }
+  }
 
   // 2. Ambil riwayat jurnal mengajar milik guru yang sedang login
   const { data: rawJournals, isLoading: loadingJournals } = useQuery<any[]>({
@@ -542,8 +575,17 @@ export default function JurnalMengajarPage() {
               <CardTitle className="text-lg">
                 Daftar Jadwal Mengajar Mingguan Anda
               </CardTitle>
-              <CardDescription>
-                Rincian seluruh jam dan kelas mengajar yang Anda ampu pada semester aktif.
+              <CardDescription className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span>Rincian seluruh jam dan kelas mengajar yang Anda ampu pada semester aktif.</span>
+                {schedulesLastUpdated && (
+                  <>
+                    <span>•</span>
+                    <span className="inline-flex items-center gap-1 text-slate-700 dark:text-slate-300 font-medium">
+                      <Clock className="w-3.5 h-3.5 text-blue-500" />
+                      Terakhir Diperbarui: <strong className="font-bold text-slate-900 dark:text-white">{formatScheduleUpdateTime(schedulesLastUpdated)}</strong>
+                    </span>
+                  </>
+                )}
               </CardDescription>
             </div>
             <TableSearch

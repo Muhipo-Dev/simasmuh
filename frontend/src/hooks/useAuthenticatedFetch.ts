@@ -45,6 +45,9 @@ export function useAuthenticatedFetch() {
         if (!isHandling401 && typeof window !== 'undefined') {
           isHandling401 = true
           try {
+            sessionStorage.clear()
+          } catch {}
+          try {
             signOut({ callbackUrl: '/login?expired=1' })
           } catch (e) {
             window.location.href = '/login?expired=1'

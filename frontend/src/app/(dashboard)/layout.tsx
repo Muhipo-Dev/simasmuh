@@ -196,6 +196,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           })
                         } catch {}
                       }
+                      if (typeof window !== 'undefined') {
+                        try {
+                          sessionStorage.clear()
+                        } catch {}
+                      }
                       await signOut({ redirect: false })
                       window.location.href = '/login'
                     }}

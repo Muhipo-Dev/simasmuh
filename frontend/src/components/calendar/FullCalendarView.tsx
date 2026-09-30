@@ -45,13 +45,69 @@ interface AnnouncementItem {
   author?: { name: string }
 }
 
+export interface KegiatanSekolahCalendarItem {
+  id: string
+  nomorKegiatan?: string
+  namaKegiatan: string
+  kategori?: string
+  sifatKegiatan?: string
+  tanggal: string | Date
+  waktuMulai?: string
+  waktuSelesai?: string
+  tempat?: string
+  pemateri?: string
+  penanggungJawab?: string
+  ringkasanMateri?: string
+  dokumentasiUrl?: string
+  status?: string
+}
+
 interface FullCalendarViewProps {
   initialAnnouncements?: AnnouncementItem[]
+  initialKegiatan?: KegiatanSekolahCalendarItem[]
 }
 
 type EventFilterCategory = 'ALL' | 'AGENDA' | 'HOLIDAY' | 'ISLAMIC' | 'MUHAMMADIYAH' | 'NATIONAL'
 
-export function FullCalendarView({ initialAnnouncements = [] }: FullCalendarViewProps) {
+export const getKategoriBadgeInfo = (kategori?: string) => {
+  switch (kategori) {
+    case 'KAJIAN_SELASA_PAGI':
+      return { badge: 'Kajian Selasa Pagi', tag: '#KajianSelasa', color: 'amber', isIsmuba: true }
+    case 'SHOLAT_JUMAT':
+      return { badge: 'Sholat Jumat Berjamaah', tag: '#SholatJumat', color: 'emerald', isIsmuba: true }
+    case 'MABIT':
+      return { badge: 'MABIT Siswa', tag: '#MABIT', color: 'indigo', isIsmuba: true }
+    case 'BAITUL_ARQAM':
+      return { badge: 'Baitul Arqam', tag: '#BaitulArqam', color: 'sky', isIsmuba: true }
+    case 'TADARUS_TAHFIDZ':
+      return { badge: 'Tadarus & Tahfidz', tag: '#Tahfidz', color: 'emerald', isIsmuba: true }
+    case 'PENGAJIAN_AKBAR':
+      return { badge: 'Pengajian Akbar', tag: '#Pengajian', color: 'teal', isIsmuba: true }
+    case 'UPACARA_APEL':
+      return { badge: 'Upacara / Apel', tag: '#Upacara', color: 'blue', isIsmuba: false }
+    case 'RAPAT_DINAS':
+      return { badge: 'Rapat Dinas', tag: '#Rapat', color: 'slate', isIsmuba: false }
+    case 'WORKSHOP_PELATIHAN':
+      return { badge: 'Workshop & Pelatihan', tag: '#Workshop', color: 'purple', isIsmuba: false }
+    case 'LOMBA_AKADEMIK':
+    case 'LOMBA_NON_AKADEMIK':
+      return { badge: 'Lomba & Kejuaraan', tag: '#Prestasi', color: 'amber', isIsmuba: false }
+    case 'CLASSMEETING':
+      return { badge: 'Classmeeting', tag: '#Classmeeting', color: 'rose', isIsmuba: false }
+    case 'MILAD_SEKOLAH':
+      return { badge: 'Milad Sekolah', tag: '#Milad', color: 'sky', isIsmuba: false }
+    case 'STUDY_TOUR_OUTING':
+      return { badge: 'Study Tour / Outing', tag: '#Outing', color: 'teal', isIsmuba: false }
+    case 'BAKSOS_SOSIAL':
+      return { badge: 'Bakti Sosial', tag: '#Baksos', color: 'emerald', isIsmuba: false }
+    case 'ISMUBA_LAINNYA':
+      return { badge: 'Kegiatan ISMUBA', tag: '#ISMUBA', color: 'emerald', isIsmuba: true }
+    default:
+      return { badge: 'Kegiatan Sekolah', tag: '#KegiatanSekolah', color: 'emerald', isIsmuba: false }
+  }
+}
+
+export function FullCalendarView({ initialAnnouncements = [], initialKegiatan = [] }: FullCalendarViewProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [filterCategory, setFilterCategory] = useState<EventFilterCategory>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
@@ -59,6 +115,7 @@ export function FullCalendarView({ initialAnnouncements = [] }: FullCalendarView
 
   const [holidays, setHolidays] = useState<NationalHoliday[]>([])
   const [hijriCalendar, setHijriCalendar] = useState<Record<string, HijriDayInfo>>({})
+  const [kegiatanList, setKegiatanList] = useState<KegiatanSekolahCalendarItem[]>(initialKegiatan)
   const [loading, setLoading] = useState(false)
 
   // Selected date popup
@@ -70,19 +127,23 @@ export function FullCalendarView({ initialAnnouncements = [] }: FullCalendarView
   const month = currentDate.getMonth() // 0-11
   const monthApiNumber = month + 1
 
-  // Load Realtime Holidays & Hijri Calendar
+  // Load Realtime Holidays, Hijri Calendar, and Public Scheduled Kegiatan
   useEffect(() => {
     let isMounted = true
     async function loadData() {
       setLoading(true)
       try {
-        const [hols, hijri] = await Promise.all([
+        const [hols, hijri, kegRes] = await Promise.all([
           fetchNationalHolidays(year),
-          fetchHijriMonthCalendar(monthApiNumber, year)
+          fetchHijriMonthCalendar(monthApiNumber, year),
+          fetch('/api-backend/kegiatan-sekolah/public').then(r => r.ok ? r.json() : []).catch(() => [])
         ])
         if (isMounted) {
           setHolidays(hols)
           setHijriCalendar(hijri)
+          if (Array.isArray(kegRes) && kegRes.length > 0) {
+            setKegiatanList(kegRes)
+          }
         }
       } catch (e) {
         console.error('Error loading calendar data:', e)
@@ -182,7 +243,7 @@ export function FullCalendarView({ initialAnnouncements = [] }: FullCalendarView
       }
     })
 
-    // 3. School Agendas
+    // 3. School Agendas from Announcements
     schoolAgendas.forEach(ag => {
       if (!ag.eventDate) return
       const d = new Date(ag.eventDate)
@@ -203,8 +264,47 @@ export function FullCalendarView({ initialAnnouncements = [] }: FullCalendarView
       })
     })
 
+    // 4. Kegiatan Sekolah (TU & Waka ISMUBA) - ONLY TERJADWAL (Exclude MENDESAK)
+    ;(kegiatanList || []).forEach(keg => {
+      if (keg.sifatKegiatan === 'MENDESAK' || !keg.tanggal) return
+      const d = new Date(keg.tanggal)
+      if (isNaN(d.getTime())) return
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      if (!map[key]) map[key] = []
+
+      const badgeInfo = getKategoriBadgeInfo(keg.kategori)
+      const timeInfo = keg.waktuMulai ? `${keg.waktuMulai}${keg.waktuSelesai ? ` - ${keg.waktuSelesai}` : ''} WIB` : ''
+      const venueInfo = keg.tempat ? `Lokasi: ${keg.tempat}` : ''
+      const speakerInfo = keg.pemateri ? `Pemateri: ${keg.pemateri}` : ''
+      const pjInfo = keg.penanggungJawab ? `PJ: ${keg.penanggungJawab}` : ''
+
+      const descParts: string[] = []
+      if (timeInfo) descParts.push(`⏰ ${timeInfo}`)
+      if (venueInfo) descParts.push(`📍 ${venueInfo}`)
+      if (speakerInfo) descParts.push(`🎙️ ${speakerInfo}`)
+      if (pjInfo) descParts.push(`👤 ${pjInfo}`)
+      if (keg.ringkasanMateri) descParts.push(`📝 ${keg.ringkasanMateri}`)
+
+      map[key].push({
+        id: keg.id,
+        title: keg.namaKegiatan,
+        type: badgeInfo.isIsmuba ? 'ISLAMIC_EVENT' : 'AGENDA',
+        tag: badgeInfo.tag,
+        badge: badgeInfo.badge,
+        content: descParts.join('\n'),
+        time: timeInfo,
+        tempat: keg.tempat,
+        pemateri: keg.pemateri,
+        penanggungJawab: keg.penanggungJawab,
+        eventDate: keg.tanggal,
+        color: badgeInfo.color,
+        isKegiatanSekolah: true,
+        nomorKegiatan: keg.nomorKegiatan
+      })
+    })
+
     return map
-  }, [holidays, hijriCalendar, schoolAgendas])
+  }, [holidays, hijriCalendar, schoolAgendas, kegiatanList])
 
   // Counts (Synchronized for current month)
   const counts = useMemo(() => {
@@ -224,14 +324,29 @@ export function FullCalendarView({ initialAnnouncements = [] }: FullCalendarView
       }
     })
 
+    const scheduledKegiatan = (kegiatanList || []).filter(keg => {
+      if (keg.sifatKegiatan === 'MENDESAK' || !keg.tanggal) return false
+      const d = new Date(keg.tanggal)
+      return d.getFullYear() === year && d.getMonth() === month
+    })
+
+    const ismubaKegiatanCount = scheduledKegiatan.filter(k => {
+      const info = getKategoriBadgeInfo(k.kategori)
+      return info.isIsmuba
+    }).length
+
+    const nonIsmubaKegiatanCount = scheduledKegiatan.length - ismubaKegiatanCount
+
     const agendaCount = schoolAgendas.filter(ag => {
       if (!ag.eventDate) return false
       const d = new Date(ag.eventDate)
       return d.getFullYear() === year && d.getMonth() === month
-    }).length
+    }).length + nonIsmubaKegiatanCount
+
+    islamicCount += ismubaKegiatanCount
 
     return { holidayCount, islamicCount, muhammadiyahCount, agendaCount, nationalCount }
-  }, [holidays, hijriCalendar, schoolAgendas, year, month])
+  }, [holidays, hijriCalendar, schoolAgendas, kegiatanList, year, month])
 
   // Calendar Grid Days
   const firstDayOfMonth = new Date(year, month, 1).getDay()
@@ -409,6 +524,40 @@ export function FullCalendarView({ initialAnnouncements = [] }: FullCalendarView
       }
     })
 
+    // Kegiatan Sekolah (TU & Waka ISMUBA)
+    ;(kegiatanList || []).forEach(keg => {
+      if (keg.sifatKegiatan === 'MENDESAK' || !keg.tanggal) return
+      const d = new Date(keg.tanggal)
+      if (isNaN(d.getTime())) return
+      const badgeInfo = getKategoriBadgeInfo(keg.kategori)
+      const timeInfo = keg.waktuMulai ? `${keg.waktuMulai}${keg.waktuSelesai ? ` - ${keg.waktuSelesai}` : ''} WIB` : ''
+      const venueInfo = keg.tempat ? `Lokasi: ${keg.tempat}` : ''
+      const speakerInfo = keg.pemateri ? `Pemateri: ${keg.pemateri}` : ''
+      const pjInfo = keg.penanggungJawab ? `PJ: ${keg.penanggungJawab}` : ''
+
+      const descParts: string[] = []
+      if (timeInfo) descParts.push(`⏰ ${timeInfo}`)
+      if (venueInfo) descParts.push(`📍 ${venueInfo}`)
+      if (speakerInfo) descParts.push(`🎙️ ${speakerInfo}`)
+      if (pjInfo) descParts.push(`👤 ${pjInfo}`)
+      if (keg.ringkasanMateri) descParts.push(`📝 ${keg.ringkasanMateri}`)
+
+      list.push({
+        id: keg.id,
+        title: keg.namaKegiatan,
+        content: descParts.join('\n'),
+        target: keg.penanggungJawab || 'Warga Sekolah',
+        dateObj: d,
+        type: badgeInfo.isIsmuba ? 'ISLAMIC_EVENT' : 'AGENDA',
+        badge: badgeInfo.badge,
+        tag: badgeInfo.tag,
+        color: badgeInfo.color,
+        time: timeInfo,
+        tempat: keg.tempat,
+        pemateri: keg.pemateri
+      })
+    })
+
     return list
       .filter(item => {
         if (filterCategory === 'AGENDA') return item.type === 'AGENDA'
@@ -429,7 +578,7 @@ export function FullCalendarView({ initialAnnouncements = [] }: FullCalendarView
         )
       })
       .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
-  }, [schoolAgendas, holidays, hijriCalendar, filterCategory, searchQuery])
+  }, [schoolAgendas, holidays, hijriCalendar, kegiatanList, filterCategory, searchQuery])
 
   const midMonthHijri = useMemo(() => {
     const midKey = `${year}-${String(month + 1).padStart(2, '0')}-15`

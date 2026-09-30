@@ -30,6 +30,7 @@ export class KegiatanSekolahService {
         nomorKegiatan,
         namaKegiatan: dto.namaKegiatan,
         kategori: dto.kategori || 'KAJIAN_SELASA_PAGI',
+        sifatKegiatan: dto.sifatKegiatan || 'TERJADWAL',
         tanggal: dto.tanggal ? new Date(dto.tanggal) : new Date(),
         waktuMulai: dto.waktuMulai || '06:45',
         waktuSelesai: dto.waktuSelesai || '07:30',
@@ -47,12 +48,13 @@ export class KegiatanSekolahService {
       category: 'SISTEM',
       level: 'INFO',
       action: 'KEGIATAN_SEKOLAH_CREATED',
-      message: `Kegiatan "${record.namaKegiatan}" (${record.nomorKegiatan}) berhasil dibuat dengan QR Code.`,
+      message: `Kegiatan "${record.namaKegiatan}" (${record.nomorKegiatan}) berhasil dibuat dengan QR Code. Sifat: ${record.sifatKegiatan}.`,
       userId,
       details: {
         id: record.id,
         nomorKegiatan: record.nomorKegiatan,
         namaKegiatan: record.namaKegiatan,
+        sifatKegiatan: record.sifatKegiatan,
         qrCodeToken: record.qrCodeToken,
       },
     });
@@ -60,13 +62,67 @@ export class KegiatanSekolahService {
     return record;
   }
 
+  async syncFromAnnouncements() {
+    try {
+      const agendas = await this.prisma.announcement.findMany({
+        where: {
+          OR: [
+            { type: 'AGENDA' },
+            { eventDate: { not: null } },
+          ],
+        },
+        include: { author: { select: { name: true } } },
+      });
+
+      for (const ag of agendas) {
+        const exists = await this.prisma.kegiatanSekolah.findFirst({
+          where: {
+            namaKegiatan: ag.title,
+          },
+        });
+
+        if (!exists) {
+          const currentYear = new Date().getFullYear();
+          const count = await this.prisma.kegiatanSekolah.count();
+          const nomorKegiatan = `KEG-WEB-${currentYear}-${String(count + 1).padStart(3, '0')}`;
+          const qrCodeToken = this.generateQrToken();
+          const eventDate = ag.eventDate ? new Date(ag.eventDate) : ag.createdAt;
+
+          await this.prisma.kegiatanSekolah.create({
+            data: {
+              nomorKegiatan,
+              namaKegiatan: ag.title,
+              kategori: 'KEGIATAN_LAIN',
+              sifatKegiatan: 'TERJADWAL',
+              tanggal: eventDate,
+              waktuMulai: '07:00',
+              waktuSelesai: '12:00',
+              tempat: 'SMA Muhammadiyah 1 Ponorogo',
+              penanggungJawab: ag.author?.name ? `${ag.author.name} (Admin Web)` : 'Admin Web / Humas',
+              ringkasanMateri: ag.content ? ag.content.replace(/<[^>]*>?/gm, '') : null,
+              dokumentasiUrl: ag.image || null,
+              qrCodeToken,
+              status: 'DIBUKA',
+            },
+          });
+        }
+      }
+    } catch {
+      // safe fallback
+    }
+  }
+
   async findAll(params?: {
     search?: string;
     kategori?: string;
     status?: string;
+    sifatKegiatan?: string;
     startDate?: string;
     endDate?: string;
   }) {
+    // Sinkronisasi otomatis data agenda dari Admin Web ke Modul Kegiatan TU
+    await this.syncFromAnnouncements();
+
     const where: any = {};
 
     if (params?.search) {
@@ -85,6 +141,10 @@ export class KegiatanSekolahService {
 
     if (params?.status && params.status !== 'ALL') {
       where.status = params.status;
+    }
+
+    if (params?.sifatKegiatan && params.sifatKegiatan !== 'ALL') {
+      where.sifatKegiatan = params.sifatKegiatan;
     }
 
     if (params?.startDate && params?.endDate) {

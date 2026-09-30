@@ -23,6 +23,7 @@ export const superadminLinks = [
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
   { name: 'Izin Keluar Pegawai', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Pegawai' },
   { name: 'Izin Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Pegawai' },
+  { name: 'Kegiatan Sekolah', href: '/fitur/kegiatan', icon: Sparkles, group: 'Layanan Pegawai' },
   { name: 'Layar QR Presensi', href: '/presensi/manajemen-qr', icon: QrCode, group: 'Pengaturan Sistem' },
   { name: 'Berita & Informasi', href: '/informasi/pengumuman', icon: Megaphone, group: 'Pengaturan Sistem' },
   { name: 'Banner Utama', href: '/informasi/banner', icon: ImageIcon, group: 'Pengaturan Sistem' },
@@ -255,6 +256,7 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   const isBk = roles.includes('BK_BP') || roles.includes('BK')
   const isPustakawan = roles.includes('PUSTAKAWAN')
   const isGuruTahfidz = roles.includes('GURU_TAHFIDZ')
+  const isIsmuba = roles.includes('ISMUBA') || roles.includes('WAKA_ISMUBA')
   const isPersuratan = roles.includes('PERSURATAN')
   const isKurikulum = roles.includes('KURIKULUM')
   const isGuruPiket = roles.includes('GURU_PIKET')
@@ -278,7 +280,7 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isBau || isKepalaSekolah || isGuru || isWaliKelas || isBk || isKurikulum
   }
   if (pathname.startsWith('/master-data/guru')) {
-    return isBau || isKepalaSekolah || isHumasSdm || isKurikulum
+    return isBau || isKepalaSekolah || isHumasSdm || isKurikulum || isIsmuba
   }
   if (pathname.startsWith('/master-data/kelas') || pathname.startsWith('/master-data/mata-pelajaran')) {
     return isBau || isKepalaSekolah || isKurikulum
@@ -338,17 +340,18 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   // 5. Modul Fitur Sub-Role Khusus (/fitur/[slug])
   if (pathname.startsWith('/fitur/')) {
     const slug = pathname.replace('/fitur/', '').split('/')[0]
-    if (slug === 'disposisi') return isGuru || isPegawai || isBau || isKepalaSekolah
+    if (slug === 'disposisi') return isGuru || isPegawai || isBau || isKepalaSekolah || isIsmuba
     if (slug === 'persuratan' || slug === 'surat-masuk' || slug === 'surat-keluar' || slug === 'arsip' || slug === 'e-archive') return isPersuratan || isBau || isKepalaSekolah
     if (slug === 'inventaris') return isBau || isKepalaSekolah
     if (slug === 'kepegawaian') return isHumasSdm || isBau || isKepalaSekolah
     if (slug === 'buku-tamu') return isHumasSdm || isBau || isKepalaSekolah
-    if (slug === 'kegiatan' || slug === 'kegiatan-sekolah') return isHumasSdm || isBau || isKepalaSekolah
+    if (slug === 'kegiatan' || slug === 'kegiatan-sekolah') return isHumasSdm || isIsmuba || isBau || isKepalaSekolah
     if (slug === 'notulensi-rapat' || slug === 'notulensi') return isHumasSdm || isBau || isKepalaSekolah
     if (slug === 'ketertiban' || slug === 'catatan-kedisiplinan') return isTatib || isBk || isGuru || isWaliKelas || isBau
     if (slug === 'bk-bp') return isBk || isTatib || isBau
     if (slug === 'perpustakaan') return isPustakawan || isBau
-    if (slug === 'tahfidz') return isGuruTahfidz || isBau
+    if (slug === 'tahfidz') return isGuruTahfidz || isIsmuba || isBau || isKepalaSekolah
+    if (slug === 'ismuba' || slug === 'waka-ismuba') return isIsmuba || isBau || isKepalaSekolah
     if (slug === 'kebersihan') return roles.includes('KEBERSIHAN') || isBau
     if (slug === 'keamanan') return roles.includes('KEAMANAN') || isBau
     if (slug === 'ekstrakulikuler') return roles.includes('PEMBINA_EKSTRA') || roles.includes('PEMBINA_EXTRA') || isBau
@@ -463,6 +466,13 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
         { name: 'Supervisi KBM & Jurnal', href: '/akademik/supervisi-jurnal', icon: BookCheck, group: 'Tim Kurikulum' },
         { name: 'Struktur Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: BookOpen, group: 'Tim Kurikulum' },
         { name: 'Jadwal Pelajaran KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Tim Kurikulum' },
+      ])
+    } else if (roleName === 'ISMUBA' || roleName === 'WAKA_ISMUBA') {
+      addLinks([
+        { name: 'ISMUBA', href: '/fitur/ismuba', icon: BookMarked, group: 'ISMUBA' },
+        { name: 'Program Tahfidz', href: '/fitur/tahfidz', icon: BookCheck, group: 'ISMUBA' },
+        { name: 'Kegiatan & Kajian', href: '/fitur/kegiatan', icon: Sparkles, group: 'ISMUBA' },
+        { name: 'Disposisi Surat', href: '/fitur/disposisi', icon: FileCheck, group: 'ISMUBA' },
       ])
     } else if (roleName === 'GURU_PIKET') {
       addLinks([

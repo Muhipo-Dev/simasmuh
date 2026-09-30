@@ -48,6 +48,7 @@ export interface KegiatanItem {
   nomorKegiatan?: string
   namaKegiatan: string
   kategori: string
+  sifatKegiatan?: string
   tanggal: string
   waktuMulai?: string
   waktuSelesai?: string
@@ -65,36 +66,72 @@ export interface KegiatanItem {
   }
 }
 
-export const KATEGORI_KEGIATAN_MAP: Record<string, { label: string; color: string; badge: string }> = {
+export const KATEGORI_KEGIATAN_MAP: Record<string, { label: string; color: string; badge: string; ismuba?: boolean }> = {
   KAJIAN_SELASA_PAGI: {
     label: 'Kajian Selasa Pagi',
-    color: 'from-emerald-500 to-teal-700',
-    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+    color: 'from-emerald-600 to-teal-800',
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
+    ismuba: true
+  },
+  SHOLAT_JUMAT: {
+    label: 'Sholat Jumat Berjamaah',
+    color: 'from-teal-600 to-cyan-800',
+    badge: 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800',
+    ismuba: true
+  },
+  MABIT_TAQWA: {
+    label: 'Malam Bina Iman & Taqwa (MABIT)',
+    color: 'from-indigo-600 to-purple-800',
+    badge: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
+    ismuba: true
+  },
+  BAITUL_ARQAM: {
+    label: 'Baitul Arqam / Darul Arqam',
+    color: 'from-green-600 to-emerald-800',
+    badge: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800',
+    ismuba: true
+  },
+  TADARUS_TAHFIDZ: {
+    label: 'Tadarus & Khotmil Qur\'an',
+    color: 'from-cyan-600 to-blue-800',
+    badge: 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800',
+    ismuba: true
+  },
+  PENGAJIAN_AKBAR: {
+    label: 'Pengajian Akbar / Milad',
+    color: 'from-purple-600 to-indigo-800',
+    badge: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800',
+    ismuba: true
+  },
+  KEGIATAN_ISMUBA: {
+    label: 'Kegiatan ISMUBA & Keislaman',
+    color: 'from-emerald-700 to-teal-900',
+    badge: 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700',
+    ismuba: true
   },
   WORKSHOP_PELATIHAN: {
     label: 'Workshop & Pelatihan',
-    color: 'from-blue-500 to-indigo-700',
-    badge: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
+    color: 'from-blue-600 to-indigo-800',
+    badge: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800',
+    ismuba: false
   },
   UPACARA_APEL: {
     label: 'Upacara / Apel Pagi',
-    color: 'from-rose-500 to-red-700',
-    badge: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
-  },
-  PENGAJIAN_AKBAR: {
-    label: 'Pengajian Akbar / Ismuba',
-    color: 'from-purple-500 to-indigo-700',
-    badge: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800'
+    color: 'from-rose-600 to-red-800',
+    badge: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800',
+    ismuba: false
   },
   RAPAT_KHUSUS: {
     label: 'Rapat / Koordinasi Khusus',
-    color: 'from-amber-500 to-orange-700',
-    badge: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+    color: 'from-amber-600 to-orange-800',
+    badge: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
+    ismuba: false
   },
   KEGIATAN_LAIN: {
     label: 'Agenda Sekolah Lainnya',
-    color: 'from-slate-500 to-slate-700',
-    badge: 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+    color: 'from-slate-600 to-slate-800',
+    badge: 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+    ismuba: false
   }
 }
 
@@ -104,22 +141,37 @@ export function KegiatanSekolahManagement() {
   const { data: session } = useSession()
   const currentUser = session?.user as any
 
-  const isHumasOrTu = useMemo(() => {
-    const r = [
+  const userRoles = useMemo(() => {
+    return [
       currentUser?.role,
       currentUser?.subRole,
       currentUser?.subRole2,
       currentUser?.subRole3,
       currentUser?.subRole4,
       currentUser?.subRole5
-    ].filter(Boolean)
-    return r.some(role => ['SUPERADMIN', 'ADMIN_IT', 'BAU', 'HUMAS_SDM', 'WAKA_HUMAS_SDM', 'KEPEGAWAIAN', 'SDM'].includes(role))
+    ].filter(Boolean).map((r: string) => r.toUpperCase())
   }, [currentUser])
+
+  const isIsmubaUser = useMemo(() => {
+    return userRoles.some(r => r === 'ISMUBA' || r === 'WAKA_ISMUBA' || r.includes('ISMUBA'))
+  }, [userRoles])
+
+  const isTuOrAdmin = useMemo(() => {
+    return userRoles.some(r => 
+      ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'ADMIN_TU', 'TATA_USAHA', 'BAU', 'KEPALA_SEKOLAH', 'HUMAS_SDM', 'WAKA_HUMAS_SDM', 'KEPEGAWAIAN', 'SDM'].includes(r) ||
+      r.includes('TU') || r.includes('TATA_USAHA') || r.includes('BAU') || r.includes('HUMAS') || r.includes('SDM')
+    )
+  }, [userRoles])
+
+  const canManageKegiatan = useMemo(() => {
+    return isTuOrAdmin || isIsmubaUser
+  }, [isTuOrAdmin, isIsmubaUser])
 
   // Filters & State
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedKategori, setSelectedKategori] = useState<string>('ALL')
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL')
+  const [selectedSifat, setSelectedSifat] = useState<string>('ALL')
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -134,13 +186,14 @@ export function KegiatanSekolahManagement() {
 
   const [formState, setFormState] = useState({
     namaKegiatan: '',
-    kategori: 'KAJIAN_SELASA_PAGI',
+    kategori: isIsmubaUser ? 'KAJIAN_SELASA_PAGI' : 'KAJIAN_SELASA_PAGI',
+    sifatKegiatan: 'TERJADWAL',
     tanggal: new Date().toISOString().split('T')[0],
     waktuMulai: '06:45',
     waktuSelesai: '07:30',
     tempat: 'Masjid Al-Manar / Aula Utama',
     pemateri: '',
-    penanggungJawab: 'Tim Humas & Ismuba',
+    penanggungJawab: isIsmubaUser ? 'Waka ISMUBA SMA MUHIPO' : 'Tata Usaha & Humas',
     ringkasanMateri: '',
     dokumentasiUrl: '',
     status: 'DIBUKA'
@@ -152,11 +205,12 @@ export function KegiatanSekolahManagement() {
     isLoading,
     refetch
   } = useQuery<KegiatanItem[]>({
-    queryKey: ['kegiatan-sekolah', selectedKategori, selectedStatus],
+    queryKey: ['kegiatan-sekolah', selectedKategori, selectedStatus, selectedSifat],
     queryFn: async () => {
       const params = new URLSearchParams()
       if (selectedKategori !== 'ALL') params.set('kategori', selectedKategori)
       if (selectedStatus !== 'ALL') params.set('status', selectedStatus)
+      if (selectedSifat !== 'ALL') params.set('sifatKegiatan', selectedSifat)
 
       const res = await authenticatedFetch(`/api-backend/kegiatan-sekolah?${params.toString()}`)
       if (!res.ok) throw new Error('Gagal mengambil data kegiatan sekolah')
@@ -343,17 +397,120 @@ export function KegiatanSekolahManagement() {
   const resetForm = () => {
     setFormState({
       namaKegiatan: '',
-      kategori: 'KAJIAN_SELASA_PAGI',
+      kategori: isIsmubaUser ? 'KAJIAN_SELASA_PAGI' : 'KAJIAN_SELASA_PAGI',
+      sifatKegiatan: 'TERJADWAL',
       tanggal: new Date().toISOString().split('T')[0],
       waktuMulai: '06:45',
       waktuSelesai: '07:30',
       tempat: 'Masjid Al-Manar / Aula Utama',
       pemateri: '',
-      penanggungJawab: 'Tim Humas & Ismuba',
+      penanggungJawab: isIsmubaUser ? 'Waka ISMUBA SMA MUHIPO' : 'Tata Usaha & Humas',
       ringkasanMateri: '',
       dokumentasiUrl: '',
       status: 'DIBUKA'
     })
+  }
+
+  const applyPreset = (presetKey: string) => {
+    const today = new Date().toISOString().split('T')[0]
+    switch (presetKey) {
+      case 'KAJIAN_SELASA_PAGI':
+        setFormState({
+          namaKegiatan: 'Kajian Rutin Selasa Pagi',
+          kategori: 'KAJIAN_SELASA_PAGI',
+          sifatKegiatan: 'TERJADWAL',
+          tanggal: today,
+          waktuMulai: '06:45',
+          waktuSelesai: '07:30',
+          tempat: 'Masjid Al-Manar SMA MUHIPO',
+          pemateri: '',
+          penanggungJawab: isIsmubaUser ? 'Waka ISMUBA SMA MUHIPO' : 'Tim ISMUBA & Humas',
+          ringkasanMateri: 'Kajian ketakwaan, tafsir Al-Qur\'an, dan pembinaan karakter islami sivitas akademika SMA Muhammadiyah 1 Ponorogo.',
+          dokumentasiUrl: '',
+          status: 'DIBUKA'
+        })
+        break
+      case 'SHOLAT_JUMAT':
+        setFormState({
+          namaKegiatan: 'Sholat Jumat Berjamaah & Khutbah',
+          kategori: 'SHOLAT_JUMAT',
+          sifatKegiatan: 'TERJADWAL',
+          tanggal: today,
+          waktuMulai: '11:30',
+          waktuSelesai: '12:45',
+          tempat: 'Masjid Al-Manar SMA MUHIPO',
+          pemateri: 'Khotib & Imam Jumat',
+          penanggungJawab: isIsmubaUser ? 'Waka ISMUBA SMA MUHIPO' : 'Tim ISMUBA',
+          ringkasanMateri: 'Pelaksanaan sholat Jumat berjamaah seluruh guru, karyawan, dan siswa.',
+          dokumentasiUrl: '',
+          status: 'DIBUKA'
+        })
+        break
+      case 'MABIT_TAQWA':
+        setFormState({
+          namaKegiatan: 'Malam Bina Iman dan Taqwa (MABIT)',
+          kategori: 'MABIT_TAQWA',
+          sifatKegiatan: 'TERJADWAL',
+          tanggal: today,
+          waktuMulai: '17:00',
+          waktuSelesai: '06:00',
+          tempat: 'Masjid Al-Manar & Kampus SMA MUHIPO',
+          pemateri: 'Tim Instruktur ISMUBA & Pembina IPM',
+          penanggungJawab: isIsmubaUser ? 'Waka ISMUBA SMA MUHIPO' : 'Tim ISMUBA & Kesiswaan',
+          ringkasanMateri: 'Pembinaan aqidah, qiyamul lail, tahsin Al-Qur\'an, dan muhasabah diri.',
+          dokumentasiUrl: '',
+          status: 'DIBUKA'
+        })
+        break
+      case 'BAITUL_ARQAM':
+        setFormState({
+          namaKegiatan: 'Baitul Arqam & Pembinaan Ideologi Kemuhammadiyahan',
+          kategori: 'BAITUL_ARQAM',
+          sifatKegiatan: 'TERJADWAL',
+          tanggal: today,
+          waktuMulai: '07:30',
+          waktuSelesai: '15:30',
+          tempat: 'Aula Utama SMA MUHIPO',
+          pemateri: 'Pimpinan Daerah Muhammadiyah Ponorogo',
+          penanggungJawab: isIsmubaUser ? 'Waka ISMUBA SMA MUHIPO' : 'Tim ISMUBA & Humas SDM',
+          ringkasanMateri: 'Pendalaman Matan Keyakinan dan Cita-Cita Hidup Muhammadiyah (MKCHM) serta etos kerja berkemajuan.',
+          dokumentasiUrl: '',
+          status: 'DIBUKA'
+        })
+        break
+      case 'UPACARA_APEL':
+        setFormState({
+          namaKegiatan: 'Upacara / Apel Pagi Hari Senin',
+          kategori: 'UPACARA_APEL',
+          sifatKegiatan: 'TERJADWAL',
+          tanggal: today,
+          waktuMulai: '06:45',
+          waktuSelesai: '07:30',
+          tempat: 'Halaman Utama Kampus SMA MUHIPO',
+          pemateri: 'Pembina Upacara',
+          penanggungJawab: 'Tata Usaha & Kesiswaan',
+          ringkasanMateri: 'Amanat pembina upacara dan penguatan kedisiplinan serta tata tertib sekolah.',
+          dokumentasiUrl: '',
+          status: 'DIBUKA'
+        })
+        break
+      case 'MENDESAK_QR':
+        setFormState({
+          namaKegiatan: 'Presensi Spontan / Koordinasi Singkat (Khusus QR)',
+          kategori: 'RAPAT_KHUSUS',
+          sifatKegiatan: 'MENDESAK',
+          tanggal: today,
+          waktuMulai: '07:00',
+          waktuSelesai: '08:00',
+          tempat: 'Ruang Guru / Aula Utama',
+          pemateri: '-',
+          penanggungJawab: currentUser?.name || 'Admin TU / Panitia',
+          ringkasanMateri: 'Kegiatan spontan / mendesak untuk pendataan kehadiran langsung via QR tanpa tampil di kalender.',
+          dokumentasiUrl: '',
+          status: 'DIBUKA'
+        })
+        break
+    }
   }
 
   const handleCreate = (e: React.FormEvent) => {
@@ -376,12 +533,13 @@ export function KegiatanSekolahManagement() {
     setFormState({
       namaKegiatan: item.namaKegiatan,
       kategori: item.kategori,
+      sifatKegiatan: item.sifatKegiatan || 'TERJADWAL',
       tanggal: item.tanggal ? new Date(item.tanggal).toISOString().split('T')[0] : '',
       waktuMulai: item.waktuMulai || '06:45',
       waktuSelesai: item.waktuSelesai || '07:30',
       tempat: item.tempat,
       pemateri: item.pemateri || '',
-      penanggungJawab: item.penanggungJawab || 'Tim Humas & Ismuba',
+      penanggungJawab: item.penanggungJawab || 'Tata Usaha & Humas',
       ringkasanMateri: item.ringkasanMateri || '',
       dokumentasiUrl: item.dokumentasiUrl || '',
       status: item.status
@@ -680,30 +838,30 @@ export function KegiatanSekolahManagement() {
   }, [kegiatanList, searchQuery])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-700 via-teal-700 to-slate-900 text-white p-5 sm:p-7 shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 text-white p-5 sm:p-6 shadow-md">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-72 h-72 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1.5 max-w-2xl">
+          <div className="space-y-1 max-w-2xl">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 border border-white/20 text-[11px] font-semibold text-emerald-200">
               <Sparkles className="w-3 h-3 text-emerald-300" />
-              <span>Manajemen Humas & TU</span>
+              <span>{isIsmubaUser ? 'Waka ISMUBA & Tim Keagamaan' : 'Manajemen Tata Usaha & Humas'}</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Kegiatan Sekolah & Presensi QR
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight">
+              Kegiatan Sekolah &amp; Presensi QR
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
-              Pengelolaan kegiatan sekolah (Kajian Selasa Pagi, Workshop, Upacara, dll.) beserta kode QR presensi kehadiran mandiri bagi guru & karyawan.
+              Pengelolaan kegiatan sekolah &amp; program ISMUBA (Kajian Selasa Pagi, Sholat Jumat, MABIT, Workshop, Upacara) beserta absensi presensi mandiri QR Code.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto">
-            {isHumasOrTu && (
+            {canManageKegiatan && (
               <Button
                 onClick={() => { resetForm(); setIsAddModalOpen(true) }}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs h-9 px-4 rounded-xl shadow-md gap-1.5 flex-1 sm:flex-initial"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs h-9 px-4 rounded-xl shadow-sm gap-1.5 flex-1 sm:flex-initial"
               >
                 <Plus className="w-4 h-4" />
                 <span>Buat Kegiatan Baru</span>
@@ -722,10 +880,74 @@ export function KegiatanSekolahManagement() {
         </div>
       </div>
 
+      {/* Quick Template Presets (Khusus TU & Waka ISMUBA) */}
+      {canManageKegiatan && (
+        <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              Template Cepat Kegiatan (1-Klik):
+            </span>
+            <span className="text-[10px] text-slate-400">Pilih untuk isi form otomatis</span>
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { applyPreset('KAJIAN_SELASA_PAGI'); setIsAddModalOpen(true) }}
+              className="h-7 text-[11px] px-2.5 rounded-lg border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 dark:bg-emerald-950/30 shrink-0 gap-1"
+            >
+              <span>📖 Kajian Selasa Pagi</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { applyPreset('SHOLAT_JUMAT'); setIsAddModalOpen(true) }}
+              className="h-7 text-[11px] px-2.5 rounded-lg border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 bg-teal-50/50 hover:bg-teal-100 dark:bg-teal-950/30 shrink-0 gap-1"
+            >
+              <span>🕌 Sholat Jumat</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { applyPreset('MABIT_TAQWA'); setIsAddModalOpen(true) }}
+              className="h-7 text-[11px] px-2.5 rounded-lg border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-indigo-50/50 hover:bg-indigo-100 dark:bg-indigo-950/30 shrink-0 gap-1"
+            >
+              <span>🌙 MABIT Siswa</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { applyPreset('BAITUL_ARQAM'); setIsAddModalOpen(true) }}
+              className="h-7 text-[11px] px-2.5 rounded-lg border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 bg-green-50/50 hover:bg-green-100 dark:bg-green-950/30 shrink-0 gap-1"
+            >
+              <span>⭐ Baitul Arqam</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { applyPreset('UPACARA_APEL'); setIsAddModalOpen(true) }}
+              className="h-7 text-[11px] px-2.5 rounded-lg border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 bg-rose-50/50 hover:bg-rose-100 dark:bg-rose-950/30 shrink-0 gap-1"
+            >
+              <span>🚩 Upacara / Apel</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { applyPreset('MENDESAK_QR'); setIsAddModalOpen(true) }}
+              className="h-7 text-[11px] px-2.5 rounded-lg border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 bg-amber-50/50 hover:bg-amber-100 dark:bg-amber-950/30 shrink-0 gap-1"
+            >
+              <AlertCircle className="w-3 h-3 text-amber-600" />
+              <span>⚡ Kegiatan Mendesak (QR Saja)</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Filter & Search Bar */}
       <Card className="border-slate-200 dark:border-slate-800 shadow-xs">
         <CardContent className="p-3 sm:p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
             <div className="relative sm:col-span-2">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <Input
@@ -741,11 +963,26 @@ export function KegiatanSekolahManagement() {
                 <SelectTrigger className="text-xs h-9 bg-white dark:bg-slate-900">
                   <SelectValue placeholder="Kategori Kegiatan" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-60">
                   <SelectItem value="ALL">Semua Kategori</SelectItem>
                   {Object.entries(KATEGORI_KEGIATAN_MAP).map(([key, val]) => (
-                    <SelectItem key={key} value={key}>{val.label}</SelectItem>
+                    <SelectItem key={key} value={key}>
+                      {val.ismuba ? `[ISMUBA] ${val.label}` : val.label}
+                    </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Select value={selectedSifat} onValueChange={(val: string | null) => setSelectedSifat(val || 'ALL')}>
+                <SelectTrigger className="text-xs h-9 bg-white dark:bg-slate-900">
+                  <SelectValue placeholder="Sifat Kegiatan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Semua Sifat</SelectItem>
+                  <SelectItem value="TERJADWAL">Terjadwal (Kalender)</SelectItem>
+                  <SelectItem value="MENDESAK">Mendesak (Khusus QR)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -783,7 +1020,7 @@ export function KegiatanSekolahManagement() {
           <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
             Belum ditemukan kegiatan sekolah yang sesuai dengan filter atau pencarian Anda.
           </p>
-          {isHumasOrTu && (
+          {canManageKegiatan && (
             <Button
               onClick={() => { resetForm(); setIsAddModalOpen(true) }}
               size="sm"
@@ -805,6 +1042,7 @@ export function KegiatanSekolahManagement() {
               month: 'short',
               year: 'numeric'
             })
+            const isMendesak = item.sifatKegiatan === 'MENDESAK'
 
             return (
               <Card 
@@ -816,16 +1054,16 @@ export function KegiatanSekolahManagement() {
                   <div className={`p-3 bg-gradient-to-r ${katConfig.color} text-white flex items-center justify-between`}>
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span className="text-[11px] font-bold tracking-wide uppercase">{katConfig.label}</span>
+                      <span className="text-[11px] font-bold tracking-wide uppercase truncate max-w-[200px]">{katConfig.label}</span>
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-black/20 backdrop-blur-xs font-semibold">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-black/20 backdrop-blur-xs font-semibold shrink-0">
                       {item.nomorKegiatan || 'KEG'}
                     </span>
                   </div>
 
-                  <CardHeader className="p-4 pb-2 space-y-1">
+                  <CardHeader className="p-4 pb-2 space-y-1.5">
                     <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-base font-bold text-slate-900 dark:text-white line-clamp-1 group-hover:text-emerald-600 transition-colors">
+                      <CardTitle className="text-base font-bold text-slate-900 dark:text-white line-clamp-1 group-hover:text-emerald-600 transition-colors" title={item.namaKegiatan}>
                         {item.namaKegiatan}
                       </CardTitle>
                       <Badge 
@@ -840,10 +1078,25 @@ export function KegiatanSekolahManagement() {
                       </Badge>
                     </div>
 
+                    {/* Sifat Kegiatan Badge */}
+                    <div className="flex items-center gap-1.5">
+                      {isMendesak ? (
+                        <Badge variant="outline" className="text-[9px] font-semibold bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 gap-1 py-0">
+                          <AlertCircle className="w-2.5 h-2.5 text-amber-600" />
+                          <span>Mendesak (Khusus QR)</span>
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[9px] font-semibold bg-sky-500/10 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800 gap-1 py-0">
+                          <Calendar className="w-2.5 h-2.5 text-sky-600" />
+                          <span>Tersinkron Kalender</span>
+                        </Badge>
+                      )}
+                    </div>
+
                     {item.pemateri && (
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5 truncate">
                         <span className="text-slate-400">Pemateri:</span>
-                        <strong className="text-slate-800 dark:text-slate-100">{item.pemateri}</strong>
+                        <strong className="text-slate-800 dark:text-slate-100 truncate">{item.pemateri}</strong>
                       </p>
                     )}
                   </CardHeader>
@@ -860,7 +1113,7 @@ export function KegiatanSekolahManagement() {
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                        <span className="truncate">{item.tempat}</span>
+                        <span className="truncate" title={item.tempat}>{item.tempat}</span>
                       </div>
                     </div>
 
@@ -873,7 +1126,7 @@ export function KegiatanSekolahManagement() {
                         <div>
                           <div className="text-[10px] text-slate-500 font-medium">Kehadiran Pegawai</div>
                           <div className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400">
-                            {hadirCount} Guru & Karyawan
+                            {hadirCount} Guru &amp; Karyawan
                           </div>
                         </div>
                       </div>
@@ -900,10 +1153,10 @@ export function KegiatanSekolahManagement() {
                     className="text-xs h-8 px-2.5 flex-1 gap-1 border-slate-200 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    <span>Detail & Peserta</span>
+                    <span>Detail &amp; Peserta</span>
                   </Button>
 
-                  {isHumasOrTu && (
+                  {canManageKegiatan && (
                     <>
                       <Button
                         size="sm"
@@ -949,15 +1202,15 @@ export function KegiatanSekolahManagement() {
               <Sparkles className="w-5 h-5" /> Buat Agenda Kegiatan Baru
             </DialogTitle>
             <DialogDescription>
-              Isi data kegiatan sekolah. Sistem akan otomatis membuat Kode QR khusus untuk absensi guru & karyawan.
+              Isi data kegiatan sekolah. Sistem akan otomatis membuat Kode QR khusus untuk absensi guru &amp; karyawan.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreate} className="space-y-3.5 py-2 text-xs">
+          <form onSubmit={handleCreate} className="space-y-3 py-2 text-xs">
             <div className="space-y-1">
-              <Label className="text-xs">Nama Kegiatan / Agenda <span className="text-rose-500">*</span></Label>
+              <Label className="text-xs font-semibold">Nama Kegiatan / Agenda <span className="text-rose-500">*</span></Label>
               <Input
-                placeholder="Misal: Kajian Selasa Pagi / Workshop Kurikulum Merdeka"
+                placeholder="Misal: Kajian Selasa Pagi / Sholat Jumat Berjamaah / Workshop"
                 value={formState.namaKegiatan}
                 onChange={(e) => setFormState({ ...formState, namaKegiatan: e.target.value })}
                 required
@@ -967,7 +1220,7 @@ export function KegiatanSekolahManagement() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Kategori Kegiatan</Label>
+                <Label className="text-xs font-semibold">Kategori Kegiatan</Label>
                 <Select
                   value={formState.kategori}
                   onValueChange={(val: string | null) => { if (val) setFormState({ ...formState, kategori: val }) }}
@@ -975,16 +1228,34 @@ export function KegiatanSekolahManagement() {
                   <SelectTrigger className="text-xs h-9">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-60">
                     {Object.entries(KATEGORI_KEGIATAN_MAP).map(([key, val]) => (
-                      <SelectItem key={key} value={key}>{val.label}</SelectItem>
+                      <SelectItem key={key} value={key}>
+                        {val.ismuba ? `[ISMUBA] ${val.label}` : val.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">Tanggal Pelaksanaan</Label>
+                <Label className="text-xs font-semibold">Sifat Kegiatan &amp; Visibilitas</Label>
+                <Select
+                  value={formState.sifatKegiatan}
+                  onValueChange={(val: string | null) => { if (val) setFormState({ ...formState, sifatKegiatan: val }) }}
+                >
+                  <SelectTrigger className="text-xs h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TERJADWAL">📅 Terjadwal (Tampil di Kalender)</SelectItem>
+                    <SelectItem value="MENDESAK">⚡ Mendesak (Khusus QR - Tanpa Kalender)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Tanggal Pelaksanaan</Label>
                 <Input
                   type="date"
                   value={formState.tanggal}
@@ -994,29 +1265,37 @@ export function KegiatanSekolahManagement() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">Waktu Mulai</Label>
-                <Input
-                  type="time"
-                  value={formState.waktuMulai}
-                  onChange={(e) => setFormState({ ...formState, waktuMulai: e.target.value })}
-                  className="text-xs h-9"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs">Waktu Selesai</Label>
-                <Input
-                  type="time"
-                  value={formState.waktuSelesai}
-                  onChange={(e) => setFormState({ ...formState, waktuSelesai: e.target.value })}
-                  className="text-xs h-9"
-                />
+                <Label className="text-xs font-semibold">Waktu Pelaksanaan</Label>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="time"
+                    value={formState.waktuMulai}
+                    onChange={(e) => setFormState({ ...formState, waktuMulai: e.target.value })}
+                    className="text-xs h-9"
+                  />
+                  <span>-</span>
+                  <Input
+                    type="time"
+                    value={formState.waktuSelesai}
+                    onChange={(e) => setFormState({ ...formState, waktuSelesai: e.target.value })}
+                    className="text-xs h-9"
+                  />
+                </div>
               </div>
             </div>
 
+            {formState.sifatKegiatan === 'MENDESAK' && (
+              <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                <span>
+                  <strong>Kegiatan Mendesak:</strong> Kegiatan ini tidak akan ditampilkan di kalender publik sekolah, namun langsung mengaktifkan Kode QR dan pencatatan presensi instan.
+                </span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Tempat / Ruangan</Label>
+                <Label className="text-xs font-semibold">Tempat / Ruangan</Label>
                 <Input
                   placeholder="Misal: Masjid Al-Manar / Aula Utama"
                   value={formState.tempat}
@@ -1026,7 +1305,7 @@ export function KegiatanSekolahManagement() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">Pemateri / Narasumber</Label>
+                <Label className="text-xs font-semibold">Pemateri / Narasumber</Label>
                 <Input
                   placeholder="Misal: Ustadz Dr. H. Syarif, M.Ag"
                   value={formState.pemateri}
@@ -1037,9 +1316,9 @@ export function KegiatanSekolahManagement() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">Penanggung Jawab / Panitia</Label>
+              <Label className="text-xs font-semibold">Penanggung Jawab / Panitia</Label>
               <Input
-                placeholder="Misal: Tim Humas & Ismuba SMA Muhammadiyah 1"
+                placeholder="Misal: Waka ISMUBA / Tata Usaha & Humas"
                 value={formState.penanggungJawab}
                 onChange={(e) => setFormState({ ...formState, penanggungJawab: e.target.value })}
                 className="text-xs h-9"
@@ -1047,10 +1326,10 @@ export function KegiatanSekolahManagement() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">Ringkasan / Catatan Materi</Label>
+              <Label className="text-xs font-semibold">Ringkasan / Catatan Materi</Label>
               <Textarea
                 placeholder="Tuliskan ringkasan materi atau poin-poin utama kegiatan..."
-                rows={3}
+                rows={2}
                 value={formState.ringkasanMateri}
                 onChange={(e) => setFormState({ ...formState, ringkasanMateri: e.target.value })}
                 className="text-xs resize-none"
@@ -1072,7 +1351,7 @@ export function KegiatanSekolahManagement() {
                 className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 gap-1.5"
               >
                 {createMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>Simpan & Generate QR</span>
+                <span>Simpan &amp; Generate QR</span>
               </Button>
             </DialogFooter>
           </form>
@@ -1088,9 +1367,9 @@ export function KegiatanSekolahManagement() {
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleUpdate} className="space-y-3.5 py-2 text-xs">
+          <form onSubmit={handleUpdate} className="space-y-3 py-2 text-xs">
             <div className="space-y-1">
-              <Label className="text-xs">Nama Kegiatan / Agenda <span className="text-rose-500">*</span></Label>
+              <Label className="text-xs font-semibold">Nama Kegiatan / Agenda <span className="text-rose-500">*</span></Label>
               <Input
                 value={formState.namaKegiatan}
                 onChange={(e) => setFormState({ ...formState, namaKegiatan: e.target.value })}
@@ -1099,9 +1378,9 @@ export function KegiatanSekolahManagement() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Kategori</Label>
+                <Label className="text-xs font-semibold">Kategori</Label>
                 <Select
                   value={formState.kategori}
                   onValueChange={(val: string | null) => { if (val) setFormState({ ...formState, kategori: val }) }}
@@ -1109,16 +1388,34 @@ export function KegiatanSekolahManagement() {
                   <SelectTrigger className="text-xs h-9">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-60">
                     {Object.entries(KATEGORI_KEGIATAN_MAP).map(([key, val]) => (
-                      <SelectItem key={key} value={key}>{val.label}</SelectItem>
+                      <SelectItem key={key} value={key}>
+                        {val.ismuba ? `[ISMUBA] ${val.label}` : val.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">Status</Label>
+                <Label className="text-xs font-semibold">Sifat Kegiatan</Label>
+                <Select
+                  value={formState.sifatKegiatan}
+                  onValueChange={(val: string | null) => { if (val) setFormState({ ...formState, sifatKegiatan: val }) }}
+                >
+                  <SelectTrigger className="text-xs h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TERJADWAL">📅 Terjadwal (Kalender)</SelectItem>
+                    <SelectItem value="MENDESAK">⚡ Mendesak (Khusus QR)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Status</Label>
                 <Select
                   value={formState.status}
                   onValueChange={(val: string | null) => { if (val) setFormState({ ...formState, status: val }) }}
@@ -1134,9 +1431,11 @@ export function KegiatanSekolahManagement() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Tanggal Pelaksanaan</Label>
+                <Label className="text-xs font-semibold">Tanggal Pelaksanaan</Label>
                 <Input
                   type="date"
                   value={formState.tanggal}
@@ -1146,7 +1445,7 @@ export function KegiatanSekolahManagement() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">Waktu</Label>
+                <Label className="text-xs font-semibold">Waktu</Label>
                 <div className="flex items-center gap-1.5">
                   <Input
                     type="time"
@@ -1167,7 +1466,7 @@ export function KegiatanSekolahManagement() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Tempat</Label>
+                <Label className="text-xs font-semibold">Tempat</Label>
                 <Input
                   value={formState.tempat}
                   onChange={(e) => setFormState({ ...formState, tempat: e.target.value })}
@@ -1176,7 +1475,7 @@ export function KegiatanSekolahManagement() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">Pemateri</Label>
+                <Label className="text-xs font-semibold">Pemateri</Label>
                 <Input
                   value={formState.pemateri}
                   onChange={(e) => setFormState({ ...formState, pemateri: e.target.value })}
@@ -1186,9 +1485,18 @@ export function KegiatanSekolahManagement() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">Ringkasan Materi</Label>
+              <Label className="text-xs font-semibold">Penanggung Jawab</Label>
+              <Input
+                value={formState.penanggungJawab}
+                onChange={(e) => setFormState({ ...formState, penanggungJawab: e.target.value })}
+                className="text-xs h-9"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Ringkasan Materi</Label>
               <Textarea
-                rows={3}
+                rows={2}
                 value={formState.ringkasanMateri}
                 onChange={(e) => setFormState({ ...formState, ringkasanMateri: e.target.value })}
                 className="text-xs resize-none"
@@ -1269,7 +1577,7 @@ export function KegiatanSekolahManagement() {
                   <span>Cetak Lembar / Stand QR</span>
                 </Button>
 
-                {isHumasOrTu && (
+                {canManageKegiatan && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -1364,7 +1672,7 @@ export function KegiatanSekolahManagement() {
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  {isHumasOrTu && (
+                  {canManageKegiatan && (
                     <Button
                       size="sm"
                       onClick={() => setIsManualPresensiOpen(true)}
@@ -1405,13 +1713,13 @@ export function KegiatanSekolahManagement() {
                       <TableHead className="w-32 text-center px-3 font-bold">NIP / NBM</TableHead>
                       <TableHead className="w-32 text-center px-3 font-bold">Waktu Presensi</TableHead>
                       <TableHead className="w-28 text-center px-3 font-bold">Metode</TableHead>
-                      {isHumasOrTu && <TableHead className="w-24 text-right px-3 font-bold">Aksi</TableHead>}
+                      {canManageKegiatan && <TableHead className="w-24 text-right px-3 font-bold">Aksi</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {!detailData.presensis || detailData.presensis.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={isHumasOrTu ? 6 : 5} className="text-center py-6 text-slate-400">
+                        <TableCell colSpan={canManageKegiatan ? 6 : 5} className="text-center py-6 text-slate-400">
                           Belum ada peserta yang melakukan presensi di kegiatan ini.
                         </TableCell>
                       </TableRow>
@@ -1441,7 +1749,7 @@ export function KegiatanSekolahManagement() {
                               {p.metode === 'QR_SCAN' ? 'Scan QR' : 'Manual'}
                             </Badge>
                           </TableCell>
-                          {isHumasOrTu && (
+                          {canManageKegiatan && (
                             <TableCell className="text-right">
                               <Button
                                 size="sm"

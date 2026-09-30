@@ -172,6 +172,39 @@ export function StudentDashboard({
     return (schedules || []).filter((sch: any) => sch.classId === studentClass?.id)
   }, [schedules, studentClass])
 
+  // Menghitung Timestamp Pembaruan Terakhir Jadwal Siswa
+  const studentScheduleLastUpdated = useMemo(() => {
+    if (!studentClassSchedules || studentClassSchedules.length === 0) return null
+    const timestamps = studentClassSchedules
+      .map((s: any) => {
+        const time = new Date(s.updatedAt || s.createdAt || 0).getTime()
+        return isNaN(time) ? 0 : time
+      })
+      .filter((t: number) => t > 0)
+    if (timestamps.length === 0) return null
+    return new Date(Math.max(...timestamps))
+  }, [studentClassSchedules])
+
+  const formatScheduleUpdateTime = (dateInput?: string | Date | null) => {
+    if (!dateInput) return 'Belum Diperbarui'
+    try {
+      const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+      if (isNaN(d.getTime()) || d.getTime() === 0) return 'Belum Diperbarui'
+      return (
+        new Intl.DateTimeFormat('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).format(d) + ' WIB'
+      )
+    } catch {
+      return 'Belum Diperbarui'
+    }
+  }
+
   // Unique time slots for student's class
   const studentWeeklySlots = useMemo(() => {
     const map = new Map<string, { startTime: string; endTime: string; startMinutes: number; endMinutes: number }>()
@@ -195,9 +228,9 @@ export function StudentDashboard({
     })
   }, [studentClassSchedules])
 
-  // Grouped by day (1..6)
+  // Grouped by day (1..5 - Senin s.d. Jumat)
   const studentGroupedWeekly = useMemo(() => {
-    const grouped: Record<number, any[]> = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] }
+    const grouped: Record<number, any[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] }
     studentClassSchedules.forEach((sch: any) => {
       const day = sch.dayOfWeek ?? 1
       if (!grouped[day]) grouped[day] = []
@@ -444,12 +477,12 @@ export function StudentDashboard({
       return
     }
 
-    const daysHeader = [1, 2, 3, 4, 5, 6]
+    const daysHeader = [1, 2, 3, 4, 5]
       .map((d) => `<th style="border: 1px solid #000; padding: 6px 4px; text-align: center; background: #f3f4f6; font-size: 11px; font-weight: bold; text-transform: uppercase;">${daysMap[d]}</th>`)
       .join('')
 
     const tableRows = studentWeeklySlots.map((slot, slotIdx) => {
-      const dayCells = [1, 2, 3, 4, 5, 6].map((dayNum) => {
+      const dayCells = [1, 2, 3, 4, 5].map((dayNum) => {
         const lessons = (studentGroupedWeekly[dayNum] || []).filter((sch: any) => {
           return (sch.startTime || '').trim() === slot.startTime || 
             (parseTimeToMinutes(sch.startTime) <= slot.startMinutes && parseTimeToMinutes(sch.endTime) > slot.startMinutes)
@@ -609,7 +642,7 @@ export function StudentDashboard({
 
           <div class="doc-header">
             <span class="doc-title">JADWAL PELAJARAN KELAS ${studentClass?.name || ''}</span>
-            <span style="font-weight: bold; font-size: 11px;">Tahun Ajaran: ${studentClass?.academicYear || '2026/2027'}</span>
+            <span style="font-weight: bold; font-size: 11px;">Tahun Ajaran: ${studentClass?.academicYear || '2026/2027'} • Terakhir Diperbarui: ${studentScheduleLastUpdated ? formatScheduleUpdateTime(studentScheduleLastUpdated) : '-'}</span>
           </div>
 
           <table>
@@ -620,7 +653,7 @@ export function StudentDashboard({
               </tr>
             </thead>
             <tbody>
-              ${studentWeeklySlots.length === 0 ? `<tr><td colspan="7" style="border: 1px solid #000; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">Belum ada jadwal pelajaran untuk kelas ini.</td></tr>` : tableRows}
+              ${studentWeeklySlots.length === 0 ? `<tr><td colspan="6" style="border: 1px solid #000; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">Belum ada jadwal pelajaran untuk kelas ini.</td></tr>` : tableRows}
             </tbody>
           </table>
 
@@ -1079,8 +1112,17 @@ export function StudentDashboard({
                   <CalendarDays className="w-4 h-4 text-purple-600" />
                   Jadwal Pelajaran Kelas {studentClass?.name || 'X 1'}
                 </CardTitle>
-                <CardDescription className="text-[11px] mt-0.5 text-slate-500">
-                  {scheduleViewTab === 'table' ? 'Tabel Jadwal Mingguan' : `Jadwal Hari Ini (${daysMap[todayDayIndex]})`} • Semester {currentSemester}
+                <CardDescription className="text-[11px] mt-0.5 text-slate-500 flex flex-wrap items-center gap-1.5">
+                  <span>{scheduleViewTab === 'table' ? 'Tabel Jadwal Mingguan' : `Jadwal Hari Ini (${daysMap[todayDayIndex]})`} • Semester {currentSemester}</span>
+                  {studentScheduleLastUpdated && (
+                    <>
+                      <span>•</span>
+                      <span className="inline-flex items-center gap-1 text-slate-700 dark:text-slate-300 font-medium">
+                        <Clock className="w-3 h-3 text-purple-500" />
+                        Update: <strong className="font-bold">{formatScheduleUpdateTime(studentScheduleLastUpdated)}</strong>
+                      </span>
+                    </>
+                  )}
                 </CardDescription>
               </div>
 
@@ -1147,7 +1189,7 @@ export function StudentDashboard({
                               <span>Waktu</span>
                             </div>
                           </th>
-                          {[1, 2, 3, 4, 5, 6].map((dayNum) => {
+                          {[1, 2, 3, 4, 5].map((dayNum) => {
                             const isToday = todayDayIndex === dayNum
                             return (
                               <th
@@ -1174,7 +1216,7 @@ export function StudentDashboard({
                                 {slot.startTime} - {slot.endTime}
                               </div>
                             </td>
-                            {[1, 2, 3, 4, 5, 6].map((dayNum) => {
+                            {[1, 2, 3, 4, 5].map((dayNum) => {
                               const dayLessons = (studentGroupedWeekly[dayNum] || []).filter((sch: any) => {
                                 return (sch.startTime || '').trim() === slot.startTime || 
                                   (parseTimeToMinutes(sch.startTime) <= slot.startMinutes && parseTimeToMinutes(sch.endTime) > slot.startMinutes)

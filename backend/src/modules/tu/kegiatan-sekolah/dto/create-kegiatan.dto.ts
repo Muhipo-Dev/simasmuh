@@ -11,6 +11,10 @@ export class CreateKegiatanDto {
 
   @IsOptional()
   @IsString()
+  sifatKegiatan?: string;
+
+  @IsOptional()
+  @IsString()
   tanggal?: string;
 
   @IsOptional()

@@ -48,6 +48,7 @@ interface AgendaItem {
 
 interface ActivityCalendarWidgetProps {
   announcements?: any[]
+  initialKegiatan?: any[]
   title?: string
   onAddAgenda?: () => void
   showAddButton?: boolean
@@ -64,8 +65,47 @@ export interface CalendarDayEvent {
   badgeLabel?: string
 }
 
+const getKategoriInfo = (kategori?: string) => {
+  switch (kategori) {
+    case 'KAJIAN_SELASA_PAGI':
+      return { badge: 'Kajian Selasa Pagi', tag: '#KajianSelasa', isIsmuba: true }
+    case 'SHOLAT_JUMAT':
+      return { badge: 'Sholat Jumat Berjamaah', tag: '#SholatJumat', isIsmuba: true }
+    case 'MABIT':
+      return { badge: 'MABIT Siswa', tag: '#MABIT', isIsmuba: true }
+    case 'BAITUL_ARQAM':
+      return { badge: 'Baitul Arqam', tag: '#BaitulArqam', isIsmuba: true }
+    case 'TADARUS_TAHFIDZ':
+      return { badge: 'Tadarus & Tahfidz', tag: '#Tahfidz', isIsmuba: true }
+    case 'PENGAJIAN_AKBAR':
+      return { badge: 'Pengajian Akbar', tag: '#Pengajian', isIsmuba: true }
+    case 'UPACARA_APEL':
+      return { badge: 'Upacara / Apel', tag: '#Upacara', isIsmuba: false }
+    case 'RAPAT_DINAS':
+      return { badge: 'Rapat Dinas', tag: '#Rapat', isIsmuba: false }
+    case 'WORKSHOP_PELATIHAN':
+      return { badge: 'Workshop & Pelatihan', tag: '#Workshop', isIsmuba: false }
+    case 'LOMBA_AKADEMIK':
+    case 'LOMBA_NON_AKADEMIK':
+      return { badge: 'Lomba & Kejuaraan', tag: '#Prestasi', isIsmuba: false }
+    case 'CLASSMEETING':
+      return { badge: 'Classmeeting', tag: '#Classmeeting', isIsmuba: false }
+    case 'MILAD_SEKOLAH':
+      return { badge: 'Milad Sekolah', tag: '#Milad', isIsmuba: false }
+    case 'STUDY_TOUR_OUTING':
+      return { badge: 'Study Tour / Outing', tag: '#Outing', isIsmuba: false }
+    case 'BAKSOS_SOSIAL':
+      return { badge: 'Bakti Sosial', tag: '#Baksos', isIsmuba: false }
+    case 'ISMUBA_LAINNYA':
+      return { badge: 'Kegiatan ISMUBA', tag: '#ISMUBA', isIsmuba: true }
+    default:
+      return { badge: 'Kegiatan Sekolah', tag: '#KegiatanSekolah', isIsmuba: false }
+  }
+}
+
 export function ActivityCalendarWidget({
   announcements = [],
+  initialKegiatan = [],
   title = 'Kalender & Agenda Terpadu',
   onAddAgenda,
   showAddButton = false,
@@ -76,6 +116,7 @@ export function ActivityCalendarWidget({
   const [filterType, setFilterType] = useState<'ALL' | 'AGENDA' | 'HOLIDAY' | 'ISLAMIC' | 'MUHAMMADIYAH' | 'NATIONAL'>('ALL')
   const [holidays, setHolidays] = useState<NationalHoliday[]>([])
   const [hijriCalendar, setHijriCalendar] = useState<Record<string, HijriDayInfo>>({})
+  const [kegiatanList, setKegiatanList] = useState<any[]>(initialKegiatan)
   const [loadingCalendar, setLoadingCalendar] = useState<boolean>(false)
   const [selectedDateEvents, setSelectedDateEvents] = useState<CalendarDayEvent[] | null>(null)
   const [selectedDateHijri, setSelectedDateHijri] = useState<HijriDayInfo | null>(null)
@@ -86,19 +127,23 @@ export function ActivityCalendarWidget({
   const month = currentDate.getMonth() // 0-indexed (0 = Jan, 8 = Sep)
   const monthApiNumber = month + 1 // 1-12
 
-  // Fetch National Holidays & Hijri Calendar Realtime when month or year changes
+  // Fetch National Holidays, Hijri Calendar & Public Scheduled Kegiatan
   useEffect(() => {
     let isMounted = true
     async function loadRealtimeCalendar() {
       setLoadingCalendar(true)
       try {
-        const [holidayList, hijriData] = await Promise.all([
+        const [holidayList, hijriData, kegRes] = await Promise.all([
           fetchNationalHolidays(year),
-          fetchHijriMonthCalendar(monthApiNumber, year)
+          fetchHijriMonthCalendar(monthApiNumber, year),
+          fetch('/api-backend/kegiatan-sekolah/public').then(r => r.ok ? r.json() : []).catch(() => [])
         ])
         if (isMounted) {
           setHolidays(holidayList)
           setHijriCalendar(hijriData)
+          if (Array.isArray(kegRes) && kegRes.length > 0) {
+            setKegiatanList(kegRes)
+          }
         }
       } catch (err) {
         console.error('Failed to load realtime calendar data:', err)
@@ -207,7 +252,7 @@ export function ActivityCalendarWidget({
       }
     })
 
-    // 3. Masukkan Agenda Sekolah
+    // 3. Masukkan Agenda Sekolah dari Announcement
     agendaList.forEach(item => {
       if (!item.eventDate) return
       const d = new Date(item.eventDate)
@@ -223,8 +268,33 @@ export function ActivityCalendarWidget({
       })
     })
 
+    // 4. Masukkan Kegiatan Sekolah (Admin TU & Waka ISMUBA) - ONLY TERJADWAL
+    ;(kegiatanList || []).forEach(keg => {
+      if (keg.sifatKegiatan === 'MENDESAK' || !keg.tanggal) return
+      const d = new Date(keg.tanggal)
+      if (isNaN(d.getTime())) return
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      if (!map[key]) map[key] = []
+
+      const kInfo = getKategoriInfo(keg.kategori)
+      const descParts: string[] = []
+      if (keg.waktuMulai) descParts.push(`⏰ ${keg.waktuMulai}${keg.waktuSelesai ? ` - ${keg.waktuSelesai}` : ''} WIB`)
+      if (keg.tempat) descParts.push(`📍 ${keg.tempat}`)
+      if (keg.pemateri) descParts.push(`🎙️ Pemateri: ${keg.pemateri}`)
+      if (keg.penanggungJawab) descParts.push(`👤 PJ: ${keg.penanggungJawab}`)
+      if (keg.ringkasanMateri) descParts.push(`📝 ${keg.ringkasanMateri}`)
+
+      map[key].push({
+        title: keg.namaKegiatan,
+        type: kInfo.isIsmuba ? 'ISLAMIC_EVENT' : 'AGENDA',
+        tag: kInfo.tag,
+        content: descParts.length > 0 ? descParts.join(' | ') : 'Kegiatan Sekolah SIMASMUH',
+        badgeLabel: kInfo.badge
+      })
+    })
+
     return map
-  }, [holidays, hijriCalendar, agendaList])
+  }, [holidays, hijriCalendar, agendaList, kegiatanList])
 
   // Count events for badges (Synchronized for current active month)
   const counts = useMemo(() => {
@@ -247,15 +317,26 @@ export function ActivityCalendarWidget({
       }
     })
 
+    const scheduledKegiatan = (kegiatanList || []).filter(keg => {
+      if (keg.sifatKegiatan === 'MENDESAK' || !keg.tanggal) return false
+      const d = new Date(keg.tanggal)
+      return d.getFullYear() === year && d.getMonth() === month
+    })
+
+    const ismubaCount = scheduledKegiatan.filter(k => getKategoriInfo(k.kategori).isIsmuba).length
+    const nonIsmubaCount = scheduledKegiatan.length - ismubaCount
+
     // 3. Agenda Sekolah Bulan Ini
     const agendaCount = agendaList.filter(item => {
       if (!item.eventDate) return false
       const d = new Date(item.eventDate)
       return d.getFullYear() === year && d.getMonth() === month
-    }).length
+    }).length + nonIsmubaCount
+
+    islamicCount += ismubaCount
 
     return { holidayCount, islamicCount, muhammadiyahCount, agendaCount, nationalCount }
-  }, [holidays, hijriCalendar, agendaList, year, month])
+  }, [holidays, hijriCalendar, agendaList, kegiatanList, year, month])
 
   // Calculate calendar grid days
   const firstDayOfMonth = new Date(year, month, 1).getDay() // 0 = Sunday
@@ -441,6 +522,32 @@ export function ActivityCalendarWidget({
       }
     })
 
+    // 4. Kegiatan Sekolah (Admin TU & Waka ISMUBA) - ONLY TERJADWAL
+    ;(kegiatanList || []).forEach(keg => {
+      if (keg.sifatKegiatan === 'MENDESAK' || !keg.tanggal) return
+      const d = new Date(keg.tanggal)
+      if (isNaN(d.getTime())) return
+      const dKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const kInfo = getKategoriInfo(keg.kategori)
+
+      const descParts: string[] = []
+      if (keg.waktuMulai) descParts.push(`⏰ ${keg.waktuMulai}${keg.waktuSelesai ? ` - ${keg.waktuSelesai}` : ''} WIB`)
+      if (keg.tempat) descParts.push(`📍 ${keg.tempat}`)
+      if (keg.pemateri) descParts.push(`🎙️ Pemateri: ${keg.pemateri}`)
+      if (keg.penanggungJawab) descParts.push(`👤 PJ: ${keg.penanggungJawab}`)
+      if (keg.ringkasanMateri) descParts.push(`📝 ${keg.ringkasanMateri}`)
+
+      list.push({
+        id: `keg-${keg.id}`,
+        dateStr: dKey,
+        title: keg.namaKegiatan,
+        content: descParts.length > 0 ? descParts.join(' | ') : 'Kegiatan Sekolah SIMASMUH',
+        type: kInfo.isIsmuba ? 'ISLAMIC_EVENT' : 'AGENDA',
+        dateObj: d,
+        hijriFormatted: hijriCalendar[dKey]?.hijriDateFormatted
+      })
+    })
+
     return list
       .filter(item => {
         if (filterType === 'AGENDA') return item.type === 'AGENDA'
@@ -451,7 +558,7 @@ export function ActivityCalendarWidget({
         return true
       })
       .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
-  }, [agendaList, holidays, hijriCalendar, filterType])
+  }, [agendaList, holidays, hijriCalendar, kegiatanList, filterType])
 
   // Mid-month Hijri info for header
   const midMonthHijri = useMemo(() => {

@@ -28,9 +28,18 @@ import {
   LayoutGrid, 
   Printer, 
   GraduationCap,
-  Sparkle
+  Sparkle,
+  Bot,
+  CheckCircle2,
+  Layers,
+  Zap,
+  AlertTriangle,
+  ShieldAlert,
+  AlertCircle,
+  XCircle,
+  Filter
 } from 'lucide-react'
-import { parseAscTimetableXml } from '@/utils/ascParser'
+import { parseAscTimetableXml, detectScheduleConflicts, type ScheduleConflict } from '@/utils/ascParser'
 import { sortClasses } from '@/lib/class-helper'
 
 const DAYS_MAP: Record<number, string> = {
@@ -38,12 +47,10 @@ const DAYS_MAP: Record<number, string> = {
   2: 'Selasa',
   3: 'Rabu',
   4: 'Kamis',
-  5: 'Jumat',
-  6: 'Sabtu',
-  0: 'Minggu'
+  5: 'Jumat'
 }
 
-const ACTIVE_DAYS = [1, 2, 3, 4, 5, 6]
+const ACTIVE_DAYS = [1, 2, 3, 4, 5]
 
 type ScheduleForm = {
   dayOfWeek: string
@@ -98,6 +105,9 @@ export default function JadwalPelajaranPage() {
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [xmlFile, setXmlFile] = useState<File | null>(null)
   const [parsedPreview, setParsedPreview] = useState<any[] | null>(null)
+  const [conflicts, setConflicts] = useState<ScheduleConflict[]>([])
+  const [conflictFilter, setConflictFilter] = useState<string>('ALL')
+  const [activeImportTab, setActiveImportTab] = useState<'overview' | 'conflicts'>('overview')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Modal State for Delete All Schedules
@@ -291,7 +301,8 @@ export default function JadwalPelajaranPage() {
       queryClient.invalidateQueries({ queryKey: ['subjects'] })
       queryClient.invalidateQueries({ queryKey: ['teachers'] })
       queryClient.invalidateQueries({ queryKey: ['students'] })
-      alert(`Berhasil mengimpor ${data?.length || 0} jadwal dari aSc Timetables! Data jadwal telah disinkronkan secara rapi dan otomatis.`)
+      const count = Array.isArray(data) ? data.length : data?.length || 0
+      alert(`Berhasil mengimpor dan menyinkronkan ${count} jadwal pelajaran dari aSc Timetables via AI Scheduler! Seluruh guru pengampu, kelas, dan mata pelajaran telah disinkronkan rapi dan presisi ke database.`)
       setImportModalOpen(false)
       setXmlFile(null)
       setParsedPreview(null)
@@ -352,7 +363,7 @@ export default function JadwalPelajaranPage() {
     }
   }
 
-  // Handle aSc Timetables XML File Upload
+  // Handle aSc Timetables XML File Upload & AI Conflict Analysis
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -363,10 +374,18 @@ export default function JadwalPelajaranPage() {
       const text = event.target?.result as string
       try {
         const parsed = parseAscTimetableXml(text, classes || [], subjects || [], teachers || [])
+        const detectedConflicts = detectScheduleConflicts(parsed)
         setParsedPreview(parsed)
-      } catch (err) {
-        alert('Gagal membaca file aSc Timetables XML. Pastikan format XML valid.')
+        setConflicts(detectedConflicts)
+        if (detectedConflicts.length > 0) {
+          setActiveImportTab('conflicts')
+        } else {
+          setActiveImportTab('overview')
+        }
+      } catch (err: any) {
+        alert(err?.message || 'Gagal membaca file aSc Timetables XML. Pastikan format XML valid.')
         setParsedPreview(null)
+        setConflicts([])
       }
     }
     reader.readAsText(file)
@@ -444,9 +463,9 @@ export default function JadwalPelajaranPage() {
     })
   }, [activeClassSchedules])
 
-  // Grouped schedules by day (1..6)
+  // Grouped schedules by day (1..5 - Senin s.d. Jumat)
   const groupedByDay = useMemo(() => {
-    const grouped: Record<number, any[]> = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] }
+    const grouped: Record<number, any[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] }
     activeClassSchedules.forEach((sch: any) => {
       const day = sch.dayOfWeek ?? 1
       if (!grouped[day]) grouped[day] = []
@@ -474,6 +493,51 @@ export default function JadwalPelajaranPage() {
       totalTeachers: uniqueTeachers
     }
   }, [activeClassSchedules])
+
+  // Menghitung Timestamp Pembaruan Terakhir Jadwal (Semua Jadwal & Jadwal Kelas Terpilih)
+  const overallLastUpdated = useMemo(() => {
+    if (!schedules || schedules.length === 0) return null
+    const timestamps = schedules
+      .map((s: any) => {
+        const time = new Date(s.updatedAt || s.createdAt || 0).getTime()
+        return isNaN(time) ? 0 : time
+      })
+      .filter((t: number) => t > 0)
+    if (timestamps.length === 0) return null
+    return new Date(Math.max(...timestamps))
+  }, [schedules])
+
+  const classLastUpdated = useMemo(() => {
+    if (!activeClassSchedules || activeClassSchedules.length === 0) return null
+    const timestamps = activeClassSchedules
+      .map((s: any) => {
+        const time = new Date(s.updatedAt || s.createdAt || 0).getTime()
+        return isNaN(time) ? 0 : time
+      })
+      .filter((t: number) => t > 0)
+    if (timestamps.length === 0) return null
+    return new Date(Math.max(...timestamps))
+  }, [activeClassSchedules])
+
+  const formatScheduleUpdateTime = (dateInput?: string | Date | null) => {
+    if (!dateInput) return 'Belum Diperbarui'
+    try {
+      const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+      if (isNaN(d.getTime()) || d.getTime() === 0) return 'Belum Diperbarui'
+      return (
+        new Intl.DateTimeFormat('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).format(d) + ' WIB'
+      )
+    } catch {
+      return 'Belum Diperbarui'
+    }
+  }
 
   // Get color palette for subject badge based on string hash
   const getSubjectColorStyle = (name: string) => {
@@ -556,9 +620,11 @@ export default function JadwalPelajaranPage() {
             <span className="font-extrabold uppercase text-sm underline tracking-wide">
               JADWAL PELAJARAN KELAS {currentSelectedClass?.name || ''}
             </span>
-            <span className="font-bold text-[11px]">
-              Tahun Ajaran: {currentSelectedClass?.academicYear || '2026/2027'}
-            </span>
+            <div className="flex items-center gap-3 font-bold text-[10.5px]">
+              <span>Tahun Ajaran: {currentSelectedClass?.academicYear || '2026/2027'}</span>
+              <span>•</span>
+              <span>Terakhir Diperbarui: {classLastUpdated ? formatScheduleUpdateTime(classLastUpdated) : overallLastUpdated ? formatScheduleUpdateTime(overallLastUpdated) : '-'}</span>
+            </div>
           </div>
         </div>
 
@@ -579,7 +645,7 @@ export default function JadwalPelajaranPage() {
           <tbody>
             {timeSlots.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center border border-black text-xs text-gray-600 italic">
+                <td colSpan={6} className="py-8 text-center border border-black text-xs text-gray-600 italic">
                   Belum ada data jadwal pelajaran untuk kelas {currentSelectedClass?.name || ''}.
                 </td>
               </tr>
@@ -685,6 +751,23 @@ export default function JadwalPelajaranPage() {
                   ? 'Tabel jadwal pelajaran mingguan per kelas tersinkronisasi otomatis dari kurikulum dan file aSc TimeTables.'
                   : 'Tabel jadwal pelajaran mingguan yang terstruktur per kelas dan tersinkronisasi secara real-time.'}
               </p>
+
+              {/* Status Pembaruan Terakhir Jadwal Pelajaran */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-medium text-xs shadow-xs">
+                  <Clock className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                  <span>
+                    Terakhir Diperbarui:{' '}
+                    <strong className="font-bold text-white">
+                      {overallLastUpdated ? formatScheduleUpdateTime(overallLastUpdated) : 'Belum Ada Pembaruan'}
+                    </strong>
+                  </span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 text-emerald-200 font-semibold text-[11px]">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                  <span>Sinkronisasi Aktif</span>
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -850,8 +933,8 @@ export default function JadwalPelajaranPage() {
 
         {/* Info Ringkas Kelas Terpilih */}
         {currentSelectedClass && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-800/40 p-3.5 px-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-800/40 p-3.5 px-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs">
+            <div className="flex flex-wrap items-center gap-2.5">
               <span className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 Jadwal Kelas {currentSelectedClass.name}
@@ -859,9 +942,13 @@ export default function JadwalPelajaranPage() {
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
                 Tahun Ajaran {currentSelectedClass.academicYear || '2026/2027'}
               </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
+                <Clock className="w-3 h-3 text-blue-500" />
+                <span>Update Kelas Ini: <strong className="text-slate-900 dark:text-white font-bold">{classLastUpdated ? formatScheduleUpdateTime(classLastUpdated) : 'Belum Ada Jadwal'}</strong></span>
+              </span>
             </div>
 
-            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
+            <div className="flex flex-wrap items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
               <span>Total: <strong className="text-blue-600 dark:text-blue-400 font-bold">{classStats.totalSessions}</strong> Sesi</span>
               <span>•</span>
               <span><strong className="text-slate-900 dark:text-white font-bold">{classStats.totalSubjects}</strong> Mapel</span>
@@ -1144,24 +1231,26 @@ export default function JadwalPelajaranPage() {
 
       {/* Modal Dialog Import aSc TimeTables XML */}
       <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
-        <DialogContent className="sm:max-w-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+        <DialogContent className="sm:max-w-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <FileCode className="w-5 h-5 text-amber-500" />
-              Import Jadwal dari aSc TimeTables (XML)
+              <div className="p-1.5 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-lg">
+                <FileCode className="w-4 h-4" />
+              </div>
+              <span>Import aSc Timetables (AI Scheduler)</span>
             </DialogTitle>
             <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs">
-              Upload file ekspor XML dari aplikasi aSc TimeTables. Sistem akan mencocokkan & membuat otomatis data Kelas, Mata Pelajaran, Guru, dan Jadwal Pelajaran.
+              Upload file ekspor XML aSc Timetables. Algoritma AI SIMASMUH secara otomatis menormalisasi data mapel, jam pelajaran, dan menganalisis penugasan guru pengampu di setiap kelas tanpa bentrok jadwal.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-3">
-            <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-              <Upload className="w-10 h-10 text-amber-500 mx-auto mb-2 opacity-80" />
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                {xmlFile ? xmlFile.name : 'Pilih atau Drag File aSc TimeTables (.xml)'}
+          <div className="space-y-3.5 py-2">
+            <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-5 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+              <Upload className="w-8 h-8 text-amber-500 mx-auto mb-2 opacity-80" />
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate px-4">
+                {xmlFile ? xmlFile.name : 'Pilih atau Drag File aSc Timetables (.xml)'}
               </p>
-              <p className="text-[11px] text-slate-400 mt-1">Format file yang didukung: XML (.xml)</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Format file yang didukung: aSc Timetables XML (.xml)</p>
               
               <input
                 type="file"
@@ -1176,31 +1265,281 @@ export default function JadwalPelajaranPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
-                className="mt-3 border-slate-300 dark:border-slate-700 font-semibold text-xs rounded-xl"
+                className="mt-3 border-slate-300 dark:border-slate-700 font-semibold text-xs rounded-xl h-8"
               >
                 {xmlFile ? 'Ganti File XML' : 'Pilih File XML'}
               </Button>
             </div>
 
-            {/* Preview Hasil Parse XML */}
+            {/* Preview Hasil Analisis AI & Notifikasi Bentrok */}
             {parsedPreview && (
-              <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3.5 space-y-1.5">
-                <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
-                  <Sparkles className="w-4 h-4 text-emerald-600" />
-                  <span>File XML Berhasil Dibaca!</span>
+              <div className="space-y-3">
+                {/* Notifikasi Deteksi Bentrok Jadwal Real-Time */}
+                {conflicts.length > 0 ? (
+                  <div className="bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-rose-800 dark:text-rose-300 font-bold text-xs">
+                        <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                        <span>Peringatan: Terdeteksi {conflicts.length} Bentrok Jadwal!</span>
+                      </div>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-600 text-white shadow-xs">
+                        Perlu Perhatian
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 text-[10px]">
+                      {conflicts.filter(c => c.type === 'TEACHER_CONFLICT').length > 0 && (
+                        <span className="px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 font-semibold">
+                          👨‍🏫 {conflicts.filter(c => c.type === 'TEACHER_CONFLICT').length} Bentrok Guru
+                        </span>
+                      )}
+                      {conflicts.filter(c => c.type === 'CLASS_CONFLICT').length > 0 && (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 font-semibold">
+                          🏛️ {conflicts.filter(c => c.type === 'CLASS_CONFLICT').length} Bentrok Kelas
+                        </span>
+                      )}
+                      {conflicts.filter(c => c.type === 'TIME_CONFLICT').length > 0 && (
+                        <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 font-semibold">
+                          ⏰ {conflicts.filter(c => c.type === 'TIME_CONFLICT').length} Bentrok Jam
+                        </span>
+                      )}
+                      {conflicts.filter(c => c.type === 'SUBJECT_CONFLICT').length > 0 && (
+                        <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 font-semibold">
+                          📚 {conflicts.filter(c => c.type === 'SUBJECT_CONFLICT').length} Bentrok Mapel
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 rounded-xl p-2.5 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300 font-bold">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span>Verifikasi AI Sukses: 0 Bentrok Jadwal Terdeteksi</span>
+                    </div>
+                    <span className="text-[10px] bg-emerald-600 text-white font-extrabold px-2 py-0.5 rounded-full">
+                      Jadwal Bersih & Siap
+                    </span>
+                  </div>
+                )}
+
+                {/* Tab Navigasi: Ringkasan vs Daftar Bentrok */}
+                <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1.5">
+                  <Button
+                    type="button"
+                    variant={activeImportTab === 'overview' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveImportTab('overview')}
+                    className={`h-7 px-3 text-xs rounded-lg font-bold ${
+                      activeImportTab === 'overview' 
+                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' 
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Ringkasan Jadwal ({parsedPreview.length})
+                  </Button>
+                  {conflicts.length > 0 && (
+                    <Button
+                      type="button"
+                      variant={activeImportTab === 'conflicts' ? 'destructive' : 'ghost'}
+                      size="sm"
+                      onClick={() => setActiveImportTab('conflicts')}
+                      className={`h-7 px-3 text-xs rounded-lg font-bold flex items-center gap-1 ${
+                        activeImportTab === 'conflicts'
+                          ? 'bg-rose-600 text-white'
+                          : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+                      }`}
+                    >
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>Daftar Bentrok ({conflicts.length})</span>
+                    </Button>
+                  )}
                 </div>
-                <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-                  Terdeteksi <strong>{parsedPreview.length} sesi jadwal pelajaran</strong> yang siap diimpor dan disinkronkan ke jadwal siswa.
-                </p>
+
+                {/* Konten Tab Ringkasan */}
+                {activeImportTab === 'overview' && (
+                  <div className="space-y-2.5">
+                    {/* Summary Stats Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="bg-slate-50 dark:bg-slate-800/70 rounded-lg p-2 border border-slate-200 dark:border-slate-700/60 text-center">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Total Jadwal</span>
+                        <strong className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">{parsedPreview.length} Sesi</strong>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-800/70 rounded-lg p-2 border border-slate-200 dark:border-slate-700/60 text-center">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Total Kelas</span>
+                        <strong className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                          {Array.from(new Set(parsedPreview.map((p: any) => p.className))).length} Kelas
+                        </strong>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-800/70 rounded-lg p-2 border border-slate-200 dark:border-slate-700/60 text-center">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Mata Pelajaran</span>
+                        <strong className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                          {Array.from(new Set(parsedPreview.map((p: any) => p.subjectName))).length} Mapel
+                        </strong>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-800/70 rounded-lg p-2 border border-slate-200 dark:border-slate-700/60 text-center">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Guru Terpetakan</span>
+                        <strong className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400">100% Siap</strong>
+                      </div>
+                    </div>
+
+                    {/* Sample List */}
+                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                      <div className="bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        <span>Pratinjau Sampel Penjadwalan AI</span>
+                        <span className="text-slate-400">Menampilkan {Math.min(parsedPreview.length, 4)} dari {parsedPreview.length}</span>
+                      </div>
+                      <div className="max-h-36 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 p-1">
+                        {parsedPreview.slice(0, 4).map((item: any, idx: number) => (
+                          <div key={idx} className="p-2 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-lg transition-colors">
+                            <div className="min-w-0 flex-1 pr-2">
+                              <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white truncate">
+                                <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[10px] font-extrabold shrink-0">
+                                  {item.className}
+                                </span>
+                                <span className="truncate">{item.subjectName}</span>
+                              </div>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                                <span>{DAYS_MAP[item.dayOfWeek] || 'Hari'} ({item.startTime} - {item.endTime})</span>
+                                <span>•</span>
+                                <span className="truncate text-slate-700 dark:text-slate-300 font-medium">
+                                  Guru: <strong>{item.teacherName || item.rawTeacherName || 'AI Auto-Assign'}</strong>
+                                </span>
+                              </div>
+                            </div>
+                            <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              AI Matched
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Konten Tab Daftar Bentrok */}
+                {activeImportTab === 'conflicts' && (
+                  <div className="space-y-2">
+                    {/* Filter Kategori Bentrok */}
+                    <div className="flex flex-wrap gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConflictFilter('ALL')}
+                        className={`h-6 px-2 text-[10px] rounded-md font-bold ${
+                          conflictFilter === 'ALL' ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900' : ''
+                        }`}
+                      >
+                        Semua ({conflicts.length})
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConflictFilter('TEACHER_CONFLICT')}
+                        className={`h-6 px-2 text-[10px] rounded-md font-bold ${
+                          conflictFilter === 'TEACHER_CONFLICT' ? 'bg-rose-600 text-white' : ''
+                        }`}
+                      >
+                        Guru ({conflicts.filter(c => c.type === 'TEACHER_CONFLICT').length})
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConflictFilter('CLASS_CONFLICT')}
+                        className={`h-6 px-2 text-[10px] rounded-md font-bold ${
+                          conflictFilter === 'CLASS_CONFLICT' ? 'bg-amber-600 text-white' : ''
+                        }`}
+                      >
+                        Kelas ({conflicts.filter(c => c.type === 'CLASS_CONFLICT').length})
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConflictFilter('TIME_CONFLICT')}
+                        className={`h-6 px-2 text-[10px] rounded-md font-bold ${
+                          conflictFilter === 'TIME_CONFLICT' ? 'bg-purple-600 text-white' : ''
+                        }`}
+                      >
+                        Jam ({conflicts.filter(c => c.type === 'TIME_CONFLICT').length})
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConflictFilter('SUBJECT_CONFLICT')}
+                        className={`h-6 px-2 text-[10px] rounded-md font-bold ${
+                          conflictFilter === 'SUBJECT_CONFLICT' ? 'bg-blue-600 text-white' : ''
+                        }`}
+                      >
+                        Mapel ({conflicts.filter(c => c.type === 'SUBJECT_CONFLICT').length})
+                      </Button>
+                    </div>
+
+                    {/* Conflict Cards List */}
+                    <div className="max-h-52 overflow-y-auto space-y-2 pr-0.5">
+                      {conflicts
+                        .filter(c => conflictFilter === 'ALL' || c.type === conflictFilter)
+                        .map((conflict) => (
+                          <div
+                            key={conflict.id}
+                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 space-y-1.5 shadow-xs"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span
+                                className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                                  conflict.type === 'TEACHER_CONFLICT'
+                                    ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                                    : conflict.type === 'CLASS_CONFLICT'
+                                    ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                                    : conflict.type === 'TIME_CONFLICT'
+                                    ? 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300'
+                                    : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                                }`}
+                              >
+                                {conflict.type === 'TEACHER_CONFLICT' && '👨‍🏫 BENTROK GURU'}
+                                {conflict.type === 'CLASS_CONFLICT' && '🏛️ BENTROK KELAS'}
+                                {conflict.type === 'TIME_CONFLICT' && '⏰ BENTROK JAM'}
+                                {conflict.type === 'SUBJECT_CONFLICT' && '📚 BENTROK MAPEL'}
+                              </span>
+                              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                {conflict.dayName} • {conflict.startTime} - {conflict.endTime}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-slate-800 dark:text-slate-200 leading-normal font-medium">
+                              {conflict.description}
+                            </p>
+
+                            <div className="bg-slate-50 dark:bg-slate-800/80 rounded-lg p-2 border border-slate-100 dark:border-slate-700/60 flex items-start gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+                              <Bot className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                              <div>
+                                <strong className="font-bold text-blue-700 dark:text-blue-300 block text-[10px]">
+                                  Rekomendasi:
+                                </strong>
+                                <span>{conflict.aiRecommendation}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          <DialogFooter className="gap-2 pt-2">
+          <DialogFooter className="gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <Button
               type="button"
               variant="outline"
-              onClick={() => setImportModalOpen(false)}
+              onClick={() => {
+                setImportModalOpen(false)
+                setXmlFile(null)
+                setParsedPreview(null)
+              }}
               className="border-slate-200 dark:border-slate-700 text-xs rounded-xl"
             >
               Batal
@@ -1214,7 +1553,7 @@ export default function JadwalPelajaranPage() {
               {bulkImportMutation.isPending && (
                 <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
               )}
-              Impor & Sinkronkan Jadwal ({parsedPreview?.length || 0})
+              Impor & Terapkan Jadwal AI ({parsedPreview?.length || 0})
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1323,7 +1662,6 @@ export default function JadwalPelajaranPage() {
                     <SelectItem value="3" className="text-xs">Rabu</SelectItem>
                     <SelectItem value="4" className="text-xs">Kamis</SelectItem>
                     <SelectItem value="5" className="text-xs">Jumat</SelectItem>
-                    <SelectItem value="6" className="text-xs">Sabtu</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

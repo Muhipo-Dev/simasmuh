@@ -36,12 +36,17 @@ export function EmailRecommendationBanner() {
   const [emailInput, setEmailInput] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [isDismissed, setIsDismissed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('simasmuh_email_reminder_dismissed') === 'true'
+  const [isDismissed, setIsDismissed] = useState(false)
+
+  // Sinkronisasi status dismiss berdasarkan sesi login aktif pengguna
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && userId) {
+      const dismissed = sessionStorage.getItem(`simasmuh_email_dismissed_${userId}`) === 'true'
+      setIsDismissed(dismissed)
+    } else {
+      setIsDismissed(false)
     }
-    return false
-  })
+  }, [userId])
 
   // Ambil profil terkini dari database
   const { data: profile } = useQuery<any>({
@@ -83,8 +88,8 @@ export function EmailRecommendationBanner() {
 
   const handleDismiss = () => {
     setIsDismissed(true)
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('simasmuh_email_reminder_dismissed', 'true')
+    if (typeof window !== 'undefined' && userId) {
+      sessionStorage.setItem(`simasmuh_email_dismissed_${userId}`, 'true')
     }
   }
 

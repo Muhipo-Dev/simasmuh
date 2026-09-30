@@ -154,6 +154,7 @@ const SUB_ROLE_OPTIONS = [
   { value: 'KEUANGAN_KELUAR', label: 'Keuangan Keluar' },
   { value: 'HUMAS_SDM', label: 'Humas & SDM' },
   { value: 'KURIKULUM', label: 'Kurikulum' },
+  { value: 'ISMUBA', label: 'ISMUBA' },
   { value: 'KETERTIBAN', label: 'Ketertiban / Tatib' },
   { value: 'BK_BP', label: 'Bimbingan Konseling (BK/BP)' },
   { value: 'PERSURATAN', label: 'Persuratan' },

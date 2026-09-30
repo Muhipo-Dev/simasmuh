@@ -17,21 +17,43 @@ import { ScanPresensiKegiatanDto, ManualPresensiKegiatanDto } from './dto/presen
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
 
 @Controller('kegiatan-sekolah')
-@UseGuards(JwtAuthGuard)
 export class KegiatanSekolahController {
   constructor(private readonly kegiatanSekolahService: KegiatanSekolahService) {}
 
+  /**
+   * Endpoint Publik: Mengambil agenda kegiatan terjadwal sekolah untuk kalender publik & widget dashboard
+   * Hanya menampilkan kegiatan yang sifatnya 'TERJADWAL' (Kegiatan 'MENDESAK' disembunyikan dari kalender)
+   */
+  @Get('public')
+  findPublic(
+    @Query('search') search?: string,
+    @Query('kategori') kategori?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.kegiatanSekolahService.findAll({
+      search,
+      kategori,
+      sifatKegiatan: 'TERJADWAL',
+      startDate,
+      endDate,
+    });
+  }
+
   @Post()
+  @UseGuards(JwtAuthGuard)
   create(@Body() createDto: CreateKegiatanDto, @Request() req: any) {
     const userId = req.user?.id;
     return this.kegiatanSekolahService.create(createDto, userId);
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   findAll(
     @Query('search') search?: string,
     @Query('kategori') kategori?: string,
     @Query('status') status?: string,
+    @Query('sifatKegiatan') sifatKegiatan?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
@@ -39,17 +61,20 @@ export class KegiatanSekolahController {
       search,
       kategori,
       status,
+      sifatKegiatan,
       startDate,
       endDate,
     });
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   findOne(@Param('id') id: string) {
     return this.kegiatanSekolahService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   update(
     @Param('id') id: string,
     @Body() updateDto: UpdateKegiatanDto,

@@ -364,6 +364,36 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
       { title: 'Rekap Capaian Nilai', desc: 'Monitoring nilai asesmen dan capaian hasil belajar siswa.', status: 'DALAM_PENGEMBANGAN' },
     ]
   },
+  ismuba: {
+    title: 'ISMUBA',
+    roleName: 'ISMUBA',
+    category: 'Al-Islam, Kemuhammadiyahan & Bahasa Arab',
+    icon: BookMarked,
+    gradient: 'from-emerald-600 via-teal-600 to-green-700',
+    badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
+    description: 'Pusat koordinasi & supervisi program Al-Islam, Kemuhammadiyahan, Bahasa Arab, pembiasaan ibadah, kajian, dan program tahfidz.',
+    modules: [
+      { title: 'Supervisi Pembiasaan Ibadah', desc: 'Pemantauan sholat berjamaah, sholat dhuha, dan pembiasaan adab islami.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Program Tahfidz & Al-Qur\'an', desc: 'Koordinasi capaian target hafalan Al-Qur\'an dan literasi kitab suci.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Kajian & Baitul Arqam', desc: 'Pengelolaan agenda kajian keislaman, darul arqam, dan pembinaan kader persyarikatan.', status: 'SEGERA_HADIR' },
+      { title: 'Kurikulum & Pembelajaran ISMUBA', desc: 'Pengembangan kurikulum dan supervisi pembelajaran ISMUBA.', status: 'TAHAP_DESAIN' },
+    ]
+  },
+  'waka-ismuba': {
+    title: 'ISMUBA',
+    roleName: 'ISMUBA',
+    category: 'Al-Islam, Kemuhammadiyahan & Bahasa Arab',
+    icon: BookMarked,
+    gradient: 'from-emerald-600 via-teal-600 to-green-700',
+    badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
+    description: 'Pusat koordinasi & supervisi program Al-Islam, Kemuhammadiyahan, Bahasa Arab, pembiasaan ibadah, kajian, dan program tahfidz.',
+    modules: [
+      { title: 'Supervisi Pembiasaan Ibadah', desc: 'Pemantauan sholat berjamaah, sholat dhuha, dan pembiasaan adab islami.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Program Tahfidz & Al-Qur\'an', desc: 'Koordinasi capaian target hafalan Al-Qur\'an dan literasi kitab suci.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Kajian & Baitul Arqam', desc: 'Pengelolaan agenda kajian keislaman, darul arqam, dan pembinaan kader persyarikatan.', status: 'SEGERA_HADIR' },
+      { title: 'Kurikulum & Pembelajaran ISMUBA', desc: 'Pengembangan kurikulum dan supervisi pembelajaran ISMUBA.', status: 'TAHAP_DESAIN' },
+    ]
+  },
   'guru-piket': {
     title: 'Guru Piket',
     roleName: 'Guru Piket',

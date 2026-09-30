@@ -41,7 +41,7 @@ type PayrollStaff = {
   role: string
   nip: string
   phone: string
-  employmentStatus: 'PTTP' | 'GTTP' | 'GTP' | 'PTP' | string
+  employmentStatus: 'PTTP' | 'GTTP' | 'CS' | 'GTP' | 'PTP' | string
   masaKerja?: number
   bankName?: string
   bankAccountNumber?: string
@@ -68,6 +68,7 @@ type PayrollStaff = {
 const EMPLOYMENT_STATUS_OPTIONS = [
   { value: 'PTTP', label: 'PTTP (Pegawai Tidak Tetap)', badgeBg: 'bg-amber-100 text-amber-800 border-amber-300' },
   { value: 'GTTP', label: 'GTTP (Guru Tidak Tetap)', badgeBg: 'bg-sky-100 text-sky-800 border-sky-300' },
+  { value: 'CS', label: 'CS (Cleaning Service)', badgeBg: 'bg-teal-100 text-teal-800 border-teal-300' },
   { value: 'GTP', label: 'GTP (Guru Tetap)', badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
   { value: 'PTP', label: 'PTP (Pegawai Tetap)', badgeBg: 'bg-purple-100 text-purple-800 border-purple-300' },
 ]
@@ -134,6 +135,14 @@ export default function PenggajianPage() {
   const [slipData, setSlipData] = useState<any>(null)
   const [isLoadingSlip, setIsLoadingSlip] = useState(false)
 
+  // State Modal Rekap Log Matriks Presensi (Gambar 1)
+  const [showMatrixModal, setShowMatrixModal] = useState(false)
+  const [matrixSearch, setMatrixSearch] = useState('')
+
+  // State Modal Rekap Presensi Kehadiran & Makan Guru Karyawan (Gambar 2 & 3)
+  const [showRekapKeuanganModal, setShowRekapKeuanganModal] = useState(false)
+  const [rekapSearch, setRekapSearch] = useState('')
+
   // State Pilihan Multi Slip Gaji (Cetak Terpilih / Semua)
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([])
   const [isBulkPrinting, setIsBulkPrinting] = useState(false)
@@ -151,6 +160,30 @@ export default function PenggajianPage() {
         !['SISWA', 'WALI_MURID'].includes(item.roles)
       )
     }
+  })
+
+  // Fetch Rekap Matriks Presensi Bulanan (Gambar 1)
+  const { data: matrixData, isLoading: isLoadingMatrix } = useQuery<any>({
+    queryKey: ['attendance-matrix', selectedYear, selectedMonth],
+    queryFn: async () => {
+      const res = await authenticatedQuery(
+        `/api-backend/finance/attendance-matrix?year=${selectedYear}&month=${selectedMonth}`
+      )
+      return res || null
+    },
+    enabled: showMatrixModal,
+  })
+
+  // Fetch Rekap Keuangan Kehadiran & Makan Guru Karyawan (Gambar 2 & 3)
+  const { data: rekapKeuanganData, isLoading: isLoadingRekapKeuangan } = useQuery<any>({
+    queryKey: ['attendance-finance-rekap', selectedYear, selectedMonth],
+    queryFn: async () => {
+      const res = await authenticatedQuery(
+        `/api-backend/finance/attendance-finance-rekap?year=${selectedYear}&month=${selectedMonth}`
+      )
+      return res || null
+    },
+    enabled: showRekapKeuanganModal,
   })
 
   // Helper render HTML Card Slip Gaji untuk cetak (Presisi format fisik & hemat tempat)
@@ -552,6 +585,388 @@ export default function PenggajianPage() {
       })
     } finally {
       setIsBulkPrinting(false)
+    }
+  }
+
+  // Format Rupiah Standar Kantor Resmi (,00)
+  const formatRpOffice = (num: number | undefined | null) => {
+    if (!num || num === 0) return 'Rp 0,00'
+    return `Rp ${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num)}`
+  }
+
+  // Helper Cetak Matriks Log Presensi (Sesuai Gambar 1 - Format Landscape A4 - Times New Roman)
+  const openPrintMatrixWindow = (m: any) => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow || !m) return
+
+    const days = m.daysInMonth || 30
+    const columnsHeaderHtml = Array.from({ length: days }, (_, i) => `<th style="width: 22px;">${i + 1}</th>`).join('')
+
+    const filteredStaff = (m.staffList || []).filter((s: any) => 
+      !matrixSearch || s.name.toLowerCase().includes(matrixSearch.toLowerCase())
+    )
+
+    const rowsHtml = filteredStaff.map((staff: any, idx: number) => {
+      const masukCells = Array.from({ length: days }, (_, i) => {
+        const att = staff.attendances?.[i + 1]
+        return `<td class="text-center">${att?.inTime || ''}</td>`
+      }).join('')
+
+      const pulangCells = Array.from({ length: days }, (_, i) => {
+        const att = staff.attendances?.[i + 1]
+        return `<td class="text-center">${att?.outTime || ''}</td>`
+      }).join('')
+
+      return `
+        <tr>
+          <td rowspan="2" class="text-center font-bold" style="vertical-align: middle;">${idx + 1}</td>
+          <td rowspan="2" class="font-bold" style="vertical-align: middle; padding-left: 4px;">${staff.name}</td>
+          <td class="text-center" style="font-weight: bold; background: #fff; font-size: 7pt;">MASUK</td>
+          ${masukCells}
+        </tr>
+        <tr>
+          <td class="text-center" style="font-weight: bold; background: #fff; font-size: 7pt;">PULANG</td>
+          ${pulangCells}
+        </tr>
+      `
+    }).join('')
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Rekap Log Presensi - ${months.find(mon => mon.value === selectedMonth)?.label} ${selectedYear}</title>
+          <style>
+            @page {
+              size: A4 landscape;
+              margin: 6mm 6mm;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            body { 
+              font-family: 'Times New Roman', Times, serif; 
+              font-size: 7.5pt; 
+              color: #000; 
+              padding: 0;
+              margin: 0;
+              background: #fff;
+            }
+            .header-kop {
+              text-align: center;
+              margin-bottom: 6px;
+            }
+            .header-kop h2 {
+              font-family: 'Times New Roman', Times, serif;
+              margin: 0;
+              font-size: 12pt;
+              font-weight: bold;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .header-kop p {
+              font-family: 'Times New Roman', Times, serif;
+              margin: 2px 0 0;
+              font-size: 9pt;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 7pt;
+              font-family: 'Times New Roman', Times, serif;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 1.5px 1px;
+              line-height: 1.1;
+              font-family: 'Times New Roman', Times, serif;
+            }
+            th {
+              background-color: #f1f5f9;
+              font-weight: bold;
+              text-align: center;
+              font-size: 7.5pt;
+            }
+            .text-center { text-align: center; }
+            .font-bold { font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header-kop">
+            <h2>REKAPITULASI LOG PRESENSI GURU & KARYAWAN</h2>
+            <p>BULAN: ${months.find(mon => mon.value === selectedMonth)?.label?.toUpperCase()} ${selectedYear} — ${m.schoolInfo?.schoolName || 'SMA MUHAMMADIYAH 1 PONOROGO'}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 20px;">No</th>
+                <th style="width: 130px;">NAMA</th>
+                <th style="width: 46px;">PRESENSI</th>
+                ${columnsHeaderHtml}
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+  }
+
+  // Helper Export Matriks Excel
+  const handleExportMatrixExcel = async () => {
+    try {
+      const res = await authenticatedFetch(
+        `/api-backend/finance/attendance-matrix/export-excel?year=${selectedYear}&month=${selectedMonth}`
+      )
+      if (!res.ok) throw new Error('Gagal mengekspor file Excel matriks presensi')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Rekap_Log_Presensi_${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Export Gagal',
+        text: err?.message || 'Gagal mengunduh berkas Excel.',
+        icon: 'error',
+      })
+    }
+  }
+
+  // Helper Cetak Rekap Keuangan Kehadiran & Makan (Sesuai Template Asli PDF - Format Portrait A4 - Times New Roman)
+  const openPrintRekapKeuanganWindow = (r: any) => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow || !r) return
+
+    const filteredList = (r.list || []).filter((item: any) =>
+      !rekapSearch || item.name.toLowerCase().includes(rekapSearch.toLowerCase())
+    )
+
+    const grandKehadiran = filteredList.reduce((sum: number, it: any) => sum + (it.kehadiran || 0), 0)
+    const grandMakan = filteredList.reduce((sum: number, it: any) => sum + (it.makan || 0), 0)
+    const grandTotal = grandKehadiran + grandMakan
+
+    const formatRpPrint = (num: number | undefined | null) => {
+      if (!num || num === 0) {
+        return `<div style="display:flex; justify-content:space-between; width:100%;"><span>Rp</span><span>-</span></div>`
+      }
+      const val = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num)
+      return `<div style="display:flex; justify-content:space-between; width:100%;"><span>Rp</span><span>${val}</span></div>`
+    }
+
+    const rowsHtml = filteredList.map((item: any) => {
+      const isGanjil = item.no % 2 === 1
+      return `
+        <tr>
+          <td class="text-center">${item.no}</td>
+          <td style="padding-left: 5px;">${item.name}</td>
+          <td style="padding: 1px 4px;">${formatRpPrint(item.kehadiran)}</td>
+          <td style="padding: 1px 4px;">${formatRpPrint(item.makan)}</td>
+          <td style="padding: 1px 4px;">${formatRpPrint(item.total)}</td>
+          <td style="padding: 1px 4px; vertical-align: top;">
+            ${isGanjil ? `<span style="display:inline-block; width:20px; text-align:left;">${item.no}</span>` : `<span style="display:inline-block; padding-left: 55px; text-align:left;">${item.no}</span>`}
+          </td>
+        </tr>
+      `
+    }).join('')
+
+    const tanggalHariIni = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()
+    const fmtGrandKehadiran = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandKehadiran)
+    const fmtGrandMakan = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandMakan)
+    const fmtGrandTotal = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandTotal)
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Presensi Kehadiran Guru Karyawan - ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 10mm 15mm;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            body { 
+              font-family: 'Times New Roman', Times, serif; 
+              font-size: 9.5pt; 
+              color: #000; 
+              padding: 0;
+              margin: 0;
+              background: #fff;
+            }
+            .header-kop {
+              text-align: center;
+              margin-bottom: 12px;
+            }
+            .header-kop h2 {
+              font-family: 'Times New Roman', Times, serif;
+              margin: 0;
+              font-size: 11pt;
+              font-weight: bold;
+              text-transform: uppercase;
+              letter-spacing: 0.3px;
+            }
+            .header-kop h3 {
+              font-family: 'Times New Roman', Times, serif;
+              margin: 2px 0 0;
+              font-size: 10pt;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .header-kop p {
+              font-family: 'Times New Roman', Times, serif;
+              margin: 2px 0 0;
+              font-size: 10pt;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            table.main-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 0;
+              font-family: 'Times New Roman', Times, serif;
+            }
+            table.main-table th, table.main-table td {
+              border: 1px solid #000;
+              padding: 1.5px 4px;
+              font-size: 9pt;
+              line-height: 1.15;
+              font-family: 'Times New Roman', Times, serif;
+            }
+            table.main-table th {
+              background-color: #fff;
+              font-weight: bold;
+              text-align: center;
+              text-transform: uppercase;
+              font-size: 9pt;
+              padding: 3px 4px;
+            }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .font-bold { font-weight: bold; }
+            .ttd-container {
+              display: flex;
+              justify-content: space-between;
+              margin-top: 25px;
+              padding: 0 35px;
+              page-break-inside: avoid;
+              font-family: 'Times New Roman', Times, serif;
+              font-size: 9.5pt;
+            }
+            .ttd-box {
+              text-align: center;
+              width: 220px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header-kop">
+            <h2>PRESENSI KEHADIRAN GURU KARYAWAN</h2>
+            <h3>${months.find(m => m.value === selectedMonth)?.label?.toUpperCase()} ${selectedYear}</h3>
+            <p>${r.schoolInfo?.schoolName || 'SMA MUHAMMADIYAH 1 PONOROGO'}</p>
+          </div>
+
+          <table class="main-table">
+            <thead>
+              <tr>
+                <th style="width: 28px;">No</th>
+                <th style="width: 175px;">NAMA</th>
+                <th style="width: 100px;">KEHADIRAN</th>
+                <th style="width: 95px;">MAKAN</th>
+                <th style="width: 105px;">TOTAL</th>
+                <th style="width: 110px;">TANDA TANGAN</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <!-- Baris Total di Bawah Tabel Sesuai Template Asli -->
+          <div style="margin-top: 8px; margin-bottom: 25px; page-break-inside: avoid;">
+            <table style="width: 100%; border-collapse: collapse; border: none; font-family: 'Times New Roman', Times, serif; font-size: 9pt; font-weight: bold;">
+              <tr>
+                <td style="border: none; width: 28px;"></td>
+                <td style="border: none; width: 175px; text-align: right; padding-right: 20px; font-weight: bold;">TOTAL</td>
+                <td style="border: none; width: 100px; text-align: right; padding-right: 4px; font-weight: bold;">Rp${fmtGrandKehadiran}</td>
+                <td style="border: none; width: 95px; text-align: right; padding-right: 4px; font-weight: bold;">Rp${fmtGrandMakan}</td>
+                <td style="border: none; width: 105px; text-align: right; padding-right: 4px; font-weight: bold;">Rp ${fmtGrandTotal}</td>
+                <td style="border: none; width: 110px;"></td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Tanda Tangan Pengesahan Sesuai Template Asli -->
+          <div class="ttd-container">
+            <div class="ttd-box">
+              <div style="font-weight: bold; margin-bottom: 60px;">KEPALA SEKOLAH</div>
+              <div style="font-weight: bold;">${r.schoolInfo?.principalName || 'SUGENG RIADI, M.Pd'}</div>
+            </div>
+
+            <div class="ttd-box" style="width: 260px;">
+              <div style="margin-bottom: 2px;">PONOROGO, ${tanggalHariIni}</div>
+              <div style="font-weight: bold; margin-bottom: 60px;">BENDAHARA</div>
+              <div style="font-weight: bold;">${r.schoolInfo?.treasurerName || 'AGUNG TRIBOWO, SE'}</div>
+            </div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+  }
+
+  // Helper Export Rekap Keuangan Excel
+  const handleExportRekapKeuanganExcel = async () => {
+    try {
+      const res = await authenticatedFetch(
+        `/api-backend/finance/attendance-finance-rekap/export-excel?year=${selectedYear}&month=${selectedMonth}`
+      )
+      if (!res.ok) throw new Error('Gagal mengekspor file Excel rekap kehadiran makan')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Rekap_Presensi_Kehadiran_Makan_${months.find(m => m.value === selectedMonth)?.label}_${selectedYear}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Export Gagal',
+        text: err?.message || 'Gagal mengunduh berkas Excel.',
+        icon: 'error',
+      })
     }
   }
 
@@ -978,6 +1393,26 @@ export default function PenggajianPage() {
           </div>
 
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Button
+              onClick={() => setShowMatrixModal(true)}
+              variant="outline"
+              className="border-indigo-400 text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 font-bold text-xs h-9"
+              title="Lihat & Cetak Matriks Log Presensi Masuk-Pulang Bulanan (Gambar 1)"
+            >
+              <Calendar className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
+              Rekap Log Presensi
+            </Button>
+
+            <Button
+              onClick={() => setShowRekapKeuanganModal(true)}
+              variant="outline"
+              className="border-amber-400 text-amber-900 bg-amber-50/70 hover:bg-amber-100 font-bold text-xs h-9"
+              title="Lihat & Cetak Rekap Keuangan Kehadiran & Makan Guru Karyawan (Gambar 2 & 3)"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
+              Rekap Kehadiran & Makan
+            </Button>
+
             <Button 
               onClick={() => handlePrintBulkSlips(searchedPayroll.map(p => p.id))} 
               variant="outline" 
@@ -1339,7 +1774,7 @@ export default function PenggajianPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-bold text-slate-700">Status Jabatan Pegawai</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-1.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 mt-1.5">
                     {EMPLOYMENT_STATUS_OPTIONS.map(opt => (
                       <button
                         key={opt.value}
@@ -1909,6 +2344,310 @@ export default function PenggajianPage() {
             >
               <Printer className="w-4 h-4 mr-2" />
               Cetak Slip Gaji
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Dialog Rekap Matriks Log Presensi Bulanan (Sesuai Format Gambar 1) */}
+      <Dialog open={showMatrixModal} onOpenChange={setShowMatrixModal}>
+        <DialogContent className="sm:max-w-6xl lg:max-w-7xl w-[98vw] max-h-[94vh] overflow-hidden flex flex-col p-4 sm:p-6">
+          <DialogHeader className="pb-2 border-b border-slate-200 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <DialogTitle className="flex items-center gap-2 text-slate-900 text-lg sm:text-xl font-bold">
+                  <Calendar className="w-5 h-5 text-indigo-600" />
+                  Rekap Matriks Log Presensi Guru & Pegawai
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  Periode: <span className="font-semibold text-indigo-700">{months.find(m => m.value === selectedMonth)?.label} {selectedYear}</span> • SMA Muhammadiyah 1 Ponorogo
+                </DialogDescription>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Cari nama pegawai..."
+                  value={matrixSearch}
+                  onChange={(e) => setMatrixSearch(e.target.value)}
+                  className="h-8 text-xs w-44 sm:w-56 bg-white"
+                />
+                <Button
+                  onClick={handleExportMatrixExcel}
+                  variant="outline"
+                  className="border-slate-300 text-slate-700 bg-white hover:bg-slate-50 font-semibold text-xs h-8"
+                  disabled={!matrixData || isLoadingMatrix}
+                >
+                  <Download className="w-3.5 h-3.5 mr-1" />
+                  Excel
+                </Button>
+                <Button
+                  onClick={() => openPrintMatrixWindow(matrixData)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8"
+                  disabled={!matrixData || isLoadingMatrix}
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1" />
+                  Cetak Matriks
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto my-3 border border-slate-300 rounded-lg bg-white shadow-2xs font-['Times_New_Roman',_Times,_serif]">
+            {isLoadingMatrix ? (
+              <div className="py-20 flex flex-col items-center justify-center text-slate-500">
+                <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-2" />
+                <p className="text-xs font-semibold font-sans">Memuat log matriks presensi bulanan...</p>
+              </div>
+            ) : matrixData ? (
+              <table className="w-full text-[11px] border-collapse">
+                <thead className="bg-slate-100/90 sticky top-0 z-10 border-b border-slate-300 shadow-2xs">
+                  <tr>
+                    <th className="border border-slate-300 px-2 py-2 text-center w-10 min-w-[40px] font-bold text-slate-800">No</th>
+                    <th className="border border-slate-300 px-3 py-2 text-left w-52 min-w-[200px] font-bold text-slate-800">NAMA</th>
+                    <th className="border border-slate-300 px-2 py-2 text-center w-18 min-w-[70px] font-bold text-slate-800">PRESENSI</th>
+                    {Array.from({ length: matrixData.daysInMonth || 30 }, (_, i) => (
+                      <th key={i + 1} className="border border-slate-300 px-1 py-2 text-center w-16 min-w-[60px] font-bold text-slate-800">
+                        {i + 1}
+                      </th>
+                    ))}
+                    <th className="border border-slate-300 px-2 py-2 text-center w-20 min-w-[80px] font-bold text-slate-800">HADIR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(matrixData.staffList || [])
+                    .filter((s: any) => !matrixSearch || s.name.toLowerCase().includes(matrixSearch.toLowerCase()))
+                    .map((staff: any, idx: number) => {
+                      return (
+                        <tr key={staff.id} className="hover:bg-indigo-50/20 border-b border-slate-200">
+                          <td className="border border-slate-300 px-2 py-1.5 text-center font-bold text-slate-700 bg-slate-50/50">
+                            {idx + 1}
+                          </td>
+                          <td className="border border-slate-300 px-2.5 py-1.5 font-bold text-slate-900 bg-slate-50/50">
+                            <div className="truncate max-w-[220px]" title={staff.name}>{staff.name}</div>
+                          </td>
+                          <td className="border border-slate-300 p-0 text-center font-semibold">
+                            <div className="py-1 border-b border-slate-200 text-slate-900 bg-slate-50 text-[10px] font-bold">MASUK</div>
+                            <div className="py-1 text-slate-900 bg-slate-50 text-[10px] font-bold">PULANG</div>
+                          </td>
+                          {Array.from({ length: matrixData.daysInMonth || 30 }, (_, i) => {
+                            const att = staff.attendances?.[i + 1]
+                            return (
+                              <td key={i + 1} className="border border-slate-300 p-0 text-center text-[10.5px]">
+                                <div className="py-1 border-b border-slate-200 text-slate-900 bg-white truncate px-0.5" title={att?.inTime || '-'}>
+                                  {att?.inTime || '-'}
+                                </div>
+                                <div className="py-1 text-slate-900 bg-slate-50/30 truncate px-0.5" title={att?.outTime || '-'}>
+                                  {att?.outTime || '-'}
+                                </div>
+                              </td>
+                            )
+                          })}
+                          <td className="border border-slate-300 px-2 py-1.5 text-center font-bold text-slate-900 bg-slate-50">
+                            {staff.totalHadir} Hari
+                          </td>
+                        </tr>
+                      )
+                    })}
+                </tbody>
+              </table>
+            ) : null}
+          </div>
+
+          <DialogFooter className="flex justify-between items-center pt-2 border-t border-slate-200 shrink-0">
+            <span className="text-xs text-slate-500">
+              Menampilkan {((matrixData?.staffList || []).filter((s: any) => !matrixSearch || s.name.toLowerCase().includes(matrixSearch.toLowerCase()))).length} Pegawai
+            </span>
+            <Button variant="outline" onClick={() => setShowMatrixModal(false)}>
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Dialog Rekap Presensi Kehadiran & Makan Guru Karyawan (Sesuai Gambar 2 & 3) */}
+      <Dialog open={showRekapKeuanganModal} onOpenChange={setShowRekapKeuanganModal}>
+        <DialogContent className="sm:max-w-4xl lg:max-w-5xl w-[96vw] max-h-[94vh] overflow-hidden flex flex-col p-4 sm:p-6">
+          <DialogHeader className="pb-2 border-b border-slate-200 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <DialogTitle className="flex items-center gap-2 text-slate-900 text-lg sm:text-xl font-bold">
+                  <DollarSign className="w-5 h-5 text-amber-600" />
+                  Rekap Keuangan Presensi Kehadiran & Makan
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  Laporan rekapitulasi kehadiran (transport) dan uang makan guru & karyawan (A4 Portrait • Times New Roman)
+                </DialogDescription>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Cari nama pegawai..."
+                  value={rekapSearch}
+                  onChange={(e) => setRekapSearch(e.target.value)}
+                  className="h-8 text-xs w-44 sm:w-56 bg-white"
+                />
+                <Button
+                  onClick={handleExportRekapKeuanganExcel}
+                  variant="outline"
+                  className="border-slate-300 text-slate-700 bg-white hover:bg-slate-50 font-semibold text-xs h-8"
+                  disabled={!rekapKeuanganData || isLoadingRekapKeuangan}
+                >
+                  <Download className="w-3.5 h-3.5 mr-1" />
+                  Excel
+                </Button>
+                <Button
+                  onClick={() => openPrintRekapKeuanganWindow(rekapKeuanganData)}
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-8"
+                  disabled={!rekapKeuanganData || isLoadingRekapKeuangan}
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1" />
+                  Cetak Laporan Resmi
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto my-3 p-4 sm:p-6 bg-slate-50/50 rounded-lg border border-slate-200">
+            {isLoadingRekapKeuangan ? (
+              <div className="py-20 flex flex-col items-center justify-center text-slate-500">
+                <Loader2 className="w-8 h-8 animate-spin text-amber-600 mb-2" />
+                <p className="text-xs font-semibold font-sans">Menghitung rekapitulasi kehadiran & makan...</p>
+              </div>
+            ) : rekapKeuanganData ? (
+              <div className="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-xs border border-slate-300 space-y-4 text-slate-900 font-['Times_New_Roman',_Times,_serif]">
+                {/* Kop Laporan Resmi Sesuai Template Asli */}
+                <div className="text-center space-y-0.5 pb-1">
+                  <h2 className="font-bold text-base tracking-wide uppercase text-slate-950">
+                    PRESENSI KEHADIRAN GURU KARYAWAN
+                  </h2>
+                  <h3 className="font-bold text-sm uppercase text-slate-900">
+                    {months.find(m => m.value === selectedMonth)?.label?.toUpperCase()} {selectedYear}
+                  </h3>
+                  <p className="font-bold text-sm uppercase text-slate-900">
+                    {rekapKeuanganData.schoolInfo?.schoolName || 'SMA MUHAMMADIYAH 1 PONOROGO'}
+                  </p>
+                </div>
+
+                {/* Tabel Rekap Resmi */}
+                <div className="overflow-x-auto border border-black rounded-xs">
+                  <table className="w-full text-xs border-collapse">
+                    <thead className="bg-white border-b border-black">
+                      <tr>
+                        <th className="border-r border-black px-2 py-1.5 text-center w-10 font-bold">No</th>
+                        <th className="border-r border-black px-2.5 py-1.5 text-center font-bold min-w-[175px]">NAMA</th>
+                        <th className="border-r border-black px-2 py-1.5 text-center font-bold w-28">KEHADIRAN</th>
+                        <th className="border-r border-black px-2 py-1.5 text-center font-bold w-28">MAKAN</th>
+                        <th className="border-r border-black px-2 py-1.5 text-center font-bold w-32">TOTAL</th>
+                        <th className="px-2 py-1.5 text-center font-bold w-32">TANDA TANGAN</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(rekapKeuanganData.list || [])
+                        .filter((item: any) => !rekapSearch || item.name.toLowerCase().includes(rekapSearch.toLowerCase()))
+                        .map((item: any) => {
+                          const isGanjil = item.no % 2 === 1
+                          return (
+                            <tr key={item.id} className="border-b border-black/70 hover:bg-slate-50/80">
+                              <td className="border-r border-black px-1.5 py-1 text-center font-medium">{item.no}</td>
+                              <td className="border-r border-black px-2.5 py-1 font-medium">
+                                <div className="text-slate-900">{item.name}</div>
+                              </td>
+                              <td className="border-r border-black px-2 py-1 text-xs">
+                                <div className="flex justify-between w-full">
+                                  <span>Rp</span>
+                                  <span>{item.kehadiran ? new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.kehadiran) : '-'}</span>
+                                </div>
+                              </td>
+                              <td className="border-r border-black px-2 py-1 text-xs">
+                                <div className="flex justify-between w-full">
+                                  <span>Rp</span>
+                                  <span>{item.makan ? new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.makan) : '-'}</span>
+                                </div>
+                              </td>
+                              <td className="border-r border-black px-2 py-1 text-xs">
+                                <div className="flex justify-between w-full font-medium">
+                                  <span>Rp</span>
+                                  <span>{item.total ? new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.total) : '-'}</span>
+                                </div>
+                              </td>
+                              <td className="px-2 py-1 text-xs text-slate-900">
+                                {isGanjil ? (
+                                  <span className="text-left inline-block w-6">{item.no}</span>
+                                ) : (
+                                  <span className="text-left inline-block pl-12">{item.no}</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Baris TOTAL di Bawah Tabel Sesuai Template Asli */}
+                <div className="pt-1 pb-4">
+                  <table className="w-full text-xs border-collapse font-bold">
+                    <tbody>
+                      <tr>
+                        <td className="w-10"></td>
+                        <td className="min-w-[175px] text-right pr-6">TOTAL</td>
+                        <td className="w-28 text-right pr-1">
+                          Rp{new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+                            (rekapKeuanganData.list || [])
+                              .filter((item: any) => !rekapSearch || item.name.toLowerCase().includes(rekapSearch.toLowerCase()))
+                              .reduce((sum: number, it: any) => sum + (it.kehadiran || 0), 0)
+                          )}
+                        </td>
+                        <td className="w-28 text-right pr-1">
+                          Rp{new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+                            (rekapKeuanganData.list || [])
+                              .filter((item: any) => !rekapSearch || item.name.toLowerCase().includes(rekapSearch.toLowerCase()))
+                              .reduce((sum: number, it: any) => sum + (it.makan || 0), 0)
+                          )}
+                        </td>
+                        <td className="w-32 text-right pr-1">
+                          Rp {new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+                            (rekapKeuanganData.list || [])
+                              .filter((item: any) => !rekapSearch || item.name.toLowerCase().includes(rekapSearch.toLowerCase()))
+                              .reduce((sum: number, it: any) => sum + (it.total || 0), 0)
+                          )}
+                        </td>
+                        <td className="w-32"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Footer Tanda Tangan Sesuai Template Asli */}
+                <div className="flex justify-between items-start pt-4 px-8 text-xs font-['Times_New_Roman',_Times,_serif]">
+                  <div className="text-center w-56 space-y-16">
+                    <p className="font-bold text-slate-900">KEPALA SEKOLAH</p>
+                    <p className="font-bold text-slate-950">
+                      {rekapKeuanganData.schoolInfo?.principalName || 'SUGENG RIADI, M.Pd'}
+                    </p>
+                  </div>
+
+                  <div className="text-center w-64 space-y-16">
+                    <p className="text-slate-900">
+                      PONOROGO, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}
+                      <br />
+                      <span className="font-bold text-slate-900">BENDAHARA</span>
+                    </p>
+                    <p className="font-bold text-slate-950">
+                      {rekapKeuanganData.schoolInfo?.treasurerName || 'AGUNG TRIBOWO, SE'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <DialogFooter className="flex justify-between items-center pt-2 border-t border-slate-200 shrink-0">
+            <span className="text-xs text-slate-500 font-sans">
+              Total {((rekapKeuanganData?.list || []).filter((item: any) => !rekapSearch || item.name.toLowerCase().includes(rekapSearch.toLowerCase()))).length} Pegawai
+            </span>
+            <Button variant="outline" onClick={() => setShowRekapKeuanganModal(false)}>
+              Tutup
             </Button>
           </DialogFooter>
         </DialogContent>

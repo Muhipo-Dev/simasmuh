@@ -288,6 +288,84 @@ export class FinanceController {
     res.send(buffer);
   }
 
+  // ----- Rekap Matriks Log Presensi Bulanan (Sesuai Gambar 1) -----
+  @Get('attendance-matrix')
+  @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
+  getMonthlyAttendanceMatrix(
+    @Query('year') year: string,
+    @Query('month') month: string,
+  ) {
+    const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
+    return this.financeService.getMonthlyAttendanceMatrix(
+      currentYear,
+      currentMonth,
+    );
+  }
+
+  @Get('attendance-matrix/export-excel')
+  @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
+  async exportAttendanceMatrixExcel(
+    @Query('year') year: string,
+    @Query('month') month: string,
+    @Res() res: any,
+  ) {
+    const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
+    const buffer = await this.financeService.generateAttendanceMatrixExcel(
+      currentYear,
+      currentMonth,
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=Rekap_Log_Presensi_${currentMonth}_${currentYear}.xlsx`,
+    );
+    res.send(buffer);
+  }
+
+  // ----- Rekap Keuangan Presensi Kehadiran & Makan Guru Karyawan (Sesuai Gambar 2 & 3) -----
+  @Get('attendance-finance-rekap')
+  @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
+  getAttendanceFinanceRekap(
+    @Query('year') year: string,
+    @Query('month') month: string,
+  ) {
+    const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
+    return this.financeService.getAttendanceFinanceRekap(
+      currentYear,
+      currentMonth,
+    );
+  }
+
+  @Get('attendance-finance-rekap/export-excel')
+  @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
+  async exportAttendanceFinanceRekapExcel(
+    @Query('year') year: string,
+    @Query('month') month: string,
+    @Res() res: any,
+  ) {
+    const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
+    const buffer = await this.financeService.generateAttendanceFinanceRekapExcel(
+      currentYear,
+      currentMonth,
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=Rekap_Presensi_Kehadiran_Makan_${currentMonth}_${currentYear}.xlsx`,
+    );
+    res.send(buffer);
+  }
+
   // ----- Tagihan - Daftar Siswa -----
   @Get('students')
   @RequirePermissions(PaymentPermission.VIEW_ALL_BILLS)

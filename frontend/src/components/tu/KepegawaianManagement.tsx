@@ -140,6 +140,7 @@ const ROLE_OPTIONS = [
   { value: 'GURU', label: 'Guru / Tenaga Pendidik' },
   { value: 'ADMIN_TU', label: 'Admin Tata Usaha' },
   { value: 'PEGAWAI', label: 'Pegawai / Karyawan' },
+  { value: 'CLEANING_SERVICE', label: 'Cleaning Service / Petugas Kebersihan' },
   { value: 'KEPALA_SEKOLAH', label: 'Kepala Sekolah' },
   { value: 'ADMIN_IT', label: 'Admin IT' },
 ]
@@ -161,6 +162,7 @@ const SUB_ROLE_OPTIONS = [
   { value: 'PEMBINA_EKSTRA', label: 'Pembina Ekstrakulikuler' },
   { value: 'ADMIN_WEB', label: 'Admin Web' },
   { value: 'KEAMANAN', label: 'Keamanan' },
+  { value: 'CLEANING_SERVICE', label: 'Cleaning Service' },
   { value: 'KEBERSIHAN', label: 'Kebersihan' },
   { value: 'GURU_PIKET', label: 'Guru Piket' },
 ]
@@ -1773,6 +1775,7 @@ export function KepegawaianManagement() {
                     <SelectItem value="GTTP">GTT (Guru Tidak Tetap)</SelectItem>
                     <SelectItem value="GTP">GTY (Guru Tetap Yayasan)</SelectItem>
                     <SelectItem value="PTTP">PTT (Pegawai Tidak Tetap)</SelectItem>
+                    <SelectItem value="CS">CS (Cleaning Service)</SelectItem>
                     <SelectItem value="PTP">PTY (Pegawai Tetap Yayasan)</SelectItem>
                   </SelectContent>
                 </Select>
@@ -2156,6 +2159,7 @@ export function KepegawaianManagement() {
                     <SelectItem value="GTTP">GTT (Guru Tidak Tetap)</SelectItem>
                     <SelectItem value="GTP">GTY (Guru Tetap Yayasan)</SelectItem>
                     <SelectItem value="PTTP">PTT (Pegawai Tidak Tetap)</SelectItem>
+                    <SelectItem value="CS">CS (Cleaning Service)</SelectItem>
                     <SelectItem value="PTP">PTY (Pegawai Tetap Yayasan)</SelectItem>
                   </SelectContent>
                 </Select>

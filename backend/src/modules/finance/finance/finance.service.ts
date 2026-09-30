@@ -37,18 +37,73 @@ export class FinanceService {
    *    - Durasi Masuk s/d Pulang >= 6 jam -> +8.000
    *    - Durasi < 6 jam -> 0
    */
-  private calculateAttendanceAllowances(attendances: any[]) {
+  /**
+   * Menghitung rincian tunjangan presensi harian per user untuk satu bulan:
+   * 
+   * A. Cleaning Service (Role / SubRole: CLEANING_SERVICE / CS / KEBERSIHAN / PETUGAS_KEBERSIHAN):
+   *    1. Transport Datang:
+   *       - Masuk <= 06:05 (365 menit) -> +5.000
+   *       - Masuk > 06:05 -> 0
+   *    2. Transport Pulang:
+   *       - Senin - Kamis: Pulang >= 14:00 (840 menit) -> +5.000
+   *       - Jumat: Pulang >= 13:00 (780 menit) -> +5.000
+   *       - Pulang sebelum batas waktu -> 0
+   * 
+   * B. Guru & Karyawan (Umum):
+   *    1. Transport Datang:
+   *       - Masuk <= 07:05 (425 menit) -> +5.000
+   *       - Masuk > 07:05 -> 0 (kedatangan di atas 7.05 tidak dapat 5000)
+   *    2. Transport Pulang:
+   *       - Senin - Kamis: Pulang >= 15:00 (900 menit) -> +5.000
+   *       - Jumat: Pulang >= 13:30 (810 menit) -> +5.000
+   *       - Pulang sebelum batas waktu -> 0
+   * 
+   * C. Uang Makan (Semua yang memenuhi syarat):
+   *    - Durasi Masuk s/d Pulang >= 6 jam (360 menit / di sekolah lebih dari 6 jam) -> +8.000
+   *    - Durasi < 6 jam -> 0
+   */
+  public calculateAttendanceAllowances(
+    attendances: any[],
+    userRoleInfo?: {
+      role?: string | null;
+      subRole?: string | null;
+      subRole2?: string | null;
+      subRole3?: string | null;
+      subRole4?: string | null;
+      subRole5?: string | null;
+      employmentStatus?: string | null;
+    } | null,
+  ) {
     let totalTransport = 0;
     let totalMeal = 0;
     let validDays = 0;
     const dailyDetails: any[] = [];
+
+    // Deteksi apakah Cleaning Service
+    const allRoles = [
+      userRoleInfo?.role,
+      userRoleInfo?.subRole,
+      userRoleInfo?.subRole2,
+      userRoleInfo?.subRole3,
+      userRoleInfo?.subRole4,
+      userRoleInfo?.subRole5,
+      userRoleInfo?.employmentStatus,
+    ]
+      .filter(Boolean)
+      .map((r) => r!.toUpperCase());
+
+    const isCleaningService = allRoles.some((r) =>
+      ['CLEANING_SERVICE', 'CS', 'KEBERSIHAN', 'PETUGAS_KEBERSIHAN'].includes(
+        r,
+      ),
+    );
 
     for (const att of attendances) {
       if (att.status !== 'HADIR') continue;
       validDays++;
 
       const dateObj = new Date(att.date);
-      const dayOfWeek = dateObj.getDay(); // 0 = Minggu, 5 = Jumat
+      const dayOfWeek = dateObj.getDay(); // 0 = Minggu, 1 = Senin, ..., 4 = Kamis, 5 = Jumat, 6 = Sabtu
 
       const inTimeStr = att.checkInTime || att.time;
       const outTimeStr = att.checkOutTime;
@@ -60,36 +115,68 @@ export class FinanceService {
 
       // Evaluasi Masuk
       if (inTimeStr) {
-        const [inH, inM] = inTimeStr.split(':').map((v: string) => parseInt(v, 10) || 0);
+        const [inH, inM] = inTimeStr
+          .split(':')
+          .map((v: string) => parseInt(v, 10) || 0);
         const inMinutes = inH * 60 + inM;
-        // <= 07:05 (7*60 + 5 = 425 menit)
-        if (inMinutes <= 425) {
-          transportIn = 5000;
+
+        if (isCleaningService) {
+          // Cleaning Service: sebelum 06.05 (<= 06:05 -> 6*60 + 5 = 365 menit)
+          if (inMinutes <= 365) {
+            transportIn = 5000;
+          }
+        } else {
+          // Guru / Karyawan: kedatangan diatas 7.05 tidak dapat 5000 (<= 07:05 -> 7*60 + 5 = 425 menit)
+          if (inMinutes <= 425) {
+            transportIn = 5000;
+          }
         }
       }
 
       // Evaluasi Pulang
       if (outTimeStr) {
-        const [outH, outM] = outTimeStr.split(':').map((v: string) => parseInt(v, 10) || 0);
+        const [outH, outM] = outTimeStr
+          .split(':')
+          .map((v: string) => parseInt(v, 10) || 0);
         const outMinutes = outH * 60 + outM;
 
-        if (dayOfWeek === 5) {
-          // Hari Jumat: >= 13:30 (13*60 + 30 = 810 menit)
-          if (outMinutes >= 810) {
-            transportOut = 5000;
+        if (isCleaningService) {
+          // Cleaning Service:
+          // Hari Jumat: di atas jam 13.00 (>= 13:00 -> 13*60 = 780 menit)
+          // Senin - Kamis: di atas jam 14.00 (>= 14:00 -> 14*60 = 840 menit)
+          if (dayOfWeek === 5) {
+            if (outMinutes >= 780) {
+              transportOut = 5000;
+            }
+          } else {
+            if (outMinutes >= 840) {
+              transportOut = 5000;
+            }
           }
         } else {
-          // Senin - Kamis & hari lainnya: >= 15:00 (15*60 = 900 menit)
-          if (outMinutes >= 900) {
-            transportOut = 5000;
+          // Guru & Karyawan Umum:
+          // Hari Jumat: di atas 13.30 (>= 13:30 -> 13*60 + 30 = 810 menit)
+          // Senin - Kamis: di atas jam 15.00 (>= 15:00 -> 15*60 = 900 menit)
+          if (dayOfWeek === 5) {
+            if (outMinutes >= 810) {
+              transportOut = 5000;
+            }
+          } else {
+            if (outMinutes >= 900) {
+              transportOut = 5000;
+            }
           }
         }
       }
 
-      // Evaluasi Uang Makan berdasarkan durasi kerja
+      // Evaluasi Uang Makan: durasi absen datang dan pulang di atas 6 jam (>= 6 jam / 360 menit)
       if (inTimeStr && outTimeStr) {
-        const [inH, inM] = inTimeStr.split(':').map((v: string) => parseInt(v, 10) || 0);
-        const [outH, outM] = outTimeStr.split(':').map((v: string) => parseInt(v, 10) || 0);
+        const [inH, inM] = inTimeStr
+          .split(':')
+          .map((v: string) => parseInt(v, 10) || 0);
+        const [outH, outM] = outTimeStr
+          .split(':')
+          .map((v: string) => parseInt(v, 10) || 0);
         const inMinutes = inH * 60 + inM;
         const outMinutes = outH * 60 + outM;
         const diffMinutes = outMinutes - inMinutes;
@@ -124,6 +211,7 @@ export class FinanceService {
       totalMeal,
       validDays,
       dailyDetails,
+      isCleaningService,
     };
   }
 
@@ -200,8 +288,8 @@ export class FinanceService {
       ].filter(Boolean);
       const roles = rolesList.join(', ');
 
-      // Kalkulasi Tunjangan Presensi (Absen Makan & Transport) Otomatis Berdasarkan Log
-      const attCalc = this.calculateAttendanceAllowances(staffAttendances);
+      // Kalkulasi Tunjangan Presensi (Absen Makan & Transport) Otomatis Berdasarkan Log & Role
+      const attCalc = this.calculateAttendanceAllowances(staffAttendances, staff);
 
       const savedRecord = recordMap.get(staff.id);
 
@@ -213,7 +301,7 @@ export class FinanceService {
       // Jam, Masa Kerja, Kelebihan Jam & Tarif
       const totalHours = savedRecord?.totalHours ?? 0;
       const hourlyRate = savedRecord?.hourlyRate ?? 0;
-      const baseSalary = savedRecord?.baseSalary ?? (totalHours * hourlyRate);
+      const baseSalary = savedRecord?.baseSalary ?? totalHours * hourlyRate;
 
       const rawNotes = savedRecord?.notes || '';
       let parsedMeta: any = {};
@@ -231,11 +319,11 @@ export class FinanceService {
       // Komponen Manual Tunjangan & Potongan
       const manualAllowances: { name: string; amount: number }[] =
         Array.isArray(savedRecord?.manualAllowances)
-          ? savedRecord.manualAllowances as { name: string; amount: number }[]
+          ? (savedRecord.manualAllowances as { name: string; amount: number }[])
           : [];
       const manualDeductions: { name: string; amount: number }[] =
         Array.isArray(savedRecord?.manualDeductions)
-          ? savedRecord.manualDeductions as { name: string; amount: number }[]
+          ? (savedRecord.manualDeductions as { name: string; amount: number }[])
           : [];
 
       const totalManualAllowance = manualAllowances.reduce(
@@ -280,7 +368,7 @@ export class FinanceService {
         netSalary,
         manualAllowances,
         manualDeductions,
-        notes: rawNotes.startsWith('{') ? (parsedMeta.notes || '') : rawNotes,
+        notes: rawNotes.startsWith('{') ? parsedMeta.notes || '' : rawNotes,
         isConfigured: !!savedRecord,
         dailyDetails: attCalc.dailyDetails,
       };
@@ -321,7 +409,7 @@ export class FinanceService {
       where: { userId, date: { gte: startDate, lte: endDate }, status: 'HADIR' },
     });
 
-    const attCalc = this.calculateAttendanceAllowances(attendances);
+    const attCalc = this.calculateAttendanceAllowances(attendances, user);
 
     const totalHours = Number(data.totalHours) || 0;
     const hourlyRate = Number(data.hourlyRate) || 0;
@@ -490,9 +578,9 @@ export class FinanceService {
 
   /** Update status jabatan kepegawaian (PTTP, GTTP, GTP, PTP) */
   async updateStaffEmploymentStatus(userId: string, employmentStatus: string) {
-    const validStatuses = ['PTTP', 'GTTP', 'GTP', 'PTP'];
+    const validStatuses = ['PTTP', 'GTTP', 'CS', 'GTP', 'PTP'];
     if (!validStatuses.includes(employmentStatus)) {
-      throw new BadRequestException('Label status kepegawaian tidak valid (PTTP, GTTP, GTP, PTP)');
+      throw new BadRequestException('Label status kepegawaian tidak valid (PTTP, GTTP, CS, GTP, PTP)');
     }
 
     const updated = await this.prisma.user.update({
@@ -553,7 +641,7 @@ export class FinanceService {
       where: { userId, date: { gte: startDate, lte: endDate }, status: 'DISETUJUI' },
     });
 
-    const attCalc = this.calculateAttendanceAllowances(attendances);
+    const attCalc = this.calculateAttendanceAllowances(attendances, user);
 
     const savedRecord = await this.prisma.payrollRecord.findUnique({
       where: {
@@ -738,6 +826,521 @@ export class FinanceService {
       row.getCell(8).alignment = { horizontal: 'center' };
       row.getCell(9).alignment = { horizontal: 'center' };
     });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  // ============================================================
+  // REKAPITULASI PRESENSI LOG & KEUANGAN GURU KARYAWAN (SIMASMUH)
+  // ============================================================
+
+  /**
+   * Rekap Matriks Presensi Bulanan (Sesuai Gambar 1):
+   * Menampilkan daftar presensi seluruh guru, karyawan, dan CS per tanggal (1..N)
+   * dengan 2 sub-baris per orang: MASUK dan PULANG
+   */
+  async getMonthlyAttendanceMatrix(year: number, month: number) {
+    const startDate = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = new Date(year, month, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const staffList = await this.prisma.user.findMany({
+      where: {
+        role: { notIn: ['SISWA', 'WALI_MURID'] },
+      },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        subRole: true,
+        subRole2: true,
+        subRole3: true,
+        subRole4: true,
+        subRole5: true,
+        employmentStatus: true,
+        nipNbm: true,
+        teacherProfile: { select: { nip: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const attendances = await this.prisma.dailyAttendance.findMany({
+      where: {
+        date: { gte: startDate, lte: endDate },
+        status: 'HADIR',
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    const settings = await this.prisma.setting.findFirst();
+
+    const resultStaff = staffList.map((staff) => {
+      const staffAttendances = attendances.filter((a) => a.userId === staff.id);
+      const attMap: Record<number, { inTime: string; outTime: string }> = {};
+
+      staffAttendances.forEach((a) => {
+        const d = new Date(a.date).getDate();
+        attMap[d] = {
+          inTime: a.checkInTime || a.time || '',
+          outTime: a.checkOutTime || '',
+        };
+      });
+
+      const attCalc = this.calculateAttendanceAllowances(staffAttendances, staff);
+
+      const rolesList = [
+        staff.role,
+        staff.subRole,
+        staff.subRole2,
+        staff.subRole3,
+        staff.subRole4,
+        staff.subRole5,
+      ].filter(Boolean);
+
+      return {
+        id: staff.id,
+        name: staff.name,
+        nip: staff.nipNbm || staff.teacherProfile?.nip || '-',
+        roles: rolesList.join(', '),
+        role: staff.role,
+        employmentStatus: staff.employmentStatus || 'GTTP',
+        isCleaningService: attCalc.isCleaningService,
+        attendances: attMap,
+        totalHadir: staffAttendances.length,
+        totalTransport: attCalc.totalTransport,
+        totalMeal: attCalc.totalMeal,
+      };
+    });
+
+    return {
+      year,
+      month,
+      daysInMonth: lastDay,
+      schoolInfo: {
+        schoolName: settings?.schoolName || 'SMA MUHAMMADIYAH 1 PONOROGO',
+        principalName: settings?.principalName || 'SUGENG RIADI, M.Pd.',
+        treasurerName: 'AGUNG TRIBOWO, SE',
+        serverLocation: settings?.serverLocation || 'Ponorogo, Jawa Timur',
+      },
+      staffList: resultStaff,
+    };
+  }
+
+  /**
+   * Rekap Presensi Keuangan Kehadiran & Makan Guru Karyawan (Sesuai Gambar 2 & 3):
+   * Format kolom: No, Nama, Kehadiran (Rp), Makan (Rp), Total (Rp), Tanda Tangan (selang-seling 1 di kiri, 2 di kanan)
+   */
+  async getAttendanceFinanceRekap(year: number, month: number) {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const staffList = await this.prisma.user.findMany({
+      where: {
+        role: { notIn: ['SISWA', 'WALI_MURID'] },
+      },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        subRole: true,
+        subRole2: true,
+        subRole3: true,
+        subRole4: true,
+        subRole5: true,
+        employmentStatus: true,
+        nipNbm: true,
+        teacherProfile: { select: { nip: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const attendances = await this.prisma.dailyAttendance.findMany({
+      where: {
+        date: { gte: startDate, lte: endDate },
+        status: 'HADIR',
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    const settings = await this.prisma.setting.findFirst();
+
+    let grandTotalKehadiran = 0;
+    let grandTotalMakan = 0;
+    let grandTotal = 0;
+
+    const list = staffList.map((staff, idx) => {
+      const staffAttendances = attendances.filter((a) => a.userId === staff.id);
+      const attCalc = this.calculateAttendanceAllowances(staffAttendances, staff);
+
+      const kehadiran = attCalc.totalTransport;
+      const makan = attCalc.totalMeal;
+      const total = kehadiran + makan;
+
+      grandTotalKehadiran += kehadiran;
+      grandTotalMakan += makan;
+      grandTotal += total;
+
+      const rolesList = [
+        staff.role,
+        staff.subRole,
+        staff.subRole2,
+        staff.subRole3,
+        staff.subRole4,
+        staff.subRole5,
+      ].filter(Boolean);
+
+      return {
+        no: idx + 1,
+        id: staff.id,
+        name: staff.name,
+        nip: staff.nipNbm || staff.teacherProfile?.nip || '-',
+        roles: rolesList.join(', '),
+        role: staff.role,
+        employmentStatus: staff.employmentStatus || 'GTTP',
+        isCleaningService: attCalc.isCleaningService,
+        totalHadir: staffAttendances.length,
+        kehadiran,
+        makan,
+        total,
+      };
+    });
+
+    return {
+      year,
+      month,
+      schoolInfo: {
+        schoolName: settings?.schoolName || 'SMA MUHAMMADIYAH 1 PONOROGO',
+        principalName: settings?.principalName || 'SUGENG RIADI, M.Pd.',
+        treasurerName: 'AGUNG TRIBOWO, SE',
+        serverLocation: settings?.serverLocation || 'Ponorogo, Jawa Timur',
+      },
+      grandTotalKehadiran,
+      grandTotalMakan,
+      grandTotal,
+      list,
+    };
+  }
+
+  /**
+   * Export Excel Matriks Log Presensi Sesuai Format Fisik Gambar 1
+   * Ukuran Kertas: A4 Landscape, Font: Times New Roman
+   */
+  async generateAttendanceMatrixExcel(year: number, month: number) {
+    const data = await this.getMonthlyAttendanceMatrix(year, month);
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(`Log Presensi ${month}-${year}`);
+
+    // Page setup A4 Landscape
+    worksheet.pageSetup = {
+      paperSize: 9, // A4
+      orientation: 'landscape',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: {
+        left: 0.3,
+        right: 0.3,
+        top: 0.4,
+        bottom: 0.4,
+        header: 0.2,
+        footer: 0.2,
+      },
+    };
+
+    const monthNames = [
+      'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
+      'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
+    ];
+    const monthName = monthNames[month - 1] || 'BULAN';
+    const totalCols = 3 + data.daysInMonth;
+
+    // Kop Judul Dokumen (Baris 1 & 2)
+    worksheet.mergeCells(1, 1, 1, totalCols);
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = 'REKAPITULASI LOG PRESENSI GURU & KARYAWAN';
+    titleCell.font = { name: 'Times New Roman', size: 12, bold: true };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(2, 1, 2, totalCols);
+    const subCell = worksheet.getCell('A2');
+    subCell.value = `BULAN: ${monthName} ${year} — ${data.schoolInfo?.schoolName || 'SMA MUHAMMADIYAH 1 PONOROGO'}`;
+    subCell.font = { name: 'Times New Roman', size: 10, bold: true };
+    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.addRow([]); // Baris 3 kosong
+
+    // Kolom Header Table (Baris 4)
+    const headerCols: string[] = ['No', 'NAMA', 'PRESENSI'];
+    for (let d = 1; d <= data.daysInMonth; d++) {
+      headerCols.push(`${d}`);
+    }
+
+    const headerRow = worksheet.addRow(headerCols);
+    headerRow.height = 20;
+    headerRow.eachCell((cell) => {
+      cell.font = { name: 'Times New Roman', size: 9, bold: true };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'F1F5F9' },
+      };
+    });
+
+    let currentRowNum = 5;
+
+    data.staffList.forEach((staff, idx) => {
+      const masukRowData: any[] = [idx + 1, staff.name, 'MASUK'];
+      const pulangRowData: any[] = ['', '', 'PULANG'];
+
+      for (let d = 1; d <= data.daysInMonth; d++) {
+        const att = staff.attendances[d];
+        masukRowData.push(att?.inTime || '');
+        pulangRowData.push(att?.outTime || '');
+      }
+
+      const row1 = worksheet.addRow(masukRowData);
+      const row2 = worksheet.addRow(pulangRowData);
+      row1.height = 14;
+      row2.height = 14;
+
+      // Merge cell No dan NAMA untuk 2 baris (MASUK & PULANG)
+      worksheet.mergeCells(`A${currentRowNum}:A${currentRowNum + 1}`);
+      worksheet.mergeCells(`B${currentRowNum}:B${currentRowNum + 1}`);
+
+      // Styling baris 1 & 2
+      [row1, row2].forEach((row, rIdx) => {
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          cell.font = { name: 'Times New Roman', size: 8 };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' },
+          };
+          if (colNumber === 1) {
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          } else if (colNumber === 2) {
+            cell.alignment = { horizontal: 'left', vertical: 'middle' };
+          } else if (colNumber === 3) {
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.font = { name: 'Times New Roman', size: 7.5, bold: true };
+          } else {
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          }
+        });
+      });
+
+      currentRowNum += 2;
+    });
+
+    // Atur lebar kolom agar proporsional di A4 Landscape
+    worksheet.getColumn(1).width = 5;   // No
+    worksheet.getColumn(2).width = 28;  // Nama
+    worksheet.getColumn(3).width = 10;  // Presensi
+    for (let d = 4; d <= totalCols; d++) {
+      worksheet.getColumn(d).width = 8.5; // Tanggal
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  /**
+   * Export Excel Rekap Presensi Kehadiran & Makan Sesuai Format Gambar 2 & 3
+   * Ukuran Kertas: A4 Portrait, Font: Times New Roman
+   */
+  async generateAttendanceFinanceRekapExcel(year: number, month: number) {
+    const data = await this.getAttendanceFinanceRekap(year, month);
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(`Rekap Presensi ${month}-${year}`);
+
+    // Page setup A4 Portrait
+    worksheet.pageSetup = {
+      paperSize: 9, // A4
+      orientation: 'portrait',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: {
+        left: 0.5,
+        right: 0.5,
+        top: 0.5,
+        bottom: 0.5,
+        header: 0.3,
+        footer: 0.3,
+      },
+    };
+
+    const monthNames = [
+      'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
+      'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
+    ];
+    const monthName = monthNames[month - 1] || 'BULAN';
+
+    // Kop Judul Dokumen Resmi (Baris 1 - 3)
+    worksheet.mergeCells('A1:F1');
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = 'PRESENSI KEHADIRAN GURU KARYAWAN';
+    titleCell.font = { name: 'Times New Roman', size: 13, bold: true };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells('A2:F2');
+    const periodCell = worksheet.getCell('A2');
+    periodCell.value = `${monthName} ${year}`;
+    periodCell.font = { name: 'Times New Roman', size: 11, bold: true };
+    periodCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells('A3:F3');
+    const schoolCell = worksheet.getCell('A3');
+    schoolCell.value = data.schoolInfo?.schoolName || 'SMA MUHAMMADIYAH 1 PONOROGO';
+    schoolCell.font = { name: 'Times New Roman', size: 11, bold: true };
+    schoolCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.addRow([]); // Baris 4 kosong
+
+    // Table Header (Baris 5)
+    const headerRow = worksheet.addRow([
+      'No',
+      'NAMA',
+      'KEHADIRAN',
+      'MAKAN',
+      'TOTAL',
+      'TANDA TANGAN',
+    ]);
+    headerRow.height = 22;
+    headerRow.eachCell((cell) => {
+      cell.font = { name: 'Times New Roman', size: 10, bold: true };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'F8FAFC' },
+      };
+    });
+
+    data.list.forEach((item) => {
+      const isGanjil = item.no % 2 === 1;
+      const ttdText = isGanjil ? `${item.no}` : `            ${item.no}`;
+      const row = worksheet.addRow([
+        item.no,
+        item.name,
+        item.kehadiran,
+        item.makan,
+        item.total,
+        ttdText,
+      ]);
+      row.height = 18;
+
+      row.eachCell((cell, colNumber) => {
+        cell.font = { name: 'Times New Roman', size: 9.5 };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+
+        if (colNumber === 1) {
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        } else if (colNumber === 2) {
+          cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        } else if (colNumber === 3 || colNumber === 4) {
+          cell.numFmt = '"Rp "#,##0.00;("Rp "#,##0.00);"-"';
+          cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        } else if (colNumber === 5) {
+          cell.numFmt = '"Rp "#,##0.00;("Rp "#,##0.00);"-"';
+          cell.font = { name: 'Times New Roman', size: 9.5, bold: true };
+          cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        } else if (colNumber === 6) {
+          cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        }
+      });
+    });
+
+    // Baris TOTAL Keseluruhan
+    const totalRow = worksheet.addRow([
+      'TOTAL',
+      '',
+      data.grandTotalKehadiran,
+      data.grandTotalMakan,
+      data.grandTotal,
+      '',
+    ]);
+    totalRow.height = 22;
+    worksheet.mergeCells(`A${totalRow.number}:B${totalRow.number}`);
+
+    totalRow.eachCell((cell, colNumber) => {
+      cell.font = { name: 'Times New Roman', size: 10, bold: true };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'double' },
+        right: { style: 'thin' },
+      };
+      if (colNumber === 1 || colNumber === 2) {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      } else if (colNumber >= 3 && colNumber <= 5) {
+        cell.numFmt = '"Rp "#,##0.00;("Rp "#,##0.00);"-"';
+        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      }
+    });
+
+    // Kolom Widths
+    worksheet.getColumn(1).width = 6;   // No
+    worksheet.getColumn(2).width = 32;  // Nama
+    worksheet.getColumn(3).width = 18;  // Kehadiran
+    worksheet.getColumn(4).width = 16;  // Makan
+    worksheet.getColumn(5).width = 20;  // Total
+    worksheet.getColumn(6).width = 20;  // Tanda Tangan
+
+    worksheet.addRow([]); // Baris kosong sebelum tanda tangan
+
+    // Tanda Tangan Pengesahan (Kepala Sekolah & Bendahara)
+    const ttdDateStr = `PONOROGO, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}`;
+    
+    const ttdRow1 = worksheet.addRow(['', 'KEPALA SEKOLAH', '', '', ttdDateStr, '']);
+    worksheet.mergeCells(`E${ttdRow1.number}:F${ttdRow1.number}`);
+    ttdRow1.getCell(2).font = { name: 'Times New Roman', size: 10, bold: true };
+    ttdRow1.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+    ttdRow1.getCell(5).font = { name: 'Times New Roman', size: 10 };
+    ttdRow1.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    const ttdRow2 = worksheet.addRow(['', '', '', '', 'BENDAHARA', '']);
+    worksheet.mergeCells(`E${ttdRow2.number}:F${ttdRow2.number}`);
+    ttdRow2.getCell(5).font = { name: 'Times New Roman', size: 10, bold: true };
+    ttdRow2.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+
+    const principalName = data.schoolInfo?.principalName || 'SUGENG RIADI, M.Pd';
+    const treasurerName = data.schoolInfo?.treasurerName || 'AGUNG TRIBOWO, SE';
+
+    const ttdRow3 = worksheet.addRow(['', principalName, '', '', treasurerName, '']);
+    worksheet.mergeCells(`E${ttdRow3.number}:F${ttdRow3.number}`);
+    ttdRow3.getCell(2).font = { name: 'Times New Roman', size: 10, bold: true, underline: true };
+    ttdRow3.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+    ttdRow3.getCell(5).font = { name: 'Times New Roman', size: 10, bold: true, underline: true };
+    ttdRow3.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);

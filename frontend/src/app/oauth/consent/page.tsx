@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { Eye, EyeOff } from 'lucide-react'
 
 function OAuthConsentContent() {
   const router = useRouter()
@@ -17,6 +18,7 @@ function OAuthConsentContent() {
   
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState<string | false>(false)
   const [error, setError] = useState('')
   
@@ -137,15 +139,26 @@ function OAuthConsentContent() {
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="font-bold text-slate-700 dark:text-slate-200">Password</Label>
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Masukkan Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="h-12 rounded-xl text-base transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue-600 bg-white/90 dark:bg-slate-900 border-slate-300 dark:border-slate-700 shadow-inner"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Masukkan Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-12 pr-12 rounded-xl text-base transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue-600 bg-white/90 dark:bg-slate-900 border-slate-300 dark:border-slate-700 shadow-inner"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg"
+                  aria-label={showPassword ? "Sembunyikan kata sandi" : "Lihat kata sandi"}
+                  title={showPassword ? "Sembunyikan kata sandi" : "Lihat kata sandi"}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
             <Button
               type="submit"

@@ -599,6 +599,32 @@ export class UsersService {
             certificationYear: true,
           },
         },
+        parentProfile: {
+          select: {
+            id: true,
+            phone: true,
+            occupation: true,
+            address: true,
+            students: {
+              select: {
+                relation: true,
+                student: {
+                  select: {
+                    id: true,
+                    name: true,
+                    nis: true,
+                    nisn: true,
+                    class: {
+                      select: {
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
         student: {
           select: {
             id: true,
@@ -1087,12 +1113,17 @@ export class UsersService {
 
     if (data.email !== undefined) {
       if (data.email && data.email.trim() !== '') {
+        const cleanEmail = data.email.trim().toLowerCase();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(cleanEmail)) {
+          throw new BadRequestException('Format alamat email tidak valid');
+        }
         const existingEmail = await this.prisma.user.findFirst({
-          where: { email: data.email.trim(), NOT: { id } },
+          where: { email: cleanEmail, NOT: { id } },
         });
         if (existingEmail)
           throw new BadRequestException('Email sudah terdaftar pada akun lain');
-        updateData.email = data.email.trim();
+        updateData.email = cleanEmail;
       } else {
         updateData.email = null;
       }

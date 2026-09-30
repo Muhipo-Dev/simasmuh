@@ -316,7 +316,7 @@ export class AuthService {
     }
 
     // Resolve target email
-    let targetEmail = user.email?.trim() || null;
+    const targetEmail = user.email?.trim() || null;
     if (!targetEmail || !targetEmail.includes('@')) {
       await this.systemLogService.log({
         category: 'AUTH',

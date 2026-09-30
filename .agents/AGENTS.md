@@ -19,10 +19,9 @@
      - **Backend API NestJS**: `http://localhost:3001`
      - **Prisma Studio**: `http://localhost:51212`
      - **Supabase Studio (Docker)**: `http://localhost:54323` (Database: `54322`, API: `54321`)
-7. **Standar Mutlak Notifikasi Resmi (In-App Dashboard & Email SMTP - Tanpa WhatsApp) (STRICT)**:
+7. **Standar Mutlak Notifikasi Resmi (In-App Dashboard & Email SMTP) (STRICT)**:
    - **Tampil di Dashboard Seluruh Pengguna**: Setiap notifikasi (presensi/absen, lembar disposisi persuratan, tagihan & bukti verifikasi keuangan, perizinan, update akademik/rapor, jurnal mengajar, dan pengumuman resmi) **MUTLAK DITAMPILKAN LANGSUNG DI DASHBOARD PENGGUNA** sesuai perannya (Pegawai, Guru, Siswa, dan Wali Murid) secara *real-time*.
    - **Pengiriman Melalui Email Resmi (SMTP)**: Seluruh notifikasi sistem dikirimkan langsung ke alamat email aktif pengguna secara handal dan aman melalui layanan SMTP Email resmi SIMASMUH.
-   - **Peniadaan WhatsApp (Zero WhatsApp)**: Notifikasi resmi sistem berfokus penuh pada integrasi In-App Dashboard dan Email resmi, serta **TIDAK LAGI MENGGUNAKAN WHATSAPP**.
 8. **Standar Akun & Peran Pengguna Wali Murid (Orang Tua / Wali)**:
    - **Peran & Relasi**: Pengguna dengan role `WALI_MURID` adalah akun orang tua/wali murid yang dapat terhubung dengan 1 atau lebih siswa di sistem melalui relasi `ParentProfile` dan `ParentStudent`.
    - **Koneksi Identitas Siswa**: No. NIS atau NISN menjadi kunci penghubung antara data wali murid dan siswa yang diwalikan.

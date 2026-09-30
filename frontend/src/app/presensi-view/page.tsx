@@ -249,82 +249,82 @@ export default function PresensiPegawaiPage() {
       <PublicNavbar academicYear={academicYear} semester={semester} />
 
       {/* Konten Utama */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-5 md:p-6 lg:p-8 space-y-6 sm:space-y-8 transition-all duration-200">
-        {/* Banner Utama */}
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-slate-800 p-6 sm:p-8 rounded-2xl text-white shadow-md flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-blue-100 text-xs font-bold uppercase tracking-wider">
-              <ClipboardCheck className="w-3.5 h-3.5" />
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-4 md:p-5 space-y-4 sm:space-y-5 transition-all duration-200">
+        {/* Banner Utama Compact */}
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-slate-800 p-4 sm:p-5 rounded-2xl text-white shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-blue-100 text-[10px] font-bold uppercase tracking-wider">
+              <ClipboardCheck className="w-3 h-3" />
               <span>Monitoring Real-Time</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-white">
               Presensi Kehadiran Guru & Karyawan
             </h1>
-            <p className="text-blue-100 text-sm sm:text-base font-medium max-w-2xl">
-              Daftar rekapitulasi kehadiran Pegawai, Guru dan Karyawan SMA Muhipo secara transparan dan real-time
+            <p className="text-blue-100 text-xs sm:text-sm font-medium max-w-2xl">
+              Daftar rekapitulasi kehadiran Pegawai, Guru dan Karyawan SMA Muhipo secara transparan dan real-time.
             </p>
           </div>
-          <div className="bg-white/10 dark:bg-slate-900/50 backdrop-blur-md p-4 sm:p-5 rounded-xl border border-white/20 shadow-inner flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
-            <div className="text-xs sm:text-sm font-bold text-blue-100 flex items-center gap-1.5">
-              <CalendarDays className="w-4 h-4 text-emerald-300" />
+          <div className="bg-white/10 dark:bg-slate-900/50 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-white/20 shadow-inner flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
+            <div className="text-xs font-bold text-blue-100 flex items-center gap-1.5">
+              <CalendarDays className="w-3.5 h-3.5 text-emerald-300" />
               <span>Tanggal Presensi:</span>
             </div>
             <Input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-none font-bold text-sm h-11 rounded-lg shadow-sm"
+              className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-none font-bold text-xs h-9 sm:h-10 rounded-lg shadow-xs touch-manipulation"
             />
           </div>
         </div>
 
         {/* Statistik Ringkas */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Card className="border-slate-200 dark:border-slate-800 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-xs">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider">Total Pegawai</CardTitle>
-              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shadow-2xs">
-                <Users className="w-5 h-5" />
+            <CardHeader className="flex flex-row items-center justify-between pb-1.5 p-3.5 sm:p-4 space-y-0">
+              <CardTitle className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Total Pegawai</CardTitle>
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shadow-2xs">
+                <Users className="w-4 h-4" />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">{stats.total} <span className="text-xs sm:text-sm font-semibold text-slate-500 font-normal">Orang</span></div>
+            <CardContent className="px-3.5 sm:px-4 pb-3.5 sm:pb-4">
+              <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">{stats.total} <span className="text-xs font-semibold text-slate-500">Orang</span></div>
             </CardContent>
           </Card>
 
           <Card className="border-slate-200 dark:border-slate-800 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-xs">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider">Sudah Hadir</CardTitle>
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shadow-2xs">
-                <UserCheck className="w-5 h-5" />
+            <CardHeader className="flex flex-row items-center justify-between pb-1.5 p-3.5 sm:p-4 space-y-0">
+              <CardTitle className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Sudah Hadir</CardTitle>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shadow-2xs">
+                <UserCheck className="w-4 h-4" />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">{stats.hadir} <span className="text-xs sm:text-sm font-semibold text-slate-500 font-normal">Orang</span></div>
+            <CardContent className="px-3.5 sm:px-4 pb-3.5 sm:pb-4">
+              <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">{stats.hadir} <span className="text-xs font-semibold text-slate-500">Orang</span></div>
             </CardContent>
           </Card>
 
           <Card className="border-slate-200 dark:border-slate-800 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-xs">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider">Belum Hadir</CardTitle>
-              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold shadow-2xs">
-                <UserX className="w-5 h-5" />
+            <CardHeader className="flex flex-row items-center justify-between pb-1.5 p-3.5 sm:p-4 space-y-0">
+              <CardTitle className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Belum Hadir</CardTitle>
+              <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold shadow-2xs">
+                <UserX className="w-4 h-4" />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400">{stats.belum} <span className="text-xs sm:text-sm font-semibold text-slate-500 font-normal">Orang</span></div>
+            <CardContent className="px-3.5 sm:px-4 pb-3.5 sm:pb-4">
+              <div className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400">{stats.belum} <span className="text-xs font-semibold text-slate-500">Orang</span></div>
             </CardContent>
           </Card>
 
           <Card className="border-slate-200 dark:border-slate-800 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-xs">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider">Kehadiran Staf</CardTitle>
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold shadow-2xs">
-                <ClipboardCheck className="w-5 h-5" />
+            <CardHeader className="flex flex-row items-center justify-between pb-1.5 p-3.5 sm:p-4 space-y-0">
+              <CardTitle className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Kehadiran Staf</CardTitle>
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold shadow-2xs">
+                <ClipboardCheck className="w-4 h-4" />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-extrabold text-indigo-600 dark:text-indigo-400">{stats.percent}%</div>
+            <CardContent className="px-3.5 sm:px-4 pb-3.5 sm:pb-4">
+              <div className="text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400">{stats.percent}%</div>
             </CardContent>
           </Card>
         </div>
@@ -683,41 +683,41 @@ export default function PresensiPegawaiPage() {
 
         {/* Filter dan Tabel Presensi */}
         <Card className="border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs">
-          <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 sm:p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-4 sm:p-5">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
-                <CardTitle className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <CardTitle className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                   <span>Daftar Kehadiran</span>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-900">
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-900">
                     {formattedDate}
                   </span>
                 </CardTitle>
-                <CardDescription className="text-slate-500 dark:text-slate-400 font-medium mt-1">
+                <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs mt-0.5">
                   Menampilkan {filteredData.length} dari total {data.length} pegawai dan guru
                 </CardDescription>
               </div>
 
               {/* Input Search dan Tombol Filter */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <div className="relative w-full sm:w-56">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="relative w-full sm:w-52">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
                     type="text"
-                    placeholder="Cari nama pegawai/guru..."
+                    placeholder="Cari nama..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-sm font-medium shadow-2xs"
+                    className="pl-9 h-9 sm:h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-xs font-semibold shadow-2xs touch-manipulation"
                   />
                 </div>
-                <div className="flex items-center gap-1.5 bg-slate-200/60 dark:bg-slate-800 p-1 rounded-xl flex-wrap">
-                  <Button size="sm" variant={statusFilter === 'SEMUA' ? 'default' : 'ghost'} onClick={() => setStatusFilter('SEMUA')} className={`rounded-lg font-bold text-xs px-2.5 h-8 ${statusFilter === 'SEMUA' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'}`}>Semua</Button>
-                  <Button size="sm" variant={statusFilter === 'HADIR' ? 'default' : 'ghost'} onClick={() => setStatusFilter('HADIR')} className={`rounded-lg font-bold text-xs px-2.5 h-8 ${statusFilter === 'HADIR' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'}`}>Hadir</Button>
-                  <Button size="sm" variant={statusFilter === 'IZIN' ? 'default' : 'ghost'} onClick={() => setStatusFilter('IZIN')} className={`rounded-lg font-bold text-xs px-2.5 h-8 ${statusFilter === 'IZIN' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'}`}>Izin</Button>
-                  <Button size="sm" variant={statusFilter === 'BELUM' ? 'default' : 'ghost'} onClick={() => setStatusFilter('BELUM')} className={`rounded-lg font-bold text-xs px-2.5 h-8 ${statusFilter === 'BELUM' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'}`}>Belum</Button>
+                <div className="flex items-center gap-1 bg-slate-200/60 dark:bg-slate-800 p-1 rounded-xl flex-wrap">
+                  <Button size="sm" variant={statusFilter === 'SEMUA' ? 'default' : 'ghost'} onClick={() => setStatusFilter('SEMUA')} className={`rounded-lg font-bold text-xs px-2.5 h-7 sm:h-8 touch-manipulation ${statusFilter === 'SEMUA' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'}`}>Semua</Button>
+                  <Button size="sm" variant={statusFilter === 'HADIR' ? 'default' : 'ghost'} onClick={() => setStatusFilter('HADIR')} className={`rounded-lg font-bold text-xs px-2.5 h-7 sm:h-8 touch-manipulation ${statusFilter === 'HADIR' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'}`}>Hadir</Button>
+                  <Button size="sm" variant={statusFilter === 'IZIN' ? 'default' : 'ghost'} onClick={() => setStatusFilter('IZIN')} className={`rounded-lg font-bold text-xs px-2.5 h-7 sm:h-8 touch-manipulation ${statusFilter === 'IZIN' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'}`}>Izin</Button>
+                  <Button size="sm" variant={statusFilter === 'BELUM' ? 'default' : 'ghost'} onClick={() => setStatusFilter('BELUM')} className={`rounded-lg font-bold text-xs px-2.5 h-7 sm:h-8 touch-manipulation ${statusFilter === 'BELUM' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'}`}>Belum</Button>
                 </div>
-                <Button size="sm" variant="outline" className="h-10 border-emerald-600 text-emerald-600 hover:bg-emerald-50 rounded-xl font-bold" onClick={handleExportExcel} disabled={loading || filteredData.length === 0}>
-                  <Download className="w-4 h-4 mr-1.5" />
-                  Export Excel
+                <Button size="sm" variant="outline" className="h-9 sm:h-10 px-3 border-emerald-600 text-emerald-600 hover:bg-emerald-50 rounded-xl font-bold text-xs touch-manipulation" onClick={handleExportExcel} disabled={loading || filteredData.length === 0}>
+                  <Download className="w-4 h-4 mr-1" />
+                  Excel
                 </Button>
               </div>
             </div>
@@ -725,23 +725,23 @@ export default function PresensiPegawaiPage() {
 
           <CardContent className="p-0">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                <p className="font-semibold text-sm">Memuat rekapitulasi kehadiran pegawai...</p>
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
+                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                <p className="font-semibold text-xs">Memuat rekapitulasi kehadiran...</p>
               </div>
             ) : error ? (
-              <div className="flex flex-col items-center justify-center py-16 text-rose-500 gap-2 p-6 text-center">
-                <AlertCircle className="w-10 h-10 text-rose-500/80" />
-                <p className="font-bold">{error}</p>
-                <Button size="sm" variant="outline" onClick={() => window.location.reload()} className="mt-2 rounded-xl">
+              <div className="flex flex-col items-center justify-center py-12 text-rose-500 gap-2 p-6 text-center">
+                <AlertCircle className="w-8 h-8 text-rose-500/80" />
+                <p className="font-bold text-xs">{error}</p>
+                <Button size="sm" variant="outline" onClick={() => window.location.reload()} className="mt-2 rounded-xl text-xs h-8">
                   Coba Lagi
                 </Button>
               </div>
             ) : filteredData.length === 0 ? (
-              <div className="text-center py-16 text-slate-400 dark:text-slate-500">
-                <Users className="w-12 h-12 mx-auto mb-3 opacity-30 stroke-[1.5]" />
-                <p className="font-bold text-base">Tidak ada data pegawai yang sesuai pencarian/filter.</p>
-                <p className="text-xs mt-1">Coba ubah kata kunci atau ganti filter status di atas.</p>
+              <div className="text-center py-12 text-slate-400 dark:text-slate-500">
+                <Users className="w-10 h-10 mx-auto mb-2 opacity-30 stroke-[1.5]" />
+                <p className="font-bold text-sm">Tidak ada data pegawai yang sesuai pencarian/filter.</p>
+                <p className="text-xs mt-0.5">Coba ubah kata kunci atau ganti filter status di atas.</p>
               </div>
             ) : (
               <>
@@ -750,55 +750,55 @@ export default function PresensiPegawaiPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50/70 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                        <th className="py-4 px-6 w-12 text-center">No.</th>
-                        <th className="py-4 px-6">Nama Pegawai / Guru</th>
-                        <th className="py-4 px-6 text-center">Jam Masuk</th>
-                        <th className="py-4 px-6 text-center">Jam Pulang</th>
-                        <th className="py-4 px-6 text-center">Status</th>
-                        <th className="py-4 px-6">Keterangan</th>
+                        <th className="py-3 px-4 w-12 text-center">No.</th>
+                        <th className="py-3 px-4 min-w-[200px]">Nama Pegawai / Guru</th>
+                        <th className="py-3 px-4 w-28 text-center">Jam Masuk</th>
+                        <th className="py-3 px-4 w-28 text-center">Jam Pulang</th>
+                        <th className="py-3 px-4 w-32 text-center">Status</th>
+                        <th className="py-3 px-4 min-w-[160px]">Keterangan</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                       {filteredData.map((item, index) => (
-                        <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50 transition-colors">
-                          <td className="py-4 px-6 text-center font-bold text-slate-400">{index + 1}</td>
-                          <td className="py-4 px-6 font-bold text-slate-900 dark:text-white">{item.name}</td>
-                          <td className="py-4 px-6 text-center font-mono font-bold text-slate-700 dark:text-slate-200">
+                        <tr key={item.id} className="h-11 hover:bg-slate-50/60 dark:hover:bg-slate-800/50 transition-colors">
+                          <td className="py-2.5 px-4 text-center font-bold text-slate-400">{index + 1}</td>
+                          <td className="py-2.5 px-4 font-bold text-slate-900 dark:text-white">{item.name}</td>
+                          <td className="py-2.5 px-4 text-center font-mono font-bold text-slate-700 dark:text-slate-200">
                             {item.checkIn !== '-' ? (
-                              <span className="text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-800">
+                              <span className="text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
                                 {item.checkIn}
                               </span>
                             ) : '-'}
                           </td>
-                          <td className="py-4 px-6 text-center font-mono font-bold text-slate-700 dark:text-slate-200">
+                          <td className="py-2.5 px-4 text-center font-mono font-bold text-slate-700 dark:text-slate-200">
                             {item.checkOut !== '-' ? (
-                              <span className="text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/80 px-2.5 py-1 rounded-md border border-blue-200 dark:border-blue-800">
+                              <span className="text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/80 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">
                                 {item.checkOut}
                               </span>
                             ) : <span className="text-slate-400 dark:text-slate-600 font-sans text-xs font-normal">Belum</span>}
                           </td>
-                          <td className="py-4 px-6 text-center">
+                          <td className="py-2.5 px-4 text-center">
                             {item.status === 'HADIR' || item.status === 'HADIR + IZIN KELUAR' ? (
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${item.status === 'HADIR + IZIN KELUAR'
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${item.status === 'HADIR + IZIN KELUAR'
                                 ? 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
                                 : 'bg-green-100 dark:bg-green-950/80 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
                                 }`}>
-                                <CheckCircle2 className="w-3.5 h-3.5 mr-1 shrink-0" />
+                                <CheckCircle2 className="w-3 h-3 mr-1 shrink-0" />
                                 {item.status === 'HADIR + IZIN KELUAR' ? 'Hadir + Izin' : 'Hadir'}
                               </span>
                             ) : item.status === 'IZIN KELUAR' ? (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                                <Clock className="w-3.5 h-3.5 mr-1 shrink-0" />
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                <Clock className="w-3 h-3 mr-1 shrink-0" />
                                 Izin Keluar
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
-                                <UserX className="w-3.5 h-3.5 mr-1 shrink-0" />
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
+                                <UserX className="w-3 h-3 mr-1 shrink-0" />
                                 Belum Hadir
                               </span>
                             )}
                           </td>
-                          <td className="py-4 px-6 text-xs font-medium text-slate-600 dark:text-slate-400 max-w-xs">
+                          <td className="py-2.5 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 max-w-xs truncate" title={item.keterangan}>
                             {item.keterangan}
                           </td>
                         </tr>
@@ -808,15 +808,15 @@ export default function PresensiPegawaiPage() {
                 </div>
 
                 {/* Tampilan Kartu Responsif untuk Ponsel/Tablet */}
-                <div className="lg:hidden p-4 sm:p-6 space-y-4">
+                <div className="lg:hidden p-3 sm:p-4 space-y-2.5">
                   {filteredData.map((item, index) => (
-                    <div key={item.id} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 shadow-xs space-y-3">
-                      <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-                        <div className="space-y-0.5">
+                    <div key={item.id} className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 shadow-xs space-y-2">
+                      <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                        <div className="space-y-0.5 min-w-0">
                           <span className="text-[10px] font-bold uppercase text-slate-400 block">No. {index + 1}</span>
-                          <h4 className="font-extrabold text-slate-900 dark:text-white text-base leading-tight">{item.name}</h4>
+                          <h4 className="font-bold text-slate-900 dark:text-white text-sm leading-tight truncate">{item.name}</h4>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${item.status === 'HADIR'
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${item.status === 'HADIR'
                           ? 'bg-green-100 text-green-700 dark:bg-green-950/90 dark:text-green-300 border border-green-200 dark:border-green-800'
                           : item.status === 'IZIN KELUAR'
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/90 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
@@ -831,25 +831,27 @@ export default function PresensiPegawaiPage() {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 pt-1">
-                        <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                          <span className="text-[11px] text-slate-400 font-semibold block uppercase">Jam Masuk</span>
-                          <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                      <div className="grid grid-cols-2 gap-2 pt-0.5">
+                        <div className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Jam Masuk</span>
+                          <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
                             {item.checkIn !== '-' ? `${item.checkIn} WIB` : '-'}
                           </span>
                         </div>
-                        <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                          <span className="text-[11px] text-slate-400 font-semibold block uppercase">Jam Pulang</span>
-                          <span className="font-mono font-bold text-sm text-blue-600 dark:text-blue-400">
+                        <div className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Jam Pulang</span>
+                          <span className="font-mono font-bold text-xs text-blue-600 dark:text-blue-400">
                             {item.checkOut !== '-' ? `${item.checkOut} WIB` : 'Belum'}
                           </span>
                         </div>
                       </div>
 
-                      <div className="pt-1 text-xs font-medium text-slate-600 dark:text-slate-400 flex items-start gap-1.5 bg-slate-100/80 dark:bg-slate-800/80 p-2 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
-                        <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                        <span><strong className="text-slate-800 dark:text-slate-200">{item.keterangan}</strong></span>
-                      </div>
+                      {item.keterangan && item.keterangan !== '-' && (
+                        <div className="pt-0.5 text-xs font-medium text-slate-600 dark:text-slate-400 flex items-start gap-1.5 bg-slate-100/80 dark:bg-slate-800/80 p-2 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
+                          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                          <span><strong className="text-slate-800 dark:text-slate-200">{item.keterangan}</strong></span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

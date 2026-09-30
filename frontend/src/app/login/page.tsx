@@ -38,8 +38,10 @@ export default function LoginPage() {
   const [forgotAccount, setForgotAccount] = useState('')
   const [forgotOtp, setForgotOtp] = useState('')
   const [forgotNewPassword, setForgotNewPassword] = useState('')
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('')
   const [forgotShowPassword, setForgotShowPassword] = useState(false)
+  const [forgotShowConfirmPassword, setForgotShowConfirmPassword] = useState(false)
   const [forgotMaskedEmail, setForgotMaskedEmail] = useState('')
   const [forgotLoading, setForgotLoading] = useState(false)
   const [forgotError, setForgotError] = useState('')
@@ -339,41 +341,41 @@ export default function LoginPage() {
         }
       />
 
-      {/* Konten Utama: Desktop Grid 2 Kolom Sejajar, Rata Tengah Sedikit Kebawah dengan Efek Glassmorphic & Icon Berwarna */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 pt-8 sm:pt-12 pb-12 sm:pb-16 z-10 w-full max-w-5xl mx-auto my-auto">
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+      {/* Konten Utama: Desktop Grid 2 Kolom Sejajar & Simetris, Rata Tengah dengan Efek Glassmorphic Modern */}
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 pb-8 sm:pb-10 z-10 w-full max-w-5xl mx-auto my-auto">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-stretch">
           
-          {/* Kolom Kiri: Card Login Form (Kontras Tinggi Selaras CBT MUHIPO & Icon Berwarna) */}
+          {/* Kolom Kiri: Card Login Form (Compact & Touchscreen Friendly) */}
           <div className="lg:col-span-6 flex flex-col">
-            <div className="w-full h-full flex flex-col justify-between rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-900/90 backdrop-blur-2xl overflow-hidden p-6 sm:p-8 space-y-6 text-slate-900 dark:text-white relative group">
+            <div className="w-full h-full flex flex-col justify-between rounded-2xl sm:rounded-3xl shadow-xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-900/90 backdrop-blur-2xl overflow-hidden p-5 sm:p-6 space-y-4 text-slate-900 dark:text-white relative group">
               
-              <div className="my-auto space-y-6">
+              <div className="my-auto space-y-4">
                 {/* Header Card dengan Icon Berwarna Khas */}
-                <div className="text-center space-y-2">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-600/20 border border-blue-200 dark:border-blue-400/30 shadow-xs mb-1">
-                    <Lock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <div className="text-center space-y-1.5">
+                  <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-600/20 border border-blue-200 dark:border-blue-400/30 shadow-xs mb-0.5">
+                    <Lock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                     Masuk Akun
                   </h1>
-                  <div className="flex items-center justify-center gap-1.5 text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-medium">
+                  <div className="flex items-center justify-center gap-1.5 text-slate-600 dark:text-slate-300 text-xs font-medium">
                     <KeyRound className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <span>Sistem Informasi Manajemen SMA Muhipo</span>
+                    <span>SIMASMUH SMA Muhipo</span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">Online</span>
                   </div>
                 </div>
 
                 {/* Alert Error */}
                 {error && (
-                  <div className="p-3.5 rounded-2xl bg-red-50 dark:bg-red-500/15 border border-red-200 dark:border-red-400/30 text-red-700 dark:text-red-200 text-xs font-semibold flex items-center gap-2.5 animate-in fade-in">
+                  <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/15 border border-red-200 dark:border-red-400/30 text-red-700 dark:text-red-200 text-xs font-semibold flex items-center gap-2.5 animate-in fade-in">
                     <div className="w-2 h-2 rounded-full bg-red-500 shrink-0 animate-pulse" />
                     <span>{error}</span>
                   </div>
                 )}
 
                 {/* Form Login */}
-                <form onSubmit={handleSubmit} className="space-y-4.5 pt-1">
-                  <div className="space-y-1.5">
+                <form onSubmit={handleSubmit} className="space-y-3.5 pt-0.5">
+                  <div className="space-y-1">
                     <Label htmlFor="email" className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
                       <div className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-500/20 flex items-center justify-center border border-blue-200 dark:border-blue-400/30">
                         <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -383,7 +385,7 @@ export default function LoginPage() {
                     <Input
                       id="email"
                       type="text"
-                      placeholder="Masukkan username akun Anda"
+                      placeholder="Masukkan username atau NIS"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -392,13 +394,13 @@ export default function LoginPage() {
                     />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password" className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
                         <div className="w-5 h-5 rounded-md bg-cyan-50 dark:bg-cyan-500/20 flex items-center justify-center border border-cyan-200 dark:border-cyan-400/30">
                           <Lock className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                         </div>
-                        <span>Password / Kata Sandi</span>
+                        <span>Kata Sandi</span>
                       </Label>
                       <button
                         type="button"
@@ -409,27 +411,38 @@ export default function LoginPage() {
                           setForgotStep(1)
                           setIsForgotModalOpen(true)
                         }}
-                        className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-all"
+                        className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-all py-1"
                       >
-                        Lupa kata sandi?
+                        Lupa sandi?
                       </button>
                     </div>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Masukkan kata sandi"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      autoComplete="current-password"
-                      className="h-11 px-3.5 rounded-xl text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-950/80 border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showLoginPassword ? 'text' : 'password'}
+                        placeholder="Masukkan kata sandi"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        autoComplete="current-password"
+                        className="h-11 px-3.5 pr-11 rounded-xl text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-950/80 border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-lg touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
+                        aria-label={showLoginPassword ? "Sembunyikan kata sandi" : "Lihat kata sandi"}
+                        title={showLoginPassword ? "Sembunyikan kata sandi" : "Lihat kata sandi"}
+                      >
+                        {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <Button
                     type="submit"
                     disabled={!!loading}
-                    className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-[0.99] mt-2.5"
+                    className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-[0.98] mt-2 touch-manipulation"
                   >
                     {loading ? (
                       <div className="flex items-center justify-center gap-2">
@@ -446,11 +459,11 @@ export default function LoginPage() {
                 </form>
 
                 {/* Accordion Petunjuk Kredensial Pengguna Khusus Mobile */}
-                <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3">
+                <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 pt-3 space-y-2">
                   <button
                     type="button"
                     onClick={() => setShowGuideMobile(!showGuideMobile)}
-                    className="w-full flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 transition-colors py-1 px-1 rounded-lg"
+                    className="w-full flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 transition-colors py-1.5 px-1 rounded-lg touch-manipulation min-h-[40px]"
                   >
                     <span className="flex items-center gap-1.5">
                       <div className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-500/20 flex items-center justify-center border border-blue-200 dark:border-blue-400/30">
@@ -458,17 +471,17 @@ export default function LoginPage() {
                       </div>
                       Petunjuk Kredensial Pengguna
                     </span>
-                    {showGuideMobile ? <ChevronUp className="w-3.5 h-3.5 text-slate-500" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-500" />}
+                    {showGuideMobile ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
                   </button>
 
                   {showGuideMobile && (
-                    <div className="space-y-2.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-[11px] leading-relaxed text-slate-700 dark:text-slate-300 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-[11px] leading-relaxed text-slate-700 dark:text-slate-300 animate-in fade-in slide-in-from-top-2">
                       <div className="flex items-start gap-2.5">
                         <div className="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-400/30 flex items-center justify-center shrink-0 mt-0.5">
                           <GraduationCap className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         </div>
                         <div>
-                          <span className="font-bold text-emerald-700 dark:text-emerald-300">Siswa:</span> Gunakan <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">NIS</span> sebagai username dan kata sandi.
+                          <span className="font-bold text-emerald-700 dark:text-emerald-300">Siswa:</span> Gunakan <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">NIS</span> sebagai username dan sandi.
                         </div>
                       </div>
                       <div className="flex items-start gap-2.5">
@@ -476,7 +489,7 @@ export default function LoginPage() {
                           <Phone className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div>
-                          <span className="font-bold text-purple-700 dark:text-purple-300">Wali Murid / Orang Tua:</span> Username: <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">No. WhatsApp</span> & Kata Sandi: <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">NIS Siswa</span>.
+                          <span className="font-bold text-purple-700 dark:text-purple-300">Wali Murid:</span> Username: <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">No. WA</span> & Sandi: <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">NIS Siswa</span>.
                         </div>
                       </div>
                       <div className="flex items-start gap-2.5">
@@ -484,11 +497,20 @@ export default function LoginPage() {
                           <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <span className="font-bold text-blue-700 dark:text-blue-300">Guru / Tenaga Kependidikan:</span> Gunakan <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">Username</span> dan kata sandi yang terdaftar.
+                          <span className="font-bold text-blue-700 dark:text-blue-300">Guru / Pegawai:</span> Gunakan <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">Username</span> terdaftar.
                         </div>
                       </div>
-                      <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-[10px] text-slate-500 dark:text-slate-400">
-                        Mengalami kendala? Hubungi <span className="font-bold text-slate-800 dark:text-slate-200">Layanan Bantuan (Helpdesk)</span> WhatsApp: <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{helpdeskPhone}</span>.
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-[10px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                        <span>Butuh bantuan?</span>
+                        <a
+                          href={`https://wa.me/${helpdeskPhone.replace(/[^0-9]/g, '').replace(/^0/, '62')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold text-emerald-600 hover:underline flex items-center gap-1"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          Helpdesk WA: {helpdeskPhone}
+                        </a>
                       </div>
                     </div>
                   )}
@@ -496,10 +518,10 @@ export default function LoginPage() {
               </div>
 
               {/* Tombol Beranda */}
-              <div className="pt-4">
+              <div className="pt-2">
                 <Link
                   href="/"
-                  className="w-full flex items-center justify-center py-2.5 px-4 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-800 rounded-xl transition-all gap-2 shadow-2xs active:scale-[0.99]"
+                  className="w-full flex items-center justify-center py-2.5 px-4 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-800 rounded-xl transition-all gap-2 shadow-2xs active:scale-[0.98] min-h-[40px] touch-manipulation"
                 >
                   <Home className="w-4 h-4 text-slate-500" />
                   Kembali ke Beranda
@@ -509,26 +531,26 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Kolom Kanan: Petunjuk Kredensial Pengguna & Helpdesk (Desktop Sejajar & Kontras Tinggi) */}
-          <div className="hidden lg:flex lg:col-span-6 flex-col justify-between p-6 sm:p-8 rounded-3xl bg-white/95 dark:bg-slate-900/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white shadow-2xl space-y-6">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 text-xs font-bold">
+          {/* Kolom Kanan: Petunjuk Kredensial Pengguna & Helpdesk (Desktop Sejajar & Compact) */}
+          <div className="hidden lg:flex lg:col-span-6 flex-col justify-between p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-slate-900/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white shadow-xl space-y-4">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 text-xs font-bold">
                 <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <span>Panduan Akses SIMASMUH</span>
               </div>
 
               <div>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
                   Petunjuk Kredensial Pengguna
                 </h2>
-                <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
-                  Format akun sesuai dengan peran Anda di lingkungan sekolah.
+                <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
+                  Format akun resmi sesuai dengan peran Anda di sekolah.
                 </p>
               </div>
 
               {/* Card List Petunjuk Kredensial */}
-              <div className="space-y-3 pt-1">
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 transition-all hover:border-emerald-300 dark:hover:border-emerald-500/40">
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 transition-all hover:border-emerald-300 dark:hover:border-emerald-500/40">
                   <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-400/30 flex items-center justify-center shrink-0">
                     <GraduationCap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
@@ -540,7 +562,7 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 transition-all hover:border-purple-300 dark:hover:border-purple-500/40">
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 transition-all hover:border-purple-300 dark:hover:border-purple-500/40">
                   <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-500/20 border border-purple-200 dark:border-purple-400/30 flex items-center justify-center shrink-0">
                     <Phone className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   </div>
@@ -552,7 +574,7 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 transition-all hover:border-blue-300 dark:hover:border-blue-500/40">
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 transition-all hover:border-blue-300 dark:hover:border-blue-500/40">
                   <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-400/30 flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   </div>
@@ -567,20 +589,20 @@ export default function LoginPage() {
             </div>
 
             {/* Kotak Bantuan Admin & Helpdesk */}
-            <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 space-y-2.5">
+            <div className="p-3.5 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-300">
                 <HelpCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span>Kendala Akses atau Lupa Kata Sandi?</span>
               </div>
               <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                Hubungi <span className="font-bold text-slate-900 dark:text-white">Layanan Bantuan (Helpdesk)</span> WhatsApp <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{helpdeskPhone}</span> jika mengalami kendala akun.
+                Hubungi <span className="font-bold text-slate-900 dark:text-white">Layanan Bantuan</span> WhatsApp <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{helpdeskPhone}</span> jika akun Anda bermasalah.
               </p>
               <div className="pt-0.5 flex flex-wrap items-center gap-2">
                 <a
                   href={`https://wa.me/${helpdeskPhone.replace(/[^0-9]/g, '').replace(/^0/, '62')}?text=Halo%20Admin%20SIMASMUH,%20saya%20membutuhkan%20bantuan%20kendala%20login%20akun.`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs touch-manipulation min-h-[38px]"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span>Hubungi Helpdesk WhatsApp</span>
@@ -594,10 +616,10 @@ export default function LoginPage() {
                     setForgotStep(1)
                     setIsForgotModalOpen(true)
                   }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs touch-manipulation min-h-[38px]"
                 >
                   <Mail className="w-3.5 h-3.5" />
-                  <span>Reset Kata Sandi via OTP</span>
+                  <span>Reset Sandi via OTP</span>
                 </button>
               </div>
             </div>
@@ -779,15 +801,26 @@ export default function LoginPage() {
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span>Konfirmasi Kata Sandi Baru</span>
                   </Label>
-                  <Input
-                    id="forgotConfirmPassword"
-                    type={forgotShowPassword ? 'text' : 'password'}
-                    placeholder="Ulangi kata sandi baru"
-                    value={forgotConfirmPassword}
-                    onChange={(e) => setForgotConfirmPassword(e.target.value)}
-                    required
-                    className="h-11 px-3.5 rounded-xl text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-950/80 border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="forgotConfirmPassword"
+                      type={forgotShowConfirmPassword ? 'text' : 'password'}
+                      placeholder="Ulangi kata sandi baru"
+                      value={forgotConfirmPassword}
+                      onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                      required
+                      className="h-11 px-3.5 pr-10 rounded-xl text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-950/80 border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setForgotShowConfirmPassword(!forgotShowConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md"
+                      aria-label={forgotShowConfirmPassword ? "Sembunyikan kata sandi" : "Lihat kata sandi"}
+                      title={forgotShowConfirmPassword ? "Sembunyikan kata sandi" : "Lihat kata sandi"}
+                    >
+                      {forgotShowConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex gap-2 pt-1">

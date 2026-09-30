@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Input, PasswordInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Plus, Loader2, Trash2, FileSpreadsheet, Pencil, CheckSquare, Edit3, ShieldCheck } from 'lucide-react'
@@ -435,9 +435,8 @@ export default function TeachersPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password {isEdit ? '(Opsional)' : '*'}</Label>
-                  <Input 
+                  <PasswordInput 
                     id="password" 
-                    type="password" 
                     placeholder={isEdit ? "Biarkan kosong jika tidak diubah" : "Default: guru123"} 
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -509,8 +508,7 @@ export default function TeachersPage() {
                     </Label>
                   </div>
                   {bulkEditData.updatePassword && (
-                    <Input 
-                      type="password"
+                    <PasswordInput 
                       placeholder="Masukkan password baru" 
                       value={bulkEditData.password}
                       onChange={(e) => setBulkEditData(prev => ({ ...prev, password: e.target.value }))}

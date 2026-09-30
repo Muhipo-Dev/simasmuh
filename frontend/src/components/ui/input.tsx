@@ -18,3 +18,4 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
 }
 
 export { Input }
+export { PasswordInput } from "./password-input"

@@ -12,6 +12,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { AppNavbar, AppFooter, AppSidebar } from '@/components/layout'
 import { isPathAllowedForRoles, getRoleLinks } from '@/lib/nav-links'
+import { EmailRecommendationBanner } from '@/components/dashboard/EmailRecommendationBanner'
 import Swal from 'sweetalert2'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -216,6 +217,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
 
         <div className="flex-1 p-2.5 sm:p-4 md:p-5 lg:p-6 max-w-[1600px] mx-auto w-full pb-20 sm:pb-24 lg:pb-10 transition-all duration-200">
+          <EmailRecommendationBanner />
           {children}
         </div>
 

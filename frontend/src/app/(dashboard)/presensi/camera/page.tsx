@@ -865,22 +865,22 @@ export default function FaceAttendanceCameraPage() {
       </div>
 
       {/* Main Navigation Tabs */}
-      <div className="flex overflow-x-auto no-scrollbar gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl">
+      <div className="flex overflow-x-auto no-scrollbar gap-1.5 p-1.5 bg-slate-100/90 dark:bg-slate-800/90 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
         <button
           type="button"
           onClick={() => setActiveTab('monitor')}
-          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'monitor' ? 'bg-white shadow text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 hover:text-slate-900'
+          className={`flex items-center justify-center shrink-0 gap-2 min-h-[42px] px-3.5 text-xs sm:text-sm font-semibold rounded-xl transition-all touch-manipulation ${
+            activeTab === 'monitor' ? 'bg-white shadow-xs text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <Video className="w-4 h-4 shrink-0" />
-          <span>Live Monitor & Scanner</span>
+          <span>Live Monitor</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('config')}
-          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'config' ? 'bg-white shadow text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 hover:text-slate-900'
+          className={`flex items-center justify-center shrink-0 gap-2 min-h-[42px] px-3.5 text-xs sm:text-sm font-semibold rounded-xl transition-all touch-manipulation ${
+            activeTab === 'config' ? 'bg-white shadow-xs text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <Sliders className="w-4 h-4 shrink-0" />
@@ -889,24 +889,24 @@ export default function FaceAttendanceCameraPage() {
         <button
           type="button"
           onClick={() => setActiveTab('dataset')}
-          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'dataset' ? 'bg-white shadow text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 hover:text-slate-900'
+          className={`flex items-center justify-center shrink-0 gap-2 min-h-[42px] px-3.5 text-xs sm:text-sm font-semibold rounded-xl transition-all touch-manipulation ${
+            activeTab === 'dataset' ? 'bg-white shadow-xs text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <Users className="w-4 h-4 shrink-0" />
-          <span>Dataset Profil Wajah</span>
+          <span>Dataset Wajah</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('logs')}
-          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'logs' ? 'bg-white shadow text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 hover:text-slate-900'
+          className={`flex items-center justify-center shrink-0 gap-2 min-h-[42px] px-3.5 text-xs sm:text-sm font-semibold rounded-xl transition-all touch-manipulation ${
+            activeTab === 'logs' ? 'bg-white shadow-xs text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <Activity className="w-4 h-4 shrink-0" />
           <span>Riwayat Log</span>
           {logsData && logsData.length > 0 && (
-            <Badge variant="secondary" className="ml-1 px-1.5 py-0.2 text-[10px] bg-indigo-100 text-indigo-700">
+            <Badge variant="secondary" className="ml-1 px-1.5 py-0.2 text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
               {logsData.length}
             </Badge>
           )}
@@ -914,72 +914,72 @@ export default function FaceAttendanceCameraPage() {
         <button
           type="button"
           onClick={() => setActiveTab('guide')}
-          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'guide' ? 'bg-white shadow text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 hover:text-slate-900'
+          className={`flex items-center justify-center shrink-0 gap-2 min-h-[42px] px-3.5 text-xs sm:text-sm font-semibold rounded-xl transition-all touch-manipulation ${
+            activeTab === 'guide' ? 'bg-white shadow-xs text-indigo-600 font-bold dark:bg-slate-900 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <HelpCircle className="w-4 h-4 shrink-0" />
-          <span>Panduan Stream</span>
+          <span>Panduan</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('backup-qr')}
-          className={`flex items-center justify-center shrink-0 gap-2 py-2 sm:py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all ${
-            activeTab === 'backup-qr' ? 'bg-amber-500 shadow text-white font-bold' : 'text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+          className={`flex items-center justify-center shrink-0 gap-2 min-h-[42px] px-3.5 text-xs sm:text-sm font-bold rounded-xl transition-all touch-manipulation ${
+            activeTab === 'backup-qr' ? 'bg-amber-500 shadow-xs text-white font-black' : 'text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40'
           }`}
         >
           <QrCode className="w-4 h-4 shrink-0" />
-          <span>Backup Scan QR (Pilihan Ke-2)</span>
+          <span>Backup QR</span>
         </button>
       </div>
 
       {/* TAB 1: LIVE MONITOR & SCANNER LOG */}
       {activeTab === 'monitor' && (
-        <div className="space-y-4 md:space-y-6">
+        <div className="space-y-4 sm:space-y-5">
           {/* Quick Stats Bar */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-700 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-gradient-to-br from-emerald-500 to-teal-700 rounded-2xl p-3 sm:p-4 text-white shadow-xs flex items-center justify-between">
               <div>
-                <p className="text-[11px] sm:text-xs font-semibold text-emerald-100 uppercase tracking-wider">Masuk</p>
-                <p className="text-xl sm:text-2xl font-extrabold mt-0.5">{logStats.masuk}</p>
+                <p className="text-[10px] sm:text-[11px] font-bold text-emerald-100 uppercase tracking-wider">Masuk</p>
+                <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.masuk}</p>
               </div>
               <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
-                <CheckCircle2 className="w-5 h-5 text-white" />
+                <CheckCircle2 className="w-4 h-4 text-white" />
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-3 sm:p-4 text-white shadow-xs flex items-center justify-between">
               <div>
-                <p className="text-[11px] sm:text-xs font-semibold text-blue-100 uppercase tracking-wider">Pulang</p>
-                <p className="text-xl sm:text-2xl font-extrabold mt-0.5">{logStats.pulang}</p>
+                <p className="text-[10px] sm:text-[11px] font-bold text-blue-100 uppercase tracking-wider">Pulang</p>
+                <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.pulang}</p>
               </div>
               <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
-                <Clock className="w-5 h-5 text-white" />
+                <Clock className="w-4 h-4 text-white" />
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-slate-700">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-2xl p-3 sm:p-4 text-white shadow-xs flex items-center justify-between border border-slate-700/60">
               <div>
-                <p className="text-[11px] sm:text-xs font-semibold text-slate-300 uppercase tracking-wider">Total</p>
-                <p className="text-xl sm:text-2xl font-extrabold mt-0.5">{logStats.total}</p>
+                <p className="text-[10px] sm:text-[11px] font-bold text-slate-300 uppercase tracking-wider">Total Scan</p>
+                <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.total}</p>
               </div>
               <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-xs shrink-0">
-                <Activity className="w-5 h-5 text-indigo-400" />
+                <Activity className="w-4 h-4 text-indigo-400" />
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-700 to-indigo-900 rounded-xl p-3.5 sm:p-4 text-white shadow-md flex items-center justify-between border border-purple-600/30">
+            <div className="bg-gradient-to-br from-purple-700 to-indigo-900 rounded-2xl p-3 sm:p-4 text-white shadow-xs flex items-center justify-between border border-purple-600/30">
               <div className="min-w-0">
-                <p className="text-[11px] sm:text-xs font-semibold text-purple-200 uppercase tracking-wider truncate">Status AI</p>
-                <div className="flex items-center gap-1.5 mt-1">
+                <p className="text-[10px] sm:text-[11px] font-bold text-purple-200 uppercase tracking-wider truncate">Status AI</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${serviceStatus?.isOnline && serviceStatus?.is_running ? 'bg-emerald-400 animate-pulse' : serviceStatus?.isOnline ? 'bg-amber-400' : 'bg-slate-400'}`} />
-                  <span className="font-bold text-[11px] sm:text-sm truncate">
+                  <span className="font-bold text-xs sm:text-sm truncate">
                     {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'STREAMING' : 'STANDBY') : 'OFFLINE'}
                   </span>
                 </div>
               </div>
               <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-xs shrink-0">
-                <Cpu className="w-5 h-5 text-purple-200" />
+                <Cpu className="w-4 h-4 text-purple-200" />
               </div>
             </div>
           </div>

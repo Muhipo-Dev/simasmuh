@@ -6,7 +6,7 @@ import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Input, PasswordInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
@@ -1714,8 +1714,7 @@ export function KepegawaianManagement() {
               </div>
               <div>
                 <Label className="text-xs font-bold">Password Awal</Label>
-                <Input
-                  type="password"
+                <PasswordInput
                   placeholder="Default: username / 123456"
                   value={formPegawai.password}
                   onChange={(e) => setFormPegawai({ ...formPegawai, password: e.target.value })}
@@ -2098,8 +2097,7 @@ export function KepegawaianManagement() {
               </div>
               <div>
                 <Label className="text-xs font-bold">Ganti Password (Opsional)</Label>
-                <Input
-                  type="password"
+                <PasswordInput
                   placeholder="Kosongkan jika tidak diubah"
                   value={editFormPegawai.password}
                   onChange={(e) => setEditFormPegawai({ ...editFormPegawai, password: e.target.value })}

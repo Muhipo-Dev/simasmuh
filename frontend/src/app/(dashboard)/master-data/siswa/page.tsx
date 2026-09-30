@@ -19,7 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
+import { Input, PasswordInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ImportProgressDialog, ImportProgressState } from '@/components/ImportProgressDialog'
@@ -2061,9 +2061,8 @@ export default function StudentsPage() {
 
                       <div className="space-y-1.5">
                         <Label htmlFor="password" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Password</Label>
-                        <Input 
+                        <PasswordInput 
                           id="password" 
-                          type="password"
                           placeholder="Otomatis dari NIS jika kosong"
                           value={formData.password}
                           onChange={(e) => setFormData({...formData, password: e.target.value})}
@@ -2889,8 +2888,7 @@ export default function StudentsPage() {
                   </Label>
                 </div>
                 {bulkEditData.updatePassword && (
-                  <Input 
-                    type="password"
+                  <PasswordInput 
                     placeholder="Masukkan password baru" 
                     value={bulkEditData.password}
                     onChange={(e) => setBulkEditData(prev => ({ ...prev, password: e.target.value }))}

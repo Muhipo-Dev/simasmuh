@@ -7,7 +7,7 @@ import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
+import { Input, PasswordInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
@@ -1345,8 +1345,7 @@ export default function JadwalPelajaranPage() {
                 <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Password Otorisasi Admin
                 </Label>
-                <Input
-                  type="password"
+                <PasswordInput
                   placeholder="Masukkan password akun Anda..."
                   value={authPassword}
                   onChange={(e) => {

@@ -5,6 +5,7 @@ import { SessionProvider } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes'
 import { Toaster } from 'sonner'
+import { GlobalPasswordEyeEnhancer } from '@/components/GlobalPasswordEyeEnhancer'
 
 function EnforceMobileLightMode() {
   const { setTheme, resolvedTheme } = useTheme()
@@ -80,6 +81,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <NextThemesProvider attribute="class" defaultTheme="light" storageKey="simasmuh_theme_cache" enableSystem={false}>
           <EnforceMobileLightMode />
+          <GlobalPasswordEyeEnhancer />
           {children}
           <Toaster 
             position="top-right"

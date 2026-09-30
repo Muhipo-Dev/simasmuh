@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Input, PasswordInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -672,7 +672,7 @@ export default function ProfilePage() {
     SDM: 'Humas & SDM', WAKA_HUMAS_SDM: 'Humas & SDM', HUMAS_SDM: 'Humas & SDM',
     KEBERSIHAN: 'Kebersihan', KEPALA_SEKOLAH: 'Kepala Sekolah', ADMIN_WEB: 'Admin Web',
     KETERTIBAN: 'Ketertiban', PUSTAKAWAN: 'Pustakawan', GURU_TAHFIDZ: 'Guru Tahfidz', PERSURATAN: 'Persuratan',
-    WALI_KELAS: 'Wali Kelas', GURU_PIKET: 'Guru Piket'
+    WALI_KELAS: 'Wali Kelas', GURU_PIKET: 'Guru Piket', WALI_MURID: 'Wali Murid (Orang Tua)', SUPERADMIN: 'Superadmin'
   }
 
   if (isLoading) {
@@ -851,15 +851,64 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    <Mail className="w-3.5 h-3.5" /> Alamat Email
-                  </Label>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                      <Mail className="w-3.5 h-3.5 text-blue-600" /> Alamat Email Notifikasi
+                    </Label>
+                    {!profile?.email && !editing && (
+                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-800 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3 text-amber-500" />
+                        Rekomendasi Notifikasi Sistem
+                      </span>
+                    )}
+                  </div>
                   {editing ? (
-                    <Input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="Alamat email" className="border-slate-200 dark:border-slate-700 text-xs h-9.5" />
+                    <div className="space-y-1.5">
+                      <Input 
+                        type="email" 
+                        value={form.email} 
+                        onChange={e => setForm(p => ({ ...p, email: e.target.value }))} 
+                        placeholder="contoh: nama.anda@gmail.com" 
+                        className="border-slate-200 dark:border-slate-700 text-xs sm:text-sm h-9.5" 
+                      />
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                        Sangat direkomendasikan: Alamat email aktif digunakan untuk menerima notifikasi resmi di luar aplikasi (presensi harian, disposisi surat, tagihan & verifikasi keuangan, pengumuman, serta pemulihan akun) via SMTP Email resmi SIMASMUH.
+                      </p>
+                    </div>
                   ) : (
-                    <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3.5 py-2 border border-slate-100 dark:border-slate-800">
-                      {profile?.email || '-'}
+                    <div>
+                      {profile?.email ? (
+                        <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3.5 py-2 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                          <span className="font-medium">{profile.email}</span>
+                          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Terdaftar & Aktif
+                          </span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setEditing(true)}
+                          className="w-full text-left group p-3 rounded-xl border border-dashed border-amber-300 dark:border-amber-700/80 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 dark:hover:bg-amber-900/40 transition-all flex items-center justify-between cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                              <AlertCircle className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                                Alamat Email Belum Diisi
+                              </p>
+                              <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-snug">
+                                Klik untuk melengkapi email agar dapat menerima notifikasi resmi di luar aplikasi via SMTP resmi SIMASMUH
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-bold text-amber-700 dark:text-amber-300 group-hover:translate-x-0.5 transition-transform flex items-center gap-1 shrink-0 ml-2">
+                            Lengkapi <ArrowRight className="w-3.5 h-3.5" />
+                          </span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1493,9 +1542,8 @@ export default function ProfilePage() {
               <Label htmlFor="oldPassword" className="text-slate-700 font-medium flex items-center gap-2">
                 <Key className="w-4 h-4 text-slate-400" /> Kata Sandi Saat Ini (Lama)
               </Label>
-              <Input
+              <PasswordInput
                 id="oldPassword"
-                type="password"
                 placeholder="Masukkan kata sandi lama untuk otorisasi..."
                 value={pwdForm.oldPassword}
                 onChange={e => setPwdForm(p => ({ ...p, oldPassword: e.target.value }))}
@@ -1508,9 +1556,8 @@ export default function ProfilePage() {
                 <Label htmlFor="newPassword" className="text-slate-700 font-medium flex items-center gap-2">
                   <Lock className="w-4 h-4 text-slate-400" /> Kata Sandi Baru
                 </Label>
-                <Input
+                <PasswordInput
                   id="newPassword"
-                  type="password"
                   placeholder="Minimal 5 karakter..."
                   value={pwdForm.newPassword}
                   onChange={e => setPwdForm(p => ({ ...p, newPassword: e.target.value }))}
@@ -1522,9 +1569,8 @@ export default function ProfilePage() {
                 <Label htmlFor="confirmPassword" className="text-slate-700 font-medium flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-slate-400" /> Konfirmasi Kata Sandi Baru
                 </Label>
-                <Input
+                <PasswordInput
                   id="confirmPassword"
-                  type="password"
                   placeholder="Ketik ulang kata sandi baru..."
                   value={pwdForm.confirmPassword}
                   onChange={e => setPwdForm(p => ({ ...p, confirmPassword: e.target.value }))}

@@ -6,7 +6,8 @@ import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthent
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, Copy, RefreshCw, QrCode } from 'lucide-react'
+import { Loader2, Copy, RefreshCw, QrCode, ShieldAlert } from 'lucide-react'
+import Swal from 'sweetalert2'
 
 export default function QrManagerPage() {
   const queryClient = useQueryClient()
@@ -28,6 +29,20 @@ export default function QrManagerPage() {
     onSuccess: (newData) => {
       queryClient.setQueryData(['qr-public-token'], newData)
       setCopied(false)
+      Swal.fire({
+        title: 'Tautan Diacak Ulang!',
+        text: 'Tautan layar publik yang lama telah dinonaktifkan.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        title: 'Gagal',
+        text: err?.message || 'Gagal mengacak ulang tautan',
+        icon: 'error',
+      })
     }
   })
 
@@ -45,76 +60,105 @@ export default function QrManagerPage() {
     }
   }
 
+  const handleConfirmRegenerate = () => {
+    Swal.fire({
+      title: 'Acak Ulang Tautan QR?',
+      text: 'Layar publik yang sedang menampilkan QR Code saat ini akan terputus dan wajib diperbarui dengan URL baru.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Acak Ulang',
+      cancelButtonText: 'Batal',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        regenerate()
+      }
+    })
+  }
+
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Manajemen Layar QR</h1>
-        <p className="text-slate-500 mt-1">Atur tautan akses publik untuk menampilkan QR Code Presensi Harian.</p>
+    <div className="space-y-4 sm:space-y-5 max-w-4xl mx-auto">
+      {/* Header Compact */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 sm:p-5 backdrop-blur-xl shadow-xs">
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-0.5">
+            Presensi & Display
+          </span>
+          <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <QrCode className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            Manajemen Layar QR
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Atur tautan akses publik untuk menampilkan QR Code Presensi Harian.</p>
+        </div>
       </div>
 
-      <Card className="shadow-sm border-slate-200">
-        <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-              <QrCode className="w-5 h-5" />
+      <Card className="shadow-xs border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+        <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <QrCode className="w-4 h-4" />
             </div>
             <div>
-              <CardTitle className="text-lg">Tautan Layar Publik</CardTitle>
-              <CardDescription>
-                Gunakan tautan di bawah ini pada browser tablet atau layar lobi. Siapapun yang memiliki tautan ini dapat melihat QR Code secara langsung tanpa perlu login.
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">Tautan Layar Publik</CardTitle>
+              <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+                Gunakan tautan ini pada browser tablet atau monitor lobi sekolah tanpa perlu autentikasi login.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="py-6 space-y-4">
+        <CardContent className="p-4 sm:p-5 space-y-3.5">
           {isLoading ? (
-            <div className="flex items-center text-slate-500 gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Memuat data tautan...</span>
+            <div className="flex items-center justify-center text-slate-500 text-xs gap-2 py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+              <span>Memuat tautan layar publik...</span>
             </div>
           ) : error ? (
-            <div className="text-red-500 bg-red-50 px-4 py-3 rounded-lg border border-red-200">
-              Gagal memuat pengaturan.
+            <div className="text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-4 py-3 rounded-xl border border-rose-200 dark:border-rose-800 text-xs font-semibold">
+              Gagal memuat token layar publik.
             </div>
           ) : (
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">URL Akses Publik</label>
-              <div className="flex gap-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">URL Akses Publik Monitor</label>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input 
                   readOnly 
                   value={publicLink} 
-                  className="bg-slate-50 font-mono text-sm text-slate-600"
+                  className="bg-slate-50 dark:bg-slate-800 font-mono text-xs text-slate-700 dark:text-slate-200 h-10 rounded-xl border-slate-200 dark:border-slate-700"
                 />
-                <Button onClick={handleCopy} variant="secondary" className="shrink-0 gap-2 w-[120px]">
+                <Button 
+                  onClick={handleCopy} 
+                  variant="secondary" 
+                  className="shrink-0 gap-1.5 h-10 px-4 rounded-xl font-bold text-xs touch-manipulation"
+                >
                   {copied ? (
-                    <span className="text-emerald-600 font-semibold">Tersalin!</span>
+                    <span className="text-emerald-600 font-bold">Tersalin!</span>
                   ) : (
                     <>
                       <Copy className="w-4 h-4" />
-                      <span>Salin</span>
+                      <span>Salin URL</span>
                     </>
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-slate-500 mt-2">
-                <strong>Catatan:</strong> Jika Anda membagikan layar ini di tempat umum, pastikan tidak ada orang tidak bertanggung jawab yang menyalin tautan ini. Jika tautan bocor, silakan gunakan tombol <strong>Acak Ulang</strong> di bawah.
-              </p>
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed flex items-start gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                <span>
+                  <strong>Keamanan:</strong> Pastikan tautan hanya dibuka di browser kiosk/tablet resmi sekolah. Jika tautan diketahui pihak luar, klik <strong>Acak Ulang Tautan</strong> untuk langsung memutus akses lama.
+                </span>
+              </div>
             </div>
           )}
         </CardContent>
-        <CardFooter className="bg-slate-50/50 border-t border-slate-100 py-4 flex justify-between items-center">
-          <p className="text-sm text-slate-500 max-w-[60%]">
-            Mengacak ulang akan membuat tautan lama langsung menjadi tidak valid. Layar yang menggunakan tautan lama akan ditutup otomatis.
+        <CardFooter className="bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-md">
+            Mengacak ulang token akan memutuskan tampilan layar QR yang sedang aktif di monitor lama secara seketika.
           </p>
           <Button 
             variant="destructive" 
-            onClick={() => {
-              if(confirm('Yakin ingin mengacak ulang tautan? Layar publik yang sedang aktif saat ini akan terputus.')) {
-                regenerate()
-              }
-            }}
+            onClick={handleConfirmRegenerate}
             disabled={isRegenerating || isLoading}
-            className="gap-2 shrink-0"
+            className="h-10 px-3.5 gap-1.5 shrink-0 rounded-xl font-bold text-xs touch-manipulation"
           >
             {isRegenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             Acak Ulang Tautan

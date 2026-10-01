@@ -9,7 +9,7 @@ import {
   FileText, Image as ImageIcon, FileSpreadsheet, File, ShieldCheck, 
   Camera, CheckCircle2, AlertCircle, HardDrive, UserCheck, Layers, 
   Sparkles, Link2, ExternalLink, X, Plus, Clock, FileCheck, Users,
-  BookOpen, Inbox, Send, Archive, Receipt, Wallet, Banknote,
+  BookOpen, Inbox, Send, Archive, Receipt, Wallet, Banknote, Database, Lock,
   LayoutGrid, Table2, Info, Monitor, Star, Pin, CornerUpLeft,
   ChevronDown, Copy, Check, Filter, SlidersHorizontal, Sparkle
 } from 'lucide-react'

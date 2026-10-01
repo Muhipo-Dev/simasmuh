@@ -44,10 +44,7 @@ export class FaceAttendanceController {
     'SUPERADMIN',
     UserRole.ADMIN_IT,
     UserRole.ADMIN_TU,
-    UserRole.BAU,
-    UserRole.TATA_USAHA,
     SubRole.ADMIN_TU,
-    SubRole.BAU,
   )
   syncDataset() {
     return this.faceAttendanceService.syncProfiles();
@@ -59,10 +56,7 @@ export class FaceAttendanceController {
     'SUPERADMIN',
     UserRole.ADMIN_IT,
     UserRole.ADMIN_TU,
-    UserRole.BAU,
-    UserRole.TATA_USAHA,
     SubRole.ADMIN_TU,
-    SubRole.BAU,
   )
   syncUser(@Body() body: any) {
     return this.faceAttendanceService.syncSingleUser(body);
@@ -98,10 +92,7 @@ export class FaceAttendanceController {
     'SUPERADMIN',
     UserRole.ADMIN_IT,
     UserRole.ADMIN_TU,
-    UserRole.BAU,
-    UserRole.TATA_USAHA,
     SubRole.ADMIN_TU,
-    SubRole.BAU,
   )
   clearLogs(@Body('resetDb') resetDb?: boolean) {
     return this.faceAttendanceService.clearLogs(resetDb !== false);
@@ -113,10 +104,7 @@ export class FaceAttendanceController {
     'SUPERADMIN',
     UserRole.ADMIN_IT,
     UserRole.ADMIN_TU,
-    UserRole.BAU,
-    UserRole.TATA_USAHA,
     SubRole.ADMIN_TU,
-    SubRole.BAU,
   )
   deleteSingleLogPost(
     @Param('id') id: string,
@@ -131,10 +119,7 @@ export class FaceAttendanceController {
     'SUPERADMIN',
     UserRole.ADMIN_IT,
     UserRole.ADMIN_TU,
-    UserRole.BAU,
-    UserRole.TATA_USAHA,
     SubRole.ADMIN_TU,
-    SubRole.BAU,
   )
   deleteSingleLog(@Param('id') id: string, @Query('resetDb') resetDb?: string) {
     return this.faceAttendanceService.deleteSingleLog(id, resetDb !== 'false');

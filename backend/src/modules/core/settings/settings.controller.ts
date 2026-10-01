@@ -124,7 +124,6 @@ export class SettingsController {
     'KEUANGAN_MASUK',
     'KEUANGAN_KELUAR',
     UserRole.ADMIN_TU,
-    UserRole.BAU,
   )
   getExecutiveStatistics() {
     return this.settingsService.getExecutiveStatistics();
@@ -142,10 +141,7 @@ export class SettingsController {
     'KEUANGAN_KELUAR',
     'KEPALA_SEKOLAH',
     UserRole.ADMIN_TU,
-    UserRole.BAU,
-    UserRole.TATA_USAHA,
     SubRole.ADMIN_TU,
-    SubRole.BAU,
     SubRole.KURIKULUM,
     'KURIKULUM',
     'KESISWAAN',
@@ -167,10 +163,7 @@ export class SettingsController {
     'KEUANGAN_KELUAR',
     'KEPALA_SEKOLAH',
     UserRole.ADMIN_TU,
-    UserRole.BAU,
-    UserRole.TATA_USAHA,
     SubRole.ADMIN_TU,
-    SubRole.BAU,
     SubRole.KURIKULUM,
     'KURIKULUM',
     'KESISWAAN',
@@ -213,10 +206,7 @@ export class SettingsController {
     'SUPERADMIN',
     UserRole.ADMIN_IT,
     UserRole.ADMIN_TU,
-    UserRole.BAU,
-    UserRole.TATA_USAHA,
     SubRole.ADMIN_TU,
-    SubRole.BAU,
   )
   regenerateQrPublicToken() {
     return this.settingsService.regenerateQrPublicToken();

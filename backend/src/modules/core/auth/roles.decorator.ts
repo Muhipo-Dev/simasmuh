@@ -38,8 +38,6 @@ export enum UserRole {
   SUPERADMIN = 'SUPERADMIN',
   KEPALA_SEKOLAH = 'KEPALA_SEKOLAH',
   ADMIN_TU = 'ADMIN_TU',
-  BAU = 'ADMIN_TU', // Alias standar ADMIN_TU
-  TATA_USAHA = 'ADMIN_TU', // Alias standar ADMIN_TU
   GURU = 'GURU',
   SISWA = 'SISWA',
   KARYAWAN = 'KARYAWAN',
@@ -55,8 +53,6 @@ export enum UserRole {
 export enum SubRole {
   KEPALA_SEKOLAH = 'KEPALA_SEKOLAH',
   ADMIN_TU = 'ADMIN_TU',
-  TATA_USAHA = 'ADMIN_TU', // Alias standar ADMIN_TU
-  BAU = 'ADMIN_TU', // Alias standar ADMIN_TU
   ADMIN_WEB = 'ADMIN_WEB',
   PEMBINA_EKSTRA = 'PEMBINA_EKSTRA',
   KETERTIBAN = 'KETERTIBAN',

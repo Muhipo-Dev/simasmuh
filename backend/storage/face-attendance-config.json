@@ -5,10 +5,10 @@
   "cameraName": "Camera AI",
   "location": "unknown",
   "threshold": 0.44,
-  "cooldownMinutes": 1,
+  "cooldownMinutes": 32,
   "isActive": true,
   "welcomeVoice": true,
   "apiKeySecret": "simasmuh_face_token_secret_2026",
-  "updatedAt": "2026-10-01T10:33:20.768Z",
+  "updatedAt": "2026-10-01T12:38:23.896Z",
   "streamSourceType": "WEBCAM"
 }

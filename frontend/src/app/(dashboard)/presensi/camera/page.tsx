@@ -538,20 +538,109 @@ export default function FaceAttendanceCameraPage() {
     } catch {}
   }
 
-  // Voice Greeting Text-to-Speech (Indonesian) untuk outdoor gate presensi
-  const speakVoiceGreeting = (name: string, scanType?: string) => {
-    if (!soundEnabled || typeof window === 'undefined' || !window.speechSynthesis) return
+  // Voice Greeting Text-to-Speech (Indonesian) - 100% Suara Wanita Indonesia Natural & Jernih
+  const speakVoiceGreeting = (
+    name?: string,
+    scanType?: string,
+    statusType: 'SUCCESS' | 'LOW_CONFIDENCE' | 'UNREGISTERED' | 'NO_FACE' | 'TWIN_AMBIGUOUS' | 'ERROR' = 'SUCCESS',
+    confidence?: number,
+    role?: string,
+  ) => {
+    if (!soundEnabled || typeof window === 'undefined') return
     try {
-      window.speechSynthesis.cancel()
-      const isPulang = scanType === 'PULANG'
-      const greeting = isPulang 
-        ? `Terima kasih, ${name}. Hati-hati di jalan.` 
-        : `Selamat datang, ${name}. Presensi berhasil.`
-      const utter = new SpeechSynthesisUtterance(greeting)
-      utter.lang = 'id-ID'
-      utter.rate = 1.05
-      utter.pitch = 1.0
-      window.speechSynthesis.speak(utter)
+      let greeting = ''
+
+      if (statusType === 'LOW_CONFIDENCE') {
+        greeting = name 
+          ? `Mohon maaf ${name}, akurasi belum cukup. Silakan posisikan wajah lebih dekat dan jelas ke kamera.` 
+          : `Akurasi biometrik belum cukup sembilan puluh persen. Mohon posisikan wajah lebih dekat ke kamera.`
+      } else if (statusType === 'UNREGISTERED') {
+        greeting = 'Wajah belum terdaftar di sistem SIMASMUH. Silakan hubungi operator.'
+      } else if (statusType === 'NO_FACE') {
+        greeting = 'Wajah tidak terdeteksi. Silakan menghadap lurus ke kamera.'
+      } else if (statusType === 'TWIN_AMBIGUOUS') {
+        greeting = name 
+          ? `Wajah mirip terdeteksi. Silakan ketuk nama ${name} pada layar untuk konfirmasi.`
+          : 'Wajah mirip terdeteksi. Silakan ketuk nama Anda di layar untuk konfirmasi.'
+      } else if (statusType === 'ERROR') {
+        greeting = 'Kamera atau server presensi sedang mengalami kendala. Silakan coba sesaat lagi.'
+      } else {
+        // Status SUCCESS: Pembedaan logika Siswa vs GTK (Guru, Karyawan, Pegawai)
+        const isStudent = role === 'SISWA'
+        if (isStudent) {
+          if (scanType === 'SUDAH_LENGKAP') {
+            greeting = `Presensi kedatangan ${name || ''} sudah tercatat. Selamat beraktifitas di SMA MUHIPO.`
+          } else {
+            greeting = `Assalamualaikum ${name || ''}, selamat datang dan selamat beraktifitas di SMA MUHIPO.`
+          }
+        } else {
+          // GTK (Guru / Karyawan / Pegawai)
+          if (scanType === 'PULANG') {
+            greeting = `Terima kasih untuk hari ini ${name || ''}, selamat beristirahat dan hati-hati di jalan.`
+          } else if (scanType === 'SUDAH_LENGKAP') {
+            greeting = `Presensi harian ${name || ''} sudah lengkap. Terima kasih dan selamat beraktifitas di SMA MUHIPO.`
+          } else {
+            greeting = `Assalamualaikum ${name || ''}, selamat bertugas dan selamat beraktifitas di SMA MUHIPO.`
+          }
+        }
+      }
+
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+      }
+
+      // 1. Prioritas Utama: Unduh & Putar Suara Wanita Indonesia Asli yang Natural & Jernih dari TTS Server
+      const ttsUrl = `/api-backend/face-attendance/tts?text=${encodeURIComponent(greeting)}`
+      const audio = new Audio()
+      audio.crossOrigin = 'anonymous'
+      audio.src = ttsUrl
+      audio.playbackRate = 1.05
+
+      const playPromise = audio.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // 2. Fallback: Browser Web Speech API dengan Filter Ketat Khusus Suara Wanita (Mengecualikan Suara Pria seperti Andika/David)
+          if (!window.speechSynthesis) return
+          const utter = new SpeechSynthesisUtterance(greeting)
+          utter.lang = 'id-ID'
+          utter.rate = 1.05
+
+          const voices = window.speechSynthesis.getVoices()
+          const isMale = (vName: string) => {
+            const lower = vName.toLowerCase()
+            return lower.includes('andika') || lower.includes('david') || lower.includes('ardi') || 
+                   lower.includes('male') || lower.includes('guy') || lower.includes('man') || 
+                   lower.includes('stefan') || lower.includes('george') || lower.includes('richard')
+          }
+          const isExplicitFemale = (vName: string) => {
+            const lower = vName.toLowerCase()
+            return lower.includes('gadis') || lower.includes('siti') || lower.includes('damayanti') || 
+                   lower.includes('female') || lower.includes('woman') || lower.includes('zira') || 
+                   lower.includes('natural') || lower.includes('bahasa indonesia')
+          }
+
+          // Cari suara wanita bahasa Indonesia terlebih dahulu
+          let selectedVoice = voices.find(v => (v.lang.startsWith('id') || v.lang.includes('ID')) && !isMale(v.name) && isExplicitFemale(v.name))
+          
+          if (!selectedVoice) {
+            selectedVoice = voices.find(v => (v.lang.startsWith('id') || v.lang.includes('ID')) && !isMale(v.name))
+          }
+
+          if (!selectedVoice) {
+            selectedVoice = voices.find(v => isExplicitFemale(v.name) && !isMale(v.name))
+          }
+
+          if (selectedVoice) {
+            utter.voice = selectedVoice
+            utter.pitch = 1.20 // Pitch vokal wanita natural
+          } else {
+            // Jika OS hanya memiliki suara default pria/Andika, ubah formant pitch menjadi 1.38 agar bernada wanita
+            utter.pitch = 1.38
+          }
+
+          window.speechSynthesis.speak(utter)
+        })
+      }
     } catch {}
   }
 
@@ -660,6 +749,7 @@ export default function FaceAttendanceCameraPage() {
 
         if (ambiguousFace) {
           playBiometricAudio('warning')
+          speakVoiceGreeting(undefined, undefined, 'TWIN_AMBIGUOUS')
           setCaptureResult({
             type: 'TWIN_AMBIGUOUS',
             message: 'Deteksi Wajah Mirip / Kembar',
@@ -668,8 +758,9 @@ export default function FaceAttendanceCameraPage() {
           })
           toast.warning('Terdeteksi kemiripan biometrik wajah kembar. Silakan pilih profil siswa.')
         } else if (registeredFace && (registeredFace.meets_attendance_threshold === false || Math.round(registeredFace.confidence * 100) < 91)) {
-          // Wajah terdeteksi tapi confidence BELUM mencapai 91% — presensi TIDAK direkam, TANPA suara sukses
+          // Wajah terdeteksi tapi confidence BELUM mencapai 91% — presensi TIDAK direkam
           playBiometricAudio('warning')
+          speakVoiceGreeting(registeredFace.name, undefined, 'LOW_CONFIDENCE', Math.round(registeredFace.confidence * 100))
           setCaptureResult({
             type: 'UNKNOWN',
             name: registeredFace.name,
@@ -684,7 +775,7 @@ export default function FaceAttendanceCameraPage() {
           playBiometricAudio('success')
           const att = registeredFace.attendance
           const attMsg = att?.message || `Presensi berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`
-          speakVoiceGreeting(registeredFace.name, att?.scanType || 'HADIR')
+          speakVoiceGreeting(registeredFace.name, att?.scanType || 'HADIR', 'SUCCESS', undefined, registeredFace.role)
           
           setCaptureResult({
             type: 'SUCCESS',
@@ -704,6 +795,7 @@ export default function FaceAttendanceCameraPage() {
           queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
         } else {
           playBiometricAudio('warning')
+          speakVoiceGreeting(undefined, undefined, 'UNREGISTERED')
           setCaptureResult({
             type: 'UNKNOWN',
             message: 'Wajah Belum Terdaftar',
@@ -713,6 +805,7 @@ export default function FaceAttendanceCameraPage() {
         }
       } else {
         playBiometricAudio('warning')
+        speakVoiceGreeting(undefined, undefined, 'NO_FACE')
         setCaptureResult({
           type: 'NO_FACE',
           message: 'Wajah Tidak Terdeteksi',
@@ -722,6 +815,7 @@ export default function FaceAttendanceCameraPage() {
       }
     } catch (err: any) {
       playBiometricAudio('warning')
+      speakVoiceGreeting(undefined, undefined, 'ERROR')
       setCaptureResult({
         type: 'ERROR',
         message: 'Gagal Memproses Snapshot',
@@ -769,7 +863,7 @@ export default function FaceAttendanceCameraPage() {
 
       const result = await res.json()
       playBiometricAudio('success')
-      speakVoiceGreeting(candidate.name, result?.scanType || 'MASUK')
+      speakVoiceGreeting(candidate.name, result?.scanType || 'MASUK', 'SUCCESS', undefined, candidate.role)
       setCaptureResult({
         type: 'SUCCESS',
         name: candidate.name,
@@ -861,7 +955,7 @@ export default function FaceAttendanceCameraPage() {
               if (regFace && regFace.attendance && regFace.attendance.success) {
                 playBiometricAudio('success')
                 const att = regFace.attendance
-                speakVoiceGreeting(regFace.name, att?.scanType || 'HADIR')
+                speakVoiceGreeting(regFace.name, att?.scanType || 'HADIR', 'SUCCESS', undefined, regFace.role)
                 setCaptureResult({
                   type: 'SUCCESS',
                   name: regFace.name,

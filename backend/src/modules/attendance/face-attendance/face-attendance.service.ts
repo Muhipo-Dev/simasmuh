@@ -458,12 +458,12 @@ export class FaceAttendanceService implements OnModuleInit {
     const today = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const dayOfWeek = today.getDay(); // 0 = Minggu, 1 = Senin, ..., 5 = Jumat, 6 = Sabtu
-    const isWorkDay = dayOfWeek >= 1 && dayOfWeek <= 5; // Senin - Jumat
+    const isWorkDay = dayOfWeek >= 1 && dayOfWeek <= 6; // Senin - Sabtu
 
-    // Cek Hari Kerja (Senin - Jumat)
-    if (!isWorkDay) {
+    // Cek Hari Kerja / Sekolah Aktif (Senin - Sabtu)
+    if (!isWorkDay && process.env.NODE_ENV === 'production') {
       throw new BadRequestException(
-        'Presensi wajah otomatis hanya aktif pada hari kerja efektif (Senin s.d. Jumat).',
+        'Presensi wajah otomatis aktif pada hari operasional sekolah (Senin s.d. Sabtu).',
       );
     }
 
@@ -472,20 +472,6 @@ export class FaceAttendanceService implements OnModuleInit {
     const currentTotalMinutes = currentHours * 60 + currentMinutes;
 
     const isStudent = user.role === 'SISWA';
-
-    // 1. Ketentuan Khusus Siswa:
-    // - Hanya presensi MASUK pada rentang waktu 05:00 s.d. 07:30
-    // - Terkoneksi ke laporan rekap presensi e-Rapor
-    if (isStudent) {
-      const studentMinMinutes = 5 * 60; // 05:00
-      const studentMaxMinutes = 7 * 60 + 30; // 07:30
-
-      if (currentTotalMinutes < studentMinMinutes || currentTotalMinutes > studentMaxMinutes) {
-        throw new BadRequestException(
-          `Waktu presensi masuk siswa hanya dibuka pukul 05:00 s.d. 07:30 (Waktu saat ini: ${pad(currentHours)}:${pad(currentMinutes)}).`,
-        );
-      }
-    }
 
     const startOfDay = new Date(today);
     startOfDay.setHours(0, 0, 0, 0);
@@ -505,7 +491,7 @@ export class FaceAttendanceService implements OnModuleInit {
     let message = '';
 
     if (!existing) {
-      // First scan = Masuk (Siswa & Guru/Pegawai)
+      // 1. Scan Pertama Hari Ini = MASUK / KEDATANGAN (Siswa & GTK)
       await this.prisma.dailyAttendance.create({
         data: {
           date: startOfDay,
@@ -515,18 +501,19 @@ export class FaceAttendanceService implements OnModuleInit {
           userId: user.id,
         },
       });
+
       scanType = 'MASUK';
       message = isStudent
-        ? `Presensi Masuk Siswa berhasil dicatat pukul ${timeString} (Sinkron e-Rapor)`
-        : `Presensi Masuk berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
+        ? `Presensi Kedatangan Siswa berhasil dicatat pukul ${timeString} (Sinkron e-Rapor & Jurnal Mapel)`
+        : `Presensi Datang GTK berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
 
-      // Kirim Notifikasi Email Masuk
+      // Kirim Notifikasi Email Masuk ke Pengguna
       if (user.email && user.email.includes('@')) {
         this.emailNotificationService
           .sendAttendanceNotification({
             toEmail: user.email,
             studentOrUserName: user.name,
-            status: 'HADIR',
+            status: 'HADIR (KEDATANGAN)',
             time: timeString,
             dateFormatted: today.toLocaleDateString('id-ID', {
               weekday: 'long',
@@ -539,35 +526,59 @@ export class FaceAttendanceService implements OnModuleInit {
           })
           .catch(() => {});
       }
-    } else if (isStudent) {
-      // Siswa hanya berlaku presensi masuk (tidak berlaku absen pulang)
-      scanType = 'SUDAH_LENGKAP';
-      message = `Presensi masuk siswa sudah tercatat hari ini pada pukul ${existing.checkInTime || existing.time}.`;
-    } else if (!existing.checkOutTime) {
-      // 2. Ketentuan Presensi Pulang (Khusus Guru / Karyawan / Pegawai):
-      // - Harus sebelum jam 18:00 (18:00 = 1080 menit)
-      // - Terhubung langsung ke perhitungan tunjangan transport & uang makan di modul Keuangan
-      const staffMaxCheckOutMinutes = 18 * 60; // 18:00
 
-      if (currentTotalMinutes > staffMaxCheckOutMinutes) {
-        throw new BadRequestException(
-          `Batas waktu presensi pulang pegawai maksimal pukul 18:00 (Waktu saat ini: ${timeString}).`,
-        );
+      // Khusus Siswa: Kirim juga Notifikasi Otomatis ke Email Wali Murid / Orang Tua
+      if (isStudent && user.student?.id) {
+        this.prisma.parentStudent
+          .findMany({
+            where: { studentId: user.student.id },
+            include: { parent: { include: { user: true } } },
+          })
+          .then((parentRels) => {
+            for (const rel of parentRels) {
+              if (rel.parent?.user?.email && rel.parent.user.email.includes('@')) {
+                this.emailNotificationService
+                  .sendAttendanceNotification({
+                    toEmail: rel.parent.user.email,
+                    studentOrUserName: user.name,
+                    status: 'HADIR (KEDATANGAN SEKOLAH)',
+                    time: timeString,
+                    dateFormatted: today.toLocaleDateString('id-ID', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    }),
+                    role: 'SISWA',
+                    type: 'MASUK',
+                  })
+                  .catch(() => {});
+              }
+            }
+          })
+          .catch(() => {});
       }
-
+    } else if (isStudent) {
+      // 2. KETENTUAN SISWA: Cukup 1 kali saat kedatangan di gerbang sekolah.
+      // Sisa presensi selama jam pelajaran berlangsung dicatat oleh guru pada Jurnal Mengajar Mapel.
+      scanType = 'SUDAH_LENGKAP';
+      message = `Presensi kedatangan siswa sudah tercatat pukul ${existing.checkInTime || existing.time}. Presensi jam pelajaran dicatat di jurnal guru mapel.`;
+    } else if (!existing.checkOutTime) {
+      // 3. KETENTUAN GTK (Guru, Karyawan, Pegawai): Wajib 2 kali sehari (Datang & Pulang)
       // Pengecekan jeda cooldown waktu presensi (sesuai setting konfigurasi dalam menit)
       if (existing.checkInTime) {
         const [inHour, inMin] = existing.checkInTime.split(':').map(Number);
         const inTotalMins = inHour * 60 + (inMin || 0);
         const outTotalMins = currentTotalMinutes;
 
-        if (outTotalMins - inTotalMins >= config.cooldownMinutes) {
+        // Jika jeda dari waktu masuk belum melewati cooldown (misal baru beberapa menit), ingatkan jeda
+        if (outTotalMins - inTotalMins >= config.cooldownMinutes || outTotalMins < inTotalMins) {
           await this.prisma.dailyAttendance.update({
             where: { id: existing.id },
             data: { checkOutTime: timeString },
           });
           scanType = 'PULANG';
-          message = `Presensi Pulang berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
+          message = `Presensi Pulang GTK berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
 
           // Kirim Notifikasi Email Pulang
           if (user.email && user.email.includes('@')) {
@@ -590,7 +601,7 @@ export class FaceAttendanceService implements OnModuleInit {
           }
         } else {
           scanType = 'SUDAH_LENGKAP';
-          message = `Sudah tercatat masuk pada ${existing.checkInTime}. Cooldown ${config.cooldownMinutes} menit sebelum absen pulang.`;
+          message = `Presensi datang GTK tercatat pada ${existing.checkInTime}. Cooldown ${config.cooldownMinutes} menit sebelum presensi pulang.`;
         }
       } else {
         await this.prisma.dailyAttendance.update({
@@ -598,7 +609,7 @@ export class FaceAttendanceService implements OnModuleInit {
           data: { checkOutTime: timeString },
         });
         scanType = 'PULANG';
-        message = `Presensi Pulang berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
+        message = `Presensi Pulang GTK berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
 
         if (user.email && user.email.includes('@')) {
           this.emailNotificationService
@@ -620,8 +631,9 @@ export class FaceAttendanceService implements OnModuleInit {
         }
       }
     } else {
+      // GTK sudah presensi datang dan pulang
       scanType = 'SUDAH_LENGKAP';
-      message = `Presensi harian pegawai sudah lengkap (Masuk: ${existing.checkInTime}, Pulang: ${existing.checkOutTime})`;
+      message = `Presensi harian GTK sudah lengkap (Datang: ${existing.checkInTime}, Pulang: ${existing.checkOutTime})`;
     }
 
     const dateIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
@@ -1163,6 +1175,65 @@ export class FaceAttendanceService implements OnModuleInit {
       success: false,
       message: 'Gagal mengonfirmasi presensi',
     };
+  }
+
+  /**
+   * High-Fidelity Indonesian Female Voice (TTS Proxy & Cache)
+   * Menyediakan suara wanita Indonesia yang jernih, merdu, dan ramah public speaker.
+   */
+  async streamTtsVoice(text: string, res: any) {
+    if (!text || !text.trim()) {
+      res.status(400).send('Text query parameter is required');
+      return;
+    }
+
+    try {
+      const cleanText = text.trim();
+      const crypto = await import('crypto');
+      const hash = crypto.createHash('md5').update(cleanText).digest('hex');
+      const cacheDir = join(STORAGE_ROOT, 'tts-cache');
+      
+      if (!existsSync(cacheDir)) {
+        mkdirSync(cacheDir, { recursive: true });
+      }
+      
+      const cachedFile = join(cacheDir, `${hash}.mp3`);
+      if (existsSync(cachedFile)) {
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        const fileStream = fs.createReadStream(cachedFile);
+        fileStream.pipe(res);
+        return;
+      }
+
+      // Download suara wanita Indonesia online dari TTS engine
+      const encodedText = encodeURIComponent(cleanText);
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${encodedText}`;
+
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`TTS provider returned status ${response.status}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Simpan ke cache disk
+      fs.writeFileSync(cachedFile, buffer);
+
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.send(buffer);
+    } catch (err: any) {
+      this.logger.warn(`Gagal streaming TTS online: ${err.message}`);
+      res.status(500).send('Gagal memproses audio TTS');
+    }
   }
 }
 

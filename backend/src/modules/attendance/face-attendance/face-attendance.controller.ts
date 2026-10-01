@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -155,6 +156,14 @@ export class FaceAttendanceController {
   @Post('confirm-attendance')
   confirmAttendance(@Body() body: { userId: string; confidence?: number }) {
     return this.faceAttendanceService.confirmAttendance(body);
+  }
+
+  @Get('tts')
+  async streamTtsVoice(
+    @Query('text') text: string,
+    @Res() res: any,
+  ) {
+    return this.faceAttendanceService.streamTtsVoice(text, res);
   }
 }
 

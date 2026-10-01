@@ -1,14 +1,14 @@
 {
   "showPublicStream": true,
   "showPublicLogs": true,
-  "streamUrl": "BROWSER_WEBCAM",
-  "cameraName": "Camera AI Presensi",
-  "location": "Gerbang Depan Sekolah",
-  "threshold": 0.70,
-  "cooldownMinutes": 15,
+  "streamUrl": "0",
+  "cameraName": "Camera AI",
+  "location": "unknown",
+  "threshold": 0.44,
+  "cooldownMinutes": 1,
   "isActive": true,
   "welcomeVoice": true,
   "apiKeySecret": "simasmuh_face_token_secret_2026",
-  "updatedAt": "2026-09-30T13:20:00.000Z",
-  "streamSourceType": "BROWSER_WEBCAM"
+  "updatedAt": "2026-10-01T10:33:20.768Z",
+  "streamSourceType": "WEBCAM"
 }

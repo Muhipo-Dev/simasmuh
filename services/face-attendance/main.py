@@ -149,6 +149,7 @@ def reset_cooldown_endpoint(payload: ResetCooldownRequest = ResetCooldownRequest
 
 class ScanFrameRequest(BaseModel):
     image: str  # base64 data url or raw base64
+    recordAttendance: bool = True
 
 @app.post("/scan_frame")
 def scan_frame(payload: ScanFrameRequest):
@@ -168,6 +169,10 @@ def scan_frame(payload: ScanFrameRequest):
         results = []
 
         req_threshold = worker.config.threshold if (worker.config and worker.config.threshold is not None) else 0.70
+
+        # Ambang batas mutlak pencatatan presensi: 91% (0.91)
+        # Bounding box & pengenalan wajah valid (>= 91%) dapat langsung merekam presensi
+        ATTENDANCE_MIN_CONFIDENCE = 0.91
 
         for (x, y, w, h) in faces:
             if w < 12 or h < 12:
@@ -191,9 +196,15 @@ def scan_frame(payload: ScanFrameRequest):
                 pct = int(sim * 100)
                 att_res = None
 
-                # Jika bukan kasus kembar ambigu dan tingkat kemiripan >= req_threshold, rekam presensi otomatis
-                if not is_twin and sim >= req_threshold:
+                # Rekam presensi HANYA jika:
+                # 1. payload.recordAttendance == True (tombol SENTUH ditekan)
+                # 2. Bukan kasus kembar ambigu
+                # 3. Confidence terkalibrasi >= 91% (ATTENDANCE_MIN_CONFIDENCE)
+                if payload.recordAttendance and not is_twin and sim >= ATTENDANCE_MIN_CONFIDENCE:
                     att_res = worker._process_attendance(user_rec, sim, face_crop=face_crop, force=True)
+
+                # Flag apakah confidence memenuhi syarat pencatatan presensi
+                meets_attendance_threshold = sim >= ATTENDANCE_MIN_CONFIDENCE
 
                 results.append({
                     "box": [int(x), int(y), int(w), int(h)],
@@ -209,6 +220,7 @@ def scan_frame(payload: ScanFrameRequest):
                     "attendance": att_res,
                     "is_twin_ambiguous": is_twin,
                     "twin_candidates": twin_candidates,
+                    "meets_attendance_threshold": meets_attendance_threshold,
                 })
             else:
                 results.append({
@@ -224,6 +236,7 @@ def scan_frame(payload: ScanFrameRequest):
                     "attendance": None,
                     "is_twin_ambiguous": False,
                     "twin_candidates": None,
+                    "meets_attendance_threshold": False,
                 })
 
         return {"faces": results, "width": w_frame, "height": h_frame}

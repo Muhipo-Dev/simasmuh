@@ -318,9 +318,9 @@ class AttendanceWorker:
                     reg_cnt = self.registered_count
                     guest_cnt = self.guest_count
 
-                # Render Bounding Box Wajah (Tetap tampil selama periode jeda cooldown 2.0 detik)
+                # Render Bounding Box Wajah (Tetap tampil stabil selama 3.5 detik)
                 for det in raw_detections:
-                    if now - det.get("timestamp", 0) > 2.1:
+                    if now - det.get("timestamp", 0) > 3.6:
                         continue
 
                     x1, y1, x2, y2 = det["box"]
@@ -494,7 +494,8 @@ class AttendanceWorker:
                             "is_twin": is_twin,
                         })
 
-                        if not is_twin and ai_frame_counter % 2 == 0:
+                        # Catat presensi otomatis HANYA jika fitur auto_attendance diaktifkan pada konfigurasi
+                        if not is_twin and getattr(self.config, 'auto_attendance', False) and ai_frame_counter % 2 == 0:
                             self._process_attendance(user_record, similarity, face_crop=face_crop)
                     else:
                         guest_count += 1
@@ -514,11 +515,11 @@ class AttendanceWorker:
                     self.registered_count = reg_count
                     self.guest_count = guest_count
 
-                # Adaptive Sleep Mode (Hemat Daya & Instan Bangun):
+                # Adaptive Sleep Mode (Stabil, Tenang & Hemat Daya):
                 if faces:
-                    time.sleep(1.8)
+                    time.sleep(2.8)
                 else:
-                    time.sleep(0.18)
+                    time.sleep(0.40)
 
             except Exception as ai_err:
                 print(f"[ERROR] AI Inference exception: {ai_err}")

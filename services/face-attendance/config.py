@@ -16,6 +16,7 @@ class FaceServiceConfig(BaseModel):
     cooldown_minutes: int = 15
     is_active: bool = True
     welcome_voice: bool = True
+    auto_attendance: bool = False
 
 def fetch_backend_config() -> FaceServiceConfig:
     try:
@@ -31,6 +32,7 @@ def fetch_backend_config() -> FaceServiceConfig:
                 cooldown_minutes=int(data.get("cooldownMinutes", 15)),
                 is_active=bool(data.get("isActive", True)),
                 welcome_voice=bool(data.get("welcomeVoice", True)),
+                auto_attendance=bool(data.get("autoAttendance", False)),
             )
     except Exception as e:
         print(f"[WARN] Failed to fetch config from backend: {e}, using defaults.")

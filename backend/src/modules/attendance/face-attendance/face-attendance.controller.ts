@@ -160,8 +160,11 @@ export class FaceAttendanceController {
   }
 
   @Post('scan-frame')
-  scanFrame(@Body('image') image: string) {
-    return this.faceAttendanceService.scanFrame(image);
+  scanFrame(
+    @Body('image') image: string,
+    @Body('recordAttendance') recordAttendance?: boolean,
+  ) {
+    return this.faceAttendanceService.scanFrame(image, recordAttendance !== false);
   }
 
   @Post('confirm-attendance')

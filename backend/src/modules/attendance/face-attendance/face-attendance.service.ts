@@ -147,9 +147,21 @@ export class FaceAttendanceService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      this.logger.log(
-        'Face Attendance AI Service berada dalam mode Standby (On-Demand). Layanan akan aktif saat dihidupkan melalui panel Presensi Camera AI.',
-      );
+      const config = this.getConfig();
+      if (config.isActive) {
+        this.logger.log(
+          'Konfigurasi Face Attendance aktif (isActive: true). Memulai Microservice FaceNet AI di latar belakang...',
+        );
+        this.startAiWorker().catch((err) => {
+          this.logger.warn(
+            `Inisialisasi awal FaceNet AI worker: ${err?.message || err}`,
+          );
+        });
+      } else {
+        this.logger.log(
+          'Face Attendance AI Service berada dalam mode Standby (On-Demand). Layanan akan aktif saat dihidupkan melalui panel Presensi Camera AI.',
+        );
+      }
     } catch (err) {
       this.logger.error(
         'Gagal memeriksa status awal AI Microservice pada onModuleInit',
@@ -849,7 +861,7 @@ export class FaceAttendanceService implements OnModuleInit {
     // 3. If offline, spawn Python process automatically
     if (!isOnline) {
       this.logger.log(
-        'Microservice Python AI offline, mencoba meluncurkan python main.py...',
+        'Microservice Python FaceNet AI offline, meluncurkan python main.py...',
       );
 
       const possibleDirs = [
@@ -857,6 +869,7 @@ export class FaceAttendanceService implements OnModuleInit {
         path.resolve(process.cwd(), 'services/face-attendance'),
         path.resolve(__dirname, '../../../../../services/face-attendance'),
         'd:/simasmuh/services/face-attendance',
+        'c:/simasmuh/services/face-attendance',
       ];
 
       const targetDir = possibleDirs.find((dir) =>
@@ -865,36 +878,35 @@ export class FaceAttendanceService implements OnModuleInit {
 
       if (targetDir) {
         try {
-          // Prioritas 1: Gunakan executable GPU dari .venv-gpu jika tersedia
-          const venvGpuWindows = path.join(
-            targetDir,
-            '.venv-gpu',
-            'Scripts',
-            'python.exe',
-          );
           const venvWindows = path.join(
             targetDir,
             '.venv',
             'Scripts',
             'python.exe',
           );
+          const venvGpuWindows = path.join(
+            targetDir,
+            '.venv-gpu',
+            'Scripts',
+            'python.exe',
+          );
+          const venvLinux = path.join(targetDir, '.venv', 'bin', 'python');
           const venvGpuLinux = path.join(
             targetDir,
             '.venv-gpu',
             'bin',
             'python',
           );
-          const venvLinux = path.join(targetDir, '.venv', 'bin', 'python');
 
           let pyCmd = 'python';
-          if (fs.existsSync(venvGpuWindows)) {
-            pyCmd = venvGpuWindows;
-          } else if (fs.existsSync(venvWindows)) {
+          if (fs.existsSync(venvWindows)) {
             pyCmd = venvWindows;
-          } else if (fs.existsSync(venvGpuLinux)) {
-            pyCmd = venvGpuLinux;
+          } else if (fs.existsSync(venvGpuWindows)) {
+            pyCmd = venvGpuWindows;
           } else if (fs.existsSync(venvLinux)) {
             pyCmd = venvLinux;
+          } else if (fs.existsSync(venvGpuLinux)) {
+            pyCmd = venvGpuLinux;
           }
 
           const pyProc = spawn(pyCmd, ['main.py'], {
@@ -903,12 +915,18 @@ export class FaceAttendanceService implements OnModuleInit {
             stdio: 'ignore',
             shell: false,
             windowsHide: true,
+            env: {
+              ...process.env,
+              PYTHONUNBUFFERED: '1',
+              PORT: '8089',
+              BACKEND_URL: 'http://localhost:3001',
+            },
           });
           pyProc.unref();
 
-          // Wait up to 10 seconds for port 8089 to come alive with fast 250ms polling
-          for (let i = 0; i < 40; i++) {
-            await new Promise((r) => setTimeout(r, 250));
+          // Wait up to 30 seconds for port 8089 to come alive with 500ms polling
+          for (let i = 0; i < 60; i++) {
+            await new Promise((r) => setTimeout(r, 500));
             const pingCheck = await this.getAiServiceStatus();
             if (pingCheck.isOnline) {
               isOnline = true;
@@ -933,7 +951,7 @@ export class FaceAttendanceService implements OnModuleInit {
         try {
           const res = await fetch(url, {
             method: 'POST',
-            signal: AbortSignal.timeout(4000),
+            signal: AbortSignal.timeout(5000),
           });
           if (res.ok) {
             return await res.json();
@@ -975,8 +993,6 @@ export class FaceAttendanceService implements OnModuleInit {
 
     try {
       const endpoints = [
-        'http://127.0.0.1:8089/terminate',
-        'http://localhost:8089/terminate',
         'http://127.0.0.1:8089/stream/stop',
         'http://localhost:8089/stream/stop',
       ];
@@ -990,7 +1006,7 @@ export class FaceAttendanceService implements OnModuleInit {
             return {
               success: true,
               message:
-                'AI FaceNet dinonaktifkan (Resource RAM & CPU dibebaskan)',
+                'AI FaceNet streaming dinonaktifkan (Mode Standby Hemat Daya)',
             };
           }
         } catch {}
@@ -1106,12 +1122,12 @@ export class FaceAttendanceService implements OnModuleInit {
     };
   }
 
-  async scanFrame(imageBase64: string) {
+  async scanFrame(imageBase64: string, recordAttendance: boolean = true) {
     try {
       const res = await fetch('http://127.0.0.1:8089/scan_frame', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: imageBase64 }),
+        body: JSON.stringify({ image: imageBase64, recordAttendance }),
         signal: AbortSignal.timeout(4000),
       });
       if (res.ok) {

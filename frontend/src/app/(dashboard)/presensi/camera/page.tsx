@@ -32,6 +32,9 @@ import {
   Briefcase,
   UserCheck,
   Maximize2,
+  Minimize2,
+  Sun,
+  SunMedium,
   Play,
   Square,
   Volume2,
@@ -50,7 +53,9 @@ import {
   Loader2,
   AlertTriangle,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Lock,
+  Unlock
 } from 'lucide-react'
 import { QrScanner } from '@/components/QrScanner'
 import Link from 'next/link'
@@ -198,8 +203,9 @@ export default function FaceAttendanceCameraPage() {
     setIsStreamLoading(false)
   }
 
-  // Browser Webcam Direct Hook
+  // Browser Webcam Direct Hook & Stream Image Ref
   const localVideoRef = useRef<HTMLVideoElement>(null)
+  const streamImgRef = useRef<HTMLImageElement>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null)
   const [isBrowserCamStreaming, setIsBrowserCamStreaming] = useState(false)
@@ -213,12 +219,14 @@ export default function FaceAttendanceCameraPage() {
   const [isCapturing, setIsCapturing] = useState(false)
   const [captureFlash, setCaptureFlash] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const [isOutdoorMode, setIsOutdoorMode] = useState(false)
   const [isConfirmingTwin, setIsConfirmingTwin] = useState(false)
   const [captureResult, setCaptureResult] = useState<{
     type: 'SUCCESS' | 'UNKNOWN' | 'NO_FACE' | 'TWIN_AMBIGUOUS' | 'ERROR'
     name?: string
     role?: string
     identifier?: string
+    avatarUrl?: string | null
     confidence?: number
     scanType?: string
     message: string
@@ -230,6 +238,7 @@ export default function FaceAttendanceCameraPage() {
       role: string
       identifier: string
       className?: string
+      avatarUrl?: string | null
       confidence: number
     }>
   } | null>(null)
@@ -244,6 +253,9 @@ export default function FaceAttendanceCameraPage() {
   // Log filter states (default: hari ini saja)
   const [logFilterMode, setLogFilterMode] = useState<'TODAY' | 'ALL'>('TODAY')
   const [logSearchQuery, setLogSearchQuery] = useState('')
+
+  // State kunci area sensitivitas (Kunci/Buka Kunci Slider Threshold)
+  const [isSensitivityLocked, setIsSensitivityLocked] = useState(true)
 
   // Local form state for config
   const [formConfig, setFormConfig] = useState<FaceCameraConfig | null>(null)
@@ -295,11 +307,12 @@ export default function FaceAttendanceCameraPage() {
       const targetDeviceId = deviceId || selectedDeviceId
 
       let stream: MediaStream | null = null
-      // 1. Resolusi jernih 960x540 (16:9 qHD)
+      // 1. Resolusi jernih 1280x720 (16:9 HD) dengan aspect ratio proporsional
       try {
         const videoConstraints: MediaTrackConstraints = {
-          width: { ideal: 960, min: 480 },
-          height: { ideal: 540, min: 270 },
+          aspectRatio: { ideal: 16 / 9 },
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 360 },
         }
         if (targetDeviceId) {
           videoConstraints.deviceId = { exact: targetDeviceId }
@@ -525,14 +538,71 @@ export default function FaceAttendanceCameraPage() {
     } catch {}
   }
 
-  // Fungsi Eksekusi Capture & Verifikasi Presensi Wajah
+  // Voice Greeting Text-to-Speech (Indonesian) untuk outdoor gate presensi
+  const speakVoiceGreeting = (name: string, scanType?: string) => {
+    if (!soundEnabled || typeof window === 'undefined' || !window.speechSynthesis) return
+    try {
+      window.speechSynthesis.cancel()
+      const isPulang = scanType === 'PULANG'
+      const greeting = isPulang 
+        ? `Terima kasih, ${name}. Hati-hati di jalan.` 
+        : `Selamat datang, ${name}. Presensi berhasil.`
+      const utter = new SpeechSynthesisUtterance(greeting)
+      utter.lang = 'id-ID'
+      utter.rate = 1.05
+      utter.pitch = 1.0
+      window.speechSynthesis.speak(utter)
+    } catch {}
+  }
+
+  // Fungsi Eksekusi Capture & Verifikasi Presensi Wajah (Mendukung Browser Webcam & Server MJPEG Stream)
   const executeFaceCapture = async () => {
     if (isCapturing) return
+
     const video = localVideoRef.current
-    if (!video || video.readyState < 2 || video.videoWidth === 0) {
-      toast.error('Kamera belum siap. Pastikan preview webcam aktif.')
-      return
+    const streamImg = streamImgRef.current
+
+    let base64 = ''
+
+    if (isBrowserMode) {
+      if (!video || video.readyState < 2 || video.videoWidth === 0) {
+        toast.error('Kamera belum siap. Pastikan preview webcam aktif.')
+        return
+      }
+      try {
+        const offscreen = document.createElement('canvas')
+        const scale = Math.min(1.0, 640 / video.videoWidth)
+        offscreen.width = Math.round(video.videoWidth * scale)
+        offscreen.height = Math.round(video.videoHeight * scale)
+        const ctx = offscreen.getContext('2d')
+        if (!ctx) throw new Error('Context canvas tidak tersedia')
+        ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height)
+        base64 = offscreen.toDataURL('image/jpeg', 0.82)
+      } catch (err) {
+        toast.error('Gagal mengambil frame dari webcam browser.')
+        return
+      }
+    } else {
+      if (!streamImg || !streamImg.naturalWidth) {
+        toast.error('Sinyal stream kamera belum siap atau offline.')
+        return
+      }
+      try {
+        const offscreen = document.createElement('canvas')
+        const scale = Math.min(1.0, 640 / streamImg.naturalWidth)
+        offscreen.width = Math.round(streamImg.naturalWidth * scale)
+        offscreen.height = Math.round(streamImg.naturalHeight * scale)
+        const ctx = offscreen.getContext('2d')
+        if (!ctx) throw new Error('Context canvas tidak tersedia')
+        ctx.drawImage(streamImg, 0, 0, offscreen.width, offscreen.height)
+        base64 = offscreen.toDataURL('image/jpeg', 0.82)
+      } catch (err) {
+        toast.error('Gagal mengambil snapshot dari stream kamera.')
+        return
+      }
     }
+
+    if (!base64) return
 
     setIsCapturing(true)
     setCaptureFlash(true)
@@ -545,21 +615,12 @@ export default function FaceAttendanceCameraPage() {
     }
 
     try {
-      const offscreen = document.createElement('canvas')
-      const scale = Math.min(1.0, 640 / video.videoWidth)
-      offscreen.width = Math.round(video.videoWidth * scale)
-      offscreen.height = Math.round(video.videoHeight * scale)
-      const ctx = offscreen.getContext('2d')
-      if (!ctx) throw new Error('Context canvas tidak tersedia')
-
-      ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height)
-      const base64 = offscreen.toDataURL('image/jpeg', 0.80)
       setCapturedSnapshotUrl(base64)
 
       const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64 }),
+        body: JSON.stringify({ image: base64, recordAttendance: true }),
       })
 
       if (!res.ok) {
@@ -568,7 +629,8 @@ export default function FaceAttendanceCameraPage() {
 
       const data = await res.json()
       const rawFaces = data.faces || []
-      const invScale = 1.0 / scale
+      const containerW = isBrowserMode ? (video?.videoWidth || 640) : (streamImg?.naturalWidth || 640)
+      const invScale = 1.0 / Math.min(1.0, 640 / containerW)
       const scaledFaces = rawFaces.map((f: any) => ({
         ...f,
         box: [
@@ -579,12 +641,22 @@ export default function FaceAttendanceCameraPage() {
         ],
       }))
 
-      drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
+      drawYoloBoundingBoxes(scaledFaces, containerW, isBrowserMode ? (video?.videoHeight || 480) : (streamImg?.naturalHeight || 480))
 
       if (rawFaces.length > 0) {
         const minThresh = currentConfig?.threshold || 0.70
-        const ambiguousFace = rawFaces.find((f: any) => f.is_twin_ambiguous && f.twin_candidates?.length > 1)
-        const registeredFace = rawFaces.find((f: any) => f.is_registered && (f.confidence || 0) >= minThresh)
+
+        // Prioritaskan wajah yang berada paling dekat dengan area tengah frame kamera (Center ROI Priority)
+        const frameCx = containerW / 2.0
+        const frameCy = (isBrowserMode ? (video?.videoHeight || 480) : (streamImg?.naturalHeight || 480)) / 2.0
+        const sortedFaces = [...rawFaces].sort((a: any, b: any) => {
+          const aDist = Math.hypot((a.box[0] + a.box[2]/2.0) - frameCx, (a.box[1] + a.box[3]/2.0) - frameCy)
+          const bDist = Math.hypot((b.box[0] + b.box[2]/2.0) - frameCx, (b.box[1] + b.box[3]/2.0) - frameCy)
+          return aDist - bDist
+        })
+
+        const ambiguousFace = sortedFaces.find((f: any) => f.is_twin_ambiguous && f.twin_candidates?.length > 1)
+        const registeredFace = sortedFaces.find((f: any) => f.is_registered && (f.confidence || 0) >= minThresh)
 
         if (ambiguousFace) {
           playBiometricAudio('warning')
@@ -595,16 +667,31 @@ export default function FaceAttendanceCameraPage() {
             twinCandidates: ambiguousFace.twin_candidates || [],
           })
           toast.warning('Terdeteksi kemiripan biometrik wajah kembar. Silakan pilih profil siswa.')
+        } else if (registeredFace && (registeredFace.meets_attendance_threshold === false || Math.round(registeredFace.confidence * 100) < 91)) {
+          // Wajah terdeteksi tapi confidence BELUM mencapai 91% — presensi TIDAK direkam, TANPA suara sukses
+          playBiometricAudio('warning')
+          setCaptureResult({
+            type: 'UNKNOWN',
+            name: registeredFace.name,
+            role: registeredFace.role,
+            identifier: registeredFace.identifier,
+            confidence: Math.round(registeredFace.confidence * 100),
+            message: `Akurasi Belum Cukup (${Math.round(registeredFace.confidence * 100)}%)`,
+            attendanceMsg: `Wajah ${registeredFace.name} terdeteksi dengan akurasi ${Math.round(registeredFace.confidence * 100)}%, minimum 91% diperlukan. Posisikan wajah lebih dekat ke kamera dengan pencahayaan yang cukup, lalu sentuh kembali.`,
+          })
+          toast.warning(`Akurasi ${Math.round(registeredFace.confidence * 100)}% belum cukup. Minimum 91% diperlukan untuk presensi.`)
         } else if (registeredFace) {
           playBiometricAudio('success')
           const att = registeredFace.attendance
           const attMsg = att?.message || `Presensi berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`
+          speakVoiceGreeting(registeredFace.name, att?.scanType || 'HADIR')
           
           setCaptureResult({
             type: 'SUCCESS',
             name: registeredFace.name,
             role: registeredFace.role,
             identifier: registeredFace.identifier,
+            avatarUrl: registeredFace.avatarUrl,
             confidence: Math.round(registeredFace.confidence * 100),
             scanType: att?.scanType || 'HADIR',
             message: 'Wajah Terverifikasi!',
@@ -682,6 +769,7 @@ export default function FaceAttendanceCameraPage() {
 
       const result = await res.json()
       playBiometricAudio('success')
+      speakVoiceGreeting(candidate.name, result?.scanType || 'MASUK')
       setCaptureResult({
         type: 'SUCCESS',
         name: candidate.name,
@@ -717,6 +805,9 @@ export default function FaceAttendanceCameraPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [activeTab, isCapturing, isBrowserCamStreaming, scanMode])
 
+  // Persistent offscreen canvas ref to prevent garbage collection hiccups and lag
+  const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null)
+
   // Periodic frame scanning HANYA saat Mode Auto-Scan diaktifkan (Mode Manual = 0 request latar belakang)
   useEffect(() => {
     if (!isBrowserCamStreaming || scanMode !== 'AUTO') return
@@ -731,18 +822,25 @@ export default function FaceAttendanceCameraPage() {
 
       isProcessing = true
       try {
-        const offscreen = document.createElement('canvas')
-        const scale = Math.min(1.0, 360 / video.videoWidth)
-        offscreen.width = Math.round(video.videoWidth * scale)
-        offscreen.height = Math.round(video.videoHeight * scale)
-        const ctx = offscreen.getContext('2d')
+        if (!offscreenCanvasRef.current) {
+          offscreenCanvasRef.current = document.createElement('canvas')
+        }
+        const offscreen = offscreenCanvasRef.current
+        const scale = Math.min(1.0, 480 / video.videoWidth)
+        const targetW = Math.round(video.videoWidth * scale)
+        const targetH = Math.round(video.videoHeight * scale)
+        if (offscreen.width !== targetW || offscreen.height !== targetH) {
+          offscreen.width = targetW
+          offscreen.height = targetH
+        }
+        const ctx = offscreen.getContext('2d', { willReadFrequently: true })
         if (ctx) {
-          ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height)
-          const base64 = offscreen.toDataURL('image/jpeg', 0.65)
+          ctx.drawImage(video, 0, 0, targetW, targetH)
+          const base64 = offscreen.toDataURL('image/jpeg', 0.70)
           const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64 }),
+            body: JSON.stringify({ image: base64, recordAttendance: true }),
           })
           if (res.ok) {
             const data = await res.json()
@@ -759,12 +857,35 @@ export default function FaceAttendanceCameraPage() {
             }))
             drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
             if (rawFaces.length > 0) {
-              if (rawFaces.some((f: any) => f.is_registered)) {
+              const regFace = rawFaces.find((f: any) => f.is_registered && (f.confidence || 0) >= (currentConfig?.threshold || 0.70))
+              if (regFace && regFace.attendance && regFace.attendance.success) {
+                playBiometricAudio('success')
+                const att = regFace.attendance
+                speakVoiceGreeting(regFace.name, att?.scanType || 'HADIR')
+                setCaptureResult({
+                  type: 'SUCCESS',
+                  name: regFace.name,
+                  role: regFace.role,
+                  identifier: regFace.identifier,
+                  avatarUrl: regFace.avatarUrl,
+                  confidence: Math.round(regFace.confidence * 100),
+                  scanType: att?.scanType || 'HADIR',
+                  message: 'Wajah Terverifikasi!',
+                  attendanceMsg: att?.message || 'Presensi berhasil dicatat!',
+                  time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                })
+                toast.success(`Presensi Berhasil: ${regFace.name} (${Math.round(regFace.confidence * 100)}%)`)
                 queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+                queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+                await new Promise((r) => setTimeout(r, 3500))
+              } else if (regFace) {
+                queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+                await new Promise((r) => setTimeout(r, 2000))
+              } else {
+                await new Promise((r) => setTimeout(r, 800))
               }
-              await new Promise((r) => setTimeout(r, 2000))
             } else {
-              await new Promise((r) => setTimeout(r, 400))
+              await new Promise((r) => setTimeout(r, 200))
             }
           }
         }
@@ -780,7 +901,7 @@ export default function FaceAttendanceCameraPage() {
       } finally {
         isProcessing = false
       }
-    }, 250)
+    }, 150)
 
     return () => clearInterval(interval)
   }, [isBrowserCamStreaming, scanMode, isCapturing])
@@ -886,8 +1007,21 @@ export default function FaceAttendanceCameraPage() {
       setFormConfig(savedData)
       setSaveSuccess(true)
       setStreamError(false)
-      setStreamKey(Date.now())
+      setIsStreamLoading(true)
+      setBrowserCamError(null)
+      const newKey = Date.now()
+      setStreamKey(newKey)
+
+      if (savedData?.streamSourceType === 'BROWSER_WEBCAM') {
+        stopBrowserWebcam()
+        setTimeout(() => {
+          startBrowserWebcam(selectedDeviceId)
+        }, 300)
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
       setTimeout(() => setSaveSuccess(false), 3000)
+      toast.success('Pengaturan presensi camera berhasil disimpan & dimuat ulang!')
     },
   })
 
@@ -1102,7 +1236,7 @@ export default function FaceAttendanceCameraPage() {
           </p>
         </div>
         
-        {/* Top Control Action Badges */}
+        {/* Top Control Action Badges & Outdoor / Fullscreen Switcher */}
         <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
           <div className="flex items-center justify-between gap-3 px-3.5 py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
             <div className="flex items-center gap-2">
@@ -1119,11 +1253,11 @@ export default function FaceAttendanceCameraPage() {
                 variant="ghost"
                 onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
                 disabled={isStartingWorker || isStoppingWorker}
-                className={`h-6 px-2.5 text-[11px] font-bold rounded-md ${
+                className={`h-7 px-2.5 text-[11px] font-bold rounded-md touch-manipulation ${
                   serviceStatus?.is_running ? 'bg-rose-500/30 hover:bg-rose-500/40 text-rose-200' : 'bg-emerald-500/30 hover:bg-emerald-500/40 text-emerald-200'
                 }`}
               >
-                <Power className="w-3 h-3 mr-1" />
+                <Power className="w-3.5 h-3.5 mr-1" />
                 {isStartingWorker ? 'Memuat...' : isStoppingWorker ? 'Mematikan...' : serviceStatus?.is_running ? 'Matikan AI' : 'Nyalakan AI'}
               </Button>
             ) : (
@@ -1134,19 +1268,32 @@ export default function FaceAttendanceCameraPage() {
           </div>
 
           <div className="flex items-center justify-between gap-2 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
-            <div className="flex items-center gap-2">
-              <Users className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
-              <span className="font-medium truncate text-[11px] sm:text-xs">{datasetData?.usersWithPhoto || 0} Profil Terdaftar</span>
-            </div>
+            {/* Toggle Mode Outdoor Anti-Glare Sinar Matahari */}
             <button
               type="button"
-              onClick={() => setActiveTab('backup-qr')}
-              className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] flex items-center gap-1 transition-all shrink-0 shadow-xs"
-              title="Gunakan pemindai QR Code cadangan jika kamera biometrik bermasalah"
+              onClick={() => setIsOutdoorMode(!isOutdoorMode)}
+              className={`min-h-[38px] px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all touch-manipulation ${
+                isOutdoorMode
+                  ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300 animate-pulse'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+              title="Aktifkan kontras ekstra tinggi untuk layar tablet di gerbang luar ruangan"
             >
-              <QrCode className="w-3 h-3" />
-              <span>Backup QR</span>
+              <Sun className={`w-3.5 h-3.5 ${isOutdoorMode ? 'text-slate-950 font-black' : 'text-amber-300'}`} />
+              <span>{isOutdoorMode ? '☀️ Outdoor: ON' : '☀️ Mode Outdoor'}</span>
             </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('backup-qr')}
+                className="min-h-[38px] px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1 transition-all shrink-0 shadow-xs touch-manipulation"
+                title="Gunakan pemindai QR Code cadangan jika kamera biometrik bermasalah"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>Backup QR</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1406,8 +1553,10 @@ export default function FaceAttendanceCameraPage() {
                       executeFaceCapture()
                     }
                   }}
-                  className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group select-none cursor-pointer"
-                  title="Klik untuk Ambil Foto & Pindai Wajah"
+                  className={`relative aspect-video w-full flex items-center justify-center overflow-hidden group select-none cursor-pointer transition-colors duration-300 ${
+                    isOutdoorMode ? 'bg-black border-2 border-emerald-400/80 shadow-[0_0_30px_rgba(16,185,129,0.3)]' : 'bg-slate-900'
+                  }`}
+                  title="Sentuh Layar / Klik untuk Ambil Foto & Pindai Wajah"
                 >
                   {/* Shutter Flash Visual Animation Effect */}
                   {captureFlash && (
@@ -1440,36 +1589,44 @@ export default function FaceAttendanceCameraPage() {
                       {!isCapturing && !captureResult && isBrowserCamStreaming && (
                         <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10">
                           {/* Face Oval Framing Target */}
-                          <div className="relative w-44 h-56 sm:w-52 sm:h-64 rounded-[50%/45%] border-2 border-dashed border-emerald-400/50 shadow-[0_0_25px_rgba(16,185,129,0.2)] flex items-center justify-center animate-pulse">
+                          <div className={`relative w-48 h-60 sm:w-56 sm:h-72 rounded-[50%/45%] flex items-center justify-center animate-pulse transition-all ${
+                            isOutdoorMode 
+                              ? 'border-4 border-dashed border-emerald-400 shadow-[0_0_35px_rgba(16,185,129,0.6)]' 
+                              : 'border-2 border-dashed border-emerald-400/60 shadow-[0_0_25px_rgba(16,185,129,0.25)]'
+                          }`}>
                             {/* Corner Accents */}
-                            <div className="absolute -top-2 -left-2 w-5 h-5 border-t-2 border-l-2 border-emerald-400" />
-                            <div className="absolute -top-2 -right-2 w-5 h-5 border-t-2 border-r-2 border-emerald-400" />
-                            <div className="absolute -bottom-2 -left-2 w-5 h-5 border-b-2 border-l-2 border-emerald-400" />
-                            <div className="absolute -bottom-2 -right-2 w-5 h-5 border-b-2 border-r-2 border-emerald-400" />
+                            <div className="absolute -top-3 -left-3 w-6 h-6 border-t-4 border-l-4 border-emerald-400" />
+                            <div className="absolute -top-3 -right-3 w-6 h-6 border-t-4 border-r-4 border-emerald-400" />
+                            <div className="absolute -bottom-3 -left-3 w-6 h-6 border-b-4 border-l-4 border-emerald-400" />
+                            <div className="absolute -bottom-3 -right-3 w-6 h-6 border-b-4 border-r-4 border-emerald-400" />
                             
                             {/* Center Crosshair */}
-                            <div className="w-2 h-2 rounded-full bg-emerald-400/60" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
                           </div>
                           
-                          <div className="mt-3 px-3 py-1 rounded-full bg-black/70 backdrop-blur-md border border-emerald-500/30 text-[11px] sm:text-xs font-medium text-emerald-300 flex items-center gap-1.5 shadow-lg">
-                            <Aperture className="w-3.5 h-3.5 animate-spin" />
-                            <span>Arahkan Wajah ke Tengah Bingkai & Klik Capture</span>
+                          <div className={`mt-3.5 px-4 py-1.5 rounded-full backdrop-blur-md flex items-center gap-2 shadow-2xl text-xs sm:text-sm font-extrabold ${
+                            isOutdoorMode 
+                              ? 'bg-black/95 border-2 border-emerald-400 text-emerald-300 ring-2 ring-emerald-500/50' 
+                              : 'bg-black/75 border border-emerald-500/40 text-emerald-300'
+                          }`}>
+                            <Aperture className="w-4 h-4 animate-spin shrink-0 text-emerald-400" />
+                            <span>SENTUH UNTUK SCAN WAJAH</span>
                           </div>
                         </div>
                       )}
 
                       {/* Laser Scanner Animation saat Memproses Frame */}
                       {isCapturing && (
-                        <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-xs">
+                        <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center bg-black/50 backdrop-blur-xs">
                           {/* Moving Laser Line */}
-                          <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] animate-bounce top-1/4" />
+                          <div className="absolute inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_20px_#34d399] animate-bounce top-1/4" />
                           
-                          <div className="px-4 py-2.5 rounded-xl bg-slate-950/90 border border-cyan-500/50 shadow-2xl text-center space-y-1.5">
-                            <div className="flex items-center justify-center gap-2 text-cyan-400">
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              <span className="text-xs sm:text-sm font-bold tracking-wide">Menganalisis Biometrik Wajah...</span>
+                          <div className="px-5 py-3 rounded-2xl bg-black/95 border-2 border-emerald-400 shadow-2xl text-center space-y-1.5">
+                            <div className="flex items-center justify-center gap-2.5 text-emerald-400">
+                              <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
+                              <span className="text-sm sm:text-base font-extrabold tracking-wide">Menganalisis Biometrik...</span>
                             </div>
-                            <p className="text-[10px] text-slate-400 font-mono">Ekstraksi Vektor FaceNet 512-D</p>
+                            <p className="text-[11px] text-slate-300 font-mono font-bold">Ekstraksi Vektor FaceNet 512-D</p>
                           </div>
                         </div>
                       )}
@@ -1477,61 +1634,69 @@ export default function FaceAttendanceCameraPage() {
                       {/* Floating Result Feedback HUD Card */}
                       {captureResult && (
                         <div className="absolute inset-x-3 bottom-3 z-30 pointer-events-auto">
-                          <div className={`p-3.5 sm:p-4 rounded-xl backdrop-blur-xl border shadow-2xl transition-all duration-300 ${
+                          <div className={`p-4 sm:p-5 rounded-2xl backdrop-blur-xl border-2 shadow-2xl transition-all duration-300 ${
                             captureResult.type === 'SUCCESS' 
-                              ? 'bg-slate-950/95 border-emerald-500/60 shadow-emerald-950/50' 
+                              ? isOutdoorMode 
+                                ? 'bg-black/98 border-emerald-400 shadow-emerald-900/60 ring-2 ring-emerald-500/40' 
+                                : 'bg-slate-950/95 border-emerald-500/70 shadow-emerald-950/50' 
                               : captureResult.type === 'TWIN_AMBIGUOUS'
-                                ? 'bg-slate-950/95 border-cyan-500/60 shadow-cyan-950/50'
+                                ? isOutdoorMode
+                                  ? 'bg-black/98 border-cyan-400 shadow-cyan-900/60 ring-2 ring-cyan-500/40'
+                                  : 'bg-slate-950/95 border-cyan-500/70 shadow-cyan-950/50'
                                 : captureResult.type === 'UNKNOWN' 
-                                  ? 'bg-slate-950/95 border-amber-500/60 shadow-amber-950/50' 
-                                  : 'bg-slate-950/95 border-rose-500/60 shadow-rose-950/50'
+                                  ? isOutdoorMode
+                                    ? 'bg-black/98 border-amber-400 shadow-amber-900/60 ring-2 ring-amber-500/40'
+                                    : 'bg-slate-950/95 border-amber-500/70 shadow-amber-950/50' 
+                                  : isOutdoorMode
+                                    ? 'bg-black/98 border-rose-400 shadow-rose-900/60 ring-2 ring-rose-500/40'
+                                    : 'bg-slate-950/95 border-rose-500/70 shadow-rose-950/50'
                           }`}>
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-3.5">
                               <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 font-bold shadow-inner ${
+                                <div className="flex items-center gap-3.5 min-w-0">
+                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 font-bold shadow-md ${
                                     captureResult.type === 'SUCCESS'
-                                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                      ? 'bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500/60'
                                       : captureResult.type === 'TWIN_AMBIGUOUS'
-                                        ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                                        ? 'bg-cyan-500/20 text-cyan-400 border-2 border-cyan-500/60'
                                         : captureResult.type === 'UNKNOWN'
-                                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                                          : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                                          ? 'bg-amber-500/20 text-amber-400 border-2 border-amber-500/60'
+                                          : 'bg-rose-500/20 text-rose-400 border-2 border-rose-500/60'
                                   }`}>
                                     {captureResult.type === 'SUCCESS' ? (
-                                      <CheckCircle className="w-6 h-6" />
+                                      <CheckCircle className="w-7 h-7 sm:w-8 sm:h-8" />
                                     ) : captureResult.type === 'TWIN_AMBIGUOUS' ? (
-                                      <Users className="w-6 h-6" />
+                                      <Users className="w-7 h-7 sm:w-8 sm:h-8" />
                                     ) : captureResult.type === 'UNKNOWN' ? (
-                                      <AlertTriangle className="w-6 h-6" />
+                                      <AlertTriangle className="w-7 h-7 sm:w-8 sm:h-8" />
                                     ) : (
-                                      <AlertCircle className="w-6 h-6" />
+                                      <AlertCircle className="w-7 h-7 sm:w-8 sm:h-8" />
                                     )}
                                   </div>
                                   <div className="min-w-0">
                                     {captureResult.type === 'SUCCESS' ? (
                                       <>
                                         <div className="flex items-center gap-2 flex-wrap">
-                                          <h3 className="text-sm sm:text-base font-bold text-white truncate">{captureResult.name}</h3>
-                                          <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px] py-0 px-1.5 font-mono">
+                                          <h3 className="text-base sm:text-lg font-black text-white truncate tracking-tight">{captureResult.name}</h3>
+                                          <Badge className="bg-emerald-500/30 text-emerald-300 border border-emerald-400 text-xs py-0.5 px-2 font-mono font-extrabold">
                                             {captureResult.confidence}% Akurat
                                           </Badge>
-                                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-slate-700 text-slate-300">
+                                          <Badge variant="outline" className="text-xs py-0.5 px-2 border-slate-600 text-slate-200 font-semibold">
                                             {captureResult.role} {captureResult.identifier ? `• ${captureResult.identifier}` : ''}
                                           </Badge>
                                         </div>
-                                        <p className="text-xs text-emerald-400 font-medium mt-0.5 truncate">
+                                        <p className="text-xs sm:text-sm text-emerald-300 font-bold mt-1 truncate">
                                           {captureResult.attendanceMsg}
                                         </p>
                                       </>
                                     ) : (
                                       <>
-                                        <h3 className={`text-sm sm:text-base font-bold ${
+                                        <h3 className={`text-base sm:text-lg font-black ${
                                           captureResult.type === 'TWIN_AMBIGUOUS' ? 'text-cyan-300' : captureResult.type === 'UNKNOWN' ? 'text-amber-300' : 'text-rose-300'
                                         }`}>
                                           {captureResult.message}
                                         </h3>
-                                        <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">
+                                        <p className="text-xs sm:text-sm text-slate-200 font-medium mt-1 line-clamp-1">
                                           {captureResult.attendanceMsg}
                                         </p>
                                       </>
@@ -1539,7 +1704,7 @@ export default function FaceAttendanceCameraPage() {
                                   </div>
                                 </div>
 
-                                <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="flex items-center gap-2 shrink-0">
                                   <Button
                                     size="sm"
                                     onClick={(e) => {
@@ -1552,7 +1717,7 @@ export default function FaceAttendanceCameraPage() {
                                         if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
                                       }
                                     }}
-                                    className="h-8 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                                    className="min-h-[42px] px-3.5 text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 touch-manipulation"
                                   >
                                     Tutup
                                   </Button>
@@ -1564,9 +1729,9 @@ export default function FaceAttendanceCameraPage() {
                                       executeFaceCapture()
                                     }}
                                     disabled={isCapturing}
-                                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1 shadow-sm"
+                                    className="min-h-[42px] px-4 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-black gap-1.5 shadow-md touch-manipulation"
                                   >
-                                    <Camera className="w-3.5 h-3.5" />
+                                    <Camera className="w-4 h-4" />
                                     <span>Scan Lagi</span>
                                   </Button>
                                 </div>
@@ -1574,7 +1739,7 @@ export default function FaceAttendanceCameraPage() {
 
                               {/* Twin Candidates Option Buttons */}
                               {captureResult.type === 'TWIN_AMBIGUOUS' && captureResult.twinCandidates && captureResult.twinCandidates.length > 0 && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-cyan-500/20">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2.5 border-t border-cyan-500/30">
                                   {captureResult.twinCandidates.map((cand) => (
                                     <button
                                       key={cand.userId}
@@ -1584,15 +1749,15 @@ export default function FaceAttendanceCameraPage() {
                                         e.stopPropagation()
                                         handleConfirmTwinAttendance(cand)
                                       }}
-                                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/90 hover:bg-cyan-950/80 border border-cyan-500/30 hover:border-cyan-400 transition-all text-left text-xs group cursor-pointer"
+                                      className="min-h-[56px] flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-cyan-950 border-2 border-cyan-500/40 hover:border-cyan-400 transition-all text-left text-xs group cursor-pointer touch-manipulation"
                                     >
                                       <div className="min-w-0 pr-2">
-                                        <p className="font-bold text-white group-hover:text-cyan-300 truncate">{cand.name}</p>
-                                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">
+                                        <p className="font-extrabold text-white group-hover:text-cyan-300 truncate text-sm">{cand.name}</p>
+                                        <p className="text-[11px] text-slate-300 mt-0.5 truncate font-medium">
                                           {cand.className || cand.role} • {cand.identifier}
                                         </p>
                                       </div>
-                                      <span className="shrink-0 px-2 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-[10px]">
+                                      <span className="shrink-0 px-3 py-1.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs shadow-md">
                                         Pilih Ini →
                                       </span>
                                     </button>
@@ -1626,10 +1791,12 @@ export default function FaceAttendanceCameraPage() {
                         </div>
                       )}
                       <img
+                        ref={streamImgRef}
                         key={streamKey}
                         src={`/api/face-stream?t=${streamKey}`}
                         alt="Live Capture FaceNet Camera Stream"
                         className="w-full h-full object-contain"
+                        crossOrigin="anonymous"
                         onLoad={handleStreamImgLoad}
                         onError={handleStreamImgError}
                       />
@@ -1692,71 +1859,73 @@ export default function FaceAttendanceCameraPage() {
                   )}
 
                   {/* Corner Visual HUD Targets */}
-                  <div className="absolute top-2 sm:top-3 left-2 sm:left-3 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/30 z-20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                  <div className="absolute top-2 sm:top-3 left-2 sm:left-3 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-xs text-[11px] font-mono text-emerald-400 border border-emerald-500/40 z-20 font-bold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                     <span>{isBrowserMode ? `WEBCAM (${browserFps} FPS)` : currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
                   </div>
 
-                  <div className="absolute top-2 sm:top-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] font-mono text-slate-300 border border-white/10 z-20">
-                    <span className={scanMode === 'MANUAL' ? 'text-teal-300 font-bold' : 'text-amber-300 font-bold'}>
+                  <div className="absolute top-2 sm:top-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-xs text-[11px] font-mono text-slate-200 border border-white/20 z-20">
+                    <span className={scanMode === 'MANUAL' ? 'text-emerald-300 font-extrabold' : 'text-amber-300 font-extrabold'}>
                       {scanMode === 'MANUAL' ? 'MODE CAPTURE MANUAL' : 'AUTO-SCAN KONTINU'}
                     </span>
                   </div>
 
-                  <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded bg-black/70 backdrop-blur-xs text-[10px] sm:text-[11px] font-mono text-slate-300 border border-white/10 z-20">
+                  <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 pointer-events-none flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-lg bg-black/85 backdrop-blur-xs text-[11px] sm:text-xs font-mono text-slate-200 border border-white/20 z-20 font-bold">
                     <span>Sensitivitas: {Math.round((currentConfig?.threshold || 0.70) * 100)}%</span>
                     <span>•</span>
                     <span>Cooldown: {currentConfig?.cooldownMinutes || 10}m</span>
                   </div>
                 </div>
 
-                {/* TOMBOL CAPTURE & ACTION PANEL (OPTIMASI ANTI-BEBAN SERVER) */}
-                <div className="p-3 sm:p-4 bg-slate-900/95 border-t border-slate-800 space-y-3">
+                {/* TOMBOL CAPTURE & ACTION PANEL (OPTIMASI ANTI-BEBAN SERVER & TABLET TOUCH TARGET) */}
+                <div className={`p-3.5 sm:p-4 border-t transition-colors duration-300 space-y-3 ${
+                  isOutdoorMode ? 'bg-black border-slate-800' : 'bg-slate-900/95 border-slate-800'
+                }`}>
                   {/* Primary Capture Action Area */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <Button
                       size="lg"
                       onClick={() => executeFaceCapture()}
-                      disabled={isCapturing || !isBrowserCamStreaming}
-                      className="flex-1 h-12 text-sm sm:text-base font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-lg shadow-emerald-950/50 gap-2.5 transition-all active:scale-[0.98] border border-emerald-400/30 cursor-pointer"
+                      disabled={isCapturing || (isBrowserMode ? !isBrowserCamStreaming : (!serviceStatus?.is_running || streamError))}
+                      className="flex-1 min-h-[52px] sm:min-h-[56px] text-base sm:text-lg font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-xl shadow-emerald-950/60 gap-3 transition-all active:scale-[0.98] border-2 border-emerald-400/50 cursor-pointer touch-manipulation"
                     >
                       {isCapturing ? (
                         <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <Loader2 className="w-6 h-6 animate-spin" />
                           <span>Menganalisis Biometrik FaceNet...</span>
                         </>
                       ) : (
                         <>
-                          <Camera className="w-5 h-5 animate-pulse" />
+                          <Camera className="w-6 h-6 animate-pulse" />
                           <span>Ambil Foto & Pindai Presensi</span>
-                          <span className="hidden md:inline-block ml-1.5 text-[10px] font-mono font-normal px-2 py-0.5 rounded bg-black/30 border border-white/20">
+                          <span className="hidden md:inline-block ml-1 text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-black/40 border border-white/30">
                             SPASI / ENTER
                           </span>
                         </>
                       )}
                     </Button>
 
-                    <div className="flex items-center gap-2 self-center sm:self-auto">
+                    <div className="flex items-center gap-2.5 self-center sm:self-auto">
                       {/* Mode Presensi Switcher */}
                       <div className="inline-flex p-1 bg-slate-950 rounded-xl border border-slate-800">
                         <button
                           type="button"
                           onClick={() => setScanMode('MANUAL')}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                          className={`min-h-[44px] px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all touch-manipulation ${
                             scanMode === 'MANUAL'
-                              ? 'bg-emerald-600 text-white shadow-xs'
+                              ? 'bg-emerald-600 text-white shadow-md'
                               : 'text-slate-400 hover:text-slate-200'
                           }`}
                           title="Mode Manual: Scan hanya berjalan saat tombol capture ditekan (Hemat server & akurat)"
                         >
-                          Manual (Capture)
+                          Manual
                         </button>
                         <button
                           type="button"
                           onClick={() => setScanMode('AUTO')}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                          className={`min-h-[44px] px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all touch-manipulation ${
                             scanMode === 'AUTO'
-                              ? 'bg-amber-600 text-white shadow-xs'
+                              ? 'bg-amber-600 text-white shadow-md'
                               : 'text-slate-400 hover:text-slate-200'
                           }`}
                           title="Mode Otomatis: Memindai frame secara berkala di latar belakang"
@@ -1770,27 +1939,27 @@ export default function FaceAttendanceCameraPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => setSoundEnabled(!soundEnabled)}
-                        className={`h-9 px-2.5 rounded-xl border-slate-800 ${
-                          soundEnabled ? 'text-emerald-400 bg-emerald-950/30' : 'text-slate-500 bg-slate-950'
+                        className={`min-h-[44px] min-w-[44px] px-3 rounded-xl border-slate-800 touch-manipulation ${
+                          soundEnabled ? 'text-emerald-400 bg-emerald-950/40 border-emerald-700/50' : 'text-slate-500 bg-slate-950'
                         }`}
-                        title={soundEnabled ? 'Audio Aktif (Klik untuk Mematikan)' : 'Audio Senyap (Klik untuk Mengaktifkan)'}
+                        title={soundEnabled ? 'Audio Suara Aktif (Klik untuk Senyap)' : 'Audio Senyap (Klik untuk Mengaktifkan Suara)'}
                       >
-                        {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                        {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                       </Button>
                     </div>
                   </div>
 
                   {/* Informational Sub-Bar */}
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
+                  <div className="flex items-center justify-between text-xs text-slate-400 pt-1.5 border-t border-slate-800/60 font-medium">
                     <div className="flex items-center gap-2 truncate">
-                      <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <Zap className="w-4 h-4 text-amber-400 shrink-0" />
                       <span className="truncate">
                         {scanMode === 'MANUAL' 
-                          ? 'Mode Capture Manual aktif: Data tidak membebani server & bebas dari salah scan.' 
-                          : 'Mode Auto-Scan aktif: Memindai otomatis setiap kali wajah terdeteksi.'}
+                          ? 'Mode Manual aktif: Bebas salah scan & sangat hemat resource server.' 
+                          : 'Mode Auto-Scan aktif: Memindai otomatis saat wajah berada di bingkai.'}
                       </span>
                     </div>
-                    <span className="hidden sm:inline-block font-mono text-[10px] text-slate-500 shrink-0">
+                    <span className="hidden sm:inline-block font-mono text-[11px] text-slate-400 shrink-0 font-bold">
                       FaceNet 512-D • MTCNN
                     </span>
                   </div>
@@ -2255,33 +2424,72 @@ export default function FaceAttendanceCameraPage() {
                   </div>
                 </div>
 
-                {/* Range: Threshold */}
-                <div className="space-y-3 pt-2">
-                  <div className="flex justify-between items-center">
+                {/* Range: Threshold dengan Fitur Kunci Sensitivitas */}
+                <div className={`space-y-3 pt-2 p-3.5 rounded-xl transition-all ${isSensitivityLocked ? 'bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800' : 'bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800'}`}>
+                  <div className="flex justify-between items-start gap-2">
                     <div>
-                      <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        Batas Sensitivitas Deteksi & Presensi Wajah (*Detection Threshold*)
-                      </Label>
-                      <p className="text-[11px] text-slate-500">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                          Batas Sensitivitas Deteksi & Presensi (*Threshold*)
+                        </Label>
+                        <Badge variant="outline" className={`text-[10px] font-bold px-1.5 py-0.5 flex items-center gap-1 ${isSensitivityLocked ? 'text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50' : 'text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50'}`}>
+                          {isSensitivityLocked ? <Lock className="w-2.5 h-2.5" /> : <Unlock className="w-2.5 h-2.5" />}
+                          {isSensitivityLocked ? 'Terkunci' : 'Dapat Diedit'}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
                         Batas kemiripan biometrik (*cosine similarity*) minimum untuk mendeteksi wajah dan mencatat presensi secara otomatis.
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-0.5 shrink-0">
-                      {Math.round((currentConfig?.threshold || 0.70) * 100)}%
-                    </Badge>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        type="button"
+                        variant={isSensitivityLocked ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => setIsSensitivityLocked(prev => !prev)}
+                        className={`h-7 px-2.5 text-xs font-semibold flex items-center gap-1.5 rounded-lg transition-all ${isSensitivityLocked ? 'border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/60' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                        title={isSensitivityLocked ? "Buka kunci untuk mengubah batas sensitivitas" : "Kunci kembali batas sensitivitas"}
+                      >
+                        {isSensitivityLocked ? (
+                          <>
+                            <Lock className="w-3.5 h-3.5" />
+                            <span>Buka Kunci</span>
+                          </>
+                        ) : (
+                          <>
+                            <Unlock className="w-3.5 h-3.5" />
+                            <span>Kunci Slider</span>
+                          </>
+                        )}
+                      </Button>
+                      <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-1">
+                        {Math.round((currentConfig?.threshold || 0.70) * 100)}%
+                      </Badge>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min={30}
-                    max={95}
-                    step={1}
-                    value={Math.round((currentConfig?.threshold || 0.70) * 100)}
-                    onChange={(e) => {
-                      const num = Number(e.target.value)
-                      setFormConfig((prev) => prev ? { ...prev, threshold: num / 100 } : null)
-                    }}
-                    className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
-                  />
+
+                  <div className="relative pt-1">
+                    <input
+                      type="range"
+                      min={30}
+                      max={95}
+                      step={1}
+                      disabled={isSensitivityLocked}
+                      value={Math.round((currentConfig?.threshold || 0.70) * 100)}
+                      onChange={(e) => {
+                        const num = Number(e.target.value)
+                        setFormConfig((prev) => prev ? { ...prev, threshold: num / 100 } : null)
+                      }}
+                      className={`w-full h-2.5 rounded-lg appearance-none transition-all ${isSensitivityLocked ? 'bg-slate-200/70 dark:bg-slate-800 cursor-not-allowed opacity-60' : 'bg-slate-200 dark:bg-slate-700 cursor-pointer accent-indigo-600 dark:accent-indigo-500'}`}
+                    />
+                    {isSensitivityLocked && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1 mt-1">
+                        <Lock className="w-3 h-3 shrink-0" />
+                        Slider terkunci untuk mencegah perubahan tidak disengaja. Klik tombol <strong>Buka Kunci</strong> di atas untuk mengatur.
+                      </p>
+                    )}
+                  </div>
+
                   <div className="flex justify-between text-[10px] text-slate-400 font-mono">
                     <span>30% (Sangat Sensitif)</span>
                     <span className="text-emerald-600 dark:text-emerald-400 font-bold">Default Optimal: 70%</span>
@@ -2289,7 +2497,7 @@ export default function FaceAttendanceCameraPage() {
                   </div>
 
                   {/* Catatan Status Ambang Batas Presensi */}
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1">
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Batas Verifikasi Presensi: &ge; {Math.round((currentConfig?.threshold || 0.70) * 100)}%

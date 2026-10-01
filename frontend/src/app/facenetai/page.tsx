@@ -1293,13 +1293,16 @@ export default function FaceNetAiStandalonePage() {
           <Link 
             href="/"
             title="Kembali ke Beranda Utama"
-            className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer touch-manipulation ${
-              isOutdoorMode 
-                ? 'bg-emerald-500/20 border-emerald-400' 
-                : 'bg-indigo-600/30 hover:bg-indigo-600/50 border-indigo-500/40'
-            }`}
+            className="w-10 h-10 rounded-xl bg-white/10 p-1 flex items-center justify-center shrink-0 transition-all hover:bg-white/20 border border-white/10 shadow-xs cursor-pointer touch-manipulation"
           >
-            <Radio className={`w-4.5 h-4.5 animate-ping ${isOutdoorMode ? 'text-emerald-300' : 'text-emerald-400'}`} />
+            <NextImage 
+              src="/pic_logo.png" 
+              alt="Logo SMA Muhammadiyah 1 Ponorogo" 
+              width={34} 
+              height={34} 
+              className="w-8 h-8 object-contain drop-shadow-sm" 
+              priority
+            />
           </Link>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -1388,7 +1391,7 @@ export default function FaceNetAiStandalonePage() {
             <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900 border border-slate-700 shadow-md">
               <span className={`w-2 h-2 rounded-full shrink-0 ml-1.5 ${
                 serviceStatus?.isOnline && serviceStatus?.is_running 
-                  ? 'bg-emerald-400 animate-pulse' 
+                  ? 'bg-emerald-400' 
                   : serviceStatus?.isOnline 
                     ? 'bg-amber-400' 
                     : 'bg-rose-500'
@@ -1453,7 +1456,7 @@ export default function FaceNetAiStandalonePage() {
           <div className={`px-3 py-0.5 rounded-xl border text-center font-mono space-y-0 min-w-[105px] ${
             isOutdoorMode ? 'bg-black border-emerald-400/80' : 'bg-slate-950/90 border-indigo-500/30'
           }`}>
-            <div className="text-xs sm:text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 animate-pulse">
+            <div className="text-xs sm:text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
               {currentClock || '--:--:--'}
             </div>
             <div className="text-[9px] font-semibold text-slate-300 truncate">
@@ -1491,10 +1494,11 @@ export default function FaceNetAiStandalonePage() {
                 isOutdoorMode ? 'bg-black border-emerald-500/40 text-white' : 'bg-slate-900/90 border-slate-800 text-slate-100'
               }`}>
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex h-3 w-3 relative shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
-                  </span>
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                    serviceStatus?.is_running || isBrowserCamStreaming 
+                      ? 'bg-emerald-500 shadow-xs' 
+                      : 'bg-slate-500'
+                  }`} />
                   <span className="text-xs sm:text-sm font-black truncate">
                     {currentConfig?.cameraName || 'Kamera Gerbang Depan'}
                   </span>
@@ -1851,13 +1855,13 @@ export default function FaceNetAiStandalonePage() {
 
                 {/* HUD Badges */}
                 <div className="absolute top-2.5 left-2.5 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/40 z-20 shadow-md">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                   <span className="font-bold">{isBrowserMode ? `WEBCAM (${browserFps} FPS)` : currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
                 </div>
 
                 <div className="absolute top-2.5 right-2.5 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-xs text-[10px] font-mono text-slate-200 border border-white/20 z-20 shadow-md">
-                  <span className="text-emerald-300 font-black flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="text-emerald-300 font-black flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     PREVIEW DETEKSI AKTIF
                   </span>
                 </div>
@@ -1947,7 +1951,7 @@ export default function FaceNetAiStandalonePage() {
                 <div className="flex items-center gap-2">
                   <Activity className="w-4.5 h-4.5 text-indigo-400" />
                   <span className="text-xs sm:text-sm font-black text-white">Scanner Log Realtime</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-950 text-emerald-300 border border-emerald-700 animate-pulse">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-950 text-emerald-300 border border-emerald-700">
                     Live Sync
                   </span>
                 </div>
@@ -2782,10 +2786,7 @@ export default function FaceNetAiStandalonePage() {
         {/* BOTTOM TICKER: ARSITEKTUR ALGORITMA AI (Ultra-Compact Single Line ~28px) */}
         <div className="shrink-0 px-3 py-1 bg-slate-950/90 border border-slate-800/80 rounded-xl text-[10px] flex items-center justify-between text-slate-400 gap-2 backdrop-blur-xs">
           <div className="flex items-center gap-1.5 min-w-0 shrink-0">
-            <span className="flex h-1.5 w-1.5 relative shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-            </span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             <span className="font-bold text-slate-200 truncate">
               Bio-Fusion AI:
             </span>

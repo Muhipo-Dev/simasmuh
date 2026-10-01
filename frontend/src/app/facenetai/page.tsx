@@ -1880,21 +1880,13 @@ export default function FaceNetAiStandalonePage() {
                 <Button
                   onClick={() => executeFaceCapture()}
                   disabled={isCapturing || (isBrowserMode ? !isBrowserCamStreaming : (!serviceStatus?.is_running || streamError))}
-                  className="flex-1 min-h-[54px] sm:min-h-[58px] text-sm sm:text-base md:text-lg font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl shadow-xl shadow-emerald-950/70 gap-2.5 border-2 border-emerald-400/50 cursor-pointer transition-all active:scale-[0.97] touch-manipulation"
+                  title="Sentuh untuk Input Presensi Wajah (Spasi / Enter)"
+                  className="flex-1 min-h-[54px] sm:min-h-[58px] bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl shadow-xl shadow-emerald-950/70 flex items-center justify-center border-2 border-emerald-400/50 cursor-pointer transition-all active:scale-[0.97] touch-manipulation"
                 >
                   {isCapturing ? (
-                    <>
-                      <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
-                      <span>Memverifikasi & Merekam Presensi...</span>
-                    </>
+                    <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 animate-spin text-white" />
                   ) : (
-                    <>
-                      <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-200" />
-                      <span className="tracking-wide">SENTUH UNTUK INPUT PRESENSI WAJAH</span>
-                      <span className="hidden sm:inline-block ml-1 text-[10px] font-mono font-normal px-2 py-0.5 rounded bg-black/40 border border-white/20">
-                        SPASI / ENTER
-                      </span>
-                    </>
+                    <Camera className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                   )}
                 </Button>
 

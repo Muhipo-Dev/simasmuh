@@ -566,6 +566,7 @@ export default function FaceAttendanceCameraPage() {
         greeting = 'Kamera atau server presensi sedang mengalami kendala. Silakan coba sesaat lagi.'
       } else {
         // Status SUCCESS: Presensi Kedatangan, Pulang, dan Lengkap
+        const isStudent = role === 'SISWA'
         if (scanType === 'SUDAH_LENGKAP') {
           greeting = name 
             ? `Presensi ${name} sudah lengkap atau masih belum waktunya, coba lagi nanti.`
@@ -573,8 +574,11 @@ export default function FaceAttendanceCameraPage() {
         } else if (scanType === 'PULANG') {
           // Khusus Presensi Pulang GTK
           greeting = `Terima kasih untuk hari ini ${name || ''}, selamat beristirahat dan hati-hati di jalan.`
+        } else if (isStudent) {
+          // Presensi Kedatangan (Masuk) Khusus SISWA
+          greeting = `Assalamualaikum ${name || ''}, selamat datang dan selamat belajar di SMA MUHIPO.`
         } else {
-          // Presensi Kedatangan (Masuk) untuk SEMUA Pengguna (Siswa, Guru, Pegawai, Karyawan)
+          // Presensi Kedatangan (Masuk) Khusus GTK (Guru / Pegawai / Karyawan)
           greeting = `Assalamualaikum ${name || ''}, selamat datang dan selamat beraktifitas di SMA MUHIPO.`
         }
       }

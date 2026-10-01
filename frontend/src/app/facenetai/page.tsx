@@ -561,18 +561,16 @@ export default function FaceNetAiStandalonePage() {
       } else {
         // Status SUCCESS: Pembedaan logika Siswa vs GTK (Guru, Karyawan, Pegawai)
         const isStudent = role === 'SISWA'
-        if (isStudent) {
-          if (scanType === 'SUDAH_LENGKAP') {
-            greeting = `Presensi kedatangan ${name || ''} sudah tercatat. Selamat beraktifitas di SMA MUHIPO.`
-          } else {
-            greeting = `Assalamualaikum ${name || ''}, selamat datang dan selamat beraktifitas di SMA MUHIPO.`
-          }
+        if (scanType === 'SUDAH_LENGKAP') {
+          greeting = name 
+            ? `Presensi ${name} sudah lengkap atau masih belum waktunya, coba lagi nanti.`
+            : 'Presensi sudah lengkap atau masih belum waktunya, coba lagi nanti.'
+        } else if (isStudent) {
+          greeting = `Assalamualaikum ${name || ''}, selamat datang dan selamat beraktifitas di SMA MUHIPO.`
         } else {
           // GTK (Guru / Karyawan / Pegawai)
           if (scanType === 'PULANG') {
             greeting = `Terima kasih untuk hari ini ${name || ''}, selamat beristirahat dan hati-hati di jalan.`
-          } else if (scanType === 'SUDAH_LENGKAP') {
-            greeting = `Presensi harian ${name || ''} sudah lengkap. Terima kasih dan selamat beraktifitas di SMA MUHIPO.`
           } else {
             greeting = `Assalamualaikum ${name || ''}, selamat bertugas dan selamat beraktifitas di SMA MUHIPO.`
           }

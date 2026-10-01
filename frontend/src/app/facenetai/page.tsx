@@ -1421,7 +1421,7 @@ export default function FaceNetAiStandalonePage() {
             </div>
           )}
 
-          {/* Outdoor Sun Mode Toggle (Fitur Khusus Layar Sentuh Luar Ruangan Gerbang) */}
+          {/* Outdoor Sun Mode Toggle (Fitur Khusus Layar Sentuh Luar Ruangan) */}
           <button
             type="button"
             onClick={() => {
@@ -1434,7 +1434,7 @@ export default function FaceNetAiStandalonePage() {
                 ? 'bg-amber-400 text-slate-950 border-amber-300 ring-2 ring-amber-400/50 shadow-amber-500/30' 
                 : 'bg-slate-900 text-amber-300 hover:bg-slate-800 border-slate-700'
             }`}
-            title="Mode Luar Ruangan: Kontras tinggi maksimal untuk tablet gerbang di bawah terik matahari"
+            title="Mode Luar Ruangan: Kontras tinggi maksimal untuk layar sentuh di bawah terik matahari"
           >
             {isOutdoorMode ? <SunMedium className="w-4 h-4 text-slate-950" /> : <Sun className="w-4 h-4 text-amber-400" />}
             <span>{isOutdoorMode ? 'OUTDOOR ☀️' : 'Outdoor Mode'}</span>
@@ -1456,7 +1456,7 @@ export default function FaceNetAiStandalonePage() {
           <button
             type="button"
             onClick={toggleFullscreen}
-            title="Layar Penuh Kiosk Gerbang"
+            title="Layar Penuh Kiosk Presensi"
             className={`min-h-[38px] px-2.5 rounded-xl border flex items-center justify-center transition-all cursor-pointer touch-manipulation ${
               isOutdoorMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
             }`}
@@ -1488,7 +1488,7 @@ export default function FaceNetAiStandalonePage() {
                       : 'bg-slate-500'
                   }`} />
                   <span className="text-xs sm:text-sm font-black truncate">
-                    {currentConfig?.cameraName || 'Kamera Gerbang Depan'}
+                    {currentConfig?.cameraName || 'Kamera Presensi'}
                   </span>
                   <Badge variant="outline" className={`text-[10px] py-0 px-1.5 font-mono font-bold shrink-0 ${
                     isOutdoorMode ? 'border-emerald-400 text-emerald-300 bg-emerald-950/60' : 'border-slate-700 text-indigo-300'
@@ -1496,7 +1496,7 @@ export default function FaceNetAiStandalonePage() {
                     {currentConfig?.streamSourceType || 'RTSP'}
                   </Badge>
                   <span className="text-[10px] text-slate-300 font-semibold truncate hidden sm:inline">
-                    {currentConfig?.location || 'Gerbang Utama'}
+                    {currentConfig?.location || 'Area Presensi'}
                   </span>
                 </div>
 
@@ -1572,7 +1572,7 @@ export default function FaceNetAiStandalonePage() {
                     {!isCapturing && !captureResult && isBrowserCamStreaming && (
                       <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10">
                         {/* Face Oval Framing Target with Outdoor High Contrast */}
-                        <div className={`relative w-44 h-56 sm:w-52 sm:h-64 rounded-[50%/45%] border-3 border-dashed flex items-center justify-center animate-pulse transition-all ${
+                        <div className={`relative w-44 h-56 sm:w-52 sm:h-64 rounded-[50%/45%] border-3 border-dashed flex items-center justify-center transition-all ${
                           isOutdoorMode 
                             ? 'border-emerald-300 shadow-[0_0_35px_rgba(52,211,153,0.5)]' 
                             : 'border-emerald-400/70 shadow-[0_0_30px_rgba(16,185,129,0.3)]'
@@ -1584,7 +1584,7 @@ export default function FaceNetAiStandalonePage() {
                           <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" />
                         </div>
                         
-                        {/* High-Visibility Touch Cue Pill for Outdoor Tablets */}
+                        {/* High-Visibility Touch Cue Pill */}
                         <div className={`mt-3.5 px-4 py-1.5 rounded-full backdrop-blur-md border text-xs sm:text-sm font-black flex items-center gap-2 shadow-2xl ${
                           isOutdoorMode 
                             ? 'bg-black/90 border-emerald-400 text-emerald-300' 
@@ -1628,9 +1628,9 @@ export default function FaceNetAiStandalonePage() {
                                 size="sm"
                                 variant="ghost"
                                 onClick={(e) => {
-                                  e.stopPropagation()
-                                  setCaptureResult(null)
-                                  setCapturedSnapshotUrl(null)
+                                   e.stopPropagation()
+                                   setCaptureResult(null)
+                                   setCapturedSnapshotUrl(null)
                                 }}
                                 className="min-h-[36px] text-xs text-slate-300 hover:text-white"
                               >
@@ -1661,7 +1661,7 @@ export default function FaceNetAiStandalonePage() {
                                     <p className="text-xs sm:text-sm font-black text-white truncate">{cand.name}</p>
                                     <p className="text-[10px] text-slate-300 font-mono font-semibold">{cand.role} • {cand.identifier}</p>
                                     <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-400 mt-0.5">
-                                      <CheckCircle className="w-3 h-3" /> Ketuk Presensi
+                                      <CheckCircle className="w-3 3" /> Ketuk Presensi
                                     </span>
                                   </div>
                                 </button>
@@ -1763,7 +1763,7 @@ export default function FaceNetAiStandalonePage() {
 
                     {browserCamError && (
                       <div className="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-4 text-center space-y-2.5 z-30 pointer-events-auto">
-                        <Camera className="w-10 h-10 text-rose-400 animate-pulse" />
+                        <Camera className="w-10 h-10 text-rose-400" />
                         <p className="text-sm font-bold text-white">Gagal Mengakses Webcam Browser</p>
                         <p className="text-xs text-slate-300 max-w-sm">{browserCamError}</p>
                         <Button size="sm" onClick={() => startBrowserWebcam()} className="bg-indigo-600 text-white text-xs min-h-[38px] px-4 rounded-xl">
@@ -1796,7 +1796,7 @@ export default function FaceNetAiStandalonePage() {
                 ) : (
                   <div className="text-center p-4 space-y-2.5 max-w-md select-none z-10 pointer-events-auto">
                     <div className="w-12 h-12 rounded-2xl bg-indigo-950/90 border border-indigo-500/50 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
-                      <Video className="w-6 h-6 animate-pulse" />
+                      <Video className="w-6 h-6" />
                     </div>
                     <div className="space-y-1">
                       <p className="font-bold text-sm text-slate-200">
@@ -1936,7 +1936,7 @@ export default function FaceNetAiStandalonePage() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">
-                      Waktu Presensi Gerbang
+                      Waktu Presensi
                     </p>
                     <p className="text-xs font-black text-slate-200 truncate">
                       {currentDateStr || 'Memuat Tanggal...'}
@@ -2035,7 +2035,7 @@ export default function FaceNetAiStandalonePage() {
                     </div>
                     <p className="text-xs sm:text-sm font-black text-slate-200">Belum Ada Presensi Hari Ini</p>
                     <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed font-medium">
-                      Arahkan wajah ke depan kamera gerbang. Hasil identifikasi dan foto snapshot kamera akan otomatis muncul di sini.
+                      Arahkan wajah ke depan kamera presensi. Hasil identifikasi dan foto snapshot kamera akan otomatis muncul di sini.
                     </p>
                   </div>
                 ) : (
@@ -2351,7 +2351,7 @@ export default function FaceNetAiStandalonePage() {
                     <Label htmlFor="cameraName" className="text-[11px] font-medium text-slate-200">Nama Titik Kamera</Label>
                     <Input
                       id="cameraName"
-                      placeholder="Camera Gerbang Utama"
+                      placeholder="Kamera Presensi Utama"
                       value={currentConfig?.cameraName || ''}
                       disabled={!isAuthenticated || !canConfigure}
                       onChange={(e) => setFormConfig((prev) => prev ? { ...prev, cameraName: e.target.value } : null)}
@@ -2362,7 +2362,7 @@ export default function FaceNetAiStandalonePage() {
                     <Label htmlFor="location" className="text-[11px] font-medium text-slate-200">Lokasi / Area</Label>
                     <Input
                       id="location"
-                      placeholder="Gerbang Depan Sekolah"
+                      placeholder="Lobi / Area Presensi"
                       value={currentConfig?.location || ''}
                       disabled={!isAuthenticated || !canConfigure}
                       onChange={(e) => setFormConfig((prev) => prev ? { ...prev, location: e.target.value } : null)}

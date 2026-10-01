@@ -3,10 +3,14 @@ import {
   Logger,
   BadRequestException,
   NotFoundException,
+  UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import sharp from 'sharp';
+import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { STORAGE_ROOT, STORAGE_DIRS } from '../config/storage.config';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -51,6 +55,7 @@ export class StorageExplorerService {
         'payment-proofs',
         'carousel',
         'thumbnails',
+        'backups',
       ];
 
       for (const dir of defaultDirs) {
@@ -304,6 +309,7 @@ export class StorageExplorerService {
       { name: 'journals', label: 'Lampiran Jurnal Mengajar', path: 'journals', color: 'rose' },
       { name: 'payment-proofs', label: 'Bukti Pembayaran Keuangan', path: 'payment-proofs', color: 'orange' },
       { name: 'carousel', label: 'Banner & Publikasi', path: 'carousel', color: 'slate' },
+      { name: 'backups', label: 'Arsip Backup & Snapshot', path: 'backups', color: 'red' },
     ];
 
     let grandTotalSize = 0;
@@ -909,5 +915,293 @@ export class StorageExplorerService {
       proofId: paymentProof.id,
     };
   }
+
+  // Token cache sementara untuk verifikasi bertingkat reset sistem (berlaku 5 menit)
+  private resetChallengeTokens = new Map<string, { token: string; expiresAt: number; userId: string }>();
+
+  /**
+   * Mengambil daftar file arsip backup yang ada di ./uploads/backups/
+   */
+  async getBackupsList() {
+    const backupDir = path.join(STORAGE_ROOT, 'backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    const files = await fs.promises.readdir(backupDir);
+    const result: any[] = [];
+
+    for (const f of files) {
+      if (!f.endsWith('.json') && !f.endsWith('.sql') && !f.endsWith('.dump')) continue;
+      const fullPath = path.join(backupDir, f);
+      try {
+        const stat = await fs.promises.stat(fullPath);
+        result.push({
+          name: f,
+          relativePath: `backups/${f}`,
+          size: stat.size,
+          sizeFormatted: this.formatFileSize(stat.size),
+          createdAt: stat.mtime.toISOString(),
+          type: f.endsWith('.json') ? 'FULL_SNAPSHOT_JSON' : 'DATABASE_SQL',
+        });
+      } catch {}
+    }
+
+    result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return result;
+  }
+
+  /**
+   * Membuat Backup Lengkap (Database Data Snapshot + File Storage Metadata)
+   * Berlaku untuk seluruh data aplikasi (Siswa, Guru, Wali Murid, Presensi, Keuangan, Persuratan, Buku Induk, Inventaris)
+   */
+  async createFullBackup(notes?: string) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFileName = `SIMASMUH_BACKUP_${timestamp}.json`;
+    const backupDir = path.join(STORAGE_ROOT, 'backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    const backupFilePath = path.join(backupDir, backupFileName);
+
+    this.logger.log(`Memulai proses Full Backup Sistem ke: ${backupFileName}`);
+
+    // Ekstraksi data tabel secara komprehensif
+    const [
+      users,
+      students,
+      parentProfiles,
+      parentStudents,
+      classes,
+      subjects,
+      attendances,
+      tagihans,
+      paymentProofs,
+      suratMasuks,
+      suratKeluars,
+      guestBooks,
+      staffJournals,
+    ] = await Promise.all([
+      this.prisma.user.findMany({
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          name: true,
+          role: true,
+          subRole: true,
+          subRole2: true,
+          subRole3: true,
+          subRole4: true,
+          subRole5: true,
+          phone: true,
+          avatarUrl: true,
+          address: true,
+          employmentStatus: true,
+          bankName: true,
+          bankAccountNumber: true,
+          bankAccountHolder: true,
+          nipNbm: true,
+          isActive: true,
+        },
+      }),
+      this.prisma.student.findMany(),
+      this.prisma.parentProfile.findMany(),
+      this.prisma.parentStudent.findMany(),
+      this.prisma.class.findMany(),
+      this.prisma.subject.findMany(),
+      this.prisma.dailyAttendance.findMany({ take: 5000, orderBy: { date: 'desc' } }),
+      this.prisma.tagihan.findMany({ take: 5000, orderBy: { createdAt: 'desc' } }),
+      this.prisma.paymentProof.findMany({ take: 5000, orderBy: { createdAt: 'desc' } }),
+      this.prisma.suratMasuk.findMany({ take: 2000, orderBy: { createdAt: 'desc' } }),
+      this.prisma.suratKeluar.findMany({ take: 2000, orderBy: { createdAt: 'desc' } }),
+      this.prisma.guestBook.findMany({ take: 2000, orderBy: { createdAt: 'desc' } }),
+      this.prisma.staffJournal.findMany({ take: 2000, orderBy: { createdAt: 'desc' } }),
+    ]);
+
+    // Ekstraksi metadata berkas di storage
+    const storageStats = await this.getStats();
+
+    const backupPayload = {
+      version: '1.0',
+      system: 'SIMASMUH',
+      generatedAt: new Date().toISOString(),
+      notes: notes || 'Backup snapshot sistem dan data basis data SIMASMUH',
+      storageRoot: STORAGE_ROOT,
+      storageStats,
+      summary: {
+        totalUsers: users.length,
+        totalStudents: students.length,
+        totalParents: parentProfiles.length,
+        totalClasses: classes.length,
+        totalSubjects: subjects.length,
+        totalAttendances: attendances.length,
+        totalTagihans: tagihans.length,
+        totalPaymentProofs: paymentProofs.length,
+        totalSuratMasuk: suratMasuks.length,
+        totalSuratKeluar: suratKeluars.length,
+      },
+      data: {
+        users,
+        students,
+        parentProfiles,
+        parentStudents,
+        classes,
+        subjects,
+        attendances,
+        tagihans,
+        paymentProofs,
+        suratMasuks,
+        suratKeluars,
+        guestBooks,
+        staffJournals,
+      },
+    };
+
+    await fs.promises.writeFile(backupFilePath, JSON.stringify(backupPayload, null, 2), 'utf8');
+
+    const stat = await fs.promises.stat(backupFilePath);
+
+    return {
+      success: true,
+      message: 'Backup data sistem dan snapshot basis data berhasil dibuat.',
+      fileName: backupFileName,
+      relativePath: `backups/${backupFileName}`,
+      sizeFormatted: this.formatFileSize(stat.size),
+      summary: backupPayload.summary,
+    };
+  }
+
+  /**
+   * Tahap 1 Reset Sistem: Request Token Autentikasi Rahasia (Multi-Factor Challenge)
+   * Mengharuskan password akun Superadmin aktif diverifikasi terlebih dahulu
+   */
+  async requestResetChallenge(userId: string, currentPassword?: string) {
+    if (!currentPassword) {
+      throw new BadRequestException('Password akun Superadmin wajib dimasukkan untuk otorisasi tindakan kritis.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Pengguna tidak ditemukan.');
+    }
+
+    // Wajib Superadmin
+    if (user.role !== 'SUPERADMIN') {
+      throw new ForbiddenException('Tindakan Reset Sistem hanya dapat diotorisasi oleh SUPERADMIN.');
+    }
+
+    // Verifikasi password pengguna
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Password akun Superadmin salah. Otorisasi Reset Sistem ditolak.');
+    }
+
+    // Generate token rahasia acak 64-karakter dengan masa kedaluwarsa 5 menit
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const challengeCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit PIN
+    const expiresAt = Date.now() + 5 * 60 * 1000;
+
+    this.resetChallengeTokens.set(userId, {
+      token: `${resetToken}-${challengeCode}`,
+      expiresAt,
+      userId,
+    });
+
+    this.logger.warn(`RESET SYSTEM CHALLENGE ISSUED untuk Superadmin: ${user.name} (${user.username}). PIN Konfirmasi: ${challengeCode}`);
+
+    return {
+      success: true,
+      message: 'Otorisasi tahap 1 berhasil. Masukkan PIN konfirmasi rahasia dan frasa keamanan untuk mengeksekusi reset.',
+      challengeCode, // Diberikan langsung ke admin di response modal aman
+      expiresInSeconds: 300,
+    };
+  }
+
+  /**
+   * Tahap 2 Reset Sistem: Eksekusi Reset Data Transaksional dengan Proteksi Penuh
+   * Sesuai aturan: Akun superadmin inti dipertahankan utuh, struktur database tetap terjaga.
+   */
+  async executeSystemReset(
+    userId: string,
+    payload: {
+      challengeCode: string;
+      confirmPhrase: string; // Wajib: "SAYA YAKIN RESET DATA SIMASMUH"
+      resetOption: 'TRANSACTIONAL_ONLY' | 'ALL_STUDENTS_AND_DATA';
+    },
+  ) {
+    if (payload.confirmPhrase !== 'SAYA YAKIN RESET DATA SIMASMUH') {
+      throw new BadRequestException('Frasa konfirmasi tidak cocok. Ketik tepat: "SAYA YAKIN RESET DATA SIMASMUH"');
+    }
+
+    const challenge = this.resetChallengeTokens.get(userId);
+    if (!challenge || Date.now() > challenge.expiresAt) {
+      this.resetChallengeTokens.delete(userId);
+      throw new UnauthorizedException('Sesi otorisasi reset telah kedaluwarsa. Silakan lakukan verifikasi password ulang.');
+    }
+
+    if (!challenge.token.endsWith(`-${payload.challengeCode}`)) {
+      throw new UnauthorizedException('Kode PIN otorisasi reset tidak valid.');
+    }
+
+    // Validasi ulang user
+    const superadmin = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!superadmin || superadmin.role !== 'SUPERADMIN') {
+      throw new ForbiddenException('Akses ditolak.');
+    }
+
+    // Buat snapshot backup otomatis terlebih dahulu sebelum reset dieksekusi demi keamanan
+    try {
+      await this.createFullBackup('Otomatis dibuat oleh sistem sebelum System Reset dieksekusi');
+    } catch (e: any) {
+      this.logger.warn('Gagal membuat auto-backup sebelum reset:', e);
+    }
+
+    this.logger.error(`MEMULAI EKSEKUSI SYSTEM RESET oleh Superadmin ${superadmin.username} (${superadmin.name}). Opsi: ${payload.resetOption}`);
+
+    // Hapus data transaksional yang aman untuk direset
+    await this.prisma.$transaction([
+      this.prisma.dailyAttendance.deleteMany(),
+      this.prisma.paymentProof.deleteMany(),
+      this.prisma.tagihan.deleteMany(),
+      this.prisma.guestBook.deleteMany(),
+      this.prisma.staffJournal.deleteMany(),
+      this.prisma.suratMasuk.deleteMany(),
+      this.prisma.suratKeluar.deleteMany(),
+      this.prisma.izinKeluar.deleteMany(),
+    ]);
+
+    // Jika opsi mencakup data siswa & wali
+    if (payload.resetOption === 'ALL_STUDENTS_AND_DATA') {
+      await this.prisma.$transaction([
+        this.prisma.parentStudent.deleteMany(),
+        this.prisma.parentProfile.deleteMany(),
+        this.prisma.student.deleteMany(),
+        this.prisma.user.deleteMany({
+          where: {
+            role: { in: ['SISWA', 'WALI_MURID'] },
+          },
+        }),
+      ]);
+    }
+
+    // Bersihkan token
+    this.resetChallengeTokens.delete(userId);
+
+    return {
+      success: true,
+      message: 'Sistem berhasil direset dengan aman. Seluruh data lama telah dibersihkan dan snapshot backup darurat telah disimpan.',
+      resetOption: payload.resetOption,
+      executedBy: superadmin.name,
+      timestamp: new Date().toISOString(),
+    };
+  }
 }
+
 

@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Query,
+  Req,
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
@@ -153,4 +154,42 @@ export class StorageExplorerController {
       body.notes,
     );
   }
+
+  @Get('backups')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN_IT)
+  async getBackupsList() {
+    return this.storageExplorerService.getBackupsList();
+  }
+
+  @Post('create-backup')
+  @Roles(UserRole.SUPERADMIN, UserRole.ADMIN_IT)
+  async createFullBackup(@Body('notes') notes?: string) {
+    return this.storageExplorerService.createFullBackup(notes);
+  }
+
+  @Post('reset-challenge')
+  @Roles(UserRole.SUPERADMIN)
+  async requestResetChallenge(
+    @Req() req: any,
+    @Body('password') password?: string,
+  ) {
+    const userId = req.user?.id || req.user?.userId;
+    return this.storageExplorerService.requestResetChallenge(userId, password);
+  }
+
+  @Post('execute-reset')
+  @Roles(UserRole.SUPERADMIN)
+  async executeSystemReset(
+    @Req() req: any,
+    @Body()
+    body: {
+      challengeCode: string;
+      confirmPhrase: string;
+      resetOption: 'TRANSACTIONAL_ONLY' | 'ALL_STUDENTS_AND_DATA';
+    },
+  ) {
+    const userId = req.user?.id || req.user?.userId;
+    return this.storageExplorerService.executeSystemReset(userId, body);
+  }
 }
+

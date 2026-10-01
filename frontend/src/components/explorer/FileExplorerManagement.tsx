@@ -115,6 +115,22 @@ export function FileExplorerManagement({ initialPath = '', forcedTitle }: FileEx
   const [paymentAmount, setPaymentAmount] = useState<string>('')
   const [paymentNotes, setPaymentNotes] = useState('')
 
+  // Backup & Restore State
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false)
+  const [backupNotes, setBackupNotes] = useState('')
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false)
+
+  // Confidential System Reset State (Multi-Factor Security)
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false)
+  const [resetStep, setResetStep] = useState<1 | 2>(1)
+  const [resetSuperadminPassword, setResetSuperadminPassword] = useState('')
+  const [resetChallengePin, setResetChallengePin] = useState('')
+  const [inputChallengePin, setInputChallengePin] = useState('')
+  const [resetConfirmPhrase, setResetConfirmPhrase] = useState('')
+  const [resetOption, setResetOption] = useState<'TRANSACTIONAL_ONLY' | 'ALL_STUDENTS_AND_DATA'>('TRANSACTIONAL_ONLY')
+  const [isRequestingReset, setIsRequestingReset] = useState(false)
+  const [isExecutingReset, setIsExecutingReset] = useState(false)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Navigate helper with history tracking
@@ -226,9 +242,21 @@ export function FileExplorerManagement({ initialPath = '', forcedTitle }: FileEx
     enabled: isLinkPaymentOpen,
   })
 
+  // 6. Query: Backups List
+  const { data: backupsList = [], refetch: refetchBackups } = useQuery<any[]>({
+    queryKey: ['storage-explorer-backups'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/storage-explorer/backups')
+      if (!res.ok) return []
+      return res.json()
+    },
+    staleTime: 10000,
+  })
+
   // Quick Access Sidebar Folders
   const quickAccessItems = [
     { name: 'Root Server', path: '', icon: HardDrive, color: 'text-slate-600 dark:text-slate-300' },
+    { name: 'Arsip Backup Data', path: 'backups', icon: Database, color: 'text-rose-500' },
     { name: 'Bukti Pembayaran', path: 'payment-proofs', icon: Receipt, color: 'text-orange-500' },
     { name: 'Foto Profil & AI', path: 'profiles', icon: Camera, color: 'text-blue-500' },
     { name: 'Berkas Siswa', path: 'students', icon: Users, color: 'text-indigo-500' },
@@ -541,6 +569,135 @@ export function FileExplorerManagement({ initialPath = '', forcedTitle }: FileEx
     }
   }
 
+  // Handle Create Backup
+  const handleCreateBackup = async () => {
+    try {
+      setIsCreatingBackup(true)
+      const res = await authenticatedFetch('/api-backend/storage-explorer/create-backup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: backupNotes }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Gagal membuat backup')
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Backup Berhasil Dibuat',
+        html: `<p class="text-xs text-slate-600">${data.message}</p><p class="text-xs font-mono font-bold mt-2 text-blue-600">${data.fileName} (${data.sizeFormatted})</p>`,
+        confirmButtonColor: '#2563eb',
+      })
+
+      setIsBackupModalOpen(false)
+      setBackupNotes('')
+      refetchBackups()
+      refetchContents()
+      refetchStats()
+    } catch (err: any) {
+      Swal.fire('Error', err?.message || 'Gagal membuat backup sistem.', 'error')
+    } finally {
+      setIsCreatingBackup(false)
+    }
+  }
+
+  // Handle Step 1: Request Reset Challenge
+  const handleRequestResetChallenge = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!resetSuperadminPassword) {
+      Swal.fire('Peringatan', 'Masukkan password akun Superadmin Anda.', 'warning')
+      return
+    }
+
+    try {
+      setIsRequestingReset(true)
+      const res = await authenticatedFetch('/api-backend/storage-explorer/reset-challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: resetSuperadminPassword }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Otorisasi gagal')
+
+      setResetChallengePin(data.challengeCode)
+      setResetStep(2)
+      setResetSuperadminPassword('')
+    } catch (err: any) {
+      Swal.fire('Otorisasi Ditolak', err?.message || 'Password salah atau Anda bukan Superadmin.', 'error')
+    } finally {
+      setIsRequestingReset(false)
+    }
+  }
+
+  // Handle Step 2: Execute Confidential Reset
+  const handleExecuteSystemReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (resetConfirmPhrase !== 'SAYA YAKIN RESET DATA SIMASMUH') {
+      Swal.fire('Peringatan', 'Ketik tepat frasa konfirmasi: "SAYA YAKIN RESET DATA SIMASMUH"', 'warning')
+      return
+    }
+
+    if (inputChallengePin !== resetChallengePin) {
+      Swal.fire('Peringatan', 'PIN Otorisasi Rahasia tidak cocok.', 'warning')
+      return
+    }
+
+    const confirm = await Swal.fire({
+      title: '🚨 PERINGATAN TERAKHIR!',
+      html: `
+        <div class="text-xs text-left text-rose-700 bg-rose-50 p-3 rounded-lg border border-rose-200">
+          <p class="font-bold mb-1">Tindakan ini akan membersihkan data operasional dan tidak dapat dibatalkan!</p>
+          <p>Sistem akan otomatis menyimpan 1 snapshot backup darurat sebelum pembersihan dimulai.</p>
+        </div>
+      `,
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'EKSEKUSI RESET SEKARANG',
+      cancelButtonText: 'Batal',
+    })
+
+    if (!confirm.isConfirmed) return
+
+    try {
+      setIsExecutingReset(true)
+      const res = await authenticatedFetch('/api-backend/storage-explorer/execute-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challengeCode: inputChallengePin,
+          confirmPhrase: resetConfirmPhrase,
+          resetOption,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Gagal mengeksekusi reset sistem')
+
+      Swal.fire({
+        icon: 'success',
+        title: 'System Reset Selesai',
+        text: data.message,
+        confirmButtonColor: '#2563eb',
+      })
+
+      setIsResetModalOpen(false)
+      setResetStep(1)
+      setInputChallengePin('')
+      setResetChallengePin('')
+      setResetConfirmPhrase('')
+      refetchContents()
+      refetchStats()
+      refetchBackups()
+    } catch (err: any) {
+      Swal.fire('Error', err?.message || 'Gagal mengeksekusi reset sistem.', 'error')
+    } finally {
+      setIsExecutingReset(false)
+    }
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-105px)] min-h-[580px] bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 rounded-xl border border-slate-300/80 dark:border-slate-800 shadow-xl overflow-hidden font-sans">
       
@@ -636,6 +793,33 @@ export function FileExplorerManagement({ initialPath = '', forcedTitle }: FileEx
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
             <span className="hidden lg:inline">FaceNet AI</span>
+          </Button>
+
+          {/* Backup Database & File Storage Button */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setIsBackupModalOpen(true)}
+            className="h-8 px-2.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-md gap-1.5"
+            title="Backup Data Sistem, Database & File Storage"
+          >
+            <Database className="w-3.5 h-3.5 text-emerald-500" />
+            <span className="hidden xl:inline">Backup Snapshot</span>
+          </Button>
+
+          {/* Confidential System Reset Button */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setResetStep(1)
+              setIsResetModalOpen(true)
+            }}
+            className="h-8 px-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-md gap-1.5"
+            title="Reset Sistem & Pembersihan Data (Superadmin Only - Rahasia)"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-rose-500" />
+            <span className="hidden xl:inline">Reset Sistem</span>
           </Button>
         </div>
 
@@ -1819,6 +2003,239 @@ export function FileExplorerManagement({ initialPath = '', forcedTitle }: FileEx
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ================= MODAL: BACKUP DATA & SNAPSHOT SYSTEM ================= */}
+      <Dialog open={isBackupModalOpen} onOpenChange={setIsBackupModalOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-600">
+              <Database className="w-5 h-5" /> Backup Basis Data & File Storage Sistem
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Mengekspor seluruh data aktif di PostgreSQL/Supabase (Siswa, Guru, Presensi, Keuangan, Persuratan, Buku Induk) serta metadata direktori server ke arsip snapshot JSON/SQL.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Catatan / Keterangan Backup</Label>
+              <Input
+                placeholder="Contoh: Backup Rutin Awal Semester Ganjil 2026/2027..."
+                value={backupNotes}
+                onChange={(e) => setBackupNotes(e.target.value)}
+                className="text-xs"
+              />
+            </div>
+
+            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+              <p className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                Cakupan Data yang Disimpan dalam Snapshot:
+              </p>
+              <ul className="list-disc pl-5 text-[11px] text-slate-600 dark:text-slate-400 space-y-0.5">
+                <li>Seluruh Master Data (Akun Pengguna, Profil Guru, Siswa, Orang Tua/Wali, Kelas, Mapel).</li>
+                <li>Seluruh Riwayat Operasional (Log Presensi Pegawai & Siswa, Izin Keluar, Cuti, Dispensasi).</li>
+                <li>Seluruh Transaksi Keuangan (Tagihan SPP/DPP, Bukti Pembayaran Transfer, Pengeluaran, Gaji).</li>
+                <li>Seluruh E-Arsip Persuratan (Buku Agenda Surat Masuk, Surat Keluar, Disposisi, Buku Tamu).</li>
+                <li>Metadata & Indexing Direktori File Server Lokal (<span className="font-mono text-[10px]">./uploads/</span>).</li>
+              </ul>
+            </div>
+
+            {/* Riwayat Arsip Backup Sebelumnya */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Arsip Backup Tersedia di Server ({backupsList.length})</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigateTo('backups')}
+                  className="h-6 text-[10px] text-blue-600 hover:underline px-1"
+                >
+                  Buka Folder di Explorer →
+                </Button>
+              </div>
+
+              <div className="max-h-36 overflow-y-auto space-y-1 pr-1 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5">
+                {backupsList.length === 0 ? (
+                  <p className="text-xs text-center py-4 text-slate-400">Belum ada file backup di ./uploads/backups/</p>
+                ) : (
+                  backupsList.map((b: any) => (
+                    <div
+                      key={b.name}
+                      className="p-1.5 rounded-md bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs"
+                    >
+                      <div className="min-w-0 flex items-center gap-2">
+                        <Database className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-xs">{b.name}</p>
+                          <p className="text-[10px] text-slate-400">{b.sizeFormatted} · {new Date(b.createdAt).toLocaleString('id-ID')}</p>
+                        </div>
+                      </div>
+                      <a
+                        href={`/uploads/${b.relativePath}`}
+                        download={b.name}
+                        className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 hover:text-blue-600"
+                        title="Unduh Arsip Snapshot"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={() => setIsBackupModalOpen(false)} disabled={isCreatingBackup}>
+              Tutup
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleCreateBackup}
+              disabled={isCreatingBackup}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5"
+            >
+              <Database className="w-3.5 h-3.5" />
+              {isCreatingBackup ? 'Memproses Backup...' : 'Buat Backup Sekarang'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ================= MODAL: CONFIDENTIAL SYSTEM RESET (MULTI-FACTOR AUTH) ================= */}
+      <Dialog open={isResetModalOpen} onOpenChange={setIsResetModalOpen}>
+        <DialogContent className="sm:max-w-lg border-rose-300 dark:border-rose-900/60">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-rose-600">
+              <ShieldCheck className="w-5 h-5" /> Reset Sistem & Pembersihan Data
+            </DialogTitle>
+            <DialogDescription className="text-xs text-rose-700 dark:text-rose-400 font-semibold">
+              Fitur Sangat Rahasia & Terproteksi Berlapis (Khusus Superadmin SIMASMUH)
+            </DialogDescription>
+          </DialogHeader>
+
+          {resetStep === 1 ? (
+            /* ===== TAHAP 1: OTORISASI PASSWORD SUPERADMIN ===== */
+            <form onSubmit={handleRequestResetChallenge} className="space-y-4 py-2">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs space-y-1">
+                <p className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  Verifikasi Tingkat 1: Kredensial Superadmin
+                </p>
+                <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                  Untuk melindungi basis data dari modifikasi tidak disengaja, masukkan password akun Superadmin Anda saat ini untuk menerbitkan PIN otorisasi rahasia.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Password Akun Superadmin</Label>
+                <Input
+                  type="password"
+                  placeholder="Masukkan password Anda..."
+                  value={resetSuperadminPassword}
+                  onChange={(e) => setResetSuperadminPassword(e.target.value)}
+                  autoFocus
+                  className="text-xs"
+                />
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button type="button" variant="outline" size="sm" onClick={() => setIsResetModalOpen(false)}>
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!resetSuperadminPassword || isRequestingReset}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                >
+                  {isRequestingReset ? 'Memverifikasi...' : 'Lanjut ke Otorisasi Akhir →'}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            /* ===== TAHAP 2: VERIFIKASI PIN RAHASIA & FRASA KONFIRMASI ===== */
+            <form onSubmit={handleExecuteSystemReset} className="space-y-4 py-2">
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 rounded-lg text-xs space-y-2 text-rose-800 dark:text-rose-300">
+                <p className="font-bold flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  Otorisasi Akhir: PIN Rahasia Berlaku 5 Menit
+                </p>
+                <div className="bg-white dark:bg-slate-900 p-2 rounded border border-rose-200 dark:border-rose-800 text-center">
+                  <span className="text-[11px] text-slate-500">PIN Keamanan Anda: </span>
+                  <span className="font-mono text-base font-black text-rose-600 tracking-widest">{resetChallengePin}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Pilih Cakupan Pembersihan</Label>
+                <Select value={resetOption} onValueChange={(val: any) => setResetOption(val)}>
+                  <SelectTrigger className="text-xs h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TRANSACTIONAL_ONLY">
+                      Hanya Data Transaksional (Presensi, Keuangan, Surat, Jurnal)
+                    </SelectItem>
+                    <SelectItem value="ALL_STUDENTS_AND_DATA">
+                      Penuh: Data Transaksional + Data Siswa & Wali Murid (Master Akun Inti Tetap Utuh)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Masukkan PIN Keamanan di Atas</Label>
+                <Input
+                  type="text"
+                  placeholder="Ketik 6 digit PIN..."
+                  value={inputChallengePin}
+                  onChange={(e) => setInputChallengePin(e.target.value)}
+                  className="text-xs font-mono font-bold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                  Ketik Tepat Frasa Konfirmasi: <span className="font-mono font-bold">SAYA YAKIN RESET DATA SIMASMUH</span>
+                </Label>
+                <Input
+                  placeholder="SAYA YAKIN RESET DATA SIMASMUH"
+                  value={resetConfirmPhrase}
+                  onChange={(e) => setResetConfirmPhrase(e.target.value)}
+                  className="text-xs font-semibold"
+                />
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setResetStep(1)}
+                  disabled={isExecutingReset}
+                >
+                  ← Kembali
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={
+                    inputChallengePin !== resetChallengePin ||
+                    resetConfirmPhrase !== 'SAYA YAKIN RESET DATA SIMASMUH' ||
+                    isExecutingReset
+                  }
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                >
+                  {isExecutingReset ? 'Mengeksekusi Reset...' : 'Eksekusi Reset Sekarang'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
+

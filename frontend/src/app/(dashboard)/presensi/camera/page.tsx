@@ -244,6 +244,7 @@ export default function FaceAttendanceCameraPage() {
   } | null>(null)
   const [capturedSnapshotUrl, setCapturedSnapshotUrl] = useState<string | null>(null)
   const autoClearTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null)
 
   // Dataset filter states
   const [searchQuery, setSearchQuery] = useState('')
@@ -583,25 +584,35 @@ export default function FaceAttendanceCameraPage() {
         }
       }
 
+      // Hentikan audio atau ucapan sebelumnya agar tidak bertumpuk saat antrian padat
+      if (activeAudioRef.current) {
+        try {
+          activeAudioRef.current.pause()
+          activeAudioRef.current.currentTime = 0
+        } catch {}
+        activeAudioRef.current = null
+      }
+
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel()
       }
 
-      // 1. Prioritas Utama: Unduh & Putar Suara Wanita Indonesia Asli yang Natural & Jernih dari TTS Server
+      // 1. Prioritas Utama: Unduh & Putar Suara Wanita Indonesia Asli dengan Intonasi Cepat (1.35x) & Jernih untuk Efisiensi 700+ Siswa
       const ttsUrl = `/api-backend/face-attendance/tts?text=${encodeURIComponent(greeting)}`
       const audio = new Audio()
       audio.crossOrigin = 'anonymous'
       audio.src = ttsUrl
-      audio.playbackRate = 1.05
+      audio.playbackRate = 1.35 // Intonasi dipercepat 35% untuk efisiensi antrian tinggi
+      activeAudioRef.current = audio
 
       const playPromise = audio.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          // 2. Fallback: Browser Web Speech API dengan Filter Ketat Khusus Suara Wanita (Mengecualikan Suara Pria seperti Andika/David)
+          // 2. Fallback: Browser Web Speech API dengan Filter Ketat Khusus Suara Wanita & Rate Cepat (1.35x)
           if (!window.speechSynthesis) return
           const utter = new SpeechSynthesisUtterance(greeting)
           utter.lang = 'id-ID'
-          utter.rate = 1.05
+          utter.rate = 1.35 // Intonasi dipercepat 35% agar efisien
 
           const voices = window.speechSynthesis.getVoices()
           const isMale = (vName: string) => {
@@ -830,7 +841,7 @@ export default function FaceAttendanceCameraPage() {
           const cCtx = canvas.getContext('2d')
           if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
         }
-      }, 5000)
+      }, 2400)
     }
   }
 

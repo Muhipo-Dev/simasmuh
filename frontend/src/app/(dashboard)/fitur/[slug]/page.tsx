@@ -32,6 +32,7 @@ import { GuestBookManagement } from '@/components/tu/GuestBookManagement'
 import { NotulensiRapatManagement } from '@/components/tu/NotulensiRapatManagement'
 import { KegiatanSekolahManagement } from '@/components/tu/KegiatanSekolahManagement'
 import { DisposisiUserManagement } from '@/components/tu/DisposisiUserManagement'
+import { FileExplorerManagement } from '@/components/explorer/FileExplorerManagement'
 
 type GuestEntry = {
   id: string
@@ -874,6 +875,8 @@ export default function FiturSubRolePage() {
         <NotulensiRapatManagement />
       ) : slug === 'catatan-kedisiplinan' || slug === 'ketertiban' || slug === 'bk-bp' ? (
         <InteractiveCharacterAssessmentManagement mode={slug === 'bk-bp' ? 'BK' : slug === 'catatan-kedisiplinan' ? 'GURU' : 'KETERTIBAN'} />
+      ) : slug === 'file-explorer' ? (
+        <FileExplorerManagement />
       ) : (
         <>
           {/* Grid Status Modul Terencana */}

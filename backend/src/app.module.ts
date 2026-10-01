@@ -25,6 +25,7 @@ import { StaffJournalsModule } from './modules/attendance/staff-journals/staff-j
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { STORAGE_ROOT } from './modules/core/config/storage.config';
 import { UploadModule } from './modules/core/upload/upload.module';
+import { StorageExplorerModule } from './modules/core/storage-explorer/storage-explorer.module';
 import { IzinKeluarModule } from './modules/attendance/izin-keluar/izin-keluar.module';
 import { FinanceModule } from './modules/finance/finance/finance.module';
 import { PaymentProofsModule } from './modules/finance/payment-proofs/payment-proofs.module';
@@ -98,6 +99,7 @@ import { AdaptiveThrottlerGuard } from './modules/core/guards/adaptive-throttler
     AnnouncementsModule,
     StaffJournalsModule,
     UploadModule,
+    StorageExplorerModule,
     IzinKeluarModule,
     FinanceModule,
     PaymentProofsModule,

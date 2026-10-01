@@ -5,7 +5,7 @@ import {
   Banknote, FileText, Image as ImageIcon, Award, FileCheck,
   ShieldAlert, Sparkles, ShieldCheck, UserCheck, HeartHandshake,
   Library, BookMarked, Mail, Contact, Package, Boxes, Camera, BellRing, Database,
-  Clock, CreditCard, Archive, Inbox, Send, BookCheck
+  Clock, CreditCard, Archive, Inbox, Send, BookCheck, HardDrive, FolderKanban
 } from 'lucide-react'
 
 // 1. Superadmin & Admin IT (Kontrol Penuh Sistem & Master Data)
@@ -24,10 +24,12 @@ export const superadminLinks = [
   { name: 'Izin Keluar Pegawai', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Pegawai' },
   { name: 'Izin Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Pegawai' },
   { name: 'Kegiatan Sekolah', href: '/fitur/kegiatan', icon: Sparkles, group: 'Layanan Pegawai' },
+  { name: 'File Explorer & Storage', href: '/fitur/file-explorer', icon: HardDrive, group: 'Pengaturan Sistem' },
   { name: 'Layar QR Presensi', href: '/presensi/manajemen-qr', icon: QrCode, group: 'Pengaturan Sistem' },
   { name: 'Berita & Informasi', href: '/informasi/pengumuman', icon: Megaphone, group: 'Pengaturan Sistem' },
   { name: 'Banner Utama', href: '/informasi/banner', icon: ImageIcon, group: 'Pengaturan Sistem' },
   { name: 'Manajemen Akun', href: '/master-data/pengguna', icon: UserCog, group: 'Pengaturan Sistem' },
+  { name: 'FaceNet AI', href: '/facenetai', icon: Camera, group: 'Pengaturan Sistem' },
   { name: 'Pengumuman Sistem', href: '/pengaturan/pengumuman-sistem', icon: BellRing, group: 'Pengaturan Sistem' },
   { name: 'Notifikasi Email', href: '/pengaturan/notifikasi', icon: Mail, group: 'Pengaturan Sistem' },
   { name: 'Pengaturan', href: '/pengaturan/sistem', icon: Settings, group: 'Pengaturan Sistem' },
@@ -43,6 +45,7 @@ export const bauLinks = [
   { name: 'Disposisi Surat', href: '/fitur/disposisi', icon: FileCheck, group: 'Tata Usaha' },
   { name: 'Surat Keluar', href: '/fitur/surat-keluar', icon: Send, group: 'Tata Usaha' },
   { name: 'Arsip Surat Digital', href: '/fitur/arsip', icon: Archive, group: 'Tata Usaha' },
+  { name: 'File Explorer & Storage', href: '/fitur/file-explorer', icon: HardDrive, group: 'Tata Usaha' },
   { name: 'Inventaris & Aset', href: '/fitur/inventaris', icon: Package, group: 'Tata Usaha' },
   { name: 'Buku Tamu', href: '/fitur/buku-tamu', icon: Contact, group: 'Tata Usaha' },
   { name: 'Kegiatan Sekolah', href: '/fitur/kegiatan', icon: Sparkles, group: 'Tata Usaha' },
@@ -152,6 +155,7 @@ export const keuanganAllLinks = [
   { name: 'Keuangan Masuk', href: '/keuangan/pemasukan', icon: Wallet, group: 'Keuangan Sekolah' },
   { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt, group: 'Keuangan Sekolah' },
   { name: 'Virtual Account BNI', href: '/keuangan/virtual-account', icon: Database, group: 'Keuangan Sekolah' },
+  { name: 'File Explorer Bukti Bayar', href: '/keuangan/file-explorer', icon: HardDrive, group: 'Keuangan Sekolah' },
   { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote, group: 'Keuangan Sekolah' },
   { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings, group: 'Keuangan Sekolah' },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText, group: 'Keuangan Sekolah' },
@@ -168,6 +172,7 @@ export const keuanganMasukLinks = [
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Keuangan Masuk', href: '/keuangan/pemasukan', icon: Wallet, group: 'Keuangan Masuk' },
   { name: 'Virtual Account BNI', href: '/keuangan/virtual-account', icon: Database, group: 'Keuangan Masuk' },
+  { name: 'File Explorer Bukti Bayar', href: '/keuangan/file-explorer', icon: HardDrive, group: 'Keuangan Masuk' },
   { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote, group: 'Keuangan Masuk' },
   { name: 'Pengaturan Biaya & Diskon', href: '/keuangan/pengaturan', icon: Settings, group: 'Keuangan Masuk' },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText, group: 'Keuangan Masuk' },
@@ -183,6 +188,7 @@ export const keuanganKeluarLinks = [
   { name: 'Scan QR Absen', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Keuangan Keluar', href: '/keuangan/pengeluaran', icon: Receipt, group: 'Keuangan Keluar' },
+  { name: 'File Explorer Bukti Bayar', href: '/keuangan/file-explorer', icon: HardDrive, group: 'Keuangan Keluar' },
   { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote, group: 'Keuangan Keluar' },
   { name: 'Laporan Keuangan', href: '/keuangan/laporan', icon: FileText, group: 'Keuangan Keluar' },
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
@@ -208,6 +214,11 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     const isKeuanganMasuk = roles.includes('KEUANGAN_MASUK')
     const isKeuanganKeluar = roles.includes('KEUANGAN_KELUAR')
     const isKeuanganPure = roles.includes('KEUANGAN') || isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar
+
+    // File Explorer Bukti Bayar Keuangan
+    if (pathname.startsWith('/keuangan/file-explorer')) {
+      return isKeuanganPure || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
+    }
 
     // Keuangan Masuk (Hanya staf Keuangan Masuk & Keuangan All)
     if (pathname.startsWith('/keuangan/pemasukan') || pathname.startsWith('/keuangan/virtual-account') || pathname.startsWith('/keuangan/pengaturan') || pathname.startsWith('/keuangan/verifikasi-pembayaran')) {
@@ -265,7 +276,13 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   if (pathname.startsWith('/master-data/pengguna')) {
     return isBau || isHumasSdm || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
   }
-  if (pathname.startsWith('/pengaturan/sistem') || pathname.startsWith('/presensi/manajemen-qr') || pathname.startsWith('/presensi/camera')) {
+  if (
+    pathname.startsWith('/pengaturan/sistem') || 
+    pathname.startsWith('/presensi/manajemen-qr') || 
+    pathname.startsWith('/presensi/camera') ||
+    pathname.startsWith('/fitur/file-explorer') ||
+    pathname.startsWith('/pengaturan/file-explorer')
+  ) {
     return isBau || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
   }
 

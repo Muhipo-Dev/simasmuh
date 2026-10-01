@@ -299,8 +299,10 @@ class FaceRecognitionEngine:
                 possible_paths.extend([
                     os.path.join(s_root, clean_rel),
                     os.path.join(s_root, "profiles", clean_rel),
+                    os.path.join(s_root, "students", clean_rel),
                     os.path.join(s_root, os.path.basename(clean_rel)),
                     os.path.join(s_root, "profiles", os.path.basename(clean_rel)),
+                    os.path.join(s_root, "students", os.path.basename(clean_rel)),
                 ])
             for p in possible_paths:
                 if os.path.exists(p):

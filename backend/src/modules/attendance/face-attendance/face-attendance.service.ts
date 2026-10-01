@@ -147,21 +147,9 @@ export class FaceAttendanceService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      const config = this.getConfig();
-      if (config.isActive) {
-        this.logger.log(
-          'Konfigurasi Face Attendance aktif (isActive: true). Memulai Microservice FaceNet AI di latar belakang...',
-        );
-        this.startAiWorker().catch((err) => {
-          this.logger.warn(
-            `Inisialisasi awal FaceNet AI worker: ${err?.message || err}`,
-          );
-        });
-      } else {
-        this.logger.log(
-          'Face Attendance AI Service berada dalam mode Standby (On-Demand). Layanan akan aktif saat dihidupkan melalui panel Presensi Camera AI.',
-        );
-      }
+      this.logger.log(
+        'Face Attendance AI Service berada dalam mode Standby (On-Demand). Layanan akan aktif saat dihidupkan manual oleh admin melalui dashboard.',
+      );
     } catch (err) {
       this.logger.error(
         'Gagal memeriksa status awal AI Microservice pada onModuleInit',
@@ -357,8 +345,12 @@ export class FaceAttendanceService implements OnModuleInit {
           const possiblePaths = [
             join(STORAGE_ROOT, cleanRel),
             join(STORAGE_ROOT, 'profiles', cleanRel),
+            join(STORAGE_ROOT, 'students', cleanRel),
             join(STORAGE_ROOT, path.basename(cleanRel)),
             join(STORAGE_ROOT, 'profiles', path.basename(cleanRel)),
+            join(STORAGE_ROOT, 'students', path.basename(cleanRel)),
+            join(process.cwd(), 'storage', cleanRel),
+            join(process.cwd(), 'storage', 'profiles', cleanRel),
           ];
           for (const p of possiblePaths) {
             if (existsSync(p)) {
@@ -370,8 +362,12 @@ export class FaceAttendanceService implements OnModuleInit {
           const possiblePaths = [
             join(STORAGE_ROOT, u.avatarUrl),
             join(STORAGE_ROOT, 'profiles', u.avatarUrl),
+            join(STORAGE_ROOT, 'students', u.avatarUrl),
             join(STORAGE_ROOT, path.basename(u.avatarUrl)),
             join(STORAGE_ROOT, 'profiles', path.basename(u.avatarUrl)),
+            join(STORAGE_ROOT, 'students', path.basename(u.avatarUrl)),
+            join(process.cwd(), 'storage', u.avatarUrl),
+            join(process.cwd(), 'storage', 'profiles', u.avatarUrl),
           ];
           for (const p of possiblePaths) {
             if (existsSync(p)) {

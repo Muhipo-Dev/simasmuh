@@ -38,8 +38,8 @@ export enum UserRole {
   SUPERADMIN = 'SUPERADMIN',
   KEPALA_SEKOLAH = 'KEPALA_SEKOLAH',
   ADMIN_TU = 'ADMIN_TU',
-  BAU = 'BAU',
-  TATA_USAHA = 'TATA_USAHA',
+  BAU = 'ADMIN_TU', // Alias standar ADMIN_TU
+  TATA_USAHA = 'ADMIN_TU', // Alias standar ADMIN_TU
   GURU = 'GURU',
   SISWA = 'SISWA',
   KARYAWAN = 'KARYAWAN',
@@ -55,8 +55,8 @@ export enum UserRole {
 export enum SubRole {
   KEPALA_SEKOLAH = 'KEPALA_SEKOLAH',
   ADMIN_TU = 'ADMIN_TU',
-  TATA_USAHA = 'TATA_USAHA',
-  BAU = 'BAU',
+  TATA_USAHA = 'ADMIN_TU', // Alias standar ADMIN_TU
+  BAU = 'ADMIN_TU', // Alias standar ADMIN_TU
   ADMIN_WEB = 'ADMIN_WEB',
   PEMBINA_EKSTRA = 'PEMBINA_EKSTRA',
   KETERTIBAN = 'KETERTIBAN',
@@ -78,3 +78,12 @@ export enum SubRole {
   ISMUBA = 'ISMUBA',
   WAKA_ISMUBA = 'WAKA_ISMUBA',
 }
+
+// Helper standardisasi grup peran Tata Usaha (ADMIN_TU)
+export const TU_ROLES = ['ADMIN_TU', 'BAU', 'TATA_USAHA'];
+export const isRoleTU = (role?: string | null): boolean => {
+  if (!role) return false;
+  const upper = role.toUpperCase();
+  return upper === 'ADMIN_TU' || upper === 'BAU' || upper === 'TATA_USAHA' || upper.includes('ADMIN_TU') || upper.includes('TATA_USAHA');
+};
+

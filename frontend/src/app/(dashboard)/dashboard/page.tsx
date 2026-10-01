@@ -2957,6 +2957,19 @@ export default function DashboardPage() {
             </>
           )}
 
+          {/* Tombol Khusus Superadmin: Akses Langsung FaceNet AI */}
+          {isSuperadminRole && (
+            <Link href="/facenetai">
+              <Button
+                size="sm"
+                className="h-8 sm:h-8.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-[11px] shadow-sm gap-1.5 border border-cyan-400/40 active:scale-95 transition-all"
+              >
+                <Camera className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+                <span>FaceNet AI</span>
+              </Button>
+            </Link>
+          )}
+
           <span className="px-2.5 py-1 rounded-xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 text-white font-bold text-[11px] uppercase tracking-wider shadow-inner flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
             {(role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') ? 'Tata Usaha' : isKepalaSekolah ? 'Kepala Sekolah' : role} {subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' && subRole !== 'KEPALA_SEKOLAH' ? `• ${subRole}` : ''}

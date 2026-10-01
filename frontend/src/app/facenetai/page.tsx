@@ -1452,18 +1452,6 @@ export default function FaceNetAiStandalonePage() {
             </div>
           </div>
 
-          {/* Jam Digital Ringkas */}
-          <div className={`px-3 py-0.5 rounded-xl border text-center font-mono space-y-0 min-w-[105px] ${
-            isOutdoorMode ? 'bg-black border-emerald-400/80' : 'bg-slate-950/90 border-indigo-500/30'
-          }`}>
-            <div className="text-xs sm:text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
-              {currentClock || '--:--:--'}
-            </div>
-            <div className="text-[9px] font-semibold text-slate-300 truncate">
-              {currentDateStr || 'Memuat Waktu...'}
-            </div>
-          </div>
-
           {/* Fullscreen Kiosk Button */}
           <button
             type="button"
@@ -1483,8 +1471,8 @@ export default function FaceNetAiStandalonePage() {
         {/* TAB 1: LIVE MONITOR & SCANNER LOG */}
         {activeTab === 'monitor' && (
           <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-3 overflow-hidden">
-            {/* KIRI: VIDEO STREAM 16:9 + ACTION CAPTURE PANEL (7 COLS) */}
-            <div className={`lg:col-span-7 flex flex-col h-full overflow-hidden rounded-2xl shadow-xl transition-all ${
+            {/* KIRI: VIDEO STREAM 16:9 + ACTION CAPTURE PANEL (8 COLS) */}
+            <div className={`lg:col-span-8 flex flex-col h-full overflow-hidden rounded-2xl shadow-xl transition-all ${
               isOutdoorMode 
                 ? 'bg-black border-2 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.2)]' 
                 : 'bg-slate-950/95 border border-slate-800'
@@ -1930,16 +1918,56 @@ export default function FaceNetAiStandalonePage() {
               </div>
             </div>
 
-            {/* KANAN: REALTIME SCANNER LOGS LIST (5 COLS) */}
-            <div className={`lg:col-span-5 flex flex-col h-full overflow-hidden rounded-2xl shadow-xl transition-all ${
-              isOutdoorMode 
-                ? 'bg-black border-2 border-slate-700' 
-                : 'bg-slate-950/95 border border-slate-800'
-            }`}>
-              {/* Log Header */}
-              <div className={`px-3.5 py-2.5 border-b flex items-center justify-between gap-2 shrink-0 ${
-                isOutdoorMode ? 'bg-black border-slate-800' : 'bg-slate-900/90 border-slate-800'
+            {/* KANAN: PANEL JAM & TANGGAL + REALTIME SCANNER LOGS LIST (4 COLS) */}
+            <div className="lg:col-span-4 flex flex-col h-full gap-2 overflow-hidden">
+              {/* KARTU JAM & TANGGAL DIGITAL (ATAS LOG PRESENSI) */}
+              <div className={`p-3 rounded-2xl border shadow-lg flex items-center justify-between gap-3 shrink-0 transition-all ${
+                isOutdoorMode 
+                  ? 'bg-black border-2 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)] text-white' 
+                  : 'bg-slate-900/95 border-slate-800 shadow-md text-slate-100'
               }`}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                    isOutdoorMode 
+                      ? 'bg-emerald-950/80 border-emerald-400 text-emerald-300' 
+                      : 'bg-indigo-950/80 border-indigo-500/40 text-indigo-400'
+                  }`}>
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">
+                      Waktu Presensi Gerbang
+                    </p>
+                    <p className="text-xs font-black text-slate-200 truncate">
+                      {currentDateStr || 'Memuat Tanggal...'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={`px-3 py-1 rounded-xl border text-right font-mono shrink-0 ${
+                  isOutdoorMode 
+                    ? 'bg-black border-emerald-400' 
+                    : 'bg-slate-950 border-slate-800'
+                }`}>
+                  <div className="text-base sm:text-lg font-black text-emerald-400 tracking-tight leading-tight">
+                    {currentClock || '--:--:--'}
+                  </div>
+                  <div className="text-[9px] font-bold text-slate-400 leading-none">
+                    WIB (Realtime)
+                  </div>
+                </div>
+              </div>
+
+              {/* LOG LIST CONTAINER (PERKECIL AREA LOG) */}
+              <div className={`flex-1 min-h-0 flex flex-col overflow-hidden rounded-2xl shadow-xl transition-all ${
+                isOutdoorMode 
+                  ? 'bg-black border-2 border-slate-700' 
+                  : 'bg-slate-950/95 border border-slate-800'
+              }`}>
+                {/* Log Header */}
+                <div className={`px-3 py-2 border-b flex items-center justify-between gap-2 shrink-0 ${
+                  isOutdoorMode ? 'bg-black border-slate-800' : 'bg-slate-900/90 border-slate-800'
+                }`}>
                 <div className="flex items-center gap-2">
                   <Activity className="w-4.5 h-4.5 text-indigo-400" />
                   <span className="text-xs sm:text-sm font-black text-white">Scanner Log Realtime</span>
@@ -2115,6 +2143,7 @@ export default function FaceNetAiStandalonePage() {
                   ))
                 )}
               </div>
+            </div>
             </div>
           </div>
         )}

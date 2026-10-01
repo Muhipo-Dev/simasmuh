@@ -562,7 +562,7 @@ export class FaceAttendanceService implements OnModuleInit {
       // 2. KETENTUAN SISWA: Cukup 1 kali saat kedatangan di gerbang sekolah.
       // Sisa presensi selama jam pelajaran berlangsung dicatat oleh guru pada Jurnal Mengajar Mapel.
       scanType = 'SUDAH_LENGKAP';
-      message = `Presensi kedatangan sudah tercatat pukul ${existing.checkInTime || existing.time}. Presensi sudah lengkap atau masih belum waktunya, coba lagi nanti.`;
+      message = `Presensi kedatangan sudah tercatat pukul ${existing.checkInTime || existing.time}. Presensi Anda belum waktunya atau sudah lengkap, silakan coba lagi nanti.`;
     } else if (!existing.checkOutTime) {
       // 3. KETENTUAN GTK (Guru, Karyawan, Pegawai): Wajib 2 kali sehari (Datang & Pulang)
       // Pengecekan jeda cooldown waktu presensi (sesuai setting konfigurasi dalam menit)
@@ -601,7 +601,7 @@ export class FaceAttendanceService implements OnModuleInit {
           }
         } else {
           scanType = 'SUDAH_LENGKAP';
-          message = `Presensi datang GTK tercatat pada ${existing.checkInTime}. Presensi sudah lengkap atau masih belum waktunya pulang, coba lagi nanti.`;
+          message = `Presensi datang GTK tercatat pada ${existing.checkInTime}. Presensi Anda belum waktunya atau sudah lengkap, silakan coba lagi nanti.`;
         }
       } else {
         await this.prisma.dailyAttendance.update({
@@ -633,7 +633,7 @@ export class FaceAttendanceService implements OnModuleInit {
     } else {
       // GTK sudah presensi datang dan pulang
       scanType = 'SUDAH_LENGKAP';
-      message = `Presensi harian GTK sudah lengkap (Datang: ${existing.checkInTime}, Pulang: ${existing.checkOutTime}). Presensi sudah lengkap atau masih belum waktunya, coba lagi nanti.`;
+      message = `Presensi harian GTK sudah lengkap (Datang: ${existing.checkInTime}, Pulang: ${existing.checkOutTime}). Presensi Anda belum waktunya atau sudah lengkap, silakan coba lagi nanti.`;
     }
 
     const dateIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;

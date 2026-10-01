@@ -569,8 +569,8 @@ export default function FaceAttendanceCameraPage() {
         const isStudent = role === 'SISWA'
         if (scanType === 'SUDAH_LENGKAP') {
           greeting = name 
-            ? `Presensi ${name} sudah lengkap atau masih belum waktunya, coba lagi nanti.`
-            : 'Presensi sudah lengkap atau masih belum waktunya, coba lagi nanti.'
+            ? `Presensi ${name} belum waktunya atau sudah lengkap, silakan coba lagi nanti.`
+            : 'Presensi Anda belum waktunya atau sudah lengkap, silakan coba lagi nanti.'
         } else if (scanType === 'PULANG') {
           // Khusus Presensi Pulang GTK
           greeting = `Terima kasih untuk hari ini ${name || ''}, selamat beristirahat dan hati-hati di jalan.`

@@ -1431,7 +1431,7 @@ export default function FaceNetAiStandalonePage() {
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
             <Link
-              href="/login?callbackUrl=/facenetai"
+              href="/login"
               className="w-full sm:w-auto flex-1 min-h-[44px] px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all active:scale-[0.98]"
             >
               <LogIn className="w-4 h-4" />

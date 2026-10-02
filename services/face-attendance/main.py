@@ -74,12 +74,27 @@ def root():
 @app.get("/status")
 def get_status():
     cfg = worker.config
+    cameras_status = []
+    for cid, sub in worker.sub_workers.items():
+        cameras_status.append({
+            "id": sub.cam_id,
+            "name": sub.cam_name,
+            "location": sub.location,
+            "stream_url": sub.stream_url,
+            "stream_status": sub.stream_status,
+            "fps": sub.current_fps,
+            "is_running": sub.is_running,
+            "registered_count": sub.registered_count,
+            "guest_count": sub.guest_count,
+        })
+
     return {
         "is_online": True,
         "is_running": worker.is_running,
         "stream_status": worker.stream_status,
         "stream_url": cfg.stream_url if cfg else "BROWSER_WEBCAM",
         "camera_name": cfg.camera_name if cfg else "Camera AI Presensi",
+        "cameras": cameras_status,
         "device": engine.device_name,
         "fps": worker.current_fps,
         "threshold": cfg.threshold if cfg else 0.70,
@@ -89,10 +104,10 @@ def get_status():
     }
 
 @app.get("/video_feed")
-def video_feed():
-    """Endpoint HTTP MJPEG streaming real-time live capture FaceNet."""
+def video_feed(cam_id: str = "cam-1"):
+    """Endpoint HTTP MJPEG streaming real-time live capture FaceNet dengan dukungan multi-camera id."""
     return StreamingResponse(
-        worker.generate_mjpeg_stream(),
+        worker.generate_mjpeg_stream(cam_id=cam_id),
         media_type="multipart/x-mixed-replace; boundary=frame",
         headers={
             "Cache-Control": "no-cache, no-store, must-revalidate",

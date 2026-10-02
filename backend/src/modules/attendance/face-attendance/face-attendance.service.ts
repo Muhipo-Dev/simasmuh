@@ -13,11 +13,21 @@ import { join } from 'path';
 import { spawn } from 'child_process';
 import { STORAGE_ROOT } from '../../core/config/storage.config';
 
+export interface SingleCameraConfig {
+  id: string; // 'cam-1', 'cam-2'
+  name: string; // e.g. "Kamera 1 (Gerbang Depan)"
+  streamSourceType: 'BROWSER_WEBCAM' | 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO';
+  streamUrl: string;
+  location: string;
+  isActive: boolean;
+}
+
 export interface FaceCameraConfig {
   streamSourceType?: 'BROWSER_WEBCAM' | 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO';
   streamUrl: string;
   cameraName: string;
   location: string;
+  cameras?: SingleCameraConfig[];
   threshold: number; // e.g. 0.70 (70%)
   cooldownMinutes: number; // e.g. 10 minutes
   isActive: boolean;
@@ -177,6 +187,24 @@ export class FaceAttendanceService implements OnModuleInit {
           streamUrl: '0',
           cameraName: 'Camera Gerbang Utama',
           location: 'Gerbang Depan Sekolah',
+          cameras: [
+            {
+              id: 'cam-1',
+              name: 'Kamera 1 (Gerbang Depan)',
+              streamSourceType: 'RTSP',
+              streamUrl: 'rtsp://admin:password@192.168.1.64:554/Streaming/Channels/101',
+              location: 'Gerbang Depan',
+              isActive: true,
+            },
+            {
+              id: 'cam-2',
+              name: 'Kamera 2 (Gerbang Belakang / Gedung B)',
+              streamSourceType: 'RTSP',
+              streamUrl: 'rtsp://admin:password@192.168.1.65:554/Streaming/Channels/101',
+              location: 'Gerbang Belakang',
+              isActive: true,
+            },
+          ],
           threshold: 0.70,
           cooldownMinutes: 10,
           isActive: false,
@@ -203,7 +231,7 @@ export class FaceAttendanceService implements OnModuleInit {
       try {
         const legacyDir = join(process.cwd(), 'storage');
         if (!existsSync(legacyDir)) mkdirSync(legacyDir, { recursive: true });
-        writeFileSync(this.legacyConfigPath, configStr, 'utf8');
+        writeFileSync(this.legacyLogsPath, configStr, 'utf8');
       } catch {}
     } catch (err) {
       this.logger.error(
@@ -214,6 +242,25 @@ export class FaceAttendanceService implements OnModuleInit {
   }
 
   getConfig(): FaceCameraConfig {
+    const defaultCameras: SingleCameraConfig[] = [
+      {
+        id: 'cam-1',
+        name: 'Kamera 1 (Gerbang Depan)',
+        streamSourceType: 'RTSP',
+        streamUrl: 'rtsp://admin:password@192.168.1.64:554/Streaming/Channels/101',
+        location: 'Gerbang Depan',
+        isActive: true,
+      },
+      {
+        id: 'cam-2',
+        name: 'Kamera 2 (Gerbang Belakang / Gedung B)',
+        streamSourceType: 'RTSP',
+        streamUrl: 'rtsp://admin:password@192.168.1.65:554/Streaming/Channels/101',
+        location: 'Gerbang Belakang',
+        isActive: true,
+      },
+    ];
+
     if (existsSync(this.configPath)) {
       try {
         const raw = readFileSync(this.configPath, 'utf8');
@@ -224,6 +271,7 @@ export class FaceAttendanceService implements OnModuleInit {
         return {
           showPublicStream: true,
           showPublicLogs: true,
+          cameras: Array.isArray(parsed.cameras) && parsed.cameras.length > 0 ? parsed.cameras : defaultCameras,
           ...parsed,
           threshold,
         };
@@ -239,6 +287,7 @@ export class FaceAttendanceService implements OnModuleInit {
         return {
           showPublicStream: true,
           showPublicLogs: true,
+          cameras: Array.isArray(parsed.cameras) && parsed.cameras.length > 0 ? parsed.cameras : defaultCameras,
           ...parsed,
           threshold,
         };
@@ -249,6 +298,7 @@ export class FaceAttendanceService implements OnModuleInit {
       streamUrl: 'BROWSER_WEBCAM',
       cameraName: 'Camera AI Presensi',
       location: 'Gerbang Depan Sekolah',
+      cameras: defaultCameras,
       threshold: 0.70,
       cooldownMinutes: 15,
       isActive: true,
@@ -1188,7 +1238,12 @@ export class FaceAttendanceService implements OnModuleInit {
     }
 
     try {
-      const cleanText = text.trim();
+      // Sanitasi pelafalan: bersihkan simbol/tanda baca berlebih agar nama dibaca mengalir sebagai kata utuh (bukan dieja per huruf)
+      const cleanText = text
+        .replace(/[,._\-/\\|(){}[\]]/g, ' ') // Ganti tanda titik, koma, garis miring dll dengan spasi agar tidak dieja
+        .replace(/\s+/g, ' ')
+        .trim();
+
       const crypto = await import('crypto');
       const hash = crypto.createHash('md5').update(cleanText).digest('hex');
       const cacheDir = join(STORAGE_ROOT, 'tts-cache');
@@ -1206,7 +1261,7 @@ export class FaceAttendanceService implements OnModuleInit {
         return;
       }
 
-      // Download suara wanita Indonesia online dari TTS engine
+      // Download suara wanita Indonesia online dari TTS engine dengan pelafalan natural
       const encodedText = encodeURIComponent(cleanText);
       const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${encodedText}`;
 

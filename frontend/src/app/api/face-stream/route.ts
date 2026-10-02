@@ -4,7 +4,9 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const pythonUrl = 'http://127.0.0.1:8089/video_feed'
+    const { searchParams } = new URL(request.url)
+    const camId = searchParams.get('cam_id') || searchParams.get('camId') || 'cam-1'
+    const pythonUrl = `http://127.0.0.1:8089/video_feed?cam_id=${encodeURIComponent(camId)}`
     const res = await fetch(pythonUrl, {
       cache: 'no-store',
       headers: {

@@ -756,8 +756,23 @@ class FaceRecognitionEngine:
         is_twin_ambiguous = False
         twin_candidates = None
 
-        if rec_2 is not None and score_1 >= 0.55 and score_2 >= 0.52 and margin < 0.025:
+        # Jika terdapat kandidat ke-2 dengan kemiripan tinggi (score_1 >= 0.50 & score_2 >= 0.48) serta selisih tipis (margin < 0.035)
+        if rec_2 is not None and score_1 >= 0.50 and score_2 >= 0.48 and margin < 0.035:
             is_twin_ambiguous = True
+            
+            # Kalibrasi confidence untuk kandidat kedua
+            if score_2 < 0.45:
+                calibrated_sim_2 = 0.62 + max(0.0, (score_2 - 0.35)) / 0.10 * 0.12
+            elif score_2 < 0.55:
+                calibrated_sim_2 = 0.76 + (score_2 - 0.45) / 0.10 * 0.13
+            elif score_2 < 0.65:
+                calibrated_sim_2 = 0.91 + (score_2 - 0.55) / 0.10 * 0.06
+            elif score_2 < 0.75:
+                calibrated_sim_2 = 0.97 + (score_2 - 0.65) / 0.10 * 0.02
+            else:
+                calibrated_sim_2 = 0.99 + min(0.008, (score_2 - 0.75) / 0.25 * 0.008)
+            calibrated_sim_2 = max(0.50, min(0.998, float(calibrated_sim_2)))
+
             twin_candidates = [
                 {
                     "userId": rec_1.user_id,
@@ -773,7 +788,7 @@ class FaceRecognitionEngine:
                     "role": rec_2.role,
                     "identifier": rec_2.identifier,
                     "avatarUrl": rec_2.avatar_url,
-                    "confidence": round(calibrated_sim - margin, 3),
+                    "confidence": round(calibrated_sim_2, 3),
                 }
             ]
 

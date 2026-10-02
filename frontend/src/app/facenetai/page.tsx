@@ -60,11 +60,21 @@ import NextImage from 'next/image'
 import { toast } from 'sonner'
 import { PublicNavbar, AppFooter } from '@/components/layout'
 
+export interface SingleCameraConfig {
+  id: string
+  name: string
+  streamSourceType: 'BROWSER_WEBCAM' | 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO'
+  streamUrl: string
+  location: string
+  isActive: boolean
+}
+
 interface FaceCameraConfig {
   streamSourceType?: 'BROWSER_WEBCAM' | 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO'
   streamUrl: string
   cameraName: string
   location: string
+  cameras?: SingleCameraConfig[]
   threshold: number
   cooldownMinutes: number
   isActive: boolean
@@ -191,6 +201,7 @@ export default function FaceNetAiStandalonePage() {
   const authenticatedFetch = useAuthenticatedFetch()
 
   const [activeTab, setActiveTab] = useState<'monitor' | 'config' | 'dataset' | 'logs'>('monitor')
+  const [activeCamId, setActiveCamId] = useState<string>('cam-1')
   const [showStreamUrl, setShowStreamUrl] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null)
@@ -223,6 +234,7 @@ export default function FaceNetAiStandalonePage() {
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null)
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null)
   const [isBrowserCamStreaming, setIsBrowserCamStreaming] = useState(false)
   const [browserCamError, setBrowserCamError] = useState<string | null>(null)
   const [browserFps, setBrowserFps] = useState<number>(0)
@@ -340,28 +352,37 @@ export default function FaceNetAiStandalonePage() {
 
       const targetDeviceId = deviceId || selectedDeviceId
 
+      // 1. Inisialisasi getUserMedia dengan fallback legacy navigator.getUserMedia untuk browser lama
+      const getMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices) ||
+        (navigator as any).webkitGetUserMedia?.bind(navigator) ||
+        (navigator as any).mozGetUserMedia?.bind(navigator) ||
+        (navigator as any).msGetUserMedia?.bind(navigator)
+
+      if (!getMedia) {
+        setBrowserCamError('Akses webcam memerlukan izin browser dan koneksi aman (HTTPS / Localhost). Pastikan izin kamera aktif pada browser perangkat Anda.')
+        setIsBrowserCamStreaming(false)
+        return
+      }
+
       let stream: MediaStream | null = null
-      try {
-        const videoConstraints: MediaTrackConstraints = {
-          aspectRatio: { ideal: 16 / 9 },
-          width: { ideal: 1280, min: 640 },
-          height: { ideal: 720, min: 480 },
-          frameRate: { ideal: 30, min: 20 },
-        }
-        if (targetDeviceId) {
-          videoConstraints.deviceId = { exact: targetDeviceId }
-        } else {
-          videoConstraints.facingMode = 'user'
-        }
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
-          audio: false,
-        })
-      } catch (hdErr) {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: targetDeviceId ? { deviceId: { exact: targetDeviceId } } : { facingMode: 'user', width: { ideal: 1280 } },
-          audio: false,
-        })
+      
+      const attempts = [
+        targetDeviceId ? { video: { deviceId: { exact: targetDeviceId } }, audio: false } : null,
+        { video: { facingMode: 'user', width: { ideal: 1280, min: 480 }, height: { ideal: 720, min: 360 } }, audio: false },
+        { video: { facingMode: 'user' }, audio: false },
+        { video: { facingMode: { ideal: 'environment' } }, audio: false },
+        { video: true, audio: false }
+      ].filter(Boolean) as MediaStreamConstraints[]
+
+      for (const constraints of attempts) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints)
+          if (stream) break
+        } catch {}
+      }
+
+      if (!stream) {
+        throw new Error('Tidak dapat membuka stream kamera. Pastikan Anda telah menekan tombol "Izinkan" / "Allow" saat browser meminta izin akses kamera.')
       }
 
       mediaStreamRef.current = stream
@@ -532,6 +553,15 @@ export default function FaceNetAiStandalonePage() {
     } catch {}
   }
 
+  // Helper: Format nama agar dilafalkan utuh mengalir sebagai kata tanpa dieja per huruf
+  const formatFullNameForSpeech = (rawName?: string) => {
+    if (!rawName) return ''
+    return rawName
+      .replace(/[,._\-/\\|(){}\[\]]/g, ' ') // Hindari ejaan per karakter akibat tanda baca/titik singkatan
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
   // Voice Greeting Text-to-Speech (Indonesian) - 100% Suara Wanita Indonesia Natural & Jernih
   const speakVoiceGreeting = (
     name?: string,
@@ -543,59 +573,63 @@ export default function FaceNetAiStandalonePage() {
     if (!soundEnabled || typeof window === 'undefined') return
     try {
       let greeting = ''
+      const spokenName = formatFullNameForSpeech(name)
 
       if (statusType === 'LOW_CONFIDENCE') {
-        greeting = name 
-          ? `Mohon maaf ${name}, akurasi belum cukup. Silakan posisikan wajah lebih dekat dan jelas ke kamera.` 
+        greeting = spokenName 
+          ? `Mohon maaf ${spokenName}, akurasi belum cukup. Silakan posisikan wajah lebih dekat dan jelas ke kamera.` 
           : `Akurasi biometrik belum cukup sembilan puluh persen. Mohon posisikan wajah lebih dekat ke kamera.`
       } else if (statusType === 'UNREGISTERED') {
         greeting = 'Wajah belum terdaftar di sistem SIMASMUH. Silakan hubungi operator.'
       } else if (statusType === 'NO_FACE') {
         greeting = 'Wajah tidak terdeteksi. Silakan menghadap lurus ke kamera.'
       } else if (statusType === 'TWIN_AMBIGUOUS') {
-        greeting = name 
-          ? `Wajah mirip terdeteksi. Silakan ketuk nama ${name} pada layar untuk konfirmasi.`
-          : 'Wajah mirip terdeteksi. Silakan ketuk nama Anda di layar untuk konfirmasi.'
+        greeting = 'Terdeteksi kemiripan pada wajah. Silakan pilih siapa yang sesuai.'
       } else if (statusType === 'ERROR') {
         greeting = 'Kamera atau server presensi sedang mengalami kendala. Silakan coba sesaat lagi.'
       } else {
         // Status SUCCESS: Presensi Kedatangan, Pulang, dan Lengkap
-        const isStudent = role === 'SISWA'
         if (scanType === 'SUDAH_LENGKAP') {
-          greeting = name 
-            ? `Presensi ${name} belum waktunya atau sudah lengkap, silakan coba lagi nanti.`
-            : 'Presensi Anda belum waktunya atau sudah lengkap, silakan coba lagi nanti.'
+          greeting = spokenName 
+            ? `${spokenName}, sudah presensi.`
+            : 'Sudah presensi.'
         } else if (scanType === 'PULANG') {
-          // Khusus Presensi Pulang GTK
-          greeting = `Terima kasih untuk hari ini ${name || ''}, selamat beristirahat dan hati-hati di jalan.`
-        } else if (isStudent) {
-          // Presensi Kedatangan (Masuk) Khusus SISWA
-          greeting = `Assalamualaikum ${name || ''}, selamat datang dan selamat belajar di SMA MUHIPO.`
+          greeting = spokenName ? `${spokenName}, pulang.` : 'Hadir pulang.'
         } else {
-          // Presensi Kedatangan (Masuk) Khusus GTK (Guru / Pegawai / Karyawan)
-          greeting = `Assalamualaikum ${name || ''}, selamat datang dan selamat beraktifitas di SMA MUHIPO.`
+          // Presensi Masuk (Hadir)
+          greeting = spokenName ? `${spokenName}, hadir.` : 'Hadir.'
         }
+      }
+
+      // Hentikan audio atau ucapan sebelumnya agar tidak bertumpuk saat antrian padat di HP/Tablet/Desktop
+      if (activeAudioRef.current) {
+        try {
+          activeAudioRef.current.pause()
+          activeAudioRef.current.currentTime = 0
+        } catch {}
+        activeAudioRef.current = null
       }
 
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel()
       }
 
-      // 1. Prioritas Utama: Unduh & Putar Suara Wanita Indonesia Asli yang Natural & Jernih dari TTS Server
+      // 1. Prioritas Utama: Unduh & Putar Suara Wanita Indonesia Asli dengan Artikulasi Cepat & Gesit (1.25x)
       const ttsUrl = `/api-backend/face-attendance/tts?text=${encodeURIComponent(greeting)}`
       const audio = new Audio()
       audio.crossOrigin = 'anonymous'
       audio.src = ttsUrl
-      audio.playbackRate = 1.05
+      audio.playbackRate = 1.25 // Intonasi 1.25x: cepat, artikulatif, dan efisien untuk antrian ratusan siswa
+      activeAudioRef.current = audio
 
       const playPromise = audio.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          // 2. Fallback: Browser Web Speech API dengan Filter Ketat Khusus Suara Wanita (Mengecualikan Suara Pria seperti Andika/David)
+          // 2. Fallback: Browser Web Speech API dengan Filter Ketat Khusus Suara Wanita & Rate Cepat (1.25x)
           if (!window.speechSynthesis) return
           const utter = new SpeechSynthesisUtterance(greeting)
           utter.lang = 'id-ID'
-          utter.rate = 1.05
+          utter.rate = 1.25 // Rate 1.25x responsif dan tegas
 
           const voices = window.speechSynthesis.getVoices()
           const isMale = (vName: string) => {
@@ -787,11 +821,11 @@ export default function FaceNetAiStandalonePage() {
               role: registeredFace.role,
               identifier: registeredFace.identifier,
               confidence: Math.round(registeredFace.confidence * 100),
-              message: 'Wajah Mirip / Siswa Kembar Terdeteksi',
-              attendanceMsg: 'Silakan ketuk nama Anda di bawah untuk konfirmasi:',
+              message: 'Deteksi Wajah Mirip',
+              attendanceMsg: 'Terdeteksi kemiripan pada wajah. Silakan pilih siapa yang sesuai:',
               twinCandidates: registeredFace.twin_candidates,
             })
-            toast.info('Wajah mirip terdeteksi. Silakan ketuk nama Anda untuk konfirmasi.')
+            toast.info('Terdeteksi kemiripan pada wajah. Silakan pilih siapa yang sesuai.')
           } else if (registeredFace.meets_attendance_threshold === false || Math.round(registeredFace.confidence * 100) < 91) {
             // Wajah terdeteksi tapi confidence BELUM mencapai 91% — presensi TIDAK direkam, berikan voice feedback instruktif
             playBiometricAudio('warning')
@@ -868,7 +902,7 @@ export default function FaceNetAiStandalonePage() {
           const cCtx = canvas.getContext('2d')
           if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
         }
-      }, 10000)
+      }, 1250)
     }
   }
 
@@ -1350,6 +1384,71 @@ export default function FaceNetAiStandalonePage() {
     }
   }
 
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-center space-y-4">
+        <Loader2 className="w-10 h-10 text-emerald-400 animate-spin" />
+        <p className="text-sm font-semibold text-slate-300">
+          Memuat Sistem FaceNet AI SIMASMUH...
+        </p>
+      </div>
+    )
+  }
+
+  // STATUS KHUSUS: Akses diblokir untuk publik dan akun selain Superadmin / Admin IT
+  if (!isAuthenticated || !isSuperAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-center relative overflow-hidden font-sans select-none">
+        {/* Background Atmosphere */}
+        <div className="fixed inset-0 -z-30 w-full h-full overflow-hidden pointer-events-none opacity-20">
+          <NextImage
+            src="/muhipo-log.jpg"
+            alt="Latar Belakang SMA MUHIPO"
+            fill
+            priority
+            unoptimized
+            className="object-cover object-center w-full h-full scale-105"
+          />
+        </div>
+        <div className="fixed inset-0 -z-20 bg-slate-950/90 backdrop-blur-md" />
+
+        <div className="max-w-md w-full p-6 sm:p-8 bg-slate-900/90 border border-slate-800 rounded-3xl shadow-2xl text-center space-y-5">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 shadow-inner">
+            <Lock className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <Badge variant="outline" className="px-3 py-1 border-rose-500/40 text-rose-400 bg-rose-500/10 text-xs font-bold uppercase tracking-wider">
+              Akses Dibatasi
+            </Badge>
+            <h1 className="text-lg sm:text-xl font-extrabold text-white">
+              Tidak Dapat Menggunakan Fitur Ini Sekarang
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              Halaman dan mesin pemindai FaceNet AI hanya dikhususkan untuk perangkat operasional dengan hak akses Superadmin dan Admin IT.
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+            <Link
+              href="/login?callbackUrl=/facenetai"
+              className="w-full sm:w-auto flex-1 min-h-[44px] px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all active:scale-[0.98]"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>Silakan Login Sebagai Admin</span>
+            </Link>
+            <Link
+              href="/"
+              className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs flex items-center justify-center transition-all"
+            >
+              Beranda
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`min-h-screen lg:h-screen lg:max-h-screen flex flex-col relative font-sans select-none overflow-x-hidden ${
       isOutdoorMode 
@@ -1558,13 +1657,13 @@ export default function FaceNetAiStandalonePage() {
         </div>
       </header>
 
-      {/* MAIN CONTAINER */}
-      <main className="flex-1 min-h-0 w-full p-2 sm:p-3 flex flex-col gap-2 overflow-hidden">
+      {/* MAIN CONTAINER (Responsive untuk Mobile, Tablet & Desktop) */}
+      <main className="flex-1 min-h-0 w-full p-2 sm:p-3 flex flex-col gap-2 overflow-y-auto lg:overflow-hidden">
         {/* TAB 1: LIVE MONITOR & SCANNER LOG */}
         {activeTab === 'monitor' && (
-          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-3 overflow-hidden">
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-3 lg:overflow-hidden">
             {/* KIRI: VIDEO STREAM 16:9 + ACTION CAPTURE PANEL (8 COLS) */}
-            <div className={`lg:col-span-8 flex flex-col h-full overflow-hidden rounded-2xl shadow-xl transition-all ${
+            <div className={`lg:col-span-8 flex flex-col min-h-[420px] sm:min-h-[480px] lg:h-full lg:overflow-hidden rounded-2xl shadow-xl transition-all ${
               isOutdoorMode 
                 ? 'bg-black border-2 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.2)]' 
                 : 'bg-slate-950/95 border border-slate-800'
@@ -1593,6 +1692,29 @@ export default function FaceNetAiStandalonePage() {
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Multi-Camera Channel Switcher Tabs */}
+                  {Array.isArray(currentConfig?.cameras) && currentConfig.cameras.length > 1 && (
+                    <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
+                      {currentConfig.cameras.map((cam, cIdx) => (
+                        <button
+                          key={cam.id || cIdx}
+                          type="button"
+                          onClick={() => {
+                            setActiveCamId(cam.id)
+                            setStreamKey(Date.now())
+                          }}
+                          className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                            activeCamId === cam.id
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          {cam.name.replace(/Kamera\s*/i, 'Cam ')}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {isBrowserMode && videoDevices.length > 1 && (
                     <select
                       aria-label="Pilih Perangkat Kamera"
@@ -1712,8 +1834,8 @@ export default function FaceNetAiStandalonePage() {
                               <div className="flex items-center gap-2 text-amber-300">
                                 <AlertTriangle className="w-5 h-5 animate-bounce shrink-0" />
                                 <div>
-                                  <h3 className="text-xs sm:text-sm font-black text-amber-300">Deteksi Siswa Kembar / Wajah Mirip</h3>
-                                  <p className="text-[11px] text-slate-200 font-medium">Ketuk nama Anda pada kotak di bawah:</p>
+                                  <h3 className="text-xs sm:text-sm font-black text-amber-300">Deteksi Wajah Mirip</h3>
+                                  <p className="text-[11px] text-slate-200 font-medium">Silakan pilih profil yang sesuai:</p>
                                 </div>
                               </div>
                               <Button
@@ -1876,8 +1998,8 @@ export default function FaceNetAiStandalonePage() {
                     )}
                     <img
                       ref={streamImgRef}
-                      key={streamKey}
-                      src={`/api/face-stream?t=${streamKey}`}
+                      key={`${streamKey}-${activeCamId}`}
+                      src={`/api/face-stream?cam_id=${encodeURIComponent(activeCamId)}&t=${streamKey}`}
                       alt="Live Capture FaceNet Camera Stream"
                       className="w-full h-full object-contain"
                       crossOrigin="anonymous"
@@ -2011,7 +2133,7 @@ export default function FaceNetAiStandalonePage() {
             </div>
 
             {/* KANAN: PANEL JAM & TANGGAL + REALTIME SCANNER LOGS LIST (4 COLS) */}
-            <div className="lg:col-span-4 flex flex-col h-full gap-2 overflow-hidden">
+            <div className="lg:col-span-4 flex flex-col min-h-[380px] lg:h-full gap-2 lg:overflow-hidden">
               {/* KARTU JAM & TANGGAL DIGITAL (ATAS LOG PRESENSI) */}
               <div className={`p-3 rounded-2xl border shadow-lg flex items-center justify-between gap-3 shrink-0 transition-all ${
                 isOutdoorMode 
@@ -2410,37 +2532,91 @@ export default function FaceNetAiStandalonePage() {
                   </div>
                 )}
 
-                {currentConfig?.streamSourceType === 'RTSP' && (
-                  <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="streamUrl" className="text-xs font-semibold text-slate-200">
-                        Target Link RTSP IP Camera
-                      </Label>
-                      <button
-                        type="button"
-                        onClick={() => setShowStreamUrl(!showStreamUrl)}
-                        className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
-                      >
-                        {showStreamUrl ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                        {showStreamUrl ? 'Sembunyikan' : 'Tampilkan'}
-                      </button>
-                    </div>
-                    <Input
-                      id="streamUrl"
-                      type={showStreamUrl ? 'text' : 'password'}
-                      placeholder="rtsp://user:pass@192.168.1.64:554/ch1"
-                      value={currentConfig?.streamUrl || ''}
-                      disabled={!isAuthenticated || !canConfigure}
-                      onChange={(e) => setFormConfig((prev) => prev ? { ...prev, streamUrl: e.target.value } : null)}
-                      className="font-mono text-xs bg-slate-800 border-slate-700 text-white h-8"
-                    />
+                {/* Multi-Camera Channel Configuration (Kamera 1 & Kamera 2) */}
+                <div className="space-y-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-indigo-400" />
+                      Konfigurasi Multi-Kamera (2 Perangkat Scanning / IP Camera)
+                    </Label>
+                    <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
+                      Dual Stream Aktif
+                    </span>
                   </div>
-                )}
 
-                {/* 3. Nama Titik Kamera & Lokasi (2 Kolom) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+                    {(currentConfig?.cameras || [
+                      { id: 'cam-1', name: 'Kamera 1 (Gerbang Depan)', streamSourceType: 'RTSP', streamUrl: 'rtsp://admin:password@192.168.1.64:554/Streaming/Channels/101', location: 'Gerbang Depan', isActive: true },
+                      { id: 'cam-2', name: 'Kamera 2 (Gerbang Belakang / Gedung B)', streamSourceType: 'RTSP', streamUrl: 'rtsp://admin:password@192.168.1.65:554/Streaming/Channels/101', location: 'Gerbang Belakang', isActive: true },
+                    ]).map((cam, idx) => (
+                      <div key={cam.id || idx} className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-indigo-300 flex items-center gap-1">
+                            <Video className="w-3 h-3 text-indigo-400" />
+                            {cam.name || `Kamera ${idx + 1}`}
+                          </span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                            ID: {cam.id}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-medium text-slate-300">Nama Titik & Lokasi</Label>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <Input
+                              type="text"
+                              value={cam.name}
+                              placeholder="Nama Kamera"
+                              disabled={!isAuthenticated || !canConfigure}
+                              onChange={(e) => {
+                                const newCams = [...(currentConfig?.cameras || [])]
+                                if (!newCams[idx]) newCams[idx] = { ...cam }
+                                newCams[idx].name = e.target.value
+                                setFormConfig((prev) => prev ? { ...prev, cameras: newCams } : null)
+                              }}
+                              className="bg-slate-900 border-slate-700 text-white text-[11px] h-7"
+                            />
+                            <Input
+                              type="text"
+                              value={cam.location}
+                              placeholder="Lokasi / Gerbang"
+                              disabled={!isAuthenticated || !canConfigure}
+                              onChange={(e) => {
+                                const newCams = [...(currentConfig?.cameras || [])]
+                                if (!newCams[idx]) newCams[idx] = { ...cam }
+                                newCams[idx].location = e.target.value
+                                setFormConfig((prev) => prev ? { ...prev, cameras: newCams } : null)
+                              }}
+                              className="bg-slate-900 border-slate-700 text-white text-[11px] h-7"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-medium text-slate-300">Target URL RTSP / Port Stream</Label>
+                          <Input
+                            type={showStreamUrl ? 'text' : 'password'}
+                            value={cam.streamUrl}
+                            placeholder="rtsp://user:pass@192.168.1.xxx:554/ch1 atau 0/1"
+                            disabled={!isAuthenticated || !canConfigure}
+                            onChange={(e) => {
+                              const newCams = [...(currentConfig?.cameras || [])]
+                              if (!newCams[idx]) newCams[idx] = { ...cam }
+                              newCams[idx].streamUrl = e.target.value
+                              setFormConfig((prev) => prev ? { ...prev, cameras: newCams } : null)
+                            }}
+                            className="font-mono text-[11px] bg-slate-900 border-slate-700 text-white h-7"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Nama Titik Kamera Utama & Lokasi */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <Label htmlFor="cameraName" className="text-[11px] font-medium text-slate-200">Nama Titik Kamera</Label>
+                    <Label htmlFor="cameraName" className="text-[11px] font-medium text-slate-200">Nama Profil Kamera Utama</Label>
                     <Input
                       id="cameraName"
                       placeholder="Kamera Presensi Utama"
@@ -2451,7 +2627,7 @@ export default function FaceNetAiStandalonePage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="location" className="text-[11px] font-medium text-slate-200">Lokasi / Area</Label>
+                    <Label htmlFor="location" className="text-[11px] font-medium text-slate-200">Lokasi / Area Utama</Label>
                     <Input
                       id="location"
                       placeholder="Lobi / Area Presensi"

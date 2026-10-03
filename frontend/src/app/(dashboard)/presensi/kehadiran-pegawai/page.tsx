@@ -147,6 +147,7 @@ export default function LogKehadiranPegawaiPage() {
     { value: '12', label: 'Desember' },
   ]
 
+  const currentMonth = new Date().getMonth() + 1
   const currentYear = new Date().getFullYear()
   const years = [currentYear - 1, currentYear, currentYear + 1]
 
@@ -188,28 +189,6 @@ export default function LogKehadiranPegawaiPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <Select value={selectedMonth} onValueChange={(val) => { if (val) setSelectedMonth(val) }}>
-            <SelectTrigger className="w-[130px] h-9 text-xs bg-white dark:bg-slate-900 rounded-xl">
-              <SelectValue placeholder="Pilih Bulan" />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map(m => (
-                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={selectedYear} onValueChange={(val) => { if (val) setSelectedYear(val) }}>
-            <SelectTrigger className="w-[100px] h-9 text-xs bg-white dark:bg-slate-900 rounded-xl">
-              <SelectValue placeholder="Pilih Tahun" />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map(y => (
-                <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           <Button 
             variant="outline" 
             onClick={handleExportExcel}
@@ -493,6 +472,47 @@ export default function LogKehadiranPegawaiPage() {
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder="Cari tanggal/keterangan..."
+            activeFiltersCount={
+              (selectedMonth !== currentMonth.toString() ? 1 : 0) +
+              (selectedYear !== currentYear.toString() ? 1 : 0)
+            }
+            onResetFilters={() => {
+              setSelectedMonth(currentMonth.toString())
+              setSelectedYear(currentYear.toString())
+            }}
+            filters={
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Bulan</label>
+                    <Select value={selectedMonth} onValueChange={(val) => { if (val) setSelectedMonth(val) }}>
+                      <SelectTrigger className="w-full h-9 bg-slate-50 dark:bg-slate-800 text-xs font-semibold rounded-xl">
+                        <SelectValue placeholder="Pilih Bulan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {months.map(m => (
+                          <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Tahun</label>
+                    <Select value={selectedYear} onValueChange={(val) => { if (val) setSelectedYear(val) }}>
+                      <SelectTrigger className="w-full h-9 bg-slate-50 dark:bg-slate-800 text-xs font-semibold rounded-xl">
+                        <SelectValue placeholder="Pilih Tahun" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {years.map(y => (
+                          <SelectItem key={y} value={y.toString()} className="text-xs">{y}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            }
           />
         </CardHeader>
         <CardContent className="p-0">

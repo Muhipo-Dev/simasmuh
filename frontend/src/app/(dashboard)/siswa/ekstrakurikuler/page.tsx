@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { TableSearch } from '@/components/TableSearch'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 
 export default function SiswaEkstrakurikulerPage() {
@@ -392,31 +393,35 @@ export default function SiswaEkstrakurikulerPage() {
         <div className="space-y-4">
           {/* Filter & Search Bar */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Cari ekskul / nama pembina / lokasi..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 text-xs"
-              />
-            </div>
-            <Select value={selectedCategory} onValueChange={(val) => setSelectedCategory(val || 'ALL')}>
-              <SelectTrigger className="w-full sm:w-56 h-9 text-xs">
-                <SelectValue placeholder="Semua Kategori" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL" className="text-xs">-- Semua Kategori --</SelectItem>
-                <SelectItem value="WAJIB_MUHAMMADIYAH" className="text-xs">Wajib Muhammadiyah (HW, TS)</SelectItem>
-                <SelectItem value="KEORGANISASIAN" className="text-xs">Keorganisasian (IPM)</SelectItem>
-                <SelectItem value="KESEHATAN_SOSIAL" className="text-xs">Kesehatan & Sosial (PMR)</SelectItem>
-                <SelectItem value="KEPEMIMPINAN" className="text-xs">Kepemimpinan (Paskibra)</SelectItem>
-                <SelectItem value="OLAHRAGA" className="text-xs">Olahraga & Bela Diri</SelectItem>
-                <SelectItem value="AKADEMIK_SAINS" className="text-xs">Akademik, Robotik & Sains</SelectItem>
-                <SelectItem value="KEAGAMAAN" className="text-xs">Keagamaan & Tahfidz</SelectItem>
-                <SelectItem value="SENI_BUDAYA" className="text-xs">Seni & Budaya</SelectItem>
-              </SelectContent>
-            </Select>
+            <TableSearch
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Cari ekskul / nama pembina / lokasi..."
+              className="w-full"
+              activeFiltersCount={selectedCategory !== 'ALL' ? 1 : 0}
+              onResetFilters={() => setSelectedCategory('ALL')}
+              filters={
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Kategori Ekstrakurikuler</label>
+                  <Select value={selectedCategory} onValueChange={(val) => setSelectedCategory(val || 'ALL')}>
+                    <SelectTrigger className="w-full h-9 text-xs bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Semua Kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL" className="text-xs">-- Semua Kategori --</SelectItem>
+                      <SelectItem value="WAJIB_MUHAMMADIYAH" className="text-xs">Wajib Muhammadiyah (HW, TS)</SelectItem>
+                      <SelectItem value="KEORGANISASIAN" className="text-xs">Keorganisasian (IPM)</SelectItem>
+                      <SelectItem value="KESEHATAN_SOSIAL" className="text-xs">Kesehatan & Sosial (PMR)</SelectItem>
+                      <SelectItem value="KEPEMIMPINAN" className="text-xs">Kepemimpinan (Paskibra)</SelectItem>
+                      <SelectItem value="OLAHRAGA" className="text-xs">Olahraga & Bela Diri</SelectItem>
+                      <SelectItem value="AKADEMIK_SAINS" className="text-xs">Akademik, Robotik & Sains</SelectItem>
+                      <SelectItem value="KEAGAMAAN" className="text-xs">Keagamaan & Tahfidz</SelectItem>
+                      <SelectItem value="SENI_BUDAYA" className="text-xs">Seni & Budaya</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              }
+            />
           </div>
 
           {/* Grid Katalog */}

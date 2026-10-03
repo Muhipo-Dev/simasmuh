@@ -337,7 +337,7 @@ const BK_LETTER_PRESETS = [
   const [newParamForm, setNewParamForm] = useState<Partial<TatibParameter>>({
     category: 'PELANGGARAN',
     title: '',
-    points: -100,
+    points: -10,
     type: 'NEGATIF',
     description: '',
     defaultAction: '',
@@ -352,7 +352,7 @@ const BK_LETTER_PRESETS = [
     type: 'NEGATIF' as any,
     title: '',
     description: '',
-    points: -100,
+    points: -10,
     date: new Date().toISOString().split('T')[0],
     actionTaken: '',
     status: canVerify ? 'SELESAI' : 'MENUNGGU',
@@ -2212,8 +2212,8 @@ const BK_LETTER_PRESETS = [
       )}
 
       {/* 3. Filter & Navigasi Tab */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex-wrap">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto max-w-full touch-pan-x [-webkit-overflow-scrolling:touch]">
           {mode === 'BK' ? (
             <>
               <Button
@@ -2221,14 +2221,14 @@ const BK_LETTER_PRESETS = [
                 variant="ghost"
                 size="sm"
                 onClick={() => setActiveTab('catatan-konseling')}
-                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
                   activeTab === 'catatan-konseling'
                     ? 'bg-pink-600 text-white shadow-xs'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <HeartHandshake className="w-3.5 h-3.5" />
-                <span>Sesi & Catatan BK ({counselingList.length})</span>
+                <span>Sesi BK ({counselingList.length})</span>
               </Button>
 
               <Button
@@ -2236,14 +2236,14 @@ const BK_LETTER_PRESETS = [
                 variant="ghost"
                 size="sm"
                 onClick={() => setActiveTab('panggilan-ortu')}
-                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
                   activeTab === 'panggilan-ortu'
                     ? 'bg-indigo-600 text-white shadow-xs'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <PhoneCall className="w-3.5 h-3.5" />
-                <span>Pemanggilan Ortu ({parentCallList.length})</span>
+                <span>Panggilan Ortu ({parentCallList.length})</span>
               </Button>
 
               <Button
@@ -2251,14 +2251,14 @@ const BK_LETTER_PRESETS = [
                 variant="ghost"
                 size="sm"
                 onClick={() => setActiveTab('rekap-siswa')}
-                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
                   activeTab === 'rekap-siswa'
                     ? 'bg-rose-600 text-white shadow-xs'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Users className="w-3.5 h-3.5" />
-                <span>Radar Pantauan Siswa</span>
+                <span>Radar Pantauan</span>
               </Button>
             </>
           ) : mode === 'GURU' ? (
@@ -2268,14 +2268,14 @@ const BK_LETTER_PRESETS = [
                 variant="ghost"
                 size="sm"
                 onClick={() => setActiveTab('rekap-siswa')}
-                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
                   activeTab === 'rekap-siswa'
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Users className="w-3.5 h-3.5" />
-                <span>Daftar Siswa & Catat Poin</span>
+                <span>Daftar Siswa & Poin</span>
               </Button>
 
               <Button
@@ -2283,14 +2283,14 @@ const BK_LETTER_PRESETS = [
                 variant="ghost"
                 size="sm"
                 onClick={() => setActiveTab('log-catatan')}
-                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
                   activeTab === 'log-catatan'
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>Riwayat Catatan Guru</span>
+                <span>Riwayat Catatan</span>
               </Button>
             </>
           ) : mode === 'KETERTIBAN' ? (
@@ -2301,14 +2301,14 @@ const BK_LETTER_PRESETS = [
                   variant="ghost"
                   size="sm"
                   onClick={() => setActiveTab('verifikasi-pembinaan')}
-                  className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
+                  className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
                     activeTab === 'verifikasi-pembinaan'
                       ? 'bg-amber-500 text-slate-950 shadow-xs'
                       : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <ShieldAlert className="w-3.5 h-3.5" />
-                  <span>Verifikasi Catatan ({pendingVerificationList.length})</span>
+                  <span>Verifikasi ({pendingVerificationList.length})</span>
                 </Button>
               )}
 
@@ -2317,86 +2317,7 @@ const BK_LETTER_PRESETS = [
                 variant="ghost"
                 size="sm"
                 onClick={() => setActiveTab('rekap-siswa')}
-                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
-                  activeTab === 'rekap-siswa'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Daftar Siswa & Skor Poin</span>
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setActiveTab('log-catatan')}
-                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
-                  activeTab === 'log-catatan'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Log Riwayat Kedisiplinan</span>
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setActiveTab('catatan-konseling')}
-                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
-                  activeTab === 'catatan-konseling'
-                    ? 'bg-pink-600 text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <HeartHandshake className="w-3.5 h-3.5" />
-                <span>Sesi & Catatan BK</span>
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setActiveTab('panggilan-ortu')}
-                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
-                  activeTab === 'panggilan-ortu'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <PhoneCall className="w-3.5 h-3.5" />
-                <span>Pemanggilan Ortu</span>
-              </Button>
-
-              {canVerify && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setActiveTab('verifikasi-pembinaan')}
-                  className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
-                    activeTab === 'verifikasi-pembinaan'
-                      ? 'bg-amber-500 text-slate-950 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                  <span>Verifikasi Catatan ({pendingVerificationList.length})</span>
-                </Button>
-              )}
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setActiveTab('rekap-siswa')}
-                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
                   activeTab === 'rekap-siswa'
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
@@ -2411,82 +2332,163 @@ const BK_LETTER_PRESETS = [
                 variant="ghost"
                 size="sm"
                 onClick={() => setActiveTab('log-catatan')}
-                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-3 ${
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
                   activeTab === 'log-catatan'
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>Log Semua Riwayat</span>
+                <span>Log Disiplin</span>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveTab('catatan-konseling')}
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
+                  activeTab === 'catatan-konseling'
+                    ? 'bg-pink-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <HeartHandshake className="w-3.5 h-3.5" />
+                <span>Sesi BK</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveTab('panggilan-ortu')}
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
+                  activeTab === 'panggilan-ortu'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>Panggilan Ortu</span>
+              </Button>
+
+              {canVerify && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveTab('verifikasi-pembinaan')}
+                  className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
+                    activeTab === 'verifikasi-pembinaan'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>Verifikasi ({pendingVerificationList.length})</span>
+                </Button>
+              )}
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveTab('rekap-siswa')}
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
+                  activeTab === 'rekap-siswa'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Daftar Siswa</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveTab('log-catatan')}
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
+                  activeTab === 'log-catatan'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Log Riwayat</span>
               </Button>
             </>
           )}
         </div>
 
-        <div className="flex flex-1 flex-wrap items-center justify-end gap-2.5">
-          <div className="relative min-w-[180px] flex-1 max-w-xs">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+        <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center justify-end gap-2">
+          <div className="relative min-w-[140px] flex-1 sm:max-w-xs">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
             <Input
               placeholder="Cari siswa, NIS, atau guru..."
-              className="pl-9 h-10 text-xs rounded-xl"
+              className="pl-8.5 h-8.5 text-xs rounded-xl"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          <Select value={selectedClassId} onValueChange={(val) => setSelectedClassId(val || 'ALL')}>
-            <SelectTrigger className="w-[140px] h-10 text-xs rounded-xl">
-              <SelectValue placeholder="Semua Kelas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Semua Kelas</SelectItem>
-              {classes.map((c: any) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="grid grid-cols-2 sm:flex items-center gap-1.5 sm:gap-2">
+            <Select value={selectedClassId} onValueChange={(val) => setSelectedClassId(val || 'ALL')}>
+              <SelectTrigger className="w-full sm:w-[130px] h-8.5 text-xs rounded-xl">
+                <SelectValue placeholder="Semua Kelas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Semua Kelas</SelectItem>
+                {classes.map((c: any) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          {activeTab === 'log-catatan' && (
-            <>
-              <Select value={selectedCategory} onValueChange={(val) => setSelectedCategory(val || 'ALL')}>
-                <SelectTrigger className="w-[140px] h-10 text-xs rounded-xl">
-                  <SelectValue placeholder="Kategori" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Semua Kategori</SelectItem>
-                  <SelectItem value="PELANGGARAN">Pelanggaran</SelectItem>
-                  <SelectItem value="KEDISIPLINAN">Kedisiplinan</SelectItem>
-                  <SelectItem value="ADAB_ETIKA">Adab & Kesantunan</SelectItem>
-                  <SelectItem value="IBADAH">Amalan Ibadah</SelectItem>
-                  <SelectItem value="PRESTASI_PENGHARGAAN">Prestasi / Reward</SelectItem>
-                </SelectContent>
-              </Select>
+            {activeTab === 'log-catatan' && (
+              <>
+                <Select value={selectedCategory} onValueChange={(val) => setSelectedCategory(val || 'ALL')}>
+                  <SelectTrigger className="w-full sm:w-[130px] h-8.5 text-xs rounded-xl">
+                    <SelectValue placeholder="Kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Semua Kategori</SelectItem>
+                    <SelectItem value="PELANGGARAN">Pelanggaran</SelectItem>
+                    <SelectItem value="KEDISIPLINAN">Kedisiplinan</SelectItem>
+                    <SelectItem value="ADAB_ETIKA">Adab & Kesantunan</SelectItem>
+                    <SelectItem value="IBADAH">Amalan Ibadah</SelectItem>
+                    <SelectItem value="PRESTASI_PENGHARGAAN">Prestasi / Reward</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <Select value={selectedStatusFilter} onValueChange={(val) => setSelectedStatusFilter(val || 'ALL')}>
-                <SelectTrigger className="w-[140px] h-10 text-xs rounded-xl">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Semua Status</SelectItem>
-                  <SelectItem value="MENUNGGU">Menunggu Tatib</SelectItem>
-                  <SelectItem value="TERVERIFIKASI">Terverifikasi</SelectItem>
-                  <SelectItem value="SELESAI">Selesai</SelectItem>
-                  <SelectItem value="DITOLAK">Ditolak</SelectItem>
-                </SelectContent>
-              </Select>
-            </>
-          )}
+                <Select value={selectedStatusFilter} onValueChange={(val) => setSelectedStatusFilter(val || 'ALL')}>
+                  <SelectTrigger className="w-full sm:w-[120px] h-8.5 text-xs rounded-xl">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Semua Status</SelectItem>
+                    <SelectItem value="MENUNGGU">Menunggu Tatib</SelectItem>
+                    <SelectItem value="TERVERIFIKASI">Terverifikasi</SelectItem>
+                    <SelectItem value="SELESAI">Selesai</SelectItem>
+                    <SelectItem value="DITOLAK">Ditolak</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportExcel}
-            className="h-10 text-xs gap-1.5 rounded-xl border-slate-200 dark:border-slate-700 font-bold"
-          >
-            <Download className="w-4 h-4 text-emerald-600" />
-            <span>Ekspor</span>
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              className="h-8.5 text-xs gap-1.5 rounded-xl border-slate-200 dark:border-slate-700 font-bold"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Ekspor</span>
+            </Button>
+          </div>
         </div>
       </div>
 

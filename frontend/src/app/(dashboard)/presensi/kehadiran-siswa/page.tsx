@@ -103,6 +103,7 @@ export default function LogPresensiSiswaPage() {
     { value: '12', label: 'Desember' },
   ]
 
+  const currentMonth = new Date().getMonth() + 1
   const currentYear = new Date().getFullYear()
   const years = [currentYear - 1, currentYear, currentYear + 1]
 
@@ -157,62 +158,15 @@ export default function LogPresensiSiswaPage() {
           <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Rekapitulasi riwayat presensi masuk harian siswa.</p>
         </div>
 
-        <div className="flex flex-wrap gap-2 w-full lg:w-auto items-center">
-          {effectiveStudentList.length > 0 && (
-            <div className="relative flex-1 sm:flex-none">
-              <select 
-                value={targetUserId} 
-                onChange={(e) => { if (e.target.value) setSelectedStudentUserId(e.target.value) }}
-                aria-label="Pilih Siswa"
-                className="w-full sm:w-[220px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold text-xs h-10 px-3 py-1.5 pr-8 rounded-xl border border-blue-300 dark:border-slate-700 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none truncate touch-manipulation"
-              >
-                {effectiveStudentList.map((item: any, idx: number) => {
-                  const sName = item.student?.name || item.name
-                  const sNis = item.student?.nis || item.nis
-                  const sUid = item.student?.userId || item.userId || item.id
-                  return (
-                    <option key={item.id || sUid || idx} value={sUid || ''}>
-                      {sName} {sNis ? `(${sNis})` : ''}
-                    </option>
-                  )
-                })}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          )}
-
-          <Select value={selectedMonth} onValueChange={(val) => { if (val) setSelectedMonth(val) }}>
-            <SelectTrigger className="w-[125px] sm:w-[135px] h-10 bg-white dark:bg-slate-900 text-xs font-semibold rounded-xl touch-manipulation">
-              <SelectValue placeholder="Pilih Bulan" />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map(m => (
-                <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={selectedYear} onValueChange={(val) => { if (val) setSelectedYear(val) }}>
-            <SelectTrigger className="w-[90px] h-10 bg-white dark:bg-slate-900 text-xs font-semibold rounded-xl touch-manipulation">
-              <SelectValue placeholder="Tahun" />
-            </SelectTrigger>
-            <SelectContent>
-               {years.map(y => (
-                <SelectItem key={y} value={y.toString()} className="text-xs">{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
           <Button 
             variant="outline" 
-            className="h-10 px-3.5 text-emerald-600 border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 font-bold text-xs rounded-xl touch-manipulation" 
+            className="h-9 px-3.5 text-emerald-600 border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 font-bold text-xs rounded-xl touch-manipulation" 
             onClick={handleExportExcel} 
             disabled={!logs || logs.length === 0 || isLoading}
           >
             <Download className="w-4 h-4 mr-1.5" />
             Export Excel
           </Button>
-        </div>
       </div>
 
       <Card className="shadow-xs border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
@@ -231,6 +185,78 @@ export default function LogPresensiSiswaPage() {
               value={searchQuery}
               onChange={setSearchQuery}
               placeholder="Cari tanggal / ket..."
+              activeFiltersCount={
+                (selectedMonth !== currentMonth.toString() ? 1 : 0) +
+                (selectedYear !== currentYear.toString() ? 1 : 0) +
+                (selectedStudentUserId ? 1 : 0)
+              }
+              onResetFilters={() => {
+                setSelectedMonth(currentMonth.toString())
+                setSelectedYear(currentYear.toString())
+                if (effectiveStudentList.length > 0) {
+                  const firstUid = effectiveStudentList[0]?.student?.userId || effectiveStudentList[0]?.userId || effectiveStudentList[0]?.id || ''
+                  setSelectedStudentUserId(firstUid)
+                }
+              }}
+              filters={
+                <div className="space-y-3">
+                  {effectiveStudentList.length > 0 && (
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Pilih Siswa</label>
+                      <div className="relative">
+                        <select 
+                          value={targetUserId} 
+                          onChange={(e) => { if (e.target.value) setSelectedStudentUserId(e.target.value) }}
+                          aria-label="Pilih Siswa"
+                          className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-xs h-9 px-3 py-1.5 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none truncate"
+                        >
+                          {effectiveStudentList.map((item: any, idx: number) => {
+                            const sName = item.student?.name || item.name
+                            const sNis = item.student?.nis || item.nis
+                            const sUid = item.student?.userId || item.userId || item.id
+                            return (
+                              <option key={item.id || sUid || idx} value={sUid || ''}>
+                                {sName} {sNis ? `(${sNis})` : ''}
+                              </option>
+                            )
+                          })}
+                        </select>
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Bulan</label>
+                      <Select value={selectedMonth} onValueChange={(val) => { if (val) setSelectedMonth(val) }}>
+                        <SelectTrigger className="w-full h-9 bg-slate-50 dark:bg-slate-800 text-xs font-semibold rounded-xl">
+                          <SelectValue placeholder="Bulan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {months.map(m => (
+                            <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Tahun</label>
+                      <Select value={selectedYear} onValueChange={(val) => { if (val) setSelectedYear(val) }}>
+                        <SelectTrigger className="w-full h-9 bg-slate-50 dark:bg-slate-800 text-xs font-semibold rounded-xl">
+                          <SelectValue placeholder="Tahun" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {years.map(y => (
+                            <SelectItem key={y} value={y.toString()} className="text-xs">{y}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              }
             />
           </div>
         </CardHeader>

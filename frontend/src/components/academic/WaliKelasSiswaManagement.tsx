@@ -533,42 +533,61 @@ export function WaliKelasSiswaManagement({
 
           {/* Kontrol Filter & Search */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              {activeTab === 'presensi' && (
-                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1">
-                  {(['daily', 'weekly', 'monthly'] as const).map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setPeriod(p)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                        period === p
-                          ? 'bg-indigo-600 text-white shadow-2xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                    >
-                      {p === 'daily' ? 'Harian' : p === 'weekly' ? 'Mingguan' : 'Bulanan'}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <input
-                  type="date"
-                  value={targetDate}
-                  onChange={(e) => setTargetDate(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer"
-                />
-              </div>
+            <div className="text-xs text-slate-500 font-medium hidden sm:block">
+              {activeTab === 'siswa' && `Total ${classSummary.length} siswa`}
+              {activeTab === 'presensi' && `Presensi tanggal ${targetDate}`}
+              {activeTab === 'izin_dispensasi' && `Data izin & dispensasi kelas`}
             </div>
 
-            <div className="w-full sm:w-64">
+            <div className="w-full sm:w-auto">
               <TableSearch
                 value={searchQuery}
                 onChange={setSearchQuery}
                 placeholder="Cari nama / NIS..."
+                activeFiltersCount={targetDate !== new Date().toISOString().split('T')[0] || (activeTab === 'presensi' && period !== 'daily') ? 1 : 0}
+                onResetFilters={() => {
+                  setSearchQuery('')
+                  setTargetDate(new Date().toISOString().split('T')[0])
+                  setPeriod('daily')
+                }}
+                filters={
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Pilih Tanggal Presensi</Label>
+                      <div className="flex items-center gap-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <input
+                          type="date"
+                          value={targetDate}
+                          onChange={(e) => setTargetDate(e.target.value)}
+                          className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer w-full"
+                        />
+                      </div>
+                    </div>
+
+                    {activeTab === 'presensi' && (
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Periode Tampilan</Label>
+                        <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                          {(['daily', 'weekly', 'monthly'] as const).map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => setPeriod(p)}
+                              className={`py-1 rounded-lg text-xs font-bold transition-all text-center ${
+                                period === p
+                                  ? 'bg-indigo-600 text-white shadow-2xs'
+                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                              }`}
+                            >
+                              {p === 'daily' ? 'Harian' : p === 'weekly' ? 'Mingguan' : 'Bulanan'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                }
               />
             </div>
           </div>

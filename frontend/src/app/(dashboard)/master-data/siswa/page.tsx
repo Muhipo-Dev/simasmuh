@@ -222,6 +222,7 @@ export default function StudentsPage() {
   const [filterGelombang, setFilterGelombang] = useState<string>('ALL')
   const [filterJalur, setFilterJalur] = useState<string>('ALL')
   const [filterActive, setFilterActive] = useState<string>('ALL')
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [fromClassId, setFromClassId] = useState<string>('')
   const [toClassId, setToClassId] = useState<string>('')
@@ -1639,28 +1640,30 @@ export default function StudentsPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
           {isSuperOrAdmin && (
             <Button 
               variant="outline"
-              className="border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 font-bold shadow-xs text-xs h-9 rounded-xl" 
+              size="sm"
+              className="border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 font-bold shadow-xs text-xs h-8 sm:h-9 rounded-xl" 
               onClick={() => setCardTemplateDialogOpen(true)}
             >
-              <CreditCard className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400" />
-              Template Kartu
+              <CreditCard className="w-3.5 h-3.5 mr-1 text-indigo-600 dark:text-indigo-400" />
+              <span className="truncate">Template Kartu</span>
             </Button>
           )}
 
           {isSuperOrAdmin && (
             <Button 
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs text-xs h-9 rounded-xl" 
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs text-xs h-8 sm:h-9 rounded-xl" 
               onClick={() => {
                 setPromoteMode('CLASS')
                 setPromoteOpen(true)
               }}
             >
-              <GraduationCap className="w-4 h-4 mr-1.5" />
-              Naik Kelas Massal
+              <GraduationCap className="w-3.5 h-3.5 mr-1" />
+              <span className="truncate">Naik Kelas</span>
             </Button>
           )}
 
@@ -1668,22 +1671,24 @@ export default function StudentsPage() {
             <>
               <Button 
                 variant="outline" 
-                className="text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 text-xs h-9 rounded-xl font-bold"
+                size="sm"
+                className="text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 text-xs h-8 sm:h-9 rounded-xl font-bold"
                 onClick={() => {
                   setImportProgress(prev => ({ ...prev, status: 'idle' }))
                   setImportDialogOpen(true)
                 }}
               >
-                <FileSpreadsheet className="w-4 h-4 mr-1.5" />
-                Import Excel
+                <FileSpreadsheet className="w-3.5 h-3.5 mr-1" />
+                <span className="truncate">Import Excel</span>
               </Button>
 
               <Button 
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs" 
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-8 sm:h-9 rounded-xl shadow-xs" 
                 onClick={handleOpenAddDialog}
               >
-                <Plus className="w-4 h-4 mr-1.5" />
-                Tambah Siswa
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                <span className="truncate">Tambah Siswa</span>
               </Button>
             </>
           )}
@@ -2993,10 +2998,10 @@ export default function StudentsPage() {
       )}
 
       <Card className="shadow-xs border-slate-200 dark:border-slate-800">
-        <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 p-3.5 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">Daftar Siswa Aktif</CardTitle>
+              <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Daftar Siswa Aktif</CardTitle>
               <CardDescription className="text-xs sm:text-sm mt-0.5">Menampilkan semua siswa yang terdaftar di sistem.</CardDescription>
             </div>
 
@@ -3019,122 +3024,119 @@ export default function StudentsPage() {
                 value={searchQuery}
                 onChange={setSearchQuery}
                 placeholder="Cari siswa (NISN/NIS/nama)..."
+                activeFiltersCount={[
+                  filterClassId && filterClassId !== 'ALL',
+                  filterProgram && filterProgram !== 'ALL',
+                  filterGender && filterGender !== 'ALL',
+                  filterGelombang && filterGelombang !== 'ALL',
+                  filterJalur && filterJalur !== 'ALL',
+                  filterActive && filterActive !== 'ALL',
+                ].filter(Boolean).length}
+                onResetFilters={handleResetFilters}
+                filters={
+                  <div className="space-y-3">
+                    {/* Filter Kelas */}
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Kelas</Label>
+                      <Select value={filterClassId} onValueChange={(v) => setFilterClassId(v || 'ALL')}>
+                        <SelectTrigger className="w-full h-8 text-xs rounded-xl bg-white dark:bg-slate-950">
+                          <SelectValue placeholder="Semua Kelas">
+                            {filterClassId === 'ALL' || !filterClassId
+                              ? 'Semua Kelas'
+                              : classes?.find(c => c.id === filterClassId)?.name || 'Semua Kelas'}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="ALL">Semua Kelas</SelectItem>
+                          {classes?.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Filter Program Unggulan */}
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold text-purple-600 dark:text-purple-400">Program Unggulan</Label>
+                      <Select value={filterProgram} onValueChange={(v) => setFilterProgram(v || 'ALL')}>
+                        <SelectTrigger className="w-full h-8 text-xs rounded-xl bg-white dark:bg-slate-950">
+                          <SelectValue placeholder="Semua Program" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="ALL">Semua Program</SelectItem>
+                          <SelectItem value="__none__">Reguler / Tanpa Program</SelectItem>
+                          {allProgramOptions.map((p: { value: string; label: string }) => (
+                            <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Filter Gender & Gelombang */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Jenis Kelamin</Label>
+                        <Select value={filterGender} onValueChange={(v) => setFilterGender(v || 'ALL')}>
+                          <SelectTrigger className="w-full h-8 text-xs rounded-xl bg-white dark:bg-slate-950">
+                            <SelectValue placeholder="Semua L/P" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="ALL">Semua L/P</SelectItem>
+                            <SelectItem value="L">Laki-Laki (L)</SelectItem>
+                            <SelectItem value="P">Perempuan (P)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Gelombang</Label>
+                        <Select value={filterGelombang} onValueChange={(v) => setFilterGelombang(v || 'ALL')}>
+                          <SelectTrigger className="w-full h-8 text-xs rounded-xl bg-white dark:bg-slate-950">
+                            <SelectValue placeholder="Semua Gel" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="ALL">Semua Gelombang</SelectItem>
+                            <SelectItem value="Gelombang 1">Gelombang 1</SelectItem>
+                            <SelectItem value="Gelombang 2">Gelombang 2</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Filter Jalur & Status */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Jalur</Label>
+                        <Select value={filterJalur} onValueChange={(v) => setFilterJalur(v || 'ALL')}>
+                          <SelectTrigger className="w-full h-8 text-xs rounded-xl bg-white dark:bg-slate-950">
+                            <SelectValue placeholder="Semua Jalur" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="ALL">Semua Jalur</SelectItem>
+                            {allJalurOptions.map((j: string) => (
+                              <SelectItem key={j} value={j}>{j}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Status Akun</Label>
+                        <Select value={filterActive} onValueChange={(v) => setFilterActive(v || 'ALL')}>
+                          <SelectTrigger className="w-full h-8 text-xs rounded-xl bg-white dark:bg-slate-950">
+                            <SelectValue placeholder="Semua Status" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="ALL">Semua Status</SelectItem>
+                            <SelectItem value="ACTIVE">Aktif</SelectItem>
+                            <SelectItem value="INACTIVE">Nonaktif</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                }
               />
-
-              {/* Filter Kelas */}
-              <div className="flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 shadow-2xs">
-                <Filter className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Kelas:</span>
-                <Select value={filterClassId} onValueChange={(v) => setFilterClassId(v || 'ALL')}>
-                  <SelectTrigger className="w-[130px] h-7 text-xs border-0 shadow-none focus:ring-0 p-0">
-                    <SelectValue placeholder="Semua Kelas">
-                      {filterClassId === 'ALL' || !filterClassId
-                        ? 'Semua Kelas'
-                        : classes?.find(c => c.id === filterClassId)?.name || 'Semua Kelas'}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="ALL">Semua Kelas</SelectItem>
-                    {classes?.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter Program Unggulan (Lengkap & Sinkron) */}
-              <div className="flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-purple-200 dark:border-purple-900/80 rounded-xl px-3 py-1.5 shadow-2xs">
-                <Tag className="w-3.5 h-3.5 text-purple-500" />
-                <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">Program:</span>
-                <Select value={filterProgram} onValueChange={(v) => setFilterProgram(v || 'ALL')}>
-                  <SelectTrigger className="w-[160px] h-7 text-xs border-0 shadow-none focus:ring-0 p-0">
-                    <SelectValue placeholder="Semua Program" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="ALL">Semua Program</SelectItem>
-                    <SelectItem value="__none__"> Reguler / Tanpa Program</SelectItem>
-                    {allProgramOptions.map((p: { value: string; label: string }) => (
-                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter Gender */}
-              <div className="flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 shadow-2xs">
-                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Gender:</span>
-                <Select value={filterGender} onValueChange={(v) => setFilterGender(v || 'ALL')}>
-                  <SelectTrigger className="w-[100px] h-7 text-xs border-0 shadow-none focus:ring-0 p-0">
-                    <SelectValue placeholder="Semua L/P" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="ALL">Semua L/P</SelectItem>
-                    <SelectItem value="L">Laki-Laki (L)</SelectItem>
-                    <SelectItem value="P">Perempuan (P)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter Gelombang */}
-              <div className="flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 shadow-2xs">
-                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Gelombang:</span>
-                <Select value={filterGelombang} onValueChange={(v) => setFilterGelombang(v || 'ALL')}>
-                  <SelectTrigger className="w-[125px] h-7 text-xs border-0 shadow-none focus:ring-0 p-0">
-                    <SelectValue placeholder="Semua Gelombang" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="ALL">Semua Gelombang</SelectItem>
-                    <SelectItem value="Gelombang 1">Gelombang 1</SelectItem>
-                    <SelectItem value="Gelombang 2">Gelombang 2</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter Jalur Pendaftaran */}
-              <div className="flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 shadow-2xs">
-                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Jalur:</span>
-                <Select value={filterJalur} onValueChange={(v) => setFilterJalur(v || 'ALL')}>
-                  <SelectTrigger className="w-[130px] h-7 text-xs border-0 shadow-none focus:ring-0 p-0">
-                    <SelectValue placeholder="Semua Jalur" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="ALL">Semua Jalur</SelectItem>
-                    {allJalurOptions.map((j: string) => (
-                      <SelectItem key={j} value={j}>{j}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter Status Akun */}
-              <div className="flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 shadow-2xs">
-                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Status:</span>
-                <Select value={filterActive} onValueChange={(v) => setFilterActive(v || 'ALL')}>
-                  <SelectTrigger className="w-[125px] h-7 text-xs border-0 shadow-none focus:ring-0 p-0">
-                    <SelectValue placeholder="Semua Status" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="ALL">Semua Status</SelectItem>
-                    <SelectItem value="ACTIVE">Aktif</SelectItem>
-                    <SelectItem value="INACTIVE">Nonaktif</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Reset Filter Button */}
-              {isAnyFilterActive && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResetFilters}
-                  className="h-8 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                  Reset Filter
-                </Button>
-              )}
             </div>
           </div>
         </CardHeader>

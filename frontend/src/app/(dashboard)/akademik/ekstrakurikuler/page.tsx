@@ -373,21 +373,29 @@ export default function EkstrakurikulerPage() {
               Seluruh unit kegiatan siswa di SMA Muhammadiyah 1 Ponorogo beserta nama pembina dan jadwal latihan.
             </CardDescription>
           </div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-white dark:bg-slate-950 font-medium"
-            >
-              <option value="ALL">-- Semua Kategori --</option>
-              {KATEGORI_EKSKUL.map((k) => (
-                <option key={k.id} value={k.id}>{k.label}</option>
-              ))}
-            </select>
+          <div className="w-full sm:w-auto">
             <TableSearch
               value={searchQuery}
               onChange={setSearchQuery}
               placeholder="Cari ekskul / pembina / tempat..."
+              activeFiltersCount={selectedCategory !== 'ALL' ? 1 : 0}
+              onResetFilters={() => setSelectedCategory('ALL')}
+              filters={
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Kategori Ekstrakurikuler</label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    aria-label="Filter Kategori Ekstrakurikuler"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="ALL">-- Semua Kategori --</option>
+                    {KATEGORI_EKSKUL.map((k) => (
+                      <option key={k.id} value={k.id}>{k.label}</option>
+                    ))}
+                  </select>
+                </div>
+              }
             />
           </div>
         </CardHeader>

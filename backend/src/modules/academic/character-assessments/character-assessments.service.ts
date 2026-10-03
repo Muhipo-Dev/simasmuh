@@ -228,7 +228,7 @@ export class CharacterAssessmentsService {
       },
     });
 
-    // Kalkulasi Poin Kedisiplinan (Dasar: 1000 Poin) - hanya hitung yang sudah terverifikasi / disetujui / selesai
+    // Kalkulasi Poin Kedisiplinan (Dasar: 100 Poin) - hanya hitung yang sudah terverifikasi / disetujui / selesai
     let totalPointsDelta = 0;
     let totalPelanggaran = 0;
     let totalPrestasi = 0;

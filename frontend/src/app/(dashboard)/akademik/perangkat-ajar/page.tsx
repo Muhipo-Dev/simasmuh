@@ -500,69 +500,10 @@ export default function PerangkatAjarPage() {
       {/* ========================================================================= */}
       {(activeTab === 'saya' || activeTab === 'verifikasi') && (
         <div className="space-y-6">
-          {/* Bar Filter & Pencarian */}
-          <Card className="border-slate-200 dark:border-slate-800 shadow-xs">
-            <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Filter Jenis */}
-                <select
-                  value={filterJenis}
-                  onChange={(e) => setFilterJenis(e.target.value)}
-                  aria-label="Filter Jenis Perangkat"
-                  className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="ALL">Semua Jenis Perangkat</option>
-                  {JENIS_PERANGKAT_OPTIONS.map((j) => (
-                    <option key={j.id} value={j.id}>
-                      {j.label}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Filter Status */}
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  aria-label="Filter Status Verifikasi"
-                  className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="ALL">Semua Status</option>
-                  <option value="DIAJUKAN">Menunggu Verifikasi</option>
-                  <option value="TERVERIFIKASI">Terverifikasi</option>
-                  <option value="PERLU_REVISI">Perlu Revisi</option>
-                  <option value="DITOLAK">Ditolak</option>
-                </select>
-
-                {/* Filter Guru (Khusus Tim Kurikulum) */}
-                {isKurikulumOrPimpinan && activeTab === 'verifikasi' && (
-                  <select
-                    value={filterTeacher}
-                    onChange={(e) => setFilterTeacher(e.target.value)}
-                    aria-label="Filter Guru Sasaran"
-                    className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="ALL">Semua Guru</option>
-                    {teachersList.map((t: any) => (
-                      <option key={t.id} value={t.id}>
-                        {t.user?.name || t.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <TableSearch
-                value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder="Cari judul / mapel / guru..."
-              />
-            </CardContent>
-          </Card>
-
           {/* Tabel Dokumen */}
           <Card className="border-slate-200 dark:border-slate-800 shadow-xs">
-            <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3.5 px-6">
-              <div className="flex items-center justify-between">
+            <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-3.5 px-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
                 <div>
                   <CardTitle className="text-sm font-bold text-slate-900 dark:text-white">
                     {activeTab === 'verifikasi' ? 'Antrian Verifikasi Berkas Guru' : 'Daftar Berkas Perangkat Ajar'}
@@ -573,9 +514,82 @@ export default function PerangkatAjarPage() {
                       : 'Dokumen administrasi yang telah Anda unggah dan status validasinya oleh kurikulum.'}
                   </CardDescription>
                 </div>
-                <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold">
+                <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold shrink-0">
                   {searchedItems.length} Dokumen
                 </Badge>
+              </div>
+
+              <div className="w-full sm:w-auto">
+                <TableSearch
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  placeholder="Cari judul / mapel / guru..."
+                  activeFiltersCount={
+                    (filterJenis !== 'ALL' ? 1 : 0) +
+                    (filterStatus !== 'ALL' ? 1 : 0) +
+                    (filterTeacher !== 'ALL' ? 1 : 0)
+                  }
+                  onResetFilters={() => {
+                    setFilterJenis('ALL')
+                    setFilterStatus('ALL')
+                    setFilterTeacher('ALL')
+                  }}
+                  filters={
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Jenis Perangkat</label>
+                        <select
+                          value={filterJenis}
+                          onChange={(e) => setFilterJenis(e.target.value)}
+                          aria-label="Filter Jenis Perangkat"
+                          className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="ALL">Semua Jenis Perangkat</option>
+                          {JENIS_PERANGKAT_OPTIONS.map((j) => (
+                            <option key={j.id} value={j.id}>
+                              {j.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Status Verifikasi</label>
+                        <select
+                          value={filterStatus}
+                          onChange={(e) => setFilterStatus(e.target.value)}
+                          aria-label="Filter Status Verifikasi"
+                          className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="ALL">Semua Status</option>
+                          <option value="DIAJUKAN">Menunggu Verifikasi</option>
+                          <option value="TERVERIFIKASI">Terverifikasi</option>
+                          <option value="PERLU_REVISI">Perlu Revisi</option>
+                          <option value="DITOLAK">Ditolak</option>
+                        </select>
+                      </div>
+
+                      {isKurikulumOrPimpinan && activeTab === 'verifikasi' && (
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Guru Sasaran</label>
+                          <select
+                            value={filterTeacher}
+                            onChange={(e) => setFilterTeacher(e.target.value)}
+                            aria-label="Filter Guru Sasaran"
+                            className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="ALL">Semua Guru</option>
+                            {teachersList.map((t: any) => (
+                              <option key={t.id} value={t.id}>
+                                {t.user?.name || t.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  }
+                />
               </div>
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">

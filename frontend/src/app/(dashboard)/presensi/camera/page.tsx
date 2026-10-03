@@ -493,12 +493,29 @@ export default function FaceAttendanceCameraPage() {
     })
   }
 
-  const isBrowserMode = formConfig?.streamSourceType === 'BROWSER_WEBCAM' || (!formConfig && configData?.streamSourceType === 'BROWSER_WEBCAM')
+  // Konfigurasi aktif (formConfig jika di-edit, fallback ke configData dari API)
+  const currentConfig = formConfig || configData
+
+  // Menentukan apakah kamera yang sedang aktif berada dalam mode WEBCAM Browser Lokal
+  const activeCameraObj = useMemo(() => {
+    const cams = currentConfig?.cameras || []
+    return cams.find((c) => c.id === activeCamId) || cams[0] || null
+  }, [currentConfig?.cameras, activeCamId])
+
+  const isBrowserMode = useMemo(() => {
+    if (activeCameraObj) {
+      return activeCameraObj.streamSourceType === 'BROWSER_WEBCAM'
+    }
+    return (
+      formConfig?.streamSourceType === 'BROWSER_WEBCAM' ||
+      (!formConfig && configData?.streamSourceType === 'BROWSER_WEBCAM')
+    )
+  }, [activeCameraObj, formConfig?.streamSourceType, configData?.streamSourceType])
 
   // Effect untuk mengaktifkan / menonaktifkan webcam browser
   useEffect(() => {
     if (isBrowserMode && activeTab === 'monitor') {
-      startBrowserWebcam()
+      startBrowserWebcam(selectedDeviceId)
     } else {
       stopBrowserWebcam()
     }
@@ -1300,8 +1317,6 @@ export default function FaceAttendanceCameraPage() {
     })
   }
 
-  const currentConfig = formConfig || configData
-
   const handleSave = () => {
     if (!currentConfig) return
     updateConfig(currentConfig)
@@ -1627,13 +1642,13 @@ export default function FaceAttendanceCameraPage() {
                     </span>
                     <div className="min-w-0">
                       <h2 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5 sm:gap-2 truncate">
-                        <span className="truncate">{currentConfig?.cameraName || 'Camera Gerbang Utama'}</span>
+                        <span className="truncate">{activeCameraObj?.name || currentConfig?.cameraName || 'Camera Gerbang Utama'}</span>
                         <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-slate-700 text-indigo-300 font-mono shrink-0">
-                          {currentConfig?.streamSourceType || 'RTSP'}
+                          {activeCameraObj?.streamSourceType || currentConfig?.streamSourceType || 'RTSP'}
                         </Badge>
                       </h2>
                       <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate max-w-[200px] sm:max-w-xs md:max-w-md">
-                        {currentConfig?.streamUrl || 'rtsp://...'}
+                        {activeCameraObj?.streamUrl || currentConfig?.streamUrl || 'rtsp://...'}
                       </p>
                     </div>
                   </div>

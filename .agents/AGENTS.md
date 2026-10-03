@@ -64,5 +64,9 @@
       - Checkbox di header tabel untuk memilih/membatalkan semua baris (*Select All / Deselect All*).
       - Checkbox di setiap baris data untuk seleksi individual (*Row Selection*).
       - Indikator baris terpilih serta aksi massal (*bulk action bar*) saat terdapat baris yang diseleksi.
+17. **Larangan Menjalankan Dev Server (`npm run dev`) Saat Pengujian / Testing (STRICT)**:
+    - AI Agent **DILARANG KERAS** menjalankan perintah dev server seperti `npm run dev`, `next dev`, atau perintah interactive long-running sejenis saat melakukan pengujian, verifikasi kode, atau pengecekan error.
+    - Untuk verifikasi dan pengetesan kualitas/tipe kode, AI Agent **MUTLAK WAJIB** menggunakan validasi build produksi (`npm run build` atau `npx tsc --noEmit`) yang bersifat non-blocking, selesai secara otomatis, dan memastikan integritas TypeScript serta Turbopack secara menyeluruh.
+
 
 

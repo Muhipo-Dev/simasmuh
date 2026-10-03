@@ -486,11 +486,25 @@ export default function FaceNetAiStandalonePage() {
     })
   }
 
-  const isBrowserMode = formConfig?.streamSourceType === 'BROWSER_WEBCAM' || (!formConfig && configData?.streamSourceType === 'BROWSER_WEBCAM')
+  // Menentukan apakah kamera yang sedang aktif berada dalam mode WEBCAM Browser Lokal
+  const activeCameraObj = useMemo(() => {
+    const cams = currentConfig?.cameras || []
+    return cams.find((c) => c.id === activeCamId) || cams[0] || null
+  }, [currentConfig?.cameras, activeCamId])
+
+  const isBrowserMode = useMemo(() => {
+    if (activeCameraObj) {
+      return activeCameraObj.streamSourceType === 'BROWSER_WEBCAM'
+    }
+    return (
+      formConfig?.streamSourceType === 'BROWSER_WEBCAM' ||
+      (!formConfig && configData?.streamSourceType === 'BROWSER_WEBCAM')
+    )
+  }, [activeCameraObj, formConfig?.streamSourceType, configData?.streamSourceType])
 
   useEffect(() => {
     if (isBrowserMode && activeTab === 'monitor') {
-      startBrowserWebcam()
+      startBrowserWebcam(selectedDeviceId)
     } else {
       stopBrowserWebcam()
     }
@@ -1678,20 +1692,20 @@ export default function FaceNetAiStandalonePage() {
               }`}>
                 <div className="flex items-center gap-2 min-w-0">
                   <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                    serviceStatus?.is_running || isBrowserCamStreaming 
-                      ? 'bg-emerald-500 shadow-xs' 
-                      : 'bg-slate-500'
+                    isBrowserMode 
+                      ? (isBrowserCamStreaming ? 'bg-emerald-500 shadow-xs animate-pulse' : 'bg-amber-500')
+                      : (serviceStatus?.is_running && !streamError ? 'bg-emerald-500 shadow-xs' : 'bg-slate-500')
                   }`} />
                   <span className="text-xs sm:text-sm font-black truncate">
-                    {currentConfig?.cameraName || 'Kamera Presensi'}
+                    {activeCameraObj?.name || currentConfig?.cameraName || 'Kamera Presensi'}
                   </span>
                   <Badge variant="outline" className={`text-[10px] py-0 px-1.5 font-mono font-bold shrink-0 ${
                     isOutdoorMode ? 'border-emerald-400 text-emerald-300 bg-emerald-950/60' : 'border-slate-700 text-indigo-300'
                   }`}>
-                    {currentConfig?.streamSourceType || 'RTSP'}
+                    {activeCameraObj?.streamSourceType || currentConfig?.streamSourceType || 'RTSP'}
                   </Badge>
                   <span className="text-[10px] text-slate-300 font-semibold truncate hidden sm:inline">
-                    {currentConfig?.location || 'Area Presensi'}
+                    {activeCameraObj?.location || currentConfig?.location || 'Area Presensi'}
                   </span>
                 </div>
 
@@ -2062,7 +2076,11 @@ export default function FaceNetAiStandalonePage() {
                 {/* HUD Badges */}
                 <div className="absolute top-2.5 left-2.5 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/40 z-20 shadow-md">
                   <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  <span className="font-bold">{isBrowserMode ? `WEBCAM (${browserFps} FPS)` : currentConfig?.streamSourceType || 'DIRECT STREAM'}</span>
+                  <span className="font-bold">
+                    {isBrowserMode
+                      ? `WEBCAM (${browserFps} FPS)`
+                      : `${activeCameraObj?.streamSourceType || currentConfig?.streamSourceType || 'RTSP'} STREAM`}
+                  </span>
                 </div>
 
                 <div className="absolute top-2.5 right-2.5 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-xs text-[10px] font-mono text-slate-200 border border-white/20 z-20 shadow-md">
@@ -2386,205 +2404,70 @@ export default function FaceNetAiStandalonePage() {
 
               {/* Body: Form Controls */}
               <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5 custom-scrollbar">
-                {/* 1. Preset Sumber Kamera */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                    <Camera className="w-3.5 h-3.5 text-indigo-400" />
-                    Pilihan Sumber Kamera Aktif
-                  </Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {STREAM_PRESETS.map((preset) => {
-                      const IconComponent = preset.icon
-                      const isSelected = formConfig?.streamSourceType === preset.id || (!formConfig?.streamSourceType && preset.id === 'RTSP')
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          disabled={!isAuthenticated || !canConfigure}
-                          onClick={() => {
-                            if (!isAuthenticated) {
-                              promptSuperadminAuth()
-                              return
-                            }
-                            if (!canConfigure) {
-                              toast.error('Hanya Superadmin yang berwenang mengubah sumber kamera')
-                              return
-                            }
-                            if (preset.id === 'BROWSER_WEBCAM') {
-                              setFormConfig((prev) => prev ? {
-                                ...prev,
-                                streamSourceType: 'BROWSER_WEBCAM',
-                                streamUrl: 'BROWSER_WEBCAM',
-                              } : null)
-                            } else {
-                              stopBrowserWebcam()
-                              setFormConfig((prev) => prev ? {
-                                ...prev,
-                                streamSourceType: preset.id as any,
-                                streamUrl: preset.example,
-                              } : null)
-                            }
-                          }}
-                          className={`flex items-center gap-2 p-2 rounded-xl text-left border transition-all text-xs disabled:opacity-50 cursor-pointer ${
-                            isSelected
-                              ? 'bg-indigo-600 text-white border-indigo-400 shadow-md font-bold'
-                              : 'bg-slate-800/80 text-slate-300 border-slate-700/80 hover:bg-slate-800'
-                          }`}
-                        >
-                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                            isSelected ? 'bg-white/20 text-white' : 'bg-slate-700/60 text-slate-300'
-                          }`}>
-                            <IconComponent className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-semibold text-[11px]">{preset.title}</p>
-                            <p className="text-[9px] text-slate-400 truncate">{preset.badge}</p>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* 2. Dynamic Input sesuai Preset */}
-                {currentConfig?.streamSourceType === 'BROWSER_WEBCAM' && (
-                  <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-indigo-200">Kamera Web Browser Lokal (Client)</span>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          startBrowserWebcam(selectedDeviceId)
-                          toast.success('Memuat ulang webcam...')
-                        }}
-                        className="h-6 text-[10px] border-indigo-700 bg-indigo-900/60 text-indigo-200 hover:text-white px-2"
-                      >
-                        <RefreshCw className="w-2.5 h-2.5 mr-1" /> Segarkan
-                      </Button>
-                    </div>
-                    {videoDevices.length > 0 ? (
-                      <select
-                        value={selectedDeviceId}
-                        disabled={!isAuthenticated || !canConfigure}
-                        onChange={(e) => {
-                          setSelectedDeviceId(e.target.value)
-                          startBrowserWebcam(e.target.value)
-                        }}
-                        className="w-full h-8 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs px-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      >
-                        {videoDevices.map((dev, idx) => (
-                          <option key={dev.deviceId || idx} value={dev.deviceId}>
-                            {dev.label || `Kamera #${idx + 1}`}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-400">
-                        <span>Menggunakan Kamera Default</span>
-                        <button
-                          type="button"
-                          onClick={() => startBrowserWebcam()}
-                          className="text-indigo-400 hover:text-indigo-300 font-bold"
-                        >
-                          Deteksi Kamera
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {currentConfig?.streamSourceType === 'WEBCAM' && (
-                  <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="streamUrl" className="text-xs font-semibold text-slate-200">
-                        Indeks Port USB Kamera Server
-                      </Label>
-                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
-                        OpenCV USB
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="streamUrl"
-                        type="text"
-                        placeholder="0, 1, 2, atau /dev/video0"
-                        value={currentConfig?.streamUrl || '0'}
-                        disabled={!isAuthenticated || !canConfigure}
-                        onChange={(e) => setFormConfig((prev) => prev ? { ...prev, streamUrl: e.target.value } : null)}
-                        className="font-mono text-xs bg-slate-800 border-slate-700 text-white h-8 flex-1"
-                      />
-                      <div className="inline-flex gap-1">
-                        {['0', '1', '2'].map((idxVal) => (
-                          <button
-                            key={idxVal}
-                            type="button"
-                            disabled={!isAuthenticated || !canConfigure}
-                            onClick={() => setFormConfig((prev) => prev ? { ...prev, streamUrl: idxVal } : null)}
-                            className={`px-2 py-1 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
-                              currentConfig?.streamUrl === idxVal
-                                ? 'bg-emerald-600 text-white'
-                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
-                            }`}
-                          >
-                            Port {idxVal}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Multi-Camera Channel Configuration (Terpisah: Kamera 1 & Kamera 2) */}
-                <div className="space-y-3 p-3 rounded-2xl bg-slate-900 border border-slate-800">
+                {/* 1. Konfigurasi Multi-Kamera Terpadu (Kamera 1 & Kamera 2) */}
+                <div className="space-y-3 p-3.5 rounded-2xl bg-slate-900 border border-slate-800">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-2">
                       <Camera className="w-4 h-4 text-indigo-400" />
-                      Konfigurasi Multi-Kamera Terpisah (Kamera 1 & Kamera 2)
+                      Pengaturan Kanal Kamera Pemindai (Kamera 1 & Kamera 2)
                     </Label>
-                    <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-800/60">
-                      Dual Stream Mandiri
+                    <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-md border border-emerald-800/60">
+                      Multi-Stream Fleksibel
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400">
-                    Atur masing-masing kamera pemindai secara terpisah. Setiap kamera dapat memilih mode sumber mandiri (Webcam Browser, IP Camera RTSP, atau USB Webcam Server).
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Tentukan sumber dan URL setiap kamera secara langsung. Setiap kamera mendukung <strong className="text-indigo-300">Webcam Browser Lokal</strong>, <strong className="text-cyan-300">IP Camera RTSP</strong>, maupun <strong className="text-emerald-300">USB Webcam Server</strong>.
                   </p>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pt-1">
                     {(currentConfig?.cameras || [
-                      { id: 'cam-1', name: 'Kamera 1 (Gerbang Depan)', streamSourceType: 'RTSP', streamUrl: 'rtsp://admin:password@192.168.1.64:554/Streaming/Channels/101', location: 'Gerbang Depan', isActive: true },
+                      { id: 'cam-1', name: 'Kamera 1 (Gerbang Depan)', streamSourceType: 'BROWSER_WEBCAM', streamUrl: 'BROWSER_WEBCAM', location: 'Gerbang Depan', isActive: true },
                       { id: 'cam-2', name: 'Kamera 2 (Gerbang Belakang)', streamSourceType: 'RTSP', streamUrl: 'rtsp://admin:password@192.168.1.65:554/Streaming/Channels/101', location: 'Gerbang Belakang', isActive: true },
                     ]).map((cam, idx) => {
-                      const activeSourceType = cam.streamSourceType || 'RTSP'
+                      const activeSourceType = cam.streamSourceType || 'BROWSER_WEBCAM'
+                      const isMainCam = idx === 0
+
                       return (
-                        <div key={cam.id || idx} className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-3 flex flex-col justify-between">
-                          <div className="space-y-2.5">
+                        <div key={cam.id || idx} className={`p-3.5 rounded-xl border space-y-3 flex flex-col justify-between transition-all ${
+                          activeCamId === cam.id
+                            ? 'bg-slate-950 border-indigo-500/50 shadow-lg shadow-indigo-950/30'
+                            : 'bg-slate-950/80 border-slate-800'
+                        }`}>
+                          <div className="space-y-3">
                             {/* Header Kartu Kamera */}
-                            <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                                  activeCamId === cam.id
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'bg-slate-800 text-slate-300'
+                                }`}>
                                   <Video className="w-3.5 h-3.5" />
                                 </div>
-                                <span className="text-xs font-black text-white">
-                                  {idx === 0 ? 'Kamera 1 (Channel Utama)' : 'Kamera 2 (Channel Sekunder)'}
-                                </span>
+                                <div className="min-w-0">
+                                  <span className="text-xs font-black text-white truncate block">
+                                    {isMainCam ? 'Kamera 1 (Kanal Utama)' : 'Kamera 2 (Kanal Sekunder)'}
+                                  </span>
+                                  <span className="text-[9px] text-slate-400 font-mono">ID: {cam.id}</span>
+                                </div>
                               </div>
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                                ID: {cam.id}
-                              </span>
+                              {activeCamId === cam.id && (
+                                <Badge className="bg-emerald-950 text-emerald-300 border-emerald-700 text-[9px] py-0 px-1.5 font-bold">
+                                  Aktif di Monitor
+                                </Badge>
+                              )}
                             </div>
 
                             {/* Mode Switcher 3 Tombol: Webcam Browser, RTSP, USB Webcam */}
-                            <div className="space-y-1">
-                              <Label className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider">
-                                Mode Sumber Kamera:
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">
+                                Sumber Kamera:
                               </Label>
                               <div className="grid grid-cols-3 gap-1">
                                 {[
                                   { id: 'BROWSER_WEBCAM', label: 'Webcam Browser', icon: Camera },
-                                  { id: 'RTSP', label: 'IP Camera RTSP', icon: Zap },
-                                  { id: 'WEBCAM', label: 'Webcam USB', icon: Video },
+                                  { id: 'RTSP', label: 'IP Cam RTSP', icon: Zap },
+                                  { id: 'WEBCAM', label: 'USB Webcam', icon: Video },
                                 ].map((mode) => {
                                   const IconComp = mode.icon
                                   const isModeSelected = activeSourceType === mode.id
@@ -2595,23 +2478,35 @@ export default function FaceNetAiStandalonePage() {
                                       disabled={!isAuthenticated || !canConfigure}
                                       onClick={() => {
                                         const newCams = [...(currentConfig?.cameras || [
-                                          { id: 'cam-1', name: 'Kamera 1 (Gerbang Depan)', streamSourceType: 'RTSP', streamUrl: 'rtsp://admin:password@192.168.1.64:554/Streaming/Channels/101', location: 'Gerbang Depan', isActive: true },
+                                          { id: 'cam-1', name: 'Kamera 1 (Gerbang Depan)', streamSourceType: 'BROWSER_WEBCAM', streamUrl: 'BROWSER_WEBCAM', location: 'Gerbang Depan', isActive: true },
                                           { id: 'cam-2', name: 'Kamera 2 (Gerbang Belakang)', streamSourceType: 'RTSP', streamUrl: 'rtsp://admin:password@192.168.1.65:554/Streaming/Channels/101', location: 'Gerbang Belakang', isActive: true },
                                         ])]
                                         if (!newCams[idx]) newCams[idx] = { ...cam }
                                         newCams[idx].streamSourceType = mode.id as any
                                         if (mode.id === 'BROWSER_WEBCAM') {
                                           newCams[idx].streamUrl = 'BROWSER_WEBCAM'
-                                        } else if (mode.id === 'WEBCAM' && (!newCams[idx].streamUrl || newCams[idx].streamUrl.startsWith('rtsp'))) {
+                                        } else if (mode.id === 'WEBCAM' && (!newCams[idx].streamUrl || newCams[idx].streamUrl.startsWith('rtsp') || newCams[idx].streamUrl === 'BROWSER_WEBCAM')) {
                                           newCams[idx].streamUrl = idx.toString()
                                         } else if (mode.id === 'RTSP' && (!newCams[idx].streamUrl || !newCams[idx].streamUrl.startsWith('rtsp'))) {
                                           newCams[idx].streamUrl = `rtsp://admin:password@192.168.1.${64 + idx}:554/Streaming/Channels/101`
                                         }
-                                        setFormConfig((prev) => prev ? { ...prev, cameras: newCams } : null)
+                                        
+                                        // Jika ini kamera utama atau kamera yang sedang aktif, sinkronkan root config
+                                        const isCurrentActive = cam.id === activeCamId || isMainCam
+                                        setFormConfig((prev) => prev ? {
+                                          ...prev,
+                                          cameras: newCams,
+                                          ...(isCurrentActive ? {
+                                            streamSourceType: mode.id as any,
+                                            streamUrl: newCams[idx].streamUrl,
+                                            cameraName: newCams[idx].name,
+                                            location: newCams[idx].location,
+                                          } : {})
+                                        } : null)
                                       }}
-                                      className={`flex items-center justify-center gap-1 py-1.5 px-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                      className={`flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
                                         isModeSelected
-                                          ? 'bg-indigo-600 text-white shadow-xs ring-1 ring-indigo-400'
+                                          ? 'bg-indigo-600 text-white shadow-md ring-1 ring-indigo-400'
                                           : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
                                       }`}
                                     >
@@ -2623,8 +2518,135 @@ export default function FaceNetAiStandalonePage() {
                               </div>
                             </div>
 
-                            {/* Nama & Lokasi */}
-                            <div className="grid grid-cols-2 gap-2">
+                            {/* Detail Input Berdasarkan Mode yang Dipilih */}
+                            {activeSourceType === 'BROWSER_WEBCAM' ? (
+                              <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-indigo-200">Perangkat Kamera Web:</span>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      startBrowserWebcam(selectedDeviceId)
+                                      toast.success('Memuat ulang webcam...')
+                                    }}
+                                    className="h-5 text-[9px] border-indigo-700 bg-indigo-900/60 text-indigo-200 hover:text-white px-2 rounded-md"
+                                  >
+                                    <RefreshCw className="w-2.5 h-2.5 mr-1" /> Segarkan
+                                  </Button>
+                                </div>
+                                {videoDevices.length > 0 ? (
+                                  <select
+                                    value={selectedDeviceId}
+                                    disabled={!isAuthenticated || !canConfigure}
+                                    onChange={(e) => {
+                                      setSelectedDeviceId(e.target.value)
+                                      startBrowserWebcam(e.target.value)
+                                    }}
+                                    className="w-full h-8 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-xs px-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                  >
+                                    {videoDevices.map((dev, dIdx) => (
+                                      <option key={dev.deviceId || dIdx} value={dev.deviceId}>
+                                        {dev.label || `Kamera Web #${dIdx + 1}`}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[10px] text-slate-400">
+                                    <span>Webcam Laptop / Default Browser</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => startBrowserWebcam()}
+                                      className="text-indigo-400 hover:text-indigo-300 font-bold"
+                                    >
+                                      Deteksi
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ) : activeSourceType === 'WEBCAM' ? (
+                              <div className="space-y-1 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800">
+                                <Label className="text-[10px] font-semibold text-slate-300">Port Indeks USB Komputer Server:</Label>
+                                <div className="flex items-center gap-1.5">
+                                  <Input
+                                    type="text"
+                                    value={cam.streamUrl}
+                                    placeholder="0, 1, 2, atau /dev/video0"
+                                    disabled={!isAuthenticated || !canConfigure}
+                                    onChange={(e) => {
+                                      const newCams = [...(currentConfig?.cameras || [])]
+                                      if (!newCams[idx]) newCams[idx] = { ...cam }
+                                      newCams[idx].streamUrl = e.target.value
+                                      const isCurrentActive = cam.id === activeCamId || isMainCam
+                                      setFormConfig((prev) => prev ? {
+                                        ...prev,
+                                        cameras: newCams,
+                                        ...(isCurrentActive ? { streamUrl: e.target.value } : {})
+                                      } : null)
+                                    }}
+                                    className="font-mono text-xs bg-slate-950 border-slate-700 text-white h-8 flex-1"
+                                  />
+                                  {['0', '1', '2'].map((pIdx) => (
+                                    <button
+                                      key={pIdx}
+                                      type="button"
+                                      disabled={!isAuthenticated || !canConfigure}
+                                      onClick={() => {
+                                        const newCams = [...(currentConfig?.cameras || [])]
+                                        if (!newCams[idx]) newCams[idx] = { ...cam }
+                                        newCams[idx].streamUrl = pIdx
+                                        const isCurrentActive = cam.id === activeCamId || isMainCam
+                                        setFormConfig((prev) => prev ? {
+                                          ...prev,
+                                          cameras: newCams,
+                                          ...(isCurrentActive ? { streamUrl: pIdx } : {})
+                                        } : null)
+                                      }}
+                                      className={`px-2.5 py-1.5 text-xs font-mono font-bold rounded-lg cursor-pointer transition-all ${
+                                        cam.streamUrl === pIdx ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-800 text-slate-400 hover:text-white'
+                                      }`}
+                                    >
+                                      Port {pIdx}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-1 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800">
+                                <div className="flex items-center justify-between">
+                                  <Label className="text-[10px] font-semibold text-slate-300">Link URL RTSP IP Camera:</Label>
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowStreamUrl(!showStreamUrl)}
+                                    className="text-[10px] text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                                  >
+                                    {showStreamUrl ? 'Sembunyikan' : 'Tampilkan'}
+                                  </button>
+                                </div>
+                                <Input
+                                  type={showStreamUrl ? 'text' : 'password'}
+                                  value={cam.streamUrl}
+                                  placeholder="rtsp://admin:password@192.168.1.64:554/Streaming/Channels/101"
+                                  disabled={!isAuthenticated || !canConfigure}
+                                  onChange={(e) => {
+                                    const newCams = [...(currentConfig?.cameras || [])]
+                                    if (!newCams[idx]) newCams[idx] = { ...cam }
+                                    newCams[idx].streamUrl = e.target.value
+                                    const isCurrentActive = cam.id === activeCamId || isMainCam
+                                    setFormConfig((prev) => prev ? {
+                                      ...prev,
+                                      cameras: newCams,
+                                      ...(isCurrentActive ? { streamUrl: e.target.value } : {})
+                                    } : null)
+                                  }}
+                                  className="font-mono text-xs bg-slate-950 border-slate-700 text-white h-8"
+                                />
+                              </div>
+                            )}
+
+                            {/* Nama & Lokasi Titik Kamera */}
+                            <div className="grid grid-cols-2 gap-2 pt-1">
                               <div className="space-y-1">
                                 <Label className="text-[10px] font-medium text-slate-300">Nama Titik Kamera</Label>
                                 <Input
@@ -2636,9 +2658,14 @@ export default function FaceNetAiStandalonePage() {
                                     const newCams = [...(currentConfig?.cameras || [])]
                                     if (!newCams[idx]) newCams[idx] = { ...cam }
                                     newCams[idx].name = e.target.value
-                                    setFormConfig((prev) => prev ? { ...prev, cameras: newCams } : null)
+                                    const isCurrentActive = cam.id === activeCamId || isMainCam
+                                    setFormConfig((prev) => prev ? {
+                                      ...prev,
+                                      cameras: newCams,
+                                      ...(isCurrentActive ? { cameraName: e.target.value } : {})
+                                    } : null)
                                   }}
-                                  className="bg-slate-900 border-slate-700 text-white text-xs h-7.5"
+                                  className="bg-slate-900 border-slate-700 text-white text-xs h-8"
                                 />
                               </div>
                               <div className="space-y-1">
@@ -2652,106 +2679,21 @@ export default function FaceNetAiStandalonePage() {
                                     const newCams = [...(currentConfig?.cameras || [])]
                                     if (!newCams[idx]) newCams[idx] = { ...cam }
                                     newCams[idx].location = e.target.value
-                                    setFormConfig((prev) => prev ? { ...prev, cameras: newCams } : null)
+                                    const isCurrentActive = cam.id === activeCamId || isMainCam
+                                    setFormConfig((prev) => prev ? {
+                                      ...prev,
+                                      cameras: newCams,
+                                      ...(isCurrentActive ? { location: e.target.value } : {})
+                                    } : null)
                                   }}
-                                  className="bg-slate-900 border-slate-700 text-white text-xs h-7.5"
+                                  className="bg-slate-900 border-slate-700 text-white text-xs h-8"
                                 />
                               </div>
                             </div>
-
-                            {/* Detail Input Berdasarkan Mode yang Dipilih */}
-                            {activeSourceType === 'BROWSER_WEBCAM' ? (
-                              <div className="p-2 rounded-lg bg-indigo-950/30 border border-indigo-500/20 text-[11px] text-indigo-300 flex items-center justify-between">
-                                <span>Menggunakan tangkapan webcam langsung browser</span>
-                                <Badge variant="outline" className="text-[9px] border-indigo-500/40 text-indigo-300">
-                                  Client Direct
-                                </Badge>
-                              </div>
-                            ) : activeSourceType === 'WEBCAM' ? (
-                              <div className="space-y-1">
-                                <Label className="text-[10px] font-medium text-slate-300">Port USB Webcam Server</Label>
-                                <div className="flex items-center gap-1.5">
-                                  <Input
-                                    type="text"
-                                    value={cam.streamUrl}
-                                    placeholder="0, 1, atau 2"
-                                    disabled={!isAuthenticated || !canConfigure}
-                                    onChange={(e) => {
-                                      const newCams = [...(currentConfig?.cameras || [])]
-                                      if (!newCams[idx]) newCams[idx] = { ...cam }
-                                      newCams[idx].streamUrl = e.target.value
-                                      setFormConfig((prev) => prev ? { ...prev, cameras: newCams } : null)
-                                    }}
-                                    className="font-mono text-xs bg-slate-900 border-slate-700 text-white h-7.5 flex-1"
-                                  />
-                                  {['0', '1', '2'].map((pIdx) => (
-                                    <button
-                                      key={pIdx}
-                                      type="button"
-                                      disabled={!isAuthenticated || !canConfigure}
-                                      onClick={() => {
-                                        const newCams = [...(currentConfig?.cameras || [])]
-                                        if (!newCams[idx]) newCams[idx] = { ...cam }
-                                        newCams[idx].streamUrl = pIdx
-                                        setFormConfig((prev) => prev ? { ...prev, cameras: newCams } : null)
-                                      }}
-                                      className={`px-2 py-1 text-[10px] font-mono font-bold rounded ${
-                                        cam.streamUrl === pIdx ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
-                                      }`}
-                                    >
-                                      Port {pIdx}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="space-y-1">
-                                <Label className="text-[10px] font-medium text-slate-300">Target URL RTSP IP Camera</Label>
-                                <Input
-                                  type={showStreamUrl ? 'text' : 'password'}
-                                  value={cam.streamUrl}
-                                  placeholder="rtsp://admin:pass@192.168.1.xxx:554/ch1"
-                                  disabled={!isAuthenticated || !canConfigure}
-                                  onChange={(e) => {
-                                    const newCams = [...(currentConfig?.cameras || [])]
-                                    if (!newCams[idx]) newCams[idx] = { ...cam }
-                                    newCams[idx].streamUrl = e.target.value
-                                    setFormConfig((prev) => prev ? { ...prev, cameras: newCams } : null)
-                                  }}
-                                  className="font-mono text-[11px] bg-slate-900 border-slate-700 text-white h-7.5"
-                                />
-                              </div>
-                            )}
                           </div>
                         </div>
                       )
                     })}
-                  </div>
-                </div>
-
-                {/* 3. Nama Titik Kamera Utama & Lokasi */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="cameraName" className="text-[11px] font-medium text-slate-200">Nama Profil Kamera Utama</Label>
-                    <Input
-                      id="cameraName"
-                      placeholder="Kamera Presensi Utama"
-                      value={currentConfig?.cameraName || ''}
-                      disabled={!isAuthenticated || !canConfigure}
-                      onChange={(e) => setFormConfig((prev) => prev ? { ...prev, cameraName: e.target.value } : null)}
-                      className="bg-slate-800 border-slate-700 text-white text-xs h-8"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="location" className="text-[11px] font-medium text-slate-200">Lokasi / Area Utama</Label>
-                    <Input
-                      id="location"
-                      placeholder="Lobi / Area Presensi"
-                      value={currentConfig?.location || ''}
-                      disabled={!isAuthenticated || !canConfigure}
-                      onChange={(e) => setFormConfig((prev) => prev ? { ...prev, location: e.target.value } : null)}
-                      className="bg-slate-800 border-slate-700 text-white text-xs h-8"
-                    />
                   </div>
                 </div>
 

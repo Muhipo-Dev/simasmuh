@@ -12,6 +12,7 @@ import { Loader2, CalendarDays, Download, UserCheck, ChevronDown } from 'lucide-
 import * as XLSX from 'xlsx'
 import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TableSelectionBar, TableCheckboxHeader, TableCheckboxCell } from '@/components/TableSelectionBar'
 import { WaliKelasSiswaManagement } from '@/components/academic/WaliKelasSiswaManagement'
 
 type LogEntry = {
@@ -36,6 +37,7 @@ export default function LogPresensiSiswaPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString())
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStudentUserId, setSelectedStudentUserId] = useState<string>('')
+  const [selectedDates, setSelectedDates] = useState<string[]>([])
 
   // 1. Ambil daftar anak jika user adalah wali murid
   const { data: myStudents = [] } = useQuery<any[]>({
@@ -260,11 +262,57 @@ export default function LogPresensiSiswaPage() {
             />
           </div>
         </CardHeader>
+        {selectedDates.length > 0 && (
+          <div className="p-3 border-b border-slate-100 dark:border-slate-800">
+            <TableSelectionBar
+              selectedCount={selectedDates.length}
+              totalCount={searchedLogs.length}
+              onClearSelection={() => setSelectedDates([])}
+              onSelectAll={() => setSelectedDates(searchedLogs.map(l => l.date))}
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const selectedItems = searchedLogs.filter(l => selectedDates.includes(l.date))
+                  const ws = XLSX.utils.json_to_sheet(selectedItems.map((l, idx) => ({
+                    No: idx + 1,
+                    Tanggal: `${l.dayNumber} ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`,
+                    Hari: l.dayName,
+                    'Jam Masuk': l.checkIn,
+                    Keterangan: l.keterangan
+                  })))
+                  const wb = XLSX.utils.book_new()
+                  XLSX.utils.book_append_sheet(wb, ws, 'Presensi Siswa Terpilih')
+                  XLSX.writeFile(wb, `Presensi_Siswa_Terpilih_${selectedMonth}_${selectedYear}.xlsx`)
+                }}
+                className="h-8.5 px-3 rounded-xl text-xs font-bold gap-1 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Ekspor Terpilih ({selectedDates.length})
+              </Button>
+            </TableSelectionBar>
+          </div>
+        )}
         <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader className="bg-slate-50/75 dark:bg-slate-900/75 border-b border-slate-200/80 dark:border-slate-800">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-14 text-center text-xs font-bold text-slate-700 dark:text-slate-300">No</TableHead>
+                <TableHead className="w-10 pl-4 text-center">
+                  <TableCheckboxHeader
+                    checked={searchedLogs.length > 0 && selectedDates.length === searchedLogs.length}
+                    indeterminate={selectedDates.length > 0 && selectedDates.length < searchedLogs.length}
+                    onChange={(checked) => {
+                      if (checked) {
+                        setSelectedDates(searchedLogs.map(l => l.date))
+                      } else {
+                        setSelectedDates([])
+                      }
+                    }}
+                  />
+                </TableHead>
+                <TableHead className="w-12 text-center text-xs font-bold text-slate-700 dark:text-slate-300 px-2">No</TableHead>
                 <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="dayNumber" className="w-44 text-xs font-bold text-slate-700 dark:text-slate-300">Tanggal & Hari</SortableTableHead>
                 <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="checkIn" className="w-40 text-center text-xs font-bold text-slate-700 dark:text-slate-300">Jam Masuk</SortableTableHead>
                 <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="keterangan" className="min-w-[200px] text-xs font-bold text-slate-700 dark:text-slate-300">Keterangan</SortableTableHead>
@@ -273,7 +321,7 @@ export default function LogPresensiSiswaPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10">
+                  <TableCell colSpan={5} className="text-center py-10">
                     <div className="flex flex-col items-center justify-center text-slate-500 text-xs">
                       <Loader2 className="w-5 h-5 animate-spin mb-2 text-blue-600" />
                       Memuat data presensi...
@@ -282,16 +330,29 @@ export default function LogPresensiSiswaPage() {
                 </TableRow>
               ) : searchedLogs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10 text-slate-500 text-xs">
+                  <TableCell colSpan={5} className="text-center py-10 text-slate-500 text-xs">
                     {searchQuery ? 'Tidak ada data presensi yang sesuai dengan pencarian.' : 'Belum ada data presensi untuk bulan ini.'}
                   </TableCell>
                 </TableRow>
               ) : (
                 searchedLogs.map((log, index) => {
                   const isWeekend = log.dayName === 'Sabtu' || log.dayName === 'Minggu'
+                  const isSelected = selectedDates.includes(log.date)
                   return (
-                    <TableRow key={log.date} className={`h-11 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors ${isWeekend ? "bg-slate-50/40 dark:bg-slate-900/20" : ""}`}>
-                      <TableCell className="text-center font-bold text-xs text-slate-500">{index + 1}</TableCell>
+                    <TableRow key={log.date} className={`h-11 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors ${isSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : isWeekend ? "bg-slate-50/40 dark:bg-slate-900/20" : ""}`}>
+                      <TableCell className="pl-4 text-center">
+                        <TableCheckboxCell
+                          checked={isSelected}
+                          onChange={(checked) => {
+                            if (checked) {
+                              setSelectedDates(prev => [...prev, log.date])
+                            } else {
+                              setSelectedDates(prev => prev.filter(d => d !== log.date))
+                            }
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center font-bold text-xs text-slate-500 px-2">{index + 1}</TableCell>
                       <TableCell className="py-2">
                         <div className="font-bold text-xs text-slate-900 dark:text-white">{log.dayNumber} {months.find(m => m.value === selectedMonth)?.label} {selectedYear}</div>
                         <div className="text-[11px] font-medium text-slate-500">{log.dayName}</div>

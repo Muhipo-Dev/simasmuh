@@ -325,7 +325,89 @@ export class ExtracurricularService {
       details: { extracurricularId: extracurricular.id },
     });
 
+    await this.syncPembinaSubRole(
+      dto.pembinaUserId || extracurricular.pembinaUserId,
+      dto.pembinaId || extracurricular.pembinaId,
+      dto.pembinaName || extracurricular.pembinaName,
+      dto.pembinaNip || extracurricular.pembinaNip
+    );
+
     return extracurricular;
+  }
+
+  /**
+   * Helper untuk otomatis menyinkronkan subRole PEMBINA_EKSTRA pada akun User/Guru
+   */
+  private async syncPembinaSubRole(pembinaUserId?: string, pembinaId?: string, pembinaName?: string, pembinaNip?: string) {
+    try {
+      let targetUserId = pembinaUserId;
+
+      if (!targetUserId && pembinaId) {
+        const teacher = await (this.prisma.teacherProfile as any).findUnique({
+          where: { id: pembinaId },
+          select: { userId: true },
+        });
+        if (teacher?.userId) {
+          targetUserId = teacher.userId;
+        }
+      }
+
+      if (!targetUserId && pembinaNip) {
+        const userByNip = await (this.prisma.user as any).findFirst({
+          where: {
+            OR: [
+              { nipNbm: pembinaNip },
+              { username: pembinaNip },
+              { teacherProfile: { nip: pembinaNip } },
+            ],
+          },
+          select: { id: true },
+        });
+        if (userByNip?.id) {
+          targetUserId = userByNip.id;
+        }
+      }
+
+      if (!targetUserId && pembinaName) {
+        const userByName = await (this.prisma.user as any).findFirst({
+          where: {
+            name: { equals: pembinaName, mode: 'insensitive' },
+          },
+          select: { id: true },
+        });
+        if (userByName?.id) {
+          targetUserId = userByName.id;
+        }
+      }
+
+      if (targetUserId) {
+        const user = await (this.prisma.user as any).findUnique({
+          where: { id: targetUserId },
+        });
+
+        if (user) {
+          const subRoles = [user.subRole, user.subRole2, user.subRole3, user.subRole4, user.subRole5].filter(Boolean);
+          const hasPembinaRole = subRoles.includes('PEMBINA_EKSTRA') || subRoles.includes('PEMBINA_EXTRA');
+
+          if (!hasPembinaRole) {
+            const updateData: any = {};
+            if (!user.subRole) updateData.subRole = 'PEMBINA_EKSTRA';
+            else if (!user.subRole2) updateData.subRole2 = 'PEMBINA_EKSTRA';
+            else if (!user.subRole3) updateData.subRole3 = 'PEMBINA_EKSTRA';
+            else if (!user.subRole4) updateData.subRole4 = 'PEMBINA_EKSTRA';
+            else if (!user.subRole5) updateData.subRole5 = 'PEMBINA_EKSTRA';
+            else updateData.subRole5 = 'PEMBINA_EKSTRA';
+
+            await (this.prisma.user as any).update({
+              where: { id: targetUserId },
+              data: updateData,
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Gagal sinkronisasi subRole pembina ekstra:', err);
+    }
   }
 
   async update(id: string, dto: UpdateExtracurricularDto, user: any): Promise<any> {
@@ -362,6 +444,13 @@ export class ExtracurricularService {
       userId: user?.id,
       details: { extracurricularId: updated.id },
     });
+
+    await this.syncPembinaSubRole(
+      dto.pembinaUserId || updated.pembinaUserId,
+      dto.pembinaId || updated.pembinaId,
+      dto.pembinaName || updated.pembinaName,
+      dto.pembinaNip || updated.pembinaNip
+    );
 
     return updated;
   }
@@ -710,6 +799,119 @@ export class ExtracurricularService {
       activeEkskul,
       totalAnggota,
       totalSessions,
+    };
+  }
+
+  // ==================== SUPERVISI LOG UNTUK KESISWAAN & KEPALA SEKOLAH ====================
+
+  async getSupervisionSummary(): Promise<any> {
+    const ekskuls = await (this.prisma as any).extracurricular.findMany({
+      orderBy: { name: 'asc' },
+      include: {
+        members: {
+          include: {
+            student: {
+              include: { class: true },
+            },
+            grades: true,
+            attendances: true,
+          },
+        },
+        sessions: {
+          orderBy: { sessionDate: 'desc' },
+          include: {
+            attendances: true,
+          },
+        },
+      },
+    });
+
+    const summaryList = ekskuls.map((e: any) => {
+      const totalMembers = e.members?.length || 0;
+      const totalSessions = e.sessions?.length || 0;
+      const latestSession = e.sessions?.[0] || null;
+
+      let totalHadir = 0;
+      let totalAttRecords = 0;
+
+      e.sessions?.forEach((s: any) => {
+        const atts = s.attendances || [];
+        totalAttRecords += atts.length;
+        totalHadir += atts.filter((a: any) => a.status === 'HADIR').length;
+      });
+
+      const avgAttendanceRate = totalAttRecords > 0 ? Math.round((totalHadir / totalAttRecords) * 100) : 0;
+      const gradedCount = e.members?.filter((m: any) => m.grades && m.grades.length > 0).length || 0;
+
+      return {
+        id: e.id,
+        name: e.name,
+        code: e.code,
+        category: e.category,
+        pembinaName: e.pembinaName,
+        pembinaNip: e.pembinaNip,
+        pembinaContact: e.pembinaContact,
+        scheduleDay: e.scheduleDay,
+        scheduleTime: e.scheduleTime,
+        location: e.location,
+        isActive: e.isActive,
+        totalMembers,
+        totalSessions,
+        avgAttendanceRate,
+        gradedCount,
+        latestSession: latestSession
+          ? {
+              id: latestSession.id,
+              title: latestSession.title,
+              sessionDate: latestSession.sessionDate,
+              location: latestSession.location,
+              topic: latestSession.topic,
+              attendanceCount: latestSession.attendances?.filter((a: any) => a.status === 'HADIR').length || 0,
+            }
+          : null,
+      };
+    });
+
+    const recentSessions = await (this.prisma as any).extracurricularSession.findMany({
+      take: 20,
+      orderBy: { sessionDate: 'desc' },
+      include: {
+        extracurricular: {
+          select: {
+            id: true,
+            name: true,
+            pembinaName: true,
+            category: true,
+          },
+        },
+        attendances: true,
+      },
+    });
+
+    return {
+      overview: {
+        totalEkskul: ekskuls.length,
+        activeEkskul: ekskuls.filter((x: any) => x.isActive).length,
+        totalMembers: ekskuls.reduce((acc: number, x: any) => acc + (x.members?.length || 0), 0),
+        totalSessions: ekskuls.reduce((acc: number, x: any) => acc + (x.sessions?.length || 0), 0),
+      },
+      summaryList,
+      recentSessions: recentSessions.map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        sessionDate: s.sessionDate,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        location: s.location,
+        topic: s.topic,
+        trainerName: s.trainerName,
+        notes: s.notes,
+        extracurricularName: s.extracurricular?.name,
+        extracurricularCategory: s.extracurricular?.category,
+        pembinaName: s.extracurricular?.pembinaName,
+        totalHadir: s.attendances?.filter((a: any) => a.status === 'HADIR').length || 0,
+        totalPeserta: s.attendances?.length || 0,
+      })),
     };
   }
 }

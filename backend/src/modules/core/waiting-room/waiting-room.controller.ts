@@ -36,12 +36,26 @@ export class WaitingRoomController {
       maxCapacity?: number;
       maxRps?: number;
       forceEnabled?: boolean;
+      cpuThreshold?: number;
+      ramThreshold?: number;
     },
   ) {
     return this.waitingRoomService.setCapacity(
       body.maxCapacity,
       body.maxRps,
       body.forceEnabled,
+      body.cpuThreshold,
+      body.ramThreshold,
     );
+  }
+
+  @Post('admin/clear-queue')
+  clearQueue() {
+    return this.waitingRoomService.clearQueue();
+  }
+
+  @Post('admin/reset-sessions')
+  resetSessions() {
+    return this.waitingRoomService.resetActiveTokens();
   }
 }

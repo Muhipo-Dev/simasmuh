@@ -730,23 +730,20 @@ export default function SupervisiAkademikPage() {
   return (
     <div className="space-y-6 pb-12">
       {/* Header Utama Modul Supervisi ASA */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 p-6 rounded-3xl text-white shadow-xl border border-white/10 print:hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 p-4 sm:p-5 rounded-2xl text-white shadow-md border border-white/10 print:hidden">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="bg-amber-400/20 text-amber-300 text-xs px-3 py-1 rounded-full font-extrabold backdrop-blur-md border border-amber-400/30 uppercase tracking-wider flex items-center gap-1.5">
-              <Award className="w-3.5 h-3.5 text-amber-300" />
-              Aplikasi Supervisi Akademik (ASA)
-            </span>
-            <span className="text-xs text-blue-200 font-semibold">
-              SMA Muhammadiyah 1 Ponorogo
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="bg-amber-400/20 text-amber-300 text-[10px] px-2.5 py-0.5 rounded-full font-extrabold backdrop-blur-md border border-amber-400/30 uppercase tracking-wider flex items-center gap-1">
+              <Award className="w-3 h-3 text-amber-300" />
+              Supervisi Akademik (ASA)
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
-            <BookCheck className="w-8 h-8 text-amber-300 shrink-0" />
-            Supervisi Akademik & Kinerja Guru
+          <h1 className="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
+            <BookCheck className="w-5 h-5 text-amber-300 shrink-0" />
+            Supervisi Akademik & GTK
           </h1>
-          <p className="text-blue-100 mt-1 text-xs sm:text-sm max-w-2xl">
-            Instrumen digital observasi kelas, telaah perangkat pembelajaran, rekaman skor pedagogik, dan program tindak lanjut pembinaan guru.
+          <p className="text-blue-100 mt-0.5 text-xs">
+            Observasi pembelajaran, telaah perangkat guru, dan evaluasi kinerja tenaga pendidik/kependidikan.
           </p>
         </div>
 
@@ -780,19 +777,19 @@ export default function SupervisiAkademikPage() {
         </div>
       </div>
 
-      {/* Navigasi Tab Fitur Resmi ASA Ponorogo (10 Menu Supervisi GTK) */}
+      {/* Navigasi Tab Fitur Resmi ASA (Menu Supervisi GTK) */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-1 overflow-x-auto pb-1 no-scrollbar print:hidden">
         {[
           { id: 'mulai', label: 'Mulai Supervisi', icon: Sparkles, count: null },
           { id: 'riwayat', label: 'Riwayat Supervisi', icon: Clock, count: supervisiRecords.length },
-          { id: 'perangkat', label: 'Lihat Perangkat Pembelajaran Guru', icon: BookOpen, count: null },
-          { id: 'rekap-perangkat', label: 'Rekap Perangkat Pembelajaran Guru', icon: FileCheck, count: teachersList.length },
-          { id: 'hasil-guru', label: 'Hasil Supervisi Guru', icon: BookCheck, count: null },
-          { id: 'program-supervisi', label: 'Program Supervisi di SMA Muhammadiyah 1 Ponorogo', icon: CalendarDays, count: null },
-          { id: 'jadwal', label: 'Jadwal Supervisi di SMA Muhammadiyah 1 Ponorogo', icon: Calendar, count: jadwalSupervisiList.length },
-          { id: 'hasil-semua', label: 'Hasil Semua Supervisi di SMA Muhammadiyah 1 Ponorogo', icon: BarChart3, count: supervisiRecords.length },
-          { id: 'foto-pelaksanaan', label: 'Foto Pelaksanaan Supervisi di SMA Muhammadiyah 1 Ponorogo', icon: Camera, count: supervisiRecords.filter(r => !!r.photoUrl).length || null },
-          { id: 'tindak-lanjut', label: 'Tindak Lanjut Supervisi di SMA Muhammadiyah 1 Ponorogo', icon: Award, count: null },
+          { id: 'perangkat', label: 'Perangkat Guru', icon: BookOpen, count: null },
+          { id: 'rekap-perangkat', label: 'Rekap Perangkat', icon: FileCheck, count: teachersList.length },
+          { id: 'hasil-guru', label: 'Hasil Supervisi', icon: BookCheck, count: null },
+          { id: 'program-supervisi', label: 'Program Tahunan', icon: CalendarDays, count: null },
+          { id: 'jadwal', label: 'Jadwal Agenda', icon: Calendar, count: jadwalSupervisiList.length },
+          { id: 'hasil-semua', label: 'Analisis Hasil', icon: BarChart3, count: supervisiRecords.length },
+          { id: 'foto-pelaksanaan', label: 'Dokumentasi Foto', icon: Camera, count: supervisiRecords.filter(r => !!r.photoUrl).length || null },
+          { id: 'tindak-lanjut', label: 'Tindak Lanjut', icon: Award, count: null },
         ].map(tab => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id

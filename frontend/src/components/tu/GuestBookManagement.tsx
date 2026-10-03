@@ -20,6 +20,8 @@ import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
 import { getPublicApiUrl } from '@/lib/api-config'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { TableSearch } from '@/components/TableSearch'
+import { TableSelectionBar, TableCheckboxHeader, TableCheckboxCell } from '@/components/TableSelectionBar'
 
 export type GuestEntry = {
   id: string
@@ -42,6 +44,7 @@ export function GuestBookManagement() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedKategori, setSelectedKategori] = useState<string>('ALL')
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL')
+  const [selectedGuestIds, setSelectedGuestIds] = useState<string[]>([])
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [qrUrl, setQrUrl] = useState<string>('')
   const qrRef = useRef<HTMLDivElement>(null)
@@ -813,46 +816,96 @@ export function GuestBookManagement() {
             </div>
           </div>
 
-          {/* Filters & Search */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input 
-                placeholder="Cari nama, instansi, keperluan..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 text-xs"
-              />
+          {/* Filters & Search - Side by Side with Popover */}
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-xs text-slate-500">
+              Menampilkan <span className="font-bold text-slate-900 dark:text-white">{filteredGuests.length}</span> data kedatangan tamu.
             </div>
 
-            <Select value={selectedKategori} onValueChange={(val) => { if (val) setSelectedKategori(val) }}>
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder="Semua Kategori" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Semua Kategori</SelectItem>
-                <SelectItem value="STUDI_TIRU">Studi Tiru / Banding</SelectItem>
-                <SelectItem value="PEJABAT">Dinas / Pejabat</SelectItem>
-                <SelectItem value="ALUMNI_IJAZAH">Alumni / Legalisir</SelectItem>
-                <SelectItem value="VENDOR_UMUM">Vendor / Umum</SelectItem>
-                <SelectItem value="ORANG_TUA">Orang Tua / Wali</SelectItem>
-                <SelectItem value="LAINNYA">Lainnya</SelectItem>
-              </SelectContent>
-            </Select>
+            <TableSearch
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Cari tamu (nama/instansi/keperluan)..."
+              activeFiltersCount={(selectedKategori !== 'ALL' ? 1 : 0) + (selectedStatus !== 'ALL' ? 1 : 0)}
+              onResetFilters={() => {
+                setSelectedKategori('ALL')
+                setSelectedStatus('ALL')
+                setSearchQuery('')
+              }}
+              filters={
+                <div className="space-y-3 py-1 text-xs">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Kategori Tamu</Label>
+                    <Select value={selectedKategori} onValueChange={(val) => { if (val) setSelectedKategori(val) }}>
+                      <SelectTrigger className="h-9 text-xs rounded-xl">
+                        <SelectValue placeholder="Semua Kategori" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Semua Kategori</SelectItem>
+                        <SelectItem value="STUDI_TIRU">Studi Tiru / Banding</SelectItem>
+                        <SelectItem value="PEJABAT">Dinas / Pejabat</SelectItem>
+                        <SelectItem value="ALUMNI_IJAZAH">Alumni / Legalisir</SelectItem>
+                        <SelectItem value="VENDOR_UMUM">Vendor / Umum</SelectItem>
+                        <SelectItem value="ORANG_TUA">Orang Tua / Wali</SelectItem>
+                        <SelectItem value="LAINNYA">Lainnya</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            <Select value={selectedStatus} onValueChange={(val) => { if (val) setSelectedStatus(val) }}>
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder="Semua Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Semua Status</SelectItem>
-                <SelectItem value="TIBA">Tiba</SelectItem>
-                <SelectItem value="PROSES">Dalam Proses</SelectItem>
-                <SelectItem value="SELESAI">Selesai</SelectItem>
-              </SelectContent>
-            </Select>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Status Kunjungan</Label>
+                    <Select value={selectedStatus} onValueChange={(val) => { if (val) setSelectedStatus(val) }}>
+                      <SelectTrigger className="h-9 text-xs rounded-xl">
+                        <SelectValue placeholder="Semua Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Semua Status</SelectItem>
+                        <SelectItem value="TIBA">Tiba</SelectItem>
+                        <SelectItem value="PROSES">Dalam Proses</SelectItem>
+                        <SelectItem value="SELESAI">Selesai</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              }
+            />
           </div>
         </CardHeader>
+
+        {selectedGuestIds.length > 0 && (
+          <div className="p-3 border-b border-slate-100 dark:border-slate-800">
+            <TableSelectionBar
+              selectedCount={selectedGuestIds.length}
+              totalCount={filteredGuests.length}
+              onClearSelection={() => setSelectedGuestIds([])}
+              onSelectAll={() => setSelectedGuestIds(filteredGuests.map(g => g.id))}
+              onDeleteSelected={async () => {
+                const confirm = await Swal.fire({
+                  title: `Hapus ${selectedGuestIds.length} tamu terpilih?`,
+                  text: 'Data yang dihapus tidak dapat dikembalikan.',
+                  icon: 'warning',
+                  showCancelButton: true,
+                  confirmButtonColor: '#e11d48',
+                  confirmButtonText: 'Ya, Hapus Semua',
+                  cancelButtonText: 'Batal'
+                })
+                if (confirm.isConfirmed) {
+                  try {
+                    await Promise.all(
+                      selectedGuestIds.map(id => authenticatedFetch(getPublicApiUrl(`/guest-book/${id}`), { method: 'DELETE' }))
+                    )
+                    setGuests(prev => prev.filter(g => !selectedGuestIds.includes(g.id)))
+                    setSelectedGuestIds([])
+                    Swal.fire('Terhapus', `${selectedGuestIds.length} data tamu berhasil dihapus.`, 'success')
+                  } catch (err) {
+                    Swal.fire('Error', 'Gagal menghapus beberapa data tamu.', 'error')
+                  }
+                }
+              }}
+              deleteLabel={`Hapus (${selectedGuestIds.length})`}
+            />
+          </div>
+        )}
 
         <CardContent className="p-0">
           {loading ? (
@@ -871,7 +924,20 @@ export function GuestBookManagement() {
               <Table>
                 <TableHeader className="bg-slate-50/80 dark:bg-slate-900/80">
                   <TableRow className="text-xs">
-                    <TableHead className="w-12 px-3 text-center font-bold">No</TableHead>
+                    <TableHead className="w-10 pl-4 text-center">
+                      <TableCheckboxHeader
+                        checked={filteredGuests.length > 0 && selectedGuestIds.length === filteredGuests.length}
+                        indeterminate={selectedGuestIds.length > 0 && selectedGuestIds.length < filteredGuests.length}
+                        onChange={(checked) => {
+                          if (checked) {
+                            setSelectedGuestIds(filteredGuests.map(g => g.id))
+                          } else {
+                            setSelectedGuestIds([])
+                          }
+                        }}
+                      />
+                    </TableHead>
+                    <TableHead className="w-12 px-2 text-center font-bold">No</TableHead>
                     <TableHead className="min-w-[180px] max-w-[280px] px-3 font-bold">Nama Tamu & Instansi</TableHead>
                     <TableHead className="w-40 min-w-[140px] px-3 font-bold">Kategori & Dituju</TableHead>
                     <TableHead className="min-w-[200px] max-w-[350px] px-3 font-bold">Keperluan / Tujuan</TableHead>
@@ -881,73 +947,88 @@ export function GuestBookManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredGuests.map((g, idx) => (
-                    <TableRow key={g.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/50 text-xs">
-                      <TableCell className="text-center font-medium text-slate-500">{idx + 1}</TableCell>
-                      <TableCell>
-                        <div className="font-bold text-slate-900 dark:text-white">{g.namaTamu}</div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                          <Building2 className="w-3 h-3 text-slate-400" />
-                          {g.instansi}
-                        </div>
-                        {g.kontak && (
-                          <div className="text-[10px] text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-0.5">
-                            <Phone className="w-2.5 h-2.5" />
-                            {g.kontak}
+                  {filteredGuests.map((g, idx) => {
+                    const isSelected = selectedGuestIds.includes(g.id)
+                    return (
+                      <TableRow key={g.id} className={`hover:bg-slate-50/80 dark:hover:bg-slate-900/50 text-xs ${isSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}`}>
+                        <TableCell className="text-center pl-4">
+                          <TableCheckboxCell
+                            checked={isSelected}
+                            onChange={(checked) => {
+                              if (checked) {
+                                setSelectedGuestIds(prev => [...prev, g.id])
+                              } else {
+                                setSelectedGuestIds(prev => prev.filter(id => id !== g.id))
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center font-medium text-slate-500 px-2">{idx + 1}</TableCell>
+                        <TableCell>
+                          <div className="font-bold text-slate-900 dark:text-white">{g.namaTamu}</div>
+                          <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                            <Building2 className="w-3 h-3 text-slate-400" />
+                            {g.instansi}
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                          {g.kategori}
-                        </Badge>
-                        <div className="text-[11px] text-slate-500 mt-1">
-                          <span className="font-medium">Dituju:</span> {g.dituju}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-xs">
-                        <p className="text-slate-800 dark:text-slate-200 line-clamp-2">{g.tujuan}</p>
-                        {g.catatan && (
-                          <span className="text-[10px] text-slate-400 italic block mt-0.5">Ket: {g.catatan}</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <div className="font-semibold text-slate-700 dark:text-slate-300">{g.waktu || '09:00 WIB'}</div>
-                        <div className="text-[10px] text-slate-400">
-                          {g.createdAt ? new Date(g.createdAt).toLocaleDateString('id-ID') : new Date().toLocaleDateString('id-ID')}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Select 
-                          value={g.status}
-                          onValueChange={(val) => { if (val) handleUpdateStatus(g.id, val as GuestEntry['status']) }}
-                        >
-                          <SelectTrigger className={`h-7 text-[11px] font-semibold border-0 ${
-                            g.status === 'TIBA' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' :
-                            g.status === 'PROSES' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' :
-                            'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
-                          }`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="TIBA">Tiba</SelectItem>
-                            <SelectItem value="PROSES">Proses Bertemu</SelectItem>
-                            <SelectItem value="SELESAI">Selesai</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          onClick={() => handleDelete(g.id, g.namaTamu)}
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          {g.kontak && (
+                            <div className="text-[10px] text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-0.5">
+                              <Phone className="w-2.5 h-2.5" />
+                              {g.kontak}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            {g.kategori}
+                          </Badge>
+                          <div className="text-[11px] text-slate-500 mt-1">
+                            <span className="font-medium">Dituju:</span> {g.dituju}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-xs">
+                          <p className="text-slate-800 dark:text-slate-200 line-clamp-2">{g.tujuan}</p>
+                          {g.catatan && (
+                            <span className="text-[10px] text-slate-400 italic block mt-0.5">Ket: {g.catatan}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="font-semibold text-slate-700 dark:text-slate-300">{g.waktu || '09:00 WIB'}</div>
+                          <div className="text-[10px] text-slate-400">
+                            {g.createdAt ? new Date(g.createdAt).toLocaleDateString('id-ID') : new Date().toLocaleDateString('id-ID')}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Select 
+                            value={g.status}
+                            onValueChange={(val) => { if (val) handleUpdateStatus(g.id, val as GuestEntry['status']) }}
+                          >
+                            <SelectTrigger className={`h-7 text-[11px] font-semibold border-0 ${
+                              g.status === 'TIBA' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' :
+                              g.status === 'PROSES' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' :
+                              'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                            }`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="TIBA">Tiba</SelectItem>
+                              <SelectItem value="PROSES">Proses Bertemu</SelectItem>
+                              <SelectItem value="SELESAI">Selesai</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            onClick={() => handleDelete(g.id, g.namaTamu)}
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>

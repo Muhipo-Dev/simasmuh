@@ -9,7 +9,7 @@ import {
   ArrowLeft, CheckCircle2, Construction, Sparkle, Layers, ChevronRight,
   Contact, Package, Boxes, Search, PlusCircle, Download, FileText, Pencil, Trash2,
   Building2, Users, Loader2, Phone, Calendar, GraduationCap,
-  Inbox, Send, Archive
+  Inbox, Send, Archive, HeartPulse, Stethoscope
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,6 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
+import { useSession } from 'next-auth/react'
 import { InteractiveCharacterAssessmentManagement } from '@/components/academic/InteractiveCharacterAssessmentManagement'
 import { CutiPegawaiManagement } from '@/app/(dashboard)/presensi/cuti/page'
 import { IzinSiswaManagement } from '@/app/(dashboard)/presensi/izin-siswa/page'
@@ -409,6 +410,33 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
       { title: 'Validasi Izin Keluar Masuk', desc: 'Pemberian dan pengecekan izin keluar siswa saat jam KBM.', status: 'DALAM_PENGEMBANGAN' },
       { title: 'Penanganan Kelas Kosong', desc: 'Tugas guru pengganti dan modul mandiri kelas kosong.', status: 'SEGERA_HADIR' },
       { title: 'Rekap Presensi KBM', desc: 'Monitoring ketertiban jam masuk guru dan siswa.', status: 'DALAM_PENGEMBANGAN' },
+    ]
+  },
+  'kesehatan-sekolah': {
+    title: 'Kesehatan Sekolah (UKS)',
+    roleName: 'Kesehatan Sekolah',
+    category: 'Layanan Kesehatan & Medis',
+    icon: HeartPulse,
+    gradient: 'from-teal-600 via-emerald-600 to-cyan-700',
+    badgeColor: 'bg-teal-500/10 text-teal-600 border-teal-500/20 dark:bg-teal-400/10 dark:text-teal-400',
+    description: 'Pusat layanan kesehatan sekolah, rekam medis keluhan siswa di UKS, dan pemantauan obat serta rujukan.',
+    modules: [
+      { title: 'Kunjungan Pasien UKS', desc: 'Pencatatan siswa istirahat di UKS, keluhan dan diagnosa awal.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Pemberian Obat & Tindakan', desc: 'Log obat P3K yang diberikan serta tindakan medis pertama.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Rujukan Faskes & Pemberitahuan Ortu', desc: 'Koordinasi penanganan lanjutan ke puskesmas / RS / dipulangkan.', status: 'SEGERA_HADIR' },
+    ]
+  },
+  uks: {
+    title: 'Pengelolaan Ruang UKS',
+    roleName: 'Kesehatan Sekolah',
+    category: 'Layanan Kesehatan & Medis',
+    icon: Stethoscope,
+    gradient: 'from-teal-600 via-emerald-600 to-cyan-700',
+    badgeColor: 'bg-teal-500/10 text-teal-600 border-teal-500/20 dark:bg-teal-400/10 dark:text-teal-400',
+    description: 'Pencatatan layanan kesehatan ruang UKS siswa terintegrasi secara realtime.',
+    modules: [
+      { title: 'Kunjungan Pasien UKS', desc: 'Pencatatan siswa istirahat di UKS, keluhan dan diagnosa awal.', status: 'DALAM_PENGEMBANGAN' },
+      { title: 'Pemberian Obat & Tindakan', desc: 'Log obat P3K yang diberikan serta tindakan medis pertama.', status: 'DALAM_PENGEMBANGAN' },
     ]
   }
 }
@@ -824,6 +852,7 @@ function InteractiveGuestBook() {
 export default function FiturSubRolePage() {
   const params = useParams()
   const router = useRouter()
+  const { data: session } = useSession()
   const slug = (params?.slug as string) || ''
   
   const config = FEATURE_MAP[slug] || {
@@ -874,10 +903,10 @@ export default function FiturSubRolePage() {
         <KegiatanSekolahManagement />
       ) : slug === 'notulensi-rapat' || slug === 'notulensi' ? (
         <NotulensiRapatManagement />
-      ) : slug === 'catatan-kedisiplinan' || slug === 'ketertiban' || slug === 'bk-bp' ? (
-        <InteractiveCharacterAssessmentManagement mode={slug === 'bk-bp' ? 'BK' : slug === 'catatan-kedisiplinan' ? 'GURU' : 'KETERTIBAN'} />
+      ) : slug === 'catatan-kedisiplinan' || slug === 'ketertiban' || slug === 'bk-bp' || slug === 'kesehatan-sekolah' || slug === 'uks' ? (
+        <InteractiveCharacterAssessmentManagement mode={slug === 'bk-bp' ? 'BK' : slug === 'catatan-kedisiplinan' ? 'GURU' : (slug === 'kesehatan-sekolah' || slug === 'uks') ? 'UKS' : 'KETERTIBAN'} />
       ) : slug === 'ekstrakulikuler' || slug === 'ekstrakurikuler' ? (
-        <PembinaEkstrakurikulerManagement />
+        <PembinaEkstrakurikulerManagement session={session} />
       ) : slug === 'file-explorer' ? (
         <FileExplorerManagement />
       ) : (

@@ -148,11 +148,6 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  /* Parent-Friendly Touch Target & High Contrast Form Elements */
-  button, input, select, textarea, [role="button"] {
-    min-height: 2.75rem; /* Min height 44px for parent touch accessibility */
-  }
-
   /* Focus ring for high visibility & accessibility */
   :focus-visible {
     outline: 2px solid oklch(0.55 0.18 250);
@@ -256,7 +251,6 @@
     background-color: oklch(0.16 0.03 255) !important;
     border-color: oklch(0.30 0.05 255) !important;
     color: oklch(0.95 0.01 255) !important;
-    font-size: 1rem !important;
   }
   .dark input::placeholder, 
   .dark textarea::placeholder {
@@ -267,27 +261,19 @@
      ULTRA-RESPONSIVITY & MOBILE ERGONOMIC DESIGN (ANDROID & IOS PHONES/TABLETS)
      ========================================================================== */
   @media (max-width: 1023px) {
-    /* 1. Pencegahan mutlak Auto-Zoom di Safari iOS & Chrome Android saat tap kolom form */
+    /* 1. Pencegahan Auto-Zoom di Safari iOS & Chrome Android saat fokus kolom form */
     input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="file"]),
     select,
     textarea {
       font-size: 16px !important;
-      line-height: 1.5 !important;
-      padding-top: 0.65rem !important;
-      padding-bottom: 0.65rem !important;
     }
 
-    /* 2. Target Sentuh Ergonomis: Tombol dan elemen interaktif di HP/Tablet minimal 44x44px (Apple & Google UI/UX standards) */
-    button:not(.carousel-dot), [role="button"]:not(.carousel-dot), a.btn, input[type="submit"], input[type="button"], .touch-target {
-      min-height: 44px;
+    /* 2. Responsifitas & Sentuhan Halus di Layar Sentuh */
+    button, [role="button"], a.btn, input[type="submit"], input[type="button"] {
       touch-action: manipulation;
     }
 
-    .carousel-dot {
-      min-height: 0 !important;
-    }
-
-    /* 3. Menghandle seluruh tabel data (Guru, Siswa, Keuangan, Presensi) agar scroll horizontal & vertikal sentuh responsif */
+    /* 3. Menghandle seluruh tabel data agar scroll horizontal & vertikal sentuh responsif & padat */
     table {
       width: 100%;
       -webkit-overflow-scrolling: touch;
@@ -300,18 +286,14 @@
       touch-action: pan-x pan-y pinch-zoom !important;
       overscroll-behavior-x: contain;
     }
-    
-    th, td {
-      padding: 0.75rem 1rem !important;
-    }
 
     /* Kustomisasi scrollbar halus untuk sentuhan jari di HP/Tablet */
     ::-webkit-scrollbar {
-      height: 5px;
-      width: 5px;
+      height: 4px;
+      width: 4px;
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.5);
+      background: rgba(148, 163, 184, 0.4);
       border-radius: 9999px;
     }
   }

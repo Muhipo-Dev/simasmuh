@@ -122,6 +122,12 @@ export class ExtracurricularController {
     return this.extracurricularService.getStats();
   }
 
+  @Get('supervision')
+  getSupervisionSummary(@Request() req: any) {
+    this.checkKesiswaanPermission(req.user);
+    return this.extracurricularService.getSupervisionSummary();
+  }
+
   // ==================== MASTER & DETAIL ====================
 
   @Get()

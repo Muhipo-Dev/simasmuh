@@ -17,7 +17,7 @@ import {
   Sparkles, Users, UserCheck, Plus, Pencil, Trash2, Eye, 
   Search, Filter, Calendar, MapPin, Clock, Trophy, Award,
   ShieldCheck, CheckCircle2, UserPlus, X, Phone, UserSquare2,
-  ChevronRight, Building
+  ChevronRight, Building, ClipboardList, Activity
 } from 'lucide-react'
 import Link from 'next/link'
 import Swal from 'sweetalert2'
@@ -72,6 +72,7 @@ export default function EkstrakurikulerPage() {
   const [openDetailModal, setOpenDetailModal] = useState(false)
   const [selectedDetail, setSelectedDetail] = useState<any>(null)
   const [openAddMemberModal, setOpenAddMemberModal] = useState(false)
+  const [openSupervisionModal, setOpenSupervisionModal] = useState(false)
 
   // State Form Ekstrakurikuler
   const [formName, setFormName] = useState('')
@@ -81,6 +82,8 @@ export default function EkstrakurikulerPage() {
   const [formScheduleDay, setFormScheduleDay] = useState('Jumat')
   const [formScheduleTime, setFormScheduleTime] = useState('15:30 - 17:00')
   const [formLocation, setFormLocation] = useState('')
+  const [formPembinaTeacherId, setFormPembinaTeacherId] = useState('')
+  const [formPembinaUserId, setFormPembinaUserId] = useState('')
   const [formPembinaName, setFormPembinaName] = useState('')
   const [formPembinaNip, setFormPembinaNip] = useState('')
   const [formPembinaContact, setFormPembinaContact] = useState('')
@@ -107,6 +110,18 @@ export default function EkstrakurikulerPage() {
     }
   })
   const ekskulList = Array.isArray(rawEkskulList) ? rawEkskulList : []
+
+  // 1.1 Fetch Data Supervisi (Khusus Kesiswaan, Waka, Kepala Sekolah, Superadmin)
+  const { data: supervisionData, isLoading: loadingSupervision } = useQuery<any>({
+    queryKey: ['extracurricular-supervision'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/extracurricular/supervision')
+      if (!res.ok) return null
+      return res.json()
+    },
+    enabled: canManage,
+    staleTime: 30000,
+  })
 
   // 2. Fetch Master Guru (Untuk Pilihan Pembina)
   const { data: rawTeachers } = useQuery<any[]>({
@@ -235,6 +250,8 @@ export default function EkstrakurikulerPage() {
     setFormScheduleDay('Jumat')
     setFormScheduleTime('15:30 - 17:00')
     setFormLocation('')
+    setFormPembinaTeacherId('')
+    setFormPembinaUserId('')
     setFormPembinaName('')
     setFormPembinaNip('')
     setFormPembinaContact('')
@@ -253,6 +270,8 @@ export default function EkstrakurikulerPage() {
     setFormScheduleDay(item.scheduleDay || 'Jumat')
     setFormScheduleTime(item.scheduleTime || '15:30 - 17:00')
     setFormLocation(item.location || '')
+    setFormPembinaTeacherId(item.pembinaId || '')
+    setFormPembinaUserId(item.pembinaUserId || '')
     setFormPembinaName(item.pembinaName || '')
     setFormPembinaNip(item.pembinaNip || '')
     setFormPembinaContact(item.pembinaContact || '')
@@ -276,7 +295,17 @@ export default function EkstrakurikulerPage() {
             Tata kelola kegiatan bakat minat, pembina/pelatih, jadwal latihan, dan keanggotaan siswa SMA Muhammadiyah 1 Ponorogo.
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center flex-wrap gap-2.5">
+          {canManage && (
+            <Button
+              variant="outline"
+              onClick={() => setOpenSupervisionModal(true)}
+              className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-xs font-bold h-10 px-3.5 shadow-xs gap-1.5"
+            >
+              <ClipboardList className="w-4 h-4 text-amber-300" />
+              Log Supervisi
+            </Button>
+          )}
           <Link href="/informasi/prestasi">
             <Button variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-xs font-bold h-10 px-3.5 shadow-xs">
               <Trophy className="w-4 h-4 mr-1.5" />
@@ -616,24 +645,34 @@ export default function EkstrakurikulerPage() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Pilih dari Guru SIMASMUH (Opsional)</Label>
+                <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Pilih dari Guru / Pegawai SIMASMUH (Sinkronisasi Otomatis)</Label>
                 <select
+                  value={formPembinaTeacherId}
                   onChange={(e) => {
                     const val = e.target.value
+                    setFormPembinaTeacherId(val)
                     const t = teachersList.find(x => x.id === val)
                     if (t) {
+                      setFormPembinaUserId(t.userId || t.user?.id || '')
                       setFormPembinaName(t.user?.name || t.name || '')
-                      setFormPembinaNip(t.nip && t.nip !== '-' ? t.nip : '')
+                      setFormPembinaNip(t.nip && t.nip !== '-' ? t.nip : (t.user?.nipNbm || ''))
                       setFormPembinaContact(t.user?.phone || '')
+                    } else {
+                      setFormPembinaUserId('')
                     }
                   }}
-                  className="w-full h-8 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-white dark:bg-slate-950"
+                  className="w-full h-8 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-white dark:bg-slate-950 font-medium"
                 >
-                  <option value="">-- Pilih Guru Sebagai Pembina --</option>
+                  <option value="">-- Pilih Guru / Pegawai Pembina --</option>
                   {teachersList.map((t: any) => (
-                    <option key={t.id} value={t.id}>{t.user?.name || t.name} {t.nip && t.nip !== '-' ? `(NIP. ${t.nip})` : ''}</option>
+                    <option key={t.id} value={t.id}>
+                      {t.user?.name || t.name} {t.nip && t.nip !== '-' ? `(NIP/NBM: ${t.nip})` : (t.user?.nipNbm ? `(NBM: ${t.user.nipNbm})` : '')}
+                    </option>
                   ))}
                 </select>
+                <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                  * Memilih guru akan otomatis mengaktifkan sub-role <strong>PEMBINA_EKSTRA</strong> & menu kerja pembina untuk guru tersebut.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -742,6 +781,8 @@ export default function EkstrakurikulerPage() {
                   scheduleDay: formScheduleDay.trim() || undefined,
                   scheduleTime: formScheduleTime.trim() || undefined,
                   location: formLocation.trim() || undefined,
+                  pembinaId: formPembinaTeacherId || undefined,
+                  pembinaUserId: formPembinaUserId || undefined,
                   pembinaName: formPembinaName.trim(),
                   pembinaNip: formPembinaNip.trim() || undefined,
                   pembinaContact: formPembinaContact.trim() || undefined,
@@ -960,6 +1001,202 @@ export default function EkstrakurikulerPage() {
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs"
             >
               {addMemberMutation.isPending ? 'Menambahkan...' : 'Daftarkan Siswa'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL LOG SUPERVISI EKSTRAKURIKULER (KESISWAAN & KEPALA SEKOLAH) */}
+      <Dialog open={openSupervisionModal} onOpenChange={setOpenSupervisionModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-indigo-600" />
+              Log Supervisi Perkembangan Ekstrakurikuler
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Monitoring riil perkembangan aktivitas latihan, keaktifan pembina, persentase kehadiran siswa, dan rekap penilaian rapor.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-xs">
+            {/* Kartu Ringkasan Supervisi */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-900">
+                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold block uppercase">Total Ekstrakurikuler</span>
+                <span className="text-xl font-black text-blue-950 dark:text-blue-100">{supervisionData?.overview?.totalEkskul || ekskulList.length}</span>
+              </div>
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-900">
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block uppercase">Ekskul Aktif</span>
+                <span className="text-xl font-black text-emerald-700 dark:text-emerald-300">{supervisionData?.overview?.activeEkskul || ekskulList.filter(e => e.isActive).length}</span>
+              </div>
+              <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-200 dark:border-indigo-900">
+                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold block uppercase">Total Anggota Siswa</span>
+                <span className="text-xl font-black text-indigo-950 dark:text-indigo-100">{supervisionData?.overview?.totalMembers || 0} Siswa</span>
+              </div>
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900">
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold block uppercase">Total Sesi Terlaksana</span>
+                <span className="text-xl font-black text-amber-900 dark:text-amber-200">{supervisionData?.overview?.totalSessions || 0} Sesi</span>
+              </div>
+            </div>
+
+            {/* Tabel Supervisi Perkembangan Setiap Ekstrakurikuler */}
+            <div className="space-y-2">
+              <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <Activity className="w-4 h-4 text-blue-600" />
+                Matriks Perkembangan & Kinerja Pembina Ekstrakurikuler
+              </h4>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-slate-50 dark:bg-slate-900 text-[11px]">
+                    <TableRow>
+                      <TableHead className="w-10 pl-3">No</TableHead>
+                      <TableHead>Ekstrakurikuler</TableHead>
+                      <TableHead>Pembina Resmi</TableHead>
+                      <TableHead className="text-center">Jml Sesi</TableHead>
+                      <TableHead className="text-center">Jml Siswa</TableHead>
+                      <TableHead className="text-center">Rerata Presensi</TableHead>
+                      <TableHead className="text-center">Status Rapor</TableHead>
+                      <TableHead>Pertemuan Terakhir</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!supervisionData?.summaryList || supervisionData.summaryList.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-6 text-slate-400 text-xs">
+                          Belum ada data supervisi ekstrakurikuler yang tercatat.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      supervisionData.summaryList.map((item: any, idx: number) => (
+                        <TableRow key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 text-xs">
+                          <TableCell className="pl-3 font-medium text-slate-500">{idx + 1}</TableCell>
+                          <TableCell>
+                            <div className="font-bold text-slate-900 dark:text-white">{item.name}</div>
+                            {item.code && <span className="text-[10px] text-blue-600 font-mono">Kode: {item.code}</span>}
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-semibold text-slate-800 dark:text-slate-200">{item.pembinaName}</div>
+                            {item.pembinaNip && item.pembinaNip !== '-' && (
+                              <span className="text-[10px] text-slate-400 font-mono block">NIP: {item.pembinaNip}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center font-bold text-slate-700 dark:text-slate-300">
+                            {item.totalSessions} Sesi
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="text-[10px] font-bold">
+                              {item.totalMembers} Siswa
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                              item.avgAttendanceRate >= 75
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                : item.avgAttendanceRate >= 50
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                            }`}>
+                              {item.avgAttendanceRate}%
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center text-[11px]">
+                            {item.gradedCount > 0 ? (
+                              <Badge className="bg-emerald-600 text-white text-[10px] font-bold">
+                                {item.gradedCount}/{item.totalMembers} Dinilai
+                              </Badge>
+                            ) : (
+                              <span className="text-slate-400 text-[10px]">Belum Ada</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {item.latestSession ? (
+                              <div>
+                                <div className="font-medium text-slate-800 dark:text-slate-200">
+                                  {item.latestSession.title}
+                                </div>
+                                <span className="text-[10px] text-slate-400">
+                                  {new Date(item.latestSession.sessionDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 text-[11px] italic">Belum ada sesi</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Riwayat Log Sesi Kegiatan Terkini */}
+            <div className="space-y-2 pt-2">
+              <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-indigo-600" />
+                Log Riwayat Sesi Latihan & Kehadiran Terkini
+              </h4>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto max-h-60 overflow-y-auto">
+                <Table>
+                  <TableHeader className="bg-slate-50 dark:bg-slate-900 text-[11px]">
+                    <TableRow>
+                      <TableHead className="w-10 pl-3">No</TableHead>
+                      <TableHead>Ekstrakurikuler</TableHead>
+                      <TableHead>Topik / Agenda Latihan</TableHead>
+                      <TableHead>Instruktur / Pembina</TableHead>
+                      <TableHead>Tanggal & Waktu</TableHead>
+                      <TableHead className="text-center">Kehadiran</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!supervisionData?.recentSessions || supervisionData.recentSessions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-6 text-slate-400 text-xs">
+                          Belum ada log sesi latihan ekstrakurikuler yang terlaksana.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      supervisionData.recentSessions.map((session: any, sIdx: number) => (
+                        <TableRow key={session.id} className="hover:bg-slate-50/50 text-xs">
+                          <TableCell className="pl-3 font-medium text-slate-500">{sIdx + 1}</TableCell>
+                          <TableCell className="font-bold text-slate-900 dark:text-white">
+                            {session.extracurricularName}
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-semibold text-slate-800 dark:text-slate-200">{session.title}</div>
+                            {session.topic && <span className="text-[10px] text-slate-400 block">{session.topic}</span>}
+                          </TableCell>
+                          <TableCell className="text-slate-700 dark:text-slate-300">
+                            {session.trainerName || session.pembinaName || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium text-slate-800 dark:text-slate-200">
+                              {new Date(session.sessionDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </div>
+                            {session.startTime && (
+                              <span className="text-[10px] text-slate-400 font-mono block">
+                                {session.startTime} - {session.endTime || 'Selesai'}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                              {session.totalHadir}/{session.totalPeserta} Hadir
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button size="sm" onClick={() => setOpenSupervisionModal(false)} className="text-xs font-bold">
+              Tutup Supervisi
             </Button>
           </DialogFooter>
         </DialogContent>

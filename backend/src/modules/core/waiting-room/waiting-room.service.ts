@@ -29,11 +29,14 @@ export class WaitingRoomService {
   private currentRps = 0;
   private lastRpsCheck = Date.now();
 
-  // Metric CPU Tracking
+  // Metric CPU & RAM Tracking
   private lastCpuUsage = process.cpuUsage();
+  private lastCpus = os.cpus();
   private lastCpuCheck = Date.now();
   private currentCpuPercent = 0;
   private currentRamPercent = 0;
+  public cpuThreshold = 80; // Ambang batas 80%
+  public ramThreshold = 80; // Ambang batas 80%
 
   private timer: NodeJS.Timeout;
 
@@ -56,24 +59,67 @@ export class WaitingRoomService {
       this.lastRpsCheck = now;
     }
 
-    // Kalkulasi CPU usage persentase Node.js terukur
+    // Kalkulasi CPU usage persentase (Sistem Host & Proses Node.js)
     const cpuElapsedMs = now - this.lastCpuCheck;
     if (cpuElapsedMs >= 1000) {
+      // 1. Process CPU
       const cpuUsageDiff = process.cpuUsage(this.lastCpuUsage);
       const totalCpuTimeMs = (cpuUsageDiff.user + cpuUsageDiff.system) / 1000;
       const numCores = os.cpus().length || 1;
-      this.currentCpuPercent = Math.min(
+      const processCpuPercent = Math.min(
         100,
         Math.round((totalCpuTimeMs / (cpuElapsedMs * numCores)) * 100),
       );
       this.lastCpuUsage = process.cpuUsage();
+
+      // 2. System-wide CPU across all cores
+      const currentCpus = os.cpus();
+      let totalIdle = 0;
+      let totalTick = 0;
+      for (let i = 0; i < currentCpus.length; i++) {
+        const prev = this.lastCpus[i] || currentCpus[i];
+        const curr = currentCpus[i];
+        const idle = curr.times.idle - prev.times.idle;
+        const total =
+          curr.times.user -
+          prev.times.user +
+          (curr.times.nice - prev.times.nice) +
+          (curr.times.sys - prev.times.sys) +
+          (curr.times.irq - prev.times.irq) +
+          idle;
+        totalIdle += idle;
+        totalTick += total;
+      }
+      this.lastCpus = currentCpus;
+      const systemCpuPercent =
+        totalTick > 0
+          ? Math.round(((totalTick - totalIdle) / totalTick) * 100)
+          : 0;
+
+      this.currentCpuPercent = Math.min(
+        100,
+        Math.max(systemCpuPercent, processCpuPercent),
+      );
       this.lastCpuCheck = now;
     }
 
-    // Kalkulasi RAM Process Heap vs Total Heap
+    // Kalkulasi RAM (Sistem Host Total vs Free & Node Heap)
     try {
+      const totalMem = os.totalmem();
+      const freeMem = os.freemem();
+      const systemRamPercent =
+        totalMem > 0 ? Math.round(((totalMem - freeMem) / totalMem) * 100) : 0;
+
       const mem = process.memoryUsage();
-      this.currentRamPercent = Math.round((mem.heapUsed / mem.heapTotal) * 100);
+      const heapPercent =
+        mem.heapTotal > 0
+          ? Math.round((mem.heapUsed / mem.heapTotal) * 100)
+          : 0;
+
+      this.currentRamPercent = Math.min(
+        100,
+        Math.max(systemRamPercent, heapPercent),
+      );
     } catch {
       this.currentRamPercent = 0;
     }
@@ -90,7 +136,7 @@ export class WaitingRoomService {
       (slot) => now - slot.lastActive < 35000,
     );
 
-    // Admit pengguna antrean terdepan jika kuota slot aktif masih tersedia
+    // Admit pengguna antrean terdepan jika kuota slot aktif masih tersedia dan beban tidak kritis
     const availableSlots = this.maxConcurrentActive - this.activeTokens.size;
     if (
       availableSlots > 0 &&
@@ -123,20 +169,19 @@ export class WaitingRoomService {
   public isTrafficCritical(): boolean {
     if (this.forceEnabled) return true;
 
-    // 1. Cek RPS (Request Per Detik) ekstrem (> 250 req/detik)
-    if (this.currentRps > this.maxRpsThreshold) return true;
+    // 1. Cek Beban Memori dan CPU Server >= 80% (Hampir penuh / di atas 80%)
+    const isCpuOverloaded = this.currentCpuPercent >= this.cpuThreshold;
+    const isRamOverloaded = this.currentRamPercent >= this.ramThreshold;
 
-    // 2. Cek Kapasitas Pengguna Aktif Serentak (> 1000 concurrent user)
-    if (this.activeTokens.size >= this.maxConcurrentActive) return true;
-
-    // 3. HIGH DEMAND OPTIMIZATION (HANYA AKTIF JIKA CPU & RAM > 90%)
-    // Waiting room hanya dipicu bila beban sistem benar-benar jenuh di atas 90%
-    const isCpuOverloaded = this.currentCpuPercent > 90;
-    const isRamOverloaded = this.currentRamPercent > 90;
-
-    if (isCpuOverloaded && isRamOverloaded) {
+    if (isCpuOverloaded || isRamOverloaded) {
       return true;
     }
+
+    // 2. Cek RPS (Request Per Detik) ekstrem (> 250 req/detik)
+    if (this.currentRps > this.maxRpsThreshold) return true;
+
+    // 3. Cek Kapasitas Pengguna Aktif Serentak (> 1000 concurrent user)
+    if (this.activeTokens.size >= this.maxConcurrentActive) return true;
 
     return false;
   }
@@ -160,6 +205,12 @@ export class WaitingRoomService {
     position: number;
     totalWaiting: number;
     estimatedWaitSeconds: number;
+    serverMetrics?: {
+      cpuPercent: number;
+      ramPercent: number;
+      cpuThreshold: number;
+      ramThreshold: number;
+    };
   } {
     const now = Date.now();
 
@@ -224,6 +275,12 @@ export class WaitingRoomService {
       position,
       totalWaiting: this.waitingQueue.length,
       estimatedWaitSeconds,
+      serverMetrics: {
+        cpuPercent: this.currentCpuPercent,
+        ramPercent: this.currentRamPercent,
+        cpuThreshold: this.cpuThreshold,
+        ramThreshold: this.ramThreshold,
+      },
     };
   }
 
@@ -236,15 +293,39 @@ export class WaitingRoomService {
       rpsThreshold: this.maxRpsThreshold,
       cpuPercent: this.currentCpuPercent,
       ramPercent: this.currentRamPercent,
+      cpuThreshold: this.cpuThreshold,
+      ramThreshold: this.ramThreshold,
       isTrafficCritical: this.isTrafficCritical(),
       forceEnabled: this.forceEnabled,
     };
   }
 
-  public setCapacity(maxActive?: number, maxRps?: number, force?: boolean) {
-    if (typeof maxActive === 'number') this.maxConcurrentActive = maxActive;
-    if (typeof maxRps === 'number') this.maxRpsThreshold = maxRps;
+  public setCapacity(
+    maxActive?: number,
+    maxRps?: number,
+    force?: boolean,
+    cpuThreshold?: number,
+    ramThreshold?: number,
+  ) {
+    if (typeof maxActive === 'number' && maxActive > 0)
+      this.maxConcurrentActive = maxActive;
+    if (typeof maxRps === 'number' && maxRps > 0)
+      this.maxRpsThreshold = maxRps;
     if (typeof force === 'boolean') this.forceEnabled = force;
+    if (typeof cpuThreshold === 'number') this.cpuThreshold = cpuThreshold;
+    if (typeof ramThreshold === 'number') this.ramThreshold = ramThreshold;
     return this.getMetrics();
+  }
+
+  public clearQueue() {
+    const count = this.waitingQueue.length;
+    this.waitingQueue = [];
+    return { success: true, clearedCount: count, metrics: this.getMetrics() };
+  }
+
+  public resetActiveTokens() {
+    const count = this.activeTokens.size;
+    this.activeTokens.clear();
+    return { success: true, resetCount: count, metrics: this.getMetrics() };
   }
 }

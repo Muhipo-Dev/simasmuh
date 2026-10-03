@@ -20,6 +20,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
+import { TableSearch } from '@/components/TableSearch'
+import { TableSelectionBar, TableCheckboxHeader, TableCheckboxCell } from '@/components/TableSelectionBar'
 
 export interface ItemInventaris {
   id: string
@@ -71,6 +73,7 @@ export function InventarisManagement() {
   const [filterKategori, setFilterKategori] = useState<string>('ALL')
   const [filterKondisi, setFilterKondisi] = useState<string>('ALL')
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  const [selectedInventarisIds, setSelectedInventarisIds] = useState<string[]>([])
 
   // Modals State
   const [isModalAddOpen, setIsModalAddOpen] = useState(false)
@@ -475,45 +478,84 @@ export function InventarisManagement() {
         {activeTab === 'daftar-aset' && (
           <div className="space-y-4">
             {/* Filter Search Bar */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
-              <div className="relative flex-1 w-full">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  placeholder="Cari kode aset, nama barang, merk, lokasi ruangan, PJ..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9 text-xs rounded-xl"
-                />
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div className="text-xs text-slate-500">
+                Menampilkan <span className="font-bold text-slate-900 dark:text-white">{filteredInventaris.length}</span> item inventaris.
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Select value={filterKategori} onValueChange={(val) => setFilterKategori(val || 'ALL')}>
-                  <SelectTrigger className="h-9 text-xs w-[140px] rounded-xl">
-                    <SelectValue placeholder="Kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Semua Kategori</SelectItem>
-                    <SelectItem value="ELEKTRONIK_TIK">Elektronik & TIK</SelectItem>
-                    <SelectItem value="FURNITUR_MEUBELAIR">Furnitur / Meja Kursi</SelectItem>
-                    <SelectItem value="ALAT_LABORATORIUM">Alat Laboratorium</SelectItem>
-                    <SelectItem value="SARANA_OLAHRAGA">Sarana Olahraga</SelectItem>
-                    <SelectItem value="KENDARAAN_DINAS">Kendaraan Dinas</SelectItem>
-                  </SelectContent>
-                </Select>
+              <TableSearch
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Cari kode aset, nama barang, lokasi, PJ..."
+                activeFiltersCount={(filterKategori !== 'ALL' ? 1 : 0) + (filterKondisi !== 'ALL' ? 1 : 0)}
+                onResetFilters={() => {
+                  setFilterKategori('ALL')
+                  setFilterKondisi('ALL')
+                  setSearchQuery('')
+                }}
+                filters={
+                  <div className="space-y-3 py-1 text-xs">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Kategori Barang</Label>
+                      <Select value={filterKategori} onValueChange={(val) => setFilterKategori(val || 'ALL')}>
+                        <SelectTrigger className="h-9 text-xs rounded-xl">
+                          <SelectValue placeholder="Semua Kategori" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">Semua Kategori</SelectItem>
+                          <SelectItem value="ELEKTRONIK_TIK">Elektronik & TIK</SelectItem>
+                          <SelectItem value="FURNITUR_MEUBELAIR">Furnitur / Meja Kursi</SelectItem>
+                          <SelectItem value="ALAT_LABORATORIUM">Alat Laboratorium</SelectItem>
+                          <SelectItem value="SARANA_OLAHRAGA">Sarana Olahraga</SelectItem>
+                          <SelectItem value="KENDARAAN_DINAS">Kendaraan Dinas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <Select value={filterKondisi} onValueChange={(val) => setFilterKondisi(val || 'ALL')}>
-                  <SelectTrigger className="h-9 text-xs w-[130px] rounded-xl">
-                    <SelectValue placeholder="Kondisi" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Semua Kondisi</SelectItem>
-                    <SelectItem value="BAIK">Kondisi Baik</SelectItem>
-                    <SelectItem value="RUSAK_RINGAN">Rusak Ringan</SelectItem>
-                    <SelectItem value="RUSAK_BERAT">Rusak Berat</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Kondisi Barang</Label>
+                      <Select value={filterKondisi} onValueChange={(val) => setFilterKondisi(val || 'ALL')}>
+                        <SelectTrigger className="h-9 text-xs rounded-xl">
+                          <SelectValue placeholder="Semua Kondisi" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">Semua Kondisi</SelectItem>
+                          <SelectItem value="BAIK">Kondisi Baik</SelectItem>
+                          <SelectItem value="RUSAK_RINGAN">Rusak Ringan</SelectItem>
+                          <SelectItem value="RUSAK_BERAT">Rusak Berat</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                }
+              />
             </div>
+
+            {selectedInventarisIds.length > 0 && (
+              <TableSelectionBar
+                selectedCount={selectedInventarisIds.length}
+                totalCount={filteredInventaris.length}
+                onClearSelection={() => setSelectedInventarisIds([])}
+                onSelectAll={() => setSelectedInventarisIds(filteredInventaris.map(i => i.id))}
+                onDeleteSelected={async () => {
+                  const confirm = await Swal.fire({
+                    title: `Hapus ${selectedInventarisIds.length} aset terpilih?`,
+                    text: 'Data inventaris yang dihapus tidak dapat dipulihkan.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#e11d48',
+                    confirmButtonText: 'Ya, Hapus Semua',
+                    cancelButtonText: 'Batal'
+                  })
+                  if (confirm.isConfirmed) {
+                    setInventarisList(prev => prev.filter(i => !selectedInventarisIds.includes(i.id)))
+                    setSelectedInventarisIds([])
+                    Swal.fire('Terhapus', `${selectedInventarisIds.length} aset berhasil dihapus.`, 'success')
+                  }
+                }}
+                deleteLabel={`Hapus (${selectedInventarisIds.length})`}
+              />
+            )}
 
             {/* Table Inventaris */}
             <Card className="border-slate-200 dark:border-slate-800 shadow-xs">
@@ -522,7 +564,20 @@ export function InventarisManagement() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-slate-50/80 dark:bg-slate-900/80 text-xs">
-                        <TableHead className="w-12 px-3 text-center font-bold">No</TableHead>
+                        <TableHead className="w-10 pl-4 text-center">
+                          <TableCheckboxHeader
+                            checked={filteredInventaris.length > 0 && selectedInventarisIds.length === filteredInventaris.length}
+                            indeterminate={selectedInventarisIds.length > 0 && selectedInventarisIds.length < filteredInventaris.length}
+                            onChange={(checked) => {
+                              if (checked) {
+                                setSelectedInventarisIds(filteredInventaris.map(i => i.id))
+                              } else {
+                                setSelectedInventarisIds([])
+                              }
+                            }}
+                          />
+                        </TableHead>
+                        <TableHead className="w-12 px-2 text-center font-bold">No</TableHead>
                         <TableHead className="min-w-[240px] max-w-[380px] px-3 font-bold">Kode Aset & Nama Barang</TableHead>
                         <TableHead className="w-44 min-w-[150px] px-3 font-bold">Kategori & Spesifikasi</TableHead>
                         <TableHead className="w-32 text-center px-3 font-bold">Jumlah & Nilai</TableHead>
@@ -534,14 +589,28 @@ export function InventarisManagement() {
                     <TableBody>
                       {filteredInventaris.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-10 text-slate-400">
+                          <TableCell colSpan={8} className="text-center py-10 text-slate-400">
                             Tidak ada barang inventaris yang sesuai pencarian.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredInventaris.map((item, idx) => (
-                          <TableRow key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/60 transition-colors">
-                            <TableCell className="text-center font-bold text-slate-500 text-xs">
+                        filteredInventaris.map((item, idx) => {
+                          const isSelected = selectedInventarisIds.includes(item.id)
+                          return (
+                          <TableRow key={item.id} className={`hover:bg-slate-50/60 dark:hover:bg-slate-900/60 transition-colors ${isSelected ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : ''}`}>
+                            <TableCell className="text-center pl-4">
+                              <TableCheckboxCell
+                                checked={isSelected}
+                                onChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedInventarisIds(prev => [...prev, item.id])
+                                  } else {
+                                    setSelectedInventarisIds(prev => prev.filter(id => id !== item.id))
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center font-bold text-slate-500 text-xs px-2">
                               {idx + 1}
                             </TableCell>
                             <TableCell>
@@ -624,8 +693,9 @@ export function InventarisManagement() {
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
+                        )
+                      })
+                    )}
                     </TableBody>
                   </Table>
                 </div>
@@ -792,13 +862,13 @@ export function InventarisManagement() {
 
       {/* MODAL 1: Form Registrasi Aset Baru */}
       <Dialog open={isModalAddOpen} onOpenChange={setIsModalAddOpen}>
-        <DialogContent className="sm:max-w-[640px] rounded-3xl">
+        <DialogContent className="sm:max-w-[640px] rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-              <Package className="w-5 h-5" /> Registrasi Barang Inventaris Aset
+              <Package className="w-5 h-5" /> Registrasi Barang Inventaris
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Isikan spesifikasi sarana prasarana baru untuk pelabelan kode aset otomatis.
+              Spesifikasi sarana prasarana baru untuk kodefikasi aset otomatis.
             </DialogDescription>
           </DialogHeader>
 

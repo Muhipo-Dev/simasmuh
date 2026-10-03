@@ -588,10 +588,10 @@ export function ActivityCalendarWidget({
             </div>
           </div>
 
-          {/* Calendar Grid - Semi-glass with subtle clean rounded-lg borders */}
-          <div className="border border-slate-200/70 dark:border-white/10 rounded-lg overflow-hidden bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-2xs">
+          {/* Calendar Grid - Crisp solid elevated card with subtle rounded-lg borders */}
+          <div className="border border-slate-200/80 dark:border-slate-800 rounded-lg overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xs">
             {/* Days Header */}
-            <div className="grid grid-cols-7 bg-slate-100/60 dark:bg-slate-800/60 backdrop-blur-xs border-b border-slate-200/70 dark:border-white/10 text-center py-1.5 text-[9.5px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+            <div className="grid grid-cols-7 bg-slate-100/90 dark:bg-slate-800/90 border-b border-slate-200/80 dark:border-slate-800 text-center py-1.5 text-[9.5px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wide">
               {dayNames.map((d, i) => (
                 <div key={i} className={i === 0 ? 'text-rose-600 dark:text-rose-400' : i === 5 ? 'text-emerald-600 dark:text-emerald-400' : ''}>
                   {d}

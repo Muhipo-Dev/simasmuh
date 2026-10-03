@@ -133,33 +133,33 @@ export default function SupervisiIzinKesiswaanPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-4 max-w-7xl mx-auto pb-12">
       {/* Header Utama Supervisi Kesiswaan */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 p-6 rounded-3xl text-white shadow-xl border border-white/10">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 p-4 sm:p-5 rounded-2xl text-white shadow-md border border-white/10">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="bg-blue-400/20 text-blue-200 text-xs px-3 py-1 rounded-full font-extrabold backdrop-blur-md border border-blue-400/30 uppercase tracking-wider flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-300" />
-              Portal Supervisi &amp; Rekonsiliasi Kesiswaan
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="bg-blue-400/20 text-blue-200 text-[10px] px-2.5 py-0.5 rounded-full font-extrabold backdrop-blur-md border border-blue-400/30 uppercase tracking-wider flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-blue-300" />
+              Supervisi Kesiswaan
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
-            <ClipboardCheck className="w-8 h-8 text-blue-300 shrink-0" />
-            Supervisi Izin &amp; Dispensasi Siswa
+          <h1 className="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
+            <ClipboardCheck className="w-5 h-5 text-blue-300 shrink-0" />
+            Supervisi Izin & Dispensasi
           </h1>
-          <p className="text-blue-100 mt-1 text-xs sm:text-sm max-w-2xl">
-            Audit pemantauan terpusat, pengawasan ketertiban perizinan harian, dan log riwayat dispensasi siswa sekolah secara real-time.
+          <p className="text-blue-100 mt-0.5 text-xs">
+            Monitoring perizinan harian, verifikasi dispensasi, dan log kehadiran siswa.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             onClick={() => refetch()}
             disabled={isRefetching}
             variant="outline"
-            className="bg-white/10 hover:bg-white/20 text-white border-white/20 rounded-2xl h-11 px-4 text-xs font-bold gap-2"
+            className="bg-white/10 hover:bg-white/20 text-white border-white/20 rounded-xl h-9 px-3 text-xs font-bold gap-1.5"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefetching ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
             Sinkron Data
           </Button>
         </div>

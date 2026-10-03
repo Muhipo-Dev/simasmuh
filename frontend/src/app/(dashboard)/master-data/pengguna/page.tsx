@@ -71,6 +71,8 @@ const SUB_ROLE_OPTIONS = [
   { value: 'GURU_PIKET', label: 'Guru Piket' },
   { value: 'KURIKULUM', label: 'Kurikulum' },
   { value: 'ISMUBA', label: 'ISMUBA' },
+  { value: 'KESEHATAN_SEKOLAH', label: 'Kesehatan Sekolah (UKS)' },
+  { value: 'UKS', label: 'Pengelola UKS' },
   { value: 'GURU', label: 'Guru' },
   { value: 'PEGAWAI', label: 'Pegawai / Karyawan' },
   { value: 'KEPALA_SEKOLAH', label: 'Kepala Sekolah' },
@@ -106,6 +108,8 @@ const SUB_ROLE_CONFIG: Record<string, { label: string; bg: string; text: string;
   GURU_PIKET: { label: 'Guru Piket', bg: 'bg-lime-50/90 dark:bg-lime-950/60', text: 'text-lime-700 dark:text-lime-300', border: 'border-lime-200 dark:border-lime-800' },
   KURIKULUM: { label: 'Kurikulum', bg: 'bg-fuchsia-50/90 dark:bg-fuchsia-950/60', text: 'text-fuchsia-700 dark:text-fuchsia-300', border: 'border-fuchsia-200 dark:border-fuchsia-800' },
   ISMUBA: { label: 'ISMUBA', bg: 'bg-emerald-50/90 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
+  KESEHATAN_SEKOLAH: { label: 'Kesehatan Sekolah (UKS)', bg: 'bg-teal-50/90 dark:bg-teal-950/60', text: 'text-teal-700 dark:text-teal-300', border: 'border-teal-200 dark:border-teal-800' },
+  UKS: { label: 'Kesehatan Sekolah (UKS)', bg: 'bg-teal-50/90 dark:bg-teal-950/60', text: 'text-teal-700 dark:text-teal-300', border: 'border-teal-200 dark:border-teal-800' },
   GURU: { label: 'Guru', bg: 'bg-emerald-50/90 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
   PEGAWAI: { label: 'Pegawai / Karyawan', bg: 'bg-cyan-50/90 dark:bg-cyan-950/60', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
   KEPALA_SEKOLAH: { label: 'Kepala Sekolah', bg: 'bg-amber-50/90 dark:bg-amber-950/60', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
@@ -515,42 +519,42 @@ export default function UsersPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                Pejabat Kepala Sekolah (E-Sign Penandatangan Sah)
+                Pejabat Penandatangan Sah
               </h3>
               <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full border ${
                 activeKepalaSekolah 
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                   : 'bg-rose-50 text-rose-700 border-rose-200'
               }`}>
-                {activeKepalaSekolah ? '1 Pejabat Terdaftar (Tunggal)' : 'Belum Ditetapkan'}
+                {activeKepalaSekolah ? '1 Pejabat Terdaftar' : 'Belum Ditetapkan'}
               </span>
             </div>
             <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 truncate">
               {activeKepalaSekolah ? (
-                <>Pejabat Aktif: <strong className="text-slate-900 dark:text-white">{activeKepalaSekolah.name}</strong> {activeKepalaSekolah.nipNbm ? `(${activeKepalaSekolah.nipNbm})` : ''} — Memegang wewenang E-Sign resmi sekolah.</>
+                <>Pejabat Aktif: <strong className="text-slate-900 dark:text-white">{activeKepalaSekolah.name}</strong> {activeKepalaSekolah.nipNbm ? `(${activeKepalaSekolah.nipNbm})` : ''} — Wewenang E-Sign resmi sekolah.</>
               ) : (
-                <>Role Kepala Sekolah saat ini kosong. Tetapkan role ke akun guru/pegawai terkait.</>
+                <>Role Kepala Sekolah kosong. Tetapkan wewenang pada akun terkait.</>
               )}
             </p>
           </div>
         </div>
         <div className="text-[10px] text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center gap-1.5 shrink-0 self-end sm:self-center">
           <Info className="w-3 h-3 text-indigo-600" />
-          <span>Aturan Keamanan: Wajib 1 Akun Tunggal</span>
+          <span>Keamanan: 1 Akun Tunggal</span>
         </div>
       </div>
 
-      {/* Header Glassmorphic Standar CBT MUHIPO */}
+      {/* Header Halaman Pengguna */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 sm:p-5 backdrop-blur-xl shadow-xs">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-0.5">
             Master Data Kepegawaian
           </span>
           <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
-            Manajemen Akun Pegawai
+            Manajemen Akun Staf
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
-            Kelola data login dan hak akses pegawai, guru, staf TU, dan pengelola sistem.
+            Kelola data login dan hak akses pegawai, guru, dan pengelola sistem.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

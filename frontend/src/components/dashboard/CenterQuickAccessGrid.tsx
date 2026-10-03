@@ -1,12 +1,13 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import {
   BookOpen, Users, UserCheck, CalendarDays, Wallet, Award,
   ShieldCheck, GraduationCap, Package, Megaphone, Settings,
   Contact, Mail, UserCog, Camera, DoorOpen, ClipboardCheck,
   Receipt, BarChart3, HardDrive, BellRing, LucideIcon,
-  Sparkles, Briefcase, Layers
+  Sparkles, Briefcase, Layers, UserCircle, QrCode, FileCheck, Database, HeartPulse, BookCheck
 } from 'lucide-react'
 
 export interface QuickActionItem {
@@ -37,39 +38,66 @@ const cardGradients = [
   'from-emerald-600 to-teal-700 shadow-emerald-500/20 text-white',
 ]
 
-// Common / General employee action links to put in secondary section
-const COMMON_ACTION_HREFS = [
-  '/presensi/scan-qr',
-  '/presensi/kehadiran-pegawai',
-  '/presensi/jurnal-karyawan',
-  '/keuangan/slip-gaji',
-  '/presensi/izin-keluar',
-  '/presensi/cuti',
-  '/pengaturan/notifikasi-pengguna',
-  '/pengaturan/notifikasi-wali',
-  '/fitur/disposisi',
-]
+// Icon mapping per category group for visual clarity (Corporate & Commercial Standard)
+const groupIcons: Record<string, LucideIcon> = {
+  // Supervisi & Eksekutif
+  'Supervisi Eksekutif': BookCheck,
+  'Supervisi Kurikulum': GraduationCap,
+  'Supervisi Kesiswaan': Award,
+  'Supervisi Humas & SDM': Users,
+  'Supervisi Sarana & Prasarana': Package,
+  'Supervisi ISMUBA': BookOpen,
+  'Supervisi Kesiswaan & Disiplin': ShieldCheck,
+  'Supervisi Bimbingan Konseling': Users,
+
+  // Operasional & Divisi
+  'Operasional Akademik': BookOpen,
+  'Kinerja Operasional': BookOpen,
+  'Tugas Perwalian': UserCheck,
+  'Piket Operasional': Briefcase,
+  'Administrasi & Persuratan': Package,
+  'Administrasi Persuratan': FileCheck,
+  'Master Data': Database,
+  'Konfigurasi Lanjutan': Settings,
+  'Operasional Sistem': Settings,
+  'Manajemen Finansial': Wallet,
+  'Penerimaan Kas': Wallet,
+  'Pengeluaran Kas': Receipt,
+  'Layanan Mandiri': UserCircle,
+  'Otorisasi & Dokumen': FileCheck,
+  'Kesiswaan & Karakter': Award,
+  'Data & Tata Kelola': Database,
+  'Tata Kelola Operasional': Briefcase,
+  'Layanan Akademik': GraduationCap,
+  'Layanan Administrasi': Sparkles,
+  'Monitoring Perkembangan': Users,
+  'Layanan & Tagihan': Wallet,
+  'Layanan Perpustakaan': BookOpen,
+  'Program Tahfidz': BookOpen,
+  'Pengembangan Siswa': Sparkles,
+  'Publikasi Portal': Megaphone,
+  'Layanan Fasilitas': Sparkles,
+  'Layanan Keamanan': ShieldCheck,
+  'Layanan Kesehatan': HeartPulse,
+}
 
 export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGridProps) {
-  // Pisahkan modul khusus peran/tugas (Atas) dan modul umum harian (Bawah)
-  const isSpecializedRole = role === 'KEPALA_SEKOLAH' || role === 'KEUANGAN' || role === 'KEUANGAN_ALL' || role === 'KEUANGAN_MASUK' || role === 'KEUANGAN_KELUAR' ||
-    role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || role === 'SUPERVISOR_KEUANGAN' || role === 'PEGAWAI' || role === 'KARYAWAN' || role === 'GURU'
+  // Kelompokkan tautan berdasarkan properti `group`
+  // Jika item tidak memiliki group (seperti Presensi QR, Log Presensi, Disposisi), masukkan ke 'Akses Utama'
+  const groupedLinks: { [groupName: string]: QuickActionItem[] } = {}
 
-  // Pisahkan link menjadi roleSpecific dan common
-  const roleSpecificLinks: QuickActionItem[] = []
-  const commonLinks: QuickActionItem[] = []
-
-  links.forEach(l => {
-    // Jika link tersebut adalah link umum pegawai
-    if (COMMON_ACTION_HREFS.some(ch => l.href.startsWith(ch))) {
-      commonLinks.push(l)
-    } else {
-      roleSpecificLinks.push(l)
+  links.forEach(link => {
+    const groupName = link.group || 'Akses Utama'
+    if (!groupedLinks[groupName]) {
+      groupedLinks[groupName] = []
     }
+    groupedLinks[groupName].push(link)
   })
 
-  // Jika tidak ada pembagian spesifik atau role admin murni, render single grid biasa
-  if (roleSpecificLinks.length === 0 || commonLinks.length === 0) {
+  const groupKeys = Object.keys(groupedLinks)
+
+  // Jika hanya ada 1 grup atau links kosong
+  if (groupKeys.length <= 1) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {links.map((link, idx) => renderCard(link, idx))}
@@ -77,33 +105,45 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
     )
   }
 
-  return (
-    <div className="space-y-4">
-      {/* KELOMPOK 1: MODUL LAYANAN (ATAS) */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
-            <Briefcase className="w-3 h-3 text-blue-600" />
-            Layanan ({roleSpecificLinks.length})
-          </span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
-          {roleSpecificLinks.map((link, idx) => renderCard(link, idx))}
-        </div>
-      </div>
+  let globalIndex = 0
 
-      {/* KELOMPOK 2: AKTIVITAS (BAWAH) */}
-      <div className="space-y-2 pt-1 border-t border-slate-200/80 dark:border-slate-800">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
-            <Layers className="w-3 h-3 text-slate-500" />
-            Aktivitas ({commonLinks.length})
-          </span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
-          {commonLinks.map((link, idx) => renderCard(link, idx + roleSpecificLinks.length))}
-        </div>
-      </div>
+  return (
+    <div className="space-y-4 sm:space-y-5">
+      {groupKeys.map((groupName) => {
+        const items = groupedLinks[groupName]
+        if (!items || items.length === 0) return null
+
+        const GroupIcon = groupIcons[groupName] || (groupName === 'Akses Utama' ? Sparkles : Briefcase)
+        const isSupervisi = groupName.startsWith('Supervisi')
+        const isPersonal = groupName === 'Layanan Mandiri' || groupName === 'Layanan Administrasi' || groupName === 'Layanan & Tagihan'
+        const isAdvance = groupName === 'Konfigurasi Lanjutan' || groupName === 'Operasional Sistem'
+
+        const badgeStyle = isSupervisi
+          ? 'text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-900/60'
+          : isAdvance
+          ? 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-900/60'
+          : isPersonal
+          ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-900/60'
+          : 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-900/60'
+
+        return (
+          <div key={groupName} className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className={`text-[11px] font-extrabold uppercase tracking-wider border px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs ${badgeStyle}`}>
+                <GroupIcon className="w-3 h-3" />
+                {groupName} ({items.length})
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
+              {items.map((link) => {
+                const card = renderCard(link, globalIndex)
+                globalIndex++
+                return card
+              })}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -114,7 +154,7 @@ function renderCard(link: QuickActionItem, idx: number) {
 
   return (
     <Link
-      key={idx}
+      key={link.href + idx}
       href={link.href}
       className="group relative block overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
     >
@@ -146,4 +186,3 @@ function renderCard(link: QuickActionItem, idx: number) {
     </Link>
   )
 }
-

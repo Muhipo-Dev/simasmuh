@@ -657,7 +657,7 @@ export function DisposisiUserManagement() {
 
       {/* Modal Detail Lembar Disposisi & Tindak Lanjut */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="sm:max-w-[620px] max-h-[90vh] overflow-y-auto rounded-3xl p-5">
+        <DialogContent className="sm:max-w-[620px] max-h-[90vh] overflow-y-auto rounded-2xl p-4 sm:p-5">
           <DialogHeader className="border-b pb-2.5">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-sm font-black flex items-center gap-1.5 text-purple-800 dark:text-purple-300">

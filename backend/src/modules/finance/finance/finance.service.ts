@@ -1413,13 +1413,31 @@ export class FinanceService {
   async getStudentsWithTagihan(classId?: string) {
     const students: any[] = await this.prisma.student.findMany({
       where: classId ? { classId } : undefined,
-      include: {
+      select: {
+        id: true,
+        nisn: true,
+        nis: true,
+        name: true,
+        gender: true,
+        program: true,
+        gelombang: true,
+        jalurPendaftaran: true,
+        beasiswaPercentage: true,
+        beasiswaReason: true,
+        beasiswaSeragamPct: true,
+        beasiswaSppPct: true,
+        beasiswaDppPct: true,
         class: { select: { name: true } },
         tagihans: {
-          orderBy: { createdAt: 'desc' },
-          include: { payments: { orderBy: { paymentDate: 'desc' } } },
+          select: {
+            id: true,
+            type: true,
+            amount: true,
+            amountPaid: true,
+            status: true,
+          },
         },
-      } as any,
+      },
       orderBy: [{ class: { name: 'asc' } }, { name: 'asc' }],
     });
 
@@ -2310,8 +2328,9 @@ export class FinanceService {
     userId: string,
     dto: {
       academicYear?: string;
-      targetScope: 'STUDENT' | 'CLASS' | 'GRADE';
+      targetScope: 'STUDENT' | 'CLASS' | 'GRADE' | 'MULTI_CLASS';
       classId?: string;
+      classIds?: string[];
       studentId?: string;
       gradeLevel?: number;
       yearStart?: number;
@@ -2342,6 +2361,8 @@ export class FinanceService {
 
     if (dto.targetScope === 'STUDENT' && dto.studentId) {
       studentQueryWhere = { id: dto.studentId };
+    } else if (dto.classIds && Array.isArray(dto.classIds) && dto.classIds.length > 0) {
+      studentQueryWhere = { classId: { in: dto.classIds } };
     } else if (dto.targetScope === 'CLASS' && dto.classId) {
       studentQueryWhere = { classId: dto.classId };
     } else if (dto.targetScope === 'GRADE' && dto.gradeLevel) {
@@ -2766,6 +2787,8 @@ export class FinanceService {
     const studentQueryWhere: any = {};
     if (dto.scope === 'STUDENT' && dto.studentId) {
       studentQueryWhere.id = dto.studentId;
+    } else if ((dto as any).classIds && Array.isArray((dto as any).classIds) && (dto as any).classIds.length > 0) {
+      studentQueryWhere.classId = { in: (dto as any).classIds };
     } else if (dto.scope === 'CLASS' && dto.classId) {
       studentQueryWhere.classId = dto.classId;
     } else if (dto.scope === 'GRADE' && dto.gradeLevel) {

@@ -99,6 +99,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  reactStrictMode: false, // Prevents duplicate double-invocations in dev for faster response
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   serverExternalPackages: ['@react-pdf/renderer'],
@@ -106,8 +107,8 @@ const nextConfig: NextConfig = {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
   onDemandEntries: {
-    maxInactiveAge: 60 * 1000,
-    pagesBufferLength: 8,
+    maxInactiveAge: 120 * 1000,
+    pagesBufferLength: 20,
   },
   experimental: {
     optimizePackageImports: [
@@ -122,6 +123,13 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-separator',
       '@radix-ui/react-switch',
       '@radix-ui/react-slot',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-select',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-tooltip',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-accordion',
       'clsx',
       'tailwind-merge',
       'class-variance-authority',

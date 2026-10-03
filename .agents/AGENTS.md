@@ -58,4 +58,11 @@
     - **Proporsionalitas Lebar Kotak Kolom & Baris**: Seluruh tabel data wajib mengalokasikan lebar kolom secara presisi dan proporsional sesuai jenis data (contoh: kolom nomor `w-12`, tanggal & badge status `w-28`, tombol aksi `w-32/w-36`, sedangkan teks nama/perihal `min-w-[200px] max-w-[400px] flex-1`).
     - **Peniadaan Area Kosong Berlebih & Offset**: Dilarang membiarkan kolom melar berlebihan (*wasted whitespace*) ataupun kolom tertekan sempit tidak wajar yang menyebabkan offset layout. Teks panjang wajib dibatasi dengan `truncate` / `line-clamp` dan dilengkapi tooltip `title`.
     - **Scroll Horizontal Halus & Responsif di Semua Perangkat**: Pembungkus tabel wajib menggunakan container `overflow-x-auto` yang lembut dan presisi tanpa memotong konten pada perangkat mobile, tablet, maupun layar desktop lebar.
+16. **Standar Mutlak Searchbar, Filter, & Checkbox Seleksi pada Seluruh Tabel (STRICT)**:
+    - **Searchbar & Tombol Filter Bersebelahan**: Seluruh bentuk tabel data dan seluruh layanan yang menggunakan tabel diwajibkan memiliki Searchbar (kolom input pencarian data) yang di sampingnya langsung terdapat Tombol Filter (dropdown/filter kategori, status, tanggal, atau atribut data terkait) secara rapi dan terintegrasi.
+    - **Checkbox Seleksi (Select All & Row Select)**: Seluruh tabel data wajib dilengkapi dengan kolom Checkbox Seleksi di sisi paling kiri:
+      - Checkbox di header tabel untuk memilih/membatalkan semua baris (*Select All / Deselect All*).
+      - Checkbox di setiap baris data untuk seleksi individual (*Row Selection*).
+      - Indikator baris terpilih serta aksi massal (*bulk action bar*) saat terdapat baris yang diseleksi.
+
 

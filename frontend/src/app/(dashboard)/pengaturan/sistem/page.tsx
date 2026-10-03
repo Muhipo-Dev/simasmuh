@@ -268,22 +268,30 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 backdrop-blur-xl shadow-xs">
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">
-            Pengaturan & Konfigurasi Global
+          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-0.5">
+            Pengaturan Sistem
           </span>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-            Pengaturan Sistem & Sekolah
+          <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+            Konfigurasi Sekolah & Sistem
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
-            Kelola informasi dasar sekolah, template kartu pelajar, rekening pembayaran, dan sinkronisasi waktu server.
+          <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
+            Identitas sekolah, kuota login pengguna, dan konfigurasi operasional SIMASMUH.
           </p>
         </div>
+
+        {/* Switch Waiting Room Manual di Bar Header Grup Pengaturan Sistem */}
+        <HeaderWaitingRoomSwitch />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Pengaturan Waiting Room & Kuota Login (Superadmin & Admin IT) */}
+        <div className="lg:col-span-2">
+          <WaitingRoomConfigCard />
+        </div>
+
         {/* Pengaturan Sekolah */}
         <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl rounded-2xl overflow-hidden">
           <form onSubmit={handleSubmit}>
@@ -577,4 +585,456 @@ export default function SettingsPage() {
     </div>
   )
 }
+
+function HeaderWaitingRoomSwitch() {
+  const queryClient = useQueryClient()
+  const authenticatedQuery = useAuthenticatedQuery()
+  const authenticatedFetch = useAuthenticatedFetch()
+
+  const { data: metrics, isLoading } = useQuery({
+    queryKey: ['waiting-room-metrics'],
+    queryFn: () => authenticatedQuery('/api-backend/waiting-room/metrics'),
+    refetchInterval: 3000,
+  })
+
+  const forceEnabled = metrics?.forceEnabled || false
+  const activeUsers = metrics?.activeUsers || 0
+  const maxCapacity = metrics?.maxCapacity || 1000
+  const isCritical = metrics?.isTrafficCritical || false
+
+  const toggleMutation = useMutation({
+    mutationFn: async (nextForce: boolean) => {
+      const res = await authenticatedFetch('/api-backend/waiting-room/admin/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forceEnabled: nextForce }),
+      })
+      if (!res.ok) throw new Error('Gagal mengubah mode waiting room')
+      return res.json()
+    },
+    onSuccess: (data, nextForce) => {
+      queryClient.setQueryData(['waiting-room-metrics'], data)
+      queryClient.invalidateQueries({ queryKey: ['waiting-room-metrics'] })
+      Swal.fire({
+        title: nextForce ? 'Waiting Room Manual Diaktifkan!' : 'Mode Otomatis Aktif!',
+        text: nextForce
+          ? 'Seluruh trafik login baru kini dialihkan ke ruang tunggu antrean.'
+          : 'Waiting room kini otomatis berjalan saat beban server ≥ 80% atau kuota penuh.',
+        icon: nextForce ? 'warning' : 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal!', err.message || 'Terjadi kesalahan sistem', 'error')
+    },
+  })
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-50/90 dark:bg-slate-800/80 p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs">
+      <div className="flex flex-col text-left">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-black text-slate-800 dark:text-slate-200">
+            Waiting Room Manual:
+          </span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
+              forceEnabled
+                ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 animate-pulse'
+                : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${forceEnabled ? 'bg-rose-600' : 'bg-emerald-600'}`} />
+            {forceEnabled ? 'MANUAL AKTIF' : 'OTOMATIS'}
+          </span>
+        </div>
+        <span className="text-[10px] text-slate-400">
+          {activeUsers}/{maxCapacity} login aktif • {metrics?.queuedUsers || 0} antre
+        </span>
+      </div>
+
+      {/* Switch Button */}
+      <button
+        type="button"
+        disabled={toggleMutation.isPending || isLoading}
+        onClick={() => toggleMutation.mutate(!forceEnabled)}
+        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+          forceEnabled
+            ? 'bg-gradient-to-r from-pink-500 to-rose-600 shadow-sm shadow-pink-300'
+            : 'bg-slate-300 dark:bg-slate-700'
+        }`}
+        title={forceEnabled ? 'Klik untuk matikan mode manual' : 'Klik untuk aktifkan mode manual'}
+      >
+        <span className="sr-only">Toggle Waiting Room Manual</span>
+        <span
+          className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+            forceEnabled ? 'translate-x-5' : 'translate-x-0'
+          }`}
+        >
+          {toggleMutation.isPending ? (
+            <Loader2 className="w-3 h-3 animate-spin text-pink-600" />
+          ) : forceEnabled ? (
+            <span className="w-2 h-2 rounded-full bg-rose-600" />
+          ) : (
+            <span className="w-2 h-2 rounded-full bg-slate-400" />
+          )}
+        </span>
+      </button>
+    </div>
+  )
+}
+
+function WaitingRoomConfigCard() {
+  const queryClient = useQueryClient()
+  const authenticatedQuery = useAuthenticatedQuery()
+  const authenticatedFetch = useAuthenticatedFetch()
+
+  const { data: metrics, isLoading, isRefetching } = useQuery({
+    queryKey: ['waiting-room-metrics'],
+    queryFn: () => authenticatedQuery('/api-backend/waiting-room/metrics'),
+    refetchInterval: 3000, // Real-time poll setiap 3 detik
+  })
+
+  const [capacity, setCapacity] = useState<number>(1000)
+  const [forceEnabled, setForceEnabled] = useState<boolean>(false)
+  const [cpuThreshold, setCpuThreshold] = useState<number>(80)
+  const [ramThreshold, setRamThreshold] = useState<number>(80)
+  const [maxRps, setMaxRps] = useState<number>(250)
+
+  useEffect(() => {
+    if (metrics) {
+      if (typeof metrics.maxCapacity === 'number') setCapacity(metrics.maxCapacity)
+      if (typeof metrics.forceEnabled === 'boolean') setForceEnabled(metrics.forceEnabled)
+      if (typeof metrics.cpuThreshold === 'number') setCpuThreshold(metrics.cpuThreshold)
+      if (typeof metrics.ramThreshold === 'number') setRamThreshold(metrics.ramThreshold)
+      if (typeof metrics.rpsThreshold === 'number') setMaxRps(metrics.rpsThreshold)
+    }
+  }, [metrics])
+
+  const saveConfigMutation = useMutation({
+    mutationFn: async (payload: {
+      maxCapacity: number
+      forceEnabled: boolean
+      cpuThreshold: number
+      ramThreshold: number
+      maxRps: number
+    }) => {
+      const res = await authenticatedFetch('/api-backend/waiting-room/admin/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Gagal memperbarui konfigurasi waiting room')
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(['waiting-room-metrics'], data)
+      queryClient.invalidateQueries({ queryKey: ['waiting-room-metrics'] })
+      Swal.fire({
+        title: 'Konfigurasi Disimpan!',
+        text: `Kapasitas kuota login disetel ke ${capacity} orang. Mode Waiting Room: ${
+          forceEnabled ? 'MANUAL AKTIF (Siaga Penuh)' : 'OTOMATIS (Beban Server ≥ 80%)'
+        }.`,
+        icon: 'success',
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal!', err.message || 'Terjadi kesalahan sistem', 'error')
+    },
+  })
+
+  const clearQueueMutation = useMutation({
+    mutationFn: async () => {
+      const res = await authenticatedFetch('/api-backend/waiting-room/admin/clear-queue', {
+        method: 'POST',
+      })
+      if (!res.ok) throw new Error('Gagal mengosongkan antrean')
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['waiting-room-metrics'] })
+      Swal.fire({
+        title: 'Antrean Dikosongkan!',
+        text: `Sebanyak ${data.clearedCount || 0} pengguna antrean telah di-reset.`,
+        icon: 'success',
+      })
+    },
+  })
+
+  const resetSessionsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await authenticatedFetch('/api-backend/waiting-room/admin/reset-sessions', {
+        method: 'POST',
+      })
+      if (!res.ok) throw new Error('Gagal mereset sesi')
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['waiting-room-metrics'] })
+      Swal.fire({
+        title: 'Sesi Aktif Direset!',
+        text: `Sebanyak ${data.resetCount || 0} slot sesi aktif telah dibersihkan.`,
+        icon: 'success',
+      })
+    },
+  })
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault()
+    saveConfigMutation.mutate({
+      maxCapacity: Number(capacity) || 1000,
+      forceEnabled,
+      cpuThreshold: Number(cpuThreshold) || 80,
+      ramThreshold: Number(ramThreshold) || 80,
+      maxRps: Number(maxRps) || 250,
+    })
+  }
+
+  const activeUsers = metrics?.activeUsers || 0
+  const maxCap = metrics?.maxCapacity || capacity || 1000
+  const queuedUsers = metrics?.queuedUsers || 0
+  const isCritical = metrics?.isTrafficCritical || false
+  const cpuPercent = metrics?.cpuPercent || 0
+  const ramPercent = metrics?.ramPercent || 0
+
+  return (
+    <Card className="shadow-xs border-pink-200/80 dark:border-pink-900/40 bg-gradient-to-br from-pink-50/40 via-white to-purple-50/30 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 backdrop-blur-xl rounded-2xl overflow-hidden">
+      <form onSubmit={handleSave}>
+        <CardHeader className="border-b border-pink-100 dark:border-slate-800/80 p-5 sm:p-6 bg-gradient-to-r from-pink-500/10 via-purple-500/5 to-transparent">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-pink-600 text-white shadow-xs">
+                  Superadmin & Admin IT
+                </span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
+                  isCritical 
+                    ? 'bg-rose-100 text-rose-700 border border-rose-200 animate-pulse' 
+                    : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isCritical ? 'bg-rose-600' : 'bg-emerald-600'}`} />
+                  {isCritical ? 'Waiting Room Aktif Menahan Trafik' : 'Sistem Normal (Kapasitas Terjaga)'}
+                </span>
+              </div>
+              <CardTitle className="text-slate-900 dark:text-white font-extrabold text-base sm:text-lg flex items-center gap-2">
+                Kontrol Manual Waiting Room & Kuota Login
+              </CardTitle>
+              <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">
+                Atur batasan berapa orang yang dapat login bersamaan ke aplikasi SIMASMUH serta aktivasi antrean sistem.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-5 sm:p-6 space-y-6">
+          {/* Live Metric Badges */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-xs">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5 flex items-center justify-between">
+                <span>Pengguna Aktif</span>
+                <span className="text-[10px] text-pink-600 font-bold">{Math.round((activeUsers / maxCap) * 100)}%</span>
+              </div>
+              <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                {activeUsers} <span className="text-xs font-normal text-slate-400">/ {maxCap} kuota</span>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mt-1.5">
+                <div 
+                  className="bg-pink-500 h-full rounded-full transition-all duration-500" 
+                  style={{ width: `${Math.min(100, (activeUsers / maxCap) * 100)}%` }} 
+                />
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-xs">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                Antrean Waiting Room
+              </div>
+              <div className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400">
+                {queuedUsers} <span className="text-xs font-normal text-slate-400">orang</span>
+              </div>
+              <div className="text-[10px] text-slate-400 mt-1">
+                {queuedUsers > 0 ? 'Sedang menunggu giliran' : 'Tidak ada antrean pending'}
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-xs">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5 flex items-center justify-between">
+                <span>Beban CPU Server</span>
+                <span className={`text-[10px] font-bold ${cpuPercent >= cpuThreshold ? 'text-rose-600' : 'text-slate-500'}`}>
+                  Limit {cpuThreshold}%
+                </span>
+              </div>
+              <div className={`text-xl sm:text-2xl font-black ${cpuPercent >= cpuThreshold ? 'text-rose-600' : 'text-slate-900 dark:text-white'}`}>
+                {cpuPercent}%
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mt-1.5">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${cpuPercent >= cpuThreshold ? 'bg-rose-500' : 'bg-emerald-500'}`} 
+                  style={{ width: `${Math.min(100, cpuPercent)}%` }} 
+                />
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-xs">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5 flex items-center justify-between">
+                <span>Beban RAM Server</span>
+                <span className={`text-[10px] font-bold ${ramPercent >= ramThreshold ? 'text-rose-600' : 'text-slate-500'}`}>
+                  Limit {ramThreshold}%
+                </span>
+              </div>
+              <div className={`text-xl sm:text-2xl font-black ${ramPercent >= ramThreshold ? 'text-rose-600' : 'text-slate-900 dark:text-white'}`}>
+                {ramPercent}%
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mt-1.5">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${ramPercent >= ramThreshold ? 'bg-rose-500' : 'bg-blue-500'}`} 
+                  style={{ width: `${Math.min(100, ramPercent)}%` }} 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Form Pengaturan Kapasitas & Mode */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Input Kuota Pengguna Login */}
+            <div className="space-y-2 p-4 rounded-2xl bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="maxCapacity" className="font-bold text-slate-900 dark:text-white text-xs">
+                  Batas Maksimal Pengguna Login Bersamaan *
+                </Label>
+                <span className="text-[10px] font-bold text-pink-600 bg-pink-50 dark:bg-pink-950/40 px-2 py-0.5 rounded-full">
+                  Kapasitas: {capacity} Pengguna
+                </span>
+              </div>
+              <Input
+                id="maxCapacity"
+                type="number"
+                min={1}
+                max={50000}
+                value={capacity}
+                onChange={(e) => setCapacity(Math.max(1, parseInt(e.target.value) || 1))}
+                placeholder="Contoh: 100"
+                className="bg-white dark:bg-slate-900 font-bold text-base"
+                required
+              />
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Ketika jumlah pengguna aktif melebihi batas ini, pengguna berikutnya akan diarahkan ke antrean secara tertib.
+              </p>
+            </div>
+
+            {/* Switch Mode Operasional Waiting Room */}
+            <div className="space-y-2 p-4 rounded-2xl bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="forceEnabledSelect" className="font-bold text-slate-900 dark:text-white text-xs">
+                  Aktivasi Manual Antrean Sistem
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => setForceEnabled(!forceEnabled)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    forceEnabled ? 'bg-pink-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      forceEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className={`p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between ${
+                forceEnabled 
+                  ? 'bg-pink-50 dark:bg-pink-950/30 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-900' 
+                  : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900'
+              }`}>
+                <span>{forceEnabled ? '🚨 Mode Manual: Aktif Penuh' : '🛡️ Mode Otomatis: Aktif Saat Beban Server ≥ 80%'}</span>
+                <span className="text-[10px] font-mono">{forceEnabled ? 'MANUAL' : 'OTOMATIS'}</span>
+              </div>
+
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                {forceEnabled 
+                  ? 'Mode Manual: Mengaktifkan antrean secara langsung untuk menahan seluruh lalu lintas login baru.' 
+                  : 'Mode Otomatis: Antrean aktif secara cerdas saat pemakaian CPU/RAM server mencapai 80% atau kuota login terpenuhi.'}
+              </p>
+            </div>
+
+            {/* Ambang Batas CPU & RAM */}
+            <div className="space-y-2 p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700">
+              <Label className="font-bold text-slate-900 dark:text-white text-xs">
+                Ambang Batas Otomatis Beban CPU (%)
+              </Label>
+              <Input
+                type="number"
+                min={10}
+                max={100}
+                value={cpuThreshold}
+                onChange={(e) => setCpuThreshold(parseInt(e.target.value) || 80)}
+                className="bg-white dark:bg-slate-900 font-semibold"
+              />
+              <p className="text-[10px] text-slate-400">Default: 80% (Aktif jika CPU server menyentuh angka ini)</p>
+            </div>
+
+            <div className="space-y-2 p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700">
+              <Label className="font-bold text-slate-900 dark:text-white text-xs">
+                Ambang Batas Otomatis Beban RAM (%)
+              </Label>
+              <Input
+                type="number"
+                min={10}
+                max={100}
+                value={ramThreshold}
+                onChange={(e) => setRamThreshold(parseInt(e.target.value) || 80)}
+                className="bg-white dark:bg-slate-900 font-semibold"
+              />
+              <p className="text-[10px] text-slate-400">Default: 80% (Aktif jika memori RAM server menyentuh angka ini)</p>
+            </div>
+          </div>
+        </CardContent>
+
+        <CardFooter className="bg-slate-50/80 dark:bg-slate-800/60 border-t border-pink-100 dark:border-slate-800 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => clearQueueMutation.mutate()}
+              disabled={clearQueueMutation.isPending || queuedUsers === 0}
+              className="text-xs font-bold text-slate-600 hover:text-slate-900 rounded-xl"
+            >
+              {clearQueueMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+              Kosongkan Antrean
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => resetSessionsMutation.mutate()}
+              disabled={resetSessionsMutation.isPending || activeUsers === 0}
+              className="text-xs font-bold text-rose-600 hover:text-rose-700 rounded-xl border-rose-200 hover:bg-rose-50"
+            >
+              {resetSessionsMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+              Reset Sesi Aktif
+            </Button>
+          </div>
+
+          <Button
+            type="submit"
+            disabled={saveConfigMutation.isPending}
+            className="w-full sm:w-auto bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90 font-bold rounded-xl shadow-xs"
+          >
+            {saveConfigMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            Simpan Konfigurasi Waiting Room
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
+  )
+}
+
+
 

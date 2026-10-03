@@ -16,7 +16,7 @@ import {
   Loader2, PlusCircle, CheckCircle2, TrendingUp, X, Download,
   AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, Sparkles,
   ShieldAlert, ShieldCheck, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check, Info,
-  CreditCard, FileCheck, Printer
+  CreditCard, FileCheck, Printer, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
@@ -1218,8 +1218,9 @@ function ReleaseYearlyModal({
   const authenticatedFetch = useAuthenticatedFetch();
   const qc = useQueryClient()
   
-  const [scope, setScope] = useState<'CLASS' | 'GRADE' | 'ALL'>('CLASS')
+  const [scope, setScope] = useState<'CLASS' | 'MULTI_CLASS' | 'GRADE' | 'ALL'>('CLASS')
   const [classId, setClassId] = useState(classes?.[0]?.id || '')
+  const [selectedClassIds, setSelectedClassIds] = useState<string[]>(classes?.map(c => c.id) || [])
   const [gradeLevel, setGradeLevel] = useState<number>(10)
   const [startYear, setStartYear] = useState<number>(currentYear)
   const [customAcademicYear, setCustomAcademicYear] = useState<string>(`${currentYear}/${currentYear + 1}`)
@@ -1307,10 +1308,15 @@ function ReleaseYearlyModal({
       const isOverrideActive = opts?.override ?? allowOverride
       const authPass = opts?.password ?? overridePassword
 
+      if (scope === 'MULTI_CLASS' && selectedClassIds.length === 0) {
+        throw new Error('Pilih minimal 1 kelas yang akan diproses rilis tagihan')
+      }
+
       const payload = {
         academicYear: customAcademicYear || `${startYear}/${startYear + 1}`,
-        targetScope: scope === 'CLASS' ? 'CLASS' : scope === 'GRADE' ? 'GRADE' : 'ALL',
+        targetScope: scope === 'CLASS' ? 'CLASS' : scope === 'MULTI_CLASS' ? 'MULTI_CLASS' : scope === 'GRADE' ? 'GRADE' : 'ALL',
         classId: scope === 'CLASS' ? classId : undefined,
+        classIds: scope === 'MULTI_CLASS' ? selectedClassIds : undefined,
         gradeLevel: scope === 'GRADE' ? gradeLevel : undefined,
         yearStart: Number(startYear),
         sppStartMonth: Number(sppStartMonth),
@@ -1379,6 +1385,7 @@ function ReleaseYearlyModal({
       const payload = {
         scope,
         classId: scope === 'CLASS' ? classId : undefined,
+        classIds: scope === 'MULTI_CLASS' ? selectedClassIds : undefined,
         gradeLevel: scope === 'GRADE' ? gradeLevel : undefined,
         startYear,
         password: resetPassword,
@@ -1463,26 +1470,32 @@ function ReleaseYearlyModal({
               1. Sasaran & Periode Tagihan
             </Label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              {/* Cakupan Target: Hanya Per Kelas atau Per Angkatan */}
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${scope === 'MULTI_CLASS' ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-3.5`}>
+              {/* Cakupan Target: Per Angkatan, Per Kelas Tunggal, atau Pilih Beberapa Kelas */}
               <div className="flex flex-col justify-between">
                 <div className="h-5 flex items-center mb-1.5">
                   <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Cakupan Sasaran</Label>
                 </div>
-                <Select value={scope} onValueChange={(v: any) => setScope(v)}>
+                <Select value={scope} onValueChange={(v: any) => {
+                  setScope(v)
+                  if (v === 'MULTI_CLASS' && selectedClassIds.length === 0 && classes?.length > 0) {
+                    setSelectedClassIds(classes.map(c => c.id))
+                  }
+                }}>
                   <SelectTrigger className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl">
                     <SelectValue>
-                      {scope === 'CLASS' ? 'Per Kelas Spesifik' : 'Per Angkatan / Tingkat'}
+                      {scope === 'CLASS' ? 'Per Kelas Tunggal' : scope === 'MULTI_CLASS' ? `Pilih Kelas (${selectedClassIds.length}/${classes?.length || 0})` : 'Per Angkatan / Tingkat'}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CLASS">Per Kelas Spesifik</SelectItem>
+                    <SelectItem value="CLASS">Per Kelas Tunggal</SelectItem>
+                    <SelectItem value="MULTI_CLASS">Pilih Beberapa Kelas (Multi-Select)</SelectItem>
                     <SelectItem value="GRADE">Per Angkatan / Tingkat</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Pilihan Kelas / Angkatan */}
+              {/* Pilihan Kelas Tunggal atau Tingkat (Bila bukan Multi-Class) */}
               {scope === 'CLASS' ? (
                 <div className="flex flex-col justify-between">
                   <div className="h-5 flex items-center mb-1.5">
@@ -1499,7 +1512,7 @@ function ReleaseYearlyModal({
                     </SelectContent>
                   </Select>
                 </div>
-              ) : (
+              ) : scope === 'GRADE' ? (
                 <div className="flex flex-col justify-between">
                   <div className="h-5 flex items-center mb-1.5">
                     <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Tingkat / Angkatan</Label>
@@ -1517,7 +1530,7 @@ function ReleaseYearlyModal({
                     </SelectContent>
                   </Select>
                 </div>
-              )}
+              ) : null}
 
               {/* Bulan & Tahun Awal Mulai Tagihan */}
               <div className="flex flex-col justify-between">
@@ -1592,6 +1605,70 @@ function ReleaseYearlyModal({
                 )}
               </div>
             </div>
+
+            {/* Dedicated Expansive Area untuk Multi-Class Selection */}
+            {scope === 'MULTI_CLASS' && (
+              <div className="bg-white dark:bg-slate-900/90 rounded-2xl border border-blue-200 dark:border-blue-900/80 p-4 space-y-3 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Pilihan Kelas Terpilih
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                      {selectedClassIds.length} dari {classes.length} Kelas
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedClassIds(classes.map(c => c.id))}
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50"
+                    >
+                      Pilih Semua Kelas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedClassIds([])}
+                      className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:underline px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800"
+                    >
+                      Batal Semua
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid Kelas Luas & Rapi (Auto-fill responsif) */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-56 overflow-y-auto p-1 custom-scrollbar">
+                  {classes.map(c => {
+                    const isChecked = selectedClassIds.includes(c.id)
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          if (isChecked) {
+                            setSelectedClassIds(prev => prev.filter(id => id !== c.id))
+                          } else {
+                            setSelectedClassIds(prev => [...prev, c.id])
+                          }
+                        }}
+                        className={`text-xs font-bold px-3 py-2 rounded-xl border transition-all flex items-center justify-between gap-2 text-left ${
+                          isChecked
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-700'
+                        }`}
+                      >
+                        <span className="truncate">{c.name}</span>
+                        {isChecked ? (
+                          <CheckSquare className="w-4 h-4 text-white shrink-0" />
+                        ) : (
+                          <Square className="w-4 h-4 text-slate-400 dark:text-slate-600 shrink-0" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Banner Periode Terpilih */}
             <div className="p-3 bg-blue-50/80 dark:bg-blue-950/40 rounded-xl border border-blue-200/80 dark:border-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
@@ -2710,10 +2787,15 @@ function TabTagihan() {
     }
   })
 
+  // Pagination state for ultra-smooth rendering with large datasets
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(25)
+
   const { data: students = [], isLoading } = useQuery<StudentSummary[]>({
     queryKey: ['finance-students'],
     queryFn: () => authenticatedQuery('/api-backend/finance/students'),
-    refetchInterval: 5000,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   })
 
   const { data: classes = [] } = useQuery<ClassItem[]>({
@@ -2726,7 +2808,7 @@ function TabTagihan() {
     queryKey: ['student-tagihan', selectedStudent?.id],
     queryFn: () => authenticatedQuery(`/api-backend/finance/students/${selectedStudent!.id}/tagihan`),
     enabled: !!selectedStudent?.id,
-    refetchInterval: 5000,
+    staleTime: 10000,
   })
 
   const filtered = useMemo(() =>
@@ -2736,6 +2818,18 @@ function TabTagihan() {
         s.nisn.includes(search) || s.nis.includes(search) ||
         s.className.toLowerCase().includes(search.toLowerCase()))
     ), [students, search, filterKelas])
+
+  // Reset current page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, filterKelas, pageSize])
+
+  // Paginated students slice
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const paginatedStudents = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize
+    return filtered.slice(startIdx, startIdx + pageSize)
+  }, [filtered, currentPage, pageSize])
 
   const isAllSelected = useMemo(() =>
     filtered.length > 0 && filtered.every(s => selectedStudentIds.includes(s.id)),
@@ -3026,105 +3120,115 @@ function TabTagihan() {
         </div>
       )}
 
-      {/* Table */}
+      {/* Table - Responsive, Compact, Smooth Horizontal Scroll with High Precision */}
       <Card className="shadow-xs border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
-        <CardContent className="p-0 overflow-x-auto max-w-full">
-          <div className="overflow-x-auto">
-            <Table className="w-full text-xs">
-              <TableHeader className="bg-slate-50 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 font-bold text-[11px]">
+        <CardContent className="p-0 max-w-full">
+          <div className="overflow-x-auto custom-scrollbar w-full">
+            <Table className="w-full text-xs min-w-[640px] sm:min-w-full border-collapse">
+              <TableHeader className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-bold text-[11px] select-none sticky top-0 z-10">
                 <TableRow className="border-b border-slate-200 dark:border-slate-800">
                   {!isKepalaSekolah && (
-                    <TableHead className="w-7 text-center px-1 py-1.5 whitespace-nowrap">
+                    <TableHead className="w-9 sm:w-10 text-center px-1.5 py-2 whitespace-nowrap">
                       <button
                         type="button"
                         onClick={toggleSelectAll}
-                        className="p-0.5 rounded text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
+                        className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer inline-flex items-center justify-center touch-manipulation"
                         title={isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua Siswa'}
                       >
-                        {isAllSelected ? <CheckSquare className="w-3.5 h-3.5 text-blue-600" /> : <Square className="w-3.5 h-3.5" />}
+                        {isAllSelected ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-slate-400" />}
                       </button>
                     </TableHead>
                   )}
-                  <TableHead className="w-8 text-center py-1.5 px-1 whitespace-nowrap">No</TableHead>
-                  <TableHead className="py-1.5 px-2 max-w-[200px] whitespace-nowrap">Nama Siswa</TableHead>
-                  <TableHead className="w-24 text-center py-1.5 px-1 whitespace-nowrap">Status</TableHead>
-                  <TableHead className="w-20 text-center py-1.5 px-1 whitespace-nowrap">SPP</TableHead>
-                  <TableHead className="w-28 text-right py-1.5 px-2 whitespace-nowrap">Sisa Tagihan</TableHead>
-                  <TableHead className="w-24 text-center py-1.5 px-1 whitespace-nowrap sticky right-0 bg-slate-50 dark:bg-slate-800 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Aksi</TableHead>
+                  <TableHead className="w-10 sm:w-12 text-center py-2 px-1 whitespace-nowrap">No</TableHead>
+                  <TableHead className="py-2 px-2.5 min-w-[170px] sm:min-w-[220px]">Nama Siswa</TableHead>
+                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1 whitespace-nowrap">Status</TableHead>
+                  <TableHead className="w-20 sm:w-24 text-center py-2 px-1 whitespace-nowrap">SPP Lunas</TableHead>
+                  <TableHead className="w-28 sm:w-32 text-right py-2 px-2.5 whitespace-nowrap">Sisa Tagihan</TableHead>
+                  <TableHead className="w-28 sm:w-32 text-center py-2 px-1.5 whitespace-nowrap sticky right-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-8">
-                      <Loader2 className="w-4 h-4 animate-spin text-blue-600 mx-auto mb-1" />
-                      <p className="text-slate-500 text-[11px]">Memuat data...</p>
+                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-10">
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-600 mx-auto mb-1.5" />
+                      <p className="text-slate-500 text-[11px] font-medium">Memuat data tagihan siswa...</p>
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-8 text-slate-400 text-xs font-medium">
-                      {search || filterKelas ? 'Tidak ada siswa yang sesuai kriteria filter.' : 'Belum ada data siswa.'}
+                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-10 text-slate-400 text-xs font-medium">
+                      {search || filterKelas ? 'Tidak ada data siswa yang sesuai filter saat ini.' : 'Belum ada data tagihan siswa tercatat.'}
                     </TableCell>
                   </TableRow>
-                ) : filtered.map((s, i) => {
+                ) : paginatedStudents.map((s, idx) => {
                   const isChecked = selectedStudentIds.includes(s.id);
+                  const displayIndex = (currentPage - 1) * pageSize + idx + 1;
                   return (
-                    <TableRow key={s.id} className={`transition-colors border-b border-slate-100 dark:border-slate-800/60 ${isChecked ? 'bg-blue-50/50 dark:bg-blue-950/20' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/50'}`}>
+                    <TableRow key={s.id} className={`transition-colors border-b border-slate-100 dark:border-slate-800/60 ${isChecked ? 'bg-blue-50/60 dark:bg-blue-950/30' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/60'}`}>
                       {!isKepalaSekolah && (
-                        <TableCell className="text-center px-1 py-1 whitespace-nowrap">
+                        <TableCell className="text-center px-1.5 py-1.5 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => toggleSelectStudent(s.id)}
-                            className="p-0.5 rounded text-slate-400 hover:text-blue-600 transition-colors"
+                            className="p-1 rounded-md text-slate-400 hover:text-blue-600 transition-colors cursor-pointer inline-flex items-center justify-center touch-manipulation"
                           >
-                            {isChecked ? <CheckSquare className="w-3.5 h-3.5 text-blue-600" /> : <Square className="w-3.5 h-3.5" />}
+                            {isChecked ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-slate-400" />}
                           </button>
                         </TableCell>
                       )}
-                      <TableCell className="text-center text-slate-400 font-medium text-[11px] px-1 py-1 whitespace-nowrap">{i + 1}</TableCell>
-                      <TableCell className="py-1 px-2 max-w-[200px]">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <div className={`w-5.5 h-5.5 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                      <TableCell className="text-center text-slate-400 font-medium text-[11px] px-1 py-1.5 whitespace-nowrap">{displayIndex}</TableCell>
+                      <TableCell className="py-1.5 px-2.5 min-w-[170px] sm:min-w-[220px]">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 shadow-2xs ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' : 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300'}`}>
                             {s.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="font-bold text-slate-900 dark:text-white text-xs leading-tight truncate" title={s.name}>{s.name}</p>
-                            <p className="text-[10px] text-slate-400 font-mono leading-tight truncate">NISN: {s.nisn} · <span className="font-semibold text-slate-600 dark:text-slate-300">{s.className}</span></p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono leading-tight truncate mt-0.5">
+                              NISN: {s.nisn || '-'} · <span className="font-semibold text-slate-600 dark:text-slate-300">{s.className}</span>
+                            </p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-center py-1 px-1 whitespace-nowrap">
+                      <TableCell className="text-center py-1.5 px-1 whitespace-nowrap">
                         {s.belumLunasCount > 0
-                          ? <span className="font-bold px-1.5 py-0.5 rounded text-[10px] bg-red-50 text-red-700 border border-red-200 inline-block whitespace-nowrap">{s.belumLunasCount} Tagihan</span>
-                          : <span className="text-emerald-700 font-bold text-[10px] bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5 whitespace-nowrap"><CheckCircle2 className="w-3 h-3 text-emerald-600" /> LUNAS</span>
+                          ? <span className="font-bold px-2 py-0.5 rounded-full text-[10px] bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 inline-block whitespace-nowrap">{s.belumLunasCount} Tagihan</span>
+                          : <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 px-2 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3 h-3 text-emerald-600" /> LUNAS</span>
                         }
                       </TableCell>
-                      <TableCell className="text-center py-1 px-1 whitespace-nowrap">
-                        <span className={`font-semibold px-1.5 py-0.5 rounded text-[10px] inline-block whitespace-nowrap ${s.sppLunasCount >= 12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : s.sppLunasCount > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
+                      <TableCell className="text-center py-1.5 px-1 whitespace-nowrap">
+                        <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] inline-block whitespace-nowrap ${s.sppLunasCount >= 12 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900' : s.sppLunasCount > 0 ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'}`}>
                           {s.sppLunasCount}/12 Bln
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-bold text-slate-900 dark:text-white text-xs py-1 px-2 whitespace-nowrap">
+                      <TableCell className="text-right font-bold text-slate-900 dark:text-white text-xs py-1.5 px-2.5 whitespace-nowrap">
                         {s.sisaTagihan !== undefined && s.sisaTagihan > 0 ? (
-                          <span className="text-rose-600 dark:text-rose-400">{currency(s.sisaTagihan)}</span>
+                          <span className="text-rose-600 dark:text-rose-400 font-extrabold">{currency(s.sisaTagihan)}</span>
                         ) : (
-                          <span className="text-emerald-600 font-semibold">Rp 0 (Lunas)</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rp 0 (Lunas)</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center py-1 px-1 whitespace-nowrap sticky right-0 bg-white dark:bg-slate-900 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
-                        <div className="flex justify-center items-center gap-1">
-                          <Button size="sm" variant="outline"
-                            className="border-blue-200 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-[10px] gap-1 h-6 px-1.5 rounded-md font-bold"
-                            onClick={() => openModal(s)}>
-                            <Receipt className="w-3 h-3" /> {isKepalaSekolah ? 'Detail' : 'Kelola'}
+                      <TableCell className="text-center py-1.5 px-1.5 whitespace-nowrap sticky right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">
+                        <div className="flex justify-center items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-blue-200 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-[11px] gap-1 h-7 px-2 rounded-lg font-bold shadow-2xs touch-manipulation"
+                            onClick={() => openModal(s)}
+                          >
+                            <Receipt className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                            <span>{isKepalaSekolah ? 'Detail' : 'Kelola'}</span>
                           </Button>
                           {!isKepalaSekolah && (
-                            <Button size="sm" variant="outline"
+                            <Button
+                              size="sm"
+                              variant="outline"
                               title="Reset Tagihan Siswa (Otorisasi Password)"
-                              className="border-rose-200 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 text-xs h-6 w-6 p-0 rounded-md"
-                              onClick={() => openResetModal([s.id])}>
-                              <RotateCcw className="w-2.5 h-2.5" />
+                              className="border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 h-7 w-7 p-0 rounded-lg shadow-2xs touch-manipulation shrink-0"
+                              onClick={() => openResetModal([s.id])}
+                            >
+                              <RotateCcw className="w-3 h-3" />
                             </Button>
                           )}
                         </div>
@@ -3135,6 +3239,80 @@ function TabTagihan() {
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Toolbar */}
+          {filtered.length > 0 && (
+            <div className="px-3 sm:px-4 py-2 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px] w-full sm:w-auto justify-between sm:justify-start">
+                <span>
+                  <strong>{Math.min(filtered.length, (currentPage - 1) * pageSize + 1)}</strong> - <strong>{Math.min(filtered.length, currentPage * pageSize)}</strong> dari <strong>{filtered.length}</strong> siswa
+                </span>
+                <div className="flex items-center gap-1.5 ml-2">
+                  <span className="text-[10px] text-slate-400">Baris:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="h-7 px-2 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-200 shadow-2xs cursor-pointer"
+                  >
+                    <option value={15}>15</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1 w-full sm:w-auto justify-center sm:justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(1)}
+                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
+                    title="Halaman Pertama"
+                  >
+                    <ChevronsLeft className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
+                    title="Sebelumnya"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </Button>
+
+                  <span className="px-2.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-300">
+                    {currentPage} / {totalPages}
+                  </span>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
+                    title="Selanjutnya"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(totalPages)}
+                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
+                    title="Halaman Terakhir"
+                  >
+                    <ChevronsRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

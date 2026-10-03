@@ -431,24 +431,24 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header & Pemilihan Ekstrakurikuler Binaan */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
-            <Sparkles className="h-6 w-6" />
+          <div className="h-10 w-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+            <Sparkles className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-800 dark:text-white">
-                Workspace Pembina Ekstrakurikuler
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                Manajemen Ekstrakurikuler
               </h1>
               <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-bold">
-                Pembina Resmi
+                Pembina
               </Badge>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Kelola keanggotaan siswa, presensi mingguan, evaluasi nilai rapor, dan rekapitulasi real-time.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Kelola keanggotaan siswa, presensi kegiatan, dan penilaian rapor ekstrakurikuler.
             </p>
           </div>
         </div>

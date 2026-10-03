@@ -3567,31 +3567,29 @@ export function PersuratanManagement({
 
   return (
     <div className="space-y-6">
-      {/* Dynamic Header Banner berdasarkan Mode dan Role Pengakses */}
+      {/* Header Banner Mode & Otoritas Akses */}
       {isKepalaSekolah ? (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/90 via-indigo-900/80 to-blue-900/90 border border-purple-500/30 text-white backdrop-blur-xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-500/20 rounded-xl border border-purple-400/40 text-purple-300 shrink-0">
-              <ShieldCheck className="w-6 h-6" />
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-purple-900/90 via-indigo-900/80 to-blue-900/90 border border-purple-500/30 text-white backdrop-blur-xl shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2.5 bg-purple-500/20 rounded-xl border border-purple-400/40 text-purple-300 shrink-0">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold">
-                  {forcedMode === 'surat-masuk' && 'Disposisi Surat Masuk Pimpinan'}
-                  {forcedMode === 'surat-keluar' && 'Panel Persetujuan & E-Sign Kepala Sekolah'}
-                  {forcedMode === 'e-archive' && 'E-Archive & Arsip Surat Pimpinan'}
-                  {forcedMode === 'all' && 'Panel Eksekutif & E-Sign Kepala Sekolah'}
-                </h2>
-              </div>
-              <p className="text-xs text-purple-200/80 mt-0.5">
-                {forcedMode === 'surat-masuk' && 'Telaah surat masuk pimpinan dan terbitkan instruksi disposisi kepada staf/guru terkait.'}
-                {forcedMode === 'surat-keluar' && 'Kelola persetujuan naskah dinas dan bubuhkan tanda tangan digital (E-Sign) resmi.'}
-                {forcedMode === 'e-archive' && 'Telusuri berkas arsip surat dinas digital dan dokumen penting sekolah.'}
-                {forcedMode === 'all' && 'Kelola persetujuan naskah dinas, bubuhkan tanda tangan digital (E-Sign), dan verifikasi disposisi surat masuk.'}
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-bold truncate">
+                {forcedMode === 'surat-masuk' && 'Disposisi Surat Masuk'}
+                {forcedMode === 'surat-keluar' && 'Persetujuan & E-Sign Surat Keluar'}
+                {forcedMode === 'e-archive' && 'Arsip Surat Digital'}
+                {forcedMode === 'all' && 'Panel Persetujuan Eksekutif'}
+              </h2>
+              <p className="text-[11px] text-purple-200/80 mt-0.5 truncate">
+                {forcedMode === 'surat-masuk' && 'Telaah surat masuk dan terbitkan instruksi disposisi unit terkait.'}
+                {forcedMode === 'surat-keluar' && 'Verifikasi naskah dinas dan penerbitan tanda tangan elektronik.'}
+                {forcedMode === 'e-archive' && 'Repositori berkas dan naskah dinas digital sekolah.'}
+                {forcedMode === 'all' && 'Verifikasi naskah dinas, tanda tangan elektronik, dan disposisi surat masuk.'}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
             {(forcedMode === 'surat-keluar' || forcedMode === 'all') && (
               <Button
                 size="sm"
@@ -3599,36 +3597,34 @@ export function PersuratanManagement({
                   setActiveTab('surat-keluar')
                   setFilterStatusTtd('MENUNGGU_TTD')
                 }}
-                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-md gap-1.5 cursor-pointer"
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer h-8"
               >
-                <FileCheck className="w-4 h-4" /> Antrian E-Sign ({suratKeluarList.filter(s => s.status === 'MENUNGGU_TTD').length})
+                <FileCheck className="w-3.5 h-3.5" /> Antrean E-Sign ({suratKeluarList.filter(s => s.status === 'MENUNGGU_TTD').length})
               </Button>
             )}
           </div>
         </div>
       ) : (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-900/90 via-slate-900/90 to-indigo-900/90 border border-blue-500/30 text-white backdrop-blur-xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-500/20 rounded-xl border border-blue-400/40 text-blue-300 shrink-0">
-              {forcedMode === 'surat-masuk' && <Inbox className="w-6 h-6" />}
-              {forcedMode === 'surat-keluar' && <Send className="w-6 h-6" />}
-              {forcedMode === 'e-archive' && <Archive className="w-6 h-6" />}
-              {forcedMode === 'all' && <Mail className="w-6 h-6" />}
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-blue-900/90 via-slate-900/90 to-indigo-900/90 border border-blue-500/30 text-white backdrop-blur-xl shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2.5 bg-blue-500/20 rounded-xl border border-blue-400/40 text-blue-300 shrink-0">
+              {forcedMode === 'surat-masuk' && <Inbox className="w-5 h-5" />}
+              {forcedMode === 'surat-keluar' && <Send className="w-5 h-5" />}
+              {forcedMode === 'e-archive' && <Archive className="w-5 h-5" />}
+              {forcedMode === 'all' && <Mail className="w-5 h-5" />}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold">
-                  {forcedMode === 'surat-masuk' && 'Buku Agenda Surat Masuk & Disposisi'}
-                  {forcedMode === 'surat-keluar' && 'Penerbitan Surat Keluar & Template Resmi'}
-                  {forcedMode === 'e-archive' && 'E-Archive & Pengarsipan Surat Digital'}
-                  {forcedMode === 'all' && 'Manajemen Persuratan & Agenda Tata Usaha'}
-                </h2>
-              </div>
-              <p className="text-xs text-blue-200/80 mt-0.5">
-                {forcedMode === 'surat-masuk' && 'Pencatatan surat masuk, penomoran agenda otomatis, scan OCR/AI, dan pembuatan lembar disposisi.'}
-                {forcedMode === 'surat-keluar' && 'Penerbitan surat keluar dinas, Surat Keputusan (SK), dan pengelolaan template resmi sekolah.'}
-                {forcedMode === 'e-archive' && 'Penyimpanan arsip digital, pencarian cepat berkas, dan penataan kategori surat.'}
-                {forcedMode === 'all' && 'Penerbitan surat keluar, penomoran agenda otomatis, pencatatan surat masuk, dan pembuatan lembar disposisi.'}
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-bold truncate">
+                {forcedMode === 'surat-masuk' && 'Buku Agenda Surat Masuk'}
+                {forcedMode === 'surat-keluar' && 'Surat Keluar & Penomoran'}
+                {forcedMode === 'e-archive' && 'Arsip Dokumen Digital'}
+                {forcedMode === 'all' && 'Tata Kelola Persuratan'}
+              </h2>
+              <p className="text-[11px] text-blue-200/80 mt-0.5 truncate">
+                {forcedMode === 'surat-masuk' && 'Pencatatan surat masuk, penomoran agenda, dan pembuatan disposisi.'}
+                {forcedMode === 'surat-keluar' && 'Penerbitan surat dinas resmi, SK, dan template persuratan.'}
+                {forcedMode === 'e-archive' && 'Penyimpanan arsip digital dan pencarian berkas terindeks.'}
+                {forcedMode === 'all' && 'Pengelolaan surat masuk, surat keluar, dan arsip dokumen dinas.'}
               </p>
             </div>
           </div>

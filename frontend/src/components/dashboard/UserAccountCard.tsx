@@ -74,7 +74,7 @@ export function UserAccountCard({
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
         <div className="flex items-center gap-1.5 font-extrabold text-xs sm:text-sm text-slate-800 dark:text-slate-100">
           <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-          <span>My Account</span>
+          <span>Profil Akun</span>
         </div>
         <Badge variant="outline" className={`text-[10px] font-bold px-2 py-0.5 max-w-[150px] truncate ${effectiveStatusColor}`}>
           {effectiveStatus}

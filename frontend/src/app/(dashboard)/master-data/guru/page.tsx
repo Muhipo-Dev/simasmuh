@@ -332,16 +332,16 @@ export default function TeachersPage() {
       }}
     />
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 backdrop-blur-xl shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 sm:p-5 backdrop-blur-xl shadow-xs">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-0.5">
             Master Data Kepegawaian
           </span>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-            Buku Induk Guru & Pendidik
+          <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+            Data Tenaga Pendidik
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
-            Kelola data pokok guru, NIP/NBM, akun sistem, dan riwayat tugas.
+          <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
+            Kelola profil pendidik, NIP/NBM, akun sistem, dan jadwal mengajar.
           </p>
         </div>
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Search, X, Filter, RotateCcw } from 'lucide-react';
+import { Search, X, Filter, RotateCcw, ArrowUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface TableSearchProps {
@@ -15,6 +15,9 @@ export interface TableSearchProps {
   onResetFilters?: () => void;
   filterButtonLabel?: string;
   align?: 'center' | 'end' | 'start';
+  sortOrder?: 'asc' | 'desc' | 'none';
+  onSortChange?: (order: 'asc' | 'desc' | 'none') => void;
+  customFilterButton?: React.ReactNode;
 }
 
 export function TableSearch({
@@ -27,9 +30,12 @@ export function TableSearch({
   onResetFilters,
   filterButtonLabel = 'Filter',
   align = 'end',
+  sortOrder,
+  onSortChange,
+  customFilterButton,
 }: TableSearchProps) {
   return (
-    <div className={cn("flex items-center gap-2", filters ? "w-full sm:w-auto" : "relative max-w-sm w-full", className)}>
+    <div className={cn("flex items-center gap-2 w-full sm:w-auto", className)}>
       <div className="relative flex-1 min-w-[140px] max-w-sm w-full">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
         <Input
@@ -51,7 +57,9 @@ export function TableSearch({
         )}
       </div>
 
-      {filters && (
+      {customFilterButton ? (
+        customFilterButton
+      ) : (
         <Popover>
           <PopoverTrigger
             render={
@@ -60,7 +68,7 @@ export function TableSearch({
                 variant={activeFiltersCount > 0 ? "default" : "outline"}
                 size="sm"
                 className={cn(
-                  "h-8.5 sm:h-9 px-3 rounded-xl text-xs font-semibold gap-1.5 shrink-0 transition-all cursor-pointer",
+                  "h-8.5 sm:h-9 px-3 rounded-xl text-xs font-semibold gap-1.5 shrink-0 transition-all cursor-pointer touch-manipulation",
                   activeFiltersCount > 0
                     ? "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
                     : "border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -103,7 +111,41 @@ export function TableSearch({
             </div>
 
             <div className="flex flex-col gap-2.5 max-h-[60vh] overflow-y-auto pr-1">
-              {filters}
+              {filters ? (
+                filters
+              ) : (
+                <div className="space-y-2 py-1 text-xs text-slate-600 dark:text-slate-400">
+                  {onSortChange ? (
+                    <div className="space-y-1.5">
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">Urutan Tampilan:</span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <Button
+                          type="button"
+                          variant={sortOrder === 'asc' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => onSortChange('asc')}
+                          className="h-8 text-xs justify-start rounded-lg"
+                        >
+                          <ArrowUpDown className="w-3 h-3 mr-1" /> A &rarr; Z (Naik)
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={sortOrder === 'desc' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => onSortChange('desc')}
+                          className="h-8 text-xs justify-start rounded-lg"
+                        >
+                          <ArrowUpDown className="w-3 h-3 mr-1" /> Z &rarr; A (Turun)
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-2 text-center text-slate-500 text-xs">
+                      Gunakan kolom pencarian atau filter kolom untuk menyaring data tabel secara presisi.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </PopoverContent>
         </Popover>

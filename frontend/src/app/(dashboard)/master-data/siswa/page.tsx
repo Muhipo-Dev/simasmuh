@@ -1288,45 +1288,47 @@ export default function StudentsPage() {
     setSearchQuery('')
   }
 
-  const rawFiltered = (students || []).filter(s => {
-    const classOk = !filterClassId || filterClassId === 'ALL'
-      ? true
-      : s.classId === filterClassId || s.class?.id === filterClassId
+  const filteredStudents = useMemo(() => {
+    const raw = (students || []).filter(s => {
+      const classOk = !filterClassId || filterClassId === 'ALL'
+        ? true
+        : s.classId === filterClassId || s.class?.id === filterClassId
 
-    const programOk = !filterProgram || filterProgram === 'ALL'
-      ? true
-      : filterProgram === '__none__'
-        ? (!s.program || s.program.trim() === '')
-        : s.program?.toLowerCase() === filterProgram.toLowerCase()
+      const programOk = !filterProgram || filterProgram === 'ALL'
+        ? true
+        : filterProgram === '__none__'
+          ? (!s.program || s.program.trim() === '')
+          : s.program?.toLowerCase() === filterProgram.toLowerCase()
 
-    const genderOk = !filterGender || filterGender === 'ALL'
-      ? true
-      : s.gender === filterGender
+      const genderOk = !filterGender || filterGender === 'ALL'
+        ? true
+        : s.gender === filterGender
 
-    const gelombangOk = !filterGelombang || filterGelombang === 'ALL'
-      ? true
-      : s.gelombang === filterGelombang
+      const gelombangOk = !filterGelombang || filterGelombang === 'ALL'
+        ? true
+        : s.gelombang === filterGelombang
 
-    const jalurOk = !filterJalur || filterJalur === 'ALL'
-      ? true
-      : s.jalurPendaftaran === filterJalur
+      const jalurOk = !filterJalur || filterJalur === 'ALL'
+        ? true
+        : s.jalurPendaftaran === filterJalur
 
-    const activeOk = !filterActive || filterActive === 'ALL'
-      ? true
-      : filterActive === 'ACTIVE'
-        ? s.isActive !== false
-        : s.isActive === false
+      const activeOk = !filterActive || filterActive === 'ALL'
+        ? true
+        : filterActive === 'ACTIVE'
+          ? s.isActive !== false
+          : s.isActive === false
 
-    return classOk && programOk && genderOk && gelombangOk && jalurOk && activeOk
-  })
+      return classOk && programOk && genderOk && gelombangOk && jalurOk && activeOk
+    })
 
-  const filteredStudents = filterDataBySearch(rawFiltered, searchQuery, [
-    'name',
-    'nisn',
-    'nis',
-    'user.username',
-    'class.name'
-  ])
+    return filterDataBySearch(raw, searchQuery, [
+      'name',
+      'nisn',
+      'nis',
+      'user.username',
+      'class.name'
+    ])
+  }, [students, filterClassId, filterProgram, filterGender, filterGelombang, filterJalur, filterActive, searchQuery])
 
   const toggleSelectStudent = (id: string) => {
     if (selectedStudentIds.includes(id)) {
@@ -1626,17 +1628,17 @@ export default function StudentsPage() {
       />
     ) : (
     <div className="space-y-6">
-      {/* Top Header Card Persis Standar CBT MUHIPO */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 backdrop-blur-xl shadow-xs">
+      {/* Header Halaman Data Siswa */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/80 dark:bg-slate-900/75 border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 sm:p-5 backdrop-blur-xl shadow-xs">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-0.5">
             Master Data Akademik
           </span>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-            Buku Induk & Manajemen Siswa
+          <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+            Data Induk Siswa
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
-            Kelola data induk siswa, penempatan kelas, dan kenaikan kelas massal.
+          <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
+            Kelola biodata siswa, penempatan rombel, dan kenaikan kelas.
           </p>
         </div>
 

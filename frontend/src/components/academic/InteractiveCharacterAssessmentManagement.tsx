@@ -74,7 +74,7 @@ const DEFAULT_PARAMETERS: TatibParameter[] = [
   { id: 'param-pel-8', category: 'PELANGGARAN', title: 'Merokok / Vape di Lingkungan Sekolah', points: -50, type: 'NEGATIF', description: 'Membawa/menghisap rokok atau rokok elektrik', defaultAction: 'Surat Peringatan (SP 1) & pemanggilan orang tua' },
 ]
 
-export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'ALL', mode = 'ALL' }: { defaultCategory?: string; mode?: 'ALL' | 'BK' | 'KETERTIBAN' | 'GURU' }) {
+export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'ALL', mode = 'ALL' }: { defaultCategory?: string; mode?: 'ALL' | 'BK' | 'KETERTIBAN' | 'GURU' | 'UKS' }) {
   const authenticatedFetch = useAuthenticatedFetch()
   const authenticatedQuery = useAuthenticatedQuery()
   const queryClient = useQueryClient()
@@ -156,7 +156,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
   // Hak akses verifikasi & persetujuan draf poin tatib hanya milik role KETERTIBAN
   const canVerify = isTatib
 
-  // State Tab Utama SIKAP
+  // State Tab Utama
   const [activeTab, setActiveTab] = useState<
     | 'rekap-siswa' 
     | 'log-catatan' 
@@ -169,7 +169,9 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
     | 'kesehatan-uks'
     | 'kehadiran-siswa'
   >(
-    mode === 'BK' 
+    mode === 'UKS'
+      ? 'kesehatan-uks'
+      : mode === 'BK' 
       ? 'catatan-konseling' 
       : mode === 'GURU'
       ? 'rekap-siswa'
@@ -1646,8 +1648,70 @@ const BK_LETTER_PRESETS = [
 
   return (
     <div className="space-y-6">
-      {/* 1. Stat Cards Ringkasan (Adaptif Mode: BK Konseling vs Catatan Kedisiplinan) */}
-      {mode === 'BK' ? (
+      {/* 1. Stat Cards Ringkasan (Adaptif Mode: UKS vs BK Konseling vs Catatan Kedisiplinan) */}
+      {mode === 'UKS' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <Card className="bg-gradient-to-br from-teal-50 to-emerald-50 border-teal-200/60 dark:from-slate-900 dark:to-slate-900 shadow-xs">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Total Kunjungan Pasien</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+                  {healthList.length}
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">Siswa Terdata di Ruang UKS</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-md">
+                <HeartPulse className="w-6 h-6" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/60 dark:from-slate-900 dark:to-slate-900 shadow-xs">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Istirahat / Observasi</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+                  {healthList.filter((h: any) => h.kondisi === 'PEMULIHAN_UKS').length}
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">Sedang Pemulihan di Bed UKS</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-600 text-white flex items-center justify-center shadow-md">
+                <Clock className="w-6 h-6" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200/60 dark:from-slate-900 dark:to-slate-900 shadow-xs">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Kembali ke Kelas</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+                  {healthList.filter((h: any) => h.kondisi === 'KEMBALI_KE_KELAS').length}
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">Kondisi Membaik & Lanjut KBM</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-rose-50 to-red-50 border-rose-200/60 dark:from-slate-900 dark:to-slate-900 shadow-xs">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Dirujuk / Pulang</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+                  {healthList.filter((h: any) => h.kondisi === 'DIRUJUK_PULANG' || h.kondisi === 'DIRUJUK_RS').length}
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">Penanganan Lanjut / Faskes</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center shadow-md">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : mode === 'BK' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           <Card className="bg-gradient-to-br from-pink-50 to-rose-50 border-pink-200/60 dark:from-slate-900 dark:to-slate-900 shadow-xs">
             <CardContent className="p-4 flex items-center justify-between">
@@ -1773,407 +1837,7 @@ const BK_LETTER_PRESETS = [
         </div>
       )}
 
-      {/* 2. SIKAP Legacy & Modern Hybrid Module Suite (Sistem Kehadiran Akademik dan Prestasi) */}
-      <Card className="border-blue-500/40 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white rounded-3xl overflow-hidden shadow-xl">
-        <div className="p-4 sm:p-6 border-b border-blue-800/40 bg-blue-600/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-black text-white text-lg tracking-wider shadow-lg shadow-cyan-500/30 ring-2 ring-white/20">
-              SIKAP
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-lg sm:text-xl font-black text-white tracking-wide">
-                  Sistem Kehadiran Akademik & Prestasi (SIKAP)
-                </h3>
-                <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-400/30 text-[10px] font-extrabold uppercase">
-                  Terintegrasi Penuh
-                </Badge>
-              </div>
-              <p className="text-xs text-blue-200/80 mt-0.5">
-                SMA MUHAMMADIYAH 1 PONOROGO • Pimpinan: <span className="font-semibold text-white">{activeKepsekName}</span>
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {canVerify && (
-              <Button
-                onClick={() => setIsParamModalOpen(true)}
-                size="sm"
-                className="h-9 text-xs gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-xs"
-              >
-                <Sliders className="w-4 h-4" />
-                <span>Atur Poin Tatib</span>
-              </Button>
-            )}
-            <Button
-              onClick={() => {
-                setSelectedStudentForAction(null)
-                setFormState({
-                  id: '',
-                  studentId: '',
-                  category: 'PELANGGARAN',
-                  type: 'NEGATIF',
-                  title: '',
-                  description: '',
-                  points: -10,
-                  date: new Date().toISOString().split('T')[0],
-                  actionTaken: '',
-                  status: canVerify ? 'SELESAI' : 'MENUNGGU',
-                  notifyParent: true,
-                })
-                setIsFormOpen(true)
-              }}
-              size="sm"
-              className="h-9 text-xs gap-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold shadow-xs"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Input Tatib Cepat</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* 8-Tile SIKAP Action Matrix (Matching exact screenshot layout) */}
-        <div className="p-4 sm:p-6 bg-slate-950/60">
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-            Menu Utama SIKAP (Input &amp; Rekapitulasi Terpadu)
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5">
-            {/* Baris 1: Kehadiran Siswa */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  window.location.href = '/presensi/kehadiran-siswa'
-                }}
-                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <ClipboardCheck className="w-3.5 h-3.5" />
-                  <span>INPUT</span>
-                </div>
-                <span>Kehadiran Siswa</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveTab('kehadiran-siswa')
-                }}
-                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
-                  activeTab === 'kehadiran-siswa'
-                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
-                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <Users className="w-3.5 h-3.5" />
-                  <span>REKAP</span>
-                </div>
-                <span>Kehadiran Siswa</span>
-              </button>
-            </div>
-
-            {/* Baris 2: Tata-Tertib Siswa */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  setSelectedStudentForAction(null)
-                  setFormState({
-                    id: '',
-                    studentId: '',
-                    category: 'PELANGGARAN',
-                    type: 'NEGATIF',
-                    title: '',
-                    description: '',
-                    points: -10,
-                    date: new Date().toISOString().split('T')[0],
-                    actionTaken: '',
-                    status: canVerify ? 'SELESAI' : 'MENUNGGU',
-                    notifyParent: true,
-                  })
-                  setIsFormOpen(true)
-                }}
-                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                  <span>INPUT</span>
-                </div>
-                <span>Tata-Tertib</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('log-catatan')}
-                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
-                  activeTab === 'log-catatan'
-                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
-                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>LIHAT</span>
-                </div>
-                <span>Tata-Tertib</span>
-              </button>
-            </div>
-
-            {/* Baris 3: Tatib Guru (Highlight Merah Maroon sesuai Foto Legacy) */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  setTeacherTatibFormState({
-                    id: '',
-                    teacherName: '',
-                    tanggal: new Date().toISOString().split('T')[0],
-                    kategori: 'KEHADIRAN_KBM',
-                    keterangan: '',
-                    status: 'TERTIB',
-                    tindakLanjut: '',
-                  })
-                  setIsTeacherTatibModalOpen(true)
-                }}
-                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-rose-800 to-red-700 hover:from-rose-700 hover:to-red-600 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-rose-500/40"
-              >
-                <div className="flex items-center gap-1.5 text-rose-200 text-[10px] font-bold uppercase tracking-wider">
-                  <UserCheck2 className="w-3.5 h-3.5" />
-                  <span>INPUT</span>
-                </div>
-                <span>Tatib Guru</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('tatib-guru')}
-                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
-                  activeTab === 'tatib-guru'
-                    ? 'bg-rose-600 text-white border-white ring-2 ring-rose-400'
-                    : 'bg-gradient-to-r from-rose-900 to-red-800 hover:from-rose-800 hover:to-red-700 text-white border-rose-500/40'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 text-rose-200 text-[10px] font-bold uppercase tracking-wider">
-                  <FileCheck className="w-3.5 h-3.5" />
-                  <span>LIHAT</span>
-                </div>
-                <span>Tatib Guru</span>
-              </button>
-            </div>
-
-            {/* Baris 4: Prestasi Siswa */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  setSelectedStudentForAction(null)
-                  setFormState({
-                    id: '',
-                    studentId: '',
-                    category: 'PRESTASI_PENGHARGAAN',
-                    type: 'POSITIF',
-                    title: 'Juara / Penghargaan Kejuaraan Siswa',
-                    description: '',
-                    points: 25,
-                    date: new Date().toISOString().split('T')[0],
-                    actionTaken: 'Apresiasi sertifikat & penambahan poin prestasi',
-                    status: canVerify ? 'SELESAI' : 'MENUNGGU',
-                    notifyParent: true,
-                  })
-                  setIsFormOpen(true)
-                }}
-                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <Award className="w-3.5 h-3.5" />
-                  <span>INPUT</span>
-                </div>
-                <span>Prestasi</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('prestasi-siswa')}
-                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
-                  activeTab === 'prestasi-siswa'
-                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
-                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <Award className="w-3.5 h-3.5" />
-                  <span>REKAP</span>
-                </div>
-                <span>Prestasi</span>
-              </button>
-            </div>
-
-            {/* Baris 5: Temuan Kejadian */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  setIncidentFormState({
-                    id: '',
-                    studentId: '',
-                    title: '',
-                    lokasi: 'Area Sekolah',
-                    tanggal: new Date().toISOString().split('T')[0],
-                    waktu: '08:30 WIB',
-                    kategori: 'KETERTIBAN',
-                    kronologi: '',
-                    saksi: '',
-                    tindakanLangsung: '',
-                    status: 'TERCATAT',
-                    poin: -10,
-                  })
-                  setIsIncidentModalOpen(true)
-                }}
-                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <AlertOctagon className="w-3.5 h-3.5" />
-                  <span>TEMUAN</span>
-                </div>
-                <span>Kejadian</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('temuan-kejadian')}
-                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
-                  activeTab === 'temuan-kejadian'
-                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
-                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>REKAP</span>
-                </div>
-                <span>Kejadian</span>
-              </button>
-            </div>
-
-            {/* Baris 6: Kesehatan & UKS */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  setHealthFormState({
-                    id: '',
-                    studentId: '',
-                    tanggal: new Date().toISOString().split('T')[0],
-                    waktuMasuk: '09:00 WIB',
-                    keluhan: '',
-                    diagnosaAwal: '',
-                    penanganan: '',
-                    obatDiberikan: '',
-                    kondisi: 'PEMULIHAN_UKS',
-                    petugasUks: '',
-                    catatan: '',
-                  })
-                  setIsHealthModalOpen(true)
-                }}
-                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <HeartPulse className="w-3.5 h-3.5" />
-                  <span>INPUT</span>
-                </div>
-                <span>Kesehatan</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('kesehatan-uks')}
-                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
-                  activeTab === 'kesehatan-uks'
-                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
-                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <Stethoscope className="w-3.5 h-3.5" />
-                  <span>INPUT</span>
-                </div>
-                <span>Pengguna UKS</span>
-              </button>
-            </div>
-
-            {/* Baris 7: Konseling BK */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  setCounselingFormState({
-                    id: '',
-                    studentId: '',
-                    counselingType: 'PELANGGARAN_KEDISIPLINAN',
-                    title: '',
-                    description: '',
-                    actionTaken: '',
-                    status: 'PROSES_BIMBINGAN',
-                    privacy: 'TERBUKA',
-                    pointsAdjust: 0,
-                    date: new Date().toISOString().split('T')[0],
-                    notifyParent: true,
-                  })
-                  setIsCounselingModalOpen(true)
-                }}
-                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <HeartHandshake className="w-3.5 h-3.5" />
-                  <span>INPUT</span>
-                </div>
-                <span>Konseling</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('catatan-konseling')}
-                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
-                  activeTab === 'catatan-konseling'
-                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
-                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <Users className="w-3.5 h-3.5" />
-                  <span>REKAP</span>
-                </div>
-                <span>Konseling</span>
-              </button>
-            </div>
-
-            {/* Baris 8: Rekapitulasi Persiswa & Semua */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  setActiveTab('rekap-siswa')
-                  setRadarFilterActive(false)
-                }}
-                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
-                  activeTab === 'rekap-siswa' && !radarFilterActive
-                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
-                    : 'bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white border-blue-400/30'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <User className="w-3.5 h-3.5" />
-                  <span>REKAP</span>
-                </div>
-                <span>Persiswa</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveTab('rekap-siswa')
-                  handleExportExcel()
-                }}
-                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
-              >
-                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
-                  <Download className="w-3.5 h-3.5" />
-                  <span>REKAPITULASI</span>
-                </div>
-                <span>Semua</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </Card>
 
       {/* 2b. Notifikasi Area: Verifikasi Izin Siswa (Wali Murid) untuk BK & Ketertiban */}
       {(canVerify || isBk || isTatib) && studentIzinList.length > 0 && (
@@ -2214,7 +1878,22 @@ const BK_LETTER_PRESETS = [
       {/* 3. Filter & Navigasi Tab */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto max-w-full touch-pan-x [-webkit-overflow-scrolling:touch]">
-          {mode === 'BK' ? (
+          {mode === 'UKS' ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setActiveTab('kesehatan-uks')}
+              className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
+                activeTab === 'kesehatan-uks'
+                  ? 'bg-teal-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <HeartPulse className="w-3.5 h-3.5" />
+              <span>Layanan Pasien UKS ({healthList.length})</span>
+            </Button>
+          ) : mode === 'BK' ? (
             <>
               <Button
                 type="button"
@@ -2341,6 +2020,51 @@ const BK_LETTER_PRESETS = [
                 <FileText className="w-3.5 h-3.5" />
                 <span>Log Disiplin</span>
               </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveTab('tatib-guru')}
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
+                  activeTab === 'tatib-guru'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <UserCheck2 className="w-3.5 h-3.5" />
+                <span>Tatib Guru ({teacherTatibList.length})</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveTab('prestasi-siswa')}
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
+                  activeTab === 'prestasi-siswa'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Award className="w-3.5 h-3.5" />
+                <span>Prestasi ({achievementList.length})</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveTab('temuan-kejadian')}
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
+                  activeTab === 'temuan-kejadian'
+                    ? 'bg-orange-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Kejadian ({incidentList.length})</span>
+              </Button>
             </>
           ) : (
             <>
@@ -2420,6 +2144,36 @@ const BK_LETTER_PRESETS = [
                 <FileText className="w-3.5 h-3.5" />
                 <span>Log Riwayat</span>
               </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveTab('tatib-guru')}
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
+                  activeTab === 'tatib-guru'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <UserCheck2 className="w-3.5 h-3.5" />
+                <span>Tatib Guru</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveTab('kesehatan-uks')}
+                className={`text-xs font-bold gap-1.5 rounded-lg h-8 px-2.5 sm:px-3 shrink-0 whitespace-nowrap ${
+                  activeTab === 'kesehatan-uks'
+                    ? 'bg-teal-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <HeartPulse className="w-3.5 h-3.5" />
+                <span>UKS</span>
+              </Button>
             </>
           )}
         </div>
@@ -2477,6 +2231,45 @@ const BK_LETTER_PRESETS = [
                   </SelectContent>
                 </Select>
               </>
+            )}
+
+            {canVerify && mode === 'KETERTIBAN' && (
+              <Button
+                onClick={() => setIsParamModalOpen(true)}
+                size="sm"
+                variant="outline"
+                className="h-8.5 text-xs gap-1.5 rounded-xl border-amber-300 dark:border-amber-700/60 text-amber-700 dark:text-amber-400 font-bold"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Atur Poin</span>
+              </Button>
+            )}
+
+            {(mode === 'KETERTIBAN' || mode === 'ALL' || mode === 'GURU') && (
+              <Button
+                onClick={() => {
+                  setSelectedStudentForAction(null)
+                  setFormState({
+                    id: '',
+                    studentId: '',
+                    category: 'PELANGGARAN',
+                    type: 'NEGATIF',
+                    title: '',
+                    description: '',
+                    points: -10,
+                    date: new Date().toISOString().split('T')[0],
+                    actionTaken: '',
+                    status: canVerify ? 'SELESAI' : 'MENUNGGU',
+                    notifyParent: true,
+                  })
+                  setIsFormOpen(true)
+                }}
+                size="sm"
+                className="h-8.5 text-xs gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>Input Tatib</span>
+              </Button>
             )}
 
             <Button

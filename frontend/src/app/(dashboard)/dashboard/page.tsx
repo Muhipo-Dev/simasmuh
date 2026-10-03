@@ -1498,20 +1498,20 @@ export default function DashboardPage() {
         })()}
 
         {/* PILIHAN STATISTIKA KHUSUS (TAB NAVIGATION FILTER) */}
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-2 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto shadow-xs">
+        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto shadow-xs">
           {[
-            { id: 'SEMUA', label: '📊 Semua Statistika', desc: 'Ringkasan Penuh' },
-            { id: 'PRESENSI', label: '⏱️ Presensi & Kehadiran', desc: 'Siswa, Guru & Karyawan' },
-            { id: 'KEDISIPLINAN', label: '🛡️ Adab & Tata Tertib', desc: 'Pelanggaran, Ibadah & BK' },
-            { id: 'KEUANGAN', label: '💰 Neraca & Keuangan', desc: 'Kas, Tagihan & Realisasi' },
-            { id: 'AKADEMIK', label: '📚 Akademik & Pembelajaran', desc: 'Rombel, Jurnal & Sesi' },
-            { id: 'DEMOGRAFIS', label: '👥 Siswa & Demografis', desc: 'Gender, Jalur & Program' },
+            { id: 'SEMUA', label: '📊 Semua', desc: 'Ringkasan' },
+            { id: 'PRESENSI', label: '⏱️ Presensi', desc: 'Kehadiran' },
+            { id: 'KEDISIPLINAN', label: '🛡️ Tata Tertib', desc: 'Adab & Ibadah' },
+            { id: 'KEUANGAN', label: '💰 Keuangan', desc: 'Kas & Realisasi' },
+            { id: 'AKADEMIK', label: '📚 Akademik', desc: 'Rombel & Jurnal' },
+            { id: 'DEMOGRAFIS', label: '👥 Demografi', desc: 'Siswa & Jalur' },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setSelectedStatCategory(tab.id)}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex flex-col items-start ${selectedStatCategory === tab.id
-                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex flex-col items-start ${selectedStatCategory === tab.id
+                ? 'bg-amber-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
             >

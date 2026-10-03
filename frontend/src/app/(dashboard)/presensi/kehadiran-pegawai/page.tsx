@@ -28,6 +28,7 @@ import {
 import * as XLSX from 'xlsx'
 import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TableSelectionBar, TableCheckboxHeader, TableCheckboxCell } from '@/components/TableSelectionBar'
 import { Badge } from '@/components/ui/badge'
 
 type LogEntry = {
@@ -75,6 +76,7 @@ export default function LogKehadiranPegawaiPage() {
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString())
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedRowDates, setSelectedRowDates] = useState<string[]>([])
   const [streamKey, setStreamKey] = useState(Date.now())
   const [streamError, setStreamError] = useState(false)
 
@@ -515,6 +517,41 @@ export default function LogKehadiranPegawaiPage() {
             }
           />
         </CardHeader>
+        {selectedRowDates.length > 0 && (
+          <div className="p-3 border-b border-slate-100 dark:border-slate-800">
+            <TableSelectionBar
+              selectedCount={selectedRowDates.length}
+              totalCount={searchedLogs.length}
+              onClearSelection={() => setSelectedRowDates([])}
+              onSelectAll={() => setSelectedRowDates(searchedLogs.map(l => l.date))}
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const selectedItems = searchedLogs.filter(l => selectedRowDates.includes(l.date))
+                  const ws = XLSX.utils.json_to_sheet(selectedItems.map((l, idx) => ({
+                    No: idx + 1,
+                    Tanggal: `${l.dayNumber} ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`,
+                    Hari: l.dayName,
+                    'Jam Masuk': l.checkIn,
+                    'Jam Pulang': l.checkOut,
+                    Keterangan: l.keterangan,
+                    'Estimasi Penghasilan': l.estimasiPenghasilan
+                  })))
+                  const wb = XLSX.utils.book_new()
+                  XLSX.utils.book_append_sheet(wb, ws, 'Presensi Terpilih')
+                  XLSX.writeFile(wb, `Presensi_Terpilih_${selectedMonth}_${selectedYear}.xlsx`)
+                }}
+                className="h-8.5 px-3 rounded-xl text-xs font-bold gap-1 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Ekspor Terpilih ({selectedRowDates.length})
+              </Button>
+            </TableSelectionBar>
+          </div>
+        )}
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             {isLoading ? (
@@ -530,7 +567,20 @@ export default function LogKehadiranPegawaiPage() {
               <Table className="w-full table-auto">
                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
                   <TableRow>
-                    <TableHead className="w-12 text-center text-xs pl-4">No</TableHead>
+                    <TableHead className="w-10 pl-4 text-center">
+                      <TableCheckboxHeader
+                        checked={searchedLogs.length > 0 && selectedRowDates.length === searchedLogs.length}
+                        indeterminate={selectedRowDates.length > 0 && selectedRowDates.length < searchedLogs.length}
+                        onChange={(checked) => {
+                          if (checked) {
+                            setSelectedRowDates(searchedLogs.map(l => l.date))
+                          } else {
+                            setSelectedRowDates([])
+                          }
+                        }}
+                      />
+                    </TableHead>
+                    <TableHead className="w-12 text-center text-xs px-2">No</TableHead>
                     <SortableTableHead sortKey="dayNumber" sortConfig={sortConfig} onSort={handleSort} className="w-32 text-xs">
                       Tanggal
                     </SortableTableHead>
@@ -554,9 +604,22 @@ export default function LogKehadiranPegawaiPage() {
                 <TableBody>
                   {searchedLogs.map((log, index) => {
                     const isHadir = log.checkIn !== '-'
+                    const isSelected = selectedRowDates.includes(log.date)
                     return (
-                      <TableRow key={index}>
-                        <TableCell className="pl-4 text-center font-medium text-slate-500 text-xs">{index + 1}</TableCell>
+                      <TableRow key={index} className={isSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}>
+                        <TableCell className="pl-4 text-center">
+                          <TableCheckboxCell
+                            checked={isSelected}
+                            onChange={(checked) => {
+                              if (checked) {
+                                setSelectedRowDates(prev => [...prev, log.date])
+                              } else {
+                                setSelectedRowDates(prev => prev.filter(d => d !== log.date))
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center font-medium text-slate-500 text-xs px-2">{index + 1}</TableCell>
                         <TableCell className="font-bold text-slate-900 dark:text-white text-xs">
                           {log.dayNumber} {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
                         </TableCell>

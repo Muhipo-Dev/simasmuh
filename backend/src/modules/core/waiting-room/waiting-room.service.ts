@@ -35,8 +35,8 @@ export class WaitingRoomService {
   private lastCpuCheck = Date.now();
   private currentCpuPercent = 0;
   private currentRamPercent = 0;
-  public cpuThreshold = 80; // Ambang batas 80%
-  public ramThreshold = 80; // Ambang batas 80%
+  public cpuThreshold = 90; // Ambang batas beban CPU kritis 90%
+  public ramThreshold = 92; // Ambang batas RAM kritis 92%
 
   private timer: NodeJS.Timeout;
 
@@ -103,23 +103,14 @@ export class WaitingRoomService {
       this.lastCpuCheck = now;
     }
 
-    // Kalkulasi RAM (Sistem Host Total vs Free & Node Heap)
+    // Kalkulasi RAM (Sistem Host Total vs Free)
     try {
       const totalMem = os.totalmem();
       const freeMem = os.freemem();
       const systemRamPercent =
         totalMem > 0 ? Math.round(((totalMem - freeMem) / totalMem) * 100) : 0;
 
-      const mem = process.memoryUsage();
-      const heapPercent =
-        mem.heapTotal > 0
-          ? Math.round((mem.heapUsed / mem.heapTotal) * 100)
-          : 0;
-
-      this.currentRamPercent = Math.min(
-        100,
-        Math.max(systemRamPercent, heapPercent),
-      );
+      this.currentRamPercent = Math.min(100, systemRamPercent);
     } catch {
       this.currentRamPercent = 0;
     }
@@ -169,19 +160,18 @@ export class WaitingRoomService {
   public isTrafficCritical(): boolean {
     if (this.forceEnabled) return true;
 
-    // 1. Cek Beban Memori dan CPU Server >= 80% (Hampir penuh / di atas 80%)
-    const isCpuOverloaded = this.currentCpuPercent >= this.cpuThreshold;
-    const isRamOverloaded = this.currentRamPercent >= this.ramThreshold;
-
-    if (isCpuOverloaded || isRamOverloaded) {
-      return true;
-    }
-
-    // 2. Cek RPS (Request Per Detik) ekstrem (> 250 req/detik)
+    // 1. Cek RPS (Request Per Detik) ekstrem (> 250 req/detik)
     if (this.currentRps > this.maxRpsThreshold) return true;
 
-    // 3. Cek Kapasitas Pengguna Aktif Serentak (> 1000 concurrent user)
+    // 2. Cek Kapasitas Pengguna Aktif Serentak (> 1000 concurrent user)
     if (this.activeTokens.size >= this.maxConcurrentActive) return true;
+
+    // 3. Cek Beban Ekstrem CPU & RAM saat ada traffic berjalan (RPS > 30 atau active users > 200)
+    const isCpuExtreme = this.currentCpuPercent >= this.cpuThreshold;
+    const isRamExtreme = this.currentRamPercent >= this.ramThreshold;
+    if ((isCpuExtreme || isRamExtreme) && (this.currentRps > 30 || this.activeTokens.size > 200)) {
+      return true;
+    }
 
     return false;
   }

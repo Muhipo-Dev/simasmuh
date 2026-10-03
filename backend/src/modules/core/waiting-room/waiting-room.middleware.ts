@@ -4,19 +4,21 @@ import { WaitingRoomService } from './waiting-room.service';
 
 @Injectable()
 export class WaitingRoomMiddleware implements NestMiddleware {
-  constructor(private readonly waitingRoomService: WaitingRoomService) {}
+  constructor(private readonly waitingRoomService: WaitingRoomService) { }
 
   use(req: Request, res: Response, next: NextFunction) {
     this.waitingRoomService.recordRequest();
 
-    const path = req.path || req.url || req.originalUrl || '';
+    const fullPath = (req.originalUrl || req.baseUrl || req.url || req.path || '').toLowerCase();
 
     // Kecualikan endpoint public/health/waiting-room/auth login dari pemblokiran middleware
     if (
-      path.includes('/waiting-room') ||
-      path.includes('/settings/public') ||
-      path.includes('/uploads') ||
-      path.includes('/health')
+      fullPath.includes('waiting-room') ||
+      fullPath.includes('auth') ||
+      fullPath.includes('settings/public') ||
+      fullPath.includes('uploads') ||
+      fullPath.includes('health') ||
+      fullPath.includes('facenetai')
     ) {
       return next();
     }

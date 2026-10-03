@@ -570,7 +570,7 @@ export default function FaceAttendanceCameraPage() {
       .trim()
   }
 
-  // Voice Greeting Text-to-Speech (Indonesian) - 100% Suara Wanita Indonesia Natural & Jernih
+  // Voice Greeting Text-to-Speech (Indonesian) - Suara Wanita Indonesia Natural, Bersahabat & Santun (Standar Institusi Pendidikan / Yayasan)
   const speakVoiceGreeting = (
     name?: string,
     scanType?: string,
@@ -585,27 +585,31 @@ export default function FaceAttendanceCameraPage() {
 
       if (statusType === 'LOW_CONFIDENCE') {
         greeting = spokenName 
-          ? `Mohon maaf ${spokenName}, akurasi belum cukup. Silakan posisikan wajah lebih dekat dan jelas ke kamera.` 
-          : `Akurasi biometrik belum cukup sembilan puluh persen. Mohon posisikan wajah lebih dekat ke kamera.`
+          ? `Mohon maaf ${spokenName}, tingkat akurasi pemindaian belum mencukupi. Silakan posisikan wajah Anda lebih dekat ke kamera.` 
+          : `Akurasi biometrik belum mencukupi. Mohon posisikan wajah Anda tegak lurus dan lebih dekat ke kamera.`
       } else if (statusType === 'UNREGISTERED') {
-        greeting = 'Wajah belum terdaftar di sistem SIMASMUH. Silakan hubungi operator.'
+        greeting = 'Identitas wajah belum terdaftar pada pangkalan data SIMASMUH. Silakan menghubungi bagian administrasi atau operator sekolah.'
       } else if (statusType === 'NO_FACE') {
         greeting = 'Wajah tidak terdeteksi. Silakan menghadap lurus ke kamera.'
       } else if (statusType === 'TWIN_AMBIGUOUS') {
-        greeting = 'Terdeteksi kemiripan pada wajah. Silakan pilih siapa yang sesuai.'
+        greeting = 'Terdeteksi kemiripan profil biometrik. Silakan pilih nama Anda pada layar untuk konfirmasi.'
       } else if (statusType === 'ERROR') {
-        greeting = 'Kamera atau server presensi sedang mengalami kendala. Silakan coba sesaat lagi.'
+        greeting = 'Sistem pemindai presensi sedang memproses data. Silakan coba sesaat lagi.'
       } else {
-        // Status SUCCESS: Presensi Kedatangan, Pulang, dan Lengkap
+        // Status SUCCESS: Presensi Kedatangan, Pulang, dan Lengkap (Bahasa Resmi Yayasan / Institusi Sekolah)
         if (scanType === 'SUDAH_LENGKAP') {
           greeting = spokenName 
-            ? `${spokenName}, sudah presensi.`
-            : 'Sudah presensi.'
+            ? `Terima kasih ${spokenName}, presensi Anda hari ini telah tercatat lengkap. Selamat beraktivitas.`
+            : 'Presensi Anda hari ini telah tercatat lengkap. Selamat beraktivitas.'
         } else if (scanType === 'PULANG') {
-          greeting = spokenName ? `${spokenName}, pulang.` : 'Hadir pulang.'
+          greeting = spokenName 
+            ? `Terima kasih ${spokenName}, presensi kepulangan berhasil dicatat. Hati-hati di jalan dan selamat beristirahat.` 
+            : 'Presensi kepulangan berhasil dicatat. Selamat beristirahat.'
         } else {
-          // Presensi Masuk (Hadir)
-          greeting = spokenName ? `${spokenName}, hadir.` : 'Hadir.'
+          // Presensi Masuk (Hadir / Kedatangan)
+          greeting = spokenName 
+            ? `Selamat datang ${spokenName}, presensi kehadiran berhasil dicatat. Selamat belajar dan berkarya.` 
+            : 'Selamat datang, presensi kehadiran berhasil dicatat. Selamat bertugas.'
         }
       }
 
@@ -786,11 +790,11 @@ export default function FaceAttendanceCameraPage() {
           speakVoiceGreeting(undefined, undefined, 'TWIN_AMBIGUOUS')
           setCaptureResult({
             type: 'TWIN_AMBIGUOUS',
-            message: 'Deteksi Wajah Mirip',
-            attendanceMsg: 'Terdeteksi kemiripan pada wajah. Silakan pilih siapa yang sesuai:',
+            message: 'Verifikasi Identitas Biometrik',
+            attendanceMsg: 'Terdeteksi kemiripan profil biometrik. Silakan pilih nama Anda pada layar untuk konfirmasi:',
             twinCandidates: ambiguousFace.twin_candidates || [],
           })
-          toast.info('Terdeteksi kemiripan pada wajah. Silakan pilih siapa yang sesuai.')
+          toast.info('Terdeteksi kemiripan profil biometrik. Silakan pilih nama yang sesuai.')
         } else if (registeredFace && (registeredFace.meets_attendance_threshold === false || Math.round(registeredFace.confidence * 100) < 91)) {
           // Wajah terdeteksi tapi confidence BELUM mencapai 91% — presensi TIDAK direkam
           playBiometricAudio('warning')
@@ -801,14 +805,14 @@ export default function FaceAttendanceCameraPage() {
             role: registeredFace.role,
             identifier: registeredFace.identifier,
             confidence: Math.round(registeredFace.confidence * 100),
-            message: `Akurasi Belum Cukup (${Math.round(registeredFace.confidence * 100)}%)`,
-            attendanceMsg: `Wajah ${registeredFace.name} terdeteksi dengan akurasi ${Math.round(registeredFace.confidence * 100)}%, minimum 91% diperlukan. Posisikan wajah lebih dekat ke kamera dengan pencahayaan yang cukup, lalu sentuh kembali.`,
+            message: `Akurasi Biometrik (${Math.round(registeredFace.confidence * 100)}%)`,
+            attendanceMsg: `Tingkat akurasi pemindaian wajah (${Math.round(registeredFace.confidence * 100)}%) belum memenuhi standar minimum 91%. Silakan posisikan wajah lebih dekat ke kamera.`,
           })
-          toast.warning(`Akurasi ${Math.round(registeredFace.confidence * 100)}% belum cukup. Minimum 91% diperlukan untuk presensi.`)
+          toast.warning(`Akurasi pemindaian (${Math.round(registeredFace.confidence * 100)}%) belum memenuhi standar minimum 91%.`)
         } else if (registeredFace) {
           playBiometricAudio('success')
           const att = registeredFace.attendance
-          const attMsg = att?.message || `Presensi berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`
+          const attMsg = att?.message || `Presensi kehadiran berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`
           speakVoiceGreeting(registeredFace.name, att?.scanType || 'HADIR', 'SUCCESS', undefined, registeredFace.role)
           
           setCaptureResult({
@@ -819,12 +823,12 @@ export default function FaceAttendanceCameraPage() {
             avatarUrl: registeredFace.avatarUrl,
             confidence: Math.round(registeredFace.confidence * 100),
             scanType: att?.scanType || 'HADIR',
-            message: 'Wajah Terverifikasi!',
+            message: 'Wajah Terverifikasi',
             attendanceMsg: attMsg,
             time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           })
 
-          toast.success(`Presensi Berhasil: ${registeredFace.name} (${Math.round(registeredFace.confidence * 100)}%)`)
+          toast.success(`Presensi Berhasil: ${registeredFace.name}`)
           queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
           queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
         } else {
@@ -833,9 +837,9 @@ export default function FaceAttendanceCameraPage() {
           setCaptureResult({
             type: 'UNKNOWN',
             message: 'Wajah Belum Terdaftar',
-            attendanceMsg: 'Wajah terdeteksi namun belum cocok dengan database pengguna SIMASMUH.',
+            attendanceMsg: 'Identitas wajah belum terdaftar pada pangkalan data SIMASMUH. Silakan menghubungi bagian administrasi atau operator sekolah.',
           })
-          toast.warning('Wajah tidak dikenali atau belum terdaftar di dataset profil.')
+          toast.warning('Wajah tidak dikenali atau belum terdaftar pada basis data profil.')
         }
       } else {
         playBiometricAudio('warning')
@@ -845,17 +849,17 @@ export default function FaceAttendanceCameraPage() {
           message: 'Wajah Tidak Terdeteksi',
           attendanceMsg: 'Pastikan wajah menghadap langsung ke kamera dengan pencahayaan yang cukup.',
         })
-        toast.info('Wajah tidak terdeteksi. Posisikan wajah di dalam bingkai.')
+        toast.info('Wajah tidak terdeteksi. Posisikan wajah tepat di dalam bingkai kamera.')
       }
     } catch (err: any) {
       playBiometricAudio('warning')
       speakVoiceGreeting(undefined, undefined, 'ERROR')
       setCaptureResult({
         type: 'ERROR',
-        message: 'Gagal Memproses Snapshot',
-        attendanceMsg: 'Terjadi kendala jaringan atau layanan AI FaceNet sedang offline.',
+        message: 'Kendala Pemrosesan Data',
+        attendanceMsg: 'Terjadi gangguan komunikasi jaringan atau layanan AI FaceNet sedang offline.',
       })
-      toast.error('Gagal memproses snapshot kamera ke AI FaceNet.')
+      toast.error('Gagal memproses pemindaian wajah ke server FaceNet.')
     } finally {
       setIsCapturing(false)
       autoClearTimeoutRef.current = setTimeout(() => {

@@ -554,8 +554,8 @@ export class FaceAttendanceService implements OnModuleInit {
 
       scanType = 'MASUK';
       message = isStudent
-        ? `Presensi Kedatangan Siswa berhasil dicatat pukul ${timeString} (Sinkron e-Rapor & Jurnal Mapel)`
-        : `Presensi Datang GTK berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
+        ? `Presensi kehadiran siswa berhasil dicatat pukul ${timeString} WIB.`
+        : `Presensi kedatangan pegawai berhasil dicatat pukul ${timeString} WIB.`;
 
       // Kirim Notifikasi Email Masuk ke Pengguna
       if (user.email && user.email.includes('@')) {
@@ -610,25 +610,23 @@ export class FaceAttendanceService implements OnModuleInit {
       }
     } else if (isStudent) {
       // 2. KETENTUAN SISWA: Cukup 1 kali saat kedatangan di gerbang sekolah.
-      // Sisa presensi selama jam pelajaran berlangsung dicatat oleh guru pada Jurnal Mengajar Mapel.
       scanType = 'SUDAH_LENGKAP';
-      message = `Presensi kedatangan sudah tercatat pukul ${existing.checkInTime || existing.time}. Presensi Anda belum waktunya atau sudah lengkap, silakan coba lagi nanti.`;
+      message = `Presensi kehadiran Anda telah tercatat pada pukul ${existing.checkInTime || existing.time} WIB.`;
     } else if (!existing.checkOutTime) {
       // 3. KETENTUAN GTK (Guru, Karyawan, Pegawai): Wajib 2 kali sehari (Datang & Pulang)
-      // Pengecekan jeda cooldown waktu presensi (sesuai setting konfigurasi dalam menit)
       if (existing.checkInTime) {
         const [inHour, inMin] = existing.checkInTime.split(':').map(Number);
         const inTotalMins = inHour * 60 + (inMin || 0);
         const outTotalMins = currentTotalMinutes;
 
-        // Jika jeda dari waktu masuk belum melewati cooldown (misal baru beberapa menit), ingatkan jeda
+        // Jika jeda dari waktu masuk belum melewati cooldown, berikan pesan santun
         if (outTotalMins - inTotalMins >= config.cooldownMinutes || outTotalMins < inTotalMins) {
           await this.prisma.dailyAttendance.update({
             where: { id: existing.id },
             data: { checkOutTime: timeString },
           });
           scanType = 'PULANG';
-          message = `Presensi Pulang GTK berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
+          message = `Presensi kepulangan pegawai berhasil dicatat pukul ${timeString} WIB.`;
 
           // Kirim Notifikasi Email Pulang
           if (user.email && user.email.includes('@')) {
@@ -651,7 +649,7 @@ export class FaceAttendanceService implements OnModuleInit {
           }
         } else {
           scanType = 'SUDAH_LENGKAP';
-          message = `Presensi datang GTK tercatat pada ${existing.checkInTime}. Presensi Anda belum waktunya atau sudah lengkap, silakan coba lagi nanti.`;
+          message = `Presensi kedatangan telah tercatat pukul ${existing.checkInTime} WIB. Jeda waktu presensi belum terpenuhi.`;
         }
       } else {
         await this.prisma.dailyAttendance.update({
@@ -659,7 +657,7 @@ export class FaceAttendanceService implements OnModuleInit {
           data: { checkOutTime: timeString },
         });
         scanType = 'PULANG';
-        message = `Presensi Pulang GTK berhasil dicatat pukul ${timeString} (Sinkron Tunjangan Keuangan)`;
+        message = `Presensi kepulangan pegawai berhasil dicatat pukul ${timeString} WIB.`;
 
         if (user.email && user.email.includes('@')) {
           this.emailNotificationService
@@ -683,7 +681,7 @@ export class FaceAttendanceService implements OnModuleInit {
     } else {
       // GTK sudah presensi datang dan pulang
       scanType = 'SUDAH_LENGKAP';
-      message = `Presensi harian GTK sudah lengkap (Datang: ${existing.checkInTime}, Pulang: ${existing.checkOutTime}). Presensi Anda belum waktunya atau sudah lengkap, silakan coba lagi nanti.`;
+      message = `Presensi hari ini telah lengkap (Kedatangan: ${existing.checkInTime} WIB, Kepulangan: ${existing.checkOutTime} WIB).`;
     }
 
     const dateIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;

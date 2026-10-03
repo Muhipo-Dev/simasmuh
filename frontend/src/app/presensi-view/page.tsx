@@ -339,14 +339,14 @@ export default function PresensiPegawaiPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-xs sm:text-sm font-extrabold text-amber-900 dark:text-amber-100">
-                    AI Biometrik FaceNet Sedang Standby / Nonaktif
+                    Pemindai Biometrik Wajah AI Sedang Standby
                   </h3>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-200/90 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 font-mono font-bold border border-amber-400/40">
-                    GUNAKAN SCAN QR CADANGAN
+                    SCAN QR ALTERNATIF
                   </span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-amber-800/90 dark:text-amber-300/90 mt-0.5 leading-relaxed">
-                  Layanan pemindaian wajah otomatis sedang standby. Guru, pegawai, dan siswa dapat melakukan presensi kehadiran menggunakan pemindai QR Code cadangan.
+                  Layanan pemindaian wajah otomatis sedang dalam mode standby. Guru, pegawai, dan siswa dapat melakukan presensi kehadiran menggunakan pemindai QR Code alternatif.
                 </p>
               </div>
             </div>
@@ -354,7 +354,7 @@ export default function PresensiPegawaiPage() {
               <Link href="/presensi/scan-qr">
                 <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5 shadow-sm">
                   <QrCode className="w-4 h-4" />
-                  <span>Scan QR Sekarang</span>
+                  <span>Scan QR Alternatif</span>
                 </Button>
               </Link>
             </div>
@@ -387,7 +387,7 @@ export default function PresensiPegawaiPage() {
                         )}
                         <div className="min-w-0">
                           <h2 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5 sm:gap-2 truncate">
-                            <span className="truncate">{cameraConfig?.cameraName || 'Camera Gerbang Utama'}</span>
+                            <span className="truncate">{cameraConfig?.cameraName || 'Kamera Presensi Utama'}</span>
                             <span className="text-[10px] py-0.5 px-2 rounded-full bg-indigo-500/20 text-indigo-300 font-mono shrink-0 border border-indigo-500/30">
                               {cameraConfig?.streamSourceType || 'LIVE STREAM'}
                             </span>
@@ -406,11 +406,11 @@ export default function PresensiPegawaiPage() {
                             setStreamError(false)
                             setStreamKey(Date.now())
                           }}
-                          title="Segarkan Stream Video"
+                          title="Segarkan Sinyal Video"
                           className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 px-2.5 rounded-lg text-xs"
                         >
                           <RefreshCw className="w-3.5 h-3.5 mr-1" />
-                          <span className="hidden sm:inline">Refresh</span>
+                          <span className="hidden sm:inline">Segarkan</span>
                         </Button>
                       </div>
                     </div>
@@ -421,7 +421,7 @@ export default function PresensiPegawaiPage() {
                         <img
                           key={streamKey}
                           src={`/api/face-stream?t=${streamKey}`}
-                          alt="Live Camera Presensi"
+                          alt="Live Kamera Presensi"
                           className="w-full h-full object-contain"
                           onError={() => setStreamError(true)}
                         />
@@ -441,17 +441,17 @@ export default function PresensiPegawaiPage() {
                           <div className="space-y-1">
                             <p className="font-bold text-xs sm:text-sm text-slate-200">
                               {!cameraConfig?.isActive
-                                ? 'AI Microservice FaceNet Dinonaktifkan Admin'
+                                ? 'Pemindai Wajah AI Dinonaktifkan'
                                 : (serviceStatus?.isOnline && cameraConfig?.isActive 
-                                    ? (serviceStatus?.is_running ? 'Menghubungkan stream video...' : 'Camera Standby (Siap Memindai)') 
-                                    : 'AI FaceNet Standby / Offline')}
+                                    ? (serviceStatus?.is_running ? 'Menghubungkan sinyal video...' : 'Kamera Standby (Siap Memindai)') 
+                                    : 'Layanan AI FaceNet Standby')}
                             </p>
                             <p className="text-[11px] text-slate-400">
                               {!cameraConfig?.isActive
-                                ? 'Layanan stream kamera dan identifikasi wajah otomatis dinonaktifkan oleh Superadmin.'
+                                ? 'Layanan pemindaian wajah otomatis sedang dinonaktifkan oleh administrator.'
                                 : (serviceStatus?.is_running && cameraConfig?.isActive
-                                    ? 'Menghubungkan stream video presensi...' 
-                                    : 'Arahkan wajah ke depan kamera gerbang untuk mencatat presensi harian secara otomatis.')}
+                                    ? 'Menghubungkan sinyal video presensi...' 
+                                    : 'Silakan posisikan wajah Anda di depan kamera untuk mencatat presensi harian.')}
                             </p>
                           </div>
                           <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">

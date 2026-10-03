@@ -1,7 +1,15 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
-import { CreateExtracurricularDto, UpdateExtracurricularDto, AddMemberDto } from './dto/extracurricular.dto';
+import {
+  CreateExtracurricularDto,
+  UpdateExtracurricularDto,
+  AddMemberDto,
+  CreateSessionDto,
+  UpdateSessionDto,
+  BulkSaveAttendanceDto,
+  BulkSaveGradesDto,
+} from './dto/extracurricular.dto';
 
 @Injectable()
 export class ExtracurricularService {
@@ -10,122 +18,7 @@ export class ExtracurricularService {
     private systemLogService: SystemLogService,
   ) {}
 
-  /**
-   * Seed otomatis ekstrakurikuler resmi default SMA Muhammadiyah 1 Ponorogo jika kosong di DB
-   */
-  private async ensureDefaultSeed() {
-    const count = await this.prisma.extracurricular.count();
-    if (count > 0) return;
-
-    const defaults = [
-      {
-        name: 'Gerakan Kepanduan Hizbul Wathan (HW)',
-        code: 'HW',
-        category: 'WAJIB_MUHAMMADIYAH',
-        description: 'Kepanduan wajib bernafaskan Islam Muhammadiyah untuk melatih kepemimpinan, kemandirian, dan kedisiplinan.',
-        scheduleDay: 'Jumat',
-        scheduleTime: '13:30 - 15:30',
-        location: 'Halaman Utama SMA Muhammadiyah 1 Ponorogo',
-        pembinaName: 'Fahrur Roji, S.Pd.I',
-        pembinaNip: '1382117',
-        targetPeserta: 'Wajib Kelas X & Pilihan Kelas XI/XII',
-      },
-      {
-        name: 'Perguruan Seni Bela Diri Tapak Suci Putra Muhammadiyah',
-        code: 'TS',
-        category: 'WAJIB_MUHAMMADIYAH',
-        description: 'Bela diri pencak silat resmi Muhammadiyah dengan tradisi prestasi kejuaraan nasional dan daerah.',
-        scheduleDay: 'Sabtu',
-        scheduleTime: '15:30 - 17:00',
-        location: 'Aula Sport Hall Lt. 3',
-        pembinaName: 'Ahmad Khoiruddin, S.Or',
-        pembinaNip: '1092881',
-        targetPeserta: 'Semua Tingkat (X, XI, XII)',
-      },
-      {
-        name: 'Ikatan Pelajar Muhammadiyah (PR IPM MUHIPO)',
-        code: 'IPM',
-        category: 'KEORGANISASIAN',
-        description: 'Organisasi otonom kesiswaan resmi untuk kaderisasi, kepemimpinan, dan literasi dakwah pelajar.',
-        scheduleDay: 'Senin & Kamis',
-        scheduleTime: '15:30 - 16:30',
-        location: 'Ruang Sekretariat IPM',
-        pembinaName: 'Drs. Supriyanto',
-        pembinaNip: '197008121998021001',
-        targetPeserta: 'Pengurus & Kader IPM',
-      },
-      {
-        name: 'Palang Merah Remaja (PMR WIRA MUHIPO)',
-        code: 'PMR',
-        category: 'KESEHATAN_SOSIAL',
-        description: 'Pelayanan pertolongan pertama, donor darah, UKS, dan aksi tanggap darurat kemanusiaan.',
-        scheduleDay: 'Kamis',
-        scheduleTime: '15:30 - 17:00',
-        location: 'Ruang UKS & Lapangan',
-        pembinaName: 'Siti Nurjanah, S.Pd',
-        pembinaNip: '198204152009012008',
-        targetPeserta: 'Semua Tingkat (X, XI, XII)',
-      },
-      {
-        name: 'Pasukan Pengibar Bendera (Paskibraka MUHIPO)',
-        code: 'PAS',
-        category: 'KEPEMIMPINAN',
-        description: 'Pelatihan baris berbaris, tata upacara bendera, dan persiapan seleksi paskibra kabupaten.',
-        scheduleDay: 'Selasa & Jumat',
-        scheduleTime: '15:30 - 17:00',
-        location: 'Lapangan Depan',
-        pembinaName: 'Bambang Eko S., S.Pd',
-        pembinaNip: '197603102008011005',
-        targetPeserta: 'Semua Tingkat (X, XI, XII)',
-      },
-      {
-        name: 'Klub Futsal & Sepak Bola',
-        code: 'FUTSAL',
-        category: 'OLAHRAGA',
-        description: 'Pengembangan bakat olahraga bola sepak dan futsal untuk persiapan kompetisi antar pelajar.',
-        scheduleDay: 'Rabu',
-        scheduleTime: '15:30 - 17:30',
-        location: 'Lapangan Futsal MUHIPO',
-        pembinaName: 'Rian Prasetyo, S.Pd',
-        pembinaNip: '-',
-        targetPeserta: 'Semua Tingkat (X, XI, XII)',
-      },
-      {
-        name: 'Klub Robotika & IoT Coding',
-        code: 'ROBOTIK',
-        category: 'AKADEMIK_SAINS',
-        description: 'Rancang bangun robot mikrokontroler, pemrograman Arduino, dan olimpiade teknologi cerdas.',
-        scheduleDay: 'Kamis',
-        scheduleTime: '15:30 - 17:00',
-        location: 'Lab Komputer 1',
-        pembinaName: 'Ir. Hendra Gunawan, S.Kom',
-        pembinaNip: '198506222010011012',
-        targetPeserta: 'Semua Tingkat (X, XI, XII)',
-      },
-      {
-        name: 'Tahfidz & Tilawatil Quran',
-        code: 'TAHFIDZ_EKS',
-        category: 'KEAGAMAAN',
-        description: 'Pendalaman hafalan Al-Quran, tajwid makharijul huruf, dan seni membaca Al-Quran (qiroah).',
-        scheduleDay: 'Senin - Rabu',
-        scheduleTime: '06:30 - 07:15',
-        location: 'Masjid Darul Hikmah MUHIPO',
-        pembinaName: 'Ust. Muhammad Wildan, S.Th.I',
-        pembinaNip: '-',
-        targetPeserta: 'Semua Tingkat (X, XI, XII)',
-      },
-    ];
-
-    for (const item of defaults) {
-      await this.prisma.extracurricular.create({
-        data: item,
-      });
-    }
-  }
-
-  async findAll(category?: string, search?: string) {
-    await this.ensureDefaultSeed();
-
+  async findAll(category?: string, search?: string): Promise<any[]> {
     const where: any = {};
     if (category && category !== 'ALL') {
       where.category = category;
@@ -139,9 +32,16 @@ export class ExtracurricularService {
       ];
     }
 
-    return this.prisma.extracurricular.findMany({
+    return (this.prisma as any).extracurricular.findMany({
       where,
       include: {
+        _count: {
+          select: {
+            members: true,
+            sessions: true,
+            grades: true,
+          },
+        },
         members: {
           include: {
             student: {
@@ -151,6 +51,10 @@ export class ExtracurricularService {
             },
           },
         },
+        sessions: {
+          orderBy: { sessionDate: 'desc' },
+          take: 3,
+        },
       },
       orderBy: [
         { isActive: 'desc' },
@@ -159,8 +63,8 @@ export class ExtracurricularService {
     });
   }
 
-  async findOne(id: string) {
-    const item = await this.prisma.extracurricular.findUnique({
+  async findOne(id: string): Promise<any> {
+    const item = await (this.prisma as any).extracurricular.findUnique({
       where: { id },
       include: {
         members: {
@@ -170,9 +74,40 @@ export class ExtracurricularService {
                 class: true,
               },
             },
+            attendances: {
+              include: {
+                session: true,
+              },
+            },
+            grades: true,
+          },
+          orderBy: [
+            { role: 'asc' },
+            { joinedAt: 'asc' },
+          ],
+        },
+        sessions: {
+          include: {
+            attendances: true,
           },
           orderBy: {
-            joinedAt: 'asc',
+            sessionDate: 'desc',
+          },
+        },
+        grades: {
+          include: {
+            member: {
+              include: {
+                student: {
+                  include: {
+                    class: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
           },
         },
       },
@@ -184,8 +119,181 @@ export class ExtracurricularService {
     return item;
   }
 
-  async create(dto: CreateExtracurricularDto, user: any) {
-    const extracurricular = await this.prisma.extracurricular.create({
+  /**
+   * Mengambil daftar ekskul yang dibina oleh pengguna yang sedang login
+   */
+  async getMyBinaan(user: any): Promise<any[]> {
+    const roles = [
+      user?.role,
+      user?.subRole,
+      user?.subRole2,
+      user?.subRole3,
+      user?.subRole4,
+      user?.subRole5,
+    ].filter(Boolean);
+
+    const isFullAccess = roles.some((r: string) =>
+      ['SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH', 'KESISWAAN', 'WAKA_KESISWAAN', 'BAU', 'ADMIN_TU'].includes(r) ||
+      r.startsWith('WAKA_')
+    );
+
+    if (isFullAccess) {
+      return this.findAll();
+    }
+
+    // Cari ekskul yang diasosiasikan dengan pembina ini
+    const whereConditions: any[] = [];
+
+    if (user?.id) {
+      whereConditions.push({ pembinaUserId: user.id });
+    }
+    if (user?.name) {
+      whereConditions.push({ pembinaName: { contains: user.name, mode: 'insensitive' } });
+      whereConditions.push({ pembina2Name: { contains: user.name, mode: 'insensitive' } });
+    }
+    if (user?.nipNbm) {
+      whereConditions.push({ pembinaNip: user.nipNbm });
+    }
+
+    let items = await (this.prisma as any).extracurricular.findMany({
+      where: {
+        OR: whereConditions.length > 0 ? whereConditions : [{ id: '__none__' }],
+      },
+      include: {
+        _count: {
+          select: {
+            members: true,
+            sessions: true,
+            grades: true,
+          },
+        },
+        members: {
+          include: {
+            student: {
+              include: {
+                class: true,
+              },
+            },
+          },
+        },
+        sessions: {
+          orderBy: { sessionDate: 'desc' },
+          take: 5,
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    // Jika belum ada ekskul yang terhubung langsung, kembalikan semua ekskul aktif agar pembina bisa mengelola
+    if (items.length === 0) {
+      items = await (this.prisma as any).extracurricular.findMany({
+        where: { isActive: true },
+        include: {
+          _count: {
+            select: {
+              members: true,
+              sessions: true,
+              grades: true,
+            },
+          },
+          members: {
+            include: {
+              student: {
+                include: {
+                  class: true,
+                },
+              },
+            },
+          },
+          sessions: {
+            orderBy: { sessionDate: 'desc' },
+            take: 5,
+          },
+        },
+        orderBy: { name: 'asc' },
+      });
+    }
+
+    return items;
+  }
+
+  /**
+   * Mengambil data ekstrakurikuler yang diikuti oleh siswa yang sedang login
+   */
+  async getStudentActivities(user: any): Promise<any> {
+    let studentId: string | null = null;
+
+    // Cari profil siswa dari userId atau username (NIS/NISN)
+    if (user?.id) {
+      const student = await this.prisma.student.findFirst({
+        where: {
+          OR: [
+            { userId: user.id },
+            { nis: user.username },
+            { nisn: user.username },
+          ],
+        },
+      });
+      if (student) {
+        studentId = student.id;
+      }
+    }
+
+    if (!studentId) {
+      return {
+        myMemberships: [],
+        availableCatalog: await (this.prisma as any).extracurricular.findMany({
+          where: { isActive: true },
+          orderBy: { name: 'asc' },
+        }),
+      };
+    }
+
+    const memberships = await (this.prisma as any).extracurricularMember.findMany({
+      where: { studentId },
+      include: {
+        extracurricular: {
+          include: {
+            sessions: {
+              orderBy: { sessionDate: 'desc' },
+            },
+          },
+        },
+        attendances: {
+          include: {
+            session: true,
+          },
+          orderBy: {
+            session: { sessionDate: 'desc' },
+          },
+        },
+        grades: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    const catalog = await (this.prisma as any).extracurricular.findMany({
+      where: { isActive: true },
+      include: {
+        _count: {
+          select: { members: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return {
+      myMemberships: memberships,
+      availableCatalog: catalog,
+    };
+  }
+
+  async create(dto: CreateExtracurricularDto, user: any): Promise<any> {
+    const extracurricular = await (this.prisma as any).extracurricular.create({
       data: {
         name: dto.name,
         code: dto.code || null,
@@ -195,6 +303,7 @@ export class ExtracurricularService {
         scheduleTime: dto.scheduleTime || null,
         location: dto.location || null,
         pembinaId: dto.pembinaId || null,
+        pembinaUserId: dto.pembinaUserId || null,
         pembinaName: dto.pembinaName,
         pembinaNip: dto.pembinaNip || null,
         pembinaContact: dto.pembinaContact || null,
@@ -219,10 +328,10 @@ export class ExtracurricularService {
     return extracurricular;
   }
 
-  async update(id: string, dto: UpdateExtracurricularDto, user: any) {
+  async update(id: string, dto: UpdateExtracurricularDto, user: any): Promise<any> {
     await this.findOne(id);
 
-    const updated = await this.prisma.extracurricular.update({
+    const updated = await (this.prisma as any).extracurricular.update({
       where: { id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
@@ -233,6 +342,7 @@ export class ExtracurricularService {
         ...(dto.scheduleTime !== undefined && { scheduleTime: dto.scheduleTime }),
         ...(dto.location !== undefined && { location: dto.location }),
         ...(dto.pembinaId !== undefined && { pembinaId: dto.pembinaId }),
+        ...(dto.pembinaUserId !== undefined && { pembinaUserId: dto.pembinaUserId }),
         ...(dto.pembinaName !== undefined && { pembinaName: dto.pembinaName }),
         ...(dto.pembinaNip !== undefined && { pembinaNip: dto.pembinaNip }),
         ...(dto.pembinaContact !== undefined && { pembinaContact: dto.pembinaContact }),
@@ -256,9 +366,9 @@ export class ExtracurricularService {
     return updated;
   }
 
-  async delete(id: string, user: any) {
+  async delete(id: string, user: any): Promise<any> {
     const existing = await this.findOne(id);
-    await this.prisma.extracurricular.delete({ where: { id } });
+    await (this.prisma as any).extracurricular.delete({ where: { id } });
 
     await this.systemLogService.log({
       category: 'AKADEMIK',
@@ -272,10 +382,10 @@ export class ExtracurricularService {
     return { success: true, message: 'Ekstrakurikuler berhasil dihapus.' };
   }
 
-  async addMember(extracurricularId: string, dto: AddMemberDto) {
+  async addMember(extracurricularId: string, dto: AddMemberDto, user?: any): Promise<any> {
     await this.findOne(extracurricularId);
 
-    const existingMember = await this.prisma.extracurricularMember.findUnique({
+    const existingMember = await (this.prisma as any).extracurricularMember.findUnique({
       where: {
         extracurricularId_studentId: {
           extracurricularId,
@@ -288,7 +398,7 @@ export class ExtracurricularService {
       throw new ConflictException('Siswa ini sudah terdaftar di ekstrakurikuler tersebut.');
     }
 
-    return this.prisma.extracurricularMember.create({
+    const member = await (this.prisma as any).extracurricularMember.create({
       data: {
         extracurricularId,
         studentId: dto.studentId,
@@ -303,27 +413,303 @@ export class ExtracurricularService {
         },
       },
     });
+
+    return member;
   }
 
-  async removeMember(memberId: string) {
-    return this.prisma.extracurricularMember.delete({
+  async removeMember(memberId: string, user?: any): Promise<any> {
+    return (this.prisma as any).extracurricularMember.delete({
       where: { id: memberId },
     });
   }
 
-  async getStats() {
-    await this.ensureDefaultSeed();
+  // ==================== PERTEMUAN & PRESENSI MINGGUAN ====================
 
-    const [totalEkskul, activeEkskul, totalAnggota] = await Promise.all([
-      this.prisma.extracurricular.count(),
-      this.prisma.extracurricular.count({ where: { isActive: true } }),
-      this.prisma.extracurricularMember.count({ where: { status: 'AKTIF' } }),
+  async createSession(extracurricularId: string, dto: CreateSessionDto, user: any): Promise<any> {
+    const ekskul = await this.findOne(extracurricularId);
+
+    const session = await (this.prisma as any).extracurricularSession.create({
+      data: {
+        extracurricularId,
+        title: dto.title,
+        sessionDate: new Date(dto.sessionDate),
+        startTime: dto.startTime || null,
+        endTime: dto.endTime || null,
+        location: dto.location || ekskul.location || null,
+        topic: dto.topic || null,
+        trainerName: dto.trainerName || ekskul.pembinaName,
+        notes: dto.notes || null,
+        createdBy: user?.name || user?.email || 'PEMBINA',
+      },
+    });
+
+    // Otomatis buat baris presensi default 'HADIR' untuk seluruh anggota aktif
+    const members = await (this.prisma as any).extracurricularMember.findMany({
+      where: { extracurricularId, status: 'AKTIF' },
+    });
+
+    if (members.length > 0) {
+      await (this.prisma as any).extracurricularAttendance.createMany({
+        data: members.map((m: any) => ({
+          sessionId: session.id,
+          memberId: m.id,
+          studentId: m.studentId,
+          status: 'HADIR',
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    return this.getSessionDetail(session.id);
+  }
+
+  async updateSession(sessionId: string, dto: UpdateSessionDto, user: any): Promise<any> {
+    const existing = await (this.prisma as any).extracurricularSession.findUnique({
+      where: { id: sessionId },
+    });
+    if (!existing) {
+      throw new NotFoundException('Sesi pertemuan tidak ditemukan.');
+    }
+
+    return (this.prisma as any).extracurricularSession.update({
+      where: { id: sessionId },
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.sessionDate !== undefined && { sessionDate: new Date(dto.sessionDate) }),
+        ...(dto.startTime !== undefined && { startTime: dto.startTime }),
+        ...(dto.endTime !== undefined && { endTime: dto.endTime }),
+        ...(dto.location !== undefined && { location: dto.location }),
+        ...(dto.topic !== undefined && { topic: dto.topic }),
+        ...(dto.trainerName !== undefined && { trainerName: dto.trainerName }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
+      },
+    });
+  }
+
+  async deleteSession(sessionId: string, user: any): Promise<any> {
+    const existing = await (this.prisma as any).extracurricularSession.findUnique({
+      where: { id: sessionId },
+    });
+    if (!existing) {
+      throw new NotFoundException('Sesi pertemuan tidak ditemukan.');
+    }
+
+    await (this.prisma as any).extracurricularSession.delete({
+      where: { id: sessionId },
+    });
+
+    return { success: true, message: 'Sesi pertemuan berhasil dihapus.' };
+  }
+
+  async getSessionDetail(sessionId: string): Promise<any> {
+    const session = await (this.prisma as any).extracurricularSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        extracurricular: {
+          include: {
+            members: {
+              include: {
+                student: {
+                  include: {
+                    class: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        attendances: {
+          include: {
+            member: {
+              include: {
+                student: {
+                  include: {
+                    class: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Sesi pertemuan tidak ditemukan.');
+    }
+    return session;
+  }
+
+  async saveSessionAttendance(sessionId: string, dto: BulkSaveAttendanceDto, user: any): Promise<any> {
+    const session = await (this.prisma as any).extracurricularSession.findUnique({
+      where: { id: sessionId },
+    });
+    if (!session) {
+      throw new NotFoundException('Sesi pertemuan tidak ditemukan.');
+    }
+
+    for (const record of dto.attendances) {
+      await (this.prisma as any).extracurricularAttendance.upsert({
+        where: {
+          sessionId_memberId: {
+            sessionId,
+            memberId: record.memberId,
+          },
+        },
+        create: {
+          sessionId,
+          memberId: record.memberId,
+          studentId: record.studentId,
+          status: record.status,
+          notes: record.notes || null,
+        },
+        update: {
+          status: record.status,
+          notes: record.notes || null,
+        },
+      });
+    }
+
+    return { success: true, message: 'Presensi pertemuan berhasil disimpan.' };
+  }
+
+  // ==================== NILAI & PREDIKAT RAPOR ====================
+
+  async saveGrades(extracurricularId: string, dto: BulkSaveGradesDto, user: any): Promise<any> {
+    await this.findOne(extracurricularId);
+
+    for (const grade of dto.grades) {
+      const academicYear = grade.academicYear || '2025/2026';
+      const semester = grade.semester || 'GANJIL';
+
+      await (this.prisma as any).extracurricularGrade.upsert({
+        where: {
+          extracurricularId_studentId_academicYear_semester: {
+            extracurricularId,
+            studentId: grade.studentId,
+            academicYear,
+            semester,
+          },
+        },
+        create: {
+          extracurricularId,
+          memberId: grade.memberId,
+          studentId: grade.studentId,
+          academicYear,
+          semester,
+          score: grade.score || 85,
+          predicate: grade.predicate,
+          description: grade.description || null,
+          createdBy: user?.name || user?.email || 'PEMBINA',
+        },
+        update: {
+          score: grade.score !== undefined ? grade.score : undefined,
+          predicate: grade.predicate,
+          description: grade.description || null,
+        },
+      });
+    }
+
+    return { success: true, message: 'Nilai ekstrakurikuler berhasil disimpan.' };
+  }
+
+  // ==================== REKAPITULASI REALTIME ====================
+
+  async getRecap(extracurricularId: string): Promise<any> {
+    const ekskul: any = await this.findOne(extracurricularId);
+
+    const totalMembers = ekskul.members?.length || 0;
+    const totalSessions = ekskul.sessions?.length || 0;
+
+    const memberRecaps = (ekskul.members || []).map((member: any) => {
+      const attendances = member.attendances || [];
+      const hadirCount = attendances.filter((a: any) => a.status === 'HADIR').length;
+      const izinCount = attendances.filter((a: any) => a.status === 'IZIN').length;
+      const sakitCount = attendances.filter((a: any) => a.status === 'SAKIT').length;
+      const alfaCount = attendances.filter((a: any) => a.status === 'ALFA').length;
+
+      const attendancePercentage =
+        totalSessions > 0 ? Math.round((hadirCount / totalSessions) * 100) : 100;
+
+      const latestGrade = member.grades?.[0] || null;
+
+      return {
+        memberId: member.id,
+        studentId: member.studentId,
+        studentName: member.student?.name || '-',
+        nisn: member.student?.nisn || '-',
+        nis: member.student?.nis || '-',
+        className: member.student?.class?.name || '-',
+        gender: member.student?.gender || '-',
+        role: member.role || 'ANGGOTA',
+        hadirCount,
+        izinCount,
+        sakitCount,
+        alfaCount,
+        attendancePercentage,
+        grade: latestGrade
+          ? {
+              score: latestGrade.score,
+              predicate: latestGrade.predicate,
+              description: latestGrade.description,
+              academicYear: latestGrade.academicYear,
+              semester: latestGrade.semester,
+            }
+          : null,
+      };
+    });
+
+    // Statistik agregat
+    const avgAttendance =
+      memberRecaps.length > 0
+        ? Math.round(
+            memberRecaps.reduce((acc: number, curr: any) => acc + curr.attendancePercentage, 0) /
+              memberRecaps.length,
+          )
+        : 0;
+
+    const gradeDistribution = {
+      sangatBaik: memberRecaps.filter((m: any) => m.grade?.predicate === 'A' || m.grade?.predicate === 'Sangat Baik').length,
+      baik: memberRecaps.filter((m: any) => m.grade?.predicate === 'B' || m.grade?.predicate === 'Baik').length,
+      cukup: memberRecaps.filter((m: any) => m.grade?.predicate === 'C' || m.grade?.predicate === 'Cukup').length,
+      kurang: memberRecaps.filter((m: any) => m.grade?.predicate === 'D' || m.grade?.predicate === 'Kurang').length,
+      belumDinilai: memberRecaps.filter((m: any) => !m.grade).length,
+    };
+
+    return {
+      extracurricular: {
+        id: ekskul.id,
+        name: ekskul.name,
+        code: ekskul.code,
+        category: ekskul.category,
+        scheduleDay: ekskul.scheduleDay,
+        scheduleTime: ekskul.scheduleTime,
+        location: ekskul.location,
+        pembinaName: ekskul.pembinaName,
+      },
+      stats: {
+        totalMembers,
+        totalSessions,
+        avgAttendance,
+        gradeDistribution,
+      },
+      memberRecaps,
+    };
+  }
+
+  async getStats(): Promise<any> {
+    const [totalEkskul, activeEkskul, totalAnggota, totalSessions] = await Promise.all([
+      (this.prisma as any).extracurricular.count(),
+      (this.prisma as any).extracurricular.count({ where: { isActive: true } }),
+      (this.prisma as any).extracurricularMember.count({ where: { status: 'AKTIF' } }),
+      (this.prisma as any).extracurricularSession.count(),
     ]);
 
     return {
       totalEkskul,
       activeEkskul,
       totalAnggota,
+      totalSessions,
     };
   }
 }

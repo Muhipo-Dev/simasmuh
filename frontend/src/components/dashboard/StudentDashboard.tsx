@@ -8,7 +8,7 @@ import {
   GraduationCap, Award, Sparkles, TrendingUp, CheckCircle2,
   Laptop, Clock, Users, QrCode, HeartHandshake, X, Search, User, Info,
   ShieldCheck, AlertTriangle, FileText, ShieldAlert, BookMarked,
-  Table as TableIcon, LayoutGrid, Printer
+  Table as TableIcon, LayoutGrid, Printer, ChevronRight
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -129,6 +129,19 @@ export function StudentDashboard({
     enabled: !!activeStudent?.id,
     staleTime: 30000,
   })
+
+  // 5. LIVE STUDENT EXTRACURRICULAR FETCHING
+  const { data: ekskulData } = useQuery<any>({
+    queryKey: ['student-dashboard-ekskul'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/extracurricular/student/my-activities')
+      if (!res.ok) return { myMemberships: [], availableCatalog: [] }
+      return res.json()
+    },
+    staleTime: 30000,
+  })
+
+  const studentMemberships = ekskulData?.myMemberships || []
 
   // Calculations & Formatters
   const todayDayIndex = new Date().getDay()
@@ -1530,6 +1543,67 @@ export function StudentDashboard({
                   </div>
                 </div>
               </div>
+            </div>
+          </Card>
+
+          {/* Card: Ekstrakurikuler Siswa Widget */}
+          <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3.5 sm:p-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  Ekstrakurikuler Saya
+                </h3>
+              </div>
+              <Link href="/siswa/ekstrakurikuler">
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold hover:underline flex items-center gap-0.5">
+                  Detail <ChevronRight className="w-3 h-3" />
+                </span>
+              </Link>
+            </div>
+
+            <div className="py-2.5 space-y-2">
+              {studentMemberships.length > 0 ? (
+                studentMemberships.map((m: any) => {
+                  const latestGrade = m.grades?.[0]
+                  return (
+                    <div
+                      key={m.id}
+                      className="p-2.5 rounded-xl border border-amber-200/60 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 space-y-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate">
+                          {m.extracurricular?.name}
+                        </span>
+                        <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[9px] font-bold">
+                          {m.role}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-[10.5px] text-slate-500 pt-0.5">
+                        <span className="truncate">
+                          {m.extracurricular?.scheduleDay || '-'} ({m.extracurricular?.scheduleTime || '-'})
+                        </span>
+                        {latestGrade && (
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                            Predikat {latestGrade.predicate}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="py-4 text-center text-xs text-slate-400 space-y-1.5">
+                  <p>Belum terdaftar di ekstrakurikuler.</p>
+                  <Link href="/siswa/ekstrakurikuler">
+                    <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold text-amber-600 border-amber-300">
+                      Jelajahi Ekstrakurikuler
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </Card>
 

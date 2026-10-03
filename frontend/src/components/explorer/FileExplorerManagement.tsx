@@ -257,6 +257,8 @@ export function FileExplorerManagement({ initialPath = '', forcedTitle }: FileEx
   const quickAccessItems = [
     { name: 'Root Server', path: '', icon: HardDrive, color: 'text-slate-600 dark:text-slate-300' },
     { name: 'Arsip Backup Data', path: 'backups', icon: Database, color: 'text-rose-500' },
+    { name: 'Dokumentasi Supervisi', path: 'supervisi', icon: FileCheck, color: 'text-violet-500' },
+    { name: 'Notulensi & Rapat', path: 'notulensi', icon: FileText, color: 'text-cyan-500' },
     { name: 'Bukti Pembayaran', path: 'payment-proofs', icon: Receipt, color: 'text-orange-500' },
     { name: 'Foto Profil & AI', path: 'profiles', icon: Camera, color: 'text-blue-500' },
     { name: 'Berkas Siswa', path: 'students', icon: Users, color: 'text-indigo-500' },

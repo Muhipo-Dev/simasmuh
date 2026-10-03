@@ -8,7 +8,7 @@ import {
   FileText, Plus, Search, Calendar, Clock, MapPin, Users, 
   CheckCircle2, Download, Printer, FileSpreadsheet, Sparkles, 
   Trash2, Edit, Eye, Filter, UserCheck, CheckSquare, AlertCircle, 
-  Share2, BookOpen, Send, Loader2, RefreshCw
+  Share2, BookOpen, Send, Loader2, RefreshCw, UploadCloud, Image as ImageIcon, X
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -58,6 +58,9 @@ export function NotulensiRapatManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [selectedNotulensi, setSelectedNotulensi] = useState<NotulensiItem | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [fotoFile, setFotoFile] = useState<File | null>(null)
+  const [fotoPreview, setFotoPreview] = useState<string>('')
+  const fotoInputRef = React.useRef<HTMLInputElement>(null)
 
   const [formState, setFormState] = useState({
     judulRapat: '',
@@ -101,10 +104,23 @@ export function NotulensiRapatManagement() {
   // 2. Mutation Tambah Notulensi
   const createMutation = useMutation({
     mutationFn: async (payload: typeof formState) => {
+      let finalFoto = payload.fotoDokumentasi
+      if (fotoFile && fotoPreview.startsWith('data:image')) {
+        const uploadRes = await authenticatedFetch('/api-backend/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: fotoPreview, folder: 'notulensi' })
+        })
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json()
+          finalFoto = uploadData.url || finalFoto
+        }
+      }
+
       const res = await authenticatedFetch('/api-backend/notulensi-rapat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ ...payload, fotoDokumentasi: finalFoto || undefined })
       })
       if (!res.ok) {
         const err = await res.json().catch(() => null)
@@ -115,6 +131,8 @@ export function NotulensiRapatManagement() {
     onSuccess: (newRecord) => {
       queryClient.invalidateQueries({ queryKey: ['notulensi-rapat'] })
       setIsAddModalOpen(false)
+      setFotoFile(null)
+      setFotoPreview('')
       setFormState({
         judulRapat: '',
         agenda: '',
@@ -617,16 +635,82 @@ export function NotulensiRapatManagement() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/30">
               <div>
-                <Label className="text-xs font-bold text-purple-900 dark:text-purple-300">
-                  Foto Dokumentasi Rapat (URL / Link Foto)
+                <Label className="text-xs font-bold text-purple-900 dark:text-purple-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-purple-600" />
+                    Foto Dokumentasi Rapat
+                  </span>
+                  {fotoFile && (
+                    <span className="text-[10px] text-purple-600 font-semibold truncate max-w-[120px]">
+                      {fotoFile.name}
+                    </span>
+                  )}
                 </Label>
-                <Input
-                  placeholder="https://... atau /uploads/dokumentasi-rapat.jpg"
-                  value={formState.fotoDokumentasi}
-                  onChange={(e) => setFormState({ ...formState, fotoDokumentasi: e.target.value })}
-                  className="mt-1 h-9 rounded-xl text-xs bg-white dark:bg-slate-900"
+
+                <input
+                  type="file"
+                  ref={fotoInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setFotoFile(file)
+                      const reader = new FileReader()
+                      reader.onload = () => {
+                        setFotoPreview(reader.result as string)
+                      }
+                      reader.readAsDataURL(file)
+                    }
+                  }}
                 />
-                <span className="text-[10px] text-slate-500">Bukti visual kehadiran fisik peserta rapat</span>
+
+                {fotoPreview || formState.fotoDokumentasi ? (
+                  <div className="relative inline-block mt-1.5 rounded-xl overflow-hidden border border-purple-200 dark:border-purple-800 max-w-full shadow-xs">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={fotoPreview || formState.fotoDokumentasi}
+                      alt="Preview Dokumentasi"
+                      className="w-full h-24 object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-1 p-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => fotoInputRef.current?.click()}
+                        className="h-7 px-2 text-[10px] font-bold bg-white/90 text-slate-900"
+                      >
+                        Ganti
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          setFotoFile(null)
+                          setFotoPreview('')
+                          setFormState({ ...formState, fotoDokumentasi: '' })
+                          if (fotoInputRef.current) fotoInputRef.current.value = ''
+                        }}
+                        className="h-7 px-2 text-[10px] font-bold"
+                      >
+                        <X className="w-3 h-3 mr-1" /> Hapus
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fotoInputRef.current?.click()}
+                    className="mt-1 w-full h-9 rounded-xl border-purple-200 text-purple-700 dark:text-purple-300 font-bold hover:bg-purple-50 text-xs flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900"
+                  >
+                    <UploadCloud className="w-3.5 h-3.5 text-purple-600" />
+                    Unggah Foto Dokumentasi
+                  </Button>
+                )}
+                <span className="text-[10px] text-slate-500 mt-1 block">Foto visual kehadiran fisik rapat</span>
               </div>
 
               <div>

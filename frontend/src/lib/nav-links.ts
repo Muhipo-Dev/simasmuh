@@ -94,6 +94,7 @@ export const siswaLinks = [
   { name: 'Prestasi Siswa', href: '/informasi/prestasi', icon: Trophy },
   { name: 'Log Izin Saya', href: '/presensi/izin-siswa', icon: ClipboardCheck },
   { name: 'Log Dispensasi', href: '/presensi/dispensasi', icon: Award },
+  { name: 'Ekstrakurikuler', href: '/siswa/ekstrakurikuler', icon: Sparkles },
   { name: 'Keuangan', href: '/keuangan/laporan', icon: Wallet },
   { name: 'Etika & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck },
   { name: 'Notifikasi Email', href: '/pengaturan/notifikasi-pengguna', icon: Mail },
@@ -346,6 +347,12 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   }
   if (pathname.startsWith('/akademik/e-rapor')) {
     return isGuru || isWaliKelas || isSiswa || isWaliMurid || isBau || isKurikulum || isKepalaSekolah
+  }
+  if (pathname.startsWith('/siswa/ekstrakurikuler')) {
+    return isSiswa || isGuru || isBau || isKepalaSekolah || isWaka || isWaliMurid
+  }
+  if (pathname.startsWith('/akademik/ekstrakurikuler')) {
+    return isKesiswaan || isWaka || isKepalaSekolah || isBau || isGuru || roles.includes('PEMBINA_EKSTRA') || roles.includes('PEMBINA_EXTRA')
   }
   if (pathname.startsWith('/akademik/etika-tatib')) {
     return isTatib || isBk || isGuru || isSiswa || isWaliMurid || isBau || isKepalaSekolah

@@ -33,6 +33,7 @@ import { NotulensiRapatManagement } from '@/components/tu/NotulensiRapatManageme
 import { KegiatanSekolahManagement } from '@/components/tu/KegiatanSekolahManagement'
 import { DisposisiUserManagement } from '@/components/tu/DisposisiUserManagement'
 import { FileExplorerManagement } from '@/components/explorer/FileExplorerManagement'
+import { PembinaEkstrakurikulerManagement } from '@/components/academic/PembinaEkstrakurikulerManagement'
 
 type GuestEntry = {
   id: string
@@ -875,6 +876,8 @@ export default function FiturSubRolePage() {
         <NotulensiRapatManagement />
       ) : slug === 'catatan-kedisiplinan' || slug === 'ketertiban' || slug === 'bk-bp' ? (
         <InteractiveCharacterAssessmentManagement mode={slug === 'bk-bp' ? 'BK' : slug === 'catatan-kedisiplinan' ? 'GURU' : 'KETERTIBAN'} />
+      ) : slug === 'ekstrakulikuler' || slug === 'ekstrakurikuler' ? (
+        <PembinaEkstrakurikulerManagement />
       ) : slug === 'file-explorer' ? (
         <FileExplorerManagement />
       ) : (

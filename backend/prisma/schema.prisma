@@ -1064,6 +1064,7 @@ model Extracurricular {
   
   // Pembina / Pelatih
   pembinaId   String?  // Relation to TeacherProfile jika pembina adalah guru
+  pembinaUserId String? // User ID pembina (jika login sebagai guru/pembina)
   pembinaName String   // Nama Pembina / Pelatih Utama
   pembinaNip  String?  // NIP / NBM Pembina
   pembinaContact String? // No. WA / Telp Pembina
@@ -1080,10 +1081,13 @@ model Extracurricular {
   updatedAt   DateTime @updatedAt
 
   members     ExtracurricularMember[]
+  sessions    ExtracurricularSession[]
+  grades      ExtracurricularGrade[]
 
   @@index([category])
   @@index([isActive])
   @@index([pembinaId])
+  @@index([pembinaUserId])
 }
 
 model ExtracurricularMember {
@@ -1097,6 +1101,8 @@ model ExtracurricularMember {
 
   extracurricular   Extracurricular @relation(fields: [extracurricularId], references: [id], onDelete: Cascade)
   student           Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attendances       ExtracurricularAttendance[]
+  grades            ExtracurricularGrade[]
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -1105,3 +1111,72 @@ model ExtracurricularMember {
   @@index([extracurricularId])
   @@index([studentId])
 }
+
+model ExtracurricularSession {
+  id                String                      @id @default(uuid())
+  extracurricularId String
+  title             String                      // e.g. "Pertemuan 1 - Latihan Fisik", "Rapat Kerja IPM"
+  sessionDate       DateTime                    // Tanggal pertemuan
+  startTime         String?                     // e.g. "15:30"
+  endTime           String?                     // e.g. "17:00"
+  location          String?                     // Lokasi pertemuan
+  topic             String?                     // Materi / Agenda latihan
+  trainerName       String?                     // Pelatih / Pembina yang memimpin
+  notes             String?                     // Catatan evaluasi kegiatan
+
+  extracurricular   Extracurricular             @relation(fields: [extracurricularId], references: [id], onDelete: Cascade)
+  attendances       ExtracurricularAttendance[]
+
+  createdBy         String?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  @@index([extracurricularId])
+  @@index([sessionDate])
+}
+
+model ExtracurricularAttendance {
+  id                String                  @id @default(uuid())
+  sessionId         String
+  memberId          String
+  studentId         String
+  status            String                  @default("HADIR") // HADIR, IZIN, SAKIT, ALFA
+  notes             String?
+  recordedAt        DateTime                @default(now())
+
+  session           ExtracurricularSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  member            ExtracurricularMember   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@unique([sessionId, memberId])
+  @@index([sessionId])
+  @@index([memberId])
+  @@index([studentId])
+}
+
+model ExtracurricularGrade {
+  id                String                  @id @default(uuid())
+  extracurricularId String
+  memberId          String
+  studentId         String
+  academicYear      String                  @default("2025/2026")
+  semester          String                  @default("GANJIL") // GANJIL, GENAP
+  score             Float?                  @default(85) // 0 - 100
+  predicate         String                  @default("A") // Sangat Baik / Baik / Cukup / Kurang (A/B/C/D)
+  description       String?                 // Keterangan capaian kompetensi rapor
+
+  extracurricular   Extracurricular         @relation(fields: [extracurricularId], references: [id], onDelete: Cascade)
+  member            ExtracurricularMember   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdBy         String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@unique([extracurricularId, studentId, academicYear, semester])
+  @@index([extracurricularId])
+  @@index([memberId])
+  @@index([studentId])
+}
+

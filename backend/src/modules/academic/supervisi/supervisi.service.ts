@@ -445,5 +445,64 @@ export class SupervisiService {
     });
     return this.getRubrik(targetJenis);
   }
+
+  /**
+   * Mengambil seluruh Guru dan Staf Pegawai (Tendik/TU/Kepegawaian) sebagai sasaran supervisi
+   */
+  async getSupervisiTargets() {
+    // 1. Ambil semua profil guru eksisting
+    const existingProfiles = await this.prisma.teacherProfile.findMany({
+      include: {
+        user: true,
+      },
+    });
+
+    // 2. Ambil user staf / tendik / pegawai / guru yang belum memiliki TeacherProfile
+    const existingUserIds = new Set(existingProfiles.map((p) => p.userId));
+    const nonStudentUsers = await this.prisma.user.findMany({
+      where: {
+        role: { notIn: ['SISWA', 'WALI_MURID'] },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        subRole: true,
+        subRole2: true,
+        subRole3: true,
+        subRole4: true,
+        subRole5: true,
+        nipNbm: true,
+        phone: true,
+      },
+    });
+
+    // Buat profil otomatis jika ada staf pegawai yang belum memiliki teacherProfile
+    for (const u of nonStudentUsers) {
+      if (!existingUserIds.has(u.id)) {
+        try {
+          const created = await this.prisma.teacherProfile.create({
+            data: {
+              userId: u.id,
+              nip: u.nipNbm || null,
+              phone: u.phone || null,
+            },
+            include: { user: true },
+          });
+          existingProfiles.push(created);
+        } catch (_) {
+          // Abaikan jika sudah terbuat bersamaan
+        }
+      }
+    }
+
+    // Urutkan alfabetis nama
+    return existingProfiles.sort((a, b) => {
+      const nameA = a.user?.name || '';
+      const nameB = b.user?.name || '';
+      return nameA.localeCompare(nameB);
+    });
+  }
 }
 

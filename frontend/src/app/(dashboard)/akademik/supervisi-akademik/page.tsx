@@ -18,7 +18,8 @@ import {
   Sparkles, UserCheck, Eye, User, BookCheck, Award, 
   FileText, Plus, Printer, Trash2, Camera, AlertCircle,
   FileCheck, CalendarDays, Check, RefreshCw, BarChart3,
-  Search, ShieldCheck, Download, Pencil, Sliders, Settings2, RotateCcw
+  Search, ShieldCheck, Download, Pencil, Sliders, Settings2, RotateCcw,
+  UploadCloud, Image as ImageIcon, X
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -240,6 +241,10 @@ export default function SupervisiAkademikPage() {
   const [formCatatanPerbaikan, setFormCatatanPerbaikan] = useState('')
   const [formRekomendasi, setFormRekomendasi] = useState('')
   const [formFotoUrl, setFormFotoUrl] = useState('')
+  const [fotoFile, setFotoFile] = useState<File | null>(null)
+  const [fotoPreview, setFotoPreview] = useState<string>('')
+  const [uploadingFoto, setUploadingFoto] = useState(false)
+  const fotoInputRef = React.useRef<HTMLInputElement>(null)
   const [savingSupervisi, setSavingSupervisi] = useState(false)
 
   // State Dialog & Form Manajemen Rubrik (Bisa Diubah oleh Semua WAKA)
@@ -274,11 +279,11 @@ export default function SupervisiAkademikPage() {
     queryFn: () => authenticatedQuery('/api-backend/settings')
   })
 
-  // 2. Ambil Master Guru
+  // 2. Ambil Master Guru & Seluruh Staf Pegawai / Tendik
   const { data: rawTeachers, isLoading: loadingTeachers } = useQuery<any[]>({
-    queryKey: ['teachers-supervisi-all'],
+    queryKey: ['teachers-and-staff-supervisi-targets'],
     queryFn: async () => {
-      const res = await authenticatedFetch('/api-backend/teachers')
+      const res = await authenticatedFetch('/api-backend/supervisi/targets')
       if (!res.ok) return []
       return res.json()
     },
@@ -509,6 +514,8 @@ export default function SupervisiAkademikPage() {
       setFormCatatanPerbaikan('')
       setFormRekomendasi('')
       setFormFotoUrl('')
+      setFotoFile(null)
+      setFotoPreview('')
       setActiveTab('riwayat')
     },
     onError: (err: any) => {
@@ -581,31 +588,53 @@ export default function SupervisiAkademikPage() {
       return
     }
 
-    const selectedTeacherObj = teachersList.find(t => t.id === formTeacherId)
-    const teacherName = selectedTeacherObj?.user?.name || selectedTeacherObj?.name || 'Guru'
-    const jenisInfo = JENIS_SUPERVISI.find(j => j.id === formJenisSupervisi)
+    setSavingSupervisi(true)
+    let finalPhotoUrl = formFotoUrl
 
-    const payload = {
-      teacherId: formTeacherId,
-      scheduleId: formScheduleId || undefined,
-      jenisId: formJenisSupervisi,
-      jenisLabel: jenisInfo?.label || 'Pembelajaran Kurikulum Merdeka',
-      kategori: jenisInfo?.category || 'AKADEMIK',
-      date: formTanggal ? new Date(formTanggal).toISOString() : new Date().toISOString(),
-      className: formKelas || 'Umum',
-      subjectName: formMapel || 'Tugas Pokok',
-      material: formMateri || 'Penilaian Kinerja Reguler',
-      scores: formScores,
-      finalScore: calculatedResult.finalScore,
-      predicate: calculatedResult.predicate,
-      catatanKekuatan: formCatatanKekuatan,
-      catatanPerbaikan: formCatatanPerbaikan,
-      rekomendasi: formRekomendasi,
-      photoUrl: formFotoUrl,
-      supervisorName: userName,
+    try {
+      if (fotoFile && fotoPreview.startsWith('data:image')) {
+        setUploadingFoto(true)
+        const uploadRes = await authenticatedFetch('/api-backend/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: fotoPreview, folder: 'supervisi' }),
+        })
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json()
+          finalPhotoUrl = uploadData.url || finalPhotoUrl
+        }
+        setUploadingFoto(false)
+      }
+
+      const selectedTeacherObj = teachersList.find(t => t.id === formTeacherId)
+      const jenisInfo = JENIS_SUPERVISI.find(j => j.id === formJenisSupervisi)
+
+      const payload = {
+        teacherId: formTeacherId,
+        scheduleId: formScheduleId || undefined,
+        jenisId: formJenisSupervisi,
+        jenisLabel: jenisInfo?.label || 'Pembelajaran Kurikulum Merdeka',
+        kategori: jenisInfo?.category || 'AKADEMIK',
+        date: formTanggal ? new Date(formTanggal).toISOString() : new Date().toISOString(),
+        className: formKelas || 'Umum',
+        subjectName: formMapel || 'Tugas Pokok',
+        material: formMateri || 'Penilaian Kinerja Reguler',
+        scores: formScores,
+        finalScore: calculatedResult.finalScore,
+        predicate: calculatedResult.predicate,
+        catatanKekuatan: formCatatanKekuatan,
+        catatanPerbaikan: formCatatanPerbaikan,
+        rekomendasi: formRekomendasi,
+        photoUrl: finalPhotoUrl || undefined,
+        supervisorName: userName,
+      }
+
+      saveSupervisiMutation.mutate(payload)
+    } catch (err: any) {
+      Swal.fire('Gagal Menyimpan', err.message || 'Terjadi kesalahan saat mengunggah foto/data.', 'error')
+    } finally {
+      setSavingSupervisi(false)
     }
-
-    saveSupervisiMutation.mutate(payload)
   }
 
   // Tambah Jadwal Supervisi Baru
@@ -869,12 +898,17 @@ export default function SupervisiAkademikPage() {
                       required
                       className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">-- Pilih Pendidik / Tendik --</option>
-                      {teachersList.map((t: any) => (
-                        <option key={t.id} value={t.id}>
-                          {t.user?.name || t.name || 'Guru'} ({t.nip ? `NIP. ${t.nip}` : 'Staf / Guru'})
-                        </option>
-                      ))}
+                      <option value="">-- Pilih Pendidik / Staf Pegawai (Tendik) --</option>
+                      {teachersList.map((t: any) => {
+                        const name = t.user?.name || t.name || 'Pegawai'
+                        const role = t.user?.role?.replace('_', ' ') || 'GURU'
+                        const nipText = t.nip || t.user?.nipNbm ? `NIP/NBM. ${t.nip || t.user?.nipNbm}` : role
+                        return (
+                          <option key={t.id} value={t.id}>
+                            {name} ({nipText})
+                          </option>
+                        )
+                      })}
                     </select>
                   </div>
 
@@ -1104,16 +1138,89 @@ export default function SupervisiAkademikPage() {
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    URL Foto Dokumentasi Pelaksanaan Supervisi (Opsional)
-                  </Label>
-                  <Input
-                    placeholder="https://... atau paste link foto dokumentasi supervisi kelas"
-                    value={formFotoUrl}
-                    onChange={(e) => setFormFotoUrl(e.target.value)}
-                    className="h-10 rounded-xl text-xs"
+                {/* Unggah Foto Bukti Dokumentasi */}
+                <div className="space-y-2 p-3.5 rounded-2xl bg-blue-50/40 dark:bg-blue-950/20 border-2 border-dashed border-blue-200 dark:border-blue-800/60">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-blue-600" />
+                      Foto Bukti Dokumentasi Pelaksanaan Supervisi
+                      <span className="text-[11px] text-slate-400 font-normal">(Opsional)</span>
+                    </Label>
+                    {fotoFile && (
+                      <span className="text-[11px] text-blue-600 font-semibold truncate max-w-[200px]">
+                        {fotoFile.name}
+                      </span>
+                    )}
+                  </div>
+
+                  <input
+                    type="file"
+                    ref={fotoInputRef}
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setFotoFile(file)
+                        const reader = new FileReader()
+                        reader.onload = () => {
+                          setFotoPreview(reader.result as string)
+                        }
+                        reader.readAsDataURL(file)
+                      }
+                    }}
                   />
+
+                  {fotoPreview || formFotoUrl ? (
+                    <div className="relative inline-block mt-2 rounded-xl overflow-hidden border border-blue-200 dark:border-blue-900 max-w-xs shadow-xs">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={fotoPreview || formFotoUrl}
+                        alt="Preview Bukti Supervisi"
+                        className="w-full h-36 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => fotoInputRef.current?.click()}
+                          className="h-8 text-xs font-bold bg-white/90 text-slate-900"
+                        >
+                          Ganti Foto
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            setFotoFile(null)
+                            setFotoPreview('')
+                            setFormFotoUrl('')
+                            if (fotoInputRef.current) fotoInputRef.current.value = ''
+                          }}
+                          className="h-8 text-xs font-bold"
+                        >
+                          <X className="w-3.5 h-3.5 mr-1" /> Hapus
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fotoInputRef.current?.click()}
+                        className="h-9 px-4 rounded-xl border-blue-300 text-blue-700 dark:text-blue-300 font-bold hover:bg-blue-50 dark:hover:bg-blue-950/40 text-xs shadow-xs"
+                      >
+                        <UploadCloud className="w-4 h-4 mr-1.5 text-blue-600" />
+                        Unggah Foto Dokumentasi (JPG / PNG / WebP)
+                      </Button>
+                      <span className="text-[11px] text-slate-400">
+                        Klik tombol di atas untuk memilih foto dokumentasi supervisi langsung dari perangkat Anda.
+                      </span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
               <CardContent className="border-t border-slate-100 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1951,7 +2058,7 @@ export default function SupervisiAkademikPage() {
                   <div className="col-span-full text-center py-12 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
                     <Camera className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                     <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Belum ada foto dokumentasi supervisi diunggah.</p>
-                    <p className="text-[11px] text-slate-400">URL foto dapat diinputkan saat mengisi form pada tab &quot;Mulai Supervisi&quot;.</p>
+                    <p className="text-[11px] text-slate-400">Foto dokumentasi dapat langsung diunggah saat mengisi form pada tab &quot;Mulai Supervisi&quot;.</p>
                   </div>
                 ) : (
                   supervisiRecords.filter(r => !!r.photoUrl).map((rec, i) => (

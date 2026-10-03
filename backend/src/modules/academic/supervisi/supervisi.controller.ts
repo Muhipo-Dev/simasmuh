@@ -67,6 +67,13 @@ export class SupervisiController {
     }
   }
 
+  // --- Supervisi Targets (Guru & Seluruh Staf Pegawai / Tendik) ---
+  @Get('targets')
+  getSupervisiTargets(@Request() req: any) {
+    this.checkPimpinanPermission(req.user);
+    return this.supervisiService.getSupervisiTargets();
+  }
+
   // --- Supervisi Records ---
   @Post()
   createSupervisi(@Body() dto: CreateSupervisiDto, @Request() req: any) {

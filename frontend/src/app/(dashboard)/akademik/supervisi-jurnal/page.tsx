@@ -18,7 +18,8 @@ import {
   UserCheck, 
   Eye, 
   User, 
-  BookCheck
+  BookCheck,
+  Award
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -32,7 +33,17 @@ const DAYS_NAME = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu
 export default function SupervisiJurnalPage() {
   const { data: session, status } = useSession()
   const userId = (session?.user as any)?.id
+  const userRole = (session?.user as any)?.role || ''
+  const subRoles: string[] = (session?.user as any)?.subRoles || []
   const authenticatedFetch = useAuthenticatedFetch()
+
+  // Hak Akses Penuh: Superadmin, Kepala Sekolah, dan WAKA Kurikulum
+  const isAuthorizedKurikulum = 
+    userRole === 'SUPERADMIN' || 
+    userRole === 'KEPALA_SEKOLAH' || 
+    userRole === 'WAKA_KURIKULUM' || 
+    subRoles.includes('WAKA_KURIKULUM') || 
+    subRoles.includes('KURIKULUM')
 
   const [activeTab, setActiveTab] = useState<'today' | 'history' | 'all-schedules'>('today')
   const [detailOpen, setDetailOpen] = useState(false)
@@ -49,7 +60,7 @@ export default function SupervisiJurnalPage() {
       if (!res.ok) throw new Error('Gagal memuat jadwal sekolah')
       return res.json()
     },
-    enabled: !!userId || status === 'authenticated'
+    enabled: (!!userId || status === 'authenticated') && isAuthorizedKurikulum
   })
 
   const allSchedulesList = Array.isArray(rawSchedules) ? rawSchedules : []
@@ -95,7 +106,7 @@ export default function SupervisiJurnalPage() {
       if (!res.ok) throw new Error('Gagal memuat jurnal mengajar')
       return res.json()
     },
-    enabled: !!userId || status === 'authenticated'
+    enabled: (!!userId || status === 'authenticated') && isAuthorizedKurikulum
   })
 
   const allJournals = Array.isArray(rawJournals) ? rawJournals : []
@@ -178,6 +189,36 @@ export default function SupervisiJurnalPage() {
   const filledTodayCount = todaySchedules.filter(s => !!getTodayJournalForSchedule(s.id)).length
   const pendingTodayCount = Math.max(0, totalToday - filledTodayCount)
 
+  if (!isAuthorizedKurikulum) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-slate-200 dark:border-slate-800 shadow-xs">
+          <CardContent className="p-8 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center mx-auto">
+              <BookCheck className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-base text-slate-900 dark:text-white">Akses Khusus Waka Kurikulum</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Halaman Supervisi Jurnal Mengajar Guru merupakan wewenang khusus WAKA Kurikulum, Kepala Sekolah, dan Superadmin.
+            </p>
+            <div className="pt-2 flex items-center justify-center gap-2">
+              <Link href="/akademik/supervisi-akademik">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-9">
+                  Buka Supervisi Akademik (ASA)
+                </Button>
+              </Link>
+              <Link href="/dashboard">
+                <Button variant="outline" className="text-xs font-bold h-9">
+                  Kembali ke Dashboard
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Top Header Card */}
@@ -201,6 +242,12 @@ export default function SupervisiJurnalPage() {
               </div>
             </div>
           )}
+          <Link href="/akademik/supervisi-akademik">
+            <Button className="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold h-10 px-3.5 shadow-md">
+              <Award className="w-4 h-4 mr-1.5" />
+              Supervisi Akademik (ASA)
+            </Button>
+          </Link>
           <Link href="/akademik/jurnal-mengajar">
             <Button variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-xs font-bold h-10 px-3.5">
               <BookOpen className="w-4 h-4 mr-1.5" />

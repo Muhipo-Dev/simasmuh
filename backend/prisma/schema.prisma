@@ -104,6 +104,9 @@ model TeacherProfile {
   user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   teachingJournals    TeachingJournal[]
   teacherSubjects     TeacherSubject[]
+  supervisiRecords    SupervisiAkademik[]
+  supervisiJadwals    JadwalSupervisi[]
+  perangkatAjars      PerangkatAjar[]
 }
 
 model ParentProfile {
@@ -176,6 +179,8 @@ model Student {
   tagihans           Tagihan[]
   virtualAccountTransactions VirtualAccountTransaction[]
   characterAssessments CharacterAssessment[]
+  achievements       StudentAchievement[]
+  extracurricularMembers ExtracurricularMember[]
 
   @@index([classId])
   @@index([virtualAccount])
@@ -890,6 +895,213 @@ model PayrollRecord {
   @@index([userId])
 }
 
+model StudentAchievement {
+  id               String    @id @default(uuid())
+  studentId        String
+  student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  judul            String    // Nama Kejuaraan / Prestasi (misal: Juara 1 Lomba Robotik Nasional)
+  kategoriBidang   String    // SAINS_TECH, OLAHRAGA, AGAMA, BAHASA, SENI, PENGEMBANGAN_DIRI
+  tingkat          String    // KELAS, SEKOLAH, KECAMATAN, KABUPATEN, PROVINSI, NASIONAL, INTERNASIONAL
+  peringkat        String?   // Juara 1, Juara 2, Juara 3, Harapan 1, Medali Emas, Finalis, dsb.
+  penyelenggara    String?   // Lembaga / Instansi Penyelenggara
+  tahun            Int       // Tahun perolehan prestasi (misal: 2026)
+  tanggal          DateTime  @default(now())
+  tempat           String?   // Tempat / Lokasi perlombaan
+  deskripsi        String?   // Rincian / Informasi selengkapnya terkait siapa dan apa prestasinya
+  sertifikatUrl    String?   // Foto sertifikat / piagam / piala
+  pembimbing       String?   // Guru Pembimbing / Pelatih
+  poinApresiasi    Int       @default(0) // Poin penghargaan prestasi
+  
+  statusVerifikasi String    @default("TERVERIFIKASI") // MENUNGGU, TERVERIFIKASI, DITOLAK
+  inputByUserId    String?   // User yang menginput (Kesiswaan / Humas)
+  inputByName      String?   // Nama penginput
+  inputByRole      String?   // Role penginput (KESISWAAN, HUMAS, dll)
+  
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
+  @@index([studentId])
+  @@index([tingkat])
+  @@index([kategoriBidang])
+  @@index([tahun])
+  @@index([statusVerifikasi])
+  @@index([createdAt])
+}
 
+model SupervisiAkademik {
+  id               String          @id @default(uuid())
+  nomorSupervisi   String?         @unique // ASA-2026-001
+  teacherId        String
+  teacher          TeacherProfile  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherName      String?
+  nip              String?
+  
+  scheduleId       String?
+  jenisId          String          // e.g. kurikulum_merdeka, telaah_rpp, kunjungan_kelas, kinerja_bendahara_sekolah, etc.
+  jenisLabel       String          // e.g. Pembelajaran Kurikulum Merdeka
+  kategori         String          @default("AKADEMIK") // AKADEMIK, BK, TENDIK, KEUANGAN
+  date             DateTime        @default(now())
+  className        String?         // e.g. X 1, XI 2, Ruang TU
+  subjectName      String?         // e.g. Matematika, Administrasi Keuangan
+  material         String?         // Materi / Tupoksi
+  
+  scores           Json            // Record<string, number> indikator penilaian
+  finalScore       Float           @default(0)
+  predicate        String          @default("Cukup") // Amat Baik (A), Baik (B), Cukup (C), Perlu Pembinaan (D)
+  
+  catatanKekuatan  String?
+  catatanPerbaikan String?
+  rekomendasi      String?
+  tindakLanjut     String?
+  photoUrl         String?
+  
+  supervisorUserId String?
+  supervisorName   String          // Sugeng Riadi, M.Pd. / Nama Kepala Sekolah & Waka
+  status           String          @default("SELESAI") // TERJADWAL, PROSES, SELESAI
+  
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
+  @@index([teacherId])
+  @@index([jenisId])
+  @@index([date])
+  @@index([kategori])
+  @@index([finalScore])
+  @@index([createdAt])
+}
+
+model JadwalSupervisi {
+  id               String          @id @default(uuid())
+  teacherId        String
+  teacher          TeacherProfile  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherName      String?
+  
+  jenisSupervisi   String          @default("kurikulum_merdeka")
+  date             DateTime
+  time             String?         @default("08:00")
+  className        String?         @default("X 1")
+  subjectName      String?         @default("Pendidikan Agama Islam")
+  supervisorName   String
+  status           String          @default("TERJADWAL") // TERJADWAL, SELESAI, DITUNDA, DIBATALKAN
+  notes            String?
+  
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([teacherId])
+  @@index([date])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PerangkatAjar {
+  id                String          @id @default(uuid())
+  teacherId         String
+  teacher           TeacherProfile  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherName       String?
+  nip               String?
+
+  academicYear      String          @default("2025/2026")
+  semester          String          @default("GANJIL") // GANJIL, GENAP
+  subjectName       String          // e.g. Matematika, Pendidikan Agama Islam, Fisika
+  className         String?         // e.g. X 1, XI 2, XII 1
+  fase              String?         // Fase E (Kelas X), Fase F (Kelas XI - XII)
+
+  jenisPerangkat    String          // MODUL_AJAR, ATP, CP, PROTA_PROMES, ASESMEN, BUKU_AJAR, LAINNYA
+  title             String          // Judul / Keterangan Dokumen
+  description       String?         // Deskripsi atau lingkup materi
+  fileUrl           String          // URL berkas lokal / Drive link / Google Docs
+  fileType          String?         @default("PDF") // PDF, DOCX, LINK, GDRIVE
+  fileSize          String?         // e.g. "2.4 MB"
+
+  status            String          @default("DIAJUKAN") // DRAFT, DIAJUKAN, TERVERIFIKASI, PERLU_REVISI, DITOLAK
+  catatanVerifikasi String?         // Catatan evaluasi / perbaikan dari kurikulum
+  
+  verifiedByUserId  String?
+  verifiedByName    String?         // Nama Waka/Tim Kurikulum
+  verifiedAt        DateTime?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([teacherId])
+  @@index([academicYear])
+  @@index([jenisPerangkat])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SupervisiRubrik {
+  id          String   @id @default(uuid())
+  jenisId     String   // e.g. kurikulum_merdeka, perangkat_pembelajaran, dll.
+  kategori    String   // e.g. "A. DOKUMEN PERATURAN, UU, PEDOMAN, DLL", "B. PERANGKAT PROGRAM dan PELAKSANAAN PEMBELAJARAN"
+  code        String?  // e.g. "item_1", "item_2"
+  label       String   // e.g. "UU Sisdiknas (No 20 th 2003)"
+  bobot       Float    @default(4)
+  orderIndex  Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([jenisId])
+  @@index([kategori])
+  @@index([orderIndex])
+  @@index([isActive])
+}
+
+model Extracurricular {
+  id          String   @id @default(uuid())
+  name        String   // e.g. "Hizbul Wathan (HW)", "Tapak Suci", "PMR / KKR", "IPM", "Paskibra", "Futsal", "Basket", "Robotik", "Paduan Suara"
+  code        String?  @unique // e.g. "HW", "TS", "PMR"
+  category    String   @default("UMUM") // WAJIB_MUHAMMADIYAH, OLAHRAGA, SENI_BUDAYA, KEAGAMAAN, AKADEMIK_SAINS, KEPANDUAN, LAINNYA
+  description String?
+  scheduleDay String?  // e.g. "Jumat", "Sabtu"
+  scheduleTime String? // e.g. "15:30 - 17:00"
+  location    String?  // e.g. "Lapangan Utama", "Aula Lt. 3", "Lab Komputer"
+  
+  // Pembina / Pelatih
+  pembinaId   String?  // Relation to TeacherProfile jika pembina adalah guru
+  pembinaName String   // Nama Pembina / Pelatih Utama
+  pembinaNip  String?  // NIP / NBM Pembina
+  pembinaContact String? // No. WA / Telp Pembina
+  
+  pembina2Name String? // Pembina Pendamping / Asisten (opsional)
+  pembina2Contact String?
+
+  logoUrl     String?
+  targetPeserta String? @default("Semua Tingkat (X, XI, XII)")
+  isActive    Boolean  @default(true)
+  
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     ExtracurricularMember[]
+
+  @@index([category])
+  @@index([isActive])
+  @@index([pembinaId])
+}
+
+model ExtracurricularMember {
+  id                String          @id @default(uuid())
+  extracurricularId String
+  studentId         String
+  role              String          @default("ANGGOTA") // KETUA, WAKIL_KETUA, SEKRETARIS, BENDAHARA, ANGGOTA
+  joinedAt          DateTime        @default(now())
+  status            String          @default("AKTIF") // AKTIF, NON_AKTIF, ALUMNI
+  catatan           String?
+
+  extracurricular   Extracurricular @relation(fields: [extracurricularId], references: [id], onDelete: Cascade)
+  student           Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([extracurricularId, studentId])
+  @@index([extracurricularId])
+  @@index([studentId])
+}

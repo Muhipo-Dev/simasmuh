@@ -3061,6 +3061,19 @@ export default function DashboardPage() {
 
               <div className="space-y-1.5 text-xs">
                 <Link
+                  href="/akademik/supervisi-akademik"
+                  className="flex items-center justify-between p-2 rounded-xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 hover:border-blue-400 transition-colors"
+                >
+                  <span className="text-[11px] font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                    <Award className="w-3.5 h-3.5 text-amber-500" />
+                    Supervisi Akademik (ASA)
+                  </span>
+                  <Badge className="bg-blue-600 text-white text-[9.5px] px-1.5 py-0">
+                    Buka ASA &rarr;
+                  </Badge>
+                </Link>
+
+                <Link
                   href="/presensi/dispensasi"
                   className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 hover:border-amber-400 transition-colors"
                 >

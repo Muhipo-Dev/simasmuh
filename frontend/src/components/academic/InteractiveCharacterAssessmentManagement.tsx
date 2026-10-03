@@ -8,7 +8,8 @@ import {
   Sparkles, Award, User, Clock, ArrowRight, Download, Filter,
   Phone, Users, Settings2, RotateCcw, Edit, Edit3, Eye, Sliders, Check,
   X, AlertCircle, RefreshCw, MessageSquare, Printer, Send, Home, PhoneCall,
-  ClipboardList
+  ClipboardList, Stethoscope, HeartPulse, UserCheck2, AlertOctagon, GraduationCap,
+  Flame, ThumbsUp, CalendarCheck, Activity, ClipboardCheck, FileCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -155,8 +156,19 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
   // Hak akses verifikasi & persetujuan draf poin tatib hanya milik role KETERTIBAN
   const canVerify = isTatib
 
-  // State Tab Utama
-  const [activeTab, setActiveTab] = useState<'rekap-siswa' | 'log-catatan' | 'verifikasi-pembinaan' | 'catatan-konseling' | 'panggilan-ortu'>(
+  // State Tab Utama SIKAP
+  const [activeTab, setActiveTab] = useState<
+    | 'rekap-siswa' 
+    | 'log-catatan' 
+    | 'verifikasi-pembinaan' 
+    | 'catatan-konseling' 
+    | 'panggilan-ortu'
+    | 'tatib-guru'
+    | 'prestasi-siswa'
+    | 'temuan-kejadian'
+    | 'kesehatan-uks'
+    | 'kehadiran-siswa'
+  >(
     mode === 'BK' 
       ? 'catatan-konseling' 
       : mode === 'GURU'
@@ -175,6 +187,51 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
 
   // State Filter Cari Siswa di Modal Form BK
   const [bkStudentSearch, setBkStudentSearch] = useState('')
+
+  // State Modal Dialog SIKAP: Kejadian / Insiden
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
+  const [incidentFormState, setIncidentFormState] = useState({
+    id: '',
+    studentId: '',
+    title: '',
+    lokasi: 'Lingkungan Sekolah',
+    tanggal: new Date().toISOString().split('T')[0],
+    waktu: '08:30 WIB',
+    kategori: 'KETERTIBAN',
+    kronologi: '',
+    saksi: '',
+    tindakanLangsung: '',
+    status: 'TERCATAT',
+    poin: -10,
+  })
+
+  // State Modal Dialog SIKAP: Kesehatan & UKS
+  const [isHealthModalOpen, setIsHealthModalOpen] = useState(false)
+  const [healthFormState, setHealthFormState] = useState({
+    id: '',
+    studentId: '',
+    tanggal: new Date().toISOString().split('T')[0],
+    waktuMasuk: '09:00 WIB',
+    keluhan: '',
+    diagnosaAwal: '',
+    penanganan: '',
+    obatDiberikan: '',
+    kondisi: 'PEMULIHAN_UKS', // PEMULIHAN_UKS | KEMBALI_KE_KELAS | DIRUJUK_PULANG | DIRUJUK_RS
+    petugasUks: '',
+    catatan: '',
+  })
+
+  // State Modal Dialog SIKAP: Tatib Guru
+  const [isTeacherTatibModalOpen, setIsTeacherTatibModalOpen] = useState(false)
+  const [teacherTatibFormState, setTeacherTatibFormState] = useState({
+    id: '',
+    teacherName: '',
+    tanggal: new Date().toISOString().split('T')[0],
+    kategori: 'KEHADIRAN_KBM', // KEHADIRAN_KBM | APEL_UPACARA | JURNAL_AJAR | PIKET_SEKOLAH | SERAGAM_ATRIBUT
+    keterangan: '',
+    status: 'TERTIB', // TERTIB | TERLAMBAT | DISPENSASI | PERLU_PEMBINAAN
+    tindakLanjut: '',
+  })
 
   // State Modal Dialog Konseling
   const [isCounselingModalOpen, setIsCounselingModalOpen] = useState(false)
@@ -396,12 +453,58 @@ const BK_LETTER_PRESETS = [
     )
   }, [assessments])
 
-  // Rekam Jejak Pemanggilan Wali Murid & Home Visit
+  // Catatan Khusus Kasus yang Membutuhkan Pemanggilan Orang Tua
   const parentCallList = useMemo(() => {
     return assessments.filter((item: any) => 
       item.status === 'PEMANGGILAN_ORTU' || 
-      item.status === 'HOME_VISIT' ||
-      (item.actionTaken && item.actionTaken.toLowerCase().includes('panggilan'))
+      item.type === 'PEMANGGILAN_ORTU' ||
+      (item.category === 'PELANGGARAN' && item.points <= -30)
+    )
+  }, [assessments])
+
+  // 7. Ambil Data Presensi Siswa Live & Harian untuk Tab SIKAP Kehadiran
+  const { data: attendanceData = [] } = useQuery<any[]>({
+    queryKey: ['character-sikap-attendances-list'],
+    queryFn: async () => {
+      const res = await authenticatedQuery('/api-backend/attendances?limit=100')
+      return Array.isArray(res) ? res : (res?.data || [])
+    },
+  })
+
+  // SIKAP: Kejadian / Insiden Khusus
+  const incidentList = useMemo(() => {
+    return assessments.filter((item: any) => 
+      item.type === 'TEMUAN_KEJADIAN' || 
+      item.category === 'PELANGGARAN' && (item.points <= -20 || item.title?.toLowerCase().includes('kejadian') || item.title?.toLowerCase().includes('insiden') || item.title?.toLowerCase().includes('temuan'))
+    )
+  }, [assessments])
+
+  // SIKAP: Catatan Kesehatan & Layanan UKS Siswa
+  const healthList = useMemo(() => {
+    return assessments.filter((item: any) => 
+      item.type === 'CATATAN_KESEHATAN' || 
+      item.title?.toLowerCase().includes('uks') || 
+      item.title?.toLowerCase().includes('sakit') || 
+      item.description?.toLowerCase().includes('kesehatan') ||
+      item.description?.toLowerCase().includes('uks')
+    )
+  }, [assessments])
+
+  // SIKAP: Prestasi & Penghargaan Siswa
+  const achievementList = useMemo(() => {
+    return assessments.filter((item: any) => 
+      item.category === 'PRESTASI_PENGHARGAAN' || 
+      item.type === 'PRESTASI' || 
+      item.type === 'POSITIF' && item.points >= 15
+    )
+  }, [assessments])
+
+  // SIKAP: Ketertiban & Kepatuhan Guru
+  const teacherTatibList = useMemo(() => {
+    return assessments.filter((item: any) => 
+      item.type === 'TATIB_GURU' || 
+      item.title?.toLowerCase().includes('guru') ||
+      item.evaluator?.role === 'KEPALA_SEKOLAH' && item.category === 'KEDISIPLINAN'
     )
   }, [assessments])
 
@@ -516,6 +619,162 @@ const BK_LETTER_PRESETS = [
       })
     } catch (err: any) {
       Swal.fire({ title: 'Gagal', text: err.message || 'Gagal menyimpan catatan konseling', icon: 'error' })
+    }
+  }
+
+  // Handler Simpan Temuan Kejadian / Insiden SIKAP
+  const handleSaveIncident = async () => {
+    if (!incidentFormState.title) {
+      Swal.fire({ title: 'Perhatian', text: 'Judul temuan kejadian wajib diisi', icon: 'warning' })
+      return
+    }
+
+    try {
+      const selectedSt = incidentFormState.studentId ? students.find((s: any) => s.id === incidentFormState.studentId) : null
+      const payload = {
+        id: incidentFormState.id || undefined,
+        studentId: incidentFormState.studentId || (students[0]?.id || ''),
+        category: 'PELANGGARAN',
+        type: 'TEMUAN_KEJADIAN',
+        title: `[Temuan Kejadian] ${incidentFormState.title} (${incidentFormState.lokasi})`,
+        description: `Waktu: ${incidentFormState.waktu} | Saksi: ${incidentFormState.saksi || '-'} | Kronologi: ${incidentFormState.kronologi || '-'}`,
+        actionTaken: incidentFormState.tindakanLangsung || 'Diamankan dan ditindaklanjuti Tim Ketertiban',
+        status: canVerify ? 'TERVERIFIKASI' : 'MENUNGGU',
+        points: Number(incidentFormState.poin) || -10,
+        date: incidentFormState.tanggal,
+        notifyParent: true,
+      }
+
+      const url = payload.id ? `/api-backend/character-assessments/${payload.id}` : '/api-backend/character-assessments'
+      const res = await authenticatedFetch(url, {
+        method: payload.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.message || 'Gagal mencatat kejadian')
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['character-assessments-list'] })
+      queryClient.invalidateQueries({ queryKey: ['character-students-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['character-assessments-stats'] })
+
+      setIsIncidentModalOpen(false)
+      Swal.fire({
+        title: 'Temuan Kejadian Tercatat',
+        text: `Log temuan kejadian berhasil dicatat ke sistem SIKAP SIMASMUH!`,
+        icon: 'success',
+        confirmButtonColor: '#0284c7'
+      })
+    } catch (err: any) {
+      Swal.fire({ title: 'Gagal', text: err.message || 'Gagal menyimpan temuan kejadian', icon: 'error' })
+    }
+  }
+
+  // Handler Simpan Log Kesehatan / UKS SIKAP
+  const handleSaveHealth = async () => {
+    if (!healthFormState.studentId) {
+      Swal.fire({ title: 'Perhatian', text: 'Pilih siswa yang berkunjung ke UKS', icon: 'warning' })
+      return
+    }
+    if (!healthFormState.keluhan) {
+      Swal.fire({ title: 'Perhatian', text: 'Keluhan kesehatan siswa wajib diisi', icon: 'warning' })
+      return
+    }
+
+    try {
+      const selectedSt = students.find((s: any) => s.id === healthFormState.studentId)
+      const payload = {
+        id: healthFormState.id || undefined,
+        studentId: healthFormState.studentId,
+        category: 'KEDISIPLINAN',
+        type: 'CATATAN_KESEHATAN',
+        title: `[Layanan UKS] ${healthFormState.keluhan} (${healthFormState.kondisi.replace(/_/g, ' ')})`,
+        description: `Waktu Masuk: ${healthFormState.waktuMasuk} | Diagnosa: ${healthFormState.diagnosaAwal || '-'} | Obat: ${healthFormState.obatDiberikan || '-'} | Petugas: ${healthFormState.petugasUks || loggedInBkName}`,
+        actionTaken: healthFormState.penanganan || 'Istirahat di ruang UKS & observasi medis',
+        status: 'SELESAI',
+        points: 0,
+        date: healthFormState.tanggal,
+        notifyParent: true,
+      }
+
+      const url = payload.id ? `/api-backend/character-assessments/${payload.id}` : '/api-backend/character-assessments'
+      const res = await authenticatedFetch(url, {
+        method: payload.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.message || 'Gagal mencatat kunjungan UKS')
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['character-assessments-list'] })
+      queryClient.invalidateQueries({ queryKey: ['character-students-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['character-assessments-stats'] })
+
+      setIsHealthModalOpen(false)
+      Swal.fire({
+        title: 'Kunjungan UKS Tercatat',
+        text: `Catatan kesehatan siswa ${selectedSt?.name || ''} berhasil disimpan ke log SIKAP!`,
+        icon: 'success',
+        confirmButtonColor: '#0284c7'
+      })
+    } catch (err: any) {
+      Swal.fire({ title: 'Gagal', text: err.message || 'Gagal menyimpan catatan UKS', icon: 'error' })
+    }
+  }
+
+  // Handler Simpan Tatib Guru & Tendik SIKAP
+  const handleSaveTeacherTatib = async () => {
+    if (!teacherTatibFormState.teacherName) {
+      Swal.fire({ title: 'Perhatian', text: 'Pilih nama guru atau pegawai', icon: 'warning' })
+      return
+    }
+
+    try {
+      const payload = {
+        id: teacherTatibFormState.id || undefined,
+        studentId: students[0]?.id || '',
+        category: 'KEDISIPLINAN',
+        type: 'TATIB_GURU',
+        title: `[Tatib Guru] ${teacherTatibFormState.teacherName} - ${teacherTatibFormState.kategori.replace(/_/g, ' ')}`,
+        description: `Status: ${teacherTatibFormState.status} | Keterangan: ${teacherTatibFormState.keterangan || '-'}`,
+        actionTaken: teacherTatibFormState.tindakLanjut || 'Pencatatan kedisiplinan guru dan koordinasi Kurikulum/SDM',
+        status: teacherTatibFormState.status === 'TERTIB' ? 'SELESAI' : 'MENUNGGU',
+        points: teacherTatibFormState.status === 'TERTIB' ? 5 : -5,
+        date: teacherTatibFormState.tanggal,
+        notifyParent: false,
+      }
+
+      const url = payload.id ? `/api-backend/character-assessments/${payload.id}` : '/api-backend/character-assessments'
+      const res = await authenticatedFetch(url, {
+        method: payload.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.message || 'Gagal mencatat tatib guru')
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['character-assessments-list'] })
+      queryClient.invalidateQueries({ queryKey: ['character-students-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['character-assessments-stats'] })
+
+      setIsTeacherTatibModalOpen(false)
+      Swal.fire({
+        title: 'Tatib Guru Tersimpan',
+        text: `Pencatatan ketertiban guru ${teacherTatibFormState.teacherName} berhasil disimpan ke SIKAP!`,
+        icon: 'success',
+        confirmButtonColor: '#0284c7'
+      })
+    } catch (err: any) {
+      Swal.fire({ title: 'Gagal', text: err.message || 'Gagal menyimpan tatib guru', icon: 'error' })
     }
   }
 
@@ -1514,90 +1773,110 @@ const BK_LETTER_PRESETS = [
         </div>
       )}
 
-      {/* 2. Banner Informasi Modul */}
-      <div className={`p-4 rounded-2xl text-white shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border ${
-        mode === 'BK' 
-          ? 'bg-gradient-to-r from-pink-950 via-purple-950 to-slate-900 border-pink-800/60' 
-          : 'bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 border-blue-800/60'
-      }`}>
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
-            mode === 'BK' ? 'bg-pink-600/30 border-pink-400/30' : 'bg-blue-600/30 border-blue-400/30'
-          }`}>
-            {mode === 'BK' ? (
-              <HeartHandshake className="w-5 h-5 text-pink-300" />
-            ) : (
-              <ShieldAlert className="w-5 h-5 text-amber-300" />
-            )}
+      {/* 2. SIKAP Legacy & Modern Hybrid Module Suite (Sistem Kehadiran Akademik dan Prestasi) */}
+      <Card className="border-blue-500/40 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white rounded-3xl overflow-hidden shadow-xl">
+        <div className="p-4 sm:p-6 border-b border-blue-800/40 bg-blue-600/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-black text-white text-lg tracking-wider shadow-lg shadow-cyan-500/30 ring-2 ring-white/20">
+              SIKAP
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-lg sm:text-xl font-black text-white tracking-wide">
+                  Sistem Kehadiran Akademik & Prestasi (SIKAP)
+                </h3>
+                <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-400/30 text-[10px] font-extrabold uppercase">
+                  Terintegrasi Penuh
+                </Badge>
+              </div>
+              <p className="text-xs text-blue-200/80 mt-0.5">
+                SMA MUHAMMADIYAH 1 PONOROGO • Pimpinan: <span className="font-semibold text-white">{activeKepsekName}</span>
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-sm sm:text-base font-black text-white">
-              {mode === 'BK' 
-                ? 'Layanan Bimbingan Konseling (BK / BP) & Pemanggilan Wali Murid'
-                : canVerify
-                ? 'Panel Poin Kedisiplinan & Verifikasi Tata Tertib'
-                : 'Panel Catatan Kedisiplinan Siswa (Draf Guru)'}
-            </h4>
-            <p className="text-xs text-blue-200/90 mt-0.5">
-              {mode === 'BK'
-                ? 'Area pencatatan sesi bimbingan konseling, pantauan kasus siswa, serta surat panggilan orang tua terhubung WhatsApp.'
-                : canVerify
-                ? 'Verifikasi catatan guru, penetapan skor kedisiplinan resmi siswa (Skala 100 Poin), dan sinkronisasi notifikasi wali murid.'
-                : 'Pencatatan pelanggaran, adab, dan teladan siswa oleh Guru. Catatan otomatis masuk sebagai Draf untuk diverifikasi Petugas Ketertiban.'}
-            </p>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {canVerify && (
+              <Button
+                onClick={() => setIsParamModalOpen(true)}
+                size="sm"
+                className="h-9 text-xs gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-xs"
+              >
+                <Sliders className="w-4 h-4" />
+                <span>Atur Poin Tatib</span>
+              </Button>
+            )}
+            <Button
+              onClick={() => {
+                setSelectedStudentForAction(null)
+                setFormState({
+                  id: '',
+                  studentId: '',
+                  category: 'PELANGGARAN',
+                  type: 'NEGATIF',
+                  title: '',
+                  description: '',
+                  points: -10,
+                  date: new Date().toISOString().split('T')[0],
+                  actionTaken: '',
+                  status: canVerify ? 'SELESAI' : 'MENUNGGU',
+                  notifyParent: true,
+                })
+                setIsFormOpen(true)
+              }}
+              size="sm"
+              className="h-9 text-xs gap-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold shadow-xs"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Input Tatib Cepat</span>
+            </Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          {mode === 'BK' ? (
-            <>
-              <Button
+        {/* 8-Tile SIKAP Action Matrix (Matching exact screenshot layout) */}
+        <div className="p-4 sm:p-6 bg-slate-950/60">
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            Menu Utama SIKAP (Input &amp; Rekapitulasi Terpadu)
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5">
+            {/* Baris 1: Kehadiran Siswa */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
                 onClick={() => {
-                  setCounselingFormState({
-                    id: '',
-                    studentId: '',
-                    counselingType: 'PELANGGARAN_KEDISIPLINAN',
-                    title: '',
-                    description: '',
-                    actionTaken: '',
-                    status: 'PROSES_BIMBINGAN',
-                    privacy: 'TERBUKA',
-                    pointsAdjust: 0,
-                    date: new Date().toISOString().split('T')[0],
-                    notifyParent: true,
-                  })
-                  setIsCounselingModalOpen(true)
+                  window.location.href = '/presensi/kehadiran-siswa'
                 }}
-                size="sm"
-                className="h-9 text-xs gap-1.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold shadow-xs"
+                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
               >
-                <HeartHandshake className="w-4 h-4" />
-                <span>+ Sesi Konseling Baru</span>
-              </Button>
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <ClipboardCheck className="w-3.5 h-3.5" />
+                  <span>INPUT</span>
+                </div>
+                <span>Kehadiran Siswa</span>
+              </button>
 
-              <Button
-                onClick={() => handleOpenParentCallLetter()}
-                size="sm"
-                className="h-9 text-xs gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs"
+              <button
+                onClick={() => {
+                  setActiveTab('kehadiran-siswa')
+                }}
+                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
+                  activeTab === 'kehadiran-siswa'
+                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
+                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
+                }`}
               >
-                <Printer className="w-4 h-4" />
-                <span>Buat Surat Ortu</span>
-              </Button>
-            </>
-          ) : (
-            <>
-              {canVerify && (
-                <Button
-                  onClick={() => setIsParamModalOpen(true)}
-                  size="sm"
-                  className="h-9 text-xs gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-xs"
-                >
-                  <Sliders className="w-4 h-4" />
-                  <span>Atur Parameter Poin</span>
-                </Button>
-              )}
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <Users className="w-3.5 h-3.5" />
+                  <span>REKAP</span>
+                </div>
+                <span>Kehadiran Siswa</span>
+              </button>
+            </div>
 
-              <Button
+            {/* Baris 2: Tata-Tertib Siswa */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
                 onClick={() => {
                   setSelectedStudentForAction(null)
                   setFormState({
@@ -1615,16 +1894,286 @@ const BK_LETTER_PRESETS = [
                   })
                   setIsFormOpen(true)
                 }}
-                size="sm"
-                className="h-9 text-xs gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs"
+                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
               >
-                <PlusCircle className="w-4 h-4" />
-                <span>{canVerify ? 'Input Catatan Pembinaan' : 'Catat Poin Kedisiplinan'}</span>
-              </Button>
-            </>
-          )}
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>INPUT</span>
+                </div>
+                <span>Tata-Tertib</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('log-catatan')}
+                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
+                  activeTab === 'log-catatan'
+                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
+                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>LIHAT</span>
+                </div>
+                <span>Tata-Tertib</span>
+              </button>
+            </div>
+
+            {/* Baris 3: Tatib Guru (Highlight Merah Maroon sesuai Foto Legacy) */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  setTeacherTatibFormState({
+                    id: '',
+                    teacherName: '',
+                    tanggal: new Date().toISOString().split('T')[0],
+                    kategori: 'KEHADIRAN_KBM',
+                    keterangan: '',
+                    status: 'TERTIB',
+                    tindakLanjut: '',
+                  })
+                  setIsTeacherTatibModalOpen(true)
+                }}
+                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-rose-800 to-red-700 hover:from-rose-700 hover:to-red-600 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-rose-500/40"
+              >
+                <div className="flex items-center gap-1.5 text-rose-200 text-[10px] font-bold uppercase tracking-wider">
+                  <UserCheck2 className="w-3.5 h-3.5" />
+                  <span>INPUT</span>
+                </div>
+                <span>Tatib Guru</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('tatib-guru')}
+                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
+                  activeTab === 'tatib-guru'
+                    ? 'bg-rose-600 text-white border-white ring-2 ring-rose-400'
+                    : 'bg-gradient-to-r from-rose-900 to-red-800 hover:from-rose-800 hover:to-red-700 text-white border-rose-500/40'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-rose-200 text-[10px] font-bold uppercase tracking-wider">
+                  <FileCheck className="w-3.5 h-3.5" />
+                  <span>LIHAT</span>
+                </div>
+                <span>Tatib Guru</span>
+              </button>
+            </div>
+
+            {/* Baris 4: Prestasi Siswa */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  setSelectedStudentForAction(null)
+                  setFormState({
+                    id: '',
+                    studentId: '',
+                    category: 'PRESTASI_PENGHARGAAN',
+                    type: 'POSITIF',
+                    title: 'Juara / Penghargaan Kejuaraan Siswa',
+                    description: '',
+                    points: 25,
+                    date: new Date().toISOString().split('T')[0],
+                    actionTaken: 'Apresiasi sertifikat & penambahan poin prestasi',
+                    status: canVerify ? 'SELESAI' : 'MENUNGGU',
+                    notifyParent: true,
+                  })
+                  setIsFormOpen(true)
+                }}
+                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
+              >
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <Award className="w-3.5 h-3.5" />
+                  <span>INPUT</span>
+                </div>
+                <span>Prestasi</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('prestasi-siswa')}
+                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
+                  activeTab === 'prestasi-siswa'
+                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
+                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <Award className="w-3.5 h-3.5" />
+                  <span>REKAP</span>
+                </div>
+                <span>Prestasi</span>
+              </button>
+            </div>
+
+            {/* Baris 5: Temuan Kejadian */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  setIncidentFormState({
+                    id: '',
+                    studentId: '',
+                    title: '',
+                    lokasi: 'Area Sekolah',
+                    tanggal: new Date().toISOString().split('T')[0],
+                    waktu: '08:30 WIB',
+                    kategori: 'KETERTIBAN',
+                    kronologi: '',
+                    saksi: '',
+                    tindakanLangsung: '',
+                    status: 'TERCATAT',
+                    poin: -10,
+                  })
+                  setIsIncidentModalOpen(true)
+                }}
+                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
+              >
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <AlertOctagon className="w-3.5 h-3.5" />
+                  <span>TEMUAN</span>
+                </div>
+                <span>Kejadian</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('temuan-kejadian')}
+                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
+                  activeTab === 'temuan-kejadian'
+                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
+                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>REKAP</span>
+                </div>
+                <span>Kejadian</span>
+              </button>
+            </div>
+
+            {/* Baris 6: Kesehatan & UKS */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  setHealthFormState({
+                    id: '',
+                    studentId: '',
+                    tanggal: new Date().toISOString().split('T')[0],
+                    waktuMasuk: '09:00 WIB',
+                    keluhan: '',
+                    diagnosaAwal: '',
+                    penanganan: '',
+                    obatDiberikan: '',
+                    kondisi: 'PEMULIHAN_UKS',
+                    petugasUks: '',
+                    catatan: '',
+                  })
+                  setIsHealthModalOpen(true)
+                }}
+                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
+              >
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <HeartPulse className="w-3.5 h-3.5" />
+                  <span>INPUT</span>
+                </div>
+                <span>Kesehatan</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('kesehatan-uks')}
+                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
+                  activeTab === 'kesehatan-uks'
+                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
+                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <Stethoscope className="w-3.5 h-3.5" />
+                  <span>INPUT</span>
+                </div>
+                <span>Pengguna UKS</span>
+              </button>
+            </div>
+
+            {/* Baris 7: Konseling BK */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  setCounselingFormState({
+                    id: '',
+                    studentId: '',
+                    counselingType: 'PELANGGARAN_KEDISIPLINAN',
+                    title: '',
+                    description: '',
+                    actionTaken: '',
+                    status: 'PROSES_BIMBINGAN',
+                    privacy: 'TERBUKA',
+                    pointsAdjust: 0,
+                    date: new Date().toISOString().split('T')[0],
+                    notifyParent: true,
+                  })
+                  setIsCounselingModalOpen(true)
+                }}
+                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
+              >
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <HeartHandshake className="w-3.5 h-3.5" />
+                  <span>INPUT</span>
+                </div>
+                <span>Konseling</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('catatan-konseling')}
+                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
+                  activeTab === 'catatan-konseling'
+                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
+                    : 'bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white border-blue-400/30'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <Users className="w-3.5 h-3.5" />
+                  <span>REKAP</span>
+                </div>
+                <span>Konseling</span>
+              </button>
+            </div>
+
+            {/* Baris 8: Rekapitulasi Persiswa & Semua */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  setActiveTab('rekap-siswa')
+                  setRadarFilterActive(false)
+                }}
+                className={`p-3 sm:p-3.5 rounded-2xl font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border ${
+                  activeTab === 'rekap-siswa' && !radarFilterActive
+                    ? 'bg-blue-500 text-white border-white ring-2 ring-cyan-400'
+                    : 'bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white border-blue-400/30'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <User className="w-3.5 h-3.5" />
+                  <span>REKAP</span>
+                </div>
+                <span>Persiswa</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('rekap-siswa')
+                  handleExportExcel()
+                }}
+                className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center text-center gap-1 shadow-md hover:scale-[1.02] transition-all border border-blue-400/30"
+              >
+                <div className="flex items-center gap-1.5 text-cyan-200 text-[10px] font-bold uppercase tracking-wider">
+                  <Download className="w-3.5 h-3.5" />
+                  <span>REKAPITULASI</span>
+                </div>
+                <span>Semua</span>
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* 2b. Notifikasi Area: Verifikasi Izin Siswa (Wali Murid) untuk BK & Ketertiban */}
       {(canVerify || isBk || isTatib) && studentIzinList.length > 0 && (
@@ -2861,7 +3410,553 @@ const BK_LETTER_PRESETS = [
         </Card>
       )}
 
-      {/* 6. MODAL 1: Atur Parameter Poin Tata Tertib & Pembinaan */}
+      {/* ========================================================================= */}
+      {/* 4. SIKAP TAB VIEW 1: REKAP KEHADIRAN SISWA (SIKAP Benchmark) */}
+      {/* ========================================================================= */}
+      {activeTab === 'kehadiran-siswa' && (
+        <Card className="border-blue-200 dark:border-blue-900/50 bg-white dark:bg-slate-900 shadow-xs rounded-2xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-blue-50/50 to-indigo-50/30 dark:from-blue-950/20 dark:to-slate-900">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-blue-600 text-white text-[10px] font-bold">SIKAP PRESENSI</Badge>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <CalendarCheck className="w-5 h-5 text-blue-600" />
+                    Rekapitulasi Kehadiran & Presensi Harian Siswa
+                  </CardTitle>
+                </div>
+                <CardDescription className="text-xs text-slate-500 mt-1">
+                  Sinkronisasi live presensi kehadiran, izin, sakit, dan dispensasi siswa SMA Muhammadiyah 1 Ponorogo.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => window.location.href = '/presensi/rekap'}
+                  className="h-9 text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl gap-1.5 shadow-xs"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Buka Live Presensi</span>
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-50 dark:bg-slate-800/60">
+                  <TableRow>
+                    <TableHead className="w-12 text-center text-xs font-bold">No</TableHead>
+                    <TableHead className="text-xs font-bold">Tanggal & Waktu</TableHead>
+                    <TableHead className="text-xs font-bold">Nama Siswa</TableHead>
+                    <TableHead className="text-xs font-bold">Kelas</TableHead>
+                    <TableHead className="text-xs font-bold text-center">Status Kehadiran</TableHead>
+                    <TableHead className="text-xs font-bold">Keterangan / Alasan</TableHead>
+                    <TableHead className="text-xs font-bold">Metode Presensi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {attendanceData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-44 text-center text-xs text-slate-400">
+                        <Users className="w-8 h-8 text-slate-300 mx-auto mb-2 opacity-60" />
+                        Belum ada rekaman presensi kehadiran siswa untuk filter saat ini.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    attendanceData.map((att: any, idx: number) => {
+                      const st = att.status || 'HADIR'
+                      const isHadir = st === 'HADIR'
+                      const isSakit = st === 'SAKIT'
+                      const isIzin = st === 'IZIN'
+                      return (
+                        <TableRow key={att.id || idx} className="text-xs hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+                          <TableCell className="text-center font-bold text-slate-500">{idx + 1}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              {att.date ? new Date(att.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                            </span>
+                            <span className="block text-[10px] text-slate-400">{att.checkInTime || att.time || '-'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-bold text-slate-900 dark:text-white block">{att.student?.name || att.user?.name || '-'}</span>
+                            <span className="text-[10px] text-slate-400">NIS: {att.student?.nis || att.nis || '-'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800">
+                              {att.student?.class?.name || att.className || '-'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge
+                              className={`text-[10px] font-bold ${
+                                isHadir
+                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200'
+                                  : isSakit
+                                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200'
+                                  : isIzin
+                                  ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200'
+                                  : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-200'
+                              }`}
+                            >
+                              {st}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate text-slate-600 dark:text-slate-300">
+                            {att.notes || att.alasan || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-[11px] font-medium text-slate-500">
+                              {att.source || att.method || 'Face Recognition AI'}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. SIKAP TAB VIEW 2: TATIB GURU & TENDIK (SIKAP Benchmark) */}
+      {/* ========================================================================= */}
+      {activeTab === 'tatib-guru' && (
+        <Card className="border-rose-200 dark:border-rose-900/50 bg-white dark:bg-slate-900 shadow-xs rounded-2xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-rose-50/50 to-red-50/30 dark:from-rose-950/20 dark:to-slate-900">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-rose-600 text-white text-[10px] font-bold">SIKAP GURU</Badge>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <UserCheck2 className="w-5 h-5 text-rose-600" />
+                    Kedisiplinan & Tata Tertib Guru / Tenaga Kependidikan
+                  </CardTitle>
+                </div>
+                <CardDescription className="text-xs text-slate-500 mt-1">
+                  Pemantauan komitmen kehadiran KBM, apel pagi, kelengkapan administrasi ajar, dan tugas piket sekolah.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setTeacherTatibFormState({
+                      id: '',
+                      teacherName: '',
+                      tanggal: new Date().toISOString().split('T')[0],
+                      kategori: 'KEHADIRAN_KBM',
+                      keterangan: '',
+                      status: 'TERTIB',
+                      tindakLanjut: '',
+                    })
+                    setIsTeacherTatibModalOpen(true)
+                  }}
+                  className="h-9 text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl gap-1.5 shadow-xs"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Input Tatib Guru</span>
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-50 dark:bg-slate-800/60">
+                  <TableRow>
+                    <TableHead className="w-12 text-center text-xs font-bold">No</TableHead>
+                    <TableHead className="text-xs font-bold">Tanggal</TableHead>
+                    <TableHead className="text-xs font-bold">Nama Guru / Pegawai</TableHead>
+                    <TableHead className="text-xs font-bold">Kategori Kedisiplinan</TableHead>
+                    <TableHead className="text-xs font-bold">Keterangan / Uraian</TableHead>
+                    <TableHead className="text-xs font-bold text-center">Status</TableHead>
+                    <TableHead className="text-xs font-bold">Tindak Lanjut / Catatan Kepala Sekolah</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {teacherTatibList.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-44 text-center text-xs text-slate-400">
+                        <UserCheck2 className="w-8 h-8 text-slate-300 mx-auto mb-2 opacity-60" />
+                        Belum ada catatan kedisiplinan guru tercatat. Seluruh guru &amp; tendik dalam status tertib.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    teacherTatibList.map((t: any, idx: number) => (
+                      <TableRow key={t.id || idx} className="text-xs hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+                        <TableCell className="text-center font-bold text-slate-500">{idx + 1}</TableCell>
+                        <TableCell className="whitespace-nowrap font-semibold text-slate-800 dark:text-slate-200">
+                          {t.tanggal ? new Date(t.tanggal).toLocaleDateString('id-ID') : '-'}
+                        </TableCell>
+                        <TableCell className="font-bold text-slate-900 dark:text-white">
+                          {t.teacherName}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800">
+                            {t.kategori?.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[240px] text-slate-600 dark:text-slate-300">
+                          {t.keterangan || '-'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge className={`text-[10px] font-bold ${
+                            t.status === 'TERTIB'
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200'
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200'
+                          }`}>
+                            {t.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] text-slate-600 dark:text-slate-400">
+                          {t.tindakLanjut || '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. SIKAP TAB VIEW 3: REKAP PRESTASI SISWA (SIKAP Benchmark) */}
+      {/* ========================================================================= */}
+      {activeTab === 'prestasi-siswa' && (
+        <Card className="border-amber-200 dark:border-amber-900/50 bg-white dark:bg-slate-900 shadow-xs rounded-2xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-amber-50/50 to-yellow-50/30 dark:from-amber-950/20 dark:to-slate-900">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-amber-500 text-slate-950 font-black text-[10px]">SIKAP PRESTASI</Badge>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Award className="w-5 h-5 text-amber-500" />
+                    Rekapitulasi Prestasi, Kejuaraan &amp; Reward Siswa
+                  </CardTitle>
+                </div>
+                <CardDescription className="text-xs text-slate-500 mt-1">
+                  Catatan pencapaian akademik, sains, seni budaya, olahraga, hafalan Quran, dan keteladanan siswa.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setSelectedStudentForAction(null)
+                    setFormState({
+                      id: '',
+                      studentId: '',
+                      category: 'PRESTASI_PENGHARGAAN',
+                      type: 'POSITIF',
+                      title: 'Juara Lomba / Prestasi',
+                      description: '',
+                      points: 25,
+                      date: new Date().toISOString().split('T')[0],
+                      actionTaken: 'Diberikan piagam dan poin apresiasi',
+                      status: canVerify ? 'SELESAI' : 'MENUNGGU',
+                      notifyParent: true,
+                    })
+                    setIsFormOpen(true)
+                  }}
+                  className="h-9 text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl gap-1.5 shadow-xs"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Input Prestasi Baru</span>
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-50 dark:bg-slate-800/60">
+                  <TableRow>
+                    <TableHead className="w-12 text-center text-xs font-bold">No</TableHead>
+                    <TableHead className="text-xs font-bold">Tanggal</TableHead>
+                    <TableHead className="text-xs font-bold">Nama Siswa</TableHead>
+                    <TableHead className="text-xs font-bold">Kelas</TableHead>
+                    <TableHead className="text-xs font-bold">Nama Prestasi / Kejuaraan</TableHead>
+                    <TableHead className="text-xs font-bold text-center">Reward Poin</TableHead>
+                    <TableHead className="text-xs font-bold">Apresiasi Sekolah</TableHead>
+                    <TableHead className="text-xs font-bold">Pencatat / Pembina</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {achievementList.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-44 text-center text-xs text-slate-400">
+                        <Award className="w-8 h-8 text-amber-300 mx-auto mb-2 opacity-60" />
+                        Belum ada catatan prestasi atau penghargaan siswa terdaftar.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    achievementList.map((ach: any, idx: number) => (
+                      <TableRow key={ach.id || idx} className="text-xs hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+                        <TableCell className="text-center font-bold text-slate-500">{idx + 1}</TableCell>
+                        <TableCell className="whitespace-nowrap font-semibold text-slate-800 dark:text-slate-200">
+                          {ach.date ? new Date(ach.date).toLocaleDateString('id-ID') : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-bold text-slate-900 dark:text-white block">{ach.student?.name || '-'}</span>
+                          <span className="text-[10px] text-slate-400">NIS: {ach.student?.nis || '-'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800">
+                            {ach.student?.class?.name || ach.student?.className || '-'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[240px]">
+                          <p className="font-bold text-slate-900 dark:text-white">{ach.title}</p>
+                          <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">{ach.description || '-'}</p>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-lg border border-emerald-200 text-xs">
+                            +{ach.points} Poin
+                          </span>
+                        </TableCell>
+                        <TableCell className="max-w-[180px] text-slate-600 dark:text-slate-300">
+                          {ach.actionTaken || 'Piagam Apresiasi'}
+                        </TableCell>
+                        <TableCell className="text-slate-500">
+                          {ach.evaluator?.name || 'Guru Pembina'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. SIKAP TAB VIEW 4: TEMUAN KEJADIAN / INSIDEN KHUSUS (SIKAP Benchmark) */}
+      {/* ========================================================================= */}
+      {activeTab === 'temuan-kejadian' && (
+        <Card className="border-cyan-200 dark:border-cyan-900/50 bg-white dark:bg-slate-900 shadow-xs rounded-2xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-cyan-50/50 to-blue-50/30 dark:from-cyan-950/20 dark:to-slate-900">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-cyan-600 text-white text-[10px] font-bold">SIKAP KEJADIAN</Badge>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <AlertOctagon className="w-5 h-5 text-cyan-600" />
+                    Log Temuan Kejadian &amp; Insiden Khusus Siswa
+                  </CardTitle>
+                </div>
+                <CardDescription className="text-xs text-slate-500 mt-1">
+                  Pencatatan temuan insiden khusus lapangan (lokasi kejadian, kronologi, saksi, dan tindakan cepat penanganan).
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setIncidentFormState({
+                      id: '',
+                      studentId: '',
+                      title: '',
+                      lokasi: 'Area Sekolah',
+                      tanggal: new Date().toISOString().split('T')[0],
+                      waktu: '08:30 WIB',
+                      kategori: 'KETERTIBAN',
+                      kronologi: '',
+                      saksi: '',
+                      tindakanLangsung: '',
+                      status: 'TERCATAT',
+                      poin: -10,
+                    })
+                    setIsIncidentModalOpen(true)
+                  }}
+                  className="h-9 text-xs bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl gap-1.5 shadow-xs"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Input Temuan Kejadian</span>
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-50 dark:bg-slate-800/60">
+                  <TableRow>
+                    <TableHead className="w-12 text-center text-xs font-bold">No</TableHead>
+                    <TableHead className="text-xs font-bold">Tanggal & Waktu</TableHead>
+                    <TableHead className="text-xs font-bold">Nama Siswa Terkait</TableHead>
+                    <TableHead className="text-xs font-bold">Perihal / Kejadian</TableHead>
+                    <TableHead className="text-xs font-bold">Lokasi & Saksi</TableHead>
+                    <TableHead className="text-xs font-bold">Tindakan Langsung</TableHead>
+                    <TableHead className="text-xs font-bold text-center">Poin / Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {incidentList.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-44 text-center text-xs text-slate-400">
+                        <AlertOctagon className="w-8 h-8 text-cyan-300 mx-auto mb-2 opacity-60" />
+                        Belum ada catatan temuan kejadian atau insiden khusus siswa. Lingkungan sekolah aman &amp; tertib.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    incidentList.map((inc: any, idx: number) => (
+                      <TableRow key={inc.id || idx} className="text-xs hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+                        <TableCell className="text-center font-bold text-slate-500">{idx + 1}</TableCell>
+                        <TableCell className="whitespace-nowrap font-semibold text-slate-800 dark:text-slate-200">
+                          {inc.date ? new Date(inc.date).toLocaleDateString('id-ID') : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-bold text-slate-900 dark:text-white block">{inc.student?.name || '-'}</span>
+                          <span className="text-[10px] text-slate-400">Kelas: {inc.student?.class?.name || inc.student?.className || '-'}</span>
+                        </TableCell>
+                        <TableCell className="max-w-[240px]">
+                          <p className="font-bold text-slate-900 dark:text-white">{inc.title}</p>
+                          <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">{inc.description || '-'}</p>
+                        </TableCell>
+                        <TableCell className="text-slate-600 dark:text-slate-300">
+                          <p className="font-semibold text-xs text-cyan-700 dark:text-cyan-300">Area Sekolah</p>
+                          <p className="text-[10px] text-slate-400">Petugas Tatib / Guru Piket</p>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] text-slate-600 dark:text-slate-300">
+                          {inc.actionTaken || 'Dibina dan dipantau'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="font-bold text-rose-600 text-xs">
+                            {inc.points} Poin
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. SIKAP TAB VIEW 5: CATATAN KESEHATAN & PENGGUNA UKS (SIKAP Benchmark) */}
+      {/* ========================================================================= */}
+      {activeTab === 'kesehatan-uks' && (
+        <Card className="border-teal-200 dark:border-teal-900/50 bg-white dark:bg-slate-900 shadow-xs rounded-2xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-teal-50/50 to-emerald-50/30 dark:from-teal-950/20 dark:to-slate-900">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-teal-600 text-white text-[10px] font-bold">SIKAP UKS</Badge>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Stethoscope className="w-5 h-5 text-teal-600" />
+                    Layanan Kesehatan &amp; Kunjungan Pasien Ruang UKS
+                  </CardTitle>
+                </div>
+                <CardDescription className="text-xs text-slate-500 mt-1">
+                  Pencatatan riwayat keluhan medis siswa, diagnosa awal, obat-obatan UKS, serta pemantauan istirahat/rujukan faskes.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setHealthFormState({
+                      id: '',
+                      studentId: '',
+                      tanggal: new Date().toISOString().split('T')[0],
+                      waktuMasuk: '09:00 WIB',
+                      keluhan: '',
+                      diagnosaAwal: '',
+                      penanganan: '',
+                      obatDiberikan: '',
+                      kondisi: 'PEMULIHAN_UKS',
+                      petugasUks: '',
+                      catatan: '',
+                    })
+                    setIsHealthModalOpen(true)
+                  }}
+                  className="h-9 text-xs bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl gap-1.5 shadow-xs"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Input Pasien UKS</span>
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-50 dark:bg-slate-800/60">
+                  <TableRow>
+                    <TableHead className="w-12 text-center text-xs font-bold">No</TableHead>
+                    <TableHead className="text-xs font-bold">Tanggal & Waktu</TableHead>
+                    <TableHead className="text-xs font-bold">Nama Pasien Siswa</TableHead>
+                    <TableHead className="text-xs font-bold">Kelas</TableHead>
+                    <TableHead className="text-xs font-bold">Keluhan & Diagnosa</TableHead>
+                    <TableHead className="text-xs font-bold">Penanganan & Obat</TableHead>
+                    <TableHead className="text-xs font-bold text-center">Kondisi / Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {healthList.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-44 text-center text-xs text-slate-400">
+                        <HeartPulse className="w-8 h-8 text-teal-300 mx-auto mb-2 opacity-60" />
+                        Belum ada catatan kunjungan atau layanan UKS terdaftar. Seluruh siswa dalam kondisi sehat walafiat.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    healthList.map((h: any, idx: number) => (
+                      <TableRow key={h.id || idx} className="text-xs hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+                        <TableCell className="text-center font-bold text-slate-500">{idx + 1}</TableCell>
+                        <TableCell className="whitespace-nowrap font-semibold text-slate-800 dark:text-slate-200">
+                          {h.date ? new Date(h.date).toLocaleDateString('id-ID') : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-bold text-slate-900 dark:text-white block">{h.student?.name || '-'}</span>
+                          <span className="text-[10px] text-slate-400">NIS: {h.student?.nis || '-'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800">
+                            {h.student?.class?.name || h.student?.className || '-'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[220px]">
+                          <p className="font-bold text-slate-900 dark:text-white">{h.title}</p>
+                          <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">{h.description || '-'}</p>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] text-slate-600 dark:text-slate-300">
+                          {h.actionTaken || 'Istirahat di UKS'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge className="bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-200 text-[10px] font-bold">
+                            {h.status || 'TERLAYANI'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       <Dialog open={isParamModalOpen} onOpenChange={setIsParamModalOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -3992,6 +5087,375 @@ const BK_LETTER_PRESETS = [
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ========================================================================= */}
+      {/* 8. SIKAP MODAL 1: Dialog Input Temuan Kejadian / Insiden Khusus */}
+      {/* ========================================================================= */}
+      <Dialog open={isIncidentModalOpen} onOpenChange={setIsIncidentModalOpen}>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
+              <AlertOctagon className="w-5 h-5 text-cyan-600" />
+              Catat Temuan Kejadian &amp; Insiden Khusus (SIKAP)
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Dokumentasikan fakta kronologis temuan pelanggaran atau insiden di lingkungan sekolah.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3.5 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Pilih Siswa Terkait *</Label>
+              <Select
+                value={incidentFormState.studentId}
+                onValueChange={(val) => setIncidentFormState((prev) => ({ ...prev, studentId: val || '' }))}
+              >
+                <SelectTrigger className="h-10 text-xs rounded-xl">
+                  <SelectValue placeholder="Pilih Siswa..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {students.map((s: any) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name} ({s.nis}) - {s.class?.name || s.className || '-'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Tanggal Kejadian</Label>
+                <Input
+                  type="date"
+                  value={incidentFormState.tanggal}
+                  onChange={(e) => setIncidentFormState((prev) => ({ ...prev, tanggal: e.target.value }))}
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Waktu / Jam</Label>
+                <Input
+                  value={incidentFormState.waktu}
+                  onChange={(e) => setIncidentFormState((prev) => ({ ...prev, waktu: e.target.value }))}
+                  placeholder="Contoh: 08:30 WIB"
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Lokasi Temuan</Label>
+                <Input
+                  value={incidentFormState.lokasi}
+                  onChange={(e) => setIncidentFormState((prev) => ({ ...prev, lokasi: e.target.value }))}
+                  placeholder="Contoh: Parkiran Belakang / Kantin"
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Poin Pelanggaran</Label>
+                <Input
+                  type="number"
+                  value={incidentFormState.poin}
+                  onChange={(e) => setIncidentFormState((prev) => ({ ...prev, poin: Number(e.target.value) }))}
+                  placeholder="-10"
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Judul / Perihal Temuan Kejadian *</Label>
+              <Input
+                value={incidentFormState.title}
+                onChange={(e) => setIncidentFormState((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder="Contoh: Terjaring membawa vape di luar kelas"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Kronologi &amp; Saksi Kejadian</Label>
+              <Textarea
+                rows={3}
+                value={incidentFormState.kronologi}
+                onChange={(e) => setIncidentFormState((prev) => ({ ...prev, kronologi: e.target.value }))}
+                placeholder="Tuliskan urutan peristiwa secara objektif beserta saksi di tempat..."
+                className="text-xs rounded-xl resize-none"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Tindakan Langsung di Tempat</Label>
+              <Input
+                value={incidentFormState.tindakanLangsung}
+                onChange={(e) => setIncidentFormState((prev) => ({ ...prev, tindakanLangsung: e.target.value }))}
+                placeholder="Contoh: Barang diamankan dan siswa diarahkan ke ruang Tatib"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsIncidentModalOpen(false)}
+              className="rounded-xl text-xs font-bold"
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveIncident}
+              className="bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-bold gap-1.5"
+            >
+              <Check className="w-4 h-4" />
+              Simpan Temuan Kejadian
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* 9. SIKAP MODAL 2: Dialog Input Pasien UKS & Kesehatan */}
+      {/* ========================================================================= */}
+      <Dialog open={isHealthModalOpen} onOpenChange={setIsHealthModalOpen}>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
+              <HeartPulse className="w-5 h-5 text-teal-600" />
+              Layanan Medis &amp; Pasien Masuk UKS (SIKAP)
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Catat kunjungan ruang UKS, keluhan medis siswa, penanganan dan pemberian obat.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3.5 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Pilih Pasien Siswa *</Label>
+              <Select
+                value={healthFormState.studentId}
+                onValueChange={(val) => setHealthFormState((prev) => ({ ...prev, studentId: val || '' }))}
+              >
+                <SelectTrigger className="h-10 text-xs rounded-xl">
+                  <SelectValue placeholder="Pilih Siswa..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {students.map((s: any) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name} ({s.nis}) - {s.class?.name || s.className || '-'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Tanggal</Label>
+                <Input
+                  type="date"
+                  value={healthFormState.tanggal}
+                  onChange={(e) => setHealthFormState((prev) => ({ ...prev, tanggal: e.target.value }))}
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Waktu Masuk UKS</Label>
+                <Input
+                  value={healthFormState.waktuMasuk}
+                  onChange={(e) => setHealthFormState((prev) => ({ ...prev, waktuMasuk: e.target.value }))}
+                  placeholder="Contoh: 09:15 WIB"
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Keluhan Gejala Medis *</Label>
+              <Input
+                value={healthFormState.keluhan}
+                onChange={(e) => setHealthFormState((prev) => ({ ...prev, keluhan: e.target.value }))}
+                placeholder="Contoh: Pusing demam, mual saat pelajaran olahraga"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Diagnosa Awal</Label>
+                <Input
+                  value={healthFormState.diagnosaAwal}
+                  onChange={(e) => setHealthFormState((prev) => ({ ...prev, diagnosaAwal: e.target.value }))}
+                  placeholder="Contoh: Gejala dispepsia / migrain"
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Obat yang Diberikan</Label>
+                <Input
+                  value={healthFormState.obatDiberikan}
+                  onChange={(e) => setHealthFormState((prev) => ({ ...prev, obatDiberikan: e.target.value }))}
+                  placeholder="Contoh: Paracetamol 500mg, Antasida"
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Status Tindak Lanjut</Label>
+                <Select
+                  value={healthFormState.kondisi}
+                  onValueChange={(val) => setHealthFormState((prev) => ({ ...prev, kondisi: val || 'PEMULIHAN_UKS' }))}
+                >
+                  <SelectTrigger className="h-10 text-xs rounded-xl">
+                    <SelectValue placeholder="Pilih Kondisi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PEMULIHAN_UKS">Istirahat di Ruang UKS</SelectItem>
+                    <SelectItem value="KEMBALI_KE_KELAS">Sudah Membaik & Kembali KBM</SelectItem>
+                    <SelectItem value="PULANG_DIJEMPUT_ORTU">Dipulangkan / Dijemput Ortu</SelectItem>
+                    <SelectItem value="RUJUKAN_FASWAP">Dirujuk ke Klinik / RS Faskes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Petugas / Kader UKS</Label>
+                <Input
+                  value={healthFormState.petugasUks}
+                  onChange={(e) => setHealthFormState((prev) => ({ ...prev, petugasUks: e.target.value }))}
+                  placeholder="Nama petugas jaga UKS"
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsHealthModalOpen(false)}
+              className="rounded-xl text-xs font-bold"
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveHealth}
+              className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold gap-1.5"
+            >
+              <Check className="w-4 h-4" />
+              Simpan Layanan UKS
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* 10. SIKAP MODAL 3: Dialog Input Tatib Guru & Tendik */}
+      {/* ========================================================================= */}
+      <Dialog open={isTeacherTatibModalOpen} onOpenChange={setIsTeacherTatibModalOpen}>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
+              <UserCheck2 className="w-5 h-5 text-rose-600" />
+              Input Catatan Tata Tertib Guru &amp; Tendik (SIKAP)
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Evaluasi komitmen kedisiplinan dan profesionalitas pendidik SMA Muhammadiyah 1 Ponorogo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3.5 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Nama Guru / Tenaga Pendidik *</Label>
+              <Input
+                value={teacherTatibFormState.teacherName}
+                onChange={(e) => setTeacherTatibFormState((prev) => ({ ...prev, teacherName: e.target.value }))}
+                placeholder="Ketik nama lengkap guru / NBM..."
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Tanggal</Label>
+                <Input
+                  type="date"
+                  value={teacherTatibFormState.tanggal}
+                  onChange={(e) => setTeacherTatibFormState((prev) => ({ ...prev, tanggal: e.target.value }))}
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Kategori Kedisiplinan</Label>
+                <Select
+                  value={teacherTatibFormState.kategori}
+                  onValueChange={(val) => setTeacherTatibFormState((prev) => ({ ...prev, kategori: val || 'KEHADIRAN_KBM' }))}
+                >
+                  <SelectTrigger className="h-10 text-xs rounded-xl">
+                    <SelectValue placeholder="Pilih Kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="KEHADIRAN_KBM">Kehadiran Jam Mengajar KBM</SelectItem>
+                    <SelectItem value="APEL_PAGI">Kehadiran Apel Pagi / Rapat Dinas</SelectItem>
+                    <SelectItem value="ADMINISTRASI_GURU">Kelengkapan Perangkat & Jurnal Ajar</SelectItem>
+                    <SelectItem value="TUGAS_PIKET">Kedisiplinan Piket Sekolah</SelectItem>
+                    <SelectItem value="KODE_ETIK">Etika &amp; Teladan Pendidik</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Keterangan / Temuan Lapangan *</Label>
+              <Textarea
+                rows={3}
+                value={teacherTatibFormState.keterangan}
+                onChange={(e) => setTeacherTatibFormState((prev) => ({ ...prev, keterangan: e.target.value }))}
+                placeholder="Tuliskan uraian catatan kedisiplinan guru secara objektif..."
+                className="text-xs rounded-xl resize-none"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Tindak Lanjut / Arahan Kepala Sekolah</Label>
+              <Input
+                value={teacherTatibFormState.tindakLanjut}
+                onChange={(e) => setTeacherTatibFormState((prev) => ({ ...prev, tindakLanjut: e.target.value }))}
+                placeholder="Contoh: Diberikan teguran lisan dan pembinaan berkala"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsTeacherTatibModalOpen(false)}
+              className="rounded-xl text-xs font-bold"
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveTeacherTatib}
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold gap-1.5"
+            >
+              <Check className="w-4 h-4" />
+              Simpan Tatib Guru
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
+

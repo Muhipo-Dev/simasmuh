@@ -15,13 +15,17 @@ import {
   Wallet, Users, BarChart3, Building2, Search, Pencil, Trash2,
   Loader2, PlusCircle, CheckCircle2, TrendingUp, X, Download,
   AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, Sparkles,
-  ShieldAlert, ShieldCheck, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check, Info
+  ShieldAlert, ShieldCheck, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check, Info,
+  CreditCard, FileCheck, Printer
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { confirmDelete } from '@/lib/swal-helper'
 import PaymentProofVerificationPage from '../verifikasi-pembayaran/page'
+import ExamCardPrintDialog from '@/components/finance/ExamCardPrintDialog'
+import SklPrintDialog from '@/components/finance/SklPrintDialog'
+import SingleReceiptPrintModal from '@/components/finance/SingleReceiptPrintModal'
 
 // ============================================================
 // TYPES
@@ -195,6 +199,10 @@ function TagihanModal({
   const [payAmountInput, setPayAmountInput] = useState('')
   const [payNotesInput, setPayNotesInput] = useState('')
   const [payMode, setPayMode] = useState<'LUNAS' | 'ANGSURAN'>('LUNAS')
+
+  // Receipt Modal State
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false)
+  const [receiptData, setReceiptData] = useState<any>(null)
 
   // Queries for public settings and program configs to auto-fill fee amounts
   const { data: publicSettings } = useQuery<{ defaultDpp?: number; defaultUka?: number; defaultUks?: number; defaultInfaq?: number; defaultSeragam?: number }>({
@@ -914,6 +922,39 @@ function TagihanModal({
                     </div>
 
                     <div className="flex sm:flex-col gap-1.5 shrink-0 justify-end items-end w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60">
+                      {/* Kwitansi / Bukti Bayar */}
+                      {(t.status === 'LUNAS' || (t.amountPaid && t.amountPaid > 0)) && (
+                        <button
+                          onClick={() => {
+                            const dInfo = parseDiscountInfo(t.notes)
+                            setReceiptData({
+                              receiptNo: `KWT-${student?.nis || '000'}-${t.type}-${Date.now().toString().slice(-4)}`,
+                              paymentDate: t.paidDate ? new Date(t.paidDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }),
+                              studentName: student?.name || '',
+                              studentNis: student?.nis || '',
+                              studentNisn: student?.nisn || '',
+                              className: student?.className || '',
+                              program: student?.program || '',
+                              paymentType: t.type,
+                              period: t.month && t.year ? `${MONTHS.find(m => m.value === t.month!.toString())?.label} ${t.year}` : (t.year ? `Tahun ${t.year}` : '-'),
+                              originalAmount: dInfo?.originalAmount || t.amount,
+                              discountAmount: dInfo?.beasiswaAmount || 0,
+                              discountPct: dInfo?.beasiswaPercentage || 0,
+                              paidAmount: t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0),
+                              remainingAmount: Math.max(0, t.amount - (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0))),
+                              status: t.status,
+                              cashierName: 'Kasir Keuangan',
+                              notes: cleanNotesText || 'Pembayaran Sistem Keuangan SIMASMUH',
+                            })
+                            setReceiptModalOpen(true)
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 border border-blue-200 dark:border-blue-800 transition-colors shadow-xs"
+                          title="Cetak Kwitansi / Bukti Pembayaran"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-blue-600" /> Cetak Kwitansi
+                        </button>
+                      )}
+
                       {/* Lunasi / Angsur / Batal */}
                       {t.status !== 'LUNAS' ? (
                         <button onClick={() => openPayDialog(t)}
@@ -1154,6 +1195,15 @@ function TagihanModal({
           </div>
         </DialogContent>
       </Dialog>
+
+      <SingleReceiptPrintModal
+        open={receiptModalOpen}
+        onClose={() => {
+          setReceiptModalOpen(false)
+          setReceiptData(null)
+        }}
+        data={receiptData}
+      />
     </>
   )
 }
@@ -2592,6 +2642,8 @@ function TabTagihan() {
   const [modalOpen, setModalOpen] = useState(false)
   const [massalOpen, setMassalOpen] = useState(false)
   const [cashModalOpen, setCashModalOpen] = useState(false)
+  const [examCardModalOpen, setExamCardModalOpen] = useState(false)
+  const [sklModalOpen, setSklModalOpen] = useState(false)
   const authenticatedQuery = useAuthenticatedQuery()
   const qc = useQueryClient()
 
@@ -2911,6 +2963,20 @@ function TabTagihan() {
               </Button>
             </>
           )}
+          <Button
+            variant="outline"
+            onClick={() => setExamCardModalOpen(true)}
+            className="border-pink-200 dark:border-pink-800 text-pink-700 dark:text-pink-300 hover:bg-pink-50 dark:hover:bg-pink-950/50 h-8 px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1"
+            title="Cetak Kartu Peserta Ujian Siswa (STS / SAS / SAT / CBT)">
+            <CreditCard className="w-3.5 h-3.5 text-pink-600" /> Kartu Ujian
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setSklModalOpen(true)}
+            className="border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 h-8 px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1"
+            title="Cetak Surat Keterangan Lulus & Bebas Keuangan (SKL)">
+            <FileCheck className="w-3.5 h-3.5 text-emerald-600" /> SKL
+          </Button>
           <Button variant="outline" onClick={handleExportRekapKelas}
             className="border-indigo-200 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 h-8 px-2 text-xs font-bold rounded-lg"
             title="Eksport Excel Rekap Keuangan Per Kelas">
@@ -3304,6 +3370,8 @@ function TabTagihan() {
         onResetStudent={(id) => openResetModal([id])} />
       <ReleaseYearlyModal open={massalOpen} onClose={() => setMassalOpen(false)} classes={classes} />
       <ManualCashPaymentModal open={cashModalOpen} onClose={() => setCashModalOpen(false)} students={students} />
+      <ExamCardPrintDialog open={examCardModalOpen} onClose={() => setExamCardModalOpen(false)} classes={classes} />
+      <SklPrintDialog open={sklModalOpen} onClose={() => setSklModalOpen(false)} classes={classes} />
     </div>
   )
 }

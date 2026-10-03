@@ -71,15 +71,14 @@ export function IzinSiswaManagement() {
   const isGuru = user?.role === 'GURU' || user?.subRole === 'GURU' || isWaliKelas
   const isTatib = user?.role === 'KETERTIBAN' || user?.subRole === 'KETERTIBAN' || user?.subRole2 === 'KETERTIBAN' || user?.subRole3 === 'KETERTIBAN' || user?.subRole4 === 'KETERTIBAN' || user?.subRole5 === 'KETERTIBAN'
   const isBk = user?.role === 'BK_BP' || user?.role === 'BK' || user?.subRole === 'BK_BP' || user?.subRole === 'BK' || user?.subRole2 === 'BK_BP' || user?.subRole3 === 'BK_BP' || user?.subRole4 === 'BK_BP' || user?.subRole5 === 'BK_BP'
+  const isKesiswaan = user?.role === 'KESISWAAN' || user?.role === 'WAKA_KESISWAAN' || user?.subRole === 'KESISWAAN' || user?.subRole === 'WAKA_KESISWAAN' || user?.subRole2 === 'KESISWAAN' || user?.subRole2 === 'WAKA_KESISWAAN'
   const isWaliMurid = user?.role === 'WALI_MURID'
   const isSiswa = user?.role === 'SISWA'
   
-  // Tim Ketertiban (TATIB) & Tim BK/BP & Wali Kelas memverifikasi semua izin siswa & melakukan pengecekan secara berkala
-  // TU tidak memiliki akses ke modul ini
-  // Kepala Sekolah & Siswa & Wali Murid hanya lihat log absensi masing-masing
-  const canManageAll = isSuperAdmin || isTatib || isBk || isWaliKelas
-  // Pengaju Izin Siswa: Khusus Wali Murid & Wali Kelas (Wali Kelas dapat menginputkan izin siswa secara sah jika izin di luar sistem)
-  const canCreate = isWaliMurid || isWaliKelas || isSuperAdmin
+  // Tim Kesiswaan, Ketertiban (TATIB), Tim BK/BP & Wali Kelas memverifikasi semua izin siswa & melakukan supervisi berkala
+  const canManageAll = isSuperAdmin || isKesiswaan || isTatib || isBk || isWaliKelas
+  // Pengaju Izin Siswa: Khusus Wali Murid, Kesiswaan, & Wali Kelas
+  const canCreate = isWaliMurid || isKesiswaan || isWaliKelas || isSuperAdmin
 
   const [myIzin, setMyIzin] = useState<IzinSiswaItem[]>([])
   const [allIzin, setAllIzin] = useState<IzinSiswaItem[]>([])

@@ -68,6 +68,7 @@ export default function DispensasiPage() {
   const isSuperAdmin = user?.role === 'SUPERADMIN' || user?.role === 'ADMIN_IT' || user?.subRole === 'SUPERADMIN'
   const isBau = user?.role === 'ADMIN_TU' || user?.role === 'BAU' || user?.role === 'TATA_USAHA' || user?.subRole === 'BAU' || user?.subRole === 'ADMIN_TU'
   const isTatib = user?.role === 'KETERTIBAN' || user?.subRole === 'KETERTIBAN' || user?.subRole2 === 'KETERTIBAN' || user?.subRole3 === 'KETERTIBAN'
+  const isKesiswaan = user?.role === 'KESISWAAN' || user?.role === 'WAKA_KESISWAAN' || user?.subRole === 'KESISWAAN' || user?.subRole === 'WAKA_KESISWAAN' || user?.subRole2 === 'KESISWAAN' || user?.subRole2 === 'WAKA_KESISWAAN'
   const isWaliKelas = user?.subRole === 'WALI_KELAS' || user?.role === 'WALI_KELAS'
   const isGuru = user?.role === 'GURU' || user?.subRole === 'GURU' || isWaliKelas
   const isWaliMurid = user?.role === 'WALI_MURID'
@@ -75,10 +76,9 @@ export default function DispensasiPage() {
 
   const isKepalaSekolah = user?.role === 'KEPALA_SEKOLAH'
 
-  // Tim Ketertiban menerbitkan dispensasi (Superadmin juga memiliki akses penuh)
-  // Kepala Sekolah langsung approve/reject
-  const canPublish = isTatib || isSuperAdmin
-  const canManage = isKepalaSekolah
+  // Waka Kesiswaan & Tim Ketertiban menerbitkan dan mengelola dispensasi siswa (Superadmin & KepSek memiliki akses penuh)
+  const canPublish = isKesiswaan || isTatib || isSuperAdmin
+  const canManage = isKepalaSekolah || isKesiswaan || isSuperAdmin
 
   const [allDispensasi, setAllDispensasi] = useState<DispensasiItem[]>([])
   const [allStudentsList, setAllStudentsList] = useState<any[]>([])

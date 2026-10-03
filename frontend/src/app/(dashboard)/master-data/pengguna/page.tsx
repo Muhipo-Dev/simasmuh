@@ -48,6 +48,11 @@ const ROLE_CONFIG: Record<string, { label: string; bg: string; text: string; bor
 
 const SUB_ROLE_OPTIONS = [
   { value: 'NONE', label: '— Tanpa Sub Role —' },
+  { value: 'WAKA_KURIKULUM', label: 'Waka Kurikulum' },
+  { value: 'WAKA_KESISWAAN', label: 'Waka Kesiswaan' },
+  { value: 'WAKA_HUMAS_SDM', label: 'Waka Humas & SDM' },
+  { value: 'WAKA_SARPRAS', label: 'Waka Sarana & Prasarana' },
+  { value: 'WAKA_ISMUBA', label: 'Waka ISMUBA' },
   { value: 'ADMIN_TU', label: 'Tata Usaha' },
   { value: 'WALI_KELAS', label: 'Wali Kelas' },
   { value: 'KEUANGAN_MASUK', label: 'Keuangan Masuk (Tagihan & Verifikasi)' },
@@ -72,6 +77,11 @@ const SUB_ROLE_OPTIONS = [
 ]
 
 const SUB_ROLE_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  WAKA_KURIKULUM: { label: 'Waka Kurikulum', bg: 'bg-fuchsia-50/90 dark:bg-fuchsia-950/60', text: 'text-fuchsia-700 dark:text-fuchsia-300', border: 'border-fuchsia-200 dark:border-fuchsia-800' },
+  WAKA_KESISWAAN: { label: 'Waka Kesiswaan', bg: 'bg-blue-50/90 dark:bg-blue-950/60', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
+  WAKA_HUMAS_SDM: { label: 'Waka Humas & SDM', bg: 'bg-purple-50/90 dark:bg-purple-950/60', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
+  WAKA_SARPRAS: { label: 'Waka Sarpras', bg: 'bg-amber-50/90 dark:bg-amber-950/60', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
+  WAKA_ISMUBA: { label: 'Waka ISMUBA', bg: 'bg-emerald-50/90 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
   ADMIN_TU: { label: 'Tata Usaha', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
   TATA_USAHA: { label: 'Tata Usaha', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
   BAU: { label: 'Tata Usaha', bg: 'bg-sky-50/90 dark:bg-sky-950/60', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
@@ -82,7 +92,6 @@ const SUB_ROLE_CONFIG: Record<string, { label: string; bg: string; text: string;
   KEUANGAN_ALL: { label: 'Keuangan Penuh', bg: 'bg-amber-50/90 dark:bg-amber-950/60', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
   KEPEGAWAIAN: { label: 'Humas & SDM', bg: 'bg-purple-50/90 dark:bg-purple-950/60', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
   SDM: { label: 'Humas & SDM', bg: 'bg-purple-50/90 dark:bg-purple-950/60', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
-  WAKA_HUMAS_SDM: { label: 'Humas & SDM', bg: 'bg-purple-50/90 dark:bg-purple-950/60', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
   HUMAS_SDM: { label: 'Humas & SDM', bg: 'bg-purple-50/90 dark:bg-purple-950/60', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
   KETERTIBAN: { label: 'Ketertiban', bg: 'bg-rose-50/90 dark:bg-rose-950/60', text: 'text-rose-700 dark:text-rose-300', border: 'border-rose-200 dark:border-rose-800' },
   BK_BP: { label: 'BK / BP', bg: 'bg-pink-50/90 dark:bg-pink-950/60', text: 'text-pink-700 dark:text-pink-300', border: 'border-pink-200 dark:border-pink-800' },
@@ -97,7 +106,6 @@ const SUB_ROLE_CONFIG: Record<string, { label: string; bg: string; text: string;
   GURU_PIKET: { label: 'Guru Piket', bg: 'bg-lime-50/90 dark:bg-lime-950/60', text: 'text-lime-700 dark:text-lime-300', border: 'border-lime-200 dark:border-lime-800' },
   KURIKULUM: { label: 'Kurikulum', bg: 'bg-fuchsia-50/90 dark:bg-fuchsia-950/60', text: 'text-fuchsia-700 dark:text-fuchsia-300', border: 'border-fuchsia-200 dark:border-fuchsia-800' },
   ISMUBA: { label: 'ISMUBA', bg: 'bg-emerald-50/90 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
-  WAKA_ISMUBA: { label: 'ISMUBA', bg: 'bg-emerald-50/90 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
   GURU: { label: 'Guru', bg: 'bg-emerald-50/90 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
   PEGAWAI: { label: 'Pegawai / Karyawan', bg: 'bg-cyan-50/90 dark:bg-cyan-950/60', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
   KEPALA_SEKOLAH: { label: 'Kepala Sekolah', bg: 'bg-amber-50/90 dark:bg-amber-950/60', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },

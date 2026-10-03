@@ -5,7 +5,8 @@ import {
   Banknote, FileText, Image as ImageIcon, Award, FileCheck,
   ShieldAlert, Sparkles, ShieldCheck, UserCheck, HeartHandshake,
   Library, BookMarked, Mail, Contact, Package, Boxes, Camera, BellRing, Database,
-  Clock, CreditCard, Archive, Inbox, Send, BookCheck, HardDrive, FolderKanban
+  Clock, CreditCard, Archive, Inbox, Send, BookCheck, HardDrive, FolderKanban,
+  Trophy
 } from 'lucide-react'
 
 // 1. Superadmin & Admin IT (Kontrol Penuh Sistem & Master Data)
@@ -25,6 +26,7 @@ export const superadminLinks = [
   { name: 'Izin Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Pegawai' },
   { name: 'Kegiatan Sekolah', href: '/fitur/kegiatan', icon: Sparkles, group: 'Layanan Pegawai' },
   { name: 'File Explorer & Storage', href: '/fitur/file-explorer', icon: HardDrive, group: 'Pengaturan Sistem' },
+  { name: 'Prestasi Siswa', href: '/informasi/prestasi', icon: Trophy, group: 'Pengaturan Sistem' },
   { name: 'Layar QR Presensi', href: '/presensi/manajemen-qr', icon: QrCode, group: 'Pengaturan Sistem' },
   { name: 'Berita & Informasi', href: '/informasi/pengumuman', icon: Megaphone, group: 'Pengaturan Sistem' },
   { name: 'Banner Utama', href: '/informasi/banner', icon: ImageIcon, group: 'Pengaturan Sistem' },
@@ -72,6 +74,7 @@ export const guruLinks = [
   { name: 'Scan QR Absen', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
   { name: 'Disposisi Surat', href: '/fitur/disposisi', icon: FileCheck },
+  { name: 'Perangkat Pembelajaran', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Tugas Guru' },
   { name: 'Jurnal Mengajar', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Tugas Guru' },
   { name: 'Catatan Kedisiplinan', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Tugas Guru' },
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Pegawai' },
@@ -88,6 +91,7 @@ export const siswaLinks = [
   { name: 'Kartu Pelajar', href: '/pengaturan/profil#kartu-pelajar', icon: CreditCard },
   { name: 'Log Presensi', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
   { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays },
+  { name: 'Prestasi Siswa', href: '/informasi/prestasi', icon: Trophy },
   { name: 'Log Izin Saya', href: '/presensi/izin-siswa', icon: ClipboardCheck },
   { name: 'Log Dispensasi', href: '/presensi/dispensasi', icon: Award },
   { name: 'Keuangan', href: '/keuangan/laporan', icon: Wallet },
@@ -99,6 +103,7 @@ export const siswaLinks = [
 export const waliMuridLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
+  { name: 'Prestasi Siswa', href: '/informasi/prestasi', icon: Trophy },
   { name: 'Izin Sakit / Siswa', href: '/presensi/izin-siswa', icon: ClipboardCheck },
   { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award },
   { name: 'Tagihan & SPP', href: '/keuangan/laporan', icon: Wallet },
@@ -128,9 +133,13 @@ export const kepalaSekolahLinks = [
   { name: 'Disposisi Surat', href: '/fitur/disposisi', icon: FileCheck, group: 'Supervisi & E-Sign' },
   { name: 'Surat Keluar (E-Sign)', href: '/fitur/surat-keluar', icon: Send, group: 'Supervisi & E-Sign' },
   { name: 'Arsip Dokumen Sekolah', href: '/fitur/arsip', icon: Archive, group: 'Supervisi & E-Sign' },
+  { name: 'Supervisi Akademik (ASA)', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'Supervisi Akademik' },
+  { name: 'Supervisi Perangkat Ajar', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Supervisi Akademik' },
   { name: 'Supervisi Jadwal KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Supervisi Akademik' },
   { name: 'Supervisi Jurnal Guru', href: '/akademik/supervisi-jurnal', icon: BookOpen, group: 'Supervisi Akademik' },
   { name: 'Supervisi Jurnal Wali Kelas', href: '/akademik/jurnal-wali-kelas', icon: BookOpen, group: 'Supervisi Akademik' },
+  { name: 'Supervisi Prestasi Siswa', href: '/informasi/prestasi', icon: Trophy, group: 'Supervisi Kesiswaan' },
+  { name: 'Ekstrakurikuler Siswa', href: '/akademik/ekstrakurikuler', icon: Sparkles, group: 'Supervisi Kesiswaan' },
   { name: 'Log Karakter & Tatib', href: '/akademik/etika-tatib', icon: ShieldCheck, group: 'Supervisi Kesiswaan' },
   { name: 'Data Rombel & Kelas', href: '/master-data/kelas', icon: BookOpen, group: 'Supervisi Data' },
   { name: 'Data Guru & Pegawai', href: '/master-data/guru', icon: Users, group: 'Supervisi Data' },
@@ -239,21 +248,6 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isKeuanganPure
   }
 
-  // Superadmin & Admin IT memiliki akses penuh ke rute non-keuangan
-  if (roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')) return true
-
-  // Dashboard utama dan halaman profil umum selalu diizinkan untuk semua user login
-  if (
-    pathname === '/dashboard' ||
-    pathname === '/profil' ||
-    pathname === '/pengaturan/profil' ||
-    pathname === '/pengaturan/notifikasi-pengguna' ||
-    pathname === '/pengaturan/notifikasi-wali'
-  ) return true
-
-  // Scan QR presensi umum
-  if (pathname === '/presensi/scan-qr') return true
-
   const isKepalaSekolah = roles.includes('KEPALA_SEKOLAH')
   const isBau = roles.includes('ADMIN_TU') || roles.includes('BAU') || roles.includes('TATA_USAHA')
   const isGuru = roles.includes('GURU')
@@ -269,8 +263,31 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   const isGuruTahfidz = roles.includes('GURU_TAHFIDZ')
   const isIsmuba = roles.includes('ISMUBA') || roles.includes('WAKA_ISMUBA')
   const isPersuratan = roles.includes('PERSURATAN')
-  const isKurikulum = roles.includes('KURIKULUM')
+  const isKurikulum = roles.includes('KURIKULUM') || roles.includes('WAKA_KURIKULUM')
+  const isKesiswaan = roles.includes('KESISWAAN') || roles.includes('WAKA_KESISWAAN')
+  const isSarpras = roles.includes('SARPRAS') || roles.includes('WAKA_SARPRAS')
+  const isWaka = isKurikulum || isKesiswaan || isHumasSdm || isIsmuba || isSarpras || roles.some(r => r.startsWith('WAKA_') || r.includes('WAKA'))
   const isGuruPiket = roles.includes('GURU_PIKET')
+
+  // 2. Modul Supervisi GTK (MUTLAK KHUSUS PIMPINAN: Kepala Sekolah & Seluruh WAKA. DILARANG untuk Admin TU, BAU, Admin IT, Guru/Siswa)
+  if (pathname.startsWith('/akademik/supervisi-akademik') || pathname.startsWith('/akademik/supervisi-jurnal')) {
+    return isKepalaSekolah || isWaka || isKurikulum || isHumasSdm || isIsmuba || isKesiswaan || isSarpras
+  }
+
+  // Superadmin & Admin IT memiliki akses penuh ke rute umum non-keuangan & non-supervisi pimpinan
+  if (roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')) return true
+
+  // Dashboard utama dan halaman profil umum selalu diizinkan untuk semua user login
+  if (
+    pathname === '/dashboard' ||
+    pathname === '/profil' ||
+    pathname === '/pengaturan/profil' ||
+    pathname === '/pengaturan/notifikasi-pengguna' ||
+    pathname === '/pengaturan/notifikasi-wali'
+  ) return true
+
+  // Scan QR presensi umum
+  if (pathname === '/presensi/scan-qr') return true
 
   // 1. Modul Manajemen Akun & Pengaturan Sistem — Admin TU / BAU, Humas SDM & Superadmin
   if (pathname.startsWith('/master-data/pengguna')) {
@@ -291,27 +308,27 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isSiswa || isBau || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
   }
   if (pathname.startsWith('/master-data/buku-induk')) {
-    return isBau || isKepalaSekolah || isWaliKelas || isKurikulum || isBk
+    return isBau || isKepalaSekolah || isWaliKelas || isKurikulum || isBk || isWaka
   }
   if (pathname.startsWith('/master-data/siswa')) {
-    return isBau || isKepalaSekolah || isGuru || isWaliKelas || isBk || isKurikulum
+    return isBau || isKepalaSekolah || isGuru || isWaliKelas || isBk || isKurikulum || isWaka
   }
   if (pathname.startsWith('/master-data/guru')) {
-    return isBau || isKepalaSekolah || isHumasSdm || isKurikulum || isIsmuba
+    return isBau || isKepalaSekolah || isHumasSdm || isKurikulum || isIsmuba || isWaka
   }
   if (pathname.startsWith('/master-data/kelas') || pathname.startsWith('/master-data/mata-pelajaran')) {
-    return isBau || isKepalaSekolah || isKurikulum
+    return isBau || isKepalaSekolah || isKurikulum || isWaka
   }
   if (pathname.startsWith('/master-data/wali-murid')) {
     return isBau
   }
 
-  // 3. Modul Akademik
+  // 3. Modul Akademik & Jadwal Pelajaran
   if (pathname.startsWith('/akademik/jadwal-pelajaran')) {
-    return isBau || isKepalaSekolah || isGuru || isSiswa || isKurikulum || isGuruPiket
+    return isBau || isKepalaSekolah || isGuru || isSiswa || isKurikulum || isGuruPiket || isWaka
   }
-  if (pathname.startsWith('/akademik/supervisi-jurnal')) {
-    return isKurikulum || isKepalaSekolah || isBau || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
+  if (pathname.startsWith('/akademik/perangkat-ajar')) {
+    return isGuru || isKurikulum || isKepalaSekolah || isBau || isWaka || roles.includes('SUPERADMIN') || roles.includes('ADMIN_IT')
   }
   if (pathname.startsWith('/akademik/jurnal-mengajar/tambah')) {
     // Pengisian jurnal ajar HANYA untuk Guru Pengampu
@@ -381,7 +398,7 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   if (pathname.startsWith('/informasi/banner')) {
     return isAdminWeb || isHumasSdm || isBau
   }
-  if (pathname.startsWith('/informasi/pengumuman') || pathname.startsWith('/berita')) {
+  if (pathname.startsWith('/informasi/prestasi') || pathname.startsWith('/informasi/pengumuman') || pathname.startsWith('/berita')) {
     return true
   }
 
@@ -467,26 +484,45 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
       ])
     } else if (roleName === 'KEPEGAWAIAN' || roleName === 'SDM' || roleName === 'WAKA_HUMAS_SDM' || roleName === 'HUMAS_SDM') {
       addLinks([
-        { name: 'Kepegawaian & SDM', href: '/fitur/kepegawaian', icon: UserCheck, group: 'Humas & Kepegawaian' },
-        { name: 'Akun Guru & Pegawai', href: '/master-data/pengguna', icon: ShieldCheck, group: 'Humas & Kepegawaian' },
-        { name: 'Buku Tamu', href: '/fitur/buku-tamu', icon: Contact, group: 'Humas & Kepegawaian' },
-        { name: 'Kegiatan Sekolah', href: '/fitur/kegiatan', icon: Sparkles, group: 'Humas & Kepegawaian' },
-        { name: 'Notulensi Rapat', href: '/fitur/notulensi-rapat', icon: FileText, group: 'Humas & Kepegawaian' },
-        { name: 'Data Guru & Pegawai', href: '/master-data/guru', icon: Users, group: 'Humas & Kepegawaian' },
-        { name: 'Manajemen Izin Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Humas & Kepegawaian' },
-        { name: 'Berita & Informasi', href: '/informasi/pengumuman', icon: Megaphone, group: 'Humas & Kepegawaian' },
-        { name: 'Banner Utama', href: '/informasi/banner', icon: ImageIcon, group: 'Humas & Kepegawaian' },
+        { name: 'Supervisi Akademik (ASA)', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'Humas & SDM' },
+        { name: 'Kepegawaian & SDM', href: '/fitur/kepegawaian', icon: UserCheck, group: 'Humas & SDM' },
+        { name: 'Akun Guru & Pegawai', href: '/master-data/pengguna', icon: ShieldCheck, group: 'Humas & SDM' },
+        { name: 'Prestasi Siswa', href: '/informasi/prestasi', icon: Trophy, group: 'Humas & SDM' },
+        { name: 'Buku Tamu', href: '/fitur/buku-tamu', icon: Contact, group: 'Humas & SDM' },
+        { name: 'Kegiatan Sekolah', href: '/fitur/kegiatan', icon: Sparkles, group: 'Humas & SDM' },
+        { name: 'Notulensi Rapat', href: '/fitur/notulensi-rapat', icon: FileText, group: 'Humas & SDM' },
+        { name: 'Data Guru & Pegawai', href: '/master-data/guru', icon: Users, group: 'Humas & SDM' },
+        { name: 'Manajemen Izin Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Humas & SDM' },
+        { name: 'Berita & Informasi', href: '/informasi/pengumuman', icon: Megaphone, group: 'Humas & SDM' },
+        { name: 'Banner Utama', href: '/informasi/banner', icon: ImageIcon, group: 'Humas & SDM' },
       ])
-    } else if (roleName === 'KURIKULUM') {
+    } else if (roleName === 'KURIKULUM' || roleName === 'WAKA_KURIKULUM') {
       addLinks([
         { name: 'Manajemen Kurikulum', href: '/fitur/kurikulum', icon: GraduationCap, group: 'Tim Kurikulum' },
-        { name: 'Supervisi KBM & Jurnal', href: '/akademik/supervisi-jurnal', icon: BookCheck, group: 'Tim Kurikulum' },
+        { name: 'Perangkat Pembelajaran Guru', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Tim Kurikulum' },
+        { name: 'Supervisi Akademik (ASA)', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'Tim Kurikulum' },
+        { name: 'Supervisi KBM & Jurnal', href: '/akademik/supervisi-jurnal', icon: BookOpen, group: 'Tim Kurikulum' },
         { name: 'Struktur Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: BookOpen, group: 'Tim Kurikulum' },
         { name: 'Jadwal Pelajaran KBM', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Tim Kurikulum' },
+      ])
+    } else if (roleName === 'WAKA_KESISWAAN' || roleName === 'KESISWAAN') {
+      addLinks([
+        { name: 'Prestasi Siswa', href: '/informasi/prestasi', icon: Trophy, group: 'Waka Kesiswaan' },
+        { name: 'Ekstrakurikuler', href: '/akademik/ekstrakurikuler', icon: Sparkles, group: 'Waka Kesiswaan' },
+        { name: 'Supervisi Akademik (ASA)', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'Waka Kesiswaan' },
+        { name: 'Poin Kedisiplinan Siswa', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Waka Kesiswaan' },
+        { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award, group: 'Waka Kesiswaan' },
+        { name: 'Izin Siswa', href: '/presensi/izin-siswa', icon: ClipboardCheck, group: 'Waka Kesiswaan' },
+      ])
+    } else if (roleName === 'WAKA_SARPRAS' || roleName === 'SARPRAS') {
+      addLinks([
+        { name: 'Supervisi Sarpras & Aset', href: '/fitur/inventaris', icon: Package, group: 'Waka Sarpras' },
+        { name: 'Supervisi Akademik (ASA)', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'Waka Sarpras' },
       ])
     } else if (roleName === 'ISMUBA' || roleName === 'WAKA_ISMUBA') {
       addLinks([
         { name: 'ISMUBA', href: '/fitur/ismuba', icon: BookMarked, group: 'ISMUBA' },
+        { name: 'Supervisi Akademik (ASA)', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'ISMUBA' },
         { name: 'Program Tahfidz', href: '/fitur/tahfidz', icon: BookCheck, group: 'ISMUBA' },
         { name: 'Kegiatan & Kajian', href: '/fitur/kegiatan', icon: Sparkles, group: 'ISMUBA' },
         { name: 'Disposisi Surat', href: '/fitur/disposisi', icon: FileCheck, group: 'ISMUBA' },

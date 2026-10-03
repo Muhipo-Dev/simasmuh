@@ -37,6 +37,10 @@ import { SuratKeluarModule } from './modules/tu/surat-keluar/surat-keluar.module
 import { SuratMasukModule } from './modules/tu/surat-masuk/surat-masuk.module';
 import { NotulensiRapatModule } from './modules/tu/notulensi-rapat/notulensi-rapat.module';
 import { KegiatanSekolahModule } from './modules/tu/kegiatan-sekolah/kegiatan-sekolah.module';
+import { AchievementsModule } from './modules/academic/achievements/achievements.module';
+import { SupervisiModule } from './modules/academic/supervisi/supervisi.module';
+import { PerangkatAjarModule } from './modules/academic/perangkat-ajar/perangkat-ajar.module';
+import { ExtracurricularModule } from './modules/academic/extracurricular/extracurricular.module';
 import { SystemLogModule } from './modules/core/system-log/system-log.module';
 import { WaitingRoomModule } from './modules/core/waiting-room/waiting-room.module';
 import { WaitingRoomMiddleware } from './modules/core/waiting-room/waiting-room.middleware';
@@ -111,6 +115,10 @@ import { AdaptiveThrottlerGuard } from './modules/core/guards/adaptive-throttler
     SuratMasukModule,
     NotulensiRapatModule,
     KegiatanSekolahModule,
+    AchievementsModule,
+    SupervisiModule,
+    PerangkatAjarModule,
+    ExtracurricularModule,
   ],
   controllers: [AppController],
   providers: [

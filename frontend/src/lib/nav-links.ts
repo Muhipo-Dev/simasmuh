@@ -269,8 +269,12 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   const isWaka = isKurikulum || isKesiswaan || isHumasSdm || isIsmuba || isSarpras || roles.some(r => r.startsWith('WAKA_') || r.includes('WAKA'))
   const isGuruPiket = roles.includes('GURU_PIKET')
 
-  // 2. Modul Supervisi GTK (MUTLAK KHUSUS PIMPINAN: Kepala Sekolah & Seluruh WAKA. DILARANG untuk Admin TU, BAU, Admin IT, Guru/Siswa)
-  if (pathname.startsWith('/akademik/supervisi-akademik') || pathname.startsWith('/akademik/supervisi-jurnal')) {
+  // 2. Modul Supervisi GTK & Supervisi Kesiswaan (MUTLAK KHUSUS PIMPINAN: Kepala Sekolah & Seluruh WAKA)
+  if (
+    pathname.startsWith('/akademik/supervisi-akademik') ||
+    pathname.startsWith('/akademik/supervisi-jurnal') ||
+    pathname.startsWith('/kesiswaan/supervisi-izin-dispensasi')
+  ) {
     return isKepalaSekolah || isWaka || isKurikulum || isHumasSdm || isIsmuba || isKesiswaan || isSarpras
   }
 
@@ -359,39 +363,39 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     return isWaliKelas || isSiswa || isWaliMurid || isBau || isGuruPiket || isKepalaSekolah
   }
   if (pathname.startsWith('/presensi/izin-keluar')) {
-    return isGuru || isPegawai || isBau || isHumasSdm || isGuruPiket || isKepalaSekolah
+    return isGuru || isPegawai || isBau || isHumasSdm || isGuruPiket || isKepalaSekolah || isWaka
   }
   if (pathname.startsWith('/presensi/izin-siswa')) {
-    return isWaliMurid || isSiswa || isWaliKelas || isTatib || isBk || isGuruPiket
+    return isWaliMurid || isSiswa || isWaliKelas || isTatib || isBk || isGuruPiket || isKesiswaan || isWaka || isKepalaSekolah
   }
   if (pathname.startsWith('/presensi/dispensasi')) {
-    return isTatib || isBau || isKepalaSekolah || isSiswa || isWaliMurid || isWaliKelas || isBk
+    return isTatib || isBau || isKepalaSekolah || isSiswa || isWaliMurid || isWaliKelas || isBk || isKesiswaan || isWaka
   }
   if (pathname.startsWith('/presensi/cuti')) {
-    return isGuru || isPegawai || isBau || isTatib || isWaliKelas || isHumasSdm || isKepalaSekolah
+    return isGuru || isPegawai || isBau || isTatib || isWaliKelas || isHumasSdm || isKepalaSekolah || isWaka
   }
 
   // 5. Modul Fitur Sub-Role Khusus (/fitur/[slug])
   if (pathname.startsWith('/fitur/')) {
     const slug = pathname.replace('/fitur/', '').split('/')[0]
-    if (slug === 'disposisi') return isGuru || isPegawai || isBau || isKepalaSekolah || isIsmuba
-    if (slug === 'persuratan' || slug === 'surat-masuk' || slug === 'surat-keluar' || slug === 'arsip' || slug === 'e-archive') return isPersuratan || isBau || isKepalaSekolah
-    if (slug === 'inventaris') return isBau || isKepalaSekolah
-    if (slug === 'kepegawaian') return isHumasSdm || isBau || isKepalaSekolah
-    if (slug === 'buku-tamu') return isHumasSdm || isBau || isKepalaSekolah
-    if (slug === 'kegiatan' || slug === 'kegiatan-sekolah') return isHumasSdm || isIsmuba || isBau || isKepalaSekolah
-    if (slug === 'notulensi-rapat' || slug === 'notulensi') return isHumasSdm || isBau || isKepalaSekolah
-    if (slug === 'ketertiban' || slug === 'catatan-kedisiplinan') return isTatib || isBk || isGuru || isWaliKelas || isBau
-    if (slug === 'bk-bp') return isBk || isTatib || isBau
-    if (slug === 'perpustakaan') return isPustakawan || isBau
-    if (slug === 'tahfidz') return isGuruTahfidz || isIsmuba || isBau || isKepalaSekolah
-    if (slug === 'ismuba' || slug === 'waka-ismuba') return isIsmuba || isBau || isKepalaSekolah
-    if (slug === 'kebersihan') return roles.includes('KEBERSIHAN') || isBau
-    if (slug === 'keamanan') return roles.includes('KEAMANAN') || isBau
-    if (slug === 'ekstrakulikuler') return roles.includes('PEMBINA_EKSTRA') || roles.includes('PEMBINA_EXTRA') || isBau
-    if (slug === 'kurikulum') return isKurikulum || isBau || isKepalaSekolah
-    if (slug === 'guru-piket') return isGuruPiket || isBau || isKepalaSekolah
-    return isBau
+    if (slug === 'disposisi') return isGuru || isPegawai || isBau || isKepalaSekolah || isIsmuba || isWaka
+    if (slug === 'persuratan' || slug === 'surat-masuk' || slug === 'surat-keluar' || slug === 'arsip' || slug === 'e-archive') return isPersuratan || isBau || isKepalaSekolah || isWaka
+    if (slug === 'inventaris') return isBau || isKepalaSekolah || isSarpras || isWaka
+    if (slug === 'kepegawaian') return isHumasSdm || isBau || isKepalaSekolah || isWaka
+    if (slug === 'buku-tamu') return isHumasSdm || isBau || isKepalaSekolah || isWaka
+    if (slug === 'kegiatan' || slug === 'kegiatan-sekolah') return isHumasSdm || isIsmuba || isBau || isKepalaSekolah || isWaka || isKesiswaan
+    if (slug === 'notulensi-rapat' || slug === 'notulensi') return isHumasSdm || isBau || isKepalaSekolah || isWaka
+    if (slug === 'ketertiban' || slug === 'catatan-kedisiplinan') return isTatib || isBk || isGuru || isWaliKelas || isBau || isKesiswaan || isWaka || isKepalaSekolah
+    if (slug === 'bk-bp') return isBk || isTatib || isBau || isKesiswaan || isWaka || isKepalaSekolah
+    if (slug === 'perpustakaan') return isPustakawan || isBau || isWaka
+    if (slug === 'tahfidz') return isGuruTahfidz || isIsmuba || isBau || isKepalaSekolah || isWaka
+    if (slug === 'ismuba' || slug === 'waka-ismuba') return isIsmuba || isBau || isKepalaSekolah || isWaka
+    if (slug === 'kebersihan') return roles.includes('KEBERSIHAN') || isBau || isWaka
+    if (slug === 'keamanan') return roles.includes('KEAMANAN') || isBau || isWaka
+    if (slug === 'ekstrakulikuler' || slug === 'ekstrakurikuler') return roles.includes('PEMBINA_EKSTRA') || roles.includes('PEMBINA_EXTRA') || isBau || isKesiswaan || isWaka
+    if (slug === 'kurikulum') return isKurikulum || isBau || isKepalaSekolah || isWaka
+    if (slug === 'guru-piket') return isGuruPiket || isBau || isKepalaSekolah || isWaka
+    return isBau || isWaka || isKepalaSekolah
   }
 
   // 6. Modul Informasi & Banner
@@ -511,8 +515,7 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
         { name: 'Ekstrakurikuler', href: '/akademik/ekstrakurikuler', icon: Sparkles, group: 'Waka Kesiswaan' },
         { name: 'Supervisi Akademik (ASA)', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'Waka Kesiswaan' },
         { name: 'Poin Kedisiplinan Siswa', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Waka Kesiswaan' },
-        { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award, group: 'Waka Kesiswaan' },
-        { name: 'Izin Siswa', href: '/presensi/izin-siswa', icon: ClipboardCheck, group: 'Waka Kesiswaan' },
+        { name: 'Supervisi Izin & Dispensasi', href: '/kesiswaan/supervisi-izin-dispensasi', icon: ClipboardCheck, group: 'Waka Kesiswaan' },
       ])
     } else if (roleName === 'WAKA_SARPRAS' || roleName === 'SARPRAS') {
       addLinks([

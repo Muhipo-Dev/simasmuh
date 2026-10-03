@@ -65,20 +65,36 @@ export function IzinSiswaManagement() {
   const user = session?.user as any
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const isSuperAdmin = user?.role === 'SUPERADMIN' || user?.role === 'ADMIN_IT' || user?.subRole === 'SUPERADMIN'
-  const isBau = user?.role === 'ADMIN_TU' || user?.role === 'BAU' || user?.role === 'TATA_USAHA' || user?.subRole === 'BAU' || user?.subRole === 'ADMIN_TU'
-  const isWaliKelas = user?.subRole === 'WALI_KELAS' || user?.role === 'WALI_KELAS'
-  const isGuru = user?.role === 'GURU' || user?.subRole === 'GURU' || isWaliKelas
-  const isTatib = user?.role === 'KETERTIBAN' || user?.subRole === 'KETERTIBAN' || user?.subRole2 === 'KETERTIBAN' || user?.subRole3 === 'KETERTIBAN' || user?.subRole4 === 'KETERTIBAN' || user?.subRole5 === 'KETERTIBAN'
-  const isBk = user?.role === 'BK_BP' || user?.role === 'BK' || user?.subRole === 'BK_BP' || user?.subRole === 'BK' || user?.subRole2 === 'BK_BP' || user?.subRole3 === 'BK_BP' || user?.subRole4 === 'BK_BP' || user?.subRole5 === 'BK_BP'
-  const isKesiswaan = user?.role === 'KESISWAAN' || user?.role === 'WAKA_KESISWAAN' || user?.subRole === 'KESISWAAN' || user?.subRole === 'WAKA_KESISWAAN' || user?.subRole2 === 'KESISWAAN' || user?.subRole2 === 'WAKA_KESISWAAN'
+  const userRolesList = [
+    user?.role,
+    user?.subRole,
+    user?.subRole2,
+    user?.subRole3,
+    user?.subRole4,
+    user?.subRole5,
+  ].filter(Boolean)
+
+  const isSuperAdmin = userRolesList.some((r: string) => ['SUPERADMIN', 'ADMIN_IT'].includes(r))
+  const isBau = userRolesList.some((r: string) => ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(r))
+  const isWaliKelas = userRolesList.includes('WALI_KELAS')
+  const isGuru = userRolesList.includes('GURU') || isWaliKelas
+  const isTatib = userRolesList.some((r: string) => r.includes('KETERTIBAN') || r.includes('TATIB'))
+  const isBk = userRolesList.some((r: string) => r === 'BK_BP' || r === 'BK' || r.includes('BK'))
+  const isKesiswaan = userRolesList.some((r: string) =>
+    r === 'KESISWAAN' ||
+    r === 'WAKA_KESISWAAN' ||
+    r.includes('KESISWAAN') ||
+    r.startsWith('WAKA_') ||
+    r.includes('WAKA')
+  )
+  const isKepalaSekolah = userRolesList.includes('KEPALA_SEKOLAH')
   const isWaliMurid = user?.role === 'WALI_MURID'
   const isSiswa = user?.role === 'SISWA'
   
-  // Tim Kesiswaan, Ketertiban (TATIB), Tim BK/BP & Wali Kelas memverifikasi semua izin siswa & melakukan supervisi berkala
-  const canManageAll = isSuperAdmin || isKesiswaan || isTatib || isBk || isWaliKelas
+  // Tim Kesiswaan, Ketertiban (TATIB), Tim BK/BP, Kepala Sekolah & Wali Kelas memverifikasi semua izin siswa & melakukan supervisi berkala
+  const canManageAll = isSuperAdmin || isKepalaSekolah || isKesiswaan || isTatib || isBk || isWaliKelas
   // Pengaju Izin Siswa: Khusus Wali Murid, Kesiswaan, & Wali Kelas
-  const canCreate = isWaliMurid || isKesiswaan || isWaliKelas || isSuperAdmin
+  const canCreate = isWaliMurid || isKesiswaan || isWaliKelas || isSuperAdmin || isTatib
 
   const [myIzin, setMyIzin] = useState<IzinSiswaItem[]>([])
   const [allIzin, setAllIzin] = useState<IzinSiswaItem[]>([])
@@ -126,7 +142,7 @@ export function IzinSiswaManagement() {
         // Tatib & Wali Kelas fetch semua izin siswa; Siswa/WaliMurid/KepSek hanya via /my
         canManageAll ? authenticatedFetch(`/api-backend/izin-keluar?${filterDate ? `date=${filterDate}&` : ''}category=SISWA`) : Promise.resolve(null),
         isWaliMurid ? authenticatedFetch('/api-backend/parents/my-students') : Promise.resolve(null),
-        isWaliKelas || isSuperAdmin ? authenticatedFetch('/api-backend/students') : Promise.resolve(null),
+        isWaliKelas || isSuperAdmin || isKesiswaan || isTatib ? authenticatedFetch('/api-backend/students') : Promise.resolve(null),
         isWaliKelas ? authenticatedFetch('/api-backend/classes') : Promise.resolve(null),
       ])
 
@@ -160,9 +176,9 @@ export function IzinSiswaManagement() {
 
       if (allStudentsRes?.ok) {
         const rawStudents = await allStudentsRes.json()
-        if (Array.isArray(rawStudents) && (isWaliKelas || isSuperAdmin)) {
+        if (Array.isArray(rawStudents) && (isWaliKelas || isSuperAdmin || isKesiswaan || isTatib)) {
           let homeroomClassId = ''
-          if (classesRes?.ok) {
+          if (classesRes?.ok && isWaliKelas) {
             const classesData = await classesRes.json()
             const myClass = classesData.find((c: any) => 
               c.homeroomTeacher?.userId === user?.id || 
@@ -569,13 +585,19 @@ export function IzinSiswaManagement() {
               <ClipboardList className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              {isWaliKelas ? 'Izin Siswa & Dispensasi Kelas' : 'Sistem Izin Siswa (Wali Murid)'}
+              {isKesiswaan || isTatib || isBk
+                ? 'Supervisi & Log Riwayat Izin Siswa'
+                : isWaliKelas
+                  ? 'Izin Siswa & Dispensasi Kelas'
+                  : 'Sistem Izin Siswa (Wali Murid)'}
             </h1>
           </div>
           <p className="text-blue-100 mt-2 text-xs sm:text-sm max-w-2xl leading-relaxed">
-            {isWaliKelas 
-              ? 'Kelola, verifikasi permohonan izin siswa perwalian, atau tambahkan izin secara sah bagi siswa yang melapor di luar sistem SIMASMUH.'
-              : 'Pengajuan izin sakit dan keperluan keluarga dapat dilakukan via sistem aplikasi dan WhatsApp Chatbot resmi sekolah (+62 882-9373-3330). Seluruh data tersimpan aman dan terintegrasi otomatis.'}
+            {isKesiswaan || isTatib || isBk
+              ? 'Monitoring, supervisi, dan rekonsiliasi log riwayat permohonan izin siswa (Sakit, Dispensasi, dan Keperluan Keluarga) yang sedang berlangsung di sekolah secara real-time.'
+              : isWaliKelas
+                ? 'Kelola, verifikasi permohonan izin siswa perwalian, atau tambahkan izin secara sah bagi siswa yang melapor di luar sistem SIMASMUH.'
+                : 'Pengajuan izin sakit dan keperluan keluarga dapat dilakukan via sistem aplikasi dan WhatsApp Chatbot resmi sekolah (+62 882-9373-3330). Seluruh data tersimpan aman dan terintegrasi otomatis.'}
           </p>
         </div>
 

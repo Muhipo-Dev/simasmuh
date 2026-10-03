@@ -21,7 +21,7 @@ export class SupervisiController {
   constructor(private readonly supervisiService: SupervisiService) {}
 
   private checkPimpinanPermission(user: any) {
-    const roles = [
+    const roles: string[] = [
       user?.role,
       user?.subRole,
       user?.subRole2,
@@ -30,25 +30,37 @@ export class SupervisiController {
       user?.subRole5,
     ].filter(Boolean);
 
-    const isAllowed = roles.some((r: string) =>
-      [
-        'SUPERADMIN',
-        'ADMIN_IT',
-        'KEPALA_SEKOLAH',
-        'KURIKULUM',
-        'WAKA_KURIKULUM',
-        'KESISWAAN',
-        'WAKA_KESISWAAN',
-        'HUMAS_SDM',
-        'WAKA_HUMAS_SDM',
-        'KEPEGAWAIAN',
-        'SDM',
-        'SARPRAS',
-        'WAKA_SARPRAS',
-        'ISMUBA',
-        'WAKA_ISMUBA',
-      ].includes(r) || r.startsWith('WAKA_') || r.includes('WAKA')
-    );
+    const isAllowed = roles.some((rawRole: string) => {
+      const r = (rawRole || '').toUpperCase();
+      return (
+        [
+          'SUPERADMIN',
+          'ADMIN_IT',
+          'KEPALA_SEKOLAH',
+          'KURIKULUM',
+          'WAKA_KURIKULUM',
+          'KESISWAAN',
+          'WAKA_KESISWAAN',
+          'HUMAS_SDM',
+          'WAKA_HUMAS_SDM',
+          'KEPEGAWAIAN',
+          'SDM',
+          'SARPRAS',
+          'WAKA_SARPRAS',
+          'ISMUBA',
+          'WAKA_ISMUBA',
+          'KETERTIBAN',
+          'TATIB',
+          'BK_BP',
+          'BK',
+        ].includes(r) ||
+        r.startsWith('WAKA_') ||
+        r.includes('WAKA') ||
+        r.includes('KESISWAAN') ||
+        r.includes('KURIKULUM') ||
+        r.includes('PIMPINAN')
+      );
+    });
 
     if (!isAllowed) {
       throw new ForbiddenException('Akses supervisi GTK khusus untuk Kepala Sekolah dan Waka.');

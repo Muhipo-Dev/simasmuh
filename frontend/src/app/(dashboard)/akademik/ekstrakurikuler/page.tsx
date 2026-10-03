@@ -39,15 +39,28 @@ export default function EkstrakurikulerPage() {
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
 
-  const userRole = (session?.user as any)?.role || ''
-  const subRoles: string[] = (session?.user as any)?.subRoles || []
+  const u = session?.user as any
+  const userRolesList = [
+    u?.role,
+    u?.subRole,
+    u?.subRole2,
+    u?.subRole3,
+    u?.subRole4,
+    u?.subRole5,
+    ...(Array.isArray(u?.subRoles) ? u.subRoles : []),
+  ].filter(Boolean)
 
   // Wewenang Kelola Penuh: Waka Kesiswaan, Seluruh Waka, Kepala Sekolah, dan Superadmin
-  const canManage = [
-    'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH', 'KESISWAAN', 'WAKA_KESISWAAN',
-    'KETERTIBAN', 'WAKA_KURIKULUM', 'KURIKULUM', 'WAKA_HUMAS_SDM', 'HUMAS_SDM',
-    'WAKA_SARPRAS', 'WAKA_ISMUBA', 'ISMUBA'
-  ].some(r => userRole === r || subRoles.includes(r))
+  const canManage = userRolesList.some((r: string) =>
+    [
+      'SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH', 'KESISWAAN', 'WAKA_KESISWAAN',
+      'KETERTIBAN', 'WAKA_KURIKULUM', 'KURIKULUM', 'WAKA_HUMAS_SDM', 'HUMAS_SDM',
+      'WAKA_SARPRAS', 'WAKA_ISMUBA', 'ISMUBA'
+    ].includes(r) ||
+    r.startsWith('WAKA_') ||
+    r.includes('WAKA') ||
+    r.includes('KESISWAAN')
+  )
 
   // State Filter & Search
   const [searchQuery, setSearchQuery] = useState('')

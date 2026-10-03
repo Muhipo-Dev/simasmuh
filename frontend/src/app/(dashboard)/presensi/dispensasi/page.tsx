@@ -65,16 +65,31 @@ export default function DispensasiPage() {
   const user = session?.user as any
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const isSuperAdmin = user?.role === 'SUPERADMIN' || user?.role === 'ADMIN_IT' || user?.subRole === 'SUPERADMIN'
-  const isBau = user?.role === 'ADMIN_TU' || user?.role === 'BAU' || user?.role === 'TATA_USAHA' || user?.subRole === 'BAU' || user?.subRole === 'ADMIN_TU'
-  const isTatib = user?.role === 'KETERTIBAN' || user?.subRole === 'KETERTIBAN' || user?.subRole2 === 'KETERTIBAN' || user?.subRole3 === 'KETERTIBAN'
-  const isKesiswaan = user?.role === 'KESISWAAN' || user?.role === 'WAKA_KESISWAAN' || user?.subRole === 'KESISWAAN' || user?.subRole === 'WAKA_KESISWAAN' || user?.subRole2 === 'KESISWAAN' || user?.subRole2 === 'WAKA_KESISWAAN'
-  const isWaliKelas = user?.subRole === 'WALI_KELAS' || user?.role === 'WALI_KELAS'
-  const isGuru = user?.role === 'GURU' || user?.subRole === 'GURU' || isWaliKelas
+  const userRolesList = [
+    user?.role,
+    user?.subRole,
+    user?.subRole2,
+    user?.subRole3,
+    user?.subRole4,
+    user?.subRole5,
+  ].filter(Boolean)
+
+  const isSuperAdmin = userRolesList.some((r: string) => ['SUPERADMIN', 'ADMIN_IT'].includes(r))
+  const isBau = userRolesList.some((r: string) => ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(r))
+  const isTatib = userRolesList.some((r: string) => r.includes('KETERTIBAN') || r.includes('TATIB'))
+  const isKesiswaan = userRolesList.some((r: string) =>
+    r === 'KESISWAAN' ||
+    r === 'WAKA_KESISWAAN' ||
+    r.includes('KESISWAAN') ||
+    r.startsWith('WAKA_') ||
+    r.includes('WAKA')
+  )
+  const isWaliKelas = userRolesList.includes('WALI_KELAS')
+  const isGuru = userRolesList.includes('GURU') || isWaliKelas
   const isWaliMurid = user?.role === 'WALI_MURID'
   const isSiswa = user?.role === 'SISWA'
 
-  const isKepalaSekolah = user?.role === 'KEPALA_SEKOLAH'
+  const isKepalaSekolah = userRolesList.includes('KEPALA_SEKOLAH')
 
   // Waka Kesiswaan & Tim Ketertiban menerbitkan dan mengelola dispensasi siswa (Superadmin & KepSek memiliki akses penuh)
   const canPublish = isKesiswaan || isTatib || isSuperAdmin
@@ -384,11 +399,15 @@ export default function DispensasiPage() {
               <Award className="w-6 h-6 text-yellow-300" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Dispensasi Khusus Siswa
+              {isKesiswaan
+                ? 'Supervisi & Log Dispensasi Siswa'
+                : 'Dispensasi Khusus Siswa'}
             </h1>
           </div>
           <p className="text-purple-100 mt-2 text-xs sm:text-sm max-w-2xl leading-relaxed">
-            Penerbitan surat dispensasi resmi oleh <strong>Tim Ketertiban</strong>. Persetujuan langsung oleh <strong>Kepala Sekolah</strong>. Data tercatat di log absensi siswa yang dapat dipantau oleh Siswa &amp; Wali Murid.
+            {isKesiswaan
+              ? 'Monitoring, supervisi, dan log riwayat penerbitan dispensasi resmi siswa (Kejuaraan, Lomba, dan Penugasan Dinas Sekolah) yang sedang berlangsung secara real-time.'
+              : 'Penerbitan surat dispensasi resmi oleh Tim Ketertiban & Kesiswaan. Persetujuan langsung oleh Kepala Sekolah. Data tercatat di log absensi siswa yang terintegrasi otomatis.'}
           </p>
         </div>
 

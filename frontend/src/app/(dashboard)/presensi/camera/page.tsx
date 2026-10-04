@@ -640,7 +640,7 @@ export default function FaceAttendanceCameraPage() {
       } else if (statusType === 'UNREGISTERED') {
         greeting = 'Identitas tidak ada di pangkalan data simasmuh.'
       } else if (statusType === 'NO_FACE') {
-        greeting = 'Wajah tidak terdeteksi. Silakan menghadap lurus ke kamera.'
+        greeting = 'Wajah tidak terdeteksi.'
       } else if (statusType === 'TWIN_AMBIGUOUS') {
         greeting = 'Terdeteksi kemiripan profil biometrik. Silakan pilih nama Anda pada layar untuk konfirmasi.'
       } else if (statusType === 'ERROR') {

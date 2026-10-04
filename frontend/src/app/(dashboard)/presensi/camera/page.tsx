@@ -439,7 +439,7 @@ export default function FaceAttendanceCameraPage() {
   const faceTracksRef = useRef<FaceTrack[]>([])
   const animFrameRef = useRef<number | null>(null)
 
-  // Update real-time face tracks dengan asosiasi spasial & interpolasi stabil (Bebas Fliker & Kedipan)
+  // Update real-time face tracks dengan asosiasi spasial presisi & interpolasi stabil (100% Bebas Fliker & Kedipan)
   const updateDetectedFaces = (newFaces: any[], videoW: number, videoH: number) => {
     const now = Date.now()
     const tracks = faceTracksRef.current
@@ -457,19 +457,25 @@ export default function FaceAttendanceCameraPage() {
         const centerCy = by + bh / 2
 
         let bestTrack: FaceTrack | null = null
-        let minDist = 180
+        const thresholdDist = Math.max(260, Math.max(bw, bh) * 0.9)
+        let minDist = thresholdDist
 
-        for (const t of tracks) {
-          if (f.userId && t.id === f.userId) {
-            bestTrack = t
-            break
-          }
-          const tCx = t.box[0] + t.box[2] / 2
-          const tCy = t.box[1] + t.box[3] / 2
-          const dist = Math.hypot(centerCx - tCx, centerCy - tCy)
-          if (dist < minDist) {
-            minDist = dist
-            bestTrack = t
+        // Jika hanya ada 1 wajah dan 1 track aktif, langsung asosiasikan secara stabil
+        if (newFaces.length === 1 && tracks.length === 1) {
+          bestTrack = tracks[0]
+        } else {
+          for (const t of tracks) {
+            if (f.userId && t.id === f.userId) {
+              bestTrack = t
+              break
+            }
+            const tCx = t.box[0] + t.box[2] / 2
+            const tCy = t.box[1] + t.box[3] / 2
+            const dist = Math.hypot(centerCx - tCx, centerCy - tCy)
+            if (dist < minDist) {
+              minDist = dist
+              bestTrack = t
+            }
           }
         }
 
@@ -483,6 +489,7 @@ export default function FaceAttendanceCameraPage() {
           bestTrack.sub_label = f.sub_label || bestTrack.sub_label
           bestTrack.role = f.role || bestTrack.role
           bestTrack.identifier = f.identifier || bestTrack.identifier
+          bestTrack.opacity = 1.0
         } else {
           const newId = f.userId || `track-${now}-${idx}-${Math.random().toString(36).substr(2, 4)}`
           tracks.push({
@@ -497,7 +504,7 @@ export default function FaceAttendanceCameraPage() {
             role: f.role || '',
             identifier: f.identifier || '',
             lastSeen: now,
-            opacity: 0.25,
+            opacity: 1.0,
           })
         }
       })
@@ -526,7 +533,7 @@ export default function FaceAttendanceCameraPage() {
     )
   }, [activeCameraObj, formConfig?.streamSourceType, configData?.streamSourceType])
 
-  // 60 FPS Continuous Render Loop untuk Canvas Overlay (Mencegah Flashing / Blank Frame)
+  // 60 FPS Continuous Render Loop untuk Canvas Overlay (Solid & Bebas Fliker / Kedipan)
   useEffect(() => {
     let active = true
 
@@ -554,15 +561,17 @@ export default function FaceAttendanceCameraPage() {
             const t = tracks[i]
             const age = now - t.lastSeen
 
-            if (age > 850) {
+            // Retensi track 2.4 detik agar tidak lenyap saat jeda antar frame
+            if (age > 2400) {
               tracks.splice(i, 1)
               continue
             }
 
-            if (age > 500) {
-              t.opacity = Math.max(0, 1.0 - (age - 500) / 350)
+            // Tetap solid 100% opacity selama 1.8 detik, kemudian fade-out halus
+            if (age > 1800) {
+              t.opacity = Math.max(0, 1.0 - (age - 1800) / 600)
             } else {
-              t.opacity = Math.min(1.0, t.opacity + 0.2)
+              t.opacity = 1.0
             }
 
             if (t.opacity <= 0.02) {
@@ -570,7 +579,7 @@ export default function FaceAttendanceCameraPage() {
               continue
             }
 
-            // Exponential Moving Average smoothing (Interpolasi bebas fliker)
+            // Exponential Moving Average smoothing (Interpolasi bebas fliker & getaran)
             t.box[0] += (t.targetBox[0] - t.box[0]) * 0.35
             t.box[1] += (t.targetBox[1] - t.box[1]) * 0.35
             t.box[2] += (t.targetBox[2] - t.box[2]) * 0.35

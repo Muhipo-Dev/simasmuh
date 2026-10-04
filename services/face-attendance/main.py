@@ -165,6 +165,7 @@ def reset_cooldown_endpoint(payload: ResetCooldownRequest = ResetCooldownRequest
 class ScanFrameRequest(BaseModel):
     image: str  # base64 data url or raw base64
     recordAttendance: bool = True
+    force: bool = False
 
 @app.post("/scan_frame")
 def scan_frame(payload: ScanFrameRequest):
@@ -184,10 +185,6 @@ def scan_frame(payload: ScanFrameRequest):
         results = []
 
         req_threshold = worker.config.threshold if (worker.config and worker.config.threshold is not None) else 0.70
-
-        # Ambang batas mutlak pencatatan presensi: 91% (0.91)
-        # Bounding box & pengenalan wajah valid (>= 91%) dapat langsung merekam presensi
-        ATTENDANCE_MIN_CONFIDENCE = 0.91
 
         for (x, y, w, h) in faces:
             if w < 12 or h < 12:
@@ -211,15 +208,14 @@ def scan_frame(payload: ScanFrameRequest):
                 pct = int(sim * 100)
                 att_res = None
 
-                # Rekam presensi HANYA jika:
-                # 1. payload.recordAttendance == True (tombol SENTUH ditekan)
+                # Rekam presensi jika:
+                # 1. payload.recordAttendance == True (manual scan atau auto scan aktif)
                 # 2. Bukan kasus kembar ambigu
-                # 3. Confidence terkalibrasi >= 91% (ATTENDANCE_MIN_CONFIDENCE)
-                if payload.recordAttendance and not is_twin and sim >= ATTENDANCE_MIN_CONFIDENCE:
-                    att_res = worker._process_attendance(user_rec, sim, face_crop=face_crop, force=True)
+                # 3. Confidence memenuhi batas threshold terkonfigurasi
+                if payload.recordAttendance and not is_twin and sim >= req_threshold:
+                    att_res = worker._process_attendance(user_rec, sim, face_crop=face_crop, force=payload.force)
 
-                # Flag apakah confidence memenuhi syarat pencatatan presensi
-                meets_attendance_threshold = sim >= ATTENDANCE_MIN_CONFIDENCE
+                meets_attendance_threshold = sim >= req_threshold
 
                 results.append({
                     "box": [int(x), int(y), int(w), int(h)],

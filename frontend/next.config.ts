@@ -79,10 +79,6 @@ const nextConfig: NextConfig = {
       {
         source: '/uploads/:path*',
         destination: `${backendUrl}/uploads/:path*`, // Proxy uploads to backend
-      },
-      {
-        source: '/api/face-stream',
-        destination: 'http://127.0.0.1:8089/video_feed', // Proxy to FaceNet AI Microservice
       }
     ]
   },

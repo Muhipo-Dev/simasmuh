@@ -79,6 +79,7 @@ interface FaceCameraConfig {
   cooldownMinutes: number
   isActive: boolean
   welcomeVoice: boolean
+  autoAttendance?: boolean
   showPublicStream?: boolean
   showPublicLogs?: boolean
   continuousScanNoDelay?: boolean
@@ -316,6 +317,9 @@ export default function FaceNetAiStandalonePage() {
   useEffect(() => {
     if (configData) {
       setFormConfig(configData)
+      if (configData.autoAttendance !== undefined) {
+        setScanMode(configData.autoAttendance ? 'AUTO' : 'MANUAL')
+      }
     }
   }, [configData])
 
@@ -367,11 +371,42 @@ export default function FaceNetAiStandalonePage() {
       let stream: MediaStream | null = null
       
       const attempts = [
-        targetDeviceId ? { video: { deviceId: { exact: targetDeviceId } }, audio: false } : null,
-        { video: { facingMode: 'user', width: { ideal: 1280, min: 480 }, height: { ideal: 720, min: 360 } }, audio: false },
-        { video: { facingMode: 'user' }, audio: false },
-        { video: { facingMode: { ideal: 'environment' } }, audio: false },
-        { video: true, audio: false }
+        targetDeviceId
+          ? {
+              video: {
+                deviceId: { exact: targetDeviceId },
+                aspectRatio: { ideal: 1.7777777778 },
+                width: { ideal: 1280, min: 640 },
+                height: { ideal: 720, min: 360 },
+              },
+              audio: false,
+            }
+          : null,
+        {
+          video: {
+            facingMode: 'user',
+            aspectRatio: { ideal: 1.7777777778 },
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 360 },
+          },
+          audio: false,
+        },
+        {
+          video: {
+            facingMode: 'user',
+            aspectRatio: { ideal: 1.7777777778 },
+          },
+          audio: false,
+        },
+        {
+          video: {
+            facingMode: { ideal: 'environment' },
+            aspectRatio: { ideal: 1.7777777778 },
+          },
+          audio: false,
+        },
+        { video: { aspectRatio: { ideal: 1.7777777778 } }, audio: false },
+        { video: true, audio: false },
       ].filter(Boolean) as MediaStreamConstraints[]
 
       for (const constraints of attempts) {
@@ -844,8 +879,8 @@ export default function FaceNetAiStandalonePage() {
               twinCandidates: registeredFace.twin_candidates,
             })
             toast.info('Terdeteksi kemiripan profil biometrik. Silakan pilih nama yang sesuai.')
-          } else if (registeredFace.meets_attendance_threshold === false || Math.round(registeredFace.confidence * 100) < 91) {
-            // Wajah terdeteksi tapi confidence BELUM mencapai 91% — presensi TIDAK direkam, berikan voice feedback instruktif
+          } else if (registeredFace.meets_attendance_threshold === false || (registeredFace.confidence || 0) < minThresh) {
+            // Wajah terdeteksi tapi confidence BELUM mencapai threshold — presensi TIDAK direkam, berikan voice feedback instruktif
             playBiometricAudio('warning')
             speakVoiceGreeting(registeredFace.name, undefined, 'LOW_CONFIDENCE', Math.round(registeredFace.confidence * 100))
             setCaptureResult({
@@ -855,29 +890,43 @@ export default function FaceNetAiStandalonePage() {
               identifier: registeredFace.identifier,
               confidence: Math.round(registeredFace.confidence * 100),
               message: `Akurasi Biometrik (${Math.round(registeredFace.confidence * 100)}%)`,
-              attendanceMsg: `Tingkat akurasi pemindaian wajah (${Math.round(registeredFace.confidence * 100)}%) belum memenuhi standar minimum 91%. Silakan posisikan wajah lebih dekat ke kamera.`,
+              attendanceMsg: `Tingkat akurasi pemindaian wajah (${Math.round(registeredFace.confidence * 100)}%) belum memenuhi standar minimum ${Math.round(minThresh * 100)}%. Silakan posisikan wajah lebih dekat ke kamera.`,
             })
-            toast.warning(`Akurasi pemindaian (${Math.round(registeredFace.confidence * 100)}%) belum memenuhi standar minimum 91%.`)
+            toast.warning(`Akurasi pemindaian (${Math.round(registeredFace.confidence * 100)}%) belum memenuhi standar minimum ${Math.round(minThresh * 100)}%.`)
           } else {
-            playBiometricAudio('success')
             const att = registeredFace.attendance
-            const attMsg = att?.message || `Presensi kehadiran berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`
+            const isAlreadyComplete = att?.scanType === 'SUDAH_LENGKAP'
+            
+            if (isAlreadyComplete) {
+              playBiometricAudio('warning')
+            } else {
+              playBiometricAudio('success')
+            }
+            
+            const attMsg = att?.message || (isAlreadyComplete 
+              ? `Presensi hari ini telah tercatat sebelumnya.` 
+              : `Presensi kehadiran berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`)
+            
             speakVoiceGreeting(registeredFace.name, att?.scanType || 'HADIR', 'SUCCESS', undefined, registeredFace.role)
             
             setCaptureResult({
-              type: 'SUCCESS',
+              type: isAlreadyComplete ? 'UNKNOWN' : 'SUCCESS',
               name: registeredFace.name,
               role: registeredFace.role,
               identifier: registeredFace.identifier,
               avatarUrl: registeredFace.avatarUrl,
               confidence: Math.round(registeredFace.confidence * 100),
               scanType: att?.scanType || 'HADIR',
-              message: 'Wajah Terverifikasi',
+              message: isAlreadyComplete ? 'Presensi Sudah Tercatat' : 'Wajah Terverifikasi',
               attendanceMsg: attMsg,
               time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             })
 
-            toast.success(`Presensi Berhasil: ${registeredFace.name}`)
+            if (isAlreadyComplete) {
+              toast.info(`Info: ${registeredFace.name} - ${attMsg}`)
+            } else {
+              toast.success(`Presensi Berhasil: ${registeredFace.name}`)
+            }
             queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
             queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
           }
@@ -941,13 +990,21 @@ export default function FaceNetAiStandalonePage() {
   // Persistent offscreen canvas ref to prevent garbage collection hiccups and lag
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null)
 
-  // Continuous Face Preview Scanning: Mendeteksi & menampilkan bounding box nama secara terus-menerus tanpa jeda
-  // Data presensi HANYA diinput/direkam ke database setelah pengguna menekan tombol sentuh scan wajah
+  // Periodic frame scanning HANYA saat Mode Auto-Scan diaktifkan (Mode MANUAL = 0 request latar belakang)
+  // Pada Mode MANUAL: Pemindaian HANYA terjadi saat tombol kamera / spasi ditekan oleh pengguna
   useEffect(() => {
-    if (!isBrowserCamStreaming || activeTab !== 'monitor') return
+    if (!isBrowserCamStreaming || activeTab !== 'monitor' || scanMode !== 'AUTO') {
+      const canvas = overlayCanvasRef.current
+      if (canvas) {
+        const cCtx = canvas.getContext('2d')
+        if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+      }
+      return
+    }
     let isProcessing = false
     let frameCount = 0
     let lastTime = Date.now()
+    let autoScanCooldownUntil = 0
 
     // Jika mode 'continuousScanNoDelay' aktif atau default, gunakan frekuensi cepat 120ms (zero-delay streaming feel)
     const scanDelay = currentConfig?.continuousScanNoDelay === false
@@ -976,11 +1033,16 @@ export default function FaceNetAiStandalonePage() {
         if (ctx) {
           ctx.drawImage(video, 0, 0, targetW, targetH)
           const base64 = offscreen.toDataURL('image/jpeg', 0.65)
-          // Mode scanning preview HUD terus-menerus tanpa jeda: recordAttendance = false (TIDAK merekam presensi otomatis)
+          
+          // Cek apakah mode auto presensi sedang dalam jeda 5 detik
+          const nowMs = Date.now()
+          const shouldRecordNow = nowMs >= autoScanCooldownUntil
+
+          // Mode scanning: kirim recordAttendance: shouldRecordNow
           const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64, recordAttendance: false }),
+            body: JSON.stringify({ image: base64, recordAttendance: shouldRecordNow, force: false }),
           })
           if (res.ok) {
             const data = await res.json()
@@ -996,6 +1058,37 @@ export default function FaceNetAiStandalonePage() {
               ],
             }))
             drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
+
+            // Jika dalam mode AUTO dan ada wajah terdaftar yang baru saja berhasil dicatat presensinya
+            if (shouldRecordNow && rawFaces.length > 0) {
+              const regFace = rawFaces.find((f: any) => f.is_registered && f.attendance && f.attendance.success)
+              if (regFace) {
+                // Kunci jeda scan berikutnya selama 5 detik
+                autoScanCooldownUntil = Date.now() + 5000
+
+                playBiometricAudio('success')
+                const att = regFace.attendance
+                const attMsg = att?.message || `Presensi otomatis berhasil diverifikasi (${Math.round(regFace.confidence * 100)}%)`
+                speakVoiceGreeting(regFace.name, att?.scanType || 'HADIR', 'SUCCESS', undefined, regFace.role)
+
+                setCaptureResult({
+                  type: 'SUCCESS',
+                  name: regFace.name,
+                  role: regFace.role,
+                  identifier: regFace.identifier,
+                  avatarUrl: regFace.avatarUrl,
+                  confidence: Math.round(regFace.confidence * 100),
+                  scanType: att?.scanType || 'HADIR',
+                  message: 'Presensi Otomatis Berhasil!',
+                  attendanceMsg: attMsg,
+                  time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                })
+
+                toast.success(`Presensi Otomatis: ${regFace.name} (Jeda 5 detik aktif)`)
+                queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
+                queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+              }
+            }
           }
         }
         frameCount++
@@ -1013,7 +1106,7 @@ export default function FaceNetAiStandalonePage() {
     }, scanDelay)
 
     return () => clearInterval(interval)
-  }, [isBrowserCamStreaming, activeTab, isCapturing, currentConfig?.continuousScanNoDelay, currentConfig?.scanIntervalMs])
+  }, [isBrowserCamStreaming, activeTab, isCapturing, currentConfig?.continuousScanNoDelay, currentConfig?.scanIntervalMs, scanMode])
 
   // 2. Fetch Users Dataset (Diizinkan untuk dilihat oleh semua pengunjung)
   const { data: datasetData, refetch: refetchDataset } = useQuery<UsersDatasetResponse>({
@@ -1034,6 +1127,20 @@ export default function FaceNetAiStandalonePage() {
     queryFn: () => authenticatedQuery('/api-backend/face-attendance/service-status'),
     refetchInterval: 2500,
   })
+
+  // MJPEG multi-part streaming di browser Chromium tidak selalu memicu event onLoad HTML standar
+  // Timer otomatis memastikan placeholder/frame stream kamera langsung terlihat tanpa tertutup spinner selamanya
+  useEffect(() => {
+    if (!isBrowserCamStreaming && serviceStatus?.is_running) {
+      setIsStreamLoading(true)
+      const timer = setTimeout(() => {
+        setIsStreamLoading(false)
+      }, 1200)
+      return () => clearTimeout(timer)
+    } else {
+      setIsStreamLoading(false)
+    }
+  }, [streamKey, activeCamId, isBrowserCamStreaming, serviceStatus?.is_running])
 
   // Filtered dataset
   const filteredUsers = useMemo(() => {
@@ -1380,13 +1487,40 @@ export default function FaceNetAiStandalonePage() {
     setTimeout(() => setSyncSuccessMsg(null), 6000)
   }
 
+  const pageContainerRef = useRef<HTMLDivElement>(null)
+
+  // Fullscreen change listener untuk mendeteksi tombol ESC / toggle dari browser
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+    }
+  }, [])
+
   const toggleFullscreen = () => {
-    if (!videoContainerRef.current) return
+    const targetElem = pageContainerRef.current || document.documentElement
     if (!document.fullscreenElement) {
-      videoContainerRef.current.requestFullscreen().catch(err => console.error(err))
+      if (targetElem.requestFullscreen) {
+        targetElem.requestFullscreen().catch((err) => console.error(err))
+      } else if ((targetElem as any).webkitRequestFullscreen) {
+        (targetElem as any).webkitRequestFullscreen()
+      } else if ((targetElem as any).msRequestFullscreen) {
+        (targetElem as any).msRequestFullscreen()
+      }
       setIsFullscreen(true)
     } else {
-      document.exitFullscreen().catch(err => console.error(err))
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch((err) => console.error(err))
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen()
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen()
+      }
       setIsFullscreen(false)
     }
   }
@@ -1468,7 +1602,9 @@ export default function FaceNetAiStandalonePage() {
   }
 
   return (
-    <div className={`min-h-screen lg:h-screen lg:max-h-screen flex flex-col relative font-sans select-none overflow-x-hidden ${
+    <div 
+      ref={pageContainerRef}
+      className={`min-h-screen lg:h-screen lg:max-h-screen flex flex-col relative font-sans select-none overflow-x-hidden ${
       isOutdoorMode 
         ? 'bg-black text-white' 
         : 'bg-slate-950 text-slate-100 lg:overflow-hidden'
@@ -1779,54 +1915,26 @@ export default function FaceNetAiStandalonePage() {
                 )}
 
                 {isBrowserMode ? (
-                  <div className="relative w-full h-full flex items-center justify-center bg-black">
+                  <div className="relative w-full h-full max-h-full aspect-video flex items-center justify-center bg-black overflow-hidden mx-auto">
                     <video
                       ref={setVideoRef}
                       autoPlay
                       playsInline
                       muted
-                      className={`w-full h-full object-contain ${capturedSnapshotUrl ? 'hidden' : 'block'}`}
+                      className={`w-full h-full object-cover ${capturedSnapshotUrl ? 'hidden' : 'block'}`}
                       onPlay={() => setIsBrowserCamStreaming(true)}
                     />
                     {capturedSnapshotUrl && (
                       <img
                         src={capturedSnapshotUrl}
                         alt="Captured Freeze Frame"
-                        className="w-full h-full object-contain select-none"
+                        className="w-full h-full object-cover select-none"
                       />
                     )}
                     <canvas
                       ref={overlayCanvasRef}
-                      className="absolute inset-0 w-full h-full pointer-events-none object-contain z-10"
+                      className="absolute inset-0 w-full h-full pointer-events-none object-cover z-10"
                     />
-
-                    {/* Biometric Framing Guide (Idle State) */}
-                    {!isCapturing && !captureResult && isBrowserCamStreaming && (
-                      <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10">
-                        {/* Face Oval Framing Target with Outdoor High Contrast */}
-                        <div className={`relative w-44 h-56 sm:w-52 sm:h-64 rounded-[50%/45%] border-3 border-dashed flex items-center justify-center transition-all ${
-                          isOutdoorMode 
-                            ? 'border-emerald-300 shadow-[0_0_35px_rgba(52,211,153,0.5)]' 
-                            : 'border-emerald-400/70 shadow-[0_0_30px_rgba(16,185,129,0.3)]'
-                        }`}>
-                          <div className="absolute -top-3 -left-3 w-6 h-6 border-t-3 border-l-3 border-emerald-400 rounded-tl-xl" />
-                          <div className="absolute -top-3 -right-3 w-6 h-6 border-t-3 border-r-3 border-emerald-400 rounded-tr-xl" />
-                          <div className="absolute -bottom-3 -left-3 w-6 h-6 border-b-3 border-l-3 border-emerald-400 rounded-bl-xl" />
-                          <div className="absolute -bottom-3 -right-3 w-6 h-6 border-b-3 border-r-3 border-emerald-400 rounded-br-xl" />
-                          <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" />
-                        </div>
-                        
-                        {/* High-Visibility Touch Cue Pill */}
-                        <div className={`mt-3.5 px-4 py-1.5 rounded-full backdrop-blur-md border text-xs sm:text-sm font-black flex items-center gap-2 shadow-2xl ${
-                          isOutdoorMode 
-                            ? 'bg-black/90 border-emerald-400 text-emerald-300' 
-                            : 'bg-black/85 border-emerald-500/50 text-emerald-300'
-                        }`}>
-                          <Aperture className="w-4 h-4 animate-spin text-emerald-400 shrink-0" />
-                          <span>Posisikan Wajah & Sentuh Layar / Tombol Scan</span>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Laser Scanner Animation saat Memproses Frame */}
                     {isCapturing && (
@@ -2005,7 +2113,7 @@ export default function FaceNetAiStandalonePage() {
                     )}
                   </div>
                 ) : !streamError && serviceStatus?.is_running ? (
-                  <div className="relative w-full h-full flex items-center justify-center bg-black">
+                  <div className="relative w-full h-full max-h-full aspect-video flex items-center justify-center bg-black overflow-hidden mx-auto">
                     {isStreamLoading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 z-10">
                         <div className="flex flex-col items-center gap-1.5">
@@ -2019,7 +2127,7 @@ export default function FaceNetAiStandalonePage() {
                       key={`${streamKey}-${activeCamId}`}
                       src={`/api/face-stream?cam_id=${encodeURIComponent(activeCamId)}&t=${streamKey}`}
                       alt="Live Capture FaceNet Camera Stream"
-                      className="w-full h-full object-contain"
+                      className="w-full h-full aspect-video object-cover"
                       crossOrigin="anonymous"
                       onLoad={handleStreamImgLoad}
                       onError={handleStreamImgError}
@@ -2084,9 +2192,9 @@ export default function FaceNetAiStandalonePage() {
                 </div>
 
                 <div className="absolute top-2.5 right-2.5 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-xs text-[10px] font-mono text-slate-200 border border-white/20 z-20 shadow-md">
-                  <span className="text-emerald-300 font-black flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    PREVIEW DETEKSI AKTIF
+                  <span className={`font-black flex items-center gap-1.5 ${scanMode === 'AUTO' ? 'text-amber-300' : 'text-emerald-300'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${scanMode === 'AUTO' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+                    {scanMode === 'AUTO' ? 'AUTO SCAN AKTIF' : 'MANUAL (KLIK TOMBOL SCAN)'}
                   </span>
                 </div>
 
@@ -2115,26 +2223,45 @@ export default function FaceNetAiStandalonePage() {
                 </Button>
 
                 {/* Mode Manual/Auto switcher (Touch Target >= 44px) */}
-                <div className="inline-flex p-1 bg-slate-950 rounded-2xl border border-slate-800 shrink-0">
+                <div className="inline-flex p-1 bg-slate-950 rounded-2xl border border-slate-800 shrink-0 shadow-inner">
                   <button
                     type="button"
-                    onClick={() => setScanMode('MANUAL')}
-                    className={`min-h-[44px] px-3 text-xs font-black rounded-xl transition-all cursor-pointer touch-manipulation ${
-                      scanMode === 'MANUAL' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+                    onClick={() => {
+                      setScanMode('MANUAL')
+                      setFormConfig((prev) => prev ? { ...prev, autoAttendance: false } : null)
+                      const canvas = overlayCanvasRef.current
+                      if (canvas) {
+                        const cCtx = canvas.getContext('2d')
+                        if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+                      }
+                      toast.info('Mode Manual Aktif: Scanning hanya saat tombol ditekan.')
+                    }}
+                    className={`min-h-[44px] px-3.5 text-xs font-black rounded-xl transition-all cursor-pointer touch-manipulation flex items-center gap-1.5 ${
+                      scanMode === 'MANUAL' 
+                        ? 'bg-emerald-600 text-white shadow-md ring-1 ring-emerald-400/50' 
+                        : 'text-slate-400 hover:text-slate-200'
                     }`}
-                    title="Mode Manual: Scan saat tombol ditekan (Aman & Hemat Server)"
+                    title="Mode Manual: Scan saat tombol kamera ditekan (Hemat komputasi & verifikasi manual)"
                   >
-                    Manual
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Manual</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setScanMode('AUTO')}
-                    className={`min-h-[44px] px-3 text-xs font-black rounded-xl transition-all cursor-pointer touch-manipulation ${
-                      scanMode === 'AUTO' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+                    onClick={() => {
+                      setScanMode('AUTO')
+                      setFormConfig((prev) => prev ? { ...prev, autoAttendance: true } : null)
+                      toast.success('Mode Auto Aktif: Scanning dan presensi otomatis setiap 5 detik.')
+                    }}
+                    className={`min-h-[44px] px-3.5 text-xs font-black rounded-xl transition-all cursor-pointer touch-manipulation flex items-center gap-1.5 ${
+                      scanMode === 'AUTO' 
+                        ? 'bg-amber-600 text-white shadow-md ring-1 ring-amber-400/50' 
+                        : 'text-slate-400 hover:text-slate-200'
                     }`}
-                    title="Mode Auto: Scan berkala otomatis di latar belakang"
+                    title="Mode Auto: Scan dan presensi otomatis di latar belakang tanpa klik tombol"
                   >
-                    Auto
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Auto</span>
                   </button>
                 </div>
 
@@ -2840,6 +2967,24 @@ export default function FaceNetAiStandalonePage() {
                       disabled={!isAuthenticated || !canConfigure}
                       checked={currentConfig?.continuousScanNoDelay ?? true}
                       onCheckedChange={(checked) => setFormConfig((prev) => prev ? { ...prev, continuousScanNoDelay: checked } : null)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/60">
+                    <div>
+                      <Label className="text-xs font-medium text-slate-200 flex items-center gap-1">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        Presensi Otomatis (Auto Scan Tanpa Klik)
+                      </Label>
+                      <p className="text-[10px] text-slate-400">Presensi langsung tercatat saat wajah dikenali tanpa perlu klik tombol</p>
+                    </div>
+                    <Switch
+                      disabled={!isAuthenticated || !canConfigure}
+                      checked={currentConfig?.autoAttendance ?? true}
+                      onCheckedChange={(checked) => {
+                        setFormConfig((prev) => prev ? { ...prev, autoAttendance: checked } : null)
+                        setScanMode(checked ? 'AUTO' : 'MANUAL')
+                      }}
                     />
                   </div>
 

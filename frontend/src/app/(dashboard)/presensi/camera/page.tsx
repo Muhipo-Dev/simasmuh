@@ -332,18 +332,49 @@ export default function FaceAttendanceCameraPage() {
 
       let stream: MediaStream | null = null
       
-      // Coba urutan konfigurasi video dari HD ke generic
+      // Coba urutan konfigurasi video dari HD ke generic dengan rasio 16:9
       const attempts = [
         // a. Spesifik device ID jika dipilih
-        targetDeviceId ? { video: { deviceId: { exact: targetDeviceId } }, audio: false } : null,
-        // b. Kamera depan (user / front) HD
-        { video: { facingMode: 'user', width: { ideal: 1280, min: 480 }, height: { ideal: 720, min: 360 } }, audio: false },
-        // c. FacingMode 'user' sederhana (cocok untuk smartphone client)
-        { video: { facingMode: 'user' }, audio: false },
-        // d. Kamera lingkungan belakang (environment) fallback
-        { video: { facingMode: { ideal: 'environment' } }, audio: false },
-        // e. General video capture (apapun kamera yang ada di client)
-        { video: true, audio: false }
+        targetDeviceId
+          ? {
+              video: {
+                deviceId: { exact: targetDeviceId },
+                aspectRatio: { ideal: 1.7777777778 },
+                width: { ideal: 1280, min: 640 },
+                height: { ideal: 720, min: 360 },
+              },
+              audio: false,
+            }
+          : null,
+        // b. Kamera depan (user / front) HD 16:9
+        {
+          video: {
+            facingMode: 'user',
+            aspectRatio: { ideal: 1.7777777778 },
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 360 },
+          },
+          audio: false,
+        },
+        // c. FacingMode 'user' sederhana 16:9
+        {
+          video: {
+            facingMode: 'user',
+            aspectRatio: { ideal: 1.7777777778 },
+          },
+          audio: false,
+        },
+        // d. Kamera lingkungan belakang (environment) fallback 16:9
+        {
+          video: {
+            facingMode: { ideal: 'environment' },
+            aspectRatio: { ideal: 1.7777777778 },
+          },
+          audio: false,
+        },
+        // e. General video capture 16:9
+        { video: { aspectRatio: { ideal: 1.7777777778 } }, audio: false },
+        { video: true, audio: false },
       ].filter(Boolean) as MediaStreamConstraints[]
 
       for (const constraints of attempts) {
@@ -1026,7 +1057,7 @@ export default function FaceAttendanceCameraPage() {
                 toast.success(`Presensi Berhasil: ${regFace.name} (${Math.round(regFace.confidence * 100)}%)`)
                 queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
                 queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
-                await new Promise((r) => setTimeout(r, 1200))
+                await new Promise((r) => setTimeout(r, 5000))
               } else if (regFace) {
                 queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
                 await new Promise((r) => setTimeout(r, 1000))
@@ -1074,6 +1105,20 @@ export default function FaceAttendanceCameraPage() {
     queryFn: () => authenticatedQuery('/api-backend/face-attendance/service-status'),
     refetchInterval: 2500,
   })
+
+  // MJPEG multi-part streaming di browser Chromium tidak selalu memicu event onLoad HTML standar
+  // Timer otomatis memastikan placeholder/frame stream kamera langsung terlihat tanpa tertutup spinner selamanya
+  useEffect(() => {
+    if (!isBrowserCamStreaming && serviceStatus?.is_running) {
+      setIsStreamLoading(true)
+      const timer = setTimeout(() => {
+        setIsStreamLoading(false)
+      }, 1200)
+      return () => clearTimeout(timer)
+    } else {
+      setIsStreamLoading(false)
+    }
+  }, [streamKey, activeCamId, isBrowserCamStreaming, serviceStatus?.is_running])
 
   // Filtered dataset
   const filteredUsers = useMemo(() => {
@@ -1734,56 +1779,26 @@ export default function FaceAttendanceCameraPage() {
                   )}
 
                   {isBrowserMode ? (
-                    <div className="relative w-full h-full flex items-center justify-center bg-black">
+                    <div className="relative w-full h-full max-h-full aspect-video flex items-center justify-center bg-black overflow-hidden mx-auto">
                       <video
                         ref={setVideoRef}
                         autoPlay
                         playsInline
                         muted
-                        className={`w-full h-full object-contain ${capturedSnapshotUrl ? 'hidden' : 'block'}`}
+                        className={`w-full h-full object-cover ${capturedSnapshotUrl ? 'hidden' : 'block'}`}
                         onPlay={() => setIsBrowserCamStreaming(true)}
                       />
                       {capturedSnapshotUrl && (
                         <img
                           src={capturedSnapshotUrl}
                           alt="Captured Freeze Frame"
-                          className="w-full h-full object-contain select-none"
+                          className="w-full h-full object-cover select-none"
                         />
                       )}
                       <canvas
                         ref={overlayCanvasRef}
-                        className="absolute inset-0 w-full h-full pointer-events-none object-contain z-10"
+                        className="absolute inset-0 w-full h-full pointer-events-none object-cover z-10"
                       />
-
-                      {/* Biometric Framing Guide (Idle State) */}
-                      {!isCapturing && !captureResult && isBrowserCamStreaming && (
-                        <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10">
-                          {/* Face Oval Framing Target */}
-                          <div className={`relative w-48 h-60 sm:w-56 sm:h-72 rounded-[50%/45%] flex items-center justify-center animate-pulse transition-all ${
-                            isOutdoorMode 
-                              ? 'border-4 border-dashed border-emerald-400 shadow-[0_0_35px_rgba(16,185,129,0.6)]' 
-                              : 'border-2 border-dashed border-emerald-400/60 shadow-[0_0_25px_rgba(16,185,129,0.25)]'
-                          }`}>
-                            {/* Corner Accents */}
-                            <div className="absolute -top-3 -left-3 w-6 h-6 border-t-4 border-l-4 border-emerald-400" />
-                            <div className="absolute -top-3 -right-3 w-6 h-6 border-t-4 border-r-4 border-emerald-400" />
-                            <div className="absolute -bottom-3 -left-3 w-6 h-6 border-b-4 border-l-4 border-emerald-400" />
-                            <div className="absolute -bottom-3 -right-3 w-6 h-6 border-b-4 border-r-4 border-emerald-400" />
-                            
-                            {/* Center Crosshair */}
-                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                          </div>
-                          
-                          <div className={`mt-3.5 px-4 py-1.5 rounded-full backdrop-blur-md flex items-center gap-2 shadow-2xl text-xs sm:text-sm font-extrabold ${
-                            isOutdoorMode 
-                              ? 'bg-black/95 border-2 border-emerald-400 text-emerald-300 ring-2 ring-emerald-500/50' 
-                              : 'bg-black/75 border border-emerald-500/40 text-emerald-300'
-                          }`}>
-                            <Aperture className="w-4 h-4 animate-spin shrink-0 text-emerald-400" />
-                            <span>SENTUH UNTUK SCAN WAJAH</span>
-                          </div>
-                        </div>
-                      )}
 
                       {/* Laser Scanner Animation saat Memproses Frame */}
                       {isCapturing && (
@@ -1951,7 +1966,7 @@ export default function FaceAttendanceCameraPage() {
                       )}
                     </div>
                   ) : !streamError && serviceStatus?.is_running ? (
-                    <div className="relative w-full h-full flex items-center justify-center bg-black">
+                    <div className="relative w-full h-full max-h-full aspect-video flex items-center justify-center bg-black overflow-hidden mx-auto">
                       {isStreamLoading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 z-10">
                           <div className="flex flex-col items-center gap-2">
@@ -1965,7 +1980,7 @@ export default function FaceAttendanceCameraPage() {
                         key={`${streamKey}-${activeCamId}`}
                         src={`/api/face-stream?cam_id=${encodeURIComponent(activeCamId)}&t=${streamKey}`}
                         alt="Live Capture FaceNet Camera Stream"
-                        className="w-full h-full object-contain"
+                        className="w-full h-full aspect-video object-contain"
                         crossOrigin="anonymous"
                         onLoad={handleStreamImgLoad}
                         onError={handleStreamImgError}

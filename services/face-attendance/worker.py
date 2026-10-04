@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import requests
 from typing import Dict, Optional, List, Tuple
-from config import BACKEND_URL, API_SECRET, FaceServiceConfig, fetch_backend_config
+from config import BACKEND_URL, API_SECRET, FaceServiceConfig, SingleCamConfig, fetch_backend_config
 from face_engine import FaceRecognitionEngine
 
 
@@ -23,9 +23,9 @@ class SingleCameraWorker:
         self.capture_thread: Optional[threading.Thread] = None
         self.ai_thread: Optional[threading.Thread] = None
         self.current_fps: float = 0.0
-        self.stream_status: str = "OFFLINE"
+        self.stream_status: str = "INITIALIZING"
         self.latest_raw_frame: Optional[np.ndarray] = None
-        self.latest_frame: Optional[np.ndarray] = None
+        self.latest_frame: Optional[np.ndarray] = self._create_placeholder_frame("MENGHUBUNGKAN KAMERA...", f"Menyiapkan koneksi {self.stream_url}...")
         self.active_detections: List[Dict] = []
         self.registered_count: int = 0
         self.guest_count: int = 0
@@ -122,8 +122,9 @@ class SingleCameraWorker:
                             pass
                 return None
             elif isinstance(src, str) and any(src.startswith(proto) for proto in ["rtsp://", "rtsps://", "rtmp://", "http://", "https://"]):
+                # 1. Coba koneksi RTSP via TCP (Standar CCTV Modern / Tapo / Hikvision / Dahua)
                 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = (
-                    "rtsp_transport;tcp|fflags;nobuffer|flags;low_delay|max_delay;0|reorder_queue_size;0|buffer_size;1024000|probesize;32768|analyzeduration;0|stimeout;3000000"
+                    "rtsp_transport;tcp|fflags;nobuffer|flags;low_delay|max_delay;500000|stimeout;3000000|timeout;3000000"
                 )
                 try:
                     c = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
@@ -132,24 +133,56 @@ class SingleCameraWorker:
                             c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                         except Exception:
                             pass
-                        ret_test, test_frame = c.read()
-                        if ret_test and test_frame is not None and test_frame.size > 0:
-                            print(f"[INFO] Camera {self.cam_id} RTSP terhubung: {src}")
-                            return c
-                except Exception:
-                    pass
+                        # Beri kesempatan pembacaan frame awal untuk decode keyframe
+                        for _ in range(25):
+                            ret_test, test_frame = c.read()
+                            if ret_test and test_frame is not None and test_frame.size > 0:
+                                print(f"[INFO] Camera {self.cam_id} RTSP terhubung (TCP): {src}")
+                                return c
+                            time.sleep(0.04)
+                        c.release()
+                except Exception as e:
+                    print(f"[DEBUG] Camera {self.cam_id} TCP attempt error: {e}")
+
+                # 2. Coba fallback koneksi RTSP via UDP (CCTV Lama / Jaringan NVR)
+                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = (
+                    "rtsp_transport;udp|fflags;nobuffer|flags;low_delay|stimeout;3000000|timeout;3000000"
+                )
                 try:
+                    c = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
+                    if c is not None and c.isOpened():
+                        try:
+                            c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        except Exception:
+                            pass
+                        for _ in range(25):
+                            ret_test, test_frame = c.read()
+                            if ret_test and test_frame is not None and test_frame.size > 0:
+                                print(f"[INFO] Camera {self.cam_id} RTSP terhubung (UDP): {src}")
+                                return c
+                            time.sleep(0.04)
+                        c.release()
+                except Exception as e:
+                    print(f"[DEBUG] Camera {self.cam_id} UDP attempt error: {e}")
+
+                # 3. Coba fallback koneksi Generic OpenCV tanpa opsi khusus
+                try:
+                    os.environ.pop("OPENCV_FFMPEG_CAPTURE_OPTIONS", None)
                     c = cv2.VideoCapture(src)
                     if c is not None and c.isOpened():
                         try:
                             c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                         except Exception:
                             pass
-                        ret_test, test_frame = c.read()
-                        if ret_test and test_frame is not None and test_frame.size > 0:
-                            return c
-                except Exception:
-                    pass
+                        for _ in range(25):
+                            ret_test, test_frame = c.read()
+                            if ret_test and test_frame is not None and test_frame.size > 0:
+                                print(f"[INFO] Camera {self.cam_id} RTSP terhubung (Default Backend): {src}")
+                                return c
+                            time.sleep(0.04)
+                        c.release()
+                except Exception as e:
+                    print(f"[DEBUG] Camera {self.cam_id} Default Backend attempt error: {e}")
                 return None
             else:
                 try:
@@ -161,6 +194,7 @@ class SingleCameraWorker:
                 return None
 
         cap = None
+        active_src = None
         consecutive_failures = 0
         prev_time = time.time()
         frame_counter = 0
@@ -169,6 +203,15 @@ class SingleCameraWorker:
             current_src = self.stream_url
             src_val, is_num = _parse_src(current_src)
 
+            # Jika konfigurasi URL kamera berubah saat loop berjalan, lepas capture lama
+            if current_src != active_src and cap is not None:
+                try:
+                    cap.release()
+                except Exception:
+                    pass
+                cap = None
+                active_src = None
+
             if src_val == "BROWSER_WEBCAM":
                 if cap is not None:
                     try:
@@ -176,6 +219,7 @@ class SingleCameraWorker:
                     except Exception:
                         pass
                     cap = None
+                    active_src = None
                 self.stream_status = "BROWSER_WEBCAM_STANDBY"
                 self.current_fps = 0
                 with self.frame_lock:
@@ -194,6 +238,7 @@ class SingleCameraWorker:
                         self.latest_frame = self._create_placeholder_frame("GAGAL MENGHUBUNGKAN KAMERA", f"Pastikan RTSP ({current_src}) online & dapat diakses.")
                     time.sleep(2.0)
                     continue
+                active_src = current_src
 
             try:
                 ret, frame = cap.read()
@@ -424,15 +469,16 @@ class AttendanceWorker:
         if not cams:
             # Fallback jika cameras kosong: gunakan stream_url utama sebagai cam-1
             main_url = self.config.stream_url if self.config else "BROWSER_WEBCAM"
-            main_name = self.config.camera_name if self.config else "Kamera Utama"
-            main_loc = self.config.location if self.config else "Gerbang Depan"
-            cams = [type('SingleCamConfig', (), {
-                'id': 'cam-1',
-                'name': main_name,
-                'stream_url': main_url,
-                'location': main_loc,
-                'is_active': True
-            })()]
+            main_name = self.config.camera_name if self.config else "Kamera 1"
+            main_loc = self.config.location if self.config else "Gerbang Depan Sekolah"
+            cams = [SingleCamConfig(
+                id="cam-1",
+                name=main_name,
+                stream_source_type="RTSP" if main_url.startswith("rtsp") else "BROWSER_WEBCAM",
+                stream_url=main_url,
+                location=main_loc,
+                is_active=True
+            )]
 
         active_cam_ids = set()
         for c in cams:
@@ -453,9 +499,17 @@ class AttendanceWorker:
             else:
                 sub = self.sub_workers[cid]
                 sub.cam_name = c.name
-                sub.stream_url = c.stream_url
                 sub.location = c.location
-                if self.is_running and c.is_active and not sub.is_running:
+                old_url = sub.stream_url
+                sub.stream_url = c.stream_url
+                
+                # Jika stream_url berubah atau kamera diaktifkan/dinonaktifkan
+                if old_url != c.stream_url and sub.is_running:
+                    print(f"[INFO] URL Kamera {cid} diperbarui dari '{old_url}' ke '{c.stream_url}', me-restart sub-worker...")
+                    sub.stop()
+                    if c.is_active and self.is_running:
+                        sub.start()
+                elif self.is_running and c.is_active and not sub.is_running:
                     sub.start()
                 elif (not c.is_active or not self.is_running) and sub.is_running:
                     sub.stop()
@@ -526,7 +580,8 @@ class AttendanceWorker:
     def generate_mjpeg_stream(self, cam_id: str = "cam-1"):
         sub = self.get_sub_worker(cam_id)
         if sub:
-            return sub.generate_mjpeg_stream()
+            yield from sub.generate_mjpeg_stream()
+            return
         # Fallback dummy stream
         encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), 74]
         canvas = np.zeros((540, 960, 3), dtype=np.uint8)

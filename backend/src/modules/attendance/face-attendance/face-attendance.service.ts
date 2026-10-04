@@ -32,6 +32,9 @@ export interface FaceCameraConfig {
   cooldownMinutes: number; // e.g. 10 minutes
   isActive: boolean;
   welcomeVoice: boolean;
+  autoAttendance?: boolean;
+  continuousScanNoDelay?: boolean;
+  scanIntervalMs?: number;
   showPublicStream?: boolean; // Tampilkan Feed Kamera di Halaman Presensi Publik (/presensi-view)
   showPublicLogs?: boolean; // Tampilkan Log Presensi Wajah di Halaman Presensi Publik (/presensi-view)
   apiKeySecret: string;
@@ -1178,12 +1181,12 @@ export class FaceAttendanceService implements OnModuleInit {
     };
   }
 
-  async scanFrame(imageBase64: string, recordAttendance: boolean = true) {
+  async scanFrame(imageBase64: string, recordAttendance: boolean = true, force: boolean = false) {
     try {
       const res = await fetch('http://127.0.0.1:8089/scan_frame', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: imageBase64, recordAttendance }),
+        body: JSON.stringify({ image: imageBase64, recordAttendance, force }),
         signal: AbortSignal.timeout(4000),
       });
       if (res.ok) {

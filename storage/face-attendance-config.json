@@ -1,14 +1,24 @@
 {
   "showPublicStream": true,
   "showPublicLogs": true,
-  "streamUrl": "BROWSER_WEBCAM",
-  "cameraName": "Camera AI Presensi",
+  "streamUrl": "rtsp://razagopo:razagopo@192.168.48.89:554/stream1",
+  "cameraName": "Kamera 1 (IP Camera)",
   "location": "Gerbang Depan Sekolah",
-  "threshold": 0.70,
+  "streamSourceType": "RTSP",
+  "cameras": [
+    {
+      "id": "cam-1",
+      "name": "Kamera 1 (IP Camera)",
+      "streamSourceType": "RTSP",
+      "streamUrl": "rtsp://razagopo:razagopo@192.168.48.89:554/stream1",
+      "location": "Gerbang Depan Sekolah",
+      "isActive": true
+    }
+  ],
+  "threshold": 0.7,
   "cooldownMinutes": 15,
   "isActive": true,
   "welcomeVoice": true,
   "apiKeySecret": "simasmuh_face_token_secret_2026",
-  "updatedAt": "2026-09-30T13:20:00.000Z",
-  "streamSourceType": "BROWSER_WEBCAM"
+  "updatedAt": "2026-10-04T11:06:00.000Z"
 }

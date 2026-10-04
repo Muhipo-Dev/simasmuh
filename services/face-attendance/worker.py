@@ -656,11 +656,13 @@ class AttendanceWorker:
             res = requests.post(f"{BACKEND_URL}/face-attendance/record", json=payload, headers=headers, timeout=4)
             if res.status_code in (200, 201):
                 res_data = res.json()
-                print(f"[SUCCESS] Presensi tercatat: {res_data.get('message')}")
+                scan_type = res_data.get("scanType") or (res_data.get("data", {}).get("scanType") if isinstance(res_data.get("data"), dict) else None) or "MASUK"
+                msg = res_data.get("message", "Presensi berhasil diproses")
+                print(f"[SUCCESS] Presensi tercatat: {msg} [ScanType: {scan_type}]")
                 return {
                     "success": True,
-                    "message": res_data.get("message", "Presensi berhasil dicatat"),
-                    "scanType": res_data.get("scanType", "HADIR"),
+                    "message": msg,
+                    "scanType": scan_type,
                     "data": res_data,
                 }
             else:

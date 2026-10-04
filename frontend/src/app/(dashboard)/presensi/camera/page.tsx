@@ -911,7 +911,7 @@ export default function FaceAttendanceCameraPage() {
       const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64, recordAttendance: true }),
+        body: JSON.stringify({ image: base64, recordAttendance: true, force: true }),
       })
 
       if (!res.ok) {

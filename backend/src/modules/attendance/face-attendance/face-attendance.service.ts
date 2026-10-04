@@ -777,53 +777,58 @@ export class FaceAttendanceService implements OnModuleInit {
       year: 'numeric',
     });
 
-    const logEntry: FaceDetectionLog = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-      date: dateIso,
-      dateFormatted,
-      timestamp: timeString,
-      userId: user.id,
-      userName: user.name,
-      userRole:
-        user.role +
-        (user.student?.class ? ` (${user.student.class.name})` : ''),
-      avatarUrl: user.avatarUrl,
-      snapshotUrl: payload.snapshot || null,
-      identifier:
-        user.student?.nis ||
-        user.nipNbm ||
-        user.teacherProfile?.nip ||
-        user.username,
-      confidence: Math.round(payload.confidence * 100) / 100,
-      scanType,
-      message,
-      cameraName: payload.cameraLocation || config.cameraName,
-    };
+    // KETENTUAN LOG: Jika scan gagal/belum dapat absen pulang (BELUM_BISA_PULANG), scan TIDAK dicatat ke log presensi scanner ataupun keuangan
+    let logEntry: FaceDetectionLog | null = null;
 
-    this.recentLogs.unshift(logEntry);
-    if (this.recentLogs.length > this.maxLogs) {
-      this.recentLogs = this.recentLogs.slice(0, this.maxLogs);
-    }
-    this.saveLogsFile();
-
-    // Rekam ke Log Sistem untuk pengarsipan terkompresi di Supabase
-    this.systemLogService
-      .log({
-        category: 'PRESENSI',
-        level: 'INFO',
-        action: `FACE_SCAN_${scanType}`,
-        message: `Presensi Wajah AI: ${user.name} (${user.role}) - ${scanType} [Akurasi: ${logEntry.confidence}]`,
+    if (scanType === 'MASUK' || scanType === 'PULANG') {
+      logEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        date: dateIso,
+        dateFormatted,
+        timestamp: timeString,
         userId: user.id,
         userName: user.name,
-        userRole: user.role,
-        details: {
-          scanType,
-          confidence: logEntry.confidence,
-          cameraName: logEntry.cameraName,
-          time: timeString,
-        },
-      })
-      .catch(() => {});
+        userRole:
+          user.role +
+          (user.student?.class ? ` (${user.student.class.name})` : ''),
+        avatarUrl: user.avatarUrl,
+        snapshotUrl: payload.snapshot || null,
+        identifier:
+          user.student?.nis ||
+          user.nipNbm ||
+          user.teacherProfile?.nip ||
+          user.username,
+        confidence: Math.round(payload.confidence * 100) / 100,
+        scanType,
+        message,
+        cameraName: payload.cameraLocation || config.cameraName,
+      };
+
+      this.recentLogs.unshift(logEntry);
+      if (this.recentLogs.length > this.maxLogs) {
+        this.recentLogs = this.recentLogs.slice(0, this.maxLogs);
+      }
+      this.saveLogsFile();
+
+      // Rekam ke Log Sistem untuk pengarsipan terkompresi di Supabase
+      this.systemLogService
+        .log({
+          category: 'PRESENSI',
+          level: 'INFO',
+          action: `FACE_SCAN_${scanType}`,
+          message: `Presensi Wajah AI: ${user.name} (${user.role}) - ${scanType} [Akurasi: ${logEntry.confidence}]`,
+          userId: user.id,
+          userName: user.name,
+          userRole: user.role,
+          details: {
+            scanType,
+            confidence: logEntry.confidence,
+            cameraName: logEntry.cameraName,
+            time: timeString,
+          },
+        })
+        .catch(() => {});
+    }
 
     return {
       success: true,

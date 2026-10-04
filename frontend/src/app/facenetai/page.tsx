@@ -323,17 +323,6 @@ export default function FaceNetAiStandalonePage() {
     }
   }, [configData])
 
-  // Attach stream to video node whenever ref is attached
-  const setVideoRef = (node: HTMLVideoElement | null) => {
-    ;(localVideoRef as any).current = node
-    if (node && mediaStreamRef.current) {
-      node.srcObject = mediaStreamRef.current
-      node.muted = true
-      node.playsInline = true
-      node.play().catch(() => {})
-    }
-  }
-
   // Start browser webcam stream
   const startBrowserWebcam = async (deviceId?: string) => {
     try {
@@ -349,9 +338,6 @@ export default function FaceNetAiStandalonePage() {
           try { t.stop() } catch {}
         })
         mediaStreamRef.current = null
-      }
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = null
       }
 
       const targetDeviceId = deviceId || selectedDeviceId
@@ -2065,18 +2051,17 @@ export default function FaceNetAiStandalonePage() {
                 {isBrowserMode ? (
                   <div className="relative w-full h-full max-h-full aspect-video flex items-center justify-center bg-black overflow-hidden mx-auto">
                     <video
-                      ref={setVideoRef}
+                      ref={localVideoRef}
                       autoPlay
                       playsInline
                       muted
-                      className={`w-full h-full object-cover ${capturedSnapshotUrl ? 'hidden' : 'block'}`}
-                      onPlay={() => setIsBrowserCamStreaming(true)}
+                      className="w-full h-full object-cover"
                     />
                     {capturedSnapshotUrl && (
                       <img
                         src={capturedSnapshotUrl}
                         alt="Captured Freeze Frame"
-                        className="w-full h-full object-cover select-none"
+                        className="absolute inset-0 w-full h-full object-cover select-none z-5 pointer-events-none"
                       />
                     )}
                     <canvas

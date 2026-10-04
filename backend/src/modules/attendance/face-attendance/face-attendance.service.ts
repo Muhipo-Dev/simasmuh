@@ -140,12 +140,78 @@ export class FaceAttendanceService implements OnModuleInit {
           } catch {}
         }
       }
+
+      // Fallback: Jika file JSON kosong / belum terbaca, bangun otomatis dari basis data DailyAttendance
+      this.restoreLogsFromDb().catch(() => {});
     } catch (err) {
       this.logger.error(
         'Gagal memuat face-attendance-logs.json dari penyimpanan',
         err,
       );
     }
+  }
+
+  async restoreLogsFromDb(): Promise<FaceDetectionLog[]> {
+    try {
+      const dailyRecords = await this.prisma.dailyAttendance.findMany({
+        include: {
+          user: {
+            include: {
+              student: { include: { class: true } },
+              teacherProfile: true,
+            },
+          },
+        },
+        orderBy: { date: 'desc' },
+        take: this.maxLogs,
+      });
+
+      if (dailyRecords && dailyRecords.length > 0) {
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const restored: FaceDetectionLog[] = dailyRecords.map((d, index) => {
+          const recordDate = new Date(d.date);
+          const dateIso = `${recordDate.getFullYear()}-${pad(recordDate.getMonth() + 1)}-${pad(recordDate.getDate())}`;
+          const dateFormatted = recordDate.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          });
+
+          const timeStr = d.checkInTime || d.time || '07:15:00';
+          const identifier =
+            d.user?.student?.nis ||
+            d.user?.nipNbm ||
+            d.user?.teacherProfile?.nip ||
+            d.user?.username ||
+            '-';
+
+          return {
+            id: `${recordDate.getTime()}-${d.id || index}`,
+            date: dateIso,
+            dateFormatted: dateFormatted,
+            timestamp: timeStr,
+            userId: d.userId,
+            userName: d.user?.name || 'Pengguna',
+            userRole: d.user?.role || 'SISWA',
+            avatarUrl: d.user?.avatarUrl || null,
+            snapshotUrl: null,
+            identifier: identifier,
+            confidence: 0.95,
+            scanType: d.checkOutTime ? 'PULANG' : 'MASUK',
+            message: 'Presensi Terverifikasi (Database)',
+            cameraName: 'Camera Gerbang Utama',
+          };
+        });
+
+        this.recentLogs = restored;
+        this.saveLogsFile();
+        return this.recentLogs;
+      }
+    } catch (err) {
+      this.logger.error('Gagal restore logs dari database DailyAttendance', err);
+    }
+    return [];
   }
 
   private saveLogsFile() {
@@ -761,9 +827,12 @@ export class FaceAttendanceService implements OnModuleInit {
     };
   }
 
-  getRecentLogs(options?: { todayOnly?: boolean; date?: string }): FaceDetectionLog[] {
+  async getRecentLogs(options?: { todayOnly?: boolean; date?: string }): Promise<FaceDetectionLog[]> {
     if (this.recentLogs.length === 0) {
       this.loadLogsFile();
+      if (this.recentLogs.length === 0) {
+        await this.restoreLogsFromDb();
+      }
     }
     if (!options) return this.recentLogs;
     let filtered = [...this.recentLogs];

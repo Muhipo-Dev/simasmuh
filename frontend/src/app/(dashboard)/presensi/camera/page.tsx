@@ -972,25 +972,49 @@ export default function FaceAttendanceCameraPage() {
           })
           toast.warning(`Akurasi pemindaian (${Math.round(registeredFace.confidence * 100)}%) belum memenuhi standar minimum 91%.`)
         } else if (registeredFace) {
-          playBiometricAudio('success')
           const att = registeredFace.attendance
-          const attMsg = att?.message || `Presensi kehadiran berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`
-          speakVoiceGreeting(registeredFace.name, att?.scanType || 'HADIR', 'SUCCESS', undefined, registeredFace.role)
+          const scanType = att?.scanType || 'MASUK'
+          const isAlreadyComplete = scanType === 'SUDAH_LENGKAP'
+          const isPulang = scanType === 'PULANG'
+
+          if (isAlreadyComplete) {
+            playBiometricAudio('warning')
+          } else {
+            playBiometricAudio('success')
+          }
+
+          const attMsg = att?.message || (isAlreadyComplete 
+            ? `Presensi hari ini telah tercatat sebelumnya.` 
+            : isPulang
+              ? `Presensi kepulangan pegawai berhasil dicatat.`
+              : `Presensi kehadiran berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`)
+
+          speakVoiceGreeting(registeredFace.name, scanType, 'SUCCESS', undefined, registeredFace.role)
           
           setCaptureResult({
-            type: 'SUCCESS',
+            type: isAlreadyComplete ? 'UNKNOWN' : 'SUCCESS',
             name: registeredFace.name,
             role: registeredFace.role,
             identifier: registeredFace.identifier,
             avatarUrl: registeredFace.avatarUrl,
             confidence: Math.round(registeredFace.confidence * 100),
-            scanType: att?.scanType || 'HADIR',
-            message: 'Wajah Terverifikasi',
+            scanType: scanType,
+            message: isAlreadyComplete 
+              ? 'Presensi Sudah Lengkap' 
+              : isPulang 
+                ? 'Presensi Pulang Berhasil' 
+                : 'Presensi Masuk Berhasil',
             attendanceMsg: attMsg,
             time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           })
 
-          toast.success(`Presensi Berhasil: ${registeredFace.name}`)
+          if (isAlreadyComplete) {
+            toast.info(`Info: ${registeredFace.name} - ${attMsg}`)
+          } else if (isPulang) {
+            toast.success(`Presensi Pulang Berhasil: ${registeredFace.name}`)
+          } else {
+            toast.success(`Presensi Masuk Berhasil: ${registeredFace.name}`)
+          }
           queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
           queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
         } else {

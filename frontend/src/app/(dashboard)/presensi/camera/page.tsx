@@ -3022,14 +3022,16 @@ export default function FaceAttendanceCameraPage() {
 
                 {/* Range: Cooldown */}
                 <div className="space-y-3 pt-2">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-start">
                     <div>
                       <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        Jeda Cooldown Presensi (*Absensi Masuk / Pulang*)
+                        Jeda Cooldown Presensi Pegawai GTK (Masuk → Pulang)
                       </Label>
-                      <p className="text-[11px] text-slate-500">Log deteksi sistem tetap tercatat realtime (cooldown 2 detik), sedangkan status presensi masuk/pulang mengikuti durasi jeda ini.</p>
+                      <p className="text-[11px] text-slate-500">
+                        Menentukan jeda waktu minimum antara presensi Kedatangan (MASUK) dan Kepulangan (PULANG) untuk Guru & Pegawai.
+                      </p>
                     </div>
-                    <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-0.5">
+                    <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-0.5 shrink-0">
                       {(() => {
                         const mins = currentConfig?.cooldownMinutes || 10
                         if (mins < 60) return `${mins} Menit`
@@ -3051,11 +3053,29 @@ export default function FaceAttendanceCameraPage() {
                     }}
                     className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
                   />
-                  <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                    <span>1 Menit</span>
-                    <span>1 Jam (60m)</span>
-                    <span>2 Jam (120m)</span>
-                    <span>4 Jam (240m)</span>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {[
+                      { val: 1, label: '1m (Uji Coba)' },
+                      { val: 5, label: '5m' },
+                      { val: 15, label: '15m' },
+                      { val: 30, label: '30m' },
+                      { val: 60, label: '1 Jam' },
+                      { val: 120, label: '2 Jam' },
+                      { val: 240, label: '4 Jam' },
+                    ].map((preset) => (
+                      <button
+                        key={preset.val}
+                        type="button"
+                        onClick={() => setFormConfig((prev) => prev ? { ...prev, cooldownMinutes: preset.val } : null)}
+                        className={`text-xs px-2.5 py-1 rounded-lg font-mono font-bold transition-all cursor-pointer ${
+                          (currentConfig?.cooldownMinutes || 10) === preset.val
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 

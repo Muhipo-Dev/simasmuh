@@ -3010,14 +3010,25 @@ export default function FaceNetAiStandalonePage() {
                   </div>
                 </div>
 
-                {/* 5. Cooldown Range Slider */}
-                <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-                  <div className="flex justify-between items-center">
-                    <Label className="text-[11px] font-semibold text-slate-200">
-                      Jeda Cooldown Presensi (Anti-Spam)
-                    </Label>
-                    <Badge variant="outline" className="text-[10px] font-bold text-indigo-400 border-indigo-800 bg-indigo-950/50 px-2 py-0.2">
-                      {currentConfig?.cooldownMinutes || 10} Menit
+                {/* 5. Cooldown Range Slider (Jeda Kedatangan ke Kepulangan Pegawai GTK) */}
+                <div className="space-y-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <Label className="text-[11px] font-semibold text-slate-200">
+                        Jeda Cooldown Presensi Pegawai GTK (Masuk → Pulang)
+                      </Label>
+                      <p className="text-[9px] text-slate-400 mt-0.5">
+                        Menentukan jeda minimum antara presensi Kedatangan (MASUK) dan Kepulangan (PULANG) untuk Guru & Pegawai.
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] font-bold text-indigo-400 border-indigo-800 bg-indigo-950/50 px-2 py-0.5 shrink-0">
+                      {(() => {
+                        const mins = currentConfig?.cooldownMinutes || 10
+                        if (mins < 60) return `${mins} Menit`
+                        const hours = Math.floor(mins / 60)
+                        const remainder = mins % 60
+                        return `${hours} Jam${remainder > 0 ? ` ${remainder}m` : ''} (${mins}m)`
+                      })()}
                     </Badge>
                   </div>
                   <input
@@ -3033,6 +3044,31 @@ export default function FaceNetAiStandalonePage() {
                     }}
                     className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                   />
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {[
+                      { val: 1, label: '1m (Uji Coba)' },
+                      { val: 5, label: '5m' },
+                      { val: 15, label: '15m' },
+                      { val: 30, label: '30m' },
+                      { val: 60, label: '1 Jam' },
+                      { val: 120, label: '2 Jam' },
+                      { val: 240, label: '4 Jam' },
+                    ].map((preset) => (
+                      <button
+                        key={preset.val}
+                        type="button"
+                        disabled={!isAuthenticated || !canConfigure}
+                        onClick={() => setFormConfig((prev) => prev ? { ...prev, cooldownMinutes: preset.val } : null)}
+                        className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold transition-all cursor-pointer ${
+                          (currentConfig?.cooldownMinutes || 10) === preset.val
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 

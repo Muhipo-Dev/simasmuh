@@ -760,8 +760,10 @@ export default function FaceAttendanceCameraPage() {
         // Status SUCCESS: Presensi Singkat & Cepat (Nama + Hadir / Nama + Pulang)
         if (scanType === 'PULANG') {
           greeting = spokenName ? `${spokenName}, pulang.` : 'Presensi pulang.'
+        } else if (scanType === 'BELUM_BISA_PULANG') {
+          greeting = spokenName ? `${spokenName}, belum dapat absen pulang.` : 'Belum dapat absen pulang.'
         } else if (scanType === 'SUDAH_LENGKAP') {
-          greeting = spokenName ? `${spokenName}, sudah hadir.` : 'Presensi sudah tercatat.'
+          greeting = spokenName ? `${spokenName}, sudah absen.` : 'Presensi sudah tercatat.'
         } else {
           // Presensi Masuk / Hadir
           greeting = spokenName ? `${spokenName}, hadir.` : 'Hadir.'
@@ -975,9 +977,10 @@ export default function FaceAttendanceCameraPage() {
           const att = registeredFace.attendance
           const scanType = att?.scanType || 'MASUK'
           const isAlreadyComplete = scanType === 'SUDAH_LENGKAP'
+          const isBelumBisaPulang = scanType === 'BELUM_BISA_PULANG'
           const isPulang = scanType === 'PULANG'
 
-          if (isAlreadyComplete) {
+          if (isAlreadyComplete || isBelumBisaPulang) {
             playBiometricAudio('warning')
           } else {
             playBiometricAudio('success')
@@ -985,30 +988,36 @@ export default function FaceAttendanceCameraPage() {
 
           const attMsg = att?.message || (isAlreadyComplete 
             ? `Presensi hari ini telah tercatat sebelumnya.` 
-            : isPulang
-              ? `Presensi kepulangan pegawai berhasil dicatat.`
-              : `Presensi kehadiran berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`)
+            : isBelumBisaPulang
+              ? `Anda belum dapat absen pulang.`
+              : isPulang
+                ? `Presensi kepulangan pegawai berhasil dicatat.`
+                : `Presensi kehadiran berhasil diverifikasi (${Math.round(registeredFace.confidence * 100)}%)`)
 
           speakVoiceGreeting(registeredFace.name, scanType, 'SUCCESS', undefined, registeredFace.role)
           
           setCaptureResult({
-            type: isAlreadyComplete ? 'UNKNOWN' : 'SUCCESS',
+            type: (isAlreadyComplete || isBelumBisaPulang) ? 'UNKNOWN' : 'SUCCESS',
             name: registeredFace.name,
             role: registeredFace.role,
             identifier: registeredFace.identifier,
             avatarUrl: registeredFace.avatarUrl,
             confidence: Math.round(registeredFace.confidence * 100),
             scanType: scanType,
-            message: isAlreadyComplete 
-              ? 'Presensi Sudah Lengkap' 
-              : isPulang 
-                ? 'Presensi Pulang Berhasil' 
-                : 'Presensi Masuk Berhasil',
+            message: isBelumBisaPulang
+              ? 'Belum Dapat Absen Pulang'
+              : isAlreadyComplete 
+                ? 'Presensi Sudah Tercatat' 
+                : isPulang 
+                  ? 'Presensi Pulang Berhasil' 
+                  : 'Presensi Masuk Berhasil',
             attendanceMsg: attMsg,
             time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           })
 
-          if (isAlreadyComplete) {
+          if (isBelumBisaPulang) {
+            toast.warning(`Pemberitahuan: ${registeredFace.name} - ${attMsg}`)
+          } else if (isAlreadyComplete) {
             toast.info(`Info: ${registeredFace.name} - ${attMsg}`)
           } else if (isPulang) {
             toast.success(`Presensi Pulang Berhasil: ${registeredFace.name}`)

@@ -686,9 +686,9 @@ export class FaceAttendanceService implements OnModuleInit {
           .catch(() => {});
       }
     } else if (isStudent) {
-      // 2. KETENTUAN SISWA: Cukup 1 kali saat kedatangan di gerbang sekolah.
+      // 2. KETENTUAN SISWA: Cukup 1 kali saat kedatangan di gerbang sekolah. Scan ulang di hari yang sama memberikan info sudah absen.
       scanType = 'SUDAH_LENGKAP';
-      message = `Presensi kehadiran Anda telah tercatat pada pukul ${existing.checkInTime || existing.time} WIB.`;
+      message = `Presensi kehadiran Anda telah tercatat pada pukul ${existing.checkInTime || existing.time} WIB. Anda sudah absen hari ini.`;
     } else if (!existing.checkOutTime) {
       // 3. KETENTUAN GTK (Guru, Karyawan, Pegawai, Superadmin): Wajib 2 kali sehari (Datang / MASUK & Pulang / PULANG)
       if (existing.checkInTime) {
@@ -701,7 +701,7 @@ export class FaceAttendanceService implements OnModuleInit {
 
         const cooldownSeconds = (Number(config.cooldownMinutes) || 10) * 60;
 
-        // Jika jeda dari waktu masuk sudah melewati cooldown (misal 1 menit = 60 detik), catat presensi PULANG
+        // Jika jeda dari waktu masuk sudah melewati cooldown (mengikuti slider di konfigurasi), catat presensi PULANG
         if (diffSeconds >= cooldownSeconds) {
           await this.prisma.dailyAttendance.update({
             where: { id: existing.id },
@@ -730,10 +730,11 @@ export class FaceAttendanceService implements OnModuleInit {
               .catch(() => {});
           }
         } else {
-          scanType = 'SUDAH_LENGKAP';
+          // Scan sebelum cooldown berakhir: tampilkan info belum dapat absen pulang
+          scanType = 'BELUM_BISA_PULANG' as any;
           const remainingSec = Math.max(1, cooldownSeconds - diffSeconds);
           const remainingMin = Math.ceil(remainingSec / 60);
-          message = `Presensi kedatangan telah tercatat pukul ${existing.checkInTime} WIB. Jeda waktu kepulangan (${config.cooldownMinutes}m) tersisa ${remainingMin > 1 ? remainingMin + ' menit' : remainingSec + ' detik'}.`;
+          message = `Anda belum dapat absen pulang. Jeda waktu kepulangan (${config.cooldownMinutes} menit) tersisa ${remainingMin > 1 ? remainingMin + ' menit' : remainingSec + ' detik'}.`;
         }
       } else {
         await this.prisma.dailyAttendance.update({

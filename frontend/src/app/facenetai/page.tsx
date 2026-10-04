@@ -777,11 +777,17 @@ export default function FaceNetAiStandalonePage() {
       } else if (statusType === 'ERROR') {
         greeting = 'Sistem pemindai presensi sedang memproses data. Silakan coba sesaat lagi.'
       } else {
-        // Status SUCCESS: Presensi Singkat & Cepat (Nama + Hadir / Nama + Pulang)
+        // Status SUCCESS: Presensi Singkat & Cepat (Nama + Hadir / Nama + Pulang / Belum Bisa Pulang / Sudah Absen)
         if (scanType === 'PULANG') {
           greeting = spokenName ? `${spokenName}, pulang.` : 'Presensi pulang.'
+        } else if (scanType === 'BELUM_BISA_PULANG') {
+          greeting = spokenName ? `${spokenName}, belum dapat absen pulang.` : 'Belum dapat absen pulang.'
         } else if (scanType === 'SUDAH_LENGKAP') {
-          greeting = spokenName ? `${spokenName}, sudah hadir.` : 'Presensi sudah tercatat.'
+          if (role?.includes('SISWA')) {
+            greeting = spokenName ? `${spokenName}, sudah absen.` : 'Presensi sudah tercatat.'
+          } else {
+            greeting = spokenName ? `${spokenName}, presensi hari ini sudah lengkap.` : 'Presensi hari ini sudah lengkap.'
+          }
         } else {
           // Presensi Masuk / Hadir
           greeting = spokenName ? `${spokenName}, hadir.` : 'Hadir.'

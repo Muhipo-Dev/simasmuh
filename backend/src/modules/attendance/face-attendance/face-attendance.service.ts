@@ -837,6 +837,9 @@ export class FaceAttendanceService implements OnModuleInit {
 
   async clearLogs(resetDb: boolean = true) {
     const today = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const todayIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
     const startOfDay = new Date(today);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(today);
@@ -861,7 +864,11 @@ export class FaceAttendanceService implements OnModuleInit {
       }
     }
 
-    this.recentLogs = [];
+    // Hanya hapus log hari ini, riwayat hari kemarin (seperti Jumat 2 Oktober 2026 dsb) TETAP UTUH & AMAN
+    this.recentLogs = this.recentLogs.filter((log) => {
+      if (!log.date) return false;
+      return log.date !== todayIso;
+    });
     this.saveLogsFile();
 
     // Reset semua timer cooldown di Python AI Worker
@@ -877,8 +884,8 @@ export class FaceAttendanceService implements OnModuleInit {
     return {
       success: true,
       message: resetDb
-        ? `Log berhasil dikosongkan dan ${deletedCount} catatan presensi hari ini berhasil direset di basis data.`
-        : 'Log berhasil dikosongkan.',
+        ? `Log presensi hari ini berhasil dikosongkan dan ${deletedCount} catatan presensi hari ini direset di basis data (riwayat hari kemarin tetap aman tersimpan).`
+        : 'Log hari ini berhasil dikosongkan.',
       deletedCount,
     };
   }

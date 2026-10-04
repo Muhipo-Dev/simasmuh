@@ -637,20 +637,14 @@ export default function FaceNetAiStandalonePage() {
       } else if (statusType === 'ERROR') {
         greeting = 'Sistem pemindai presensi sedang memproses data. Silakan coba sesaat lagi.'
       } else {
-        // Status SUCCESS: Presensi Kedatangan, Pulang, dan Lengkap (Bahasa Resmi Yayasan / Institusi Sekolah)
-        if (scanType === 'SUDAH_LENGKAP') {
-          greeting = spokenName 
-            ? `Terima kasih ${spokenName}, presensi Anda hari ini telah tercatat lengkap. Selamat beraktivitas.`
-            : 'Presensi Anda hari ini telah tercatat lengkap. Selamat beraktivitas.'
-        } else if (scanType === 'PULANG') {
-          greeting = spokenName 
-            ? `Terima kasih ${spokenName}, presensi kepulangan berhasil dicatat. Hati-hati di jalan dan selamat beristirahat.` 
-            : 'Presensi kepulangan berhasil dicatat. Selamat beristirahat.'
+        // Status SUCCESS: Presensi Singkat & Cepat (Nama + Hadir / Nama + Pulang)
+        if (scanType === 'PULANG') {
+          greeting = spokenName ? `${spokenName}, Pulang.` : 'Presensi Pulang.'
+        } else if (scanType === 'SUDAH_LENGKAP') {
+          greeting = spokenName ? `${spokenName}, Sudah Hadir.` : 'Presensi Sudah Tercatat.'
         } else {
-          // Presensi Masuk (Hadir / Kedatangan)
-          greeting = spokenName 
-            ? `Selamat datang ${spokenName}, presensi kehadiran berhasil dicatat. Selamat belajar dan berkarya.` 
-            : 'Selamat datang, presensi kehadiran berhasil dicatat. Selamat bertugas.'
+          // Presensi Masuk / Hadir
+          greeting = spokenName ? `${spokenName}, Hadir.` : 'Hadir.'
         }
       }
 
@@ -990,10 +984,11 @@ export default function FaceNetAiStandalonePage() {
   // Persistent offscreen canvas ref to prevent garbage collection hiccups and lag
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null)
 
-  // Periodic frame scanning HANYA saat Mode Auto-Scan diaktifkan (Mode MANUAL = 0 request latar belakang)
-  // Pada Mode MANUAL: Pemindaian HANYA terjadi saat tombol kamera / spasi ditekan oleh pengguna
+  // Periodic frame scanning & real-time bounding box detection (AUTO & MANUAL modes)
+  // Pada Mode MANUAL: Bounding box HUD tetap aktif dan presisi, tetapi presensi HANYA dicatat saat tombol kamera/spasi ditekan
+  // Pada Mode AUTO: Bounding box HUD aktif dan presensi otomatis dicatat dengan jeda 5 detik
   useEffect(() => {
-    if (!isBrowserCamStreaming || activeTab !== 'monitor' || scanMode !== 'AUTO') {
+    if (!isBrowserCamStreaming || activeTab !== 'monitor') {
       const canvas = overlayCanvasRef.current
       if (canvas) {
         const cCtx = canvas.getContext('2d')
@@ -1034,11 +1029,12 @@ export default function FaceNetAiStandalonePage() {
           ctx.drawImage(video, 0, 0, targetW, targetH)
           const base64 = offscreen.toDataURL('image/jpeg', 0.65)
           
-          // Cek apakah mode auto presensi sedang dalam jeda 5 detik
+          // Cek apakah mode auto presensi aktif dan tidak sedang dalam jeda 5 detik
+          const isAutoAttendance = scanMode === 'AUTO' || currentConfig?.autoAttendance === true
           const nowMs = Date.now()
-          const shouldRecordNow = nowMs >= autoScanCooldownUntil
+          const shouldRecordNow = isAutoAttendance && nowMs >= autoScanCooldownUntil
 
-          // Mode scanning: kirim recordAttendance: shouldRecordNow
+          // Mode scanning: kirim recordAttendance sesuai kondisi auto
           const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1106,7 +1102,7 @@ export default function FaceNetAiStandalonePage() {
     }, scanDelay)
 
     return () => clearInterval(interval)
-  }, [isBrowserCamStreaming, activeTab, isCapturing, currentConfig?.continuousScanNoDelay, currentConfig?.scanIntervalMs, scanMode])
+  }, [isBrowserCamStreaming, activeTab, isCapturing, currentConfig?.continuousScanNoDelay, currentConfig?.scanIntervalMs, currentConfig?.autoAttendance, scanMode])
 
   // 2. Fetch Users Dataset (Diizinkan untuk dilihat oleh semua pengunjung)
   const { data: datasetData, refetch: refetchDataset } = useQuery<UsersDatasetResponse>({
@@ -1356,13 +1352,13 @@ export default function FaceNetAiStandalonePage() {
       return
     }
     Swal.fire({
-      title: 'Reset Seluruh Log & Presensi Hari Ini?',
-      text: 'Semua riwayat scanner log dan catatan presensi hari ini di database utama akan direset. Lanjutkan?',
+      title: 'Reset Log & Presensi Hari Ini Saja?',
+      text: 'Catatan presensi dan log pemindaian KHUSUS HARI INI akan dikosongkan. Riwayat presensi hari kemarin (Jumat dsb) tetap aman tersimpan di database. Lanjutkan?',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#e11d48',
       cancelButtonColor: '#64748b',
-      confirmButtonText: 'Ya, Reset Semua',
+      confirmButtonText: 'Ya, Reset Hari Ini Saja',
       cancelButtonText: 'Batal',
     }).then((result) => {
       if (result.isConfirmed) {

@@ -81,6 +81,7 @@ interface FaceCameraConfig {
   cooldownMinutes: number
   isActive: boolean
   welcomeVoice: boolean
+  autoAttendance?: boolean
   showPublicStream?: boolean
   showPublicLogs?: boolean
   apiKeySecret: string
@@ -644,20 +645,14 @@ export default function FaceAttendanceCameraPage() {
       } else if (statusType === 'ERROR') {
         greeting = 'Sistem pemindai presensi sedang memproses data. Silakan coba sesaat lagi.'
       } else {
-        // Status SUCCESS: Presensi Kedatangan, Pulang, dan Lengkap (Bahasa Resmi Yayasan / Institusi Sekolah)
-        if (scanType === 'SUDAH_LENGKAP') {
-          greeting = spokenName 
-            ? `Terima kasih ${spokenName}, presensi Anda hari ini telah tercatat lengkap. Selamat beraktivitas.`
-            : 'Presensi Anda hari ini telah tercatat lengkap. Selamat beraktivitas.'
-        } else if (scanType === 'PULANG') {
-          greeting = spokenName 
-            ? `Terima kasih ${spokenName}, presensi kepulangan berhasil dicatat. Hati-hati di jalan dan selamat beristirahat.` 
-            : 'Presensi kepulangan berhasil dicatat. Selamat beristirahat.'
+        // Status SUCCESS: Presensi Singkat & Cepat (Nama + Hadir / Nama + Pulang)
+        if (scanType === 'PULANG') {
+          greeting = spokenName ? `${spokenName}, Pulang.` : 'Presensi Pulang.'
+        } else if (scanType === 'SUDAH_LENGKAP') {
+          greeting = spokenName ? `${spokenName}, Sudah Hadir.` : 'Presensi Sudah Tercatat.'
         } else {
-          // Presensi Masuk (Hadir / Kedatangan)
-          greeting = spokenName 
-            ? `Selamat datang ${spokenName}, presensi kehadiran berhasil dicatat. Selamat belajar dan berkarya.` 
-            : 'Selamat datang, presensi kehadiran berhasil dicatat. Selamat bertugas.'
+          // Presensi Masuk / Hadir
+          greeting = spokenName ? `${spokenName}, Hadir.` : 'Hadir.'
         }
       }
 
@@ -988,12 +983,22 @@ export default function FaceAttendanceCameraPage() {
   // Persistent offscreen canvas ref to prevent garbage collection hiccups and lag
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null)
 
-  // Periodic frame scanning HANYA saat Mode Auto-Scan diaktifkan (Mode Manual = 0 request latar belakang)
+  // Periodic frame scanning & real-time bounding box detection (AUTO & MANUAL modes)
+  // Pada Mode MANUAL: Bounding box HUD tetap aktif dan presisi, tetapi presensi HANYA dicatat saat tombol kamera/spasi ditekan
+  // Pada Mode AUTO: Bounding box HUD aktif dan presensi otomatis dicatat
   useEffect(() => {
-    if (!isBrowserCamStreaming || scanMode !== 'AUTO') return
+    if (!isBrowserCamStreaming) {
+      const canvas = overlayCanvasRef.current
+      if (canvas) {
+        const cCtx = canvas.getContext('2d')
+        if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+      }
+      return
+    }
     let isProcessing = false
     let frameCount = 0
     let lastTime = Date.now()
+    let autoScanCooldownUntil = 0
 
     const interval = setInterval(async () => {
       if (isProcessing || isCapturing || !localVideoRef.current || !overlayCanvasRef.current) return
@@ -1017,10 +1022,15 @@ export default function FaceAttendanceCameraPage() {
         if (ctx) {
           ctx.drawImage(video, 0, 0, targetW, targetH)
           const base64 = offscreen.toDataURL('image/jpeg', 0.70)
+          
+          const isAutoAttendance = scanMode === 'AUTO' || currentConfig?.autoAttendance === true
+          const nowMs = Date.now()
+          const shouldRecordNow = isAutoAttendance && nowMs >= autoScanCooldownUntil
+
           const res = await authenticatedFetch('/api-backend/face-attendance/scan-frame', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64, recordAttendance: true }),
+            body: JSON.stringify({ image: base64, recordAttendance: shouldRecordNow, force: false }),
           })
           if (res.ok) {
             const data = await res.json()
@@ -1036,9 +1046,10 @@ export default function FaceAttendanceCameraPage() {
               ],
             }))
             drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
-            if (rawFaces.length > 0) {
+            if (shouldRecordNow && rawFaces.length > 0) {
               const regFace = rawFaces.find((f: any) => f.is_registered && (f.confidence || 0) >= (currentConfig?.threshold || 0.70))
               if (regFace && regFace.attendance && regFace.attendance.success) {
+                autoScanCooldownUntil = Date.now() + 5000
                 playBiometricAudio('success')
                 const att = regFace.attendance
                 speakVoiceGreeting(regFace.name, att?.scanType || 'HADIR', 'SUCCESS', undefined, regFace.role)
@@ -1057,15 +1068,9 @@ export default function FaceAttendanceCameraPage() {
                 toast.success(`Presensi Berhasil: ${regFace.name} (${Math.round(regFace.confidence * 100)}%)`)
                 queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
                 queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
-                await new Promise((r) => setTimeout(r, 5000))
               } else if (regFace) {
                 queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
-                await new Promise((r) => setTimeout(r, 1000))
-              } else {
-                await new Promise((r) => setTimeout(r, 400))
               }
-            } else {
-              await new Promise((r) => setTimeout(r, 100))
             }
           }
         }
@@ -1084,7 +1089,7 @@ export default function FaceAttendanceCameraPage() {
     }, 150)
 
     return () => clearInterval(interval)
-  }, [isBrowserCamStreaming, scanMode, isCapturing])
+  }, [isBrowserCamStreaming, scanMode, isCapturing, currentConfig?.autoAttendance, currentConfig?.threshold])
 
   // 2. Fetch Users Dataset stats
   const { data: datasetData, isLoading: isDatasetLoading, refetch: refetchDataset } = useQuery<UsersDatasetResponse>({
@@ -1330,13 +1335,13 @@ export default function FaceAttendanceCameraPage() {
 
   const handleConfirmClearLogs = () => {
     Swal.fire({
-      title: 'Reset Seluruh Log & Presensi Hari Ini?',
-      text: 'Semua riwayat scanner log dan catatan presensi hari ini di database utama (Supabase/PostgreSQL) akan ikut direset. Lanjutkan?',
+      title: 'Reset Log & Presensi Hari Ini Saja?',
+      text: 'Catatan presensi dan log pemindaian KHUSUS HARI INI akan dikosongkan. Riwayat presensi hari kemarin (Jumat dsb) tetap aman tersimpan di database. Lanjutkan?',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#e11d48',
       cancelButtonColor: '#64748b',
-      confirmButtonText: 'Ya, Reset Semua',
+      confirmButtonText: 'Ya, Reset Hari Ini Saja',
       cancelButtonText: 'Batal',
     }).then((result) => {
       if (result.isConfirmed) {

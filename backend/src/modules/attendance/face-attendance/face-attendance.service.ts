@@ -1322,9 +1322,11 @@ export class FaceAttendanceService implements OnModuleInit {
     }
 
     try {
-      // Sanitasi pelafalan: bersihkan simbol/tanda baca berlebih agar nama dibaca mengalir sebagai kata utuh (bukan dieja per huruf)
+      // Sanitasi pelafalan: bersihkan simbol/tanda baca berlebih dan konversi kata kapital ke huruf kecil
+      // agar akronim / kata kapital (seperti "SIMASMUH", "MUHIPO", atau nama siswa kapital) dibaca mengalir sebagai kata utuh (tidak dieja per huruf)
       const cleanText = text
         .replace(/[,._\-/\\|(){}[\]]/g, ' ') // Ganti tanda titik, koma, garis miring dll dengan spasi agar tidak dieja
+        .toLowerCase()
         .replace(/\s+/g, ' ')
         .trim();
 

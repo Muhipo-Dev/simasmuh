@@ -607,6 +607,7 @@ export default function FaceNetAiStandalonePage() {
     if (!rawName) return ''
     return rawName
       .replace(/[,._\-/\\|(){}\[\]]/g, ' ') // Hindari ejaan per karakter akibat tanda baca/titik singkatan
+      .toLowerCase() // Ubah ke huruf kecil agar kata kapital tidak dieja per huruf
       .replace(/\s+/g, ' ')
       .trim()
   }
@@ -629,7 +630,7 @@ export default function FaceNetAiStandalonePage() {
           ? `Mohon maaf ${spokenName}, tingkat akurasi pemindaian belum mencukupi. Silakan posisikan wajah Anda lebih dekat ke kamera.` 
           : `Akurasi biometrik belum mencukupi. Mohon posisikan wajah Anda tegak lurus dan lebih dekat ke kamera.`
       } else if (statusType === 'UNREGISTERED') {
-        greeting = 'Identitas wajah belum terdaftar pada pangkalan data SIMASMUH. Silakan menghubungi bagian administrasi atau operator sekolah.'
+        greeting = 'Identitas wajah belum terdaftar pada pangkalan data simasmuh. Silakan menghubungi bagian administrasi atau operator sekolah.'
       } else if (statusType === 'NO_FACE') {
         greeting = 'Wajah tidak terdeteksi. Silakan menghadap lurus ke kamera.'
       } else if (statusType === 'TWIN_AMBIGUOUS') {
@@ -639,14 +640,21 @@ export default function FaceNetAiStandalonePage() {
       } else {
         // Status SUCCESS: Presensi Singkat & Cepat (Nama + Hadir / Nama + Pulang)
         if (scanType === 'PULANG') {
-          greeting = spokenName ? `${spokenName}, Pulang.` : 'Presensi Pulang.'
+          greeting = spokenName ? `${spokenName}, pulang.` : 'Presensi pulang.'
         } else if (scanType === 'SUDAH_LENGKAP') {
-          greeting = spokenName ? `${spokenName}, Sudah Hadir.` : 'Presensi Sudah Tercatat.'
+          greeting = spokenName ? `${spokenName}, sudah hadir.` : 'Presensi sudah tercatat.'
         } else {
           // Presensi Masuk / Hadir
-          greeting = spokenName ? `${spokenName}, Hadir.` : 'Hadir.'
+          greeting = spokenName ? `${spokenName}, hadir.` : 'Hadir.'
         }
       }
+
+      // Konversi kalimat suara ke huruf kecil & hilangkan karakter asing agar dibaca utuh sebagai kata
+      const speechText = greeting
+        .replace(/[,._\-/\\|(){}\[\]]/g, ' ')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim()
 
       // Hentikan audio atau ucapan sebelumnya agar tidak bertumpuk saat antrian padat di HP/Tablet/Desktop
       if (activeAudioRef.current) {
@@ -654,7 +662,7 @@ export default function FaceNetAiStandalonePage() {
           activeAudioRef.current.pause()
           activeAudioRef.current.currentTime = 0
         } catch {}
-        activeAudioRef.current = null
+          activeAudioRef.current = null
       }
 
       if (window.speechSynthesis) {
@@ -662,7 +670,7 @@ export default function FaceNetAiStandalonePage() {
       }
 
       // 1. Prioritas Utama: Unduh & Putar Suara Wanita Indonesia Asli dengan Artikulasi Cepat & Gesit (1.25x)
-      const ttsUrl = `/api-backend/face-attendance/tts?text=${encodeURIComponent(greeting)}`
+      const ttsUrl = `/api-backend/face-attendance/tts?text=${encodeURIComponent(speechText)}`
       const audio = new Audio()
       audio.crossOrigin = 'anonymous'
       audio.src = ttsUrl
@@ -674,7 +682,7 @@ export default function FaceNetAiStandalonePage() {
         playPromise.catch(() => {
           // 2. Fallback: Browser Web Speech API dengan Filter Ketat Khusus Suara Wanita & Rate Cepat (1.25x)
           if (!window.speechSynthesis) return
-          const utter = new SpeechSynthesisUtterance(greeting)
+          const utter = new SpeechSynthesisUtterance(speechText)
           utter.lang = 'id-ID'
           utter.rate = 1.25 // Rate 1.25x responsif dan tegas
 

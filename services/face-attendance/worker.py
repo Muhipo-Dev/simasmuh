@@ -549,6 +549,14 @@ class AttendanceWorker:
         self._sync_sub_workers()
         print(f"[INFO] Multi-Camera Attendance Worker aktif dengan {len(self.sub_workers)} kamera terhubung.")
 
+    def refresh_config(self):
+        """Memperbarui konfigurasi kamera & threshold secara dinamis dari backend."""
+        try:
+            self.config = fetch_backend_config()
+            self._sync_sub_workers()
+        except Exception as e:
+            print(f"[WARN] Gagal memperbarui konfigurasi AI worker: {e}")
+
     def stop(self):
         self.is_running = False
         self.stop_event.set()
@@ -606,17 +614,16 @@ class AttendanceWorker:
         if similarity < req_threshold and not force:
             return None
 
-        # 2. Cooldown Scanner Umum (cepat & responsif untuk pergantian antrian siswa antar detik)
-        SCANNER_COOLDOWN_SEC = 0.75
+        # 2. Debounce Scanner Antrian (responsif & cepat untuk pergantian antrian siswa antar detik)
+        SCANNER_COOLDOWN_SEC = 0.5
         if not force and now - self.last_scan_time < SCANNER_COOLDOWN_SEC:
             return None
 
-        # 3. Jeda Cooldown Berulang Akun Masuk Sistem
-        cooldown_mins = self.config.cooldown_minutes if self.config else 15
-        cooldown_sec = cooldown_mins * 60
-
+        # 3. Debounce per User (cegah multiple request duplikat beruntun dalam 2 detik)
+        # Logika bisnis cooldown datang (MASUK) & pulang (PULANG) dikelola penuh secara akurat oleh database NestJS Backend
+        USER_DEBOUNCE_SEC = 2.0
         last_time = self.last_attendance_time.get(user_id, 0)
-        if not force and now - last_time < cooldown_sec:
+        if not force and now - last_time < USER_DEBOUNCE_SEC:
             return None
 
         self.last_scan_time = now

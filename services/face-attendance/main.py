@@ -162,6 +162,22 @@ def reset_cooldown_endpoint(payload: ResetCooldownRequest = ResetCooldownRequest
         "message": "Cooldown timer presensi kamera berhasil direset.",
     }
 
+@app.post("/refresh-config")
+@app.get("/refresh-config")
+def refresh_config_endpoint():
+    """Memperbarui konfigurasi kamera & threshold secara dinamis dari backend."""
+    worker.refresh_config()
+    return {
+        "success": True,
+        "message": "Konfigurasi AI FaceNet berhasil disinkronkan dengan backend.",
+        "config": {
+            "threshold": worker.config.threshold,
+            "cooldown_minutes": worker.config.cooldown_minutes,
+            "stream_url": worker.config.stream_url,
+            "cameras_count": len(worker.config.cameras),
+        }
+    }
+
 class ScanFrameRequest(BaseModel):
     image: str  # base64 data url or raw base64
     recordAttendance: bool = True

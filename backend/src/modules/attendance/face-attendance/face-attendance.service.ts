@@ -410,6 +410,10 @@ export class FaceAttendanceService implements OnModuleInit {
       } else {
         // Auto trigger reload/restart on python AI worker if active
         try {
+          fetch('http://127.0.0.1:8089/refresh-config', {
+            method: 'POST',
+            signal: AbortSignal.timeout(3000),
+          }).catch(() => {});
           fetch('http://127.0.0.1:8089/stream/restart', {
             method: 'POST',
             signal: AbortSignal.timeout(3000),
@@ -686,14 +690,19 @@ export class FaceAttendanceService implements OnModuleInit {
       scanType = 'SUDAH_LENGKAP';
       message = `Presensi kehadiran Anda telah tercatat pada pukul ${existing.checkInTime || existing.time} WIB.`;
     } else if (!existing.checkOutTime) {
-      // 3. KETENTUAN GTK (Guru, Karyawan, Pegawai): Wajib 2 kali sehari (Datang & Pulang)
+      // 3. KETENTUAN GTK (Guru, Karyawan, Pegawai, Superadmin): Wajib 2 kali sehari (Datang / MASUK & Pulang / PULANG)
       if (existing.checkInTime) {
-        const [inHour, inMin] = existing.checkInTime.split(':').map(Number);
-        const inTotalMins = inHour * 60 + (inMin || 0);
-        const outTotalMins = currentTotalMinutes;
+        const inParts = existing.checkInTime.split(':').map(Number);
+        const inTotalSeconds = inParts[0] * 3600 + (inParts[1] || 0) * 60 + (inParts[2] || 0);
+        const currentTotalSeconds = currentHours * 3600 + currentMinutes * 60 + today.getSeconds();
+        const diffSeconds = currentTotalSeconds >= inTotalSeconds 
+          ? (currentTotalSeconds - inTotalSeconds) 
+          : (currentTotalSeconds + 86400 - inTotalSeconds);
 
-        // Jika jeda dari waktu masuk belum melewati cooldown, berikan pesan santun
-        if (outTotalMins - inTotalMins >= config.cooldownMinutes || outTotalMins < inTotalMins) {
+        const cooldownSeconds = (Number(config.cooldownMinutes) || 10) * 60;
+
+        // Jika jeda dari waktu masuk sudah melewati cooldown (misal 1 menit = 60 detik), catat presensi PULANG
+        if (diffSeconds >= cooldownSeconds) {
           await this.prisma.dailyAttendance.update({
             where: { id: existing.id },
             data: { checkOutTime: timeString },
@@ -722,7 +731,9 @@ export class FaceAttendanceService implements OnModuleInit {
           }
         } else {
           scanType = 'SUDAH_LENGKAP';
-          message = `Presensi kedatangan telah tercatat pukul ${existing.checkInTime} WIB. Jeda waktu presensi belum terpenuhi.`;
+          const remainingSec = Math.max(1, cooldownSeconds - diffSeconds);
+          const remainingMin = Math.ceil(remainingSec / 60);
+          message = `Presensi kedatangan telah tercatat pukul ${existing.checkInTime} WIB. Jeda waktu kepulangan (${config.cooldownMinutes}m) tersisa ${remainingMin > 1 ? remainingMin + ' menit' : remainingSec + ' detik'}.`;
         }
       } else {
         await this.prisma.dailyAttendance.update({
@@ -752,7 +763,7 @@ export class FaceAttendanceService implements OnModuleInit {
         }
       }
     } else {
-      // GTK sudah presensi datang dan pulang
+      // GTK sudah presensi datang dan pulang lengkap hari ini
       scanType = 'SUDAH_LENGKAP';
       message = `Presensi hari ini telah lengkap (Kedatangan: ${existing.checkInTime} WIB, Kepulangan: ${existing.checkOutTime} WIB).`;
     }

@@ -638,7 +638,7 @@ export default function FaceAttendanceCameraPage() {
           ? `Mohon maaf ${spokenName}, tingkat akurasi pemindaian belum mencukupi. Silakan posisikan wajah Anda lebih dekat ke kamera.` 
           : `Akurasi biometrik belum mencukupi. Mohon posisikan wajah Anda tegak lurus dan lebih dekat ke kamera.`
       } else if (statusType === 'UNREGISTERED') {
-        greeting = 'Identitas wajah belum terdaftar pada pangkalan data simasmuh. Silakan menghubungi bagian administrasi atau operator sekolah.'
+        greeting = 'Identitas tidak ada di pangkalan data simasmuh, silakan hubungi operator sekolah.'
       } else if (statusType === 'NO_FACE') {
         greeting = 'Wajah tidak terdeteksi. Silakan menghadap lurus ke kamera.'
       } else if (statusType === 'TWIN_AMBIGUOUS') {
@@ -677,22 +677,22 @@ export default function FaceAttendanceCameraPage() {
         window.speechSynthesis.cancel()
       }
 
-      // 1. Prioritas Utama: Unduh & Putar Suara Wanita Indonesia Asli dengan Artikulasi Cepat & Gesit (1.25x)
+      // 1. Prioritas Utama: Unduh & Putar Suara Wanita Indonesia Asli dengan Artikulasi Natural & Jelas (1.0x)
       const ttsUrl = `/api-backend/face-attendance/tts?text=${encodeURIComponent(speechText)}`
       const audio = new Audio()
       audio.crossOrigin = 'anonymous'
       audio.src = ttsUrl
-      audio.playbackRate = 1.25 // Intonasi 1.25x: cepat, artikulatif, dan efisien untuk antrian ratusan siswa
+      audio.playbackRate = 1.0 // Intonasi natural 1.0x: jelas, santun, dan nyaman didengar
       activeAudioRef.current = audio
 
       const playPromise = audio.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          // 2. Fallback: Browser Web Speech API dengan Filter Ketat Khusus Suara Wanita & Rate Cepat (1.25x)
+          // 2. Fallback: Browser Web Speech API dengan Filter Ketat Khusus Suara Wanita & Rate Natural (1.0x)
           if (!window.speechSynthesis) return
           const utter = new SpeechSynthesisUtterance(speechText)
           utter.lang = 'id-ID'
-          utter.rate = 1.25 // Rate 1.25x responsif dan tegas
+          utter.rate = 1.0 // Rate 1.0x natural dan tenang
 
           const voices = window.speechSynthesis.getVoices()
           const isMale = (vName: string) => {
@@ -888,7 +888,7 @@ export default function FaceAttendanceCameraPage() {
           setCaptureResult({
             type: 'UNKNOWN',
             message: 'Wajah Belum Terdaftar',
-            attendanceMsg: 'Identitas wajah belum terdaftar pada pangkalan data SIMASMUH. Silakan menghubungi bagian administrasi atau operator sekolah.',
+            attendanceMsg: 'Identitas tidak ada di pangkalan data SIMASMUH, silakan hubungi operator sekolah.',
           })
           toast.warning('Wajah tidak dikenali atau belum terdaftar pada basis data profil.')
         }

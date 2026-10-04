@@ -435,95 +435,91 @@ export default function FaceAttendanceCameraPage() {
     }
   }
 
-  // Ref untuk smoothing dan retensi visual bounding box agar tidak flickering
-  const lastDetectionsRef = useRef<{ faces: any[]; timestamp: number; vWidth: number; vHeight: number }>({
-    faces: [],
-    timestamp: 0,
-    vWidth: 640,
-    vHeight: 360,
-  })
-
-  // Draw YOLO bounding box over video canvas (Terdaftar = Hijau HD, Tamu / Orang Asing = Kuning Amber HD)
-  const drawYoloBoundingBoxes = (faces: any[], vWidth: number, vHeight: number) => {
-    const canvas = overlayCanvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    const now = Date.now()
-
-    if (faces && faces.length > 0) {
-      lastDetectionsRef.current = { faces, timestamp: now, vWidth, vHeight }
-    } else if (now - lastDetectionsRef.current.timestamp > 850) {
-      lastDetectionsRef.current.faces = []
-    }
-
-    const activeFaces = lastDetectionsRef.current.faces
-
-    if (canvas.width !== vWidth || canvas.height !== vHeight) {
-      canvas.width = vWidth
-      canvas.height = vHeight
-    }
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-    if (!activeFaces || activeFaces.length === 0) return
-
-    activeFaces.forEach((f) => {
-      const [x, y, w, h] = f.box
-      const isReg = f.is_registered
-      // Hijau Zamrud untuk terdaftar, Kuning Amber untuk Tamu/Orang Asing
-      const color = isReg ? '#10b981' : '#f59e0b'
-      const tagBg = isReg ? '#059669' : '#d97706'
-      const boxFill = isReg ? 'rgba(16, 185, 129, 0.10)' : 'rgba(245, 158, 11, 0.10)'
-
-      // 0. Semi-transparent fill box
-      ctx.fillStyle = boxFill
-      ctx.fillRect(x, y, w, h)
-
-      // 1. Bounding Box Segiempat (Tipis, Rapih & Elegan)
-      ctx.strokeStyle = color
-      ctx.lineWidth = 1.6
-      ctx.strokeRect(x, y, w, h)
-
-      // 2. Corner accents
-      const cLen = Math.max(5, Math.min(14, w / 4))
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 1.6
-      // Top-left
-      ctx.beginPath(); ctx.moveTo(x, y + cLen); ctx.lineTo(x, y); ctx.lineTo(x + cLen, y); ctx.stroke()
-      // Top-right
-      ctx.beginPath(); ctx.moveTo(x + w - cLen, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + cLen); ctx.stroke()
-      // Bottom-left
-      ctx.beginPath(); ctx.moveTo(x, y + h - cLen); ctx.lineTo(x, y + h); ctx.lineTo(x + cLen, y + h); ctx.stroke()
-      // Bottom-right
-      ctx.beginPath(); ctx.moveTo(x + w - cLen, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - cLen); ctx.stroke()
-
-      // 3. YOLO Tag Label di atas kotak (Font Lebih Kecil & Kompak)
-      const labelText = isReg 
-        ? `${f.name || 'Terdaftar'} (${Math.round((f.confidence || 0) * 100)}%)` 
-        : 'Tamu / Orang Asing'
-      
-      const subLabelText = isReg 
-        ? (f.sub_label || `${f.role || ''} - ${f.identifier || ''}`)
-        : 'Wajah Belum Terdaftar'
-
-      const fullText = `${labelText} • ${subLabelText}`
-      ctx.font = '600 10px system-ui, -apple-system, sans-serif'
-      const textWidth = ctx.measureText(fullText).width
-      const tagH = 18
-      const tagW = Math.max(80, textWidth + 12)
-      const tagY = y - tagH >= 0 ? y - tagH : y
-
-      ctx.fillStyle = tagBg
-      ctx.fillRect(x, tagY, tagW, tagH)
-      ctx.strokeStyle = color
-      ctx.lineWidth = 1.0
-      ctx.strokeRect(x, tagY, tagW, tagH)
-
-      ctx.fillStyle = '#ffffff'
-      ctx.fillText(fullText, x + 6, tagY + 12.5)
-    })
+  interface FaceTrack {
+    id: string
+    box: [number, number, number, number]
+    targetBox: [number, number, number, number]
+    is_registered: boolean
+    name: string
+    confidence: number
+    label: string
+    sub_label: string
+    role?: string
+    identifier?: string
+    lastSeen: number
+    opacity: number
   }
+
+  const faceTracksRef = useRef<FaceTrack[]>([])
+  const animFrameRef = useRef<number | null>(null)
+
+  // Update real-time face tracks dengan asosiasi spasial & interpolasi stabil (Bebas Fliker & Kedipan)
+  const updateDetectedFaces = (newFaces: any[], videoW: number, videoH: number) => {
+    const now = Date.now()
+    const tracks = faceTracksRef.current
+
+    if (newFaces && newFaces.length > 0) {
+      newFaces.forEach((f, idx) => {
+        const rawBox = f.box || [0, 0, 0, 0]
+        const bx = Math.max(0, Math.min(videoW - 20, rawBox[0]))
+        const by = Math.max(0, Math.min(videoH - 20, rawBox[1]))
+        const bw = Math.max(20, Math.min(videoW - bx, rawBox[2]))
+        const bh = Math.max(20, Math.min(videoH - by, rawBox[3]))
+        const clampedBox: [number, number, number, number] = [bx, by, bw, bh]
+
+        const centerCx = bx + bw / 2
+        const centerCy = by + bh / 2
+
+        let bestTrack: FaceTrack | null = null
+        let minDist = 180
+
+        for (const t of tracks) {
+          if (f.userId && t.id === f.userId) {
+            bestTrack = t
+            break
+          }
+          const tCx = t.box[0] + t.box[2] / 2
+          const tCy = t.box[1] + t.box[3] / 2
+          const dist = Math.hypot(centerCx - tCx, centerCy - tCy)
+          if (dist < minDist) {
+            minDist = dist
+            bestTrack = t
+          }
+        }
+
+        if (bestTrack) {
+          bestTrack.targetBox = clampedBox
+          bestTrack.lastSeen = now
+          bestTrack.is_registered = f.is_registered
+          bestTrack.name = f.name || bestTrack.name
+          bestTrack.confidence = f.confidence ?? bestTrack.confidence
+          bestTrack.label = f.label || bestTrack.label
+          bestTrack.sub_label = f.sub_label || bestTrack.sub_label
+          bestTrack.role = f.role || bestTrack.role
+          bestTrack.identifier = f.identifier || bestTrack.identifier
+        } else {
+          const newId = f.userId || `track-${now}-${idx}-${Math.random().toString(36).substr(2, 4)}`
+          tracks.push({
+            id: newId,
+            box: [...clampedBox],
+            targetBox: [...clampedBox],
+            is_registered: f.is_registered,
+            name: f.name || '',
+            confidence: f.confidence || 0,
+            label: f.label || '',
+            sub_label: f.sub_label || '',
+            role: f.role || '',
+            identifier: f.identifier || '',
+            lastSeen: now,
+            opacity: 0.25,
+          })
+        }
+      })
+    }
+  }
+
+  // Alias untuk kompatibilitas
+  const drawYoloBoundingBoxes = updateDetectedFaces
 
   // Konfigurasi aktif (formConfig jika di-edit, fallback ke configData dari API)
   const currentConfig = formConfig || configData
@@ -543,6 +539,126 @@ export default function FaceAttendanceCameraPage() {
       (!formConfig && configData?.streamSourceType === 'BROWSER_WEBCAM')
     )
   }, [activeCameraObj, formConfig?.streamSourceType, configData?.streamSourceType])
+
+  // 60 FPS Continuous Render Loop untuk Canvas Overlay (Mencegah Flashing / Blank Frame)
+  useEffect(() => {
+    let active = true
+
+    const renderOverlayLoop = () => {
+      if (!active) return
+      const canvas = overlayCanvasRef.current
+      const video = localVideoRef.current
+
+      if (canvas && video && video.readyState >= 2 && video.videoWidth > 0) {
+        const vW = video.videoWidth
+        const vH = video.videoHeight
+
+        if (canvas.width !== vW || canvas.height !== vH) {
+          canvas.width = vW
+          canvas.height = vH
+        }
+
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height)
+          const now = Date.now()
+          const tracks = faceTracksRef.current
+
+          for (let i = tracks.length - 1; i >= 0; i--) {
+            const t = tracks[i]
+            const age = now - t.lastSeen
+
+            if (age > 850) {
+              tracks.splice(i, 1)
+              continue
+            }
+
+            if (age > 500) {
+              t.opacity = Math.max(0, 1.0 - (age - 500) / 350)
+            } else {
+              t.opacity = Math.min(1.0, t.opacity + 0.2)
+            }
+
+            if (t.opacity <= 0.02) {
+              tracks.splice(i, 1)
+              continue
+            }
+
+            // Exponential Moving Average smoothing (Interpolasi bebas fliker)
+            t.box[0] += (t.targetBox[0] - t.box[0]) * 0.35
+            t.box[1] += (t.targetBox[1] - t.box[1]) * 0.35
+            t.box[2] += (t.targetBox[2] - t.box[2]) * 0.35
+            t.box[3] += (t.targetBox[3] - t.box[3]) * 0.35
+
+            const x = Math.round(t.box[0])
+            const y = Math.round(t.box[1])
+            const w = Math.round(t.box[2])
+            const h = Math.round(t.box[3])
+
+            ctx.save()
+            ctx.globalAlpha = t.opacity
+
+            const isReg = t.is_registered
+            const color = isReg ? '#10b981' : '#f59e0b'
+            const tagBg = isReg ? '#059669' : '#d97706'
+            const boxFill = isReg ? 'rgba(16, 185, 129, 0.10)' : 'rgba(245, 158, 11, 0.10)'
+
+            ctx.fillStyle = boxFill
+            ctx.fillRect(x, y, w, h)
+
+            ctx.strokeStyle = color
+            ctx.lineWidth = 1.6
+            ctx.strokeRect(x, y, w, h)
+
+            const cLen = Math.max(5, Math.min(14, Math.floor(w / 4)))
+            ctx.strokeStyle = '#ffffff'
+            ctx.lineWidth = 1.6
+            ctx.beginPath(); ctx.moveTo(x, y + cLen); ctx.lineTo(x, y); ctx.lineTo(x + cLen, y); ctx.stroke()
+            ctx.beginPath(); ctx.moveTo(x + w - cLen, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + cLen); ctx.stroke()
+            ctx.beginPath(); ctx.moveTo(x, y + h - cLen); ctx.lineTo(x, y + h); ctx.lineTo(x + cLen, y + h); ctx.stroke()
+            ctx.beginPath(); ctx.moveTo(x + w - cLen, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - cLen); ctx.stroke()
+
+            const labelText = isReg
+              ? `${t.name || 'Terdaftar'} (${Math.round((t.confidence || 0) * 100)}%)`
+              : 'Tamu / Orang Asing'
+            const subLabelText = isReg
+              ? (t.sub_label || `${t.role || ''} - ${t.identifier || ''}`)
+              : 'Wajah Belum Terdaftar'
+            const fullText = `${labelText} • ${subLabelText}`
+
+            ctx.font = '600 10px system-ui, -apple-system, sans-serif'
+            const textWidth = ctx.measureText(fullText).width
+            const tagH = 18
+            const tagW = Math.max(80, textWidth + 12)
+            const tagY = y - tagH >= 0 ? y - tagH : y
+            const tagX = Math.max(0, Math.min(vW - tagW, x))
+
+            ctx.fillStyle = tagBg
+            ctx.fillRect(tagX, tagY, tagW, tagH)
+            ctx.strokeStyle = color
+            ctx.lineWidth = 1.0
+            ctx.strokeRect(tagX, tagY, tagW, tagH)
+
+            ctx.fillStyle = '#ffffff'
+            ctx.fillText(fullText, tagX + 6, tagY + 12.5)
+
+            ctx.restore()
+          }
+        }
+      } else if (canvas) {
+        const ctx = canvas.getContext('2d')
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
+      }
+
+      animFrameRef.current = requestAnimationFrame(renderOverlayLoop)
+    }
+
+    animFrameRef.current = requestAnimationFrame(renderOverlayLoop)
+    return () => {
+      active = false
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+    }
+  }, [isBrowserMode, activeTab])
 
   // Effect untuk mengaktifkan / menonaktifkan webcam browser
   useEffect(() => {
@@ -2865,7 +2981,7 @@ export default function FaceAttendanceCameraPage() {
                         )}
                       </Button>
                       <Badge variant="outline" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/50 px-2.5 py-1">
-                        {Math.round((currentConfig?.threshold || 0.70) * 100)}%
+                        {Math.round((currentConfig?.threshold || 0.90) * 100)}%
                       </Badge>
                     </div>
                   </div>
@@ -2874,10 +2990,10 @@ export default function FaceAttendanceCameraPage() {
                     <input
                       type="range"
                       min={30}
-                      max={95}
+                      max={98}
                       step={1}
                       disabled={isSensitivityLocked}
-                      value={Math.round((currentConfig?.threshold || 0.70) * 100)}
+                      value={Math.round((currentConfig?.threshold || 0.90) * 100)}
                       onChange={(e) => {
                         const num = Number(e.target.value)
                         setFormConfig((prev) => prev ? { ...prev, threshold: num / 100 } : null)
@@ -2893,19 +3009,19 @@ export default function FaceAttendanceCameraPage() {
                   </div>
 
                   <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                    <span>30% (Sangat Sensitif)</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Default Optimal: 70%</span>
-                    <span>95% (Sangat Ketat)</span>
+                    <span>30% (Sensitif)</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Standar Presisi: 90%</span>
+                    <span>98% (Sangat Ketat)</span>
                   </div>
 
                   {/* Catatan Status Ambang Batas Presensi */}
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Batas Verifikasi Presensi: &ge; {Math.round((currentConfig?.threshold || 0.70) * 100)}%
+                      Batas Verifikasi Presensi: &ge; {Math.round((currentConfig?.threshold || 0.90) * 100)}%
                     </div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Wajah terdaftar dengan tingkat kemiripan biometrik &ge; <strong className="text-emerald-600 dark:text-emerald-400">{Math.round((currentConfig?.threshold || 0.70) * 100)}%</strong> akan langsung diverifikasi dan dicatat ke riwayat log serta database absensi resmi sekolah.
+                      Wajah terdaftar dengan tingkat kemiripan biometrik &ge; <strong className="text-emerald-600 dark:text-emerald-400">{Math.round((currentConfig?.threshold || 0.90) * 100)}%</strong> akan langsung diverifikasi dan dicatat ke riwayat log serta database absensi resmi sekolah.
                     </p>
                   </div>
                 </div>

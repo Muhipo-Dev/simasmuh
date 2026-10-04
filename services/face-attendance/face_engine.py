@@ -598,7 +598,7 @@ class FaceRecognitionEngine:
                     mtcnn_boxes = []
                     for i, box in enumerate(detected_boxes):
                         prob = float(probs[i]) if probs is not None else 0.0
-                        if prob >= 0.40:
+                        if prob >= 0.70:  # Ambang probabilitas ketat untuk mencegah deteksi palsu pada pakaian/latar
                             x1, y1, x2, y2 = box
                             x1 = max(0, int(x1 * inv_scale))
                             y1 = max(0, int(y1 * inv_scale))
@@ -608,7 +608,8 @@ class FaceRecognitionEngine:
                             bh = max(1, y2 - y1)
                             
                             aspect_ratio = float(bw) / float(bh)
-                            if bw >= 12 and bh >= 12 and 0.35 <= aspect_ratio <= 2.5:
+                            # Wajah manusia memiliki rasio aspek proporsional (0.65 - 1.45) dan ukuran minimal 28px
+                            if bw >= 28 and bh >= 28 and 0.65 <= aspect_ratio <= 1.45:
                                 mtcnn_boxes.append((x1, y1, bw, bh))
                     if len(mtcnn_boxes) > 0:
                         # Prioritaskan pemindaian wajah di area tengah frame (Center ROI Priority)
@@ -622,20 +623,20 @@ class FaceRecognitionEngine:
             except Exception as e_mtcnn:
                 pass
 
-        # 2. Metode Cadangan Cepat: Equalized Multi-Scale Haar Cascade (jika MTCNN terhalang sudut miring ekstrim)
+        # 2. Metode Cadangan Cepat: Equalized Multi-Scale Haar Cascade (hanya dengan filter ketat)
         if self.cascade_detector is not None:
             try:
                 gray = cv2.cvtColor(infer_frame, cv2.COLOR_BGR2GRAY)
                 gray_eq = cv2.equalizeHist(gray)
                 detected = self.cascade_detector.detectMultiScale(
                     gray_eq,
-                    scaleFactor=1.10,
-                    minNeighbors=5,
-                    minSize=(24, 24)
+                    scaleFactor=1.12,
+                    minNeighbors=8,
+                    minSize=(36, 36)
                 )
                 for (cx, cy, cw, ch) in detected:
                     aspect_ratio = float(cw) / float(ch)
-                    if 0.60 <= aspect_ratio <= 1.60 and cw >= 24 and ch >= 24:
+                    if 0.70 <= aspect_ratio <= 1.40 and cw >= 36 and ch >= 36:
                         x1 = max(0, int(cx * inv_scale))
                         y1 = max(0, int(cy * inv_scale))
                         bw = int(cw * inv_scale)
@@ -652,7 +653,7 @@ class FaceRecognitionEngine:
 
         return boxes
 
-    def match_face(self, face_crop: np.ndarray, threshold: float = 0.70) -> Optional[Dict[str, Any]]:
+    def match_face(self, face_crop: np.ndarray, threshold: float = 0.90) -> Optional[Dict[str, Any]]:
         """
         Mencocokkan potongan wajah dengan database Bio-Fusion AI:
         - Vectorized BLAS Matrix Cosine Search (< 0.05ms)
@@ -714,40 +715,37 @@ class FaceRecognitionEngine:
         rec_2 = self.user_records_list[top_indices[1]] if top_k > 1 else None
 
         # Ambang batas biometrik adaptif FaceNet Inception-ResNet
-        # Pada sensitivitas 70% (0.70), raw_cosine_cutoff berada di kisaran 0.35 - 0.38
-        raw_cosine_cutoff = 0.35
+        # Pada standar akurasi tinggi, raw_cosine_cutoff minimal 0.44
+        raw_cosine_cutoff = 0.44
         if threshold is not None:
             if float(threshold) <= 0.50:
-                raw_cosine_cutoff = max(0.18, float(threshold) * 0.60)
+                raw_cosine_cutoff = max(0.25, float(threshold) * 0.65)
             elif float(threshold) >= 0.85:
-                raw_cosine_cutoff = 0.42
+                raw_cosine_cutoff = 0.46
 
         # Wajib melewati batas minimum cosine similarity dasar
         if score_1 < raw_cosine_cutoff:
             return None
 
         # 3. Kalibrasi Sensitivitas Akurasi ke Skala Persentase Nyata (0.0 - 1.0)
-        # Terkalibrasi presisi pada baseline sensitivitas 70%:
-        # - Cosine 0.35 - 0.44: Zona batas / pencahayaan ekstrim -> 62% - 74%
-        # - Cosine 0.45 - 0.54: Kecocokan wajah valid / sudut miring -> 76% - 89%
-        # - Cosine 0.55 - 0.64: Kecocokan akurat 100% orang yang sama -> 91% - 96%
-        # - Cosine 0.65 - 0.75: Kecocokan presisi tinggi / pasfoto -> 97% - 99%
-        # - Cosine > 0.75: Identik sempurna -> 99.5%
-        if score_1 < 0.45:
-            calibrated_sim = 0.62 + max(0.0, (score_1 - 0.35)) / 0.10 * 0.12
-        elif score_1 < 0.55:
-            calibrated_sim = 0.76 + (score_1 - 0.45) / 0.10 * 0.13
-        elif score_1 < 0.65:
-            calibrated_sim = 0.91 + (score_1 - 0.55) / 0.10 * 0.06
+        # Terkalibrasi presisi pada baseline sensitivitas FaceNet:
+        # - Cosine 0.44 - 0.52: Zona kecocokan awal -> 75% - 85%
+        # - Cosine 0.53 - 0.62: Kecocokan valid terverifikasi -> 86% - 94%
+        # - Cosine 0.63 - 0.74: Kecocokan presisi tinggi -> 95% - 98%
+        # - Cosine > 0.74: Identik sempurna -> 99.5%
+        if score_1 < 0.53:
+            calibrated_sim = 0.75 + (score_1 - 0.44) / 0.09 * 0.10
+        elif score_1 < 0.63:
+            calibrated_sim = 0.86 + (score_1 - 0.53) / 0.10 * 0.08
         elif score_1 < 0.75:
-            calibrated_sim = 0.97 + (score_1 - 0.65) / 0.10 * 0.02
+            calibrated_sim = 0.95 + (score_1 - 0.63) / 0.12 * 0.035
         else:
-            calibrated_sim = 0.99 + min(0.008, (score_1 - 0.75) / 0.25 * 0.008)
+            calibrated_sim = 0.985 + min(0.012, (score_1 - 0.75) / 0.25 * 0.012)
 
         calibrated_sim = max(0.50, min(0.998, float(calibrated_sim)))
 
-        # Validasi terhadap target threshold yang dikonfigurasi (default 70% / 0.70)
-        req_thresh = float(threshold) if threshold is not None else 0.70
+        # Validasi terhadap target threshold yang dikonfigurasi (wajib minimal 90% / 0.90)
+        req_thresh = max(0.90, float(threshold)) if threshold is not None else 0.90
         if calibrated_sim < req_thresh:
             return None
 

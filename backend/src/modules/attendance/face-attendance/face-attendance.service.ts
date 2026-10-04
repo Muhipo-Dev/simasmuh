@@ -278,7 +278,7 @@ export class FaceAttendanceService implements OnModuleInit {
               isActive: true,
             },
           ],
-          threshold: 0.70,
+          threshold: 0.90,
           cooldownMinutes: 10,
           isActive: false,
           welcomeVoice: true,
@@ -372,7 +372,7 @@ export class FaceAttendanceService implements OnModuleInit {
       cameraName: 'Camera AI Presensi',
       location: 'Gerbang Depan Sekolah',
       cameras: defaultCameras,
-      threshold: 0.70,
+      threshold: 0.90,
       cooldownMinutes: 15,
       isActive: true,
       welcomeVoice: true,
@@ -555,12 +555,12 @@ export class FaceAttendanceService implements OnModuleInit {
       throw new BadRequestException('Kunci autentikasi API kamera tidak valid');
     }
 
-    // Validasi batas input log sistem & absensi: kemiripan biometrik FaceNet terkalibrasi >= config.threshold (default 0.70)
-    const minAttendanceThreshold = typeof config.threshold === 'number' ? config.threshold : 0.70;
+    // Validasi batas input log sistem & absensi: kemiripan biometrik FaceNet terkalibrasi >= config.threshold (wajib minimal 0.90 / 90%)
+    const minAttendanceThreshold = typeof config.threshold === 'number' ? Math.max(0.90, config.threshold) : 0.90;
     const confidenceValue = Number(payload.confidence) || 0;
     if (confidenceValue < minAttendanceThreshold) {
       throw new BadRequestException(
-        `Tingkat kemiripan wajah (${Math.round(confidenceValue * 100)}%) belum memenuhi batas sensitivitas minimum presensi (${Math.round(minAttendanceThreshold * 100)}%).`,
+        `Tingkat kemiripan wajah (${Math.round(confidenceValue * 100)}%) belum memenuhi batas sensitivitas minimum presensi (${Math.round(minAttendanceThreshold * 100)}%). Wajib di atas 90%.`,
       );
     }
 

@@ -289,6 +289,10 @@ class SingleCameraWorker:
                     if now - det.get("timestamp", 0) > 3.6:
                         continue
                     x1, y1, x2, y2 = det["box"]
+                    x1 = max(0, min(w_frame - 10, int(x1)))
+                    y1 = max(0, min(h_frame - 10, int(y1)))
+                    x2 = max(x1 + 10, min(w_frame, int(x2)))
+                    y2 = max(y1 + 10, min(h_frame, int(y2)))
                     is_registered = det["is_registered"]
                     label = det["label"]
                     sub_label = det.get("sub_label", "")
@@ -388,7 +392,7 @@ class SingleCameraWorker:
                     x2 = min(w_frame, x + w + pad_x)
                     face_crop = target_frame[y1:y2, x1:x2]
 
-                    threshold = self.global_worker.config.threshold if (self.global_worker.config and self.global_worker.config.threshold is not None) else 0.70
+                    threshold = max(0.90, self.global_worker.config.threshold) if (self.global_worker.config and self.global_worker.config.threshold is not None) else 0.90
                     match_result = self.engine.match_face(face_crop, threshold=threshold)
 
                     if match_result:
@@ -597,8 +601,8 @@ class AttendanceWorker:
         user_id = user_record.user_id
         now = time.time()
         
-        # 1. Validasi syarat presensi: kemiripan biometrik terkalibrasi wajib di atas batas threshold
-        req_threshold = self.config.threshold if (self.config and self.config.threshold is not None) else 0.70
+        # 1. Validasi syarat presensi: kemiripan biometrik terkalibrasi wajib di atas batas threshold (wajib minimal 0.90 / 90%)
+        req_threshold = max(0.90, self.config.threshold) if (self.config and self.config.threshold is not None) else 0.90
         if similarity < req_threshold and not force:
             return None
 

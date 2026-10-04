@@ -184,7 +184,7 @@ def scan_frame(payload: ScanFrameRequest):
         faces = engine.detect_faces(frame)
         results = []
 
-        req_threshold = worker.config.threshold if (worker.config and worker.config.threshold is not None) else 0.70
+        req_threshold = max(0.90, worker.config.threshold) if (worker.config and worker.config.threshold is not None) else 0.90
 
         for (x, y, w, h) in faces:
             if w < 12 or h < 12:

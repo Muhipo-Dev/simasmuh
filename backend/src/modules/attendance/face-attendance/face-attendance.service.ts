@@ -119,21 +119,25 @@ export class FaceAttendanceService implements OnModuleInit {
         });
       };
 
-      if (existsSync(this.logsPath)) {
-        const raw = readFileSync(this.logsPath, 'utf8');
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          this.recentLogs = normalizeLogs(parsed).slice(0, this.maxLogs);
-          this.saveLogsFile();
-          return;
-        }
-      }
-      if (existsSync(this.legacyLogsPath)) {
-        const raw = readFileSync(this.legacyLogsPath, 'utf8');
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          this.recentLogs = normalizeLogs(parsed).slice(0, this.maxLogs);
-          this.saveLogsFile();
+      const possibleLogFiles = [
+        this.logsPath,
+        this.legacyLogsPath,
+        'D:/simasmuh_storage/face-attendance-logs.json',
+        'd:/simasmuh/storage/face-attendance-logs.json',
+        'd:/simasmuh/backend/storage/face-attendance-logs.json',
+      ];
+
+      for (const p of possibleLogFiles) {
+        if (p && existsSync(p)) {
+          try {
+            const raw = readFileSync(p, 'utf8');
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              this.recentLogs = normalizeLogs(parsed).slice(0, this.maxLogs);
+              this.saveLogsFile();
+              return;
+            }
+          } catch {}
         }
       }
     } catch (err) {
@@ -758,6 +762,9 @@ export class FaceAttendanceService implements OnModuleInit {
   }
 
   getRecentLogs(options?: { todayOnly?: boolean; date?: string }): FaceDetectionLog[] {
+    if (this.recentLogs.length === 0) {
+      this.loadLogsFile();
+    }
     if (!options) return this.recentLogs;
     let filtered = [...this.recentLogs];
     

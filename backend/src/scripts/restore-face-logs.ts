@@ -67,6 +67,7 @@ async function restoreLogs() {
     const targetPaths = [
       'd:/simasmuh/storage/face-attendance-logs.json',
       'd:/simasmuh/backend/storage/face-attendance-logs.json',
+      'D:/simasmuh_storage/face-attendance-logs.json',
     ];
 
     for (const p of targetPaths) {

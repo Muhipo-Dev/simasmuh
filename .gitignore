@@ -21,6 +21,16 @@ frontend/.unlighthouse/
 
 # Local Runtime temporary & Process IDs
 *.log
+*.log.*
+logs/
+**/logs/
+*-logs.json
+*-log.json
+**/storage/*logs*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 *.pid
 .*.pid
 storage/compressed-logs/

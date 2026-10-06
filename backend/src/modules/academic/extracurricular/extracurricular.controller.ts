@@ -109,6 +109,16 @@ export class ExtracurricularController {
     return this.extracurricularService.getStudentActivities(req.user);
   }
 
+  @Post('student/join/:id')
+  joinExtracurricular(@Param('id') id: string, @Request() req: any) {
+    return this.extracurricularService.joinExtracurricular(id, req.user);
+  }
+
+  @Post('student/leave/:id')
+  leaveExtracurricular(@Param('id') id: string, @Request() req: any) {
+    return this.extracurricularService.leaveExtracurricular(id, req.user);
+  }
+
   // ==================== PEMBINA ENDPOINTS ====================
 
   @Get('pembina/my-binaan')

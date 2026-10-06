@@ -225,25 +225,25 @@ export function ExamCardPrintDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="max-w-[96vw] md:max-w-5xl lg:max-w-6xl w-full max-h-[94vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+      <DialogContent showCloseButton={false} className="max-w-[96vw] md:max-w-5xl lg:max-w-6xl w-full max-h-[94vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
         {/* Header Modal */}
-        <div className="shrink-0 bg-gradient-to-r from-rose-700 via-pink-700 to-red-700 p-4 sm:p-5 text-white shadow-sm flex items-center justify-between">
+        <div className="shrink-0 bg-white dark:bg-slate-900 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/15 rounded-xl backdrop-blur-md border border-white/20">
-              <CreditCard className="w-5 h-5 text-rose-100" />
+            <div className="p-2.5 bg-rose-50 dark:bg-rose-950/60 rounded-xl border border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400">
+              <CreditCard className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+              <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 Cetak Kartu Peserta Ujian (SIKU & SIMASMUH)
               </DialogTitle>
-              <DialogDescription className="text-rose-100 text-xs">
+              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Generator cetak kartu ujian resmi berbasis verifikasi status administrasi keuangan.
               </DialogDescription>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-1.5 rounded-xl hover:bg-white/10 text-white/80 hover:text-white transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

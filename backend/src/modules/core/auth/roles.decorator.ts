@@ -47,6 +47,7 @@ export enum UserRole {
   KEUANGAN_ALL = 'KEUANGAN_ALL',
   SUPERVISOR_KEUANGAN = 'SUPERVISOR_KEUANGAN',
   ADMIN_WEB = 'ADMIN_WEB',
+  HONORER = 'HONORER',
 }
 
 // Sub roles

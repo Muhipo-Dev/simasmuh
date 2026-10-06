@@ -1137,7 +1137,7 @@ export function InventarisManagement() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">Nomor Kontak PJ (WhatsApp)</Label>
+              <Label className="text-xs">Nomor Kontak PJ (Telepon/HP)</Label>
               <Input
                 placeholder="0812-xxxx-xxxx"
                 value={formRuangan.kontakPJ}

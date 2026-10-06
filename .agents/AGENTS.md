@@ -67,6 +67,25 @@
 17. **Larangan Menjalankan Dev Server (`npm run dev`) Saat Pengujian / Testing (STRICT)**:
     - AI Agent **DILARANG KERAS** menjalankan perintah dev server seperti `npm run dev`, `next dev`, atau perintah interactive long-running sejenis saat melakukan pengujian, verifikasi kode, atau pengecekan error.
     - Untuk verifikasi dan pengetesan kualitas/tipe kode, AI Agent **MUTLAK WAJIB** menggunakan validasi build produksi (`npm run build` atau `npx tsc --noEmit`) yang bersifat non-blocking, selesai secara otomatis, dan memastikan integritas TypeScript serta Turbopack secara menyeluruh.
-
-
-
+18. **Standar Mutlak Spasi, Jarak Antar Layout, Pembatasan Lebar-Panjang, & Padding Celah Harmonis (STRICT)**:
+    - **Jarak Antar Komponen / Layout (Spacing & Gap Hierarchy)**:
+      - Setiap pembungkus tata letak (navbar, header, sidebar, grid konten, card, modal, footer) wajib memiliki jarak antar elemen (`gap` atau `space-y`) yang jelas, konsisten, dan tidak boleh saling berdempetan/menumpuk.
+      - Gunakan hierarki celah terstandar: `gap-1.5` / `gap-2` untuk ikon & badge kecil, `gap-3` / `gap-4` untuk baris form & tombol aksi, `gap-4` / `gap-6` untuk kartu/grid kolom, serta `space-y-4` / `space-y-6` antar seksi konten halaman.
+    - **Pembatasan Lebar & Panjang Maksimum (Container Constraints & Truncation)**:
+      - Kontainer halaman wajib memiliki batas lebar terukur (`max-w-7xl` atau `2xl:max-w-[1440px] mx-auto`) untuk mencegah tata letak melar tak berbatas di layar ultra-wide.
+      - Seluruh elemen teks dinamis (nama pengguna, judul perihal, deskripsi, tautan navigasi) **MUTLAK DIBATASI** dengan pembatas lebar (`max-w-[...]`) yang dipadukan dengan `truncate` atau `line-clamp` untuk mencegah pemotongan paksa, pembengkakan baris, atau pergeseran tombol navigasi.
+    - **Padding & Margin Celah Aman (Safe Margin & Inner Padding)**:
+      - Seluruh kartu konten, dropdown menu, dialog modal, dan kontainer utama wajib menerapkan inner padding terukur (`p-3 sm:p-4 md:p-6` atau `px-4 sm:px-6 lg:px-8 py-4 sm:py-6`) sehingga isi konten tidak menempel ke tepi batas visual (*no boundary collisions*).
+      - Navigasi atas (Navbar) dan bawah (Bottom Bar) wajib menyertakan celah aman tepi layar (`pl-safe pr-safe` / `safe-area-inset-bottom`) dan padding horizontal terdistribusi seimbang.
+    - **Harmoni Visual, Responsif, & Bebas Tabrakan**:
+      - Penggunaan `shrink-0` dan `flex-1` / `min-w-0` wajib dikombinasikan secara presisi pada flex container agar komponen penting (seperti tombol aksi, avatar, icon) tidak gepeng dan komponen fleksibel (menu navigasi, judul teks) memiliki ruang napas yang lapang dan proporsional di semua ukuran layar (Mobile, Tablet, Laptop, Desktop).
+19. **Standar Mutlak Anti AI-Slop, Keunikan Desain Institusional, Responsif, & Low-Resource (STRICT)**:
+    - **Peniadaan Total Ciri Khas AI-Slop**:
+      - Dilarang keras menggunakan kombinasi visual generic AI-slop (seperti gradien pelangi/ungu-merah muda pekat yang bertumpuk-tumpuk, border bersinar tebal berlebihan yang menyilaukan mata, efek floating berkilau semu, atau ornamen dekoratif fiktif yang tidak fungsional).
+      - Seluruh antarmuka (UI/UX) wajib tampil dengan estetika institusional modern: bersih (*clean*), berwibawa (*authoritative*), berbasis kontras neutral slate, tipografi tegas (*Inter/Outfit/Geist*), serta aksen warna institusi yang harmonis.
+    - **Keunikan & Orisinalitas Desain**:
+      - Setiap modul, modal popup, kartu ringkasan, dan tabel data dirancang unik sesuai fungsi spesifiknya tanpa layout klise bawaan template instan.
+      - Memadukan layout ergonomis yang intuitif dengan micro-interactions yang mulus dan natural.
+    - **Ringan & Hemat Sumber Daya (Low-Resource & Fast Loading)**:
+      - Desain dan kode wajib sangat ringan, efisien, dan dioptimalkan agar dapat berjalan lancar (*60 FPS*) pada perangkat dengan spesifikasi rendah (*low-end smartphone / PC sekolah / tablet POS*).
+      - Hindari animasi berat yang membebani GPU/CPU, minimalisasi re-render yang tidak perlu, dan gunakan teknik CSS performa tinggi (GPU-accelerated transforms, `backdrop-filter` ringan, dan container queries).

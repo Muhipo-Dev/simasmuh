@@ -38,8 +38,14 @@ export function NewsArticleListWidget({
       {/* List Content */}
       <div className="space-y-2.5 sm:space-y-3 max-h-[380px] sm:max-h-[420px] overflow-y-auto pr-1">
         {newsList.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-xs border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-            Belum ada berita atau artikel terbaru.
+          <div className="p-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 text-center space-y-1">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300">
+              <Megaphone className="w-4 h-4 text-blue-500" />
+              <span>Informasi Terkini</span>
+            </div>
+            <p className="text-[10.5px] text-slate-400 font-medium">
+              Belum ada berita atau artikel baru dipublikasikan.
+            </p>
           </div>
         ) : (
           newsList.map((item: any, idx: number) => {
@@ -57,7 +63,7 @@ export function NewsArticleListWidget({
                 className="flex items-start gap-2.5 sm:gap-3 p-1.5 sm:p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
               >
                 {/* Thumbnail Image */}
-                <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200/60 dark:border-slate-700">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200/60 dark:border-slate-700">
                   {item.image ? (
                     <img
                       src={item.image}
@@ -66,7 +72,7 @@ export function NewsArticleListWidget({
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
-                      <Megaphone className="w-5 h-5 sm:w-6 sm:h-6" />
+                      <Megaphone className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   )}
                 </div>

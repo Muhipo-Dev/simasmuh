@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
-  Wallet, Receipt, Search, PlusCircle, Trash2, Loader2, Calendar
+  Wallet, Receipt, Search, PlusCircle, Trash2, Loader2, Calendar,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { TableSearch } from '@/components/TableSearch'
@@ -60,6 +61,8 @@ export default function KeuanganKeluarPage() {
   const { data: pengeluarans = [], isLoading } = useQuery<any[]>({
     queryKey: ['pengeluaran', year, month],
     queryFn: () => authenticatedQuery(`/api-backend/finance/pengeluaran?year=${year}${month !== 'all' ? `&month=${month}` : ''}`),
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   })
 
   const filtered = useMemo(() => {
@@ -71,6 +74,16 @@ export default function KeuanganKeluarPage() {
       return matchSearch && matchCategory
     })
   }, [pengeluarans, search, categoryFilter])
+
+  // Pagination states (Optimized for 2GB RAM devices)
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const paginatedPengeluarans = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize
+    return filtered.slice(startIdx, startIdx + pageSize)
+  }, [filtered, currentPage, pageSize])
 
   const totalPengeluaran = filtered.reduce((acc, curr) => acc + curr.amount, 0)
 
@@ -295,10 +308,10 @@ export default function KeuanganKeluarPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow><TableCell colSpan={isKepalaSekolah ? 5 : 6} className="h-32 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-rose-500" /></TableCell></TableRow>
-                ) : filtered.length === 0 ? (
+                ) : paginatedPengeluarans.length === 0 ? (
                   <TableRow><TableCell colSpan={isKepalaSekolah ? 5 : 6} className="h-32 text-center text-slate-500 text-xs">Belum ada data pengeluaran yang sesuai.</TableCell></TableRow>
                 ) : (
-                  filtered.map((item) => {
+                  paginatedPengeluarans.map((item) => {
                     const isSelected = selectedIds.includes(item.id)
                     return (
                       <TableRow key={item.id} className={`hover:bg-slate-50/60 dark:hover:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 transition-colors ${isSelected ? 'bg-rose-50/40 dark:bg-rose-950/20' : ''}`}>
@@ -337,6 +350,84 @@ export default function KeuanganKeluarPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination Bar */}
+          <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-xs text-slate-500">
+              Menampilkan <span className="font-semibold text-slate-900 dark:text-white">
+                {filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+              </span> – <span className="font-semibold text-slate-900 dark:text-white">
+                {Math.min(currentPage * pageSize, filtered.length)}
+              </span> dari <span className="font-semibold text-slate-900 dark:text-white">{filtered.length}</span> transaksi
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span>Baris:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value))
+                    setCurrentPage(1)
+                  }}
+                  className="px-2 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  title="Awal"
+                >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  title="Sebelumnya"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </Button>
+
+                <span className="px-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {currentPage} / {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  title="Selanjutnya"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage >= totalPages}
+                  title="Akhir"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

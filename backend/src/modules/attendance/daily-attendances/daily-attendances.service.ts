@@ -272,9 +272,9 @@ export class DailyAttendancesService {
       izinMap.set(izin.userId, izin);
     }
 
-    // Get all staff & teachers (not SISWA or WALI_MURID)
+    // Get all staff & teachers (not SISWA, WALI_MURID, or HONORER)
     const staffList = await this.prisma.user.findMany({
-      where: { role: { notIn: ['SISWA', 'WALI_MURID'] } },
+      where: { role: { notIn: ['SISWA', 'WALI_MURID', 'HONORER'] } },
       select: {
         id: true,
         name: true,

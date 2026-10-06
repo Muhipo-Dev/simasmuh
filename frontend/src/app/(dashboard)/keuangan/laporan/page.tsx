@@ -522,18 +522,24 @@ function SchoolExecutiveFinancialReportView() {
   const { data: rekapData, isLoading: isLoadingRekap } = useQuery({
     queryKey: ['executive-finance-rekap', selectedYear, selectedMonth],
     queryFn: () => authenticatedQuery(`/api-backend/finance/rekap?year=${selectedYear}${selectedMonth ? `&month=${selectedMonth}` : ''}`),
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   // 2. Pengeluaran Operasional
   const { data: pengeluaranData, isLoading: isLoadingPengeluaran } = useQuery<any[]>({
     queryKey: ['executive-finance-pengeluaran', selectedYear, selectedMonth],
     queryFn: () => authenticatedQuery(`/api-backend/finance/pengeluaran?year=${selectedYear}${selectedMonth ? `&month=${selectedMonth}` : ''}`),
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   // 3. Rekap Penggajian Guru & Pegawai
   const { data: payrollData, isLoading: isLoadingPayroll } = useQuery<any[]>({
     queryKey: ['executive-finance-payroll', selectedYear, selectedMonth || currentMonth],
     queryFn: () => authenticatedQuery(`/api-backend/finance/payroll-summary?year=${selectedYear}&month=${selectedMonth || currentMonth}`),
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   const isLoading = isLoadingRekap || isLoadingPengeluaran || isLoadingPayroll

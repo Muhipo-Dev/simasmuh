@@ -43,6 +43,7 @@ type StudentSummary = {
   gender: string; className: string; totalTagihan: number
   totalLunas: number; sisaTagihan?: number; belumLunasCount: number
   sppLunasCount: number; tagihanCount: number
+  isActive?: boolean
   program?: string | null
   gelombang?: string | null
   jalurPendaftaran?: string | null
@@ -57,6 +58,7 @@ type StudentDetail = {
   id: string; name: string; nisn: string; nis: string
   className: string; gender: string; tagihans: Tagihan[]
   class: { name: string }
+  isActive?: boolean
   program?: string | null
   beasiswaPercentage?: number
   beasiswaReason?: string | null
@@ -131,25 +133,25 @@ function ConfirmDialog({ open, onClose, onConfirm, loading, title, description }
 }) {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-sm w-[92vw] p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-        <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-red-700 p-5 text-white">
+      <DialogContent className="max-w-sm w-[92vw] p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2.5 text-white text-base sm:text-lg font-black">
-              <div className="p-2 bg-white/15 rounded-xl backdrop-blur-md border border-white/20">
-                <AlertTriangle className="w-5 h-5 text-rose-100" />
+            <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+              <div className="p-2 bg-rose-50 dark:bg-rose-950/60 rounded-xl border border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400">
+                <AlertTriangle className="w-5 h-5" />
               </div>
               {title}
             </DialogTitle>
-            <DialogDescription className="text-rose-100 text-xs mt-1">
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
               {description}
             </DialogDescription>
           </DialogHeader>
         </div>
-        <div className="p-5 flex gap-2.5 justify-end bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800">
-          <Button variant="outline" onClick={onClose} disabled={loading} className="h-11 px-5 rounded-xl font-bold border-slate-300 dark:border-slate-700">
+        <div className="p-4 sm:p-5 flex gap-2 justify-end bg-slate-50/60 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800">
+          <Button variant="outline" onClick={onClose} disabled={loading} className="h-10 px-4 rounded-xl font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
             Batal
           </Button>
-          <Button className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold h-11 px-5 rounded-xl shadow-md gap-2" onClick={onConfirm} disabled={loading}>
+          <Button className="bg-rose-600 hover:bg-rose-700 text-white font-semibold h-10 px-4 rounded-xl shadow-xs gap-1.5 text-xs sm:text-sm" onClick={onConfirm} disabled={loading}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Hapus
           </Button>
         </div>
@@ -208,11 +210,15 @@ function TagihanModal({
   const { data: publicSettings } = useQuery<{ defaultDpp?: number; defaultUka?: number; defaultUks?: number; defaultInfaq?: number; defaultSeragam?: number }>({
     queryKey: ['public-settings'],
     queryFn: () => authenticatedQuery('/api-backend/settings/public'),
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   const { data: programConfigs } = useQuery<Array<{ id: string; code: string; name: string; defaultSpp: number; defaultDiscount: number }>>({
     queryKey: ['program-configs'],
     queryFn: () => authenticatedQuery('/api-backend/settings/program-configs'),
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   const studentProgConfig = useMemo(() => {
@@ -476,43 +482,53 @@ function TagihanModal({
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); resetForm() } }}>
-        <DialogContent showCloseButton={false} className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-          {/* Header Banner Modern */}
-          <div className="shrink-0 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-5 sm:p-6 text-white shadow-md relative">
-            {/* Custom Close Button inside dark header */}
+        <DialogContent showCloseButton={false} className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+          {/* Header Modal Clean */}
+          <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 relative">
+            {/* Custom Close Button */}
             <button
               onClick={() => { onClose(); resetForm() }}
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 rounded-xl w-8 h-8 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all focus:outline-none z-10"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 rounded-lg w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10"
             >
               <X className="w-4 h-4" />
               <span className="sr-only">Tutup</span>
             </button>
 
-            <DialogHeader className="space-y-1 pb-4 border-b border-white/10 dark:border-white/10">
+            <DialogHeader className="space-y-1">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-8 sm:pr-12">
                 <div className="space-y-1">
-                  <DialogTitle className="flex items-center gap-3 text-white text-lg sm:text-xl font-black">
-                    <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
-                      <Receipt className="w-5 h-5 text-blue-200" />
+                  <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-950/60 rounded-xl border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400">
+                      <Receipt className="w-5 h-5" />
                     </div>
                     Tagihan Siswa — {student?.name}
                   </DialogTitle>
-                  <DialogDescription className="text-blue-100 text-xs sm:text-sm font-medium">
-                    Kelas <span className="font-extrabold text-white">{student?.class?.name}</span> · NISN: <span className="font-mono text-white">{student?.nisn}</span> · NIS: <span className="font-mono text-white">{student?.nis}</span>
+                  <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium flex flex-wrap items-center gap-2">
+                    <span>Kelas <strong className="text-slate-700 dark:text-slate-200">{student?.class?.name}</strong> · NISN: <span className="font-mono text-slate-700 dark:text-slate-300">{student?.nisn}</span> · NIS: <span className="font-mono text-slate-700 dark:text-slate-300">{student?.nis}</span></span>
+                    {student?.isActive === false ? (
+                      <span className="font-semibold text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 inline-flex items-center gap-1">
+                        <ShieldAlert className="w-3 h-3" /> Nonaktif
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 inline-flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3" /> Aktif
+                      </span>
+                    )}
                   </DialogDescription>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Button
                     size="sm"
+                    variant="outline"
                     onClick={() => {
                       if (student) {
                         onClose();
                         window.dispatchEvent(new CustomEvent('open-beasiswa-dialog', { detail: student }));
                       }
                     }}
-                    className="border-amber-400/50 bg-amber-500/20 text-amber-100 hover:bg-amber-500 hover:text-white text-xs font-extrabold gap-1.5 h-9 rounded-xl backdrop-blur-sm transition-all shadow-sm"
+                    className="border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-xs font-semibold gap-1.5 h-9 rounded-xl transition-all"
                   >
-                    <Percent className="w-3.5 h-3.5 text-amber-300" />
+                    <Percent className="w-3.5 h-3.5" />
                     Set Beasiswa (%)
                   </Button>
                   {student && onResetStudent && (
@@ -523,7 +539,7 @@ function TagihanModal({
                         onClose();
                         onResetStudent(student.id);
                       }}
-                      className="border-rose-400/40 bg-rose-500/10 text-rose-200 hover:bg-rose-600 hover:text-white text-xs font-extrabold gap-1.5 h-9 rounded-xl backdrop-blur-sm transition-all shadow-sm"
+                      className="border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-semibold gap-1.5 h-9 rounded-xl transition-all"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                       Reset Tagihan Siswa
@@ -1004,13 +1020,16 @@ function TagihanModal({
 
       {/* MODAL BAYAR / ANGSURAN TAGIHAN */}
       <Dialog open={!!payTargetTagihan} onOpenChange={(v) => { if (!v) closePayDialog() }}>
-        <DialogContent className="max-w-md w-[95vw] p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-          <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-green-700 p-5 text-white">
+        <DialogContent className="max-w-md w-[95vw] p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2.5 text-white text-lg font-black">
-                <Receipt className="w-5 h-5 text-emerald-200" /> Pembayaran / Angsuran Kasir
+              <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl border border-emerald-100 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                Pembayaran / Angsuran Kasir
               </DialogTitle>
-              <DialogDescription className="text-emerald-100 text-xs mt-0.5">
+              <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs mt-1">
                 {payTargetTagihan?.type} — {student?.name}
               </DialogDescription>
             </DialogHeader>
@@ -1023,26 +1042,26 @@ function TagihanModal({
 
             return (
               <div className="p-5 sm:p-6 space-y-4 text-slate-800 dark:text-slate-100">
-                <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-2 text-xs">
+                <div className="bg-slate-50/70 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Total Tagihan Awal:</span>
-                    <span className="font-extrabold text-slate-900 dark:text-white">{currency(payTargetTagihan.amount)}</span>
+                    <span className="text-slate-500 font-medium">Total Tagihan Awal:</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">{currency(payTargetTagihan.amount)}</span>
                   </div>
                   {paid > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500 font-semibold">Sudah Terbayar:</span>
-                      <span className="font-black text-emerald-600 dark:text-emerald-400">{currency(paid)}</span>
+                      <span className="text-slate-500 font-medium">Sudah Terbayar:</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">{currency(paid)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
-                    <span className="font-black text-slate-800 dark:text-slate-200">Sisa Tagihan:</span>
-                    <span className="font-black text-rose-600 dark:text-rose-400 text-base">{currency(remaining)}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">Sisa Tagihan:</span>
+                    <span className="font-bold text-rose-600 dark:text-rose-400 text-base">{currency(remaining)}</span>
                   </div>
                 </div>
 
                 {/* Warning if Infaq */}
                 {isInfaq && (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200">
+                  <div className="p-3 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200">
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <div>
                       <strong>Aturan Infaq:</strong> Tagihan Infaq <u>TIDAK BISA</u> diangsur. Pembayaran harus lunas sekaligus ({currency(remaining)}).
@@ -1052,14 +1071,14 @@ function TagihanModal({
 
                 {/* Option Mode */}
                 <div>
-                  <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 block">Pilihan Mode</Label>
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-2">Pilihan Mode Pembayaran</Label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => { setPayMode('LUNAS'); setPayAmountInput(remaining.toString()); }}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-black border transition-all ${
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
                         payMode === 'LUNAS'
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 shadow-xs'
                           : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
                       }`}
                     >
@@ -1069,11 +1088,11 @@ function TagihanModal({
                       type="button"
                       disabled={isInfaq}
                       onClick={() => { setPayMode('ANGSURAN'); setPayAmountInput(''); }}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-black border transition-all ${
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
                         isInfaq
                           ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
                           : payMode === 'ANGSURAN'
-                          ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                          ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 shadow-xs'
                           : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
                       }`}
                     >
@@ -1083,25 +1102,25 @@ function TagihanModal({
                 </div>
 
                 {/* Input Nominal */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Nominal Dibayar (Rp)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Nominal Dibayar (Rp)</Label>
                   <Input
                     type="number"
                     placeholder="Masukkan nominal..."
                     value={payAmountInput}
                     disabled={payMode === 'LUNAS' || isInfaq}
                     onChange={(e) => setPayAmountInput(e.target.value)}
-                    className="bg-white dark:bg-slate-950 font-black text-slate-900 dark:text-white h-11 rounded-xl text-sm"
+                    className="bg-white dark:bg-slate-950 font-bold text-slate-900 dark:text-white h-10 rounded-xl text-sm"
                   />
                   {payMode === 'ANGSURAN' && !isInfaq && payAmountInput && (
-                    <p className="text-[11px] text-slate-500 font-semibold mt-1">
+                    <p className="text-[11px] text-slate-500 font-medium mt-1">
                       Sisa setelah angsuran ini: <strong className="text-rose-600">{currency(Math.max(0, remaining - (parseFloat(payAmountInput) || 0)))}</strong>
                     </p>
                   )}
                 </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Catatan Kasir (Opsional)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 block">Catatan Kasir (Opsional)</Label>
                   <Input
                     placeholder="Misal: Angsuran ke-1 Kasir Tunai"
                     value={payNotesInput}
@@ -1110,10 +1129,10 @@ function TagihanModal({
                   />
                 </div>
 
-                <div className="flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                  <Button variant="outline" onClick={closePayDialog} className="flex-1 h-11 rounded-xl font-bold">Batal</Button>
+                <div className="flex gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+                  <Button variant="outline" onClick={closePayDialog} className="flex-1 h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700">Batal</Button>
                   <Button
-                    className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md"
+                    className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs text-xs sm:text-sm"
                     disabled={!payAmountInput || parseFloat(payAmountInput) <= 0 || lunasiMut.isPending}
                     onClick={() => {
                       const amount = parseFloat(payAmountInput)
@@ -1141,29 +1160,32 @@ function TagihanModal({
 
       {/* Discount Modal */}
       <Dialog open={showDiscountModal} onOpenChange={(v) => { if (!v) setShowDiscountModal(false) }}>
-        <DialogContent className="max-w-sm w-[95vw] p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-          <div className="bg-gradient-to-r from-amber-600 to-orange-600 p-5 text-white">
+        <DialogContent className="max-w-sm w-[95vw] p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-white text-lg font-black">
-                <TrendingUp className="w-5 h-5 text-amber-200" /> Set Diskon Tagihan
+              <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+                <div className="p-2 bg-amber-50 dark:bg-amber-950/60 rounded-xl border border-amber-100 dark:border-amber-900/50 text-amber-600 dark:text-amber-400">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                Set Diskon Tagihan
               </DialogTitle>
-              <DialogDescription className="text-amber-100 text-xs mt-0.5">
+              <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs mt-1">
                 Terapkan potongan diskon / beasiswa khusus tagihan.
               </DialogDescription>
             </DialogHeader>
           </div>
           <div className="p-5 space-y-4">
             <div>
-              <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 block">Persentase Diskon</Label>
+              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">Persentase Diskon</Label>
               <div className="grid grid-cols-4 gap-2">
                 {[25, 50, 75, 100].map((pct) => (
                   <button
                     key={pct}
                     type="button"
                     onClick={() => setDiscountPercentage(pct as 25 | 50 | 75 | 100)}
-                    className={`py-2 rounded-xl text-xs font-black border transition-all ${
+                    className={`py-2 rounded-xl text-xs font-bold border transition-all ${
                       discountPercentage === pct
-                        ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                        ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 shadow-xs'
                         : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-amber-300'
                     }`}
                   >
@@ -1173,7 +1195,7 @@ function TagihanModal({
               </div>
             </div>
             <div>
-              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">Alasan (Opsional)</Label>
+              <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 block">Alasan (Opsional)</Label>
               <Input
                 placeholder="Misal: Beasiswa prestasi"
                 value={discountReason}
@@ -1182,9 +1204,9 @@ function TagihanModal({
               />
             </div>
             <div className="flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-              <Button variant="outline" onClick={() => setShowDiscountModal(false)} className="flex-1 h-10 rounded-xl font-bold">Batal</Button>
+              <Button variant="outline" onClick={() => setShowDiscountModal(false)} className="flex-1 h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700">Batal</Button>
               <Button
-                className="flex-1 h-10 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl shadow-md"
+                className="flex-1 h-10 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-xs text-xs sm:text-sm"
                 disabled={discountMut.isPending}
                 onClick={() => discountMut.mutate()}
               >
@@ -1212,13 +1234,23 @@ function TagihanModal({
 // MODAL RILIS TAGIHAN 1 TAHUN KEDEPAN (MASSAL / PER KELAS / PER SISWA)
 // ============================================================
 function ReleaseYearlyModal({
-  open, onClose, classes }: {
-  open: boolean; onClose: () => void; classes: ClassItem[]
+  open, onClose, classes, studentIds }: {
+  open: boolean; onClose: () => void; classes: ClassItem[]; studentIds?: string[]
 }) {
   const authenticatedFetch = useAuthenticatedFetch();
   const qc = useQueryClient()
+  const hasPresetStudents = !!studentIds && studentIds.length > 0
   
-  const [scope, setScope] = useState<'CLASS' | 'MULTI_CLASS' | 'GRADE' | 'ALL'>('CLASS')
+  const [scope, setScope] = useState<'CLASS' | 'MULTI_CLASS' | 'GRADE' | 'ALL' | 'STUDENTS'>('CLASS')
+
+  // Durasi Rilis: 1 Tahun Penuh atau 1 Semester Saja
+  const [releaseDuration, setReleaseDuration] = useState<'TAHUN' | 'SEMESTER'>('TAHUN')
+  const [targetSemester, setTargetSemester] = useState<1 | 2>(1) // 1 = Ganjil, 2 = Genap
+
+  // Mode Set Tagihan dari multi-select siswa
+  useEffect(() => {
+    if (open) setScope(hasPresetStudents ? 'STUDENTS' : 'CLASS')
+  }, [open, hasPresetStudents])
   const [classId, setClassId] = useState(classes?.[0]?.id || '')
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>(classes?.map(c => c.id) || [])
   const [gradeLevel, setGradeLevel] = useState<number>(10)
@@ -1260,7 +1292,7 @@ function ReleaseYearlyModal({
   const [overridePassword, setOverridePassword] = useState('')
   const [overrideError, setOverrideError] = useState('')
 
-  // State untuk Reset Rilis Tagihan Tahunan dengan verifikasi password
+  // State untuk Reset Rilis Tagihan Tahunan / Semesteran dengan verifikasi password
   const [resetModalOpen, setResetModalOpen] = useState(false)
   const [resetPassword, setResetPassword] = useState('')
   const [resetOnlyUnpaid, setResetOnlyUnpaid] = useState(false)
@@ -1272,9 +1304,24 @@ function ReleaseYearlyModal({
     }
   }, [classes, classId])
 
+  // Sinkronisasi bulan awal SPP berdasarkan pilihan durasi dan target semester
+  useEffect(() => {
+    if (releaseDuration === 'SEMESTER') {
+      if (targetSemester === 1) {
+        setSppStartMonth(7) // Juli
+        setSppStartYear(startYear)
+      } else {
+        setSppStartMonth(1) // Januari
+        setSppStartYear(startYear + 1)
+      }
+    } else {
+      setSppStartMonth(7) // Juli
+      setSppStartYear(startYear)
+    }
+  }, [releaseDuration, targetSemester, startYear])
+
   // Sinkronisasi tahun awal SPP dan teks tahun ajaran saat startYear berubah (jika mode otomatis aktif)
   useEffect(() => {
-    setSppStartYear(startYear)
     if (!isManualAcademicYear) {
       setCustomAcademicYear(`${startYear}/${startYear + 1}`)
     }
@@ -1311,14 +1358,20 @@ function ReleaseYearlyModal({
       if (scope === 'MULTI_CLASS' && selectedClassIds.length === 0) {
         throw new Error('Pilih minimal 1 kelas yang akan diproses rilis tagihan')
       }
+      if (scope === 'STUDENTS' && !hasPresetStudents) {
+        throw new Error('Pilih minimal 1 siswa untuk set tagihan')
+      }
 
       const payload = {
         academicYear: customAcademicYear || `${startYear}/${startYear + 1}`,
-        targetScope: scope === 'CLASS' ? 'CLASS' : scope === 'MULTI_CLASS' ? 'MULTI_CLASS' : scope === 'GRADE' ? 'GRADE' : 'ALL',
+        targetScope: scope === 'STUDENTS' ? 'STUDENTS' : scope === 'CLASS' ? 'CLASS' : scope === 'MULTI_CLASS' ? 'MULTI_CLASS' : scope === 'GRADE' ? 'GRADE' : 'ALL',
+        studentIds: scope === 'STUDENTS' ? studentIds : undefined,
         classId: scope === 'CLASS' ? classId : undefined,
         classIds: scope === 'MULTI_CLASS' ? selectedClassIds : undefined,
         gradeLevel: scope === 'GRADE' ? gradeLevel : undefined,
         yearStart: Number(startYear),
+        releaseDuration,
+        targetSemester: releaseDuration === 'SEMESTER' ? targetSemester : undefined,
         sppStartMonth: Number(sppStartMonth),
         sppStartYear: Number(sppStartYear),
         customSppMonthly: includeSpp ? sppMonthly : 0,
@@ -1350,7 +1403,7 @@ function ReleaseYearlyModal({
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}))
-        throw new Error(errJson.message || 'Gagal merilis paket tagihan tahunan')
+        throw new Error(errJson.message || 'Gagal merilis paket tagihan')
       }
       return res.json()
     },
@@ -1363,7 +1416,7 @@ function ReleaseYearlyModal({
       
       const isDuplicatedDetected = data.duplicatesDetected > 0
       Swal.fire({
-        title: isDuplicatedDetected ? 'Rilis Selesai (Proteksi Aktif)' : 'Berhasil Rilis Tagihan 1 Tahun!',
+        title: isDuplicatedDetected ? 'Rilis Selesai (Proteksi Aktif)' : `Berhasil Rilis Tagihan ${releaseDuration === 'SEMESTER' ? `Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun'}!`,
         text: data.message || `Berhasil memproses tagihan tahun ajaran siswa.`,
         icon: 'success',
         confirmButtonColor: '#2563eb',
@@ -1379,7 +1432,7 @@ function ReleaseYearlyModal({
     },
   })
 
-  // Mutasi Reset Rilis Tagihan Tahunan
+  // Mutasi Reset Rilis Tagihan Tahunan / Semesteran
   const resetYearlyMut = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -1388,6 +1441,8 @@ function ReleaseYearlyModal({
         classIds: scope === 'MULTI_CLASS' ? selectedClassIds : undefined,
         gradeLevel: scope === 'GRADE' ? gradeLevel : undefined,
         startYear,
+        releaseDuration,
+        targetSemester: releaseDuration === 'SEMESTER' ? targetSemester : undefined,
         password: resetPassword,
         onlyUnpaid: resetOnlyUnpaid,
       }
@@ -1412,7 +1467,7 @@ function ReleaseYearlyModal({
       setResetError('')
       Swal.fire({
         title: 'Reset Tagihan Berhasil!',
-        text: data.message || `Berhasil mereset tagihan tahunan siswa.`,
+        text: data.message || `Berhasil mereset tagihan siswa.`,
         icon: 'success',
         confirmButtonColor: '#2563eb',
       })
@@ -1423,10 +1478,12 @@ function ReleaseYearlyModal({
     },
   })
 
+  const sppMonthsCount = releaseDuration === 'SEMESTER' ? 6 : 12
+
   // Total estimasi per siswa
   const totalPerTahun = useMemo(() => {
     let tot = 0
-    if (includeSpp) tot += (sppMonthly * 12)
+    if (includeSpp) tot += (sppMonthly * sppMonthsCount)
     if (includeDpp) tot += dppAmount
     if (includeUis) tot += uisAmount
     if (includeUka) tot += ukaAmount
@@ -1434,47 +1491,74 @@ function ReleaseYearlyModal({
     if (includeSeragam) tot += seragamPutraAmount // Estimasi default putra
     if (includeLks) tot += lksAmount
     return tot
-  }, [includeSpp, sppMonthly, includeDpp, dppAmount, includeUis, uisAmount, includeUka, ukaAmount, includeUks, uksAmount, includeSeragam, seragamPutraAmount, includeLks, lksAmount])
+  }, [includeSpp, sppMonthly, sppMonthsCount, includeDpp, dppAmount, includeUis, uisAmount, includeUka, ukaAmount, includeUks, uksAmount, includeSeragam, seragamPutraAmount, includeLks, lksAmount])
 
-  // Label rentang SPP 12 Bulan yang akan dirilis
+  // Label rentang SPP (6 Bulan untuk semester, 12 Bulan untuk 1 tahun) yang akan dirilis
   const sppRangePreview = useMemo(() => {
     const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
-    let endM = (sppStartMonth + 11) % 12
+    const offset = sppMonthsCount - 1
+    let endM = (sppStartMonth + offset) % 12
     if (endM === 0) endM = 12
-    const endY = sppStartYear + Math.floor((sppStartMonth + 11 - 1) / 12)
+    const endY = sppStartYear + Math.floor((sppStartMonth + offset - 1) / 12)
     return `${monthNames[sppStartMonth]} ${sppStartYear} - ${monthNames[endM]} ${endY}`
-  }, [sppStartMonth, sppStartYear])
+  }, [sppStartMonth, sppStartYear, sppMonthsCount])
 
   return (
     <>
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[92vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-        <div className="shrink-0 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 p-5 sm:p-6 text-white shadow-sm">
+      <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[92vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2.5 text-white text-lg sm:text-xl font-extrabold">
-              <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
-                <Layers className="w-5 h-5 text-blue-200" />
+            <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+              <div className="p-2 bg-blue-50 dark:bg-blue-950/60 rounded-xl border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400">
+                <Layers className="w-5 h-5" />
               </div>
-              Rilis Tagihan 1 Tahun ({sppRangePreview})
+              Rilis Tagihan {releaseDuration === 'SEMESTER' ? `Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun'} ({sppRangePreview})
             </DialogTitle>
-            <DialogDescription className="text-blue-100 text-xs sm:text-sm mt-1">
-              Rilis tagihan 12 bulan SPP ({sppRangePreview}), DPP tahunan, UIS, UKA, UKS, Seragam, & LKS ({customAcademicYear ? `TA ${customAcademicYear}` : `Tahun ${startYear}`}).
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+              Rilis tagihan {sppMonthsCount} bulan SPP ({sppRangePreview}), DPP, UIS, UKA, UKS, Seragam, & LKS ({customAcademicYear ? `TA ${customAcademicYear}` : `Tahun ${startYear}`}).
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 custom-scrollbar text-slate-800 dark:text-slate-100">
           {/* Target & Scope */}
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
-            <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-              1. Sasaran & Periode Tagihan
-            </Label>
+          <div className="bg-slate-50/70 dark:bg-slate-950/50 p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                1. Sasaran & Durasi Rilis Tagihan
+              </Label>
+              <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setReleaseDuration('TAHUN')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    releaseDuration === 'TAHUN'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  1 Tahun Penuh (12 Bln)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReleaseDuration('SEMESTER')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    releaseDuration === 'SEMESTER'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  1 Semester (6 Bln)
+                </button>
+              </div>
+            </div>
 
-            <div className={`grid grid-cols-1 sm:grid-cols-2 ${scope === 'MULTI_CLASS' ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-3.5`}>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${releaseDuration === 'SEMESTER' ? 'lg:grid-cols-5' : (scope === 'MULTI_CLASS' ? 'lg:grid-cols-3' : 'lg:grid-cols-4')} gap-3.5`}>
               {/* Cakupan Target: Per Angkatan, Per Kelas Tunggal, atau Pilih Beberapa Kelas */}
               <div className="flex flex-col justify-between">
                 <div className="h-5 flex items-center mb-1.5">
-                  <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Cakupan Sasaran</Label>
+                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Cakupan Sasaran</Label>
                 </div>
                 <Select value={scope} onValueChange={(v: any) => {
                   setScope(v)
@@ -1482,12 +1566,15 @@ function ReleaseYearlyModal({
                     setSelectedClassIds(classes.map(c => c.id))
                   }
                 }}>
-                  <SelectTrigger className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl">
+                  <SelectTrigger className="bg-white dark:bg-slate-950 font-medium text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800">
                     <SelectValue>
-                      {scope === 'CLASS' ? 'Per Kelas Tunggal' : scope === 'MULTI_CLASS' ? `Pilih Kelas (${selectedClassIds.length}/${classes?.length || 0})` : 'Per Angkatan / Tingkat'}
+                      {scope === 'STUDENTS' ? `Siswa Terpilih (${studentIds?.length || 0})` : scope === 'CLASS' ? 'Per Kelas Tunggal' : scope === 'MULTI_CLASS' ? `Pilih Kelas (${selectedClassIds.length}/${classes?.length || 0})` : 'Per Angkatan / Tingkat'}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
+                    {hasPresetStudents && (
+                      <SelectItem value="STUDENTS">Siswa Terpilih ({studentIds?.length})</SelectItem>
+                    )}
                     <SelectItem value="CLASS">Per Kelas Tunggal</SelectItem>
                     <SelectItem value="MULTI_CLASS">Pilih Beberapa Kelas (Multi-Select)</SelectItem>
                     <SelectItem value="GRADE">Per Angkatan / Tingkat</SelectItem>
@@ -1499,10 +1586,10 @@ function ReleaseYearlyModal({
               {scope === 'CLASS' ? (
                 <div className="flex flex-col justify-between">
                   <div className="h-5 flex items-center mb-1.5">
-                    <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Pilih Kelas</Label>
+                    <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Pilih Kelas</Label>
                   </div>
                   <Select value={classId} onValueChange={(v) => { if (v) setClassId(v) }}>
-                    <SelectTrigger className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl">
+                    <SelectTrigger className="bg-white dark:bg-slate-950 font-medium text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800">
                       <SelectValue placeholder="Pilih kelas...">
                         {classes.find(c => c.id === classId)?.name || 'Pilih kelas...'}
                       </SelectValue>
@@ -1512,13 +1599,13 @@ function ReleaseYearlyModal({
                     </SelectContent>
                   </Select>
                 </div>
-              ) : scope === 'GRADE' ? (
+              ) : (scope === 'GRADE' || scope === 'STUDENTS') ? (
                 <div className="flex flex-col justify-between">
                   <div className="h-5 flex items-center mb-1.5">
-                    <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Tingkat / Angkatan</Label>
+                    <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">{scope === 'STUDENTS' ? 'Tarif Tingkat' : 'Tingkat / Angkatan'}</Label>
                   </div>
                   <Select value={gradeLevel.toString()} onValueChange={(v) => { if (v) setGradeLevel(parseInt(v)) }}>
-                    <SelectTrigger className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl">
+                    <SelectTrigger className="bg-white dark:bg-slate-950 font-medium text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800">
                       <SelectValue>
                         {gradeLevel === 10 ? 'Kelas 10 (Fase E)' : gradeLevel === 11 ? 'Kelas 11 (Fase F)' : 'Kelas 12 (Tingkat Akhir)'}
                       </SelectValue>
@@ -1532,13 +1619,33 @@ function ReleaseYearlyModal({
                 </div>
               ) : null}
 
+              {/* Pilihan Semester jika Mode Semester Aktif */}
+              {releaseDuration === 'SEMESTER' && (
+                <div className="flex flex-col justify-between">
+                  <div className="h-5 flex items-center mb-1.5">
+                    <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Pilih Semester</Label>
+                  </div>
+                  <Select value={targetSemester.toString()} onValueChange={(v) => setTargetSemester(Number(v) as 1 | 2)}>
+                    <SelectTrigger className="bg-white dark:bg-slate-950 font-medium text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800">
+                      <SelectValue>
+                        {targetSemester === 1 ? 'Semester 1 (Ganjil: Jul-Des)' : 'Semester 2 (Genap: Jan-Jun)'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Semester 1 (Ganjil: Jul - Des)</SelectItem>
+                      <SelectItem value="2">Semester 2 (Genap: Jan - Jun)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Bulan & Tahun Awal Mulai Tagihan */}
               <div className="flex flex-col justify-between">
                 <div className="h-5 flex items-center mb-1.5">
-                  <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Bulan Awal Mulai</Label>
+                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Bulan Awal Mulai</Label>
                 </div>
                 <Select value={sppStartMonth.toString()} onValueChange={(v) => setSppStartMonth(Number(v))}>
-                  <SelectTrigger className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl">
+                  <SelectTrigger className="bg-white dark:bg-slate-950 font-medium text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800">
                     <SelectValue>
                       {[
                         '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -1566,11 +1673,11 @@ function ReleaseYearlyModal({
               {/* Tahun Ajaran / Periode */}
               <div className="flex flex-col justify-between">
                 <div className="h-5 flex items-center justify-between mb-1.5">
-                  <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">Tahun Ajaran / Awal</Label>
+                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Tahun Ajaran / Awal</Label>
                   <button
                     type="button"
                     onClick={() => setIsManualAcademicYear(!isManualAcademicYear)}
-                    className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                    className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline"
                   >
                     {isManualAcademicYear ? 'Pilih Tahun' : 'Ketik Manual'}
                   </button>
@@ -1581,7 +1688,7 @@ function ReleaseYearlyModal({
                     value={customAcademicYear}
                     onChange={(e) => setCustomAcademicYear(e.target.value)}
                     placeholder="Misal: 2026/2027"
-                    className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl"
+                    className="bg-white dark:bg-slate-950 font-medium text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800"
                   />
                 ) : (
                   <Select value={startYear.toString()} onValueChange={(v) => {
@@ -1591,7 +1698,7 @@ function ReleaseYearlyModal({
                       setCustomAcademicYear(`${y}/${y + 1}`)
                     }
                   }}>
-                    <SelectTrigger className="bg-white dark:bg-slate-950 font-bold text-xs h-11 rounded-xl">
+                    <SelectTrigger className="bg-white dark:bg-slate-950 font-medium text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800">
                       <SelectValue>
                         {`${startYear} / ${startYear + 1}`}
                       </SelectValue>
@@ -1608,13 +1715,13 @@ function ReleaseYearlyModal({
 
             {/* Dedicated Expansive Area untuk Multi-Class Selection */}
             {scope === 'MULTI_CLASS' && (
-              <div className="bg-white dark:bg-slate-900/90 rounded-2xl border border-blue-200 dark:border-blue-900/80 p-4 space-y-3 shadow-xs">
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 shadow-xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                       Pilihan Kelas Terpilih
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                       {selectedClassIds.length} dari {classes.length} Kelas
                     </span>
                   </div>
@@ -1622,14 +1729,14 @@ function ReleaseYearlyModal({
                     <button
                       type="button"
                       onClick={() => setSelectedClassIds(classes.map(c => c.id))}
-                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50"
+                      className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40"
                     >
                       Pilih Semua Kelas
                     </button>
                     <button
                       type="button"
                       onClick={() => setSelectedClassIds([])}
-                      className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:underline px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800"
+                      className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-rose-600 hover:underline px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800"
                     >
                       Batal Semua
                     </button>
@@ -1651,15 +1758,15 @@ function ReleaseYearlyModal({
                             setSelectedClassIds(prev => [...prev, c.id])
                           }
                         }}
-                        className={`text-xs font-bold px-3 py-2 rounded-xl border transition-all flex items-center justify-between gap-2 text-left ${
+                        className={`text-xs px-3 py-2 rounded-xl border transition-all flex items-center justify-between gap-2 text-left ${
                           isChecked
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                            : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-700'
+                            ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800 font-semibold shadow-xs'
+                            : 'bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
                         }`}
                       >
                         <span className="truncate">{c.name}</span>
                         {isChecked ? (
-                          <CheckSquare className="w-4 h-4 text-white shrink-0" />
+                          <CheckSquare className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         ) : (
                           <Square className="w-4 h-4 text-slate-400 dark:text-slate-600 shrink-0" />
                         )}
@@ -1671,12 +1778,12 @@ function ReleaseYearlyModal({
             )}
 
             {/* Banner Periode Terpilih */}
-            <div className="p-3 bg-blue-50/80 dark:bg-blue-950/40 rounded-xl border border-blue-200/80 dark:border-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="p-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-200/60 dark:border-blue-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
               <span className="text-slate-600 dark:text-slate-300">
-                Rentang Paket 12 Bulan: <strong className="font-extrabold text-blue-700 dark:text-blue-300">{sppRangePreview}</strong>
+                Rentang Tagihan: <strong className="font-bold text-blue-700 dark:text-blue-300">{sppRangePreview}</strong>
               </span>
-              <span className="font-bold text-slate-500 dark:text-slate-400 text-[11px]">
-                Tahun Ajaran: <span className="text-blue-600 dark:text-blue-400 font-extrabold">{customAcademicYear || `${startYear}/${startYear + 1}`}</span>
+              <span className="font-medium text-slate-500 dark:text-slate-400 text-xs">
+                Tahun Ajaran: <strong className="text-blue-600 dark:text-blue-400 font-bold">{customAcademicYear || `${startYear}/${startYear + 1}`}</strong>
               </span>
             </div>
           </div>
@@ -1684,190 +1791,218 @@ function ReleaseYearlyModal({
           {/* Rincian Komponen Biaya 1 Tahun */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                 2. Komponen & Tarif Biaya Resmi 1 Tahun
               </Label>
-              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                Total Estimasi Paket: {currency(totalPerTahun)} / siswa
+              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                Total Estimasi Paket: <strong className="font-bold">{currency(totalPerTahun)}</strong> / siswa
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {/* SPP Bulanan x 12 */}
-              <div className={`p-4 rounded-2xl border transition-all space-y-3 ${includeSpp ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+              {/* SPP Bulanan (12 Bulan atau 6 Bulan Semester) */}
+              <div className={`p-4 rounded-xl border transition-all space-y-3 ${
+                includeSpp
+                  ? 'bg-white dark:bg-slate-900 border-blue-300 dark:border-blue-800 shadow-xs ring-1 ring-blue-500/20'
+                  : 'bg-slate-50/60 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800/80 opacity-60'
+              }`}>
                 <div className="flex justify-between items-center">
-                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-blue-900 dark:text-blue-300">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-900 dark:text-slate-100">
                     <input type="checkbox" checked={includeSpp} onChange={(e) => setIncludeSpp(e.target.checked)} className="rounded text-blue-600" />
-                    SPP (12 Bulan Sekaligus)
+                    SPP ({sppMonthsCount} Bln {releaseDuration === 'SEMESTER' ? `Sem. ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Sekaligus'})
                   </label>
-                  <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Bulanan</span>
+                  <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60">Bulanan</span>
                 </div>
                 
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 mb-1 block">Tarif Per Bulan (Default)</span>
+                  <span className="text-[10px] font-medium text-slate-500 mb-1 block">Tarif Per Bulan (Default)</span>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">Rp</span>
                     <Input
                       type="number"
                       disabled={!includeSpp}
                       value={sppMonthly || ''}
                       onChange={(e) => setSppMonthly(Number(e.target.value))}
-                      className="pl-8 h-9 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                      className="pl-8 h-9 text-xs font-semibold bg-white dark:bg-slate-950 rounded-lg border-slate-200 dark:border-slate-800"
                     />
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-blue-100 dark:border-blue-900/60">
-                  <p className="text-[11px] font-medium text-blue-700 dark:text-blue-300 leading-tight">
-                    Periode: <strong className="font-bold">{sppRangePreview}</strong> (12 Bulan = {currency(sppMonthly * 12)})
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300 leading-tight">
+                    Periode: <strong className="font-semibold text-blue-600 dark:text-blue-400">{sppRangePreview}</strong> ({sppMonthsCount} Bln = {currency(sppMonthly * sppMonthsCount)})
                   </p>
                 </div>
               </div>
 
               {/* DPP Tahunan */}
-              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeDpp ? 'bg-purple-50/60 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+              <div className={`p-4 rounded-xl border transition-all space-y-2.5 ${
+                includeDpp
+                  ? 'bg-white dark:bg-slate-900 border-blue-300 dark:border-blue-800 shadow-xs ring-1 ring-blue-500/20'
+                  : 'bg-slate-50/60 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800/80 opacity-60'
+              }`}>
                 <div className="flex justify-between items-center">
-                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-purple-900 dark:text-purple-300">
-                    <input type="checkbox" checked={includeDpp} onChange={(e) => setIncludeDpp(e.target.checked)} className="rounded text-purple-600" />
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-900 dark:text-slate-100">
+                    <input type="checkbox" checked={includeDpp} onChange={(e) => setIncludeDpp(e.target.checked)} className="rounded text-blue-600" />
                     DPP (Dana Pengembangan)
                   </label>
-                  <span className="text-[10px] font-black bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Setahun</span>
+                  <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60">Setahun</span>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">Rp</span>
                   <Input
                     type="number"
                     disabled={!includeDpp}
                     value={dppAmount || ''}
                     onChange={(e) => setDppAmount(Number(e.target.value))}
-                    className="pl-8 h-10 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                    className="pl-8 h-9 text-xs font-semibold bg-white dark:bg-slate-950 rounded-lg border-slate-200 dark:border-slate-800"
                   />
                 </div>
                 <p className="text-[11px] text-slate-500">Wajib tuntas dalam 1 tahun ajaran.</p>
               </div>
 
               {/* UIS (Infaq Sekolah) */}
-              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeUis ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+              <div className={`p-4 rounded-xl border transition-all space-y-2.5 ${
+                includeUis
+                  ? 'bg-white dark:bg-slate-900 border-blue-300 dark:border-blue-800 shadow-xs ring-1 ring-blue-500/20'
+                  : 'bg-slate-50/60 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800/80 opacity-60'
+              }`}>
                 <div className="flex justify-between items-center">
-                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-emerald-900 dark:text-emerald-300">
-                    <input type="checkbox" checked={includeUis} onChange={(e) => setIncludeUis(e.target.checked)} className="rounded text-emerald-600" />
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-900 dark:text-slate-100">
+                    <input type="checkbox" checked={includeUis} onChange={(e) => setIncludeUis(e.target.checked)} className="rounded text-blue-600" />
                     UIS (Uang Infaq Sekolah)
                   </label>
-                  <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">Setahun</span>
+                  <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60">Setahun</span>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">Rp</span>
                   <Input
                     type="number"
                     disabled={!includeUis}
                     value={uisAmount || ''}
                     onChange={(e) => setUisAmount(Number(e.target.value))}
-                    className="pl-8 h-10 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                    className="pl-8 h-9 text-xs font-semibold bg-white dark:bg-slate-950 rounded-lg border-slate-200 dark:border-slate-800"
                   />
                 </div>
                 <p className="text-[11px] text-slate-500">Infaq sarana & prasarana sekolah.</p>
               </div>
 
               {/* UKA (Kegiatan Akademik) */}
-              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeUka ? 'bg-indigo-50/60 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+              <div className={`p-4 rounded-xl border transition-all space-y-2.5 ${
+                includeUka
+                  ? 'bg-white dark:bg-slate-900 border-blue-300 dark:border-blue-800 shadow-xs ring-1 ring-blue-500/20'
+                  : 'bg-slate-50/60 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800/80 opacity-60'
+              }`}>
                 <div className="flex justify-between items-center">
-                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-indigo-900 dark:text-indigo-300">
-                    <input type="checkbox" checked={includeUka} onChange={(e) => setIncludeUka(e.target.checked)} className="rounded text-indigo-600" />
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-900 dark:text-slate-100">
+                    <input type="checkbox" checked={includeUka} onChange={(e) => setIncludeUka(e.target.checked)} className="rounded text-blue-600" />
                     UKA (Kegiatan Akademik)
                   </label>
-                  <span className="text-[10px] font-black bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">UTS/UAS/Outdoor</span>
+                  <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60">UTS/UAS/Outdoor</span>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">Rp</span>
                   <Input
                     type="number"
                     disabled={!includeUka}
                     value={ukaAmount || ''}
                     onChange={(e) => setUkaAmount(Number(e.target.value))}
-                    className="pl-8 h-10 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                    className="pl-8 h-9 text-xs font-semibold bg-white dark:bg-slate-950 rounded-lg border-slate-200 dark:border-slate-800"
                   />
                 </div>
                 <p className="text-[11px] text-slate-500">UTS, UAS, Outdoor, Fortasi, HW, UTBK.</p>
               </div>
 
               {/* UKS (Kegiatan Sekolah) */}
-              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeUks ? 'bg-teal-50/60 dark:bg-teal-950/30 border-teal-200 dark:border-teal-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+              <div className={`p-4 rounded-xl border transition-all space-y-2.5 ${
+                includeUks
+                  ? 'bg-white dark:bg-slate-900 border-blue-300 dark:border-blue-800 shadow-xs ring-1 ring-blue-500/20'
+                  : 'bg-slate-50/60 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800/80 opacity-60'
+              }`}>
                 <div className="flex justify-between items-center">
-                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-teal-900 dark:text-teal-300">
-                    <input type="checkbox" checked={includeUks} onChange={(e) => setIncludeUks(e.target.checked)} className="rounded text-teal-600" />
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-900 dark:text-slate-100">
+                    <input type="checkbox" checked={includeUks} onChange={(e) => setIncludeUks(e.target.checked)} className="rounded text-blue-600" />
                     UKS (Kegiatan Sekolah)
                   </label>
-                  <span className="text-[10px] font-black bg-teal-100 text-teal-800 px-2 py-0.5 rounded">OSIS/PHBI/Wisuda</span>
+                  <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60">OSIS/PHBI/Wisuda</span>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">Rp</span>
                   <Input
                     type="number"
                     disabled={!includeUks}
                     value={uksAmount || ''}
                     onChange={(e) => setUksAmount(Number(e.target.value))}
-                    className="pl-8 h-10 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                    className="pl-8 h-9 text-xs font-semibold bg-white dark:bg-slate-950 rounded-lg border-slate-200 dark:border-slate-800"
                   />
                 </div>
                 <p className="text-[11px] text-slate-500">OSIS, PHBI, Asuransi, Kalender, Wisuda.</p>
               </div>
 
               {/* Seragam (Khusus Kls 10) */}
-              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeSeragam ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+              <div className={`p-4 rounded-xl border transition-all space-y-2.5 ${
+                includeSeragam
+                  ? 'bg-white dark:bg-slate-900 border-blue-300 dark:border-blue-800 shadow-xs ring-1 ring-blue-500/20'
+                  : 'bg-slate-50/60 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800/80 opacity-60'
+              }`}>
                 <div className="flex justify-between items-center">
-                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-amber-900 dark:text-amber-300">
-                    <input type="checkbox" checked={includeSeragam} onChange={(e) => setIncludeSeragam(e.target.checked)} className="rounded text-amber-600" />
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-900 dark:text-slate-100">
+                    <input type="checkbox" checked={includeSeragam} onChange={(e) => setIncludeSeragam(e.target.checked)} className="rounded text-blue-600" />
                     Seragam (Khusus Kelas X)
                   </label>
-                  <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Paket Masuk</span>
+                  <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60">Paket Masuk</span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-500">Putra (Rp)</span>
+                    <span className="text-[10px] font-medium text-slate-500">Putra (Rp)</span>
                     <Input
                       type="number"
                       disabled={!includeSeragam}
                       value={seragamPutraAmount || ''}
                       onChange={(e) => setSeragamPutraAmount(Number(e.target.value))}
-                      className="h-9 text-xs font-bold bg-white dark:bg-slate-950 rounded-lg"
+                      className="h-9 text-xs font-semibold bg-white dark:bg-slate-950 rounded-lg border-slate-200 dark:border-slate-800"
                     />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-500">Putri (Rp)</span>
+                    <span className="text-[10px] font-medium text-slate-500">Putri (Rp)</span>
                     <Input
                       type="number"
                       disabled={!includeSeragam}
                       value={seragamPutriAmount || ''}
                       onChange={(e) => setSeragamPutriAmount(Number(e.target.value))}
-                      className="h-9 text-xs font-bold bg-white dark:bg-slate-950 rounded-lg"
+                      className="h-9 text-xs font-semibold bg-white dark:bg-slate-950 rounded-lg border-slate-200 dark:border-slate-800"
                     />
                   </div>
                 </div>
               </div>
 
               {/* LKS / Buku */}
-              <div className={`p-4 rounded-2xl border transition-all space-y-2 ${includeLks ? 'bg-sky-50/60 dark:bg-sky-950/30 border-sky-200 dark:border-sky-900' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 opacity-60'}`}>
+              <div className={`p-4 rounded-xl border transition-all space-y-2.5 ${
+                includeLks
+                  ? 'bg-white dark:bg-slate-900 border-blue-300 dark:border-blue-800 shadow-xs ring-1 ring-blue-500/20'
+                  : 'bg-slate-50/60 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800/80 opacity-60'
+              }`}>
                 <div className="flex justify-between items-center">
-                  <label className="flex items-center gap-2 cursor-pointer font-extrabold text-xs text-sky-900 dark:text-sky-300">
-                    <input type="checkbox" checked={includeLks} onChange={(e) => setIncludeLks(e.target.checked)} className="rounded text-sky-600" />
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-900 dark:text-slate-100">
+                    <input type="checkbox" checked={includeLks} onChange={(e) => setIncludeLks(e.target.checked)} className="rounded text-blue-600" />
                     LKS & Buku Modul
                   </label>
-                  <span className="text-[10px] font-black bg-sky-100 text-sky-800 px-2 py-0.5 rounded">Fleksibel</span>
+                  <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60">Fleksibel</span>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">Rp</span>
                   <Input
                     type="number"
                     disabled={!includeLks}
                     value={lksAmount || ''}
                     placeholder="Nominal LKS..."
                     onChange={(e) => setLksAmount(Number(e.target.value))}
-                    className="pl-8 h-10 text-xs font-bold bg-white dark:bg-slate-950 rounded-xl"
+                    className="pl-8 h-9 text-xs font-semibold bg-white dark:bg-slate-950 rounded-lg border-slate-200 dark:border-slate-800"
                   />
                 </div>
                 <div className="flex gap-2">
                   <Select disabled={!includeLks} value={lksPeriod} onValueChange={(v: any) => setLksPeriod(v)}>
-                    <SelectTrigger className="bg-white dark:bg-slate-950 h-8 text-[11px] font-bold rounded-lg"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-white dark:bg-slate-950 h-8 text-[11px] font-medium rounded-lg border-slate-200 dark:border-slate-800"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="TAHUNAN">Setahun Penuh</SelectItem>
                       <SelectItem value="SEMESTER_1">Semester Ganjil</SelectItem>
@@ -1881,59 +2016,61 @@ function ReleaseYearlyModal({
 
           {/* Catatan & Proteksi Duplikasi */}
           <div className="space-y-3">
-            <div className="p-3.5 bg-blue-50/70 dark:bg-blue-950/40 rounded-2xl border border-blue-200 dark:border-blue-900 flex items-start gap-3">
+            <div className="p-3.5 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-200/60 dark:border-blue-900/60 flex items-start gap-3">
               <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-              <div className="text-xs text-blue-900 dark:text-blue-200 space-y-1">
-                <p className="font-extrabold text-blue-950 dark:text-blue-100">Proteksi Anti-Duplikasi Otomatis Aktif</p>
-                <p className="leading-relaxed text-[11px] text-blue-800 dark:text-blue-300">
+              <div className="text-xs text-slate-700 dark:text-slate-300 space-y-1">
+                <p className="font-bold text-slate-900 dark:text-slate-100">Proteksi Anti-Duplikasi Otomatis Aktif</p>
+                <p className="leading-relaxed text-[11px] text-slate-600 dark:text-slate-400">
                   Sistem otomatis mendeteksi tagihan yang sudah ada sebelumnya. Tagihan yang sudah terbit atau lunas <strong>tidak akan diduplikasi/ditimpa</strong> dan langsung dilewati (skip).
                 </p>
               </div>
             </div>
 
             <div>
-              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">Catatan Rilis (Opsional)</Label>
+              <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 block">Catatan Rilis (Opsional)</Label>
               <Input
                 placeholder="Misal: Rilis Tagihan Resmi Ajaran 2025/2026"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="bg-white dark:bg-slate-950 text-xs h-10 rounded-xl"
+                className="bg-white dark:bg-slate-950 text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800"
               />
             </div>
           </div>
         </div>
 
-        <div className="shrink-0 p-4 sm:p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5">
+        <div className="shrink-0 p-4 sm:p-5 bg-slate-50/60 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5">
+          {scope !== 'STUDENTS' ? (
           <Button
             type="button"
             variant="outline"
             onClick={() => { setResetModalOpen(true); setResetPassword(''); setResetError(''); }}
-            className="h-11 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl font-extrabold gap-2 text-xs"
+            className="h-10 border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl font-semibold gap-1.5 text-xs"
           >
-            <RotateCcw className="w-4 h-4 text-rose-600" />
-            Reset Rilis Tagihan Tahunan
+            <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+            {releaseDuration === 'SEMESTER' ? `Reset Rilis Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Reset Rilis Tagihan Tahunan'}
           </Button>
+          ) : <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Target: <strong className="text-blue-600 dark:text-blue-400">{studentIds?.length || 0} siswa</strong> terpilih</span>}
 
-          <div className="flex flex-col-reverse sm:flex-row gap-2.5">
-            <Button variant="outline" onClick={onClose} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+          <div className="flex flex-col-reverse sm:flex-row gap-2">
+            <Button variant="outline" onClick={onClose} className="h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
               Batal
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => { setOverrideModalOpen(true); setOverridePassword(''); setOverrideError(''); }}
-              className="h-11 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded-xl font-extrabold gap-2 text-xs"
+              className="h-10 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl font-semibold gap-1.5 text-xs"
             >
-              <Lock className="w-4 h-4 text-amber-600" />
+              <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
               Otorisasi Perbarui Duplikat
             </Button>
             <Button
-              className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md gap-2"
+              className="h-10 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-xs gap-2 text-xs sm:text-sm px-4"
               disabled={releaseMut.isPending}
               onClick={() => releaseMut.mutate({ override: false })}
             >
               {releaseMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Rilis Tagihan 1 Tahun Sekarang
+              {releaseDuration === 'SEMESTER' ? `Rilis Tagihan Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Rilis Tagihan 1 Tahun'}
             </Button>
           </div>
         </div>
@@ -1942,25 +2079,25 @@ function ReleaseYearlyModal({
 
     {/* MODAL OTORISASI PERBARUI DUPLIKAT TAGIHAN */}
     <Dialog open={overrideModalOpen} onOpenChange={(v) => { if (!v) { setOverrideModalOpen(false); setOverridePassword(''); setOverrideError(''); } }}>
-      <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-        <div className="shrink-0 bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 p-6 text-white shadow-sm">
+      <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2.5 text-white text-lg font-extrabold">
-              <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
-                <Lock className="w-5 h-5 text-amber-200" />
+            <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+              <div className="p-2 bg-amber-50 dark:bg-amber-950/60 rounded-xl border border-amber-100 dark:border-amber-900/50 text-amber-600 dark:text-amber-400">
+                <Lock className="w-5 h-5" />
               </div>
               Otorisasi Pembaruan Tagihan Duplikat
             </DialogTitle>
-            <DialogDescription className="text-amber-100 text-xs mt-1">
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
               Perbarui tagihan yang sudah ada sebelumnya dengan tarif baru (khusus tagihan yang belum lunas).
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); releaseMut.mutate({ override: true, password: overridePassword }); }} className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-            <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-2xl text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
-              <p className="font-extrabold flex items-center gap-1.5 text-sm text-amber-800 dark:text-amber-300">
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar">
+            <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+              <p className="font-bold flex items-center gap-1.5 text-sm text-amber-800 dark:text-amber-300">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                 Ketentuan Otorisasi Pembaruan
               </p>
@@ -1970,7 +2107,7 @@ function ReleaseYearlyModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
                 Password Akun Keuangan <span className="text-rose-500">*</span>
               </Label>
               <div className="relative">
@@ -1979,24 +2116,24 @@ function ReleaseYearlyModal({
                   placeholder="Masukkan password akun keuangan Anda..."
                   value={overridePassword}
                   onChange={(e) => { setOverridePassword(e.target.value); setOverrideError(''); }}
-                  className="pl-9 h-11 bg-white dark:bg-slate-950 font-bold rounded-xl border-slate-200 dark:border-slate-800"
+                  className="pl-9 h-10 bg-white dark:bg-slate-950 font-medium rounded-xl border-slate-200 dark:border-slate-800"
                   required
                 />
               </div>
               {overrideError && (
-                <p className="text-xs font-bold text-rose-600 dark:text-rose-400 mt-1">{overrideError}</p>
+                <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 mt-1">{overrideError}</p>
               )}
             </div>
           </div>
 
-          <div className="shrink-0 p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
-            <Button type="button" variant="outline" onClick={() => setOverrideModalOpen(false)} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+          <div className="shrink-0 p-4 sm:p-5 bg-slate-50/60 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setOverrideModalOpen(false)} className="h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700">
               Batal
             </Button>
             <Button
               type="submit"
               disabled={releaseMut.isPending || !overridePassword}
-              className="h-11 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl shadow-md gap-2"
+              className="h-10 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-xs gap-1.5 text-xs sm:text-sm"
             >
               {releaseMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
               Setujui & Perbarui Tagihan
@@ -2008,25 +2145,25 @@ function ReleaseYearlyModal({
 
     {/* MODAL OTORISASI RESET RILIS TAGIHAN TAHUNAN */}
     <Dialog open={resetModalOpen} onOpenChange={(v) => { if (!v) { setResetModalOpen(false); setResetPassword(''); setResetError(''); } }}>
-      <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-        <div className="shrink-0 bg-gradient-to-r from-rose-700 via-red-700 to-rose-900 p-6 text-white shadow-sm">
+      <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2.5 text-white text-lg font-extrabold">
-              <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
-                <ShieldAlert className="w-5 h-5 text-rose-200" />
+            <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+              <div className="p-2 bg-rose-50 dark:bg-rose-950/60 rounded-xl border border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400">
+                <ShieldAlert className="w-5 h-5" />
               </div>
-              Otorisasi Reset Rilis Tagihan Tahunan
+              Otorisasi Reset Rilis Tagihan
             </DialogTitle>
-            <DialogDescription className="text-rose-100 text-xs mt-1">
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
               Hapus seluruh tagihan 1 tahun ajaran ({startYear}/{startYear + 1}) sesuai sasaran yang dipilih.
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); resetYearlyMut.mutate(); }} className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl text-xs text-rose-900 dark:text-rose-200 space-y-1.5">
-              <p className="font-extrabold flex items-center gap-1.5 text-sm text-rose-800 dark:text-rose-300">
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar">
+            <div className="p-3.5 bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-900 dark:text-rose-200 space-y-1.5">
+              <p className="font-bold flex items-center gap-1.5 text-sm text-rose-800 dark:text-rose-300">
                 <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                 Sasaran Reset Tagihan
               </p>
@@ -2042,7 +2179,7 @@ function ReleaseYearlyModal({
               </p>
             </div>
 
-            <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2.5 p-3 bg-slate-50/70 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
               <input
                 type="checkbox"
                 id="resetOnlyUnpaid"
@@ -2050,13 +2187,13 @@ function ReleaseYearlyModal({
                 onChange={(e) => setResetOnlyUnpaid(e.target.checked)}
                 className="rounded text-rose-600 w-4 h-4 cursor-pointer"
               />
-              <label htmlFor="resetOnlyUnpaid" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+              <label htmlFor="resetOnlyUnpaid" className="text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
                 Hanya reset tagihan yang <u>BELUM LUNAS</u> (Lindungi tagihan yang sudah lunas).
               </label>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
                 Password Akun Keuangan <span className="text-rose-500">*</span>
               </Label>
               <div className="relative">
@@ -2065,24 +2202,24 @@ function ReleaseYearlyModal({
                   placeholder="Masukkan password akun keuangan Anda..."
                   value={resetPassword}
                   onChange={(e) => { setResetPassword(e.target.value); setResetError(''); }}
-                  className="pl-9 h-11 bg-white dark:bg-slate-950 font-bold rounded-xl border-slate-200 dark:border-slate-800"
+                  className="pl-9 h-10 bg-white dark:bg-slate-950 font-medium rounded-xl border-slate-200 dark:border-slate-800"
                   required
                 />
               </div>
               {resetError && (
-                <p className="text-xs font-bold text-rose-600 dark:text-rose-400 mt-1">{resetError}</p>
+                <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 mt-1">{resetError}</p>
               )}
             </div>
           </div>
 
-          <div className="shrink-0 p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
-            <Button type="button" variant="outline" onClick={() => setResetModalOpen(false)} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+          <div className="shrink-0 p-4 sm:p-5 bg-slate-50/60 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setResetModalOpen(false)} className="h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700">
               Batal
             </Button>
             <Button
               type="submit"
               disabled={resetYearlyMut.isPending || !resetPassword}
-              className="h-11 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl shadow-md gap-2"
+              className="h-10 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow-xs gap-1.5 text-xs sm:text-sm"
             >
               {resetYearlyMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
               Konfirmasi & Reset Tagihan
@@ -2113,12 +2250,17 @@ function ManualCashPaymentModal({
   const [filterStatusTunggakan, setFilterStatusTunggakan] = useState<'ALL' | 'HANYA_TUNGGAKAN' | 'LUNAS'>('ALL')
 
   const [selectedStudentId, setSelectedStudentId] = useState('')
-  const [selectedTagihanId, setSelectedTagihanId] = useState('')
-  const [cashAmount, setCashAmount] = useState('')
-  const [cashNotes, setCashNotes] = useState('Pembayaran Tunai Kasir Keuangan')
+  const [selectedTagihanIds, setSelectedTagihanIds] = useState<string[]>([])
+  
+  // Per-tagihan configuration: { [tagihanId]: { payType: 'FULL' | 'ANGSURAN', amount: string, discountPct: number, discountReason: string } }
+  const [tagihanConfigs, setTagihanConfigs] = useState<Record<string, {
+    payType: 'FULL' | 'ANGSURAN';
+    amount: string;
+    discountPct: number;
+    discountReason: string;
+  }>>({})
 
-  const [cashDiscountPct, setCashDiscountPct] = useState<number>(0)
-  const [cashDiscountReason, setCashDiscountReason] = useState<string>('')
+  const [cashNotes, setCashNotes] = useState('Pembayaran Tunai Kasir Keuangan')
 
   const { data: studentDetail } = useQuery<StudentDetail>({
     queryKey: ['student-tagihan-cash', selectedStudentId],
@@ -2178,55 +2320,194 @@ function ManualCashPaymentModal({
   }, [students, studentSearch, filterKelas, filterProgram, filterStatusTunggakan])
 
   const activeTagihans = (studentDetail?.tagihans || []).filter(t => t.status !== 'LUNAS')
-  const selectedTagihan = activeTagihans.find(t => t.id === selectedTagihanId)
 
-  const handleSelectTagihan = (tagihanId: string | null) => {
-    if (!tagihanId) return
-    setSelectedTagihanId(tagihanId)
-    setCashDiscountPct(0)
-    setCashDiscountReason('')
-    const t = activeTagihans.find(item => item.id === tagihanId)
-    if (t) {
-      const paid = t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)
-      const remaining = Math.max(0, t.amount - paid)
-      setCashAmount(remaining.toString())
-    }
-  }
-
-  const handleDiscountChange = (pct: number) => {
-    setCashDiscountPct(pct)
-    if (!selectedTagihan) return
-    const paid = selectedTagihan.amountPaid || 0
-    let orig = selectedTagihan.amount
-    const discountMatch = selectedTagihan.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/)
+  // Helper untuk mendapatkan sisa tagihan asli & setelah diskon
+  const getTagihanCalculations = (t: any) => {
+    const config = tagihanConfigs[t.id] || { payType: 'FULL', amount: '', discountPct: 0, discountReason: '' }
+    const paid = t.amountPaid || 0
+    let origAmount = t.amount
+    const discountMatch = t.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/)
     if (discountMatch) {
       try {
         const info = JSON.parse(discountMatch[1])
-        orig = info.originalAmount || selectedTagihan.amount
+        origAmount = info.originalAmount || t.amount
       } catch {}
     }
-    const discountAmount = Math.round(orig * (pct / 100))
-    const finalAmount = orig - discountAmount
-    const newRemaining = Math.max(0, finalAmount - paid)
-    setCashAmount(newRemaining.toString())
+    const discountAmt = config.discountPct > 0 ? Math.round(origAmount * (config.discountPct / 100)) : 0
+    const finalAmount = config.discountPct > 0 ? origAmount - discountAmt : t.amount
+    const remainingBeforePay = Math.max(0, finalAmount - paid)
+    
+    let payVal = 0
+    if (config.payType === 'FULL') {
+      payVal = remainingBeforePay
+    } else {
+      payVal = parseFloat(config.amount) || 0
+    }
+    const remainingAfterPay = Math.max(0, remainingBeforePay - payVal)
+
+    return {
+      origAmount,
+      paid,
+      discountAmt,
+      discountPct: config.discountPct,
+      discountReason: config.discountReason,
+      finalAmount,
+      remainingBeforePay,
+      payVal,
+      payType: config.payType,
+      remainingAfterPay,
+      isInfaq: t.type.toLowerCase() === 'infaq',
+    }
   }
+
+  const handleToggleTagihan = (tagihanId: string) => {
+    setSelectedTagihanIds(prev => {
+      const exists = prev.includes(tagihanId)
+      if (exists) {
+        return prev.filter(id => id !== tagihanId)
+      } else {
+        const t = activeTagihans.find(item => item.id === tagihanId)
+        if (t && !tagihanConfigs[tagihanId]) {
+          const paid = t.amountPaid || 0
+          const remaining = Math.max(0, t.amount - paid)
+          setTagihanConfigs(c => ({
+            ...c,
+            [tagihanId]: {
+              payType: 'FULL',
+              amount: remaining.toString(),
+              discountPct: 0,
+              discountReason: '',
+            }
+          }))
+        }
+        return [...prev, tagihanId]
+      }
+    })
+  }
+
+  const handleSelectAllTagihans = () => {
+    if (selectedTagihanIds.length === activeTagihans.length) {
+      setSelectedTagihanIds([])
+    } else {
+      const allIds = activeTagihans.map(t => t.id)
+      const newConfigs = { ...tagihanConfigs }
+      activeTagihans.forEach(t => {
+        if (!newConfigs[t.id]) {
+          const paid = t.amountPaid || 0
+          const remaining = Math.max(0, t.amount - paid)
+          newConfigs[t.id] = {
+            payType: 'FULL',
+            amount: remaining.toString(),
+            discountPct: 0,
+            discountReason: '',
+          }
+        }
+      })
+      setTagihanConfigs(newConfigs)
+      setSelectedTagihanIds(allIds)
+    }
+  }
+
+  const updateTagihanConfig = (tagihanId: string, updates: Partial<{
+    payType: 'FULL' | 'ANGSURAN';
+    amount: string;
+    discountPct: number;
+    discountReason: string;
+  }>) => {
+    setTagihanConfigs(prev => {
+      const current = prev[tagihanId] || {
+        payType: 'FULL',
+        amount: '',
+        discountPct: 0,
+        discountReason: '',
+      }
+      return {
+        ...prev,
+        [tagihanId]: {
+          ...current,
+          ...updates,
+        }
+      }
+    })
+  }
+
+  const setAllSelectedPayType = (type: 'FULL' | 'ANGSURAN') => {
+    setTagihanConfigs(prev => {
+      const next = { ...prev }
+      selectedTagihanIds.forEach(id => {
+        const t = activeTagihans.find(item => item.id === id)
+        const current = next[id] || { payType: 'FULL', amount: '', discountPct: 0, discountReason: '' }
+        if (t && t.type.toLowerCase() === 'infaq') {
+          next[id] = { ...current, payType: 'FULL' }
+          return
+        }
+        if (type === 'FULL') {
+          const paid = t?.amountPaid || 0
+          const remaining = Math.max(0, (t?.amount || 0) - paid)
+          next[id] = { ...current, payType: 'FULL', amount: remaining.toString() }
+        } else {
+          const paid = t?.amountPaid || 0
+          const remaining = Math.max(0, (t?.amount || 0) - paid)
+          next[id] = { ...current, payType: 'ANGSURAN', amount: current.amount || Math.round(remaining / 2).toString() }
+        }
+      })
+      return next
+    })
+  }
+
+  // Ringkasan Total Pembayaran dari semua tagihan yang dipilih
+  const totalPaymentSummary = useMemo(() => {
+    let totalNominalBayar = 0
+    let totalSisaAwal = 0
+    let totalSisaAkhir = 0
+    let isValid = selectedTagihanIds.length > 0
+
+    selectedTagihanIds.forEach(id => {
+      const t = activeTagihans.find(item => item.id === id)
+      if (t) {
+        const calc = getTagihanCalculations(t)
+        totalNominalBayar += calc.payVal
+        totalSisaAwal += calc.remainingBeforePay
+        totalSisaAkhir += calc.remainingAfterPay
+        if (calc.payVal <= 0 || calc.payVal > calc.remainingBeforePay) {
+          isValid = false
+        }
+      }
+    })
+
+    return {
+      count: selectedTagihanIds.length,
+      totalNominalBayar,
+      totalSisaAwal,
+      totalSisaAkhir,
+      isValid,
+    }
+  }, [selectedTagihanIds, tagihanConfigs, activeTagihans])
 
   const payMut = useMutation({
     mutationFn: async () => {
-      const amount = parseFloat(cashAmount)
-      const payload: any = {
-        paymentAmount: amount,
-        notes: cashNotes,
-      }
-      if (cashDiscountPct > 0) {
-        payload.beasiswaPercentage = cashDiscountPct
-        payload.beasiswaReason = cashDiscountReason || 'Beasiswa Kasir Keuangan'
-      }
+      const payments = selectedTagihanIds.map(id => {
+        const t = activeTagihans.find(item => item.id === id)!
+        const calc = getTagihanCalculations(t)
+        const itemPayload: any = {
+          tagihanId: id,
+          paymentAmount: calc.payVal,
+          notes: cashNotes,
+        }
+        if (calc.discountPct > 0) {
+          itemPayload.beasiswaPercentage = calc.discountPct
+          itemPayload.beasiswaReason = calc.discountReason || 'Beasiswa Kasir Keuangan'
+        }
+        return itemPayload
+      })
 
-      const res = await authenticatedFetch(`/api-backend/finance/tagihan/${selectedTagihanId}/lunasi`, {
-        method: 'PATCH',
+      const res = await authenticatedFetch(`/api-backend/finance/tagihan/batch-lunasi`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          payments,
+          globalNotes: cashNotes,
+        }),
       })
       if (!res.ok) {
         const errText = await res.text()
@@ -2247,7 +2528,7 @@ function ManualCashPaymentModal({
       qc.invalidateQueries({ queryKey: ['quarterly-rekap'] })
       qc.invalidateQueries({ queryKey: ['payment-proofs'] })
       Swal.fire({
-        title: data?.isLunas ? 'Pelunasan Berhasil!' : 'Angsuran Berhasil Dicatat!',
+        title: data?.allLunas ? 'Pelunasan Multi Tagihan Berhasil!' : 'Pembayaran Berhasil Dicatat!',
         text: data?.message || 'Pembayaran tunai berhasil dicatat.',
         icon: 'success',
         confirmButtonColor: '#059669',
@@ -2255,10 +2536,8 @@ function ManualCashPaymentModal({
       onClose()
       setStudentSearch('')
       setSelectedStudentId('')
-      setSelectedTagihanId('')
-      setCashAmount('')
-      setCashDiscountPct(0)
-      setCashDiscountReason('')
+      setSelectedTagihanIds([])
+      setTagihanConfigs({})
     },
     onError: (err: any) => {
       Swal.fire('Error', err.message || 'Gagal menyimpan pembayaran', 'error')
@@ -2274,18 +2553,18 @@ function ManualCashPaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-[96vw] md:max-w-3xl lg:max-w-4xl w-full max-h-[92vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-        {/* Fixed Header Banner */}
-        <div className="shrink-0 bg-gradient-to-r from-emerald-700 via-teal-700 to-green-700 p-4 sm:p-5 text-white shadow-sm">
+      <DialogContent className="max-w-[96vw] md:max-w-4xl lg:max-w-5xl w-full max-h-[92vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+        {/* Fixed Header */}
+        <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2.5 text-white text-base sm:text-lg font-black">
-              <div className="p-1.5 sm:p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
-                <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-200" />
+            <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+              <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl border border-emerald-100 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400">
+                <Wallet className="w-5 h-5" />
               </div>
               Input Pembayaran Tunai (Kasir Keuangan)
             </DialogTitle>
-            <DialogDescription className="text-emerald-100 text-[11px] sm:text-xs mt-0.5">
-              Pencatatan langsung pembayaran tunai siswa di loket kasir keuangan.
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+              Pencatatan langsung multi pembayaran tunai dengan fleksibilitas bayar penuh atau mengangsur per tagihan.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -2343,7 +2622,12 @@ function ManualCashPaymentModal({
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => { setSelectedStudentId(''); setStudentSearch(''); setSelectedTagihanId(''); setCashAmount(''); setCashDiscountPct(0); }} 
+                    onClick={() => { 
+                      setSelectedStudentId(''); 
+                      setStudentSearch(''); 
+                      setSelectedTagihanIds([]); 
+                      setTagihanConfigs({}); 
+                    }} 
                     className="text-xs font-bold h-8 sm:h-9 rounded-xl border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 shrink-0"
                   >
                     Ganti Siswa
@@ -2425,9 +2709,8 @@ function ManualCashPaymentModal({
                           type="button"
                           onClick={() => {
                             setSelectedStudentId(s.id)
-                            setSelectedTagihanId('')
-                            setCashAmount('')
-                            setCashDiscountPct(0)
+                            setSelectedTagihanIds([])
+                            setTagihanConfigs({})
                           }}
                           className="w-full text-left p-2 sm:p-2.5 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 transition-colors flex items-center justify-between group gap-2"
                         >
@@ -2463,12 +2746,55 @@ function ManualCashPaymentModal({
             )}
           </div>
 
-          {/* STEP 2: PILIH TAGIHAN SISWA */}
+          {/* STEP 2: PILIH MULTI TAGIHAN SISWA */}
           {selectedStudentId && (
             <div className="space-y-2.5 bg-slate-50 dark:bg-slate-800/40 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
-              <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-                2. Pilih Tagihan Yang Ingin Dibayar
-              </Label>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                    2. Pilih Tagihan Yang Ingin Dibayar
+                  </Label>
+                  <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-black rounded-full border border-emerald-300 dark:border-emerald-800">
+                    {selectedTagihanIds.length} Terpilih
+                  </span>
+                </div>
+                {activeTagihans.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAllTagihans}
+                      className="h-7 text-[11px] font-bold rounded-lg border-slate-300 dark:border-slate-700"
+                    >
+                      {selectedTagihanIds.length === activeTagihans.length ? 'Batalkan Semua' : 'Pilih Semua Tagihan'}
+                    </Button>
+                    {selectedTagihanIds.length > 0 && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setAllSelectedPayType('FULL')}
+                          className="h-7 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/60 rounded-lg"
+                        >
+                          Set Semua Bayar Penuh
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setAllSelectedPayType('ANGSURAN')}
+                          className="h-7 text-[11px] font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/60 rounded-lg"
+                        >
+                          Set Semua Mengangsur
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {activeTagihans.length === 0 ? (
                 <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 font-bold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -2479,34 +2805,44 @@ function ManualCashPaymentModal({
                   {activeTagihans.map(t => {
                     const paid = t.amountPaid || 0
                     const remaining = Math.max(0, t.amount - paid)
-                    const isSelected = t.id === selectedTagihanId
+                    const isSelected = selectedTagihanIds.includes(t.id)
                     return (
                       <div
                         key={t.id}
-                        onClick={() => handleSelectTagihan(t.id)}
+                        onClick={() => handleToggleTagihan(t.id)}
                         className={`p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
                           isSelected 
-                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 shadow-sm ring-2 ring-emerald-500/20' 
+                            ? 'bg-emerald-50/90 dark:bg-emerald-950/70 border-emerald-500 shadow-sm ring-2 ring-emerald-500/25' 
                             : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className={`text-[11px] font-black px-2 py-0.5 rounded-md ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-700'}`}>
-                              {t.type}
-                            </span>
-                            {t.month && t.year && (
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mt-1">
-                                {MONTHS.find(m => m.value === t.month!.toString())?.label} {t.year}
-                              </p>
-                            )}
+                          <div className="flex items-center gap-2.5">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {}} // handled by parent onClick
+                              className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 dark:border-slate-700 cursor-pointer pointer-events-none"
+                            />
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-[11px] font-black px-2 py-0.5 rounded-md ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-700'}`}>
+                                  {t.type}
+                                </span>
+                                {t.month && t.year && (
+                                  <span className="text-[11px] text-slate-600 dark:text-slate-300 font-bold">
+                                    {MONTHS.find(m => m.value === t.month!.toString())?.label} {t.year}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                           <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${t.status === 'ANGSURAN' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
                             {t.status === 'ANGSURAN' ? 'Angsuran' : 'Belum Lunas'}
                           </span>
                         </div>
 
-                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                           <div>
                             <p className="text-[10px] text-slate-400 font-semibold">Sisa Tagihan</p>
                             <p className="font-black text-slate-900 dark:text-white text-sm sm:text-base">{currency(remaining)}</p>
@@ -2523,184 +2859,236 @@ function ManualCashPaymentModal({
             </div>
           )}
 
-          {/* STEP 3: FORM PEMBAYARAN & PRATINJAU KUITANSI */}
-          {selectedTagihan && (() => {
-            const paid = selectedTagihan.amountPaid || 0
-            let origAmount = selectedTagihan.amount
-            const discountMatch = selectedTagihan.notes?.match(/DISCOUNT_INFO:\s*(\{.*?\})/)
-            if (discountMatch) {
-              try {
-                const info = JSON.parse(discountMatch[1])
-                origAmount = info.originalAmount || selectedTagihan.amount
-              } catch {}
-            }
+          {/* STEP 3: DETAIL RINCIAN PEMBAYARAN MULTI TAGIHAN DENGAN PILIHAN BAYAR PENUH / MENGANGSUR */}
+          {selectedTagihanIds.length > 0 && (
+            <div className="space-y-4 bg-gradient-to-br from-slate-50 to-emerald-50/30 dark:from-slate-950 dark:to-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 rounded-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
+                <Label className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider block flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  3. Pengaturan Pembayaran per Tagihan ({selectedTagihanIds.length} Tagihan)
+                </Label>
+                <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
+                  Total Bayar: {currency(totalPaymentSummary.totalNominalBayar)}
+                </span>
+              </div>
 
-            const currentDiscountAmt = cashDiscountPct > 0 ? Math.round(origAmount * (cashDiscountPct / 100)) : 0
-            const currentFinalAmt = cashDiscountPct > 0 ? origAmount - currentDiscountAmt : selectedTagihan.amount
-            const remainingBeforePay = Math.max(0, currentFinalAmt - paid)
-            const payInputVal = parseFloat(cashAmount) || 0
-            const remainingAfterPay = Math.max(0, remainingBeforePay - payInputVal)
-            const isInfaq = selectedTagihan.type.toLowerCase() === 'infaq'
+              <div className="space-y-3">
+                {selectedTagihanIds.map((tagihanId, idx) => {
+                  const t = activeTagihans.find(item => item.id === tagihanId)
+                  if (!t) return null
+                  const calc = getTagihanCalculations(t)
+                  const cfg = tagihanConfigs[tagihanId] || { payType: 'FULL', amount: '', discountPct: 0, discountReason: '' }
 
-            return (
-              <div className="space-y-4 bg-gradient-to-br from-slate-50 to-emerald-50/30 dark:from-slate-950 dark:to-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 rounded-2xl">
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
-                  <Label className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider block flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                    3. Rincian & Opsi Pembayaran Kasir
-                  </Label>
-                  <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
-                    {selectedTagihan.type}
-                  </span>
-                </div>
+                  return (
+                    <div
+                      key={tagihanId}
+                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 rounded-xl space-y-3 shadow-xs"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800/80">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-black flex items-center justify-center">
+                            {idx + 1}
+                          </span>
+                          <div>
+                            <span className={`text-[11px] font-black px-2 py-0.5 rounded-md ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-700'}`}>
+                              {t.type}
+                            </span>
+                            {t.month && t.year && (
+                              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1.5">
+                                {MONTHS.find(m => m.value === t.month!.toString())?.label} {t.year}
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Terapkan Diskon Kasir */}
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block flex items-center gap-1">
-                      <Percent className="w-3 h-3 text-amber-600" /> Diskon Tunai Kasir
-                    </Label>
-                    <Select value={cashDiscountPct.toString()} onValueChange={(v) => handleDiscountChange(parseInt(v || '0', 10))}>
-                      <SelectTrigger className="bg-white dark:bg-slate-950 h-10 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800">
-                        <SelectValue placeholder="Pilih persentase diskon..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">0% (Tanpa Diskon Tambahan)</SelectItem>
-                        <SelectItem value="25">25% Diskon Tunai</SelectItem>
-                        <SelectItem value="50">50% Diskon Tunai</SelectItem>
-                        <SelectItem value="75">75% Diskon Tunai</SelectItem>
-                        <SelectItem value="100">100% Bebas Biaya / Beasiswa</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {cashDiscountPct > 0 && (
-                      <Input
-                        placeholder="Alasan Diskon (misal: Diskon Kasir / Beasiswa)"
-                        value={cashDiscountReason}
-                        onChange={(e) => setCashDiscountReason(e.target.value)}
-                        className="bg-white dark:bg-slate-950 text-xs h-9 mt-1 rounded-xl border-slate-200 dark:border-slate-800"
-                      />
-                    )}
-                  </div>
-
-                  {/* Nominal Bayar Input & Shortcut */}
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-                      Nominal Dibayar (Rp)
-                    </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">Rp</span>
-                      <Input
-                        type="number"
-                        disabled={isInfaq}
-                        placeholder="Masukkan nominal..."
-                        value={cashAmount}
-                        onChange={(e) => setCashAmount(e.target.value)}
-                        className="pl-8.5 h-10 bg-white dark:bg-slate-950 font-black text-slate-900 dark:text-white rounded-xl border-slate-200 dark:border-slate-800 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
-                    {/* Shortcut Buttons */}
-                    {!isInfaq && (
-                      <div className="flex gap-1.5 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setCashAmount(remainingBeforePay.toString())}
-                          className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200"
-                        >
-                          Lunas ({currency(remainingBeforePay)})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCashAmount(Math.round(remainingBeforePay / 2).toString())}
-                          className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-200"
-                        >
-                          50% ({currency(Math.round(remainingBeforePay / 2))})
-                        </button>
+                        {/* Pilihan Bayar Penuh vs Mengangsur */}
+                        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateTagihanConfig(tagihanId, {
+                                payType: 'FULL',
+                                amount: calc.remainingBeforePay.toString(),
+                              })
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
+                              cfg.payType === 'FULL'
+                                ? 'bg-emerald-600 text-white shadow-xs'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                            }`}
+                          >
+                            <CheckCircle2 className="w-3 h-3" /> Bayar Penuh (Lunas)
+                          </button>
+                          <button
+                            type="button"
+                            disabled={calc.isInfaq}
+                            onClick={() => {
+                              updateTagihanConfig(tagihanId, {
+                                payType: 'ANGSURAN',
+                                amount: cfg.amount || Math.round(calc.remainingBeforePay / 2).toString(),
+                              })
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
+                              calc.isInfaq 
+                                ? 'opacity-40 cursor-not-allowed text-slate-400'
+                                : cfg.payType === 'ANGSURAN'
+                                  ? 'bg-amber-600 text-white shadow-xs'
+                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                            }`}
+                          >
+                            <Clock className="w-3 h-3" /> Mengangsur
+                          </button>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* PRATINJAU KUITANSI / TRANSACTION BREAKDOWN CARD */}
-                <div className="bg-white dark:bg-slate-950 border border-emerald-200 dark:border-emerald-900/60 p-3.5 sm:p-4 rounded-xl space-y-2 text-xs text-slate-700 dark:text-slate-300 shadow-xs">
-                  <p className="font-black uppercase tracking-wider text-[10px] text-emerald-700 dark:text-emerald-400">
-                    Pratinjau Kalkulasi Kuitansi
-                  </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                        {/* Diskon Kasir */}
+                        <div className="sm:col-span-4 space-y-1">
+                          <Label className="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider block flex items-center gap-1">
+                            <Percent className="w-3 h-3 text-amber-600" /> Diskon Kasir
+                          </Label>
+                          <Select
+                            value={cfg.discountPct.toString()}
+                            onValueChange={(v) => {
+                              const pct = parseInt(v || '0', 10)
+                              updateTagihanConfig(tagihanId, { discountPct: pct })
+                            }}
+                          >
+                            <SelectTrigger className="bg-slate-50 dark:bg-slate-900 h-9 font-bold text-xs rounded-xl border-slate-200 dark:border-slate-800">
+                              <SelectValue placeholder="Pilih diskon" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="0">0% (Tanpa Diskon)</SelectItem>
+                              <SelectItem value="25">25% Diskon</SelectItem>
+                              <SelectItem value="50">50% Diskon</SelectItem>
+                              <SelectItem value="75">75% Diskon</SelectItem>
+                              <SelectItem value="100">100% Bebas Biaya</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                  <div className="space-y-1 pt-0.5 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Total Tagihan Awal:</span>
-                      <span className="font-semibold text-slate-900 dark:text-white">{currency(origAmount)}</span>
-                    </div>
+                        {/* Input Nominal Pembayaran */}
+                        <div className="sm:col-span-5 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
+                              Nominal Dibayar (Rp)
+                            </Label>
+                            <span className="text-[10px] text-slate-400 font-semibold">
+                              Sisa: {currency(calc.remainingBeforePay)}
+                            </span>
+                          </div>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">Rp</span>
+                            <Input
+                              type="number"
+                              disabled={cfg.payType === 'FULL' || calc.isInfaq}
+                              value={cfg.payType === 'FULL' ? calc.remainingBeforePay.toString() : cfg.amount}
+                              onChange={(e) => {
+                                updateTagihanConfig(tagihanId, { amount: e.target.value })
+                              }}
+                              className="pl-8.5 h-9 bg-slate-50 dark:bg-slate-900 font-black text-slate-900 dark:text-white rounded-xl border-slate-200 dark:border-slate-800 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                          </div>
+                        </div>
 
-                    {paid > 0 && (
-                      <div className="flex justify-between text-blue-700 dark:text-blue-400">
-                        <span>Sudah Diangsur:</span>
-                        <span className="font-bold">{currency(paid)}</span>
+                        {/* Status Kalkulasi Item */}
+                        <div className="sm:col-span-3 pb-1 text-right">
+                          <p className="text-[10px] text-slate-400 font-medium">Status Item</p>
+                          {calc.remainingAfterPay === 0 ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-600 dark:text-emerald-400">
+                              <CheckCircle2 className="w-3 h-3" /> Lunas ({currency(calc.payVal)})
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-black text-amber-600 dark:text-amber-400">
+                              <Clock className="w-3 h-3" /> Angsuran ({currency(calc.payVal)})
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )}
 
-                    {cashDiscountPct > 0 && (
-                      <div className="flex justify-between text-amber-700 dark:text-amber-400 font-semibold">
-                        <span>Potongan Diskon ({cashDiscountPct}%):</span>
-                        <span>- {currency(currentDiscountAmt)}</span>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between font-bold text-slate-900 dark:text-white pt-1 border-t border-slate-100 dark:border-slate-800">
-                      <span>Sisa Sebelum Bayar:</span>
-                      <span>{currency(remainingBeforePay)}</span>
-                    </div>
-
-                    <div className="flex justify-between font-black text-emerald-700 dark:text-emerald-400 text-sm pt-0.5">
-                      <span>Nominal Bayar Tunai:</span>
-                      <span>{currency(payInputVal)}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center font-black text-xs sm:text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
-                      <span className="text-slate-800 dark:text-slate-200">Status Transaksi:</span>
-                      {remainingAfterPay === 0 ? (
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-[11px] font-black flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> LUNAS SEKALIGUS
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-[11px] font-black flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> ANGSURAN (Kurang: {currency(remainingAfterPay)})
-                        </span>
+                      {cfg.discountPct > 0 && (
+                        <Input
+                          placeholder="Alasan Diskon / Beasiswa..."
+                          value={cfg.discountReason}
+                          onChange={(e) => updateTagihanConfig(tagihanId, { discountReason: e.target.value })}
+                          className="bg-slate-50 dark:bg-slate-900 text-xs h-8 rounded-xl border-slate-200 dark:border-slate-800"
+                        />
                       )}
                     </div>
+                  )
+                })}
+              </div>
+
+              {/* PRATINJAU TOTAL MULTI PEMBAYARAN KASIR */}
+              <div className="bg-white dark:bg-slate-950 border border-emerald-200 dark:border-emerald-900/60 p-3.5 sm:p-4 rounded-xl space-y-2 text-xs text-slate-700 dark:text-slate-300 shadow-xs">
+                <p className="font-black uppercase tracking-wider text-[10px] text-emerald-700 dark:text-emerald-400 flex items-center justify-between">
+                  <span>Pratinjau Total Kuitansi Multi Pembayaran</span>
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-black text-[10px]">
+                    {selectedTagihanIds.length} Tagihan Terpilih
+                  </span>
+                </p>
+
+                <div className="space-y-1 pt-0.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Total Sisa Tagihan Dipilih:</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">{currency(totalPaymentSummary.totalSisaAwal)}</span>
+                  </div>
+
+                  <div className="flex justify-between font-black text-emerald-700 dark:text-emerald-400 text-sm sm:text-base pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <span>Total Yang Akan Dibayarkan Tunai:</span>
+                    <span>{currency(totalPaymentSummary.totalNominalBayar)}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center font-bold text-xs pt-1">
+                    <span className="text-slate-600 dark:text-slate-400">Sisa Tagihan Setelah Pembayaran Ini:</span>
+                    <span className={totalPaymentSummary.totalSisaAkhir === 0 ? 'text-emerald-600 font-black' : 'text-amber-600 font-black'}>
+                      {currency(totalPaymentSummary.totalSisaAkhir)} {totalPaymentSummary.totalSisaAkhir === 0 ? '(LUNAS SEMUA)' : '(MASIH ADA SISA)'}
+                    </span>
                   </div>
                 </div>
-
-                {/* Catatan / Kuitansi */}
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-                    Catatan / Nomor Kuitansi (Opsional)
-                  </Label>
-                  <Input
-                    placeholder="Misal: KWT-KASIR/#1024 - Tunai Kasir Keuangan"
-                    value={cashNotes}
-                    onChange={(e) => setCashNotes(e.target.value)}
-                    className="bg-white dark:bg-slate-950 text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800"
-                  />
-                </div>
               </div>
-            )
-          })()}
+
+              {/* Catatan / Kuitansi Global */}
+              <div className="space-y-1">
+                <Label className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                  Catatan / Nomor Kuitansi Kasir (Opsional)
+                </Label>
+                <Input
+                  placeholder="Misal: KWT-KASIR/#1024 - Tunai Kasir Keuangan"
+                  value={cashNotes}
+                  onChange={(e) => setCashNotes(e.target.value)}
+                  className="bg-white dark:bg-slate-950 text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Fixed Sticky Footer */}
-        <div className="shrink-0 p-3.5 sm:p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose} className="h-10 rounded-xl font-semibold border-slate-300 dark:border-slate-700 text-xs">
-            Batal
-          </Button>
-          <Button
-            className="h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md gap-2 text-xs"
-            disabled={!selectedTagihanId || !cashAmount || parseFloat(cashAmount) <= 0 || payMut.isPending}
-            onClick={() => payMut.mutate()}
-          >
-            {payMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
-            Simpan Pembayaran Tunai
-          </Button>
+        <div className="shrink-0 p-3.5 sm:p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-between items-center gap-3">
+          <div className="text-xs text-slate-500 font-semibold w-full sm:w-auto text-center sm:text-left">
+            {selectedTagihanIds.length > 0 ? (
+              <span>
+                <strong className="text-slate-900 dark:text-white">{selectedTagihanIds.length}</strong> tagihan dipilih · Total: <strong className="text-emerald-600 dark:text-emerald-400 font-black">{currency(totalPaymentSummary.totalNominalBayar)}</strong>
+              </span>
+            ) : (
+              <span>Pilih satu atau beberapa tagihan untuk melanjutkan pembayaran.</span>
+            )}
+          </div>
+          
+          <div className="flex gap-2 w-full sm:w-auto justify-end">
+            <Button type="button" variant="outline" onClick={onClose} className="h-10 rounded-xl font-semibold border-slate-300 dark:border-slate-700 text-xs">
+              Batal
+            </Button>
+            <Button
+              className="h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md gap-2 text-xs"
+              disabled={!totalPaymentSummary.isValid || totalPaymentSummary.totalNominalBayar <= 0 || payMut.isPending}
+              onClick={() => payMut.mutate()}
+            >
+              {payMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
+              Simpan Pembayaran Tunai ({selectedTagihanIds.length})
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -2738,6 +3126,56 @@ function TabTagihan() {
   const [beasiswaSppVal, setBeasiswaSppVal] = useState<number>(0)
   const [beasiswaDppVal, setBeasiswaDppVal] = useState<number>(0)
   const [beasiswaReason, setBeasiswaReason] = useState<string>('')
+
+  // Bulk (multi-select) Set Beasiswa & Set Tagihan
+  const [bulkBeasiswaOpen, setBulkBeasiswaOpen] = useState(false)
+  const [bulkSeragamPct, setBulkSeragamPct] = useState<number>(0)
+  const [bulkSppPct, setBulkSppPct] = useState<number>(0)
+  const [bulkDppPct, setBulkDppPct] = useState<number>(0)
+  const [bulkReason, setBulkReason] = useState<string>('')
+  const [bulkTagihanOpen, setBulkTagihanOpen] = useState(false)
+
+  const openBulkBeasiswa = () => {
+    setBulkSeragamPct(0); setBulkSppPct(0); setBulkDppPct(0); setBulkReason('')
+    setBulkBeasiswaOpen(true)
+  }
+
+  const bulkBeasiswaMut = useMutation({
+    mutationFn: async () => {
+      const res = await authenticatedFetch('/api-backend/students/bulk-beasiswa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentIds: selectedStudentIds,
+          beasiswaSeragamPct: bulkSeragamPct,
+          beasiswaSppPct: bulkSppPct,
+          beasiswaDppPct: bulkDppPct,
+          beasiswaPercentage: bulkSppPct,
+          beasiswaReason: bulkReason,
+        }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal mengatur beasiswa massal')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['student-tagihan'] })
+      setBulkBeasiswaOpen(false)
+      setSelectedStudentIds([])
+      Swal.fire({
+        title: 'Beasiswa Diterapkan!',
+        text: data.message || 'Beasiswa siswa terpilih berhasil disimpan.',
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal Menyimpan', err.message || 'Terjadi kesalahan sistem', 'error')
+    },
+  })
 
   useEffect(() => {
     const handleOpenBeasiswa = (e: any) => {
@@ -2787,9 +3225,65 @@ function TabTagihan() {
     }
   })
 
-  // Pagination state for ultra-smooth rendering with large datasets
+  const [filterActive, setFilterActive] = useState<'ALL' | 'AKTIF' | 'NONAKTIF'>('ALL')
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const res = await authenticatedFetch(`/api-backend/students/${id}/toggle-active`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive })
+      })
+      if (!res.ok) throw new Error('Gagal memperbarui status keaktifan siswa')
+      return res.json()
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      if (selectedStudent) {
+        qc.invalidateQueries({ queryKey: ['student-tagihan', selectedStudent.id] })
+      }
+      Swal.fire({
+        title: 'Status Keaktifan Diperbarui',
+        text: `Status peserta didik berhasil di-${variables.isActive ? 'aktifkan' : 'nonaktifkan'}.`,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal', err.message || 'Gagal mengubah status keaktifan siswa', 'error')
+    }
+  })
+
+  const bulkToggleActiveMutation = useMutation({
+    mutationFn: async ({ ids, isActive }: { ids: string[]; isActive: boolean }) => {
+      const res = await authenticatedFetch(`/api-backend/students/bulk-toggle-active`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, isActive })
+      })
+      if (!res.ok) throw new Error('Gagal memperbarui status keaktifan siswa massal')
+      return res.json()
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      setSelectedStudentIds([])
+      Swal.fire({
+        title: 'Status Keaktifan Massal Diperbarui',
+        text: `${variables.ids.length} peserta didik berhasil di-${variables.isActive ? 'aktifkan' : 'nonaktifkan'}.`,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal', err.message || 'Gagal mengubah status keaktifan massal', 'error')
+    }
+  })
+
+  // Pagination state for ultra-smooth rendering with large datasets (Optimized for 2GB RAM devices)
   const [currentPage, setCurrentPage] = useState<number>(1)
-  const [pageSize, setPageSize] = useState<number>(25)
+  const [pageSize, setPageSize] = useState<number>(10)
 
   const { data: students = [], isLoading } = useQuery<StudentSummary[]>({
     queryKey: ['finance-students'],
@@ -2814,15 +3308,16 @@ function TabTagihan() {
   const filtered = useMemo(() =>
     students.filter(s =>
       (!filterKelas || s.className === filterKelas) &&
+      (filterActive === 'ALL' || (filterActive === 'AKTIF' ? s.isActive !== false : s.isActive === false)) &&
       (s.name.toLowerCase().includes(search.toLowerCase()) ||
         s.nisn.includes(search) || s.nis.includes(search) ||
         s.className.toLowerCase().includes(search.toLowerCase()))
-    ), [students, search, filterKelas])
+    ), [students, search, filterKelas, filterActive])
 
   // Reset current page to 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, filterKelas, pageSize])
+  }, [search, filterKelas, filterActive, pageSize])
 
   // Paginated students slice
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
@@ -3009,10 +3504,10 @@ function TabTagihan() {
         </div>
       </div>
 
-      {/* Toolbar / Search & Actions Filter (Responsive Wrap on Zoom) */}
+      {/* Toolbar / Search & Actions Filter (Responsive Wrap on Zoom 150%+) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 sm:p-2.5 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-[240px]">
-          <div className="relative flex-1 min-w-[140px]">
+        <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-[220px]">
+          <div className="relative flex-1 min-w-[130px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <Input
               placeholder="Cari siswa/kelas..."
@@ -3022,7 +3517,7 @@ function TabTagihan() {
             />
           </div>
           <Select value={filterKelas || 'all'} onValueChange={(v) => setFilterKelas(!v || v === 'all' ? '' : v)}>
-            <SelectTrigger className="w-[115px] sm:w-[130px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
+            <SelectTrigger className="w-[110px] sm:w-[125px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
               <SelectValue placeholder="Semua Kelas" />
             </SelectTrigger>
             <SelectContent>
@@ -3036,8 +3531,8 @@ function TabTagihan() {
           {!isKepalaSekolah && (
             <>
               <Button onClick={() => setMassalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white gap-1 h-8 px-2.5 text-xs font-bold rounded-lg shadow-xs">
-                <Layers className="w-3.5 h-3.5" /> Rilis 1 Th
+                className="bg-blue-600 hover:bg-blue-700 text-white gap-1 h-8 px-2 sm:px-2.5 text-xs font-bold rounded-lg shadow-xs touch-manipulation">
+                <Layers className="w-3.5 h-3.5" /> <span>Rilis Th / Sem</span>
               </Button>
               <Button
                 variant="outline"
@@ -3049,37 +3544,37 @@ function TabTagihan() {
                   openResetModal(filtered.map(s => s.id));
                 }}
                 disabled={filtered.length === 0}
-                className="border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 h-8 px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1"
+                className="border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 h-8 px-2 sm:px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1 touch-manipulation"
                 title={filterKelas ? `Reset Tagihan untuk Kelas ${filterKelas} (${filtered.length} Siswa)` : `Reset Tagihan Seluruh Siswa Terfilter (${filtered.length} Siswa)`}
               >
                 <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
-                {filterKelas ? `Reset ${filterKelas}` : search ? `Reset (${filtered.length})` : 'Reset Semua'}
+                <span>{filterKelas ? `Reset ${filterKelas}` : search ? `Reset (${filtered.length})` : 'Reset'}</span>
               </Button>
             </>
           )}
           <Button
             variant="outline"
             onClick={() => setExamCardModalOpen(true)}
-            className="border-pink-200 dark:border-pink-800 text-pink-700 dark:text-pink-300 hover:bg-pink-50 dark:hover:bg-pink-950/50 h-8 px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1"
+            className="border-pink-200 dark:border-pink-800 text-pink-700 dark:text-pink-300 hover:bg-pink-50 dark:hover:bg-pink-950/50 h-8 px-2 sm:px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1 touch-manipulation"
             title="Cetak Kartu Peserta Ujian Siswa (STS / SAS / SAT / CBT)">
-            <CreditCard className="w-3.5 h-3.5 text-pink-600" /> Kartu Ujian
+            <CreditCard className="w-3.5 h-3.5 text-pink-600" /> <span>Kartu Ujian</span>
           </Button>
           <Button
             variant="outline"
             onClick={() => setSklModalOpen(true)}
-            className="border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 h-8 px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1"
+            className="border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 h-8 px-2 sm:px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1 touch-manipulation"
             title="Cetak Surat Keterangan Lulus & Bebas Keuangan (SKL)">
-            <FileCheck className="w-3.5 h-3.5 text-emerald-600" /> SKL
+            <FileCheck className="w-3.5 h-3.5 text-emerald-600" /> <span>SKL</span>
           </Button>
           <Button variant="outline" onClick={handleExportRekapKelas}
-            className="border-indigo-200 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 h-8 px-2 text-xs font-bold rounded-lg"
+            className="border-indigo-200 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 h-8 px-2 text-xs font-bold rounded-lg touch-manipulation"
             title="Eksport Excel Rekap Keuangan Per Kelas">
-            <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" /> Excel
+            <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" /> <span>Excel</span>
           </Button>
           <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}
-            className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 h-8 px-2 text-xs font-bold rounded-lg"
+            className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 h-8 px-2 text-xs font-bold rounded-lg touch-manipulation"
             title="Export Seluruh Data">
-            <Download className="w-3.5 h-3.5" /> Export
+            <Download className="w-3.5 h-3.5" /> <span>Export</span>
           </Button>
         </div>
       </div>
@@ -3099,7 +3594,25 @@ function TabTagihan() {
             )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Button
+              size="sm"
+              onClick={openBulkBeasiswa}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
+              title="Set Beasiswa untuk siswa terpilih"
+            >
+              <Percent className="w-3.5 h-3.5" />
+              Set Beasiswa
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setBulkTagihanOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
+              title="Set Tagihan 1 tahun untuk siswa terpilih"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Set Tagihan
+            </Button>
             <Button
               size="sm"
               onClick={() => openResetModal(selectedStudentIds)}
@@ -3318,25 +3831,25 @@ function TabTagihan() {
 
       {/* RESTRICTED RESET PASSWORD AUTHORIZATION MODAL */}
       <Dialog open={resetAuthModalOpen} onOpenChange={(v) => { if (!v) closeResetAuthModal() }}>
-        <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-          <div className="shrink-0 bg-gradient-to-r from-rose-700 via-red-700 to-rose-900 p-6 text-white shadow-sm">
+        <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2.5 text-white text-lg font-extrabold">
-                <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
-                  <ShieldAlert className="w-5 h-5 text-rose-200" />
+              <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+                <div className="p-2 bg-rose-50 dark:bg-rose-950/60 rounded-xl border border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400">
+                  <ShieldAlert className="w-5 h-5" />
                 </div>
                 Otorisasi Reset Tagihan Siswa
               </DialogTitle>
-              <DialogDescription className="text-rose-100 text-xs mt-1">
+              <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
                 Akses Terbatas. Diperlukan verifikasi password akun keuangan Anda.
               </DialogDescription>
             </DialogHeader>
           </div>
 
           <form onSubmit={(e) => { e.preventDefault(); resetMut.mutate(); }} className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-              <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl text-xs text-rose-900 dark:text-rose-200 space-y-1">
-                <p className="font-extrabold flex items-center gap-1.5 text-sm text-rose-800 dark:text-rose-300">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar">
+              <div className="p-3.5 bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-900 dark:text-rose-200 space-y-1">
+                <p className="font-bold flex items-center gap-1.5 text-sm text-rose-800 dark:text-rose-300">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                   Peringatan Keamanan
                 </p>
@@ -3346,7 +3859,7 @@ function TabTagihan() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
                   Password Akun Keuangan <span className="text-rose-500">*</span>
                 </Label>
                 <div className="relative">
@@ -3355,21 +3868,21 @@ function TabTagihan() {
                     placeholder="Masukkan password akun Anda..."
                     value={authPassword}
                     onChange={(e) => { setAuthPassword(e.target.value); setAuthError(''); }}
-                    className="pl-9 h-11 bg-white dark:bg-slate-950 font-bold rounded-xl border-slate-200 dark:border-slate-800"
+                    className="pl-9 h-10 bg-white dark:bg-slate-950 font-medium rounded-xl border-slate-200 dark:border-slate-800"
                     required
                   />
                 </div>
                 {authError && (
-                  <p className="text-xs font-bold text-rose-600 dark:text-rose-400 mt-1">{authError}</p>
+                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 mt-1">{authError}</p>
                 )}
               </div>
             </div>
 
-            <div className="shrink-0 p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
-              <Button type="button" variant="outline" onClick={closeResetAuthModal} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+            <div className="shrink-0 p-4 sm:p-5 bg-slate-50/60 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2">
+              <Button type="button" variant="outline" onClick={closeResetAuthModal} className="h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700">
                 Batal
               </Button>
-              <Button type="submit" disabled={resetMut.isPending || !authPassword} className="h-11 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl shadow-md gap-2">
+              <Button type="submit" disabled={resetMut.isPending || !authPassword} className="h-10 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow-xs gap-1.5 text-xs sm:text-sm">
                 {resetMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                 Konfirmasi & Reset Tagihan
               </Button>
@@ -3380,16 +3893,16 @@ function TabTagihan() {
 
       {/* BEASISWA DIALOG KEUANGAN */}
       <Dialog open={isBeasiswaDialogOpen} onOpenChange={setIsBeasiswaDialogOpen}>
-        <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[92vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
-          <div className="shrink-0 bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 p-5 sm:p-6 text-white shadow-sm">
+        <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[92vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
             <DialogHeader className="space-y-1">
-              <DialogTitle className="flex items-center gap-3 text-white text-lg sm:text-xl font-extrabold">
-                <div className="p-2.5 bg-white/15 rounded-2xl backdrop-blur-md border border-white/20">
-                  <Percent className="w-5 h-5 text-amber-100" />
+              <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+                <div className="p-2 bg-amber-50 dark:bg-amber-950/60 rounded-xl border border-amber-100 dark:border-amber-900/50 text-amber-600 dark:text-amber-400">
+                  <Percent className="w-5 h-5" />
                 </div>
                 Pengaturan Beasiswa Keuangan
               </DialogTitle>
-              <DialogDescription className="text-amber-100 text-xs sm:text-sm font-medium">
+              <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
                 Atur alokasi persentase beasiswa untuk Seragam, SPP, & DPP.
               </DialogDescription>
             </DialogHeader>
@@ -3397,40 +3910,36 @@ function TabTagihan() {
 
           {beasiswaTargetStudent && (
             <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-5 custom-scrollbar">
-              <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-1.5 shadow-xs">
-                <p className="font-extrabold text-base text-slate-900 dark:text-slate-100">{beasiswaTargetStudent.name}</p>
+              <div className="bg-slate-50/70 dark:bg-slate-950/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5 shadow-xs">
+                <p className="font-bold text-base text-slate-900 dark:text-slate-100">{beasiswaTargetStudent.name}</p>
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-extrabold px-2.5 py-1 rounded-lg">
+                  <span className="bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 font-semibold px-2.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
                     Kelas: {beasiswaTargetStudent.className}
                   </span>
-                  <span className={`font-extrabold px-2.5 py-1 rounded-lg ${
-                    beasiswaTargetStudent.jalurPendaftaran === 'Mandiri'
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                      : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
-                  }`}>
+                  <span className="bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-semibold px-2.5 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">
                     Jalur: {beasiswaTargetStudent.jalurPendaftaran || 'Mandiri'}
                   </span>
                 </div>
               </div>
 
               {/* Rincian Beasiswa Per Item */}
-              <div className="space-y-4 bg-amber-50/60 dark:bg-amber-950/30 p-4 sm:p-5 rounded-2xl border border-amber-200/90 dark:border-amber-900/50">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-amber-200/70 pb-3">
-                  <p className="text-xs font-black text-amber-900 dark:text-amber-300 uppercase tracking-wider">
+              <div className="space-y-4 bg-slate-50/70 dark:bg-slate-950/50 p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-200/80 dark:border-slate-800 pb-3">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     Alokasi Beasiswa (%) Per Item:
                   </p>
-                  <span className="text-xs font-extrabold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/80 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-700 self-start sm:self-auto">
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 self-start sm:self-auto">
                     {beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? 'Seragam, SPP & DPP' : 'Hanya SPP & DPP'}
                   </span>
                 </div>
 
                 {beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? (
-                  <div className="space-y-2 bg-white dark:bg-slate-950 p-4 rounded-xl border border-amber-200/70 dark:border-slate-800 shadow-xs">
+                  <div className="space-y-2 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
-                      <Label className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs">
                         Beasiswa Seragam (%)
                       </Label>
-                      <span className="font-extrabold text-amber-700 dark:text-amber-400">
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">
                         Potongan: {beasiswaSeragamVal}% ({currency(2000000 * ((beasiswaSeragamVal || 0) / 100))})
                       </span>
                     </div>
@@ -3442,26 +3951,26 @@ function TabTagihan() {
                         placeholder="0 - 100%"
                         value={beasiswaSeragamVal || ''}
                         onChange={(e) => setBeasiswaSeragamVal(Math.min(100, Math.max(0, Number(e.target.value))))}
-                        className="bg-white dark:bg-slate-900 text-sm h-11 pr-9 font-bold rounded-xl border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-amber-500"
+                        className="bg-white dark:bg-slate-950 text-xs h-10 pr-9 font-semibold rounded-lg border-slate-200 dark:border-slate-800"
                       />
-                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 select-none">%</span>
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
                     </div>
-                    <p className="text-xs text-slate-500 font-medium">Bayar Netto: <strong className="text-emerald-600 font-bold">{currency(2000000 * (1 - (beasiswaSeragamVal || 0) / 100))}</strong> (Default Rp 2.000.000)</p>
+                    <p className="text-[11px] text-slate-500 font-medium">Bayar Netto: <strong className="text-emerald-600 font-semibold">{currency(2000000 * (1 - (beasiswaSeragamVal || 0) / 100))}</strong> (Default Rp 2.000.000)</p>
                   </div>
                 ) : (
-                  <div className="text-xs text-slate-600 dark:text-slate-300 font-medium bg-amber-100/50 dark:bg-slate-950 p-3.5 rounded-xl border border-amber-200 dark:border-slate-800 flex items-center gap-2.5">
-                    <Info className="w-5 h-5 text-amber-600 shrink-0" />
+                  <div className="text-xs text-slate-600 dark:text-slate-300 font-medium bg-amber-50/60 dark:bg-amber-950/20 p-3 rounded-xl border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5">
+                    <Info className="w-4 h-4 text-amber-600 shrink-0" />
                     <span>Jalur Mandiri tidak berhak mendapat Beasiswa Seragam. (Berhak untuk SPP & DPP).</span>
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div className="space-y-2 bg-white dark:bg-slate-950 p-4 rounded-xl border border-amber-200/70 dark:border-slate-800 shadow-xs">
+                  <div className="space-y-2 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
                     <div className="flex justify-between items-center text-xs">
-                      <Label className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs">
                         Beasiswa SPP (%)
                       </Label>
-                      <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs">
                         {beasiswaSppVal}%
                       </span>
                     </div>
@@ -3473,18 +3982,18 @@ function TabTagihan() {
                         placeholder="0 - 100%"
                         value={beasiswaSppVal || ''}
                         onChange={(e) => setBeasiswaSppVal(Math.min(100, Math.max(0, Number(e.target.value))))}
-                        className="bg-white dark:bg-slate-900 text-sm h-11 pr-9 font-bold rounded-xl border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-emerald-500"
+                        className="bg-white dark:bg-slate-950 text-xs h-10 pr-9 font-semibold rounded-lg border-slate-200 dark:border-slate-800"
                       />
-                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 select-none">%</span>
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
                     </div>
                   </div>
 
-                  <div className="space-y-2 bg-white dark:bg-slate-950 p-4 rounded-xl border border-amber-200/70 dark:border-slate-800 shadow-xs">
+                  <div className="space-y-2 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
                     <div className="flex justify-between items-center text-xs">
-                      <Label className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">
+                      <Label className="font-bold text-slate-800 dark:text-slate-200 text-xs">
                         Beasiswa DPP (%)
                       </Label>
-                      <span className="font-extrabold text-indigo-600 dark:text-indigo-400 text-sm">
+                      <span className="font-bold text-indigo-600 dark:text-indigo-400 text-xs">
                         {beasiswaDppVal}%
                       </span>
                     </div>
@@ -3496,33 +4005,33 @@ function TabTagihan() {
                         placeholder="0 - 100%"
                         value={beasiswaDppVal || ''}
                         onChange={(e) => setBeasiswaDppVal(Math.min(100, Math.max(0, Number(e.target.value))))}
-                        className="bg-white dark:bg-slate-900 text-sm h-11 pr-9 font-bold rounded-xl border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-indigo-500"
+                        className="bg-white dark:bg-slate-950 text-xs h-10 pr-9 font-semibold rounded-lg border-slate-200 dark:border-slate-800"
                       />
-                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 select-none">%</span>
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">%</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">Alasan / Catatan Beasiswa</Label>
+                <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 block">Alasan / Catatan Beasiswa</Label>
                 <Input
                   placeholder="Misal: Beasiswa Kader Persyarikatan / Prestasi / Bidikmisi"
                   value={beasiswaReason}
                   onChange={(e) => setBeasiswaReason(e.target.value)}
-                  className="bg-white dark:bg-slate-950 text-sm h-11 rounded-xl font-medium border-slate-200 dark:border-slate-800"
+                  className="bg-white dark:bg-slate-950 text-xs h-10 rounded-xl font-medium border-slate-200 dark:border-slate-800"
                 />
               </div>
             </div>
           )}
 
-          <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col-reverse sm:flex-row justify-end gap-2.5">
-            <Button type="button" variant="outline" onClick={() => setIsBeasiswaDialogOpen(false)} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+          <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950 flex flex-col-reverse sm:flex-row justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setIsBeasiswaDialogOpen(false)} className="h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700">
               Batal
             </Button>
             <Button
               type="button"
-              className="h-11 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl shadow-md gap-2"
+              className="h-10 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-xs gap-1.5 text-xs sm:text-sm"
               onClick={() => {
                 if (!beasiswaTargetStudent) return
                 updateBeasiswaMutation.mutate({
@@ -3537,7 +4046,7 @@ function TabTagihan() {
               disabled={updateBeasiswaMutation.isPending}
             >
               {updateBeasiswaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Percent className="w-4 h-4" />}
-              Simpan Beasiswa Keuangan
+              Simpan Beasiswa
             </Button>
           </div>
         </DialogContent>
@@ -3547,6 +4056,84 @@ function TabTagihan() {
         onClose={() => { setModalOpen(false); setSelectedStudent(null) }}
         onResetStudent={(id) => openResetModal([id])} />
       <ReleaseYearlyModal open={massalOpen} onClose={() => setMassalOpen(false)} classes={classes} />
+      <ReleaseYearlyModal
+        open={bulkTagihanOpen}
+        onClose={() => setBulkTagihanOpen(false)}
+        classes={classes}
+        studentIds={bulkTagihanOpen ? selectedStudentIds : undefined}
+      />
+
+      {/* BULK SET BEASISWA DIALOG */}
+      <Dialog open={bulkBeasiswaOpen} onOpenChange={setBulkBeasiswaOpen}>
+        <DialogContent className="max-w-md w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+                <div className="p-2 bg-amber-50 dark:bg-amber-950/60 rounded-xl border border-amber-100 dark:border-amber-900/50 text-amber-600 dark:text-amber-400">
+                  <Percent className="w-5 h-5" />
+                </div>
+                Set Beasiswa Massal
+              </DialogTitle>
+              <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+                Berlaku untuk {selectedStudentIds.length} siswa terpilih. Tagihan lunas tidak diubah.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <form
+            onSubmit={(e) => { e.preventDefault(); bulkBeasiswaMut.mutate() }}
+            className="flex-1 flex flex-col overflow-hidden"
+          >
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {([
+                  { label: 'Seragam (%)', val: bulkSeragamPct, set: setBulkSeragamPct },
+                  { label: 'SPP (%)', val: bulkSppPct, set: setBulkSppPct },
+                  { label: 'DPP (%)', val: bulkDppPct, set: setBulkDppPct },
+                ] as const).map((f) => (
+                  <div key={f.label} className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{f.label}</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="0"
+                        value={f.val || ''}
+                        onChange={(e) => f.set(Math.min(100, Math.max(0, Number(e.target.value))))}
+                        className="h-10 pr-8 font-semibold text-xs rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Beasiswa Seragam hanya berlaku bagi siswa non-Mandiri. Isi 0 untuk menghapus beasiswa.
+              </p>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">Alasan / Catatan</Label>
+                <Input
+                  placeholder="Misal: Beasiswa Prestasi / Kader"
+                  value={bulkReason}
+                  onChange={(e) => setBulkReason(e.target.value)}
+                  className="h-10 text-xs rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="shrink-0 p-4 sm:p-5 bg-slate-50/60 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setBulkBeasiswaOpen(false)} className="h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700">
+                Batal
+              </Button>
+              <Button type="submit" disabled={bulkBeasiswaMut.isPending} className="h-10 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-xs gap-1.5 text-xs sm:text-sm">
+                {bulkBeasiswaMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Percent className="w-4 h-4" />}
+                Simpan ({selectedStudentIds.length})
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
       <ManualCashPaymentModal open={cashModalOpen} onClose={() => setCashModalOpen(false)} students={students} />
       <ExamCardPrintDialog open={examCardModalOpen} onClose={() => setExamCardModalOpen(false)} classes={classes} />
       <SklPrintDialog open={sklModalOpen} onClose={() => setSklModalOpen(false)} classes={classes} />
@@ -3572,6 +4159,7 @@ function TabRekap() {
   const { data: classes = [] } = useQuery<ClassItem[]>({
     queryKey: ['classes'],
     queryFn: () => authenticatedQuery('/api-backend/classes'),
+    staleTime: 60000,
   })
 
   useEffect(() => {
@@ -3589,7 +4177,8 @@ function TabRekap() {
       return res.json()
     },
     enabled: rekapMode === 'GENERAL',
-    refetchInterval: 5000,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   })
 
   const { data: quarterlyData, isLoading: loadingQuarterly } = useQuery<any>({
@@ -3600,7 +4189,8 @@ function TabRekap() {
       return res.json()
     },
     enabled: rekapMode === 'TRIWULAN' && !!triwulanClassId,
-    refetchInterval: 5000,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   })
 
   const handleExportTriwulanExcel = async () => {
@@ -3947,42 +4537,42 @@ export default function KeuanganMasukPage() {
 
   return (
     <KeuanganRoleContext.Provider value={{ isKepalaSekolah }}>
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-xs shrink-0">
-            <Wallet className="w-4 h-4 text-white" />
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-1">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-xs shrink-0 text-white">
+              <Wallet className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg lg:text-xl font-black tracking-tight text-slate-900 dark:text-white leading-tight truncate">
+                Keuangan Masuk
+              </h1>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">Tagihan, verifikasi pembayaran, & rekapitulasi</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white">
-              Keuangan Masuk
-            </h1>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Tagihan, verifikasi pembayaran, & rekapitulasi</p>
+
+          {/* Tab Navigation Compact Pill Style */}
+          <div className="flex flex-wrap items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80 gap-1 self-start md:self-auto shrink-0">
+            {TABS.map(tab => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.id
+              return (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-bold rounded-lg whitespace-nowrap transition-all touch-manipulation cursor-pointer ${isActive ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/10'}`}>
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span>{tab.label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* Tab Navigation Compact Pill Style */}
-        <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80 gap-1 overflow-x-auto self-start sm:self-auto">
-          {TABS.map(tab => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap transition-all ${isActive ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-white/50'}`}>
-                <Icon className="w-3.5 h-3.5" />
-                {tab.label}
-              </button>
-            )
-          })}
+        <div>
+          {activeTab === 'tagihan' && <TabTagihan />}
+          {activeTab === 'verifikasi' && <PaymentProofVerificationPage />}
+          {activeTab === 'rekap' && <TabRekap />}
         </div>
       </div>
-
-      <div>
-        {activeTab === 'tagihan' && <TabTagihan />}
-        {activeTab === 'verifikasi' && <PaymentProofVerificationPage />}
-        {activeTab === 'rekap' && <TabRekap />}
-      </div>
-    </div>
     </KeuanganRoleContext.Provider>
   )
 }

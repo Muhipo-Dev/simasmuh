@@ -803,7 +803,7 @@ function InteractiveGuestBook() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Nomor Kontak / WhatsApp</Label>
+              <Label>Nomor Kontak / Telepon</Label>
               <Input
                 placeholder="0812-xxxx-xxxx"
                 value={formState.kontak}

@@ -13,8 +13,8 @@ import {
 export const superadminLinks = [
   // Utama & Akses Cepat
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
+  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Disposisi', href: '/fitur/disposisi', icon: FileCheck },
 
   // Master Data
@@ -25,12 +25,6 @@ export const superadminLinks = [
   { name: 'Rombongan Belajar', href: '/master-data/kelas', icon: BookOpen, group: 'Master Data' },
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap, group: 'Master Data' },
   { name: 'Jadwal Akademik', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Master Data' },
-
-  // Layanan Pribadi Pegawai
-  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Mandiri' },
-  { name: 'Izin Keluar Kantor', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Mandiri' },
-  { name: 'Pengajuan Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Mandiri' },
-  { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
 
   // Pengaturan Advance & Sistem
   { name: 'Pusat Berkas & Storage', href: '/fitur/file-explorer', icon: HardDrive, group: 'Konfigurasi Lanjutan' },
@@ -43,14 +37,21 @@ export const superadminLinks = [
   { name: 'Publikasi & Informasi', href: '/informasi/pengumuman', icon: Megaphone, group: 'Konfigurasi Lanjutan' },
   { name: 'Banner Portal', href: '/informasi/banner', icon: ImageIcon, group: 'Konfigurasi Lanjutan' },
   { name: 'Prestasi Siswa', href: '/informasi/prestasi', icon: Trophy, group: 'Konfigurasi Lanjutan' },
+
+  // Layanan Pribadi Pegawai (Paling Bawah)
+  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Mandiri' },
+  { name: 'Tunjangan Harian', href: '/keuangan/tunjangan-harian', icon: Clock, group: 'Layanan Mandiri' },
+  { name: 'Izin Keluar Kantor', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Mandiri' },
+  { name: 'Pengajuan Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Mandiri' },
+  { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
 ]
 
 // 2. Admin TU / BAU (Tata Usaha & Administrasi Perkantoran)
 export const bauLinks = [
   // Utama & Akses Cepat
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
+  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Disposisi', href: '/fitur/disposisi', icon: FileCheck },
 
   // Layanan Tata Usaha & Administrasi
@@ -73,25 +74,26 @@ export const bauLinks = [
   { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap, group: 'Master Data' },
   { name: 'Jadwal Akademik', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Master Data' },
 
-  // Layanan Pribadi Pegawai
-  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Mandiri' },
-  { name: 'Izin Keluar Kantor', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Mandiri' },
-  { name: 'Pengajuan Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Mandiri' },
-  { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
-
   // Administrasi Sistem
   { name: 'Terminal Presensi QR', href: '/presensi/manajemen-qr', icon: QrCode, group: 'Operasional Sistem' },
   { name: 'Manajemen Pengguna', href: '/master-data/pengguna', icon: UserCog, group: 'Operasional Sistem' },
   { name: 'Konfigurasi Notifikasi', href: '/pengaturan/notifikasi', icon: Mail, group: 'Operasional Sistem' },
   { name: 'Pengaturan Sistem', href: '/pengaturan/sistem', icon: Settings, group: 'Operasional Sistem' },
+
+  // Layanan Pribadi Pegawai (Paling Bawah)
+  { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Mandiri' },
+  { name: 'Tunjangan Harian', href: '/keuangan/tunjangan-harian', icon: Clock, group: 'Layanan Mandiri' },
+  { name: 'Izin Keluar Kantor', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Mandiri' },
+  { name: 'Pengajuan Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Mandiri' },
+  { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
 ]
 
 // 3. Guru (Layanan Pembelajaran & Pengajaran)
 export const guruLinks = [
   // Utama & Akses Cepat
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
+  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Disposisi', href: '/fitur/disposisi', icon: FileCheck },
 
   // Operasional Akademik Guru
@@ -100,10 +102,25 @@ export const guruLinks = [
   { name: 'Jadwal Mengajar', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Operasional Akademik' },
   { name: 'Rekam Disiplin Siswa', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Operasional Akademik' },
 
-  // Layanan Pribadi
+  // Layanan Pribadi (Paling Bawah)
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Mandiri' },
+  { name: 'Tunjangan Harian', href: '/keuangan/tunjangan-harian', icon: Clock, group: 'Layanan Mandiri' },
   { name: 'Izin Keluar Kantor', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Mandiri' },
   { name: 'Pengajuan Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Mandiri' },
+  { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
+]
+
+// 3b. Guru Honorer / Guru Panggilan (Pegawai Kontrak Sangat Sementara)
+export const honorerLinks = [
+  // Utama & Akses Cepat
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+
+  // Operasional Akademik Khusus Guru Panggilan
+  { name: 'Jurnal Pembelajaran', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Operasional Akademik' },
+  { name: 'Jadwal Mengajar', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Operasional Akademik' },
+  { name: 'Presensi Kelas Binaan', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck, group: 'Operasional Akademik' },
+
+  // Layanan Mandiri
   { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
 ]
 
@@ -111,15 +128,16 @@ export const guruLinks = [
 export const pegawaiLinks = [
   // Utama & Akses Cepat
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
+  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Disposisi', href: '/fitur/disposisi', icon: FileCheck },
 
   // Kinerja Operasional Pegawai
   { name: 'Jurnal Kinerja Pegawai', href: '/presensi/jurnal-karyawan', icon: BookOpen, group: 'Kinerja Operasional' },
 
-  // Layanan Pribadi
+  // Layanan Pribadi (Paling Bawah)
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Mandiri' },
+  { name: 'Tunjangan Harian', href: '/keuangan/tunjangan-harian', icon: Clock, group: 'Layanan Mandiri' },
   { name: 'Izin Keluar Kantor', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Mandiri' },
   { name: 'Pengajuan Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Mandiri' },
   { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
@@ -129,40 +147,47 @@ export const pegawaiLinks = [
 export const siswaLinks = [
   // Fitur Utama & Akademik
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Buku Induk Mandiri', href: '/siswa/buku-induk', icon: BookMarked },
+  { name: 'Log Kehadiran', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
   { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Kartu Tanda Pelajar', href: '/pengaturan/profil#kartu-pelajar', icon: CreditCard },
-  { name: 'Log Kehadiran', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck, group: 'Layanan Akademik' },
+
+  // Layanan Akademik Siswa
+  { name: 'Buku Induk Mandiri', href: '/siswa/buku-induk', icon: BookMarked, group: 'Layanan Akademik' },
   { name: 'Jadwal Pembelajaran', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Layanan Akademik' },
   { name: 'Portofolio Prestasi', href: '/informasi/prestasi', icon: Trophy, group: 'Layanan Akademik' },
   { name: 'Pengembangan Diri', href: '/siswa/ekstrakurikuler', icon: Sparkles, group: 'Layanan Akademik' },
 
-  // Perizinan & Keuangan Siswa
-  { name: 'Permohonan Izin', href: '/presensi/izin-siswa', icon: DoorOpen, group: 'Layanan Administrasi' },
-  { name: 'Pengajuan Dispensasi', href: '/presensi/dispensasi', icon: Award, group: 'Layanan Administrasi' },
-  { name: 'Tagihan & Keuangan', href: '/keuangan/laporan', icon: Wallet, group: 'Layanan Administrasi' },
-  { name: 'Tata Tertib & Etika', href: '/akademik/etika-tatib', icon: ShieldCheck, group: 'Layanan Administrasi' },
-  { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Administrasi' },
+  // Layanan Mandiri / Administrasi Siswa (Paling Bawah)
+  { name: 'Permohonan Izin', href: '/presensi/izin-siswa', icon: DoorOpen, group: 'Layanan Mandiri' },
+  { name: 'Pengajuan Dispensasi', href: '/presensi/dispensasi', icon: Award, group: 'Layanan Mandiri' },
+  { name: 'Tagihan & Keuangan', href: '/keuangan/laporan', icon: Wallet, group: 'Layanan Mandiri' },
+  { name: 'Tata Tertib & Etika', href: '/akademik/etika-tatib', icon: ShieldCheck, group: 'Layanan Mandiri' },
+  { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
 ]
 
 // 6. Wali Murid (Portal Orang Tua / Wali)
 export const waliMuridLinks = [
+  // Utama & Akses Cepat
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Monitoring Presensi', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck, group: 'Monitoring Perkembangan' },
+  { name: 'Log Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
+
+  // Monitoring Perkembangan Siswa
   { name: 'Portofolio Prestasi', href: '/informasi/prestasi', icon: Trophy, group: 'Monitoring Perkembangan' },
-  { name: 'Permohonan Izin Siswa', href: '/presensi/izin-siswa', icon: DoorOpen, group: 'Layanan & Tagihan' },
-  { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award, group: 'Layanan & Tagihan' },
-  { name: 'Informasi Tagihan & SPP', href: '/keuangan/laporan', icon: Wallet, group: 'Layanan & Tagihan' },
-  { name: 'Tata Tertib Sekolah', href: '/akademik/etika-tatib', icon: ShieldCheck, group: 'Layanan & Tagihan' },
-  { name: 'Notifikasi Wali', href: '/pengaturan/notifikasi-wali', icon: Mail, group: 'Layanan & Tagihan' },
+  { name: 'Tata Tertib Sekolah', href: '/akademik/etika-tatib', icon: ShieldCheck, group: 'Monitoring Perkembangan' },
+
+  // Layanan Mandiri & Tagihan (Paling Bawah)
+  { name: 'Permohonan Izin Siswa', href: '/presensi/izin-siswa', icon: DoorOpen, group: 'Layanan Mandiri' },
+  { name: 'Dispensasi Siswa', href: '/presensi/dispensasi', icon: Award, group: 'Layanan Mandiri' },
+  { name: 'Informasi Tagihan & SPP', href: '/keuangan/laporan', icon: Wallet, group: 'Layanan Mandiri' },
+  { name: 'Notifikasi Wali', href: '/pengaturan/notifikasi-wali', icon: Mail, group: 'Layanan Mandiri' },
 ]
 
 // 7. Kepala Sekolah (Eksekutif & Supervisi Terpadu)
 export const kepalaSekolahLinks = [
   // Utama & Akses Cepat
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi GTK', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
+  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Disposisi', href: '/fitur/disposisi', icon: FileCheck },
 
   // Otorisasi & E-Sign Persuratan
@@ -194,8 +219,9 @@ export const kepalaSekolahLinks = [
   { name: 'Agenda Kegiatan Korporasi', href: '/fitur/kegiatan-sekolah', icon: CalendarDays, group: 'Tata Kelola Operasional' },
   { name: 'Laporan Finansial', href: '/keuangan/laporan', icon: Wallet, group: 'Tata Kelola Operasional' },
 
-  // Layanan Pribadi
+  // Layanan Pribadi (Paling Bawah)
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Mandiri' },
+  { name: 'Tunjangan Harian', href: '/keuangan/tunjangan-harian', icon: Clock, group: 'Layanan Mandiri' },
   { name: 'Izin Keluar Kantor', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Mandiri' },
   { name: 'Pengajuan Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Mandiri' },
   { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
@@ -205,8 +231,8 @@ export const kepalaSekolahLinks = [
 export const keuanganAllLinks = [
   // Utama & Akses Cepat
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
+  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Disposisi', href: '/fitur/disposisi', icon: FileCheck },
 
   // Panel Manajemen Keuangan
@@ -218,8 +244,9 @@ export const keuanganAllLinks = [
   { name: 'Tarif & Skema Biaya', href: '/keuangan/pengaturan', icon: Settings, group: 'Manajemen Finansial' },
   { name: 'Laporan Arus Kas & Finansial', href: '/keuangan/laporan', icon: FileText, group: 'Manajemen Finansial' },
 
-  // Layanan Pribadi
+  // Layanan Pribadi (Paling Bawah)
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Mandiri' },
+  { name: 'Tunjangan Harian', href: '/keuangan/tunjangan-harian', icon: Clock, group: 'Layanan Mandiri' },
   { name: 'Izin Keluar Kantor', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Mandiri' },
   { name: 'Pengajuan Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Mandiri' },
   { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
@@ -229,20 +256,20 @@ export const keuanganAllLinks = [
 export const keuanganMasukLinks = [
   // Utama & Akses Cepat
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
+  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Disposisi', href: '/fitur/disposisi', icon: FileCheck },
 
   // Fitur Keuangan Masuk
   { name: 'Penerimaan Kas & SPP', href: '/keuangan/pemasukan', icon: Wallet, group: 'Penerimaan Kas' },
   { name: 'Integrasi Virtual Account', href: '/keuangan/virtual-account', icon: Database, group: 'Penerimaan Kas' },
   { name: 'Verifikasi Bukti Bayar', href: '/keuangan/file-explorer', icon: HardDrive, group: 'Penerimaan Kas' },
-  { name: 'Penggajian & Payroll', href: '/keuangan/penggajian', icon: Banknote, group: 'Penerimaan Kas' },
   { name: 'Tarif & Skema Biaya', href: '/keuangan/pengaturan', icon: Settings, group: 'Penerimaan Kas' },
   { name: 'Laporan Penerimaan', href: '/keuangan/laporan', icon: FileText, group: 'Penerimaan Kas' },
 
-  // Layanan Pribadi
+  // Layanan Pribadi (Paling Bawah)
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Mandiri' },
+  { name: 'Tunjangan Harian', href: '/keuangan/tunjangan-harian', icon: Clock, group: 'Layanan Mandiri' },
   { name: 'Izin Keluar Kantor', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Mandiri' },
   { name: 'Pengajuan Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Mandiri' },
   { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
@@ -252,18 +279,18 @@ export const keuanganMasukLinks = [
 export const keuanganKeluarLinks = [
   // Utama & Akses Cepat
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Log Presensi', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
+  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Disposisi', href: '/fitur/disposisi', icon: FileCheck },
 
   // Fitur Keuangan Keluar
   { name: 'Pengeluaran & Belanja', href: '/keuangan/pengeluaran', icon: Receipt, group: 'Pengeluaran Kas' },
   { name: 'Verifikasi Bukti Belanja', href: '/keuangan/file-explorer', icon: HardDrive, group: 'Pengeluaran Kas' },
-  { name: 'Penggajian & Payroll', href: '/keuangan/penggajian', icon: Banknote, group: 'Pengeluaran Kas' },
   { name: 'Laporan Pengeluaran', href: '/keuangan/laporan', icon: FileText, group: 'Pengeluaran Kas' },
 
-  // Layanan Pribadi
+  // Layanan Pribadi (Paling Bawah)
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Mandiri' },
+  { name: 'Tunjangan Harian', href: '/keuangan/tunjangan-harian', icon: Clock, group: 'Layanan Mandiri' },
   { name: 'Izin Keluar Kantor', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Layanan Mandiri' },
   { name: 'Pengajuan Cuti', href: '/presensi/cuti', icon: CalendarDays, group: 'Layanan Mandiri' },
   { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
@@ -271,11 +298,41 @@ export const keuanganKeluarLinks = [
 
 // Pengecekan Hak Akses Rute Ketat Berdasarkan Role & Sub-Role
 export function isPathAllowedForRoles(pathname: string, roles: string[]): boolean {
-  // 1. Modul Keuangan (MUTLAK: Superadmin, Admin IT, Admin TU/BAU DILARANG mengakses seluruh panel keuangan, KECUALI slip-gaji)
+  // Pegawai Honorer / Guru Panggilan: Hanya boleh mengakses Dashboard, Jadwal, Jurnal Mengajar, Presensi Siswa, dan Notifikasi Akun
+  const isHonorer = roles.includes('HONORER')
+  if (isHonorer) {
+    if (
+      pathname.startsWith('/keuangan/') ||
+      pathname.startsWith('/presensi/kehadiran-pegawai') ||
+      pathname.startsWith('/presensi/scan-qr') ||
+      pathname.startsWith('/presensi/cuti') ||
+      pathname.startsWith('/presensi/izin-keluar') ||
+      pathname.startsWith('/presensi/jurnal-karyawan') ||
+      pathname.startsWith('/presensi/manajemen-qr') ||
+      pathname.startsWith('/fitur/kepegawaian') ||
+      pathname.startsWith('/master-data/guru') ||
+      pathname.startsWith('/master-data/pengguna')
+    ) {
+      return false
+    }
+    if (
+      pathname === '/dashboard' ||
+      pathname === '/profil' ||
+      pathname === '/pengaturan/profil' ||
+      pathname === '/pengaturan/notifikasi-pengguna' ||
+      pathname.startsWith('/akademik/jurnal-mengajar') ||
+      pathname.startsWith('/akademik/jadwal-pelajaran') ||
+      pathname.startsWith('/presensi/kehadiran-siswa')
+    ) {
+      return true
+    }
+  }
+
+  // 1. Modul Keuangan (MUTLAK: Superadmin, Admin IT, Admin TU/BAU DILARANG mengakses seluruh panel keuangan, KECUALI slip-gaji dan tunjangan-harian)
   if (pathname.startsWith('/keuangan/')) {
-    // Slip Gaji — Diizinkan untuk setiap staf/pengguna sistem (kecuali SISWA dan WALI_MURID)
-    if (pathname.startsWith('/keuangan/slip-gaji')) {
-      return !roles.includes('SISWA') && !roles.includes('WALI_MURID')
+    // Slip Gaji & Tunjangan Harian — Diizinkan untuk setiap staf/pengguna sistem (kecuali SISWA, WALI_MURID, dan HONORER)
+    if (pathname.startsWith('/keuangan/slip-gaji') || pathname.startsWith('/keuangan/tunjangan-harian')) {
+      return !roles.includes('SISWA') && !roles.includes('WALI_MURID') && !roles.includes('HONORER')
     }
     // Laporan Keuangan untuk Siswa / Wali Murid
     if (pathname.startsWith('/keuangan/laporan') && (roles.includes('SISWA') || roles.includes('WALI_MURID'))) {
@@ -300,9 +357,9 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     if (pathname.startsWith('/keuangan/pengeluaran') || pathname.startsWith('/keuangan/lpj')) {
       return isKeuanganAll || isKeuanganKeluar || roles.includes('KEUANGAN')
     }
-    // Penggajian Pegawai — Keuangan All, Keuangan Masuk & Keuangan Keluar
+    // Penggajian Pegawai & Payroll — HANYA Keuangan Lengkap / Keuangan All (KEUANGAN_ALL / SUPERVISOR_KEUANGAN / KEUANGAN)
     if (pathname.startsWith('/keuangan/penggajian')) {
-      return isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar || roles.includes('KEUANGAN')
+      return isKeuanganAll || roles.includes('KEUANGAN')
     }
     // Laporan Keuangan — Keuangan All, Masuk, Keluar, dan Kepala Sekolah (Supervisi Eksekutif)
     if (pathname.startsWith('/keuangan/laporan')) {
@@ -313,7 +370,7 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
 
   const isKepalaSekolah = roles.includes('KEPALA_SEKOLAH')
   const isBau = roles.includes('ADMIN_TU') || roles.includes('BAU') || roles.includes('TATA_USAHA')
-  const isGuru = roles.includes('GURU')
+  const isGuru = roles.includes('GURU') || roles.includes('HONORER')
   const isWaliKelas = roles.includes('WALI_KELAS')
   const isPegawai = roles.includes('PEGAWAI') || roles.includes('KARYAWAN')
   const isSiswa = roles.includes('SISWA')
@@ -494,7 +551,7 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   return allowedLinks.some(l => pathname.startsWith(l.href))
 }
 
-export function getRoleLinks(role: string, subRole?: string, subRole2?: string, subRole3?: string, subRole4?: string, subRole5?: string) {
+export function getRoleLinks(role: string, subRole?: string, subRole2?: string, subRole3?: string, subRole4?: string, subRole5?: string, username?: string) {
   let currentLinks: any[] = []
   
   const addLinks = (links: any[]) => {
@@ -512,6 +569,8 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
     addLinks(kepalaSekolahLinks)
   } else if (role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA') {
     addLinks(bauLinks)
+  } else if (role === 'HONORER') {
+    addLinks(honorerLinks)
   } else if (role === 'GURU') {
     addLinks(guruLinks)
   } else if (role === 'SISWA') {
@@ -520,7 +579,7 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
     addLinks(waliMuridLinks)
   } else if (role === 'PEGAWAI' || role === 'KARYAWAN') {
     addLinks(pegawaiLinks)
-  } else if (role === 'KEUANGAN_ALL' || role === 'SUPERVISOR_KEUANGAN') {
+  } else if (role === 'KEUANGAN' || role === 'KEUANGAN_ALL' || role === 'SUPERVISOR_KEUANGAN') {
     addLinks(keuanganAllLinks)
   } else if (role === 'KEUANGAN_MASUK') {
     addLinks(keuanganMasukLinks)
@@ -646,7 +705,7 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
       ])
     } else if (roleName === 'ADMIN_TU' || roleName === 'BAU' || roleName === 'TATA_USAHA') {
       addLinks(bauLinks.map(l => ({ ...l, group: 'Administrasi & Persuratan' })))
-    } else if (roleName === 'KEUANGAN_ALL' || roleName === 'SUPERVISOR_KEUANGAN') {
+    } else if (roleName === 'KEUANGAN' || roleName === 'KEUANGAN_ALL' || roleName === 'SUPERVISOR_KEUANGAN') {
       addLinks(keuanganAllLinks.map(l => ({ ...l, group: 'Manajemen Finansial' })))
     } else if (roleName === 'KEUANGAN_MASUK') {
       addLinks(keuanganMasukLinks.map(l => ({ ...l, group: 'Penerimaan Kas' })))
@@ -670,6 +729,16 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
   applySubRoleLinks(subRole4)
   applySubRoleLinks(subRole5)
 
-  // Pastikan tombol Profil selalu difilter untuk semua pengguna tanpa terkecuali
-  return currentLinks.filter(link => link.href !== '/pengaturan/profil' && link.name !== 'Profil')
+  // Filter profil
+  const filtered = currentLinks.filter(link => link.href !== '/pengaturan/profil' && link.name !== 'Profil')
+
+  // Pastikan urutan:
+  // 1. Paling Atas: Fitur umum yang sering digunakan (Dashboard, Log Presensi, Presensi QR, Disposisi / tanpa group)
+  // 2. Di Tengah: Fitur role & subrole (Master Data, Supervisi, Operasional, Administrasi, dll.)
+  // 3. Paling Bawah: Layanan Mandiri (Slip Gaji, Tunjangan Harian, Izin, Cuti, Notifikasi)
+  const topGeneral = filtered.filter(l => !l.group)
+  const middleRoleFeatures = filtered.filter(l => l.group && l.group !== 'Layanan Mandiri')
+  const bottomPersonal = filtered.filter(l => l.group === 'Layanan Mandiri')
+
+  return [...topGeneral, ...middleRoleFeatures, ...bottomPersonal]
 }

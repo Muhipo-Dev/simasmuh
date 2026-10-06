@@ -1124,7 +1124,7 @@ export function PersuratanManagement({
               <p class="text-[9px] text-slate-400 font-bold uppercase mb-1">Spesimen Tanda Tangan Canvas Kepsek:</p>
               <img src="${signatureDataUrl}" alt="Tanda Tangan Digital" class="max-h-16 mx-auto" />
             </div>
-            <p class="text-xs text-emerald-600 font-semibold">✓ Tanda Tangan Digital sah terverifikasi & Notifikasi WhatsApp otomatis terkirim (088293733330).</p>
+            <p class="text-xs text-emerald-600 font-semibold">✓ Tanda Tangan Digital sah terverifikasi & Notifikasi resmi terkirim ke Dashboard & Email.</p>
           </div>
         `,
         confirmButtonText: 'Cetak Lembar Disposisi',
@@ -1234,7 +1234,7 @@ export function PersuratanManagement({
             <img src="${signatureDataUrl}" alt="Tanda Tangan Digital" class="max-h-16 mx-auto" />
           </div>
           <p class="text-[11px] text-emerald-700 font-semibold pt-1">✓ Coretan tanda tangan asli & QR Code sah resmi tersimpan permanen di basis data.</p>
-          <p class="text-[10px] text-slate-500">Notifikasi WhatsApp otomatis terkirim ke Tata Usaha (088293733330).</p>
+          <p class="text-[10px] text-slate-500">Notifikasi resmi otomatis terkirim ke Dashboard & Email Tata Usaha.</p>
         </div>
       `,
       confirmButtonText: 'Selesai'
@@ -1478,7 +1478,7 @@ export function PersuratanManagement({
       html: `
         <div class="text-left text-xs p-3 bg-blue-50 rounded-xl space-y-1">
           <p>Surat dengan identitas <strong>${templateForm.nomorSurat}</strong> berhasil dikirimkan kembali ke antrean Tanda Tangan Digital Kepala Sekolah.</p>
-          <p class="text-emerald-700 font-semibold mt-1">✓ Notifikasi WhatsApp otomatis terkirim ke ponsel Kepala Sekolah (088293733330).</p>
+          <p class="text-emerald-700 font-semibold mt-1">✓ Notifikasi resmi otomatis terkirim ke Dashboard & Email Kepala Sekolah.</p>
         </div>
       `,
       confirmButtonText: 'Selesai'
@@ -2818,7 +2818,7 @@ export function PersuratanManagement({
         <div class="text-left text-sm space-y-1">
           <p><strong>Kepala Sekolah:</strong> ${signerForm.nama}</p>
           <p><strong>Token E-Sign:</strong> <span class="font-mono font-bold text-purple-700">${tokenEsign}</span></p>
-          <p class="text-xs text-emerald-600 font-semibold mt-2">✓ Tanda Tangan Digital sah terverifikasi & Notifikasi WhatsApp otomatis terkirim (088293733330).</p>
+          <p class="text-xs text-emerald-600 font-semibold mt-2">✓ Tanda Tangan Digital sah terverifikasi & Notifikasi resmi terkirim ke Dashboard & Email.</p>
         </div>
       `,
       confirmButtonText: 'Cetak Lembar Disposisi Sekarang',
@@ -3132,7 +3132,7 @@ export function PersuratanManagement({
           <p class="text-slate-600">Nomor Agenda: <strong>${nextAgenda}</strong></p>
           <p class="text-slate-600">Perihal: <strong>${templateForm.perihal}</strong></p>
           <p class="text-emerald-800 font-semibold text-xs pt-1">✓ Berkas langsung masuk ke basis data Surat Keluar & antrean Tanda Tangan Digital Kepala Sekolah.</p>
-          <p class="text-[10px] text-slate-500">Notifikasi WhatsApp otomatis diteruskan ke Kepala Sekolah (088293733330).</p>
+          <p class="text-[10px] text-slate-500">Notifikasi resmi otomatis diteruskan ke Dashboard & Email Kepala Sekolah.</p>
         </div>
       `,
       confirmButtonText: 'Buka Daftar Surat Keluar',
@@ -7243,9 +7243,9 @@ export function PersuratanManagement({
                 <Sparkles className="w-5 h-5 text-indigo-600 animate-pulse" />
                 Unggah & Analisis Otomatis Surat Masuk
               </span>
-              <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] px-2.5 py-0.5 font-bold">
-                Analisis Dokumen Otomatis
-              </Badge>
+              <span className="simas-kpi-badge bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/60">
+                Analisis Dokumen
+              </span>
             </DialogTitle>
             <DialogDescription className="text-xs">
               Silakan unggah berkas surat masuk (PDF atau Foto). Sistem akan membaca isi dokumen, mengidentifikasi instansi pengirim, nomor surat, perihal, serta menyusun ringkasan secara otomatis.
@@ -7477,7 +7477,7 @@ export function PersuratanManagement({
                 size="sm"
                 disabled={!aiExtractedForm || isAnalyzingAi}
                 onClick={handleSimpanDanBukaDisposisiAi}
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold shadow-md gap-1.5 text-xs"
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-xs gap-1.5 text-xs"
               >
                 <Sparkles className="w-4 h-4" /> Simpan & Langsung Buat Disposisi
               </Button>

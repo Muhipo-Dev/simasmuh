@@ -57,7 +57,7 @@ export default function HeroCarousel({ schoolName }: HeroCarouselProps) {
   }
 
   return (
-    <div className="relative w-full min-h-[460px] sm:min-h-[520px] md:h-[600px] flex flex-col justify-center pt-6 pb-16 sm:py-20 overflow-hidden bg-slate-950">
+    <div className="relative w-full min-h-[520px] sm:min-h-[580px] md:h-[640px] flex flex-col justify-center pt-24 sm:pt-28 md:pt-32 pb-16 sm:py-24 overflow-hidden bg-slate-950">
       {/* Background Images */}
       {images.map((src, index) => {
         // Handle external src, upload path from proxy, or local file

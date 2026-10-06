@@ -53,7 +53,9 @@ export default function FinanceSettingsPage() {
   // Fetch Settings
   const { data: settings, isLoading: loadingSettings } = useQuery<Setting & { defaultInfaq?: number; defaultSeragam?: number }>({
     queryKey: ['settings'],
-    queryFn: () => authenticatedQuery('/api-backend/settings')
+    queryFn: () => authenticatedQuery('/api-backend/settings'),
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   useEffect(() => {
@@ -100,7 +102,9 @@ export default function FinanceSettingsPage() {
   // Fetch Program Configs (Default SPP & Beasiswa per Program)
   const { data: programConfigs, isLoading: loadingPrograms } = useQuery<ProgramConfig[]>({
     queryKey: ['program-configs'],
-    queryFn: () => authenticatedQuery('/api-backend/settings/program-configs')
+    queryFn: () => authenticatedQuery('/api-backend/settings/program-configs'),
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   // State for Editing/Adding Program Config

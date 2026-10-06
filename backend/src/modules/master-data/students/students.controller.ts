@@ -101,6 +101,22 @@ export class StudentsController {
     );
   }
 
+  @Post('bulk-beasiswa')
+  @UseGuards(JwtAuthGuard)
+  bulkUpdateBeasiswa(
+    @Body()
+    body: {
+      studentIds: string[];
+      beasiswaSeragamPct?: number;
+      beasiswaSppPct?: number;
+      beasiswaDppPct?: number;
+      beasiswaPercentage?: number;
+      beasiswaReason?: string;
+    },
+  ) {
+    return this.studentsService.bulkUpdateBeasiswa(body);
+  }
+
   @Patch(':id/toggle-active')
   @UseGuards(JwtAuthGuard)
   toggleActive(

@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Sparkles, Award, Calendar, Clock, MapPin, Users,
   CheckCircle2, ShieldCheck, BookOpen, AlertCircle, Info,
-  Filter, Search, UserCheck, Star, ChevronRight
+  Filter, Search, UserCheck, Star, ChevronRight, UserPlus, LogOut, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,14 +15,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch } from '@/components/TableSearch'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import Swal from 'sweetalert2'
 
 export default function SiswaEkstrakurikulerPage() {
   const authenticatedFetch = useAuthenticatedFetch()
+  const queryClient = useQueryClient()
 
   const [activeTab, setActiveTab] = useState<'my' | 'catalog'>('my')
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedMembershipId, setSelectedMembershipId] = useState<string | null>(null)
+  const [joiningId, setJoiningId] = useState<string | null>(null)
+  const [leavingId, setLeavingId] = useState<string | null>(null)
 
   // 1. Fetch Aktivitas & Katalog Ekskul Siswa Realtime
   const { data, isLoading } = useQuery<{
@@ -40,6 +44,106 @@ export default function SiswaEkstrakurikulerPage() {
 
   const myMemberships = data?.myMemberships || []
   const availableCatalog = data?.availableCatalog || []
+
+  // Set ID ekskul yang sudah diikuti
+  const joinedEkskulIds = new Set(myMemberships.map((m: any) => m.extracurricularId || m.extracurricular?.id))
+
+  // Handler Gabung Ekstrakurikuler Mandiri
+  const handleJoinExtracurricular = async (ekskul: any) => {
+    const confirm = await Swal.fire({
+      title: `Gabung Ekstrakurikuler?`,
+      html: `
+        <div class="text-left text-xs space-y-2 p-2">
+          <p>Anda akan mendaftar ke unit kegiatan: <b>${ekskul.name}</b></p>
+          <div class="p-3 bg-amber-50 dark:bg-slate-800 rounded-xl border border-amber-200">
+            <p class="text-slate-600 dark:text-slate-300"><b>Jadwal:</b> ${ekskul.scheduleDay || '-'} (${ekskul.scheduleTime || '-'})</p>
+            <p class="text-slate-600 dark:text-slate-300"><b>Lokasi:</b> ${ekskul.location || '-'}</p>
+            <p class="text-slate-600 dark:text-slate-300"><b>Pembina:</b> ${ekskul.pembinaName || '-'}</p>
+          </div>
+          <p class="text-slate-500">Pendaftaran akan langsung tersinkronisasi dengan Guru Pembina dan Bidang Kesiswaan.</p>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Gabung Sekarang',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#d97706',
+    })
+
+    if (!confirm.isConfirmed) return
+
+    try {
+      setJoiningId(ekskul.id)
+      const res = await authenticatedFetch(`/api-backend/extracurricular/student/join/${ekskul.id}`, {
+        method: 'POST',
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.message || 'Gagal mendaftar ekstrakurikuler')
+
+      Swal.fire({
+        title: 'Berhasil Bergabung!',
+        text: result.message || `Anda resmi terdaftar di ekstrakurikuler ${ekskul.name}.`,
+        icon: 'success',
+        timer: 2500,
+        showConfirmButton: false,
+      })
+
+      queryClient.invalidateQueries({ queryKey: ['student-my-extracurriculars'] })
+      queryClient.invalidateQueries({ queryKey: ['student-dashboard-ekskul'] })
+      setActiveTab('my')
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Pendaftaran Gagal',
+        text: err?.message || 'Terjadi kesalahan sistem.',
+        icon: 'error',
+      })
+    } finally {
+      setJoiningId(null)
+    }
+  }
+
+  // Handler Keluar Ekstrakurikuler Mandiri
+  const handleLeaveExtracurricular = async (ekskul: any) => {
+    const confirm = await Swal.fire({
+      title: `Keluar dari Ekstrakurikuler?`,
+      text: `Apakah Anda yakin ingin berhenti dan keluar dari keanggotaan ${ekskul.name}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Keluar',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#e11d48',
+    })
+
+    if (!confirm.isConfirmed) return
+
+    try {
+      setLeavingId(ekskul.id)
+      const res = await authenticatedFetch(`/api-backend/extracurricular/student/leave/${ekskul.id}`, {
+        method: 'POST',
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.message || 'Gagal memproses permohonan keluar')
+
+      Swal.fire({
+        title: 'Berhasil Keluar',
+        text: result.message || `Anda telah keluar dari ekstrakurikuler ${ekskul.name}.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+
+      queryClient.invalidateQueries({ queryKey: ['student-my-extracurriculars'] })
+      queryClient.invalidateQueries({ queryKey: ['student-dashboard-ekskul'] })
+    } catch (err: any) {
+      Swal.fire({
+        title: 'Gagal Keluar',
+        text: err?.message || 'Terjadi kesalahan sistem.',
+        icon: 'error',
+      })
+    } finally {
+      setLeavingId(null)
+    }
+  }
 
   // Pilih membership pertama secara default jika ada
   const activeMembership = myMemberships.find((m) => m.id === selectedMembershipId) || myMemberships[0] || null
@@ -156,9 +260,30 @@ export default function SiswaEkstrakurikulerPage() {
                             {activeMembership.extracurricular?.description || 'Unit kegiatan pengembangan potensi siswa SMA Muhammadiyah 1 Ponorogo.'}
                           </CardDescription>
                         </div>
-                        <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 text-xs font-bold self-start">
-                          Status: {activeMembership.status}
-                        </Badge>
+                        <div className="flex items-center gap-2 self-start">
+                          <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 text-xs font-bold">
+                            Status: {activeMembership.status}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleLeaveExtracurricular(activeMembership.extracurricular)}
+                            disabled={leavingId === activeMembership.extracurricular?.id}
+                            className="h-7 text-[11px] font-bold text-rose-600 border-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                          >
+                            {leavingId === activeMembership.extracurricular?.id ? (
+                              <>
+                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                <span>Keluar...</span>
+                              </>
+                            ) : (
+                              <>
+                                <LogOut className="w-3 h-3 mr-1" />
+                                <span>Keluar Ekskul</span>
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="p-5 pt-0">
@@ -474,6 +599,39 @@ export default function SiswaEkstrakurikulerPage() {
                     <span className="font-bold text-amber-600 dark:text-amber-400">
                       {ekskul._count?.members || 0} Siswa
                     </span>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                    {joinedEkskulIds.has(ekskul.id) ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled
+                        className="w-full h-8 text-xs font-bold text-emerald-600 border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                        Sudah Terdaftar
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => handleJoinExtracurricular(ekskul)}
+                        disabled={joiningId === ekskul.id}
+                        className="w-full h-8 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs flex items-center justify-center gap-1"
+                      >
+                        {joiningId === ekskul.id ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Mendaftar...</span>
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>Gabung Ekstrakurikuler</span>
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

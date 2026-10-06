@@ -151,7 +151,7 @@ export default function EtikaTatibPage() {
               <span className="text-xs uppercase font-extrabold tracking-wider bg-white/25 px-2 py-0.5 rounded text-white">
                 Terkoneksi Tim Tatib & BK
               </span>
-              <span className="text-xs text-emerald-100 font-medium">Buku Saku Digital & Notifikasi WhatsApp</span>
+              <span className="text-xs text-emerald-100 font-medium">Buku Saku Digital & Notifikasi Email</span>
             </div>
             <h3 className="text-base sm:text-lg font-extrabold text-white mt-1">
               Evaluasi Karakter Islami, Kedisiplinan & Perkembangan Siswa

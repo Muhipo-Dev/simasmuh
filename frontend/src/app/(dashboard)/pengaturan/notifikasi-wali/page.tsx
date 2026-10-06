@@ -28,7 +28,6 @@ export default function NotifikasiWaliPage() {
     notifPengumuman: true,
     notifKedisiplinan: true,
     email: '',
-    whatsappTargetNumber: '',
   })
 
   const [editingEmail, setEditingEmail] = useState(false)
@@ -54,7 +53,6 @@ export default function NotifikasiWaliPage() {
       setSettings((prev) => ({
         ...prev,
         email: parentEmail,
-        whatsappTargetNumber: dashboardData.parentUser?.phone || '',
       }))
       setInputEmail(parentEmail)
     }

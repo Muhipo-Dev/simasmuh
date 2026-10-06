@@ -19,8 +19,9 @@ export class SchedulesController {
   findAll(
     @Query('userId') userId?: string,
     @Query('teacherId') teacherId?: string,
+    @Query('classId') classId?: string,
   ) {
-    return this.schedulesService.findAll({ userId, teacherId });
+    return this.schedulesService.findAll({ userId, teacherId, classId });
   }
 
   @Get(':id')

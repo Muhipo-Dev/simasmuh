@@ -431,7 +431,7 @@ export class FaceAttendanceService implements OnModuleInit {
     const users = await this.prisma.user.findMany({
       where: {
         role: {
-          not: 'WALI_MURID' as any,
+          notIn: ['WALI_MURID', 'HONORER'] as any,
         },
       },
       select: {

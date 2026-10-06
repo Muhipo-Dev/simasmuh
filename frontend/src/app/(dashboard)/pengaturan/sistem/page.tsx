@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { compressImageFile } from '@/utils/imageCompressor'
+import { SystemRuntimeSupervisor } from '@/components/settings/SystemRuntimeSupervisor'
 
 type Setting = {
   id: string
@@ -286,6 +287,9 @@ export default function SettingsPage() {
         <HeaderWaitingRoomSwitch />
       </div>
 
+      {/* Supervisor Runtime, Live Sync Clock, & Sesi Pengguna */}
+      <SystemRuntimeSupervisor isSuperadminRole={true} />
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Pengaturan Waiting Room & Kuota Login (Superadmin & Admin IT) */}
         <div className="lg:col-span-2">
@@ -417,7 +421,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Sekolah</Label>
+                    <Label htmlFor="email">Email Resmi Sekolah & Helpdesk</Label>
                     <Input 
                       id="email" 
                       type="email"
@@ -425,13 +429,14 @@ export default function SettingsPage() {
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
                       placeholder="Contoh: info@sekolah.sch.id"
                     />
+                    <p className="text-[11px] text-slate-500">Tampil otomatis pada kotak bantuan login dan dokumen resmi.</p>
                   </div>
                 </div>
 
                 <div className="space-y-2 p-3.5 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="helpdeskPhone" className="font-bold text-blue-900 dark:text-blue-200 text-xs">
-                      Nomor WhatsApp Helpdesk & Bantuan Login
+                      Nomor Telepon Helpdesk & Bantuan Login
                     </Label>
                     <span className="text-[11px] text-slate-500">Tampil di halaman login & kontak bantuan</span>
                   </div>
@@ -443,7 +448,7 @@ export default function SettingsPage() {
                     className="bg-white dark:bg-slate-900 font-mono text-sm"
                   />
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Nomor WhatsApp ini khusus untuk menerima pesan kendala login / bantuan dari pengguna, terpisah dari gateway nomor pengirim notifikasi.
+                    Nomor kontak ini khusus untuk menerima panggilan/pesan kendala login dan bantuan teknis dari pengguna.
                   </p>
                 </div>
               </div>

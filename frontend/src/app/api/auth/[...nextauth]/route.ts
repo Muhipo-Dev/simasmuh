@@ -155,7 +155,7 @@ const authOptions = {
   trustHost: true
 };
 
-const handler = NextAuth(authOptions);
+const handler = (req: NextRequest, ctx: any) => NextAuth(req, ctx, authOptions);
 
 export { handler as GET, handler as POST }
 

@@ -67,8 +67,14 @@ export function SystemInfoWidget({
       {/* Content items with card bubble styling */}
       <div className="space-y-2 sm:space-y-2.5 max-h-[320px] sm:max-h-[360px] overflow-y-auto pr-1">
         {displayedList.length === 0 ? (
-          <div className="text-center py-6 text-slate-400 text-xs border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-            Belum ada pengumuman sistem saat ini.
+          <div className="p-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 text-center space-y-1">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              <span>Semua Sistem Normal</span>
+            </div>
+            <p className="text-[10.5px] text-slate-400 font-medium">
+              Tidak ada pengumuman mendesak saat ini.
+            </p>
           </div>
         ) : (
           displayedList.map((info: any, idx: number) => {

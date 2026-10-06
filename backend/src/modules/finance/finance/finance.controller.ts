@@ -32,6 +32,31 @@ import {
 export class FinanceController {
   constructor(private readonly financeService: FinanceService) {}
 
+  private checkPayrollAccess(req: any) {
+    const user = req.user;
+    if (!user) {
+      throw new ForbiddenException('Akses ditolak. Sesi pengguna tidak valid.');
+    }
+    const userRoles = [
+      user.role,
+      user.subRole,
+      user.subRole2,
+      user.subRole3,
+      user.subRole4,
+      user.subRole5,
+    ].filter(Boolean);
+
+    const isKeuanganLengkap = userRoles.some((r) =>
+      ['KEUANGAN_ALL', 'SUPERVISOR_KEUANGAN', 'KEUANGAN', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+    );
+
+    if (!isKeuanganLengkap) {
+      throw new ForbiddenException(
+        'Akses ditolak. Modul dan data penggajian payroll hanya dapat diakses dan di-CRUD oleh Keuangan Lengkap (Keuangan All).',
+      );
+    }
+  }
+
   // ----- Payroll Summary & Management -----
   @Get('payroll-summary')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
@@ -40,30 +65,7 @@ export class FinanceController {
     @Query('year') year: string,
     @Query('month') month: string,
   ) {
-    const userSubRoles = [
-      req.user?.subRole,
-      req.user?.subRole2,
-      req.user?.subRole3,
-      req.user?.subRole4,
-      req.user?.subRole5,
-      req.user?.role,
-    ];
-    const isKeuanganStaff = userSubRoles.some((r) =>
-      [
-        'KEUANGAN_ALL',
-        'KEUANGAN_MASUK',
-        'KEUANGAN_KELUAR',
-        'SUPERADMIN',
-        'ADMIN_IT',
-        'KEPALA_SEKOLAH',
-      ].includes(r),
-    );
-
-    if (!isKeuanganStaff) {
-      throw new ForbiddenException(
-        'Akses ditolak. Penggajian pegawai hanya dapat diakses oleh bagian Keuangan / Superadmin.',
-      );
-    }
+    this.checkPayrollAccess(req);
 
     const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
     const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
@@ -88,23 +90,7 @@ export class FinanceController {
       notes?: string;
     },
   ) {
-    const userSubRoles = [
-      req.user?.subRole,
-      req.user?.subRole2,
-      req.user?.subRole3,
-      req.user?.subRole4,
-      req.user?.subRole5,
-      req.user?.role,
-    ];
-    const isKeuanganAuthorized = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
-    );
-
-    if (!isKeuanganAuthorized) {
-      throw new ForbiddenException(
-        'Akses ditolak. Pengaturan komponen penggajian hanya dapat diubah oleh Keuangan / Superadmin.',
-      );
-    }
+    this.checkPayrollAccess(req);
 
     return this.financeService.savePayrollRecord(
       body.userId,
@@ -122,23 +108,7 @@ export class FinanceController {
     @Query('year') year: string,
     @Query('month') month: string,
   ) {
-    const userSubRoles = [
-      req.user?.subRole,
-      req.user?.subRole2,
-      req.user?.subRole3,
-      req.user?.subRole4,
-      req.user?.subRole5,
-      req.user?.role,
-    ];
-    const isKeuanganAuthorized = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
-    );
-
-    if (!isKeuanganAuthorized) {
-      throw new ForbiddenException(
-        'Akses ditolak. Reset data penggajian hanya dapat dilakukan oleh Keuangan / Superadmin.',
-      );
-    }
+    this.checkPayrollAccess(req);
 
     const targetYear = year ? parseInt(year, 10) : new Date().getFullYear();
     const targetMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
@@ -152,23 +122,7 @@ export class FinanceController {
     @Req() req: any,
     @Body() body: { userIds?: string[]; year: number; month: number },
   ) {
-    const userSubRoles = [
-      req.user?.subRole,
-      req.user?.subRole2,
-      req.user?.subRole3,
-      req.user?.subRole4,
-      req.user?.subRole5,
-      req.user?.role,
-    ];
-    const isKeuanganAuthorized = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
-    );
-
-    if (!isKeuanganAuthorized) {
-      throw new ForbiddenException(
-        'Akses ditolak. Reset data penggajian hanya dapat dilakukan oleh Keuangan / Superadmin.',
-      );
-    }
+    this.checkPayrollAccess(req);
 
     return this.financeService.resetBulkPayrollRecords(body.userIds, body.year, body.month);
   }
@@ -180,23 +134,7 @@ export class FinanceController {
     @Param('userId') userId: string,
     @Body('employmentStatus') employmentStatus: string,
   ) {
-    const userSubRoles = [
-      req.user?.subRole,
-      req.user?.subRole2,
-      req.user?.subRole3,
-      req.user?.subRole4,
-      req.user?.subRole5,
-      req.user?.role,
-    ];
-    const isKeuanganAuthorized = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
-    );
-
-    if (!isKeuanganAuthorized) {
-      throw new ForbiddenException(
-        'Akses ditolak. Pengaturan status kepegawaian hanya dapat diubah oleh Keuangan / Superadmin.',
-      );
-    }
+    this.checkPayrollAccess(req);
 
     return this.financeService.updateStaffEmploymentStatus(
       userId,
@@ -211,23 +149,7 @@ export class FinanceController {
     @Param('userId') userId: string,
     @Body() body: { bankName?: string; bankAccountNumber?: string; bankAccountHolder?: string },
   ) {
-    const userSubRoles = [
-      req.user?.subRole,
-      req.user?.subRole2,
-      req.user?.subRole3,
-      req.user?.subRole4,
-      req.user?.subRole5,
-      req.user?.role,
-    ];
-    const isKeuanganAuthorized = userSubRoles.some((r) =>
-      ['KEUANGAN_ALL', 'KEUANGAN_MASUK', 'KEUANGAN_KELUAR', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
-    );
-
-    if (!isKeuanganAuthorized) {
-      throw new ForbiddenException(
-        'Akses ditolak. Pengaturan rekening pegawai hanya dapat diubah oleh Keuangan / Superadmin.',
-      );
-    }
+    this.checkPayrollAccess(req);
 
     return this.financeService.updateStaffBankAccount(userId, body);
   }
@@ -255,6 +177,9 @@ export class FinanceController {
     @Query('year') year?: string,
     @Query('month') month?: string,
   ) {
+    if (req.user?.id !== userId) {
+      this.checkPayrollAccess(req);
+    }
     const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
     const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
     return this.financeService.getStaffSlipGaji(
@@ -267,10 +192,13 @@ export class FinanceController {
   @Get('payroll/export-excel')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   async exportPayrollExcel(
+    @Req() req: any,
     @Query('year') year: string,
     @Query('month') month: string,
     @Res() res: any,
   ) {
+    this.checkPayrollAccess(req);
+
     const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
     const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
     const buffer = await this.financeService.generatePayrollExcel(
@@ -292,9 +220,12 @@ export class FinanceController {
   @Get('attendance-matrix')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   getMonthlyAttendanceMatrix(
+    @Req() req: any,
     @Query('year') year: string,
     @Query('month') month: string,
   ) {
+    this.checkPayrollAccess(req);
+
     const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
     const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
     return this.financeService.getMonthlyAttendanceMatrix(
@@ -306,10 +237,13 @@ export class FinanceController {
   @Get('attendance-matrix/export-excel')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   async exportAttendanceMatrixExcel(
+    @Req() req: any,
     @Query('year') year: string,
     @Query('month') month: string,
     @Res() res: any,
   ) {
+    this.checkPayrollAccess(req);
+
     const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
     const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
     const buffer = await this.financeService.generateAttendanceMatrixExcel(
@@ -331,9 +265,12 @@ export class FinanceController {
   @Get('attendance-finance-rekap')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   getAttendanceFinanceRekap(
+    @Req() req: any,
     @Query('year') year: string,
     @Query('month') month: string,
   ) {
+    this.checkPayrollAccess(req);
+
     const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
     const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
     return this.financeService.getAttendanceFinanceRekap(
@@ -345,10 +282,13 @@ export class FinanceController {
   @Get('attendance-finance-rekap/export-excel')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   async exportAttendanceFinanceRekapExcel(
+    @Req() req: any,
     @Query('year') year: string,
     @Query('month') month: string,
     @Res() res: any,
   ) {
+    this.checkPayrollAccess(req);
+
     const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
     const currentMonth = month ? parseInt(month, 10) : new Date().getMonth() + 1;
     const buffer = await this.financeService.generateAttendanceFinanceRekapExcel(
@@ -487,6 +427,11 @@ export class FinanceController {
   @Patch('tagihan/:tagihanId')
   updateTagihan(@Param('tagihanId') tagihanId: string, @Body() body: any) {
     return this.financeService.updateTagihan(tagihanId, body);
+  }
+
+  @Post('tagihan/batch-lunasi')
+  batchLunasiTagihan(@Body() body: any) {
+    return this.financeService.batchLunasiTagihan(body);
   }
 
   @Patch('tagihan/:tagihanId/lunasi')

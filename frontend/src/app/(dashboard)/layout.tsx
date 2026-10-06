@@ -13,6 +13,7 @@ import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { AppNavbar, AppFooter, AppSidebar } from '@/components/layout'
 import { isPathAllowedForRoles, getRoleLinks } from '@/lib/nav-links'
 import { EmailRecommendationBanner } from '@/components/dashboard/EmailRecommendationBanner'
+import { NavbarPrayerWidget } from '@/components/dashboard/NavbarPrayerWidget'
 import Swal from 'sweetalert2'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -53,7 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (session && pathname) {
       const u = session.user as any
       const isAccountActive = u?.isActive !== false
-      const roles = [u?.role, u?.subRole, u?.subRole2, u?.subRole3, u?.subRole4, u?.subRole5].filter(Boolean) as string[]
+      const roles = [u?.role, u?.subRole, u?.subRole2, u?.subRole3, u?.subRole4, u?.subRole5, u?.username, u?.name].filter(Boolean) as string[]
 
       // Jika akun dinonaktifkan / purna tugas, batasi hanya boleh melihat /dashboard
       if (!isAccountActive && pathname !== '/dashboard' && pathname !== '/pengaturan/profil') {
@@ -95,16 +96,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!session) return null
 
-  const role = (session.user as { role?: string })?.role || 'GURU'
-  const subRole = (session.user as { subRole?: string })?.subRole
-  const subRole2 = (session.user as { subRole2?: string })?.subRole2
-  const subRole3 = (session.user as { subRole3?: string })?.subRole3
-  const subRole4 = (session.user as { subRole4?: string })?.subRole4
-  const subRole5 = (session.user as { subRole5?: string })?.subRole5
+  const userObj = session.user as any
+  const role = userObj?.role || 'GURU'
+  const subRole = userObj?.subRole
+  const subRole2 = userObj?.subRole2
+  const subRole3 = userObj?.subRole3
+  const subRole4 = userObj?.subRole4
+  const subRole5 = userObj?.subRole5
+  const username = userObj?.username
   
   const displayRole = role
   
-  const currentLinks = getRoleLinks(role, subRole, subRole2, subRole3, subRole4, subRole5)
+  const currentLinks = getRoleLinks(role, subRole, subRole2, subRole3, subRole4, subRole5, username)
   const isDashboardPage = pathname === '/dashboard'
   const hideSidebar = isDashboardPage
 
@@ -143,23 +146,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      <main className={`flex-1 flex flex-col min-h-dvh w-full overflow-x-hidden print:min-h-0 print:m-0 print:p-0 print:w-full print:bg-white print:text-black print:static print:overflow-visible ${hideSidebar ? '' : 'lg:ml-72 print:lg:ml-0'}`}>
+      <main className={`flex-1 flex flex-col min-h-dvh w-full min-w-0 overflow-x-hidden print:min-h-0 print:m-0 print:p-0 print:w-full print:bg-white print:text-black print:static print:overflow-visible transition-all duration-200 ${hideSidebar ? '' : 'lg:ml-72 xl:ml-76 print:lg:ml-0'}`}>
         {/* Navbar Induk Terpadu (Kiri Logo, Kanan Info TA, Theme, Profil, Logout) */}
         <div className="print:hidden">
           <AppNavbar
             logoUrl={systemSettings?.logoUrl}
             actions={
-              <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-3 shrink-0">
-                {/* Tahun Ajaran Badge (Sembunyi di mobile kecil agar tidak tabrakan) */}
-                <div className="hidden md:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-[10px] sm:text-xs shadow-2xs shrink-0 backdrop-blur-md">
+              <div className="flex items-center gap-1 sm:gap-2 lg:gap-2.5 shrink-0">
+                {/* Jadwal Sholat Terdekat (Sembunyi adaptif jika zoom tinggi / layar sempit) */}
+                <div className="hidden xl:flex items-center shrink-0">
+                  <NavbarPrayerWidget />
+                </div>
+
+                {/* Tahun Ajaran Badge (Otomatis menyesuaikan saat zoom tinggi / viewport sempit) */}
+                <div className="hidden lg:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-[10px] sm:text-xs shadow-2xs shrink-0 backdrop-blur-md">
                   <CalendarDays className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                   <span>TA: {systemSettings?.academicYear || '2026/2027'}</span>
                   {systemSettings?.semester && (
-                    <span className="hidden xl:inline text-[11px] opacity-90 font-medium">({systemSettings.semester})</span>
+                    <span className="hidden 2xl:inline text-[11px] opacity-90 font-medium">({systemSettings.semester})</span>
                   )}
                 </div>
 
-                <div className="hidden sm:block border-r border-slate-200/80 dark:border-white/15 pr-2.5 lg:pr-3">
+                <div className="hidden sm:block border-r border-slate-200/80 dark:border-white/15 pr-1.5 sm:pr-2">
                   <ThemeToggle />
                 </div>
                 <div className="sm:hidden">
@@ -167,25 +175,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
                 
                 {/* Profile Card & Logout */}
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <Link href="/pengaturan/profil" className="flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-white/10 p-1 sm:p-1.5 sm:pr-2.5 rounded-full transition-colors border border-slate-200/80 dark:border-white/10 shrink-0">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 relative rounded-full overflow-hidden bg-blue-600/10 dark:bg-blue-600/30 flex items-center justify-center text-blue-600 dark:text-blue-300 font-black text-xs sm:text-sm border border-blue-200/60 dark:border-white/20 shadow-xs">
+                <div className="flex items-center gap-1 sm:gap-1.5">
+                  <Link href="/pengaturan/profil" className="flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-white/10 p-0.5 sm:p-1 sm:pr-2 rounded-full transition-colors border border-slate-200/80 dark:border-white/10 shrink-0 max-w-[180px] sm:max-w-[220px]">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 relative rounded-full overflow-hidden bg-blue-600/10 dark:bg-blue-600/30 flex items-center justify-center text-blue-600 dark:text-blue-300 font-black text-xs sm:text-sm border border-blue-200/60 dark:border-white/20 shadow-xs shrink-0">
                       {profileData?.avatarUrl ? (
                         <NextImage src={profileData.avatarUrl} alt="Avatar" fill className="object-cover" />
                       ) : (
                         <span>{(profileData?.name || session.user?.name || 'U').charAt(0).toUpperCase()}</span>
                       )}
                     </div>
-                    <div className="hidden md:block text-left">
-                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight max-w-[120px] lg:max-w-[150px] truncate">{profileData?.name || session.user?.name}</p>
-                      <p className="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-[120px] lg:max-w-[150px]">{displayRole}</p>
+                    <div className="hidden md:block text-left min-w-0 flex-1">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight max-w-[100px] lg:max-w-[130px] xl:max-w-[150px] truncate">{profileData?.name || session.user?.name}</p>
+                      <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-[100px] lg:max-w-[130px] xl:max-w-[150px]">{displayRole}</p>
                     </div>
                   </Link>
                   
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 sm:h-9 sm:w-9 text-slate-600 dark:text-slate-300 hover:text-white hover:bg-red-600 rounded-full transition-colors shadow-xs bg-slate-100 dark:bg-slate-800/60 border border-slate-200/80 dark:border-white/10 backdrop-blur-md shrink-0"
+                    className="h-7.5 w-7.5 sm:h-8 sm:w-8 text-slate-600 dark:text-slate-300 hover:text-white hover:bg-red-600 rounded-full transition-colors shadow-xs bg-slate-100 dark:bg-slate-800/60 border border-slate-200/80 dark:border-white/10 backdrop-blur-md shrink-0"
                     onClick={async () => {
                       if (userId) {
                         try {
@@ -206,14 +214,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     }}
                     title="Keluar"
                   >
-                    <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <LogOut className="w-3.5 h-3.5" />
                   </Button>
 
                   {!hideSidebar && (
                     <button
                       type="button"
                       onClick={() => setIsMobileMenuOpen(true)}
-                      className="lg:hidden h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-xl bg-blue-600/80 hover:bg-blue-600 border border-blue-400/30 text-white transition-colors active:scale-95 shadow-sm backdrop-blur-md shrink-0"
+                      className="lg:hidden h-7.5 w-7.5 sm:h-8 sm:w-8 flex items-center justify-center rounded-xl bg-blue-600/80 hover:bg-blue-600 border border-blue-400/30 text-white transition-colors active:scale-95 shadow-sm backdrop-blur-md shrink-0"
                       aria-label="Buka Menu"
                     >
                       <Menu className="w-4 h-4" />
@@ -225,7 +233,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
         </div>
 
-        <div className="flex-1 p-2.5 sm:p-4 md:p-5 lg:p-6 max-w-[1600px] mx-auto w-full pb-20 sm:pb-24 lg:pb-10 transition-all duration-200 print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0">
+        <div className={`flex-1 w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-8 xl:px-10 2xl:px-12 pt-3 sm:pt-4 md:pt-5 pb-24 sm:pb-28 lg:pb-14 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0 max-w-7xl 2xl:max-w-[1440px]`}>
           <div className="print:hidden">
             <EmailRecommendationBanner />
           </div>

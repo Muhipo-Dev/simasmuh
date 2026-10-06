@@ -12,12 +12,6 @@ $BACKEND_DIR  = Join-Path $ROOT "backend"
 $FRONTEND_DIR = Join-Path $ROOT "frontend"
 $FACE_AI_DIR  = Join-Path $ROOT "services\face-attendance"
 
-# Log files
-$BACKEND_LOG        = Join-Path $ROOT "backend.log"
-$FRONTEND_LOG       = Join-Path $ROOT "frontend.log"
-$PRISMA_STUDIO_LOG  = Join-Path $ROOT "prisma-studio.log"
-$FACE_AI_LOG        = Join-Path $ROOT "face-ai.log"
-
 # PID marker files
 $BACKEND_PID_FILE        = Join-Path $ROOT ".backend.pid"
 $FRONTEND_PID_FILE       = Join-Path $ROOT ".frontend.pid"
@@ -55,12 +49,21 @@ function Get-NpmPath {
     return $null
 }
 
+function Save-StoredPid {
+    param($File, $ProcessId)
+    try {
+        [System.IO.File]::WriteAllText($File, $ProcessId.ToString())
+    } catch {}
+}
+
 function Get-StoredPid {
     param($File)
-    if (Test-Path $File) {
-        $raw = Get-Content $File -Raw
-        if ($raw -match '^\d+$') { return [int]$raw.Trim() }
-    }
+    try {
+        if (Test-Path $File) {
+            $raw = [System.IO.File]::ReadAllText($File)
+            if ($raw -match '^\d+$') { return [int]$raw.Trim() }
+        }
+    } catch {}
     return $null
 }
 
@@ -95,58 +98,27 @@ function Stop-PortProcess {
     } catch {}
 }
 
-# Kompresi file log mentah ke format Gzip (.log.gz) sekecil-kecilnya
-function Compress-LogFile-Gzip {
-    param(
-        [string]$SourcePath,
-        [string]$TargetDir = ""
-    )
-    if (-not (Test-Path $SourcePath)) { return }
-    $fileInfo = Get-Item $SourcePath
-    if ($fileInfo.Length -le 10) { return }
-
-    if ([string]::IsNullOrWhiteSpace($TargetDir)) {
-        $TargetDir = Join-Path $ROOT "storage\compressed-logs"
-    }
-    if (-not (Test-Path $TargetDir)) {
-        $null = New-Item -ItemType Directory -Path $TargetDir -Force -ErrorAction SilentlyContinue
-    }
-
-    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $baseName = [System.IO.Path]::GetFileNameWithoutExtension($SourcePath)
-    $gzPath = Join-Path $TargetDir "$($baseName)_$($timestamp).log.gz"
-
-    try {
-        $inFileStream  = [System.IO.File]::OpenRead($SourcePath)
-        $outFileStream = [System.IO.File]::Create($gzPath)
-        $gzStream      = New-Object System.IO.Compression.GZipStream($outFileStream, [System.IO.Compression.CompressionLevel]::Optimal)
-        $inFileStream.CopyTo($gzStream)
-        $gzStream.Close()
-        $outFileStream.Close()
-        $inFileStream.Close()
-
-        $gzInfo = Get-Item $gzPath
-        $ratio = [Math]::Round(((($fileInfo.Length - $gzInfo.Length) / $fileInfo.Length) * 100), 1)
-        Write-Ok "Log terkompresi otomatis: $($fileInfo.Name) ($($fileInfo.Length) B -> $($gzInfo.Length) B, hemat $ratio%)"
-        
-        # Kosongkan file log mentah agar tidak membengkak di disk
-        "" | Out-File -FilePath $SourcePath -Encoding utf8 -Force -ErrorAction SilentlyContinue
-    } catch {
-        # Abaikan jika terkunci
-    }
-}
-
-function Compress-All-LogFiles {
-    Write-Status "Mengompresi dan merotasi seluruh file log aktif..." "Cyan"
-    $allLogs = @($BACKEND_LOG, $FRONTEND_LOG, $PRISMA_STUDIO_LOG, $FACE_AI_LOG)
-    foreach ($logFile in $allLogs) {
-        Compress-LogFile-Gzip -SourcePath $logFile
-    }
-}
-
-# Cek apakah port sedang LISTENING (status akurat via netstat)
+# Cek apakah port sedang LISTENING atau dapat dihubungi (akurat untuk TCP, IPv4, IPv6, dan Docker Desktop)
 function Test-PortListening {
     param([int]$Port)
+    try {
+        $tcpClient = New-Object System.Net.Sockets.TcpClient
+        $connect = $tcpClient.BeginConnect("127.0.0.1", $Port, $null, $null)
+        $waited = $connect.AsyncWaitHandle.WaitOne(400, $false)
+        if ($waited -and $tcpClient.Connected) {
+            $tcpClient.Close()
+            return $true
+        }
+        $tcpClient.Close()
+    } catch {}
+
+    try {
+        $conn = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
+        if ($conn -and ($conn.Count -gt 0 -or $null -ne $conn.LocalPort)) {
+            return $true
+        }
+    } catch {}
+
     $result = netstat -ano 2>$null | Select-String ":$Port\s" | Select-String "LISTENING"
     return ($null -ne $result -and $result.Count -gt 0)
 }
@@ -315,8 +287,7 @@ function Stop-Apps {
     Stop-PortProcess 51212
 
     Start-Sleep -Seconds 1
-    Compress-All-LogFiles
-    Write-Ok "Semua proses aplikasi berhasil dinonaktifkan dan log terkompresi rapi."
+    Write-Ok "Semua proses aplikasi berhasil dinonaktifkan."
 }
 
 function Stop-FaceAiService {
@@ -473,21 +444,21 @@ function Start-Backend {
     
     if ($Mode -eq "Development") {
         Write-Status "Menjalankan Backend DEVELOPMENT (port 3001)..." "Cyan"
-        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:dev >> `"$BACKEND_LOG`" 2>&1"
+        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:dev"
     } elseif ($Mode -eq "Debug" -or $Mode -eq "Testing") {
         Write-Status "Menjalankan Backend TESTING / DEBUG (port 3001, debug port 9229)..." "Cyan"
         Write-Info "Node.js Debugger aktif di 127.0.0.1:9229 (Attach via Chrome chrome://inspect atau VS Code)"
-        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:debug >> `"$BACKEND_LOG`" 2>&1"
+        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:debug"
     } elseif ($Mode -eq "Preview") {
         Write-Status "Menjalankan Backend PREVIEW (port 3001)..." "Cyan"
-        $cmdLine = "/c set NODE_ENV=preview&& set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:dev >> `"$BACKEND_LOG`" 2>&1"
+        $cmdLine = "/c set NODE_ENV=preview&& set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:dev"
     } elseif ($Mode -eq "Staging") {
         Write-Status "Menjalankan Backend STAGING (port 3001)..." "Cyan"
-        $cmdLine = "/c set NODE_ENV=staging&& set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:dev >> `"$BACKEND_LOG`" 2>&1"
+        $cmdLine = "/c set NODE_ENV=staging&& set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:dev"
     } elseif ($Mode -eq "Fallback") {
         Write-Status "Menjalankan Backend FALLBACK MODE (port 3001)..." "Yellow"
         Write-Info "Menggunakan konfigurasi aman untuk menghindari error server..."
-        $cmdLine = "/c set NODE_ENV=fallback&& set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:dev >> `"$BACKEND_LOG`" 2>&1"
+        $cmdLine = "/c set NODE_ENV=fallback&& set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:dev"
     } else {
         Write-Status "Menjalankan Backend PRODUCTION (port 3001)..." "Cyan"
         $distMain = Join-Path $BACKEND_DIR "dist\src\main.js"
@@ -497,18 +468,16 @@ function Start-Backend {
             $built = Build-Backend
             if (-not $built) { return $false }
         }
-        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:prod >> `"$BACKEND_LOG`" 2>&1"
+        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:prod"
     }
 
-    # Reset log lama secara aman
-    try { "" | Out-File -FilePath $BACKEND_LOG -Encoding utf8 -Force -ErrorAction SilentlyContinue } catch {}
     $proc = Start-Process -FilePath "cmd.exe" `
                           -ArgumentList $cmdLine `
                           -WorkingDirectory $BACKEND_DIR `
                           -NoNewWindow -PassThru
 
-    # Simpan PID
-    $proc.Id | Set-Content $BACKEND_PID_FILE
+    # Simpan PID secara aman
+    Save-StoredPid $BACKEND_PID_FILE $proc.Id
 
     # Tunggu sampai siap (max 60 detik)
     $timeout = 60
@@ -519,20 +488,16 @@ function Start-Backend {
         $elapsed++
         Write-Host "." -NoNewline -ForegroundColor Cyan
 
-        if (-not (Test-ProcessRunning $proc.Id)) {
+        if (Test-PortListening 3001) {
             Write-Host ""
-            Write-Err "Backend process berhenti tiba-tiba."
-            Write-Info "Periksa log: $BACKEND_LOG"
-            return $false
+            Write-Ok "Backend aktif di port 3001 (terdeteksi via port check)"
+            return $true
         }
 
-        if (Test-Path $BACKEND_LOG) {
-            $log = Get-Content $BACKEND_LOG -Raw -ErrorAction SilentlyContinue
-            if ($log -match "Nest application successfully started|Application is running on|Debugger listening") {
-                Write-Host ""
-                Write-Ok "Backend aktif di port 3001"
-                return $true
-            }
+        if ($elapsed -ge 5 -and -not (Test-ProcessRunning $proc.Id) -and -not (Test-PortListening 3001)) {
+            Write-Host ""
+            Write-Err "Backend process berhenti tiba-tiba."
+            return $false
         }
     }
 
@@ -544,7 +509,6 @@ function Start-Backend {
     }
 
     Write-Err "Backend gagal dimulai dalam $timeout detik."
-    Write-Info "Periksa log: $BACKEND_LOG"
     return $false
 }
 
@@ -553,16 +517,16 @@ function Start-Frontend {
     
     if ($Mode -eq "Development") {
         Write-Status "Menjalankan Frontend DEVELOPMENT (port 3000)..." "Cyan"
-        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1536&& npm run dev >> `"$FRONTEND_LOG`" 2>&1"
+        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1536&& npm run dev"
     } elseif ($Mode -eq "Preview") {
         Write-Status "Menjalankan Frontend PREVIEW (port 3000)..." "Cyan"
-        $cmdLine = "/c set NODE_ENV=preview&& set NODE_OPTIONS=--max-old-space-size=1536&& npm run dev >> `"$FRONTEND_LOG`" 2>&1"
+        $cmdLine = "/c set NODE_ENV=preview&& set NODE_OPTIONS=--max-old-space-size=1536&& npm run dev"
     } elseif ($Mode -eq "Staging") {
         Write-Status "Menjalankan Frontend STAGING (port 3000)..." "Cyan"
-        $cmdLine = "/c set NODE_ENV=staging&& set NODE_OPTIONS=--max-old-space-size=1536&& npm run dev >> `"$FRONTEND_LOG`" 2>&1"
+        $cmdLine = "/c set NODE_ENV=staging&& set NODE_OPTIONS=--max-old-space-size=1536&& npm run dev"
     } elseif ($Mode -eq "Fallback") {
         Write-Status "Menjalankan Frontend FALLBACK MODE (port 3000)..." "Yellow"
-        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1536&& npm run dev >> `"$FRONTEND_LOG`" 2>&1"
+        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1536&& npm run dev"
     } else {
         Write-Status "Menjalankan Frontend PRODUCTION (port 3000)..." "Cyan"
         $buildManifest = Join-Path $FRONTEND_DIR ".next\build-manifest.json"
@@ -571,18 +535,16 @@ function Start-Frontend {
             $built = Build-Frontend
             if (-not $built) { return $false }
         }
-        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1536&& npm run start >> `"$FRONTEND_LOG`" 2>&1"
+        $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1536&& npm run start"
     }
 
-    # Reset log lama secara aman
-    try { "" | Out-File -FilePath $FRONTEND_LOG -Encoding utf8 -Force -ErrorAction SilentlyContinue } catch {}
     $proc = Start-Process -FilePath "cmd.exe" `
                           -ArgumentList $cmdLine `
                           -WorkingDirectory $FRONTEND_DIR `
                           -NoNewWindow -PassThru
 
-    # Simpan PID
-    $proc.Id | Set-Content $FRONTEND_PID_FILE
+    # Simpan PID secara aman
+    Save-StoredPid $FRONTEND_PID_FILE $proc.Id
 
     # Tunggu sampai siap (max 60 detik)
     $timeout = 60
@@ -593,20 +555,16 @@ function Start-Frontend {
         $elapsed++
         Write-Host "." -NoNewline -ForegroundColor Cyan
 
-        if (-not (Test-ProcessRunning $proc.Id)) {
+        if (Test-PortListening 3000) {
             Write-Host ""
-            Write-Err "Frontend process berhenti tiba-tiba."
-            Write-Info "Periksa log: $FRONTEND_LOG"
-            return $false
+            Write-Ok "Frontend aktif di port 3000 -> http://localhost:3000"
+            return $true
         }
 
-        if (Test-Path $FRONTEND_LOG) {
-            $log = Get-Content $FRONTEND_LOG -Raw -ErrorAction SilentlyContinue
-            if ($log -match "Ready in|started server on|Local:\s+http|Listening on") {
-                Write-Host ""
-                Write-Ok "Frontend aktif di port 3000 -> http://localhost:3000"
-                return $true
-            }
+        if ($elapsed -ge 5 -and -not (Test-ProcessRunning $proc.Id) -and -not (Test-PortListening 3000)) {
+            Write-Host ""
+            Write-Err "Frontend process berhenti tiba-tiba."
+            return $false
         }
     }
 
@@ -618,7 +576,6 @@ function Start-Frontend {
     }
 
     Write-Err "Frontend gagal dimulai dalam $timeout detik."
-    Write-Info "Periksa log: $FRONTEND_LOG"
     return $false
 }
 
@@ -656,14 +613,13 @@ function Start-PrismaStudio {
         return $true
     }
 
-    try { "" | Out-File -FilePath $PRISMA_STUDIO_LOG -Encoding utf8 -Force } catch {}
-    $cmdLine = "/c npx prisma studio --port 51212 --browser none >> `"$PRISMA_STUDIO_LOG`" 2>&1"
+    $cmdLine = "/c npx prisma studio --port 51212 --browser none"
     $proc = Start-Process -FilePath "cmd.exe" `
                           -ArgumentList $cmdLine `
                           -WorkingDirectory $BACKEND_DIR `
                           -NoNewWindow -PassThru
 
-    $proc.Id | Set-Content $PRISMA_STUDIO_PID_FILE
+    Save-StoredPid $PRISMA_STUDIO_PID_FILE $proc.Id
 
     Start-Sleep -Seconds 2
     if (Test-PortListening 51212) {
@@ -696,14 +652,13 @@ function Start-FaceAiService {
         }
     }
 
-    try { "" | Out-File -FilePath $FACE_AI_LOG -Encoding utf8 -Force } catch {}
-    $cmdLine = "/c cd /d `"$FACE_AI_DIR`" && $pyExe main.py >> `"$FACE_AI_LOG`" 2>&1"
+    $cmdLine = "/c cd /d `"$FACE_AI_DIR`" && $pyExe main.py"
     $proc = Start-Process -FilePath "cmd.exe" `
                           -ArgumentList $cmdLine `
                           -WorkingDirectory $FACE_AI_DIR `
                           -NoNewWindow -PassThru
 
-    $proc.Id | Set-Content $FACE_AI_PID_FILE
+    Save-StoredPid $FACE_AI_PID_FILE $proc.Id
 
     Start-Sleep -Seconds 2
     if (Test-PortListening 8089) {
@@ -732,7 +687,7 @@ function Start-Apps {
     # 2. Jalankan Backend
     $backendOk = Start-Backend -Mode $Mode
     if (-not $backendOk) {
-        Write-Err "Gagal memulai Backend. Periksa log di: $BACKEND_LOG"
+        Write-Err "Gagal memulai Backend."
         return
     }
 
@@ -740,7 +695,7 @@ function Start-Apps {
     Write-Host ""
     $frontendOk = Start-Frontend -Mode $Mode
     if (-not $frontendOk) {
-        Write-Err "Gagal memulai Frontend. Periksa log di: $FRONTEND_LOG"
+        Write-Err "Gagal memulai Frontend."
         return
     }
 
@@ -790,52 +745,6 @@ function Start-BuildOnly {
     }
 }
 
-# ─── LOGS ────────────────────────────────────────────────────
-
-function Show-Logs {
-    Write-Banner
-    Write-Host "  Pilih log yang ingin dilihat:" -ForegroundColor White
-    Write-Host "  [1] Log Backend       ($BACKEND_LOG)"
-    Write-Host "  [2] Log Frontend      ($FRONTEND_LOG)"
-    Write-Host "  [3] Log Prisma Studio ($PRISMA_STUDIO_LOG)"
-    Write-Host "  [0] Kembali"
-    Write-Host ""
-    $choice = Read-Host "  Pilihan"
-
-    switch ($choice) {
-        "1" {
-            if (Test-Path $BACKEND_LOG) {
-                Write-Host ""
-                Write-Host "  === LOG BACKEND (50 baris terakhir) ===" -ForegroundColor Cyan
-                Get-Content $BACKEND_LOG -Tail 50 | ForEach-Object { Write-Host "  $_" }
-            } else {
-                Write-Err "Log backend tidak ditemukan."
-            }
-        }
-        "2" {
-            if (Test-Path $FRONTEND_LOG) {
-                Write-Host ""
-                Write-Host "  === LOG FRONTEND (50 baris terakhir) ===" -ForegroundColor Cyan
-                Get-Content $FRONTEND_LOG -Tail 50 | ForEach-Object { Write-Host "  $_" }
-            } else {
-                Write-Err "Log frontend tidak ditemukan."
-            }
-        }
-        "3" {
-            if (Test-Path $PRISMA_STUDIO_LOG) {
-                Write-Host ""
-                Write-Host "  === LOG PRISMA STUDIO (50 baris terakhir) ===" -ForegroundColor Cyan
-                Get-Content $PRISMA_STUDIO_LOG -Tail 50 | ForEach-Object { Write-Host "  $_" }
-            } else {
-                Write-Err "Log Prisma Studio tidak ditemukan."
-            }
-        }
-    }
-
-    Write-Host ""
-    Read-Host "  Tekan ENTER untuk kembali ke menu"
-}
-
 # ─── TROUBLESHOOT ─────────────────────────────────────────────
 
 function Start-Troubleshoot {
@@ -846,8 +755,7 @@ function Start-Troubleshoot {
     Write-Host "  |  [1] Matikan Paksa Port 3000 & 3001 & 51212|" -ForegroundColor White
     Write-Host "  |  [2] Hapus Cache .next (Frontend)       |" -ForegroundColor White
     Write-Host "  |  [3] Hapus dist (Backend)               |" -ForegroundColor White
-    Write-Host "  |  [4] Bersihkan Log                      |" -ForegroundColor White
-    Write-Host "  |  [5] Perbaiki Semuanya (Full Reset)     |" -ForegroundColor Red
+    Write-Host "  |  [4] Perbaiki Semuanya (Full Reset)     |" -ForegroundColor Red
     Write-Host "  |  [0] Kembali                            |" -ForegroundColor White
     Write-Host "  +=========================================+" -ForegroundColor Yellow
     Write-Host ""
@@ -882,26 +790,12 @@ function Start-Troubleshoot {
             }
         }
         "4" {
-            Write-Status "Mengompresi dan mengarsipkan log sebelum dibersihkan..." "Yellow"
-            Compress-All-LogFiles
-            if (Test-Path $BACKEND_LOG) { "" | Out-File -FilePath $BACKEND_LOG -Encoding utf8 -Force -ErrorAction SilentlyContinue }
-            if (Test-Path $FRONTEND_LOG) { "" | Out-File -FilePath $FRONTEND_LOG -Encoding utf8 -Force -ErrorAction SilentlyContinue }
-            if (Test-Path $PRISMA_STUDIO_LOG) { "" | Out-File -FilePath $PRISMA_STUDIO_LOG -Encoding utf8 -Force -ErrorAction SilentlyContinue }
-            if (Test-Path $FACE_AI_LOG) { "" | Out-File -FilePath $FACE_AI_LOG -Encoding utf8 -Force -ErrorAction SilentlyContinue }
-            if (Test-Path $WA_GATEWAY_LOG) { "" | Out-File -FilePath $WA_GATEWAY_LOG -Encoding utf8 -Force -ErrorAction SilentlyContinue }
-            Write-Ok "Log berhasil dikompresi ke storage/compressed-logs dan file mentah direset."
-        }
-        "5" {
             Write-Status "Melakukan Full Reset..." "Red"
             Stop-Apps
-            Compress-All-LogFiles
             $nextDir = Join-Path $FRONTEND_DIR ".next"
             $distDir = Join-Path $BACKEND_DIR "dist"
             if (Test-Path $nextDir) { Remove-Item -Recurse -Force $nextDir -ErrorAction SilentlyContinue }
             if (Test-Path $distDir) { Remove-Item -Recurse -Force $distDir -ErrorAction SilentlyContinue }
-            if (Test-Path $BACKEND_LOG) { "" | Out-File -FilePath $BACKEND_LOG -Encoding utf8 -Force -ErrorAction SilentlyContinue }
-            if (Test-Path $FRONTEND_LOG) { "" | Out-File -FilePath $FRONTEND_LOG -Encoding utf8 -Force -ErrorAction SilentlyContinue }
-            if (Test-Path $PRISMA_STUDIO_LOG) { "" | Out-File -FilePath $PRISMA_STUDIO_LOG -Encoding utf8 -Force -ErrorAction SilentlyContinue }
             Write-Ok "Reset selesai! Silakan build ulang atau jalankan aplikasi."
         }
     }
@@ -1410,7 +1304,6 @@ while ($true) {
     Write-Host "  |  [8] Rebuild & Restart (Full)           |" -ForegroundColor White
     Write-Host "  |  [9] Menonaktifkan Mode / Stop Aplikasi |" -ForegroundColor Red
     Write-Host "  |  [10] Build Aplikasi (Tanpa Menjalankan)|" -ForegroundColor White
-    Write-Host "  |  [11] Lihat Log Server                  |" -ForegroundColor White
     Write-Host "  |  [12] Buka Browser (localhost:3000)     |" -ForegroundColor White
     Write-Host "  |  [13] Suite Testing & Diagnostik       |" -ForegroundColor Yellow
     Write-Host "  |  [14] Troubleshoot (Perbaiki Error)    |" -ForegroundColor White
@@ -1496,34 +1389,15 @@ while ($true) {
         "8" {
             Write-Banner
             if (Confirm-Action "Yakin ingin mem-Build ulang dan Restart Frontend & Backend? (Perubahan kode akan diterapkan)") {
-                Write-Status "Menghentikan proses Frontend, Backend, dan Prisma Studio..." "Yellow"
-                
-                $bPid = Get-StoredPid $BACKEND_PID_FILE
-                $fPid = Get-StoredPid $FRONTEND_PID_FILE
-                $pPid = Get-StoredPid $PRISMA_STUDIO_PID_FILE
-                if ($bPid) {
-                    Stop-ProcessById $bPid
-                    Remove-Item $BACKEND_PID_FILE -ErrorAction SilentlyContinue
-                }
-                if ($fPid) {
-                    Stop-ProcessById $fPid
-                    Remove-Item $FRONTEND_PID_FILE -ErrorAction SilentlyContinue
-                }
-                if ($pPid) {
-                    Stop-ProcessById $pPid
-                    Remove-Item $PRISMA_STUDIO_PID_FILE -ErrorAction SilentlyContinue
-                }
-                Stop-PortProcess 3001
-                Stop-PortProcess 3000
-                Stop-PortProcess 51212
-                Start-Sleep -Seconds 1
+                Stop-Apps
+                Start-Sleep -Seconds 2
                 
                 $bBuilt = Build-Backend
                 $fBuilt = Build-Frontend
                 
-                if ($bBuilt) { Start-Backend }
-                if ($fBuilt) { Start-Frontend }
-                Start-PrismaStudio
+                if ($bBuilt) { $null = Start-Backend }
+                if ($fBuilt) { $null = Start-Frontend }
+                $null = Start-PrismaStudio
             }
             Read-Host "  Tekan ENTER untuk kembali ke menu"
         }
@@ -1535,9 +1409,6 @@ while ($true) {
             Write-Banner
             Start-BuildOnly
             Read-Host "  Tekan ENTER untuk kembali ke menu"
-        }
-        "11" {
-            Show-Logs
         }
         "12" {
             Write-Status "Membuka browser ke http://localhost:3000 ..." "Cyan"

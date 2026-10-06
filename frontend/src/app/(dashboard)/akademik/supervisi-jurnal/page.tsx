@@ -26,9 +26,12 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
+import { 
+  mergeConsecutiveSchedules, 
+  findJournalForSchedule, 
+  DAYS_NAME 
+} from '@/lib/schedule-utils'
 import { SortableTableHead, useSorting } from '@/components/SortableTableHead'
-
-const DAYS_NAME = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
 
 export default function SupervisiJurnalPage() {
   const { data: session, status } = useSession()
@@ -128,48 +131,38 @@ export default function SupervisiJurnalPage() {
     ).values()
   ).sort((a, b) => a.name.localeCompare(b.name))
 
+  // Gabungkan jadwal yang berurutan untuk kelas, mapel, dan guru yang sama
+  const mergedAllSchedules = useMemo(() => {
+    return mergeConsecutiveSchedules(allSchedulesList)
+  }, [allSchedulesList])
+
   // Hitung jadwal hari ini
   const todayDayOfWeek = new Date().getDay()
   const todayDateString = new Date().toISOString().split('T')[0]
 
-  const parseTimeToMinutes = (t: string | undefined | null): number => {
-    if (!t) return 0
-    const clean = t.replace('.', ':').trim()
-    const parts = clean.split(':')
-    const hours = parseInt(parts[0] || '0', 10) || 0
-    const minutes = parseInt(parts[1] || '0', 10) || 0
-    return hours * 60 + minutes
-  }
+  // Jadwal Hari Ini terfilter (hasil merge)
+  const todaySchedules = useMemo(() => {
+    return mergedAllSchedules
+      .filter(s => Number(s.dayOfWeek) === todayDayOfWeek)
+      .filter(s => selectedTeacherFilter === 'ALL' || s.teacherId === selectedTeacherFilter || s.teacher?.id === selectedTeacherFilter)
+      .filter(s => selectedClassFilter === 'ALL' || s.classId === selectedClassFilter || s.class?.id === selectedClassFilter)
+  }, [mergedAllSchedules, todayDayOfWeek, selectedTeacherFilter, selectedClassFilter])
 
-  // Jadwal Hari Ini terfilter
-  const todaySchedules = allSchedulesList
-    .filter(s => Number(s.dayOfWeek) === todayDayOfWeek)
-    .filter(s => selectedTeacherFilter === 'ALL' || s.teacherId === selectedTeacherFilter || s.teacher?.id === selectedTeacherFilter)
-    .filter(s => selectedClassFilter === 'ALL' || s.classId === selectedClassFilter || s.class?.id === selectedClassFilter)
-    .sort((a, b) => parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime))
-
-  // Jadwal Mingguan Lengkap terfilter
-  const allWeeklySchedules = [...allSchedulesList]
-    .filter(s => selectedTeacherFilter === 'ALL' || s.teacherId === selectedTeacherFilter || s.teacher?.id === selectedTeacherFilter)
-    .filter(s => selectedClassFilter === 'ALL' || s.classId === selectedClassFilter || s.class?.id === selectedClassFilter)
-    .sort((a, b) => {
-      if ((a.dayOfWeek ?? 1) !== (b.dayOfWeek ?? 1)) {
-        return (a.dayOfWeek ?? 1) - (b.dayOfWeek ?? 1)
-      }
-      return parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime)
-    })
+  // Jadwal Mingguan Lengkap terfilter (hasil merge)
+  const allWeeklySchedules = useMemo(() => {
+    return mergedAllSchedules
+      .filter(s => selectedTeacherFilter === 'ALL' || s.teacherId === selectedTeacherFilter || s.teacher?.id === selectedTeacherFilter)
+      .filter(s => selectedClassFilter === 'ALL' || s.classId === selectedClassFilter || s.class?.id === selectedClassFilter)
+  }, [mergedAllSchedules, selectedTeacherFilter, selectedClassFilter])
 
   // Jurnal terfilter
   const filteredJournals = allJournals
     .filter(j => selectedTeacherFilter === 'ALL' || j.teacherId === selectedTeacherFilter || j.schedule?.teacherId === selectedTeacherFilter || j.schedule?.teacher?.id === selectedTeacherFilter)
     .filter(j => selectedClassFilter === 'ALL' || j.schedule?.classId === selectedClassFilter || j.schedule?.class?.id === selectedClassFilter)
 
-  // Cek apakah jurnal hari ini sudah diisi untuk scheduleId tertentu
-  const getTodayJournalForSchedule = (scheduleId: string) => {
-    return allJournals.find(j => {
-      const jDateStr = new Date(j.date).toISOString().split('T')[0]
-      return j.scheduleId === scheduleId && jDateStr === todayDateString
-    })
+  // Cek apakah jurnal hari ini sudah diisi untuk schedule tertentu
+  const getTodayJournalForSchedule = (schedule: any) => {
+    return findJournalForSchedule(schedule, allJournals, todayDateString)
   }
 
   const handleOpenDetailDialog = (journalItem: any, fallbackSchedule?: any) => {
@@ -186,7 +179,7 @@ export default function SupervisiJurnalPage() {
 
   // Ringkasan metrik hari ini
   const totalToday = todaySchedules.length
-  const filledTodayCount = todaySchedules.filter(s => !!getTodayJournalForSchedule(s.id)).length
+  const filledTodayCount = todaySchedules.filter(s => !!getTodayJournalForSchedule(s)).length
   const pendingTodayCount = Math.max(0, totalToday - filledTodayCount)
 
   if (!isAuthorizedKurikulum) {
@@ -414,7 +407,7 @@ export default function SupervisiJurnalPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {todaySchedules.map((schedule) => {
-                const filledJournal = getTodayJournalForSchedule(schedule.id)
+                const filledJournal = getTodayJournalForSchedule(schedule)
                 return (
                   <Card 
                     key={schedule.id} 
@@ -433,6 +426,11 @@ export default function SupervisiJurnalPage() {
                           <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md">
                             <Clock className="w-3.5 h-3.5 text-slate-500" />
                             {schedule.startTime} - {schedule.endTime}
+                            {schedule.totalPeriods > 1 && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ml-0.5">
+                                {schedule.totalPeriods} JP
+                              </span>
+                            )}
                           </span>
                         </div>
 

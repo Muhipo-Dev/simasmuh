@@ -155,20 +155,20 @@ export function EmailRecommendationBanner() {
         {/* Glow accent */}
         <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-amber-400/20 dark:bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3.5 relative z-10">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sm:gap-3.5 relative z-10">
           {/* Sisi Kiri: Ikon & Deskripsi */}
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-500/20 dark:bg-amber-500/30 border border-amber-400/50 dark:border-amber-400/30 flex items-center justify-center text-amber-700 dark:text-amber-300 shrink-0 shadow-xs mt-0.5 lg:mt-0">
-              <Mail className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
+          <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/20 dark:bg-amber-500/30 border border-amber-400/50 dark:border-amber-400/30 flex items-center justify-center text-amber-700 dark:text-amber-300 shrink-0 shadow-xs mt-0.5">
+              <Mail className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
             </div>
 
-            <div className="space-y-1 min-w-0">
+            <div className="space-y-1 min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 dark:bg-amber-500/30 text-amber-900 dark:text-amber-200 border border-amber-400/40 dark:border-amber-400/30 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wide">
-                  <BellRing className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 dark:bg-amber-500/30 text-amber-900 dark:text-amber-200 border border-amber-400/40 dark:border-amber-400/30 text-[10px] sm:text-[10.5px] font-extrabold uppercase tracking-wide shrink-0">
+                  <BellRing className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
                   Rekomendasi Notifikasi Sistem
                 </span>
-                <span className="text-[11px] font-semibold text-amber-800/80 dark:text-amber-300/80">
+                <span className="text-[10.5px] sm:text-[11px] font-semibold text-amber-800/80 dark:text-amber-300/80 truncate">
                   Peran: {userRoleLabel}
                 </span>
               </div>
@@ -184,22 +184,22 @@ export function EmailRecommendationBanner() {
           </div>
 
           {/* Sisi Kanan: Tombol Aksi & Dismiss */}
-          <div className="flex items-center gap-2 w-full lg:w-auto shrink-0 pt-1 lg:pt-0 justify-end">
+          <div className="flex items-center gap-1.5 sm:gap-2 w-full md:w-auto shrink-0 pt-1 md:pt-0 justify-end">
             <Button
               type="button"
               onClick={handleOpenModal}
-              className="h-9 sm:h-9.5 px-3.5 sm:px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-95 flex items-center gap-1.5 touch-manipulation flex-1 lg:flex-none justify-center"
+              className="h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-all active:scale-95 flex items-center gap-1.5 touch-manipulation shrink-0"
             >
-              <Mail className="w-4 h-4 shrink-0" />
+              <Mail className="w-3.5 h-3.5 shrink-0" />
               <span>Isi Email Sekarang</span>
             </Button>
 
             <Link
               href="/pengaturan/profil"
-              className="h-9 sm:h-9.5 px-3 sm:px-3.5 rounded-xl border border-amber-300 dark:border-amber-700/80 bg-white/70 dark:bg-slate-900/60 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-semibold transition-all touch-manipulation inline-flex items-center gap-1.5 shrink-0"
+              className="h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-xl border border-amber-300 dark:border-amber-700/80 bg-white/70 dark:bg-slate-900/60 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs font-semibold transition-all touch-manipulation inline-flex items-center gap-1 shrink-0"
             >
               <span>Profil</span>
-              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+              <ArrowRight className="w-3 h-3 shrink-0" />
             </Link>
 
             <button
@@ -207,9 +207,9 @@ export function EmailRecommendationBanner() {
               onClick={handleDismiss}
               title="Ingatkan nanti"
               aria-label="Tutup sementara rekomendasi email"
-              className="h-9 w-9 sm:h-9.5 sm:w-9.5 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-amber-200/50 dark:hover:bg-amber-950/60 transition-colors shrink-0 touch-manipulation"
+              className="h-8 w-8 sm:h-8.5 sm:w-8.5 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-amber-200/50 dark:hover:bg-amber-950/60 transition-colors shrink-0 touch-manipulation"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>

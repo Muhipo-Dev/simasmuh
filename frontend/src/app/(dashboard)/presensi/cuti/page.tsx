@@ -246,7 +246,7 @@ export function CutiPegawaiManagement() {
         Swal.fire({
           icon: 'success',
           title: actionDialog.type === 'APPROVE' ? 'Cuti Disetujui' : 'Cuti Ditolak',
-          text: `Status cuti pegawai berhasil diperbarui dan notifikasi WhatsApp telah dikirimkan.`,
+          text: `Status cuti pegawai berhasil diperbarui dan notifikasi email resmi telah dikirimkan.`,
           timer: 2000,
           showConfirmButton: false,
         })

@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import {
   CreditCard, Upload, Download, Search, Filter, RefreshCw, CheckCircle2,
-  AlertCircle, Edit2, Trash2, FileSpreadsheet, Building2, UserCheck, HelpCircle, X, Plus
+  AlertCircle, Edit2, Trash2, FileSpreadsheet, Building2, UserCheck, HelpCircle, X, Plus,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import * as XLSX from 'xlsx'
@@ -56,6 +57,16 @@ export default function VirtualAccountPage() {
     totalNominalVaActive: 0,
     totalUnpaidNominal: 0,
   })
+
+  // Pagination states for smooth rendering (Optimized for 2GB RAM devices)
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  const totalPages = Math.max(1, Math.ceil(students.length / pageSize))
+  const paginatedStudents = React.useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize
+    return students.slice(startIdx, startIdx + pageSize)
+  }, [students, currentPage, pageSize])
 
   // Modal Import States
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
@@ -517,16 +528,18 @@ export default function VirtualAccountPage() {
                     Memuat data Virtual Account...
                   </td>
                 </tr>
-              ) : students.length === 0 ? (
+              ) : paginatedStudents.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
                     Tidak ada data siswa ditemukan.
                   </td>
                 </tr>
               ) : (
-                students.map((student, idx) => (
+                paginatedStudents.map((student, idx) => (
                   <tr key={student.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition-colors">
-                    <td className="px-4 py-2.5 text-center font-medium text-slate-400">{idx + 1}</td>
+                    <td className="px-4 py-2.5 text-center font-medium text-slate-400">
+                      {(currentPage - 1) * pageSize + idx + 1}
+                    </td>
                     <td className="px-4 py-2.5 font-mono font-semibold text-slate-800 dark:text-slate-200">
                       {student.nis}
                     </td>
@@ -597,6 +610,76 @@ export default function VirtualAccountPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Bar */}
+        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Menampilkan <span className="font-semibold text-slate-900 dark:text-white">
+              {students.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+            </span> – <span className="font-semibold text-slate-900 dark:text-white">
+              {Math.min(currentPage * pageSize, students.length)}
+            </span> dari <span className="font-semibold text-slate-900 dark:text-white">{students.length}</span> siswa
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <span>Baris per halaman:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value))
+                  setCurrentPage(1)
+                }}
+                className="px-2 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                title="Halaman Pertama"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                title="Sebelumnya"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <span className="px-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                {currentPage} / {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                title="Selanjutnya"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage >= totalPages}
+                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                title="Halaman Terakhir"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -40,9 +40,9 @@ export function AppSidebar({
         />
       )}
 
-      {/* Sidebar Frame Persis CBT MUHIPO dengan Dark & Light Mode */}
+      {/* Sidebar Frame Persis CBT MUHIPO dengan Floating Glassmorphism di Desktop */}
       <aside
-        className={`w-72 bg-white/95 dark:bg-slate-950/95 border-r border-slate-200 dark:border-white/10 text-slate-800 dark:text-white backdrop-blur-2xl flex flex-col fixed inset-y-0 z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl ${
+        className={`w-72 bg-white/95 dark:bg-slate-950/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-white backdrop-blur-2xl flex flex-col fixed z-50 transition-all duration-300 ease-in-out shadow-xl lg:translate-x-0 inset-y-0 lg:inset-y-auto lg:top-3.5 lg:bottom-3.5 lg:left-3.5 lg:w-64 xl:w-68 lg:rounded-2xl overflow-hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

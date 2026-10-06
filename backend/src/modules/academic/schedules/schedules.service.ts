@@ -335,8 +335,11 @@ function parseTimeToMinutes(t: string | undefined | null): number {
 export class SchedulesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(query?: { userId?: string; teacherId?: string }) {
+  async findAll(query?: { userId?: string; teacherId?: string; classId?: string }) {
     const where: any = {};
+    if (query?.classId) {
+      where.classId = query.classId;
+    }
     if (query?.teacherId) {
       where.teacherId = query.teacherId;
     }

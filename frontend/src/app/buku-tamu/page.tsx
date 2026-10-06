@@ -289,7 +289,7 @@ export default function PublicGuestBookPage() {
                   <div className="space-y-1">
                     <Label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                       <Phone className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Nomor Telepon / WhatsApp</span>
+                      <span>Nomor Telepon / HP</span>
                     </Label>
                     <Input 
                       placeholder="Contoh: 081234567890"

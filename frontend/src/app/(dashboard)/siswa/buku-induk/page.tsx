@@ -836,7 +836,7 @@ export default function SiswaBukuIndukPage() {
                 </div>
 
                 <div>
-                  <Label className="text-xs font-semibold text-slate-700">11. No. Telepon / HP / WhatsApp</Label>
+                  <Label className="text-xs font-semibold text-slate-700">11. No. Telepon / HP</Label>
                   <Input
                     value={formData.telp || ''}
                     onChange={(e) => handleInputChange('telp', e.target.value)}

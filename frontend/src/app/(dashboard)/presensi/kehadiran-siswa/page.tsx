@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Loader2, CalendarDays, Download, UserCheck, ChevronDown } from 'lucide-react'
+import { Loader2, CalendarDays, Download, UserCheck, ChevronDown, QrCode } from 'lucide-react'
+import Link from 'next/link'
 import * as XLSX from 'xlsx'
 import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
@@ -160,6 +161,15 @@ export default function LogPresensiSiswaPage() {
           <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Rekapitulasi riwayat presensi masuk harian siswa.</p>
         </div>
 
+        <div className="flex items-center gap-2">
+          <Link
+            href="/presensi/scan-qr"
+            className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs hover:shadow-md transition-all touch-manipulation transform active:scale-95"
+          >
+            <QrCode className="w-4 h-4" />
+            <span>QR Scanner</span>
+          </Link>
+
           <Button 
             variant="outline" 
             className="h-9 px-3.5 text-emerald-600 border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 font-bold text-xs rounded-xl touch-manipulation" 
@@ -169,6 +179,7 @@ export default function LogPresensiSiswaPage() {
             <Download className="w-4 h-4 mr-1.5" />
             Export Excel
           </Button>
+        </div>
       </div>
 
       <Card className="shadow-xs border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">

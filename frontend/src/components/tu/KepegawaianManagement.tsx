@@ -302,8 +302,8 @@ export function KepegawaianManagement() {
     }
   })
 
-  // Filter hanya staf internal (Guru, Pegawai, Admin TU, Kepala Sekolah, dll, bukan siswa / wali murid)
-  const staffList = allUsers.filter(u => u.role !== 'SISWA' && u.role !== 'WALI_MURID')
+  // Filter hanya staf internal resmi (Guru, Pegawai, Admin TU, Kepala Sekolah, dll, bukan siswa, wali murid, atau guru honorer/panggilan sementara)
+  const staffList = allUsers.filter(u => u.role !== 'SISWA' && u.role !== 'WALI_MURID' && u.role !== 'HONORER')
 
   // Upload Handler helper dengan batas maksimal 20 MB
   const handleFileUpload = async (file: File, folder: string = 'sdm_docs'): Promise<string> => {
@@ -1531,7 +1531,7 @@ export function KepegawaianManagement() {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-bold">No. WhatsApp *</Label>
+                <Label className="text-xs font-bold">No. HP / Telepon *</Label>
                 <Input
                   placeholder="081234567890"
                   value={formPelamar.noHp}
@@ -1824,7 +1824,7 @@ export function KepegawaianManagement() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-bold">No. WhatsApp / HP *</Label>
+                <Label className="text-xs font-bold">No. HP / Telepon *</Label>
                 <Input
                   placeholder="088293733330"
                   value={formPegawai.phone}
@@ -2216,7 +2216,7 @@ export function KepegawaianManagement() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-bold">No. WhatsApp / HP</Label>
+                <Label className="text-xs font-bold">No. HP / Telepon</Label>
                 <Input
                   placeholder="088293733330"
                   value={editFormPegawai.phone}
@@ -2485,7 +2485,7 @@ export function KepegawaianManagement() {
                   </div>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-200/50">
-                  <span className="text-slate-400">Kontak WhatsApp:</span>
+                  <span className="text-slate-400">No. Kontak:</span>
                   <span className="font-semibold text-slate-700 dark:text-slate-200">{selectedPegawai.phone || selectedPegawai.teacherProfile?.phone || '-'}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-200/50">

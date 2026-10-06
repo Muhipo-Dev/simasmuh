@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { AppNavbar } from './AppNavbar'
+import { NavbarPrayerWidget } from '@/components/dashboard/NavbarPrayerWidget'
 import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 
 interface PublicNavbarProps {
@@ -100,6 +101,7 @@ export function PublicNavbar({
       actions={
         isMinimal ? (
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <NavbarPrayerWidget />
             {currentAcademicYear && (
               <div className="flex items-center gap-1.5 px-2.5 2xl:px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs backdrop-blur-md shrink-0">
                 <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -115,10 +117,10 @@ export function PublicNavbar({
           </div>
         ) : (
           <>
-            {/* Desktop Actions (xl+ screen) */}
-            <div className="hidden xl:flex items-center gap-2.5 2xl:gap-3.5 border-l border-slate-200 dark:border-white/15 pl-4 2xl:pl-6 shrink-0">
+            {/* Desktop Actions (Public: Tahun Ajaran, Theme Toggle, Tombol Login/Dashboard) */}
+            <div className="hidden lg:flex items-center gap-2 xl:gap-2.5 shrink-0">
               {currentAcademicYear && (
-                <div className="flex items-center gap-1.5 px-2.5 2xl:px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs backdrop-blur-md shrink-0">
+                <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-xs shadow-2xs backdrop-blur-md shrink-0">
                   <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                   <span>TA: {currentAcademicYear}</span>
                   {currentSemester && (
@@ -128,12 +130,14 @@ export function PublicNavbar({
                   )}
                 </div>
               )}
-              <ThemeToggle />
+              <div className="border-l border-slate-200 dark:border-white/15 pl-2">
+                <ThemeToggle />
+              </div>
 
               {isLoggedIn ? (
                 <Link
                   href="/dashboard"
-                  className="bg-blue-600 hover:bg-blue-700 text-white pl-2 pr-4 py-1.5 rounded-full font-bold text-xs 2xl:text-sm flex items-center gap-2 transition-all shadow-xs hover:shadow-md active:scale-95 shrink-0"
+                  className="bg-blue-600 hover:bg-blue-700 text-white pl-2 pr-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs hover:shadow-md active:scale-95 shrink-0"
                 >
                   <div className="w-6 h-6 rounded-full bg-white/20 relative overflow-hidden flex items-center justify-center text-[10px] font-black shrink-0 border border-white/30">
                     {avatarUrl ? (
@@ -142,32 +146,60 @@ export function PublicNavbar({
                       <span>{displayName.charAt(0).toUpperCase()}</span>
                     )}
                   </div>
-                  <span className="max-w-[110px] truncate">{displayName}</span>
-                  <LayoutDashboard className="w-3.5 h-3.5 opacity-80" />
+                  <span className="max-w-[80px] xl:max-w-[110px] 2xl:max-w-[140px] truncate">{displayName}</span>
+                  <LayoutDashboard className="w-3.5 h-3.5 opacity-80 shrink-0" />
                 </Link>
               ) : (
                 <Link
                   href="/login"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 2xl:px-5 py-2 rounded-full font-bold text-xs 2xl:text-sm flex items-center transition-all shadow-xs hover:shadow-md active:scale-95 shrink-0"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-full font-bold text-xs xl:text-sm flex items-center transition-all shadow-xs hover:shadow-md active:scale-95 shrink-0"
                 >
-                  <LogIn className="w-4 h-4 mr-1.5 2xl:mr-2" />
+                  <LogIn className="w-4 h-4 mr-1.5 shrink-0" />
                   <span>Login</span>
                 </Link>
               )}
             </div>
 
-            {/* Tablet & Mobile Menu / Theme Toggle (below xl) */}
-            <div className="xl:hidden flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Tablet & Mobile Menu / Theme Toggle (below lg) */}
+            <div className="lg:hidden flex items-center gap-1 sm:gap-1.5 shrink-0">
               {currentAcademicYear && (
-                <div className="hidden sm:flex md:hidden lg:flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-[10px] shadow-2xs backdrop-blur-md shrink-0">
-                  <CalendarDays className="w-3.5 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
-                  <span>{currentAcademicYear}</span>
+                <div className="hidden sm:flex md:hidden xl:flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-[10px] shadow-2xs backdrop-blur-md shrink-0">
+                  <CalendarDays className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span>TA: {currentAcademicYear}</span>
                 </div>
               )}
+              
               <ThemeToggle size="sm" />
+
+              {/* Tombol Cepat Dashboard / Login di Layar Mobile */}
+              {isLoggedIn ? (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white p-1 sm:px-2.5 sm:py-1 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0"
+                  title="Buka Dashboard"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-white/20 relative overflow-hidden flex items-center justify-center text-[10px] font-black shrink-0">
+                    {avatarUrl ? (
+                      <NextImage src={avatarUrl} alt="Avatar" fill className="object-cover" />
+                    ) : (
+                      <span>{displayName.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <span className="hidden sm:inline max-w-[70px] truncate">{displayName}</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0"
+                >
+                  <LogIn className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Login</span>
+                </Link>
+              )}
+
               <DropdownMenu>
-                <DropdownMenuTrigger className="bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-800 dark:text-white border border-slate-200 dark:border-white/20 rounded-xl w-9 h-9 p-0 flex items-center justify-center shadow-xs transition-colors backdrop-blur-md shrink-0">
-                  <Menu className="h-5 w-5" />
+                <DropdownMenuTrigger className="bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-800 dark:text-white border border-slate-200 dark:border-white/20 rounded-xl w-8.5 h-8.5 sm:w-9 sm:h-9 p-0 flex items-center justify-center shadow-xs transition-colors backdrop-blur-md shrink-0">
+                  <Menu className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
@@ -229,16 +261,16 @@ export function PublicNavbar({
         )
       }
     >
-      {/* Desktop Navigation Links */}
+      {/* Desktop Navigation Links (Tampil fleksibel dan nyaman di layar lg & xl) */}
       {!isMinimal && (
-        <div className="hidden xl:flex items-center gap-1 2xl:gap-2">
+        <div className="flex items-center gap-0.5 xl:gap-1">
           {navItems.map((item) => {
             const active = isActive(item.href)
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`px-3.5 2xl:px-4 py-1.5 rounded-full text-xs 2xl:text-sm transition-all shrink-0 font-bold ${
+                className={`px-2.5 xl:px-3 py-1.5 rounded-full text-xs xl:text-sm transition-all shrink-0 font-bold whitespace-nowrap ${
                   active
                     ? 'text-white bg-blue-600 shadow-xs'
                     : 'text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10'

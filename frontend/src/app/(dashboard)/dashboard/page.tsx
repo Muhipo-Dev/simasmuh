@@ -28,7 +28,6 @@ import { UrgentAnnouncementPopup } from '@/components/dashboard/UrgentAnnounceme
 import { ActivityCalendarWidget } from '@/components/dashboard/ActivityCalendarWidget'
 import { NewsArticleListWidget } from '@/components/dashboard/NewsArticleListWidget'
 import { StudentDashboard } from '@/components/dashboard/StudentDashboard'
-import { PrayerTimesWidget } from '@/components/dashboard/PrayerTimesWidget'
 import { SignaturePadDialog } from '@/components/dashboard/SignaturePadDialog'
 import { ExecutiveStatsPanel } from '@/components/dashboard/ExecutiveStatsPanel'
 import { DisposisiAlertBanner } from '@/components/dashboard/DisposisiAlertBanner'
@@ -79,7 +78,16 @@ export default function DashboardPage() {
 
   const { data: students, isLoading: loadingStudents } = useQuery<any[]>({
     queryKey: ['students'],
-    queryFn: () => authenticatedQuery('/api-backend/students')
+    queryFn: () => authenticatedQuery('/api-backend/students'),
+    enabled: role !== 'SISWA'
+  })
+
+  // Direct fast query for active student profile
+  const { data: myStudentProfile } = useQuery<any>({
+    queryKey: ['my-student-profile', userId],
+    queryFn: () => userId ? authenticatedQuery(`/api-backend/students/by-user/${userId}`) : Promise.resolve(null),
+    enabled: role === 'SISWA' && !!userId,
+    staleTime: 60000,
   })
 
   const { data: classes, isLoading: loadingClasses } = useQuery<any[]>({
@@ -638,16 +646,16 @@ export default function DashboardPage() {
     }
   }
 
-  // Handler Supervisor: Kirim Link Reset Password Resmi via WhatsApp (SOP Troubleshooting)
+  // Handler Supervisor: Kirim Link Reset Password Resmi via Email (SOP Troubleshooting)
   const handleSendResetPassword = async (sessionItem: any) => {
     const result = await Swal.fire({
       title: 'Kirim Link Reset Password?',
-      html: `SOP Bantuan Troubleshooting:<br/>Kirimkan tautan reset password resmi langsung ke nomor WhatsApp <strong>${sessionItem.name}</strong> (@${sessionItem.username})?`,
+      html: `SOP Bantuan Troubleshooting:<br/>Kirimkan tautan reset password resmi langsung ke email terdaftar pengguna <strong>${sessionItem.name}</strong> (@${sessionItem.username})?`,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#4f46e5',
+      confirmButtonColor: '#2563eb',
       cancelButtonColor: '#64748b',
-      confirmButtonText: 'Ya, Kirim Link WhatsApp',
+      confirmButtonText: 'Ya, Kirim Link Email',
       cancelButtonText: 'Batal'
     })
 
@@ -664,7 +672,7 @@ export default function DashboardPage() {
 
       Swal.fire({
         title: 'Link Reset Terkirim!',
-        html: `Tautan pemulihan sandi berhasil digenerate dan dikirim via WhatsApp ke <strong>${data.recipientName}</strong> (${data.targetPhone}).<br/><br/><small class="text-slate-500 font-mono text-[11px] block mt-1 break-all bg-slate-100 dark:bg-slate-800 p-2 rounded">${window.location.origin}${data.resetUrl}</small>`,
+        html: `Tautan pemulihan sandi berhasil digenerate dan dikirim via Email ke <strong>${data.recipientName}</strong> (${data.targetEmail || 'Email Akun'}).<br/><br/><small class="text-slate-500 font-mono text-[11px] block mt-1 break-all bg-slate-100 dark:bg-slate-800 p-2 rounded">${window.location.origin}${data.resetUrl}</small>`,
         icon: 'success',
       })
       refetchSupervisor()
@@ -722,7 +730,7 @@ export default function DashboardPage() {
     .filter(s => {
       if (s.dayOfWeek !== todayDayOfWeek) return false;
       if (role === 'SUPERADMIN') return true;
-      if (role === 'GURU' || subRole === 'GURU' || subRole2 === 'GURU' || subRole3 === 'GURU') {
+      if (role === 'GURU' || role === 'HONORER' || subRole === 'GURU' || subRole === 'HONORER' || subRole2 === 'GURU' || subRole2 === 'HONORER' || subRole3 === 'GURU' || subRole3 === 'HONORER') {
         return s?.teacher?.userId === userId || s?.teacher?.user?.email === session?.user?.email || (s?.teacher?.user?.username && s?.teacher?.user?.username === (session?.user as any)?.username);
       }
       return true;
@@ -939,7 +947,7 @@ export default function DashboardPage() {
   )
 
   if (role === 'SISWA') {
-    const activeStudent = (Array.isArray(students) ? students : []).find((s: any) =>
+    const activeStudent = myStudentProfile || (Array.isArray(students) ? students : []).find((s: any) =>
       s.userId === userId ||
       (s.user && (s.user.id === userId || s.user.username === (session?.user as any)?.username || s.user.email === session?.user?.email)) ||
       s.nisn === (session?.user as any)?.username ||
@@ -947,10 +955,10 @@ export default function DashboardPage() {
       s.nisn === session?.user?.email ||
       s.nis === session?.user?.email
     )
-    const studentClass = (Array.isArray(classes) ? classes : []).find((c: any) => c.id === activeStudent?.classId) || activeStudent?.class || (classes && classes.length > 0 ? classes[0] : null)
+    const studentClass = activeStudent?.class || (Array.isArray(classes) ? classes : []).find((c: any) => c.id === activeStudent?.classId) || null
     
     // Classmates in the same class
-    const classmates = (Array.isArray(students) ? students : []).filter((s: any) => s.classId === studentClass?.id)
+    const classmates = (Array.isArray(students) ? students : []).filter((s: any) => studentClass?.id && s.classId === studentClass.id)
 
     return (
       <StudentDashboard
@@ -959,7 +967,6 @@ export default function DashboardPage() {
         studentClass={studentClass}
         classmates={classmates}
         schedules={schedules || []}
-        grades={activeStudent?.grades || []}
         dailyAttendanceHistory={myHistory || []}
         studentTagihans={studentTagihans}
         announcements={announcements || []}
@@ -1008,14 +1015,22 @@ export default function DashboardPage() {
     return (
       <div className="space-y-3.5 sm:space-y-4 w-full">
         {/* Banner Welcome Header Wali Murid & Selektor Siswa */}
-        <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-slate-900 p-4 sm:p-5 rounded-2xl text-white shadow-md flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5 w-full border border-white/10">
+        <div className="simas-dash-header p-4 sm:p-5 text-white flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5 w-full">
           <div>
-            <h1 className="text-lg sm:text-xl tracking-tight text-white flex items-center gap-1.5 sm:gap-2">
-              <span className="font-extrabold">{clock.greeting} 👋,</span>
-              <span className="font-extrabold italic">{(session?.user as any)?.name || 'Bapak/Ibu Wali Murid'}</span>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="simas-kpi-badge bg-blue-500/20 text-blue-300 border-blue-400/40">
+                Wali Murid
+              </span>
+              <span className="text-[11px] text-slate-400 font-medium">
+                Portal Terpadu Orang Tua
+              </span>
+            </div>
+            <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white flex items-center gap-1.5 sm:gap-2">
+              <span>{clock.greeting},</span>
+              <span className="font-extrabold text-blue-200">{(session?.user as any)?.name || 'Bapak/Ibu Wali Murid'}</span>
             </h1>
-            <p className="text-indigo-100 mt-0.5 text-xs font-medium">
-              Portal Pemantauan Terpadu Wali Murid SIMASMUH SMA Muhammadiyah 1 Ponorogo
+            <p className="text-slate-400 text-xs font-medium mt-0.5">
+              Pemantauan akademik, presensi, dan administrasi keuangan peserta didik.
             </p>
           </div>
 
@@ -1057,13 +1072,41 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* JADWAL SHOLAT & KHGT MUHAMMADIYAH REALTIME BANNER */}
-        <PrayerTimesWidget variant="banner" />
+        {/* NOTIFIKASI TAGIHAN KEUANGAN SISWA TERHUBUNG UNTUK WALI MURID */}
+        {allUnpaid.length > 0 && (
+          <div className="p-4 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 font-bold flex items-center justify-center shrink-0 shadow-xs">
+                <Receipt className="w-5 h-5 text-slate-950" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide">
+                    Tagihan Keuangan Siswa ({activeStudent?.name || 'Siswa'})
+                  </span>
+                  <span className="simas-kpi-badge bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/60">
+                    {allUnpaid.length} Tagihan Belum Lunas
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                  Total tanggungan biaya pendidikan &amp; SPP yang perlu diselesaikan: <strong className="text-rose-600 dark:text-rose-400 font-bold swiss-tabular-nums">{formatCurrency(totalUnpaidAmount)}</strong>.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setShowPaymentPopup(true)}
+              className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs h-9 px-4 rounded-xl shadow-xs shrink-0 flex items-center justify-center gap-1.5"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Rincian &amp; Bayar Online</span>
+            </Button>
+          </div>
+        )}
 
         {/* 3-AREA DASHBOARD LAYOUT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3.5 sm:gap-4 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
           {/* AREA KIRI: INFO AKUN & INFORMASI SISTEM */}
-          <div className="md:col-span-1 xl:col-span-3 space-y-3.5 sm:space-y-4">
+          <div className="md:col-span-1 lg:col-span-3 space-y-3.5 sm:space-y-4">
             <UserAccountCard
               role={role}
               activeStudent={activeStudent}
@@ -1073,92 +1116,96 @@ export default function DashboardPage() {
           </div>
 
           {/* AREA TENGAH: TOMBOL AKSES CEPAT & WIDGET MONITORING */}
-          <div className="md:col-span-2 xl:col-span-6 space-y-3.5 sm:space-y-4 order-first md:order-none">
+          <div className="md:col-span-2 lg:col-span-6 space-y-3.5 sm:space-y-4 order-first lg:order-none">
             {/* Quick Access Tile Grid */}
             <div>
-              <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                Menu Akses Cepat Wali Murid
-              </h3>
+              <div className="flex items-center justify-center mb-2 sm:mb-2.5">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight">
+                    Menu Akses Cepat Wali Murid
+                  </h3>
+                </div>
+              </div>
               <CenterQuickAccessGrid links={parentNavLinks} role={role} />
             </div>
 
             {/* Monitoring Ringkasan Etika Tatib & Jadwal Siswa */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Adab & Karakter Siswa */}
-              <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-2xs rounded-xl p-3 sm:p-3.5 flex flex-col justify-between">
+              <div className="simas-metric-panel p-3.5 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5 mb-2">
-                    <span className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
                       <Award className="w-3.5 h-3.5 text-emerald-600" />
                       Poin Karakter & Adab
                     </span>
-                    <Badge variant="outline" className="text-[9.5px] bg-emerald-50 text-emerald-700 border-emerald-300 px-1.5 py-0">
-                      Live
-                    </Badge>
+                    <span className="simas-kpi-badge bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/60">
+                      Aktif
+                    </span>
                   </div>
                   <div className="flex items-center justify-around text-center py-1">
                     <div>
                       <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Poin Tatib</span>
-                      <span className="text-xl font-black text-emerald-600">
+                      <span className="text-xl font-bold text-emerald-600 swiss-tabular-nums">
                         {activeStudent?.etikaTataTertib?.kedisiplinanScore ?? 100}
                       </span>
                     </div>
                     <div className="border-r border-slate-100 dark:border-slate-800 h-7" />
                     <div>
                       <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Amalan Ibadah</span>
-                      <span className="text-xl font-black text-teal-600">
+                      <span className="text-xl font-bold text-teal-600">
                         {activeStudent?.etikaTataTertib?.ibadahGrade || 'A'}
                       </span>
                     </div>
                   </div>
                 </div>
                 <Link href="/akademik/etika-tatib" className="pt-2">
-                  <Button variant="outline" size="sm" className="w-full text-[11px] font-bold h-7 rounded-lg">
+                  <Button variant="outline" size="sm" className="w-full text-[11px] font-bold h-7.5 rounded-lg border-slate-200 dark:border-slate-700">
                     Buku Saku &rarr;
                   </Button>
                 </Link>
-              </Card>
+              </div>
 
               {/* Status Kehadiran Siswa */}
-              <Card className="border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900 shadow-2xs rounded-xl p-3 sm:p-3.5 flex flex-col justify-between">
+              <div className="simas-metric-panel p-3.5 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5 mb-2">
-                    <span className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
                       <ClipboardCheck className="w-3.5 h-3.5 text-blue-600" />
                       Status Presensi & Izin
                     </span>
-                    <Badge variant="outline" className="text-[9.5px] bg-blue-50 text-blue-700 border-blue-300 px-1.5 py-0">
+                    <span className="simas-kpi-badge bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/60">
                       Harian
-                    </Badge>
+                    </span>
                   </div>
                   <div className="flex items-center justify-around text-center py-1">
                     <div>
                       <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Presensi Bulan Ini</span>
-                      <span className="text-xl font-black text-blue-600">
+                      <span className="text-xl font-bold text-blue-600 swiss-tabular-nums">
                         {activeStudent?.attendances?.length || 0} Hari
                       </span>
                     </div>
                     <div className="border-r border-slate-100 dark:border-slate-800 h-7" />
                     <div>
                       <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Izin Sakit/Lain</span>
-                      <span className="text-xl font-black text-amber-600">
+                      <span className="text-xl font-bold text-amber-600 swiss-tabular-nums">
                         0
                       </span>
                     </div>
                   </div>
                 </div>
                 <Link href="/presensi/kehadiran-siswa" className="pt-2">
-                  <Button variant="outline" size="sm" className="w-full text-[11px] font-bold h-7 rounded-lg">
+                  <Button variant="outline" size="sm" className="w-full text-[11px] font-bold h-7.5 rounded-lg border-slate-200 dark:border-slate-700">
                     Log Presensi &rarr;
                   </Button>
                 </Link>
-              </Card>
+              </div>
             </div>
           </div>
 
           {/* AREA KANAN: DAFTAR BERITA / ARTIKEL & KALENDER KEGIATAN */}
-          <div className="md:col-span-1 xl:col-span-3 space-y-3.5 sm:space-y-4">
+          <div className="md:col-span-1 lg:col-span-3 space-y-3.5 sm:space-y-4">
             <NewsArticleListWidget announcements={announcements} limit={4} />
             <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
           </div>
@@ -1212,45 +1259,38 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6 lg:space-y-8 pb-10">
         {/* Banner Welcome Header Kepala Sekolah */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-orange-600 to-slate-900 p-6 sm:p-8 text-white shadow-xl border border-white/10">
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-amber-400/20 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 rounded-full bg-orange-500/20 blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="space-y-2">
+        <div className="simas-dash-header p-5 sm:p-6 text-white">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-extrabold backdrop-blur-md border border-white/20 uppercase tracking-wider flex items-center gap-1.5 shadow-inner">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-                  Pusat Informasi & Analisis Eksekutif
+                <span className="simas-kpi-badge bg-amber-500/20 text-amber-300 border-amber-400/40">
+                  Kepala Sekolah
                 </span>
-                <span className="text-xs text-amber-100 font-semibold bg-amber-500/30 px-2.5 py-0.5 rounded-full">
-                  Executive Real-Time Dashboard
+                <span className="text-xs text-slate-400 font-medium">
+                  Dasbor Eksekutif & Ringkasan Sekolah
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
-                Dasbor Eksekutif & Ringkasan Sekolah
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                {clock.greeting}, <span className="font-extrabold text-amber-200">{(session?.user as any)?.name || 'Bapak/Ibu Kepala Sekolah'}</span>
               </h1>
-              <p className="text-amber-100 text-sm sm:text-base font-medium max-w-2xl leading-relaxed">
-                <strong className="font-bold">{clock.greeting}</strong>, <strong className="text-white font-bold italic">{(session?.user as any)?.name || 'Bapak/Ibu Kepala Sekolah'}</strong>. Berikut adalah ikhtisar analitik komprehensif, rekapitulasi operasional, serta monitoring berkala seluruh sektor kegiatan sekolah.
+              <p className="text-slate-400 text-xs sm:text-sm font-medium max-w-2xl leading-relaxed">
+                Ikhtisar analitik komprehensif, rekapitulasi operasional, serta monitoring berkala seluruh sektor kegiatan sekolah.
               </p>
             </div>
 
             <div className="flex flex-col sm:items-end gap-2 shrink-0">
-              <div className="px-4 py-2 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white text-xs shadow-inner max-w-xs">
-                <div className="flex items-center gap-1.5 font-bold mb-0.5">
-                  <Activity className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+              <div className="px-3.5 py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-white text-xs max-w-xs">
+                <div className="flex items-center gap-1.5 font-bold mb-0.5 text-amber-300">
+                  <Activity className="w-3.5 h-3.5 shrink-0" />
                   <span>Periode T.A. 2026/2027</span>
                 </div>
-                <p className="text-[11px] text-amber-100/90 leading-tight">
-                  Data terintegrasi mulai T.A. 2026/2027 (tidak tersinkronisasi dengan arsip sistem lama).
+                <p className="text-[10.5px] text-slate-400 leading-tight">
+                  Data analitik terintegrasi aktif SIKU & SIMASMUH.
                 </p>
               </div>
             </div>
           </div>
         </div>
-
-        {/* JADWAL SHOLAT & KHGT MUHAMMADIYAH REALTIME BANNER */}
-        <PrayerTimesWidget variant="banner" />
 
         {/* PUSAT PENGAWASAN & AKSES CEPAT LAYANAN DATA SEKOLAH (ATAS) */}
         {(() => {
@@ -1313,20 +1353,20 @@ export default function DashboardPage() {
               </div>
 
               {/* Grid 8 Menu Utama / Akses Cepat Primer */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-2.5">
                 {primaryKsLinks.map((link, idx) => {
                   const Icon = link.icon
                   return (
                     <Link key={idx} href={link.href} className="group">
-                      <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-2xs hover:shadow-lg hover:border-amber-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-3.5 gap-2 rounded-2xl hover:-translate-y-0.5 text-center">
-                        <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-amber-500 group-hover:to-orange-600 group-hover:text-white group-hover:border-transparent transition-all duration-300 shadow-2xs">
-                          <Icon className="w-5 h-5 transition-colors" />
+                      <Card className="h-full border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-2xs hover:shadow-md hover:border-amber-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center p-2.5 sm:p-3 gap-1.5 rounded-xl hover:-translate-y-0.5 text-center min-h-[76px]">
+                        <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 group-hover:bg-gradient-to-br group-hover:from-amber-500 group-hover:to-orange-600 group-hover:text-white group-hover:border-transparent transition-all duration-300 shadow-2xs">
+                          <Icon className="w-4 h-4 transition-colors" />
                         </div>
-                        <div>
-                          <h3 className="font-bold text-slate-800 dark:text-slate-100 text-xs group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
+                        <div className="w-full">
+                          <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-[11px] group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight truncate">
                             {link.name}
                           </h3>
-                          <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                          <span className="text-[9px] text-slate-400 font-medium block mt-0.5 truncate">
                             {link.desc}
                           </span>
                         </div>
@@ -2173,7 +2213,7 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-3 flex justify-between items-center text-xs text-slate-500">
-                    <span>Terhubung dengan WhatsApp Wali Murid</span>
+                    <span>Terhubung dengan Email & Dashboard Wali Murid</span>
                     <span className="text-slate-400 font-medium">Buku Saku Digital</span>
                   </div>
                 </Card>
@@ -2905,32 +2945,32 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-3.5 sm:space-y-4 pb-6">
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 p-3.5 sm:p-4 lg:p-5 rounded-2xl text-white shadow-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 relative overflow-hidden">
-        <div className="relative z-10 space-y-0.5">
-          <div className="flex items-center gap-2">
-            <span className="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.2 rounded-full font-bold border border-indigo-500/30 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse inline-block" />
-              {isSuperadminRole ? 'Superadmin' : 'Dashboard'}
+      <div className="simas-dash-header p-3.5 sm:p-4 md:p-5 text-white flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+        <div className="space-y-1 min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="simas-kpi-badge bg-blue-500/20 text-blue-300 border-blue-400/40">
+              {isSuperadminRole ? 'Superadmin' : 'SIMASMUH'}
             </span>
-            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[9.5px] px-1.5 py-0">
-              Real-time
-            </Badge>
+            <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-bold shrink-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Sistem Terhubung</span>
+            </div>
           </div>
-          <h1 className="text-lg sm:text-xl font-black tracking-tight text-white">
-            {clock.greeting}, {(session?.user as any)?.name || 'Superadmin'}
+          <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white truncate" title={`${clock.greeting}, ${(session?.user as any)?.name || 'Pengguna'}`}>
+            {clock.greeting}, <span className="font-extrabold text-blue-200">{(session?.user as any)?.name || 'Pengguna'}</span>
           </h1>
-          <p className="text-slate-300 text-[11px] font-medium">
-            {isSuperadminRole ? 'Monitoring sistem, port, dan sesi pengguna aktif.' : 'Sistem Informasi Manajemen Terpadu SIMASMUH.'}
+          <p className="text-slate-400 text-xs font-medium line-clamp-1 sm:line-clamp-none">
+            {isSuperadminRole ? 'Monitoring sistem, port operasional, dan sesi aktif secara realtime.' : 'Portal Informasi & Manajemen Pendidikan SMA Muhammadiyah 1 Ponorogo.'}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 relative z-10">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 w-full md:w-auto justify-start md:justify-end">
           {/* Tombol Khusus Kepala Sekolah: Tanda Tangan Digital (E-Sign) & Toggle Statistika */}
           {isKepalaSekolah && (
             <>
               <Button
                 size="sm"
                 onClick={() => setShowSignaturePad(true)}
-                className="h-8 sm:h-8.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-extrabold text-[11px] shadow-sm gap-1.5 border border-amber-400/40"
+                className="h-8 sm:h-8.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-extrabold text-[11px] shadow-sm gap-1.5 border border-amber-400/40 shrink-0"
               >
                 <PenTool className="w-3.5 h-3.5" />
                 <span>Tanda Tangan (E-Sign)</span>
@@ -2945,7 +2985,7 @@ export default function DashboardPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => setShowExecutiveStats(!showExecutiveStats)}
-                className={`h-8 sm:h-8.5 rounded-xl font-extrabold text-[11px] gap-1.5 backdrop-blur-md transition-all ${
+                className={`h-8 sm:h-8.5 rounded-xl font-extrabold text-[11px] gap-1.5 backdrop-blur-md transition-all shrink-0 ${
                   showExecutiveStats
                     ? 'bg-amber-500 text-white border-amber-400 shadow-sm'
                     : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
@@ -2959,7 +2999,7 @@ export default function DashboardPage() {
 
           {/* Tombol Khusus Superadmin: Akses Langsung FaceNet AI */}
           {isSuperadminRole && (
-            <Link href="/facenetai">
+            <Link href="/facenetai" className="shrink-0">
               <Button
                 size="sm"
                 className="h-8 sm:h-8.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-[11px] shadow-sm gap-1.5 border border-cyan-400/40 active:scale-95 transition-all"
@@ -2970,15 +3010,15 @@ export default function DashboardPage() {
             </Link>
           )}
 
-          <span className="px-2.5 py-1 rounded-xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 text-white font-bold text-[11px] uppercase tracking-wider shadow-inner flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            {(role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') ? 'Tata Usaha' : isKepalaSekolah ? 'Kepala Sekolah' : role} {subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' && subRole !== 'KEPALA_SEKOLAH' ? `• ${subRole}` : ''}
+          <span className="px-2.5 py-1 rounded-xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 text-white font-bold text-[10px] sm:text-[11px] uppercase tracking-wider shadow-inner flex items-center gap-1.5 shrink-0">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span>
+              {((role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') ? 'Tata Usaha' : isKepalaSekolah ? 'Kepala Sekolah' : role)}
+              {subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' && subRole !== 'KEPALA_SEKOLAH' && subRole !== role ? ` • ${subRole}` : ''}
+            </span>
           </span>
         </div>
       </div>
-
-      {/* JADWAL SHOLAT & KHGT MUHAMMADIYAH REALTIME BANNER */}
-      <PrayerTimesWidget variant="banner" />
 
       {/* BANNER ALERT NOTIFIKASI DISPOSISI REALTIME GURU / PEGAWAI / PIMPINAN */}
       <DisposisiAlertBanner />
@@ -3024,10 +3064,10 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 3-AREA GENERAL DASHBOARD LAYOUT */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 sm:gap-5 items-start">
+      {/* 3-AREA GENERAL DASHBOARD LAYOUT (Adaptive for Standard & High Zoom 125%-200%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
         {/* AREA KIRI: MY ACCOUNT & INFORMASI PENGUMUMAN SISTEM */}
-        <div className="md:col-span-1 xl:col-span-3 space-y-4 sm:space-y-5">
+        <div className="lg:col-span-3 space-y-3.5 sm:space-y-4">
           <UserAccountCard
             role={role}
             subRole={subRole}
@@ -3115,17 +3155,17 @@ export default function DashboardPage() {
           <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
         </div>
 
-        {/* AREA TENGAH: TOMBOL AKSES CEPAT */}
-        <div className="md:col-span-2 xl:col-span-6 space-y-4 sm:space-y-5 order-first md:order-none">
+        {/* AREA TENGAH: TOMBOL AKSES CEPAT & LOG ABSENSI */}
+        <div className="lg:col-span-6 space-y-3.5 sm:space-y-4">
           <div>
-            <div className="flex items-center justify-between mb-2 sm:mb-2.5">
+            <div className="flex items-center justify-center gap-2 mb-2 sm:mb-2.5">
               <div className="flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 tracking-tight">
-                  Akses Cepat
+                  Akses Cepat Layanan
                 </h3>
               </div>
-              <span className="text-[10px] sm:text-[11px] text-slate-500 font-semibold">
+              <span className="text-[9.5px] sm:text-[10px] text-blue-600 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 px-2 py-0.2 rounded-full shadow-2xs">
                 {currentLinks.length} Modul
               </span>
             </div>
@@ -3140,852 +3180,15 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* AREA KANAN: DAFTAR BERITA / ARTIKEL & KALENDER KEGIATAN (Sejajar dengan Side Kiri) */}
-        <div className="md:col-span-1 xl:col-span-3 space-y-4 sm:space-y-5">
+        {/* AREA KANAN: DAFTAR BERITA / ARTIKEL & KALENDER KEGIATAN */}
+        <div className="lg:col-span-3 space-y-3.5 sm:space-y-4">
           <NewsArticleListWidget announcements={announcements} limit={4} />
           <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
         </div>
       </div>
 
-      {/* KARTU SINKRONISASI TANGGAL & WAKTU SERVER (UTC+7) */}
-      {isSuperadminRole && (
-        <Card className="border-blue-200/80 dark:border-blue-900/50 bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40 backdrop-blur-xl rounded-2xl overflow-hidden shadow-xs p-4 sm:p-5 border">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-blue-600 text-white shadow-2xs">
-                  <Clock className="w-4 h-4" />
-                </span>
-                <div>
-                  <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    Sinkronisasi Tanggal & Waktu Server SIMASMUH
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                      <CheckCircle2 className="w-3 h-3" /> Terkalibrasi Aktif
-                    </span>
-                  </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Standar zona waktu server <strong>UTC+7 (WIB / Asia/Jakarta)</strong> mengunci konsistensi presensi, log, dan jadwal di seluruh aplikasi.
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            {/* Live Clock Display & Sync Button */}
-            <div className="flex items-center justify-between sm:justify-end gap-3 bg-white dark:bg-slate-800/90 p-3 rounded-xl border border-blue-100 dark:border-slate-700/80 shadow-2xs shrink-0">
-              <div className="text-left sm:text-right">
-                <div className="text-xl sm:text-2xl font-extrabold tracking-tight text-blue-600 dark:text-blue-400 font-mono leading-none">
-                  {clock.timeString} <span className="text-[10px] font-sans font-semibold text-slate-500">WIB</span>
-                </div>
-                <div className="text-[11px] font-medium text-slate-700 dark:text-slate-300 mt-0.5">
-                  {clock.dateString}
-                </div>
-              </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  clock.reSync()
-                  Swal.fire({
-                    title: 'Waktu Berhasil Dikalibrasi!',
-                    text: `Waktu sistem telah disinkronkan langsung dengan server endpoint (${clock.latency} ms).`,
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                  })
-                }}
-                disabled={clock.isSyncing}
-                className="rounded-xl border-blue-200 hover:bg-blue-50 text-blue-700 dark:text-blue-300 dark:border-blue-800 font-bold gap-1.5 text-xs h-8 px-3"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${clock.isSyncing ? 'animate-spin' : ''}`} />
-                <span>{clock.isSyncing ? 'Sinkron...' : 'Kalibrasi'}</span>
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* KARTU 1: RUNTIME & MONITORING SISTEM RINGKAS */}
-      {isSuperadminRole && (
-        <div className="space-y-6">
-          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-xs border">
-            {/* Header Ringkas Runtime Monitoring */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-2xs shrink-0">
-                  <Activity className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                      Runtime & Monitoring Sistem
-                    </h2>
-                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700/60 text-[10px] font-semibold py-0">
-                      Live
-                    </Badge>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Status Uptime, Latensi, RAM, Port, dan Kapasitas Sistem
-                  </p>
-                </div>
-              </div>
-
-              {/* Action Tools: Speed Test & Manual Refresh */}
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handleRunSpeedTest}
-                  disabled={speedTesting}
-                  size="sm"
-                  variant="outline"
-                  className="font-semibold text-xs rounded-xl gap-1.5 h-8 px-3 border-slate-200 dark:border-slate-700"
-                >
-                  <Zap className={`w-3.5 h-3.5 text-amber-500 ${speedTesting ? 'animate-bounce' : ''}`} />
-                  <span>{speedTesting ? 'Menguji...' : 'Bench Jaringan'}</span>
-                </Button>
-                <Button
-                  onClick={() => refetchSupervisor()}
-                  disabled={loadingSupervisor || refetchingSupervisor}
-                  variant="outline"
-                  size="sm"
-                  className="font-semibold text-xs rounded-xl gap-1.5 h-8 px-2.5 border-slate-200 dark:border-slate-700"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 text-blue-500 ${refetchingSupervisor ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Sync</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Grid 4 Metrik Kunci Ringkas */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3.5">
-              {/* 1. Uptime System (Tanpa Downtime) */}
-              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
-                  <span className="font-semibold uppercase text-[10px] tracking-wider">Uptime Sistem</span>
-                  <Clock className="w-3.5 h-3.5 text-blue-500" />
-                </div>
-                <div className="my-1.5">
-                  <div className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white font-mono">
-                    {supervisorData?.runtime?.uptimeHuman || '0j 0m 0d'}
-                  </div>
-                </div>
-                <div className="text-[10px] text-slate-400 font-mono truncate">
-                  Host: {supervisorData?.runtime?.hostname || 'localhost'}
-                </div>
-              </div>
-
-              {/* 2. Latensi (Informasi Singkat Padat) */}
-              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
-                  <span className="font-semibold uppercase text-[10px] tracking-wider">Latensi</span>
-                  <Radio className="w-3.5 h-3.5 text-emerald-500" />
-                </div>
-                <div className="my-1.5">
-                  <div className="text-lg sm:text-xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                    {supervisorData?.performance?.apiLatencyMs ?? 2} ms
-                  </div>
-                </div>
-                <div className="text-[10px] text-slate-400 font-mono truncate">
-                  DB: {supervisorData?.performance?.dbLatencyMs ?? 1} ms ({supervisorData?.performance?.dbStatus || 'HEALTHY'})
-                </div>
-              </div>
-
-              {/* 3. Info RAM (Heap Used & Free / Total RAM) */}
-              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
-                  <span className="font-semibold uppercase text-[10px] tracking-wider">Info RAM</span>
-                  <HardDrive className="w-3.5 h-3.5 text-purple-500" />
-                </div>
-                <div className="my-1.5">
-                  <div className="text-lg sm:text-xl font-extrabold text-purple-600 dark:text-purple-400 font-mono">
-                    {supervisorData?.performance?.heapUsedMb ?? 0} MB <span className="text-xs font-normal text-slate-500">Heap</span>
-                  </div>
-                </div>
-                <div className="text-[10px] text-slate-400 font-mono truncate">
-                  Free: <strong className="text-slate-600 dark:text-slate-300 font-semibold">{supervisorData?.performance?.freeSystemMemoryGb ?? 0} GB</strong> / Total: {supervisorData?.performance?.totalSystemMemoryGb ?? 0} GB
-                </div>
-              </div>
-
-              {/* 4. Koneksi Pengguna (Sesi Aktif & Total Pengguna) */}
-              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
-                  <span className="font-semibold uppercase text-[10px] tracking-wider">Koneksi Pengguna</span>
-                  <Users className="w-3.5 h-3.5 text-amber-500" />
-                </div>
-                <div className="my-1.5">
-                  <div className="text-lg sm:text-xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">
-                    {supervisorData?.taskManager?.activeConnectedSessions ?? 1} <span className="text-xs font-normal text-slate-500">Sesi Aktif</span>
-                  </div>
-                </div>
-                <div className="text-[10px] text-slate-400 truncate">
-                  Total Terdaftar: <strong>{supervisorData?.taskManager?.totalRegisteredUsers ?? 0}</strong> Pengguna
-                </div>
-              </div>
-            </div>
-
-            {/* Sub-grid: Status Port 4 Layanan SIMASMUH + Bench Jaringan Ringkas */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-              {/* Status Port Layanan (Info Port + Latensi jika online, Badge Offline jika offline) */}
-              <div className="p-3 rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/80">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <Server className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                    Status Port 4 Layanan SIMASMUH
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {(supervisorData?.taskManager?.services || [
-                    { name: 'Frontend Web', port: 3000, status: 'ONLINE', latencyMs: 2 },
-                    { name: 'Backend API', port: 3001, status: 'ONLINE', latencyMs: 2 },
-                    { name: 'Prisma Studio', port: 51212, status: 'ONLINE', latencyMs: 1 },
-                    { name: 'PostgreSQL DB', port: 54322, status: 'ONLINE', latencyMs: 2 },
-                  ]).map((srv: any, idx: number) => {
-                    const isOnline = srv.status === 'ONLINE' || srv.status === 'READY'
-                    return (
-                      <div key={idx} className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between">
-                        <div className="truncate mr-1">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 block truncate text-[11px]">{srv.name}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">Port :{srv.port}</span>
-                        </div>
-                        {isOnline ? (
-                          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 text-[10px] font-mono px-1.5 py-0">
-                            {srv.latencyMs !== undefined ? `${srv.latencyMs}ms` : 'Online'}
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 text-[10px] px-1.5 py-0">
-                            Offline
-                          </Badge>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Bench Jaringan Ringkas */}
-              <div className="p-3 rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5 text-amber-500" />
-                      Bench Jaringan
-                    </span>
-                    {speedTestResult && (
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {speedTestResult.timestamp}
-                      </span>
-                    )}
-                  </div>
-
-                  {speedTesting ? (
-                    <div className="py-3 flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900">
-                      <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-                      <span className="text-xs text-slate-600 dark:text-slate-300">{speedTestStep || 'Menguji transmisi...'}</span>
-                    </div>
-                  ) : speedTestResult ? (
-                    <div className="space-y-1.5">
-                      <div className="grid grid-cols-4 gap-1.5 text-center">
-                        <div className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
-                          <span className="text-[9px] text-slate-400 uppercase block font-semibold">Down</span>
-                          <span className="text-xs font-bold text-blue-600 dark:text-cyan-400 font-mono">{speedTestResult.downloadSpeed}</span>
-                        </div>
-                        <div className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
-                          <span className="text-[9px] text-slate-400 uppercase block font-semibold">Up</span>
-                          <span className="text-xs font-bold text-purple-600 dark:text-purple-400 font-mono">{speedTestResult.uploadSpeed}</span>
-                        </div>
-                        <div className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
-                          <span className="text-[9px] text-slate-400 uppercase block font-semibold">Ping</span>
-                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">{speedTestResult.ping}ms</span>
-                        </div>
-                        <div className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
-                          <span className="text-[9px] text-slate-400 uppercase block font-semibold">Jitter</span>
-                          <span className="text-xs font-bold text-amber-600 dark:text-amber-400 font-mono">{speedTestResult.jitter}ms</span>
-                        </div>
-                      </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center justify-between font-mono px-1">
-                        <span className="truncate max-w-[55%]">IP: {speedTestResult.clientIp}</span>
-                        <span className="truncate max-w-[40%] text-right">Host: {speedTestResult.serverHost}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="py-2.5 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-lg bg-white/50 dark:bg-slate-900/50">
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Klik <strong>&quot;Bench Jaringan&quot;</strong> untuk mengukur throughput & latensi.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Load Sistem & Waiting Room Ringkas */}
-            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <div className="p-2.5 rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <DoorOpen className="w-4 h-4 text-amber-500 shrink-0" />
-                  <div>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">Kapasitas Load:</span>{' '}
-                    <span className="text-slate-600 dark:text-slate-400 font-mono">
-                      ~{supervisorData?.performance?.loadCapacity?.estimatedMaxUsers ?? 500} Pengguna Serentak (Beban: {supervisorData?.performance?.loadCapacity?.currentLoadPercent ?? 1}%)
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-slate-500 text-[11px]">Waiting Room:</span>
-                  {supervisorData?.performance?.loadCapacity?.waitingRoomStatus === 'CRITICAL' ? (
-                    <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 text-[10px]">
-                      Wajib Aktif
-                    </Badge>
-                  ) : supervisorData?.performance?.loadCapacity?.waitingRoomStatus === 'RECOMMENDED' ? (
-                    <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800 text-[10px]">
-                      Disarankan
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 text-[10px]">
-                      Standby (Aman)
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* KARTU 2: SESI PENGGUNA LIVE LOG (TERPISAH) */}
-          <Card className="border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-xs border">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                  <Laptop className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                    Sesi Pengguna Live Log
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Aktivitas perangkat & pemantauan sesi login terkini
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handleTerminateAllSessions}
-                  disabled={terminatingAll}
-                  variant="outline"
-                  size="sm"
-                  title="Keluarkan paksa seluruh sesi login pengguna aktif"
-                  className="h-7 px-2.5 text-[11px] font-semibold rounded-lg border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 gap-1.5 shadow-2xs"
-                >
-                  <LogOut className={`w-3 h-3 ${terminatingAll ? 'animate-spin' : ''}`} />
-                  <span>Akhiri Semua Sesi</span>
-                </Button>
-                <Button
-                  onClick={handleDeleteAllSessionLogs}
-                  disabled={deletingAllLogs}
-                  variant="outline"
-                  size="sm"
-                  title="Hapus seluruh data riwayat sesi semua pengguna dari database"
-                  className="h-7 px-2.5 text-[11px] font-semibold rounded-lg border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 gap-1.5 shadow-2xs"
-                >
-                  <Trash2 className={`w-3 h-3 ${deletingAllLogs ? 'animate-spin' : ''}`} />
-                  <span>Hapus Semua Riwayat</span>
-                </Button>
-                <Button
-                  onClick={() => setShowAllSessionsModal(true)}
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-semibold px-2 h-7 gap-1"
-                >
-                  <span>Semua Sesi</span>
-                  <span>&rarr;</span>
-                </Button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto mt-3">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
-                    <th className="py-2 px-3">Pengguna</th>
-                    <th className="py-2 px-3">Peran</th>
-                    <th className="py-2 px-3">Perangkat / IP</th>
-                    <th className="py-2 px-3">Aktivitas</th>
-                    <th className="py-2 px-3">Status</th>
-                    <th className="py-2 px-3 text-center">Rincian</th>
-                    <th className="py-2 px-3 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                  {(supervisorData?.taskManager?.lastActiveSessions || []).length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-4 text-center text-slate-500">
-                        Belum ada catatan riwayat sesi aktif
-                      </td>
-                    </tr>
-                  ) : (
-                    (supervisorData?.taskManager?.lastActiveSessions || []).slice(0, 6).map((s: any, idx: number) => (
-                      <tr key={s.userId || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
-                        <td className="py-2 px-3 font-semibold text-slate-900 dark:text-slate-200">
-                          {s.name}
-                          <span className="text-[10px] text-slate-400 block font-normal font-mono">@{s.username || s.userId}</span>
-                        </td>
-                        <td className="py-2 px-3">
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                            {s.role}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 text-slate-600 dark:text-slate-300">
-                          {s.device || 'Desktop'}
-                          <span className="text-[10px] text-slate-400 font-mono block">{s.ipAddress}</span>
-                        </td>
-                        <td className="py-2 px-3 text-slate-600 dark:text-slate-300 text-[11px]">
-                          {s.lastActiveAt ? (
-                            <div>
-                              <span>{new Date(s.lastActiveAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</span>
-                              <span className="text-[10px] text-slate-400 font-mono block">
-                                {new Date(s.lastActiveAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
-                              </span>
-                            </div>
-                          ) : '-'}
-                        </td>
-                        <td className="py-2 px-3">
-                          {s.isLiveOnline ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                              Online
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
-                              Offline
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-center">
-                          <Button
-                            onClick={() => setViewingUserSessions(s)}
-                            size="sm"
-                            variant="outline"
-                            className="h-6 px-2 text-[10px] font-semibold rounded-lg border-slate-200 dark:border-slate-700 gap-1 mx-auto"
-                          >
-                            <Eye className="w-3 h-3 text-blue-500" />
-                            <span>{s.sessions?.length || 1} Sesi</span>
-                          </Button>
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {s.isActive && (
-                              <Button
-                                onClick={() => handleTerminateSession({
-                                  id: s.primarySessionId || s.sessions?.[0]?.id,
-                                  name: s.name,
-                                  username: s.username,
-                                  device: s.device,
-                                })}
-                                disabled={terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id)}
-                                size="sm"
-                                variant="outline"
-                                className="h-6 px-1.5 text-[10px] font-semibold rounded-lg border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 gap-1"
-                              >
-                                <LogOut className={`w-3 h-3 ${terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id) ? 'animate-spin' : ''}`} />
-                                <span>Putus</span>
-                              </Button>
-                            )}
-                            <Button
-                              onClick={() => handleDeleteUserSessions(s)}
-                              disabled={deletingSessionId === s.userId}
-                              size="sm"
-                              variant="outline"
-                              className="h-6 px-1.5 text-[10px] font-semibold rounded-lg border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 gap-1"
-                            >
-                              <Trash2 className={`w-3 h-3 ${deletingSessionId === s.userId ? 'animate-spin' : ''}`} />
-                              <span>Hapus</span>
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* POP-UP MODAL: LIHAT RINCIAN SELURUH SESI & PERANGKAT PENGGUNA */}
-      {viewingUserSessions && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <Card className="w-full max-w-2xl bg-slate-900 border-slate-700 text-white rounded-3xl shadow-2xl overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                  <Laptop className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
-                    Rincian Sesi Perangkat
-                    <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 text-[10px]">
-                      {viewingUserSessions.sessions?.length || 1} Perangkat
-                    </Badge>
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Pengguna: <strong className="text-slate-200">{viewingUserSessions.name}</strong> (@{viewingUserSessions.username}) &bull; Role: <strong className="text-indigo-400">{viewingUserSessions.role}</strong>
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => handleDeleteUserSessions(viewingUserSessions)}
-                  disabled={deletingSessionId === viewingUserSessions.userId}
-                  variant="outline"
-                  size="sm"
-                  title="Hapus Seluruh Riwayat Sesi Pengguna Ini dari Database"
-                  className="h-8 px-2.5 text-[11px] font-bold rounded-xl border-rose-500/50 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1.5 shadow-2xs"
-                >
-                  <Trash2 className={`w-3.5 h-3.5 text-rose-400 ${deletingSessionId === viewingUserSessions.userId ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Hapus Semua Sesi</span>
-                </Button>
-                <Button
-                  onClick={() => setViewingUserSessions(null)}
-                  variant="ghost"
-                  size="sm"
-                  className="text-slate-400 hover:text-white rounded-xl h-8 w-8 p-0"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="p-5 max-h-[60vh] overflow-y-auto space-y-3">
-              {(viewingUserSessions.sessions || []).map((item: any, i: number) => (
-                <div
-                  key={item.id || i}
-                  className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-slate-200">{item.device}</span>
-                      {item.isLiveOnline ? (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          Online
-                        </span>
-                      ) : (
-                        <span className="text-[9px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded">
-                          {item.isActive ? 'Offline' : 'Non-aktif'}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-slate-400 flex flex-wrap gap-x-3 gap-y-1 font-mono">
-                      <span>IP: {item.ipAddress}</span>
-                      <span>&bull;</span>
-                      <span>{item.browser} &bull; {item.os}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-500">
-                      Aktivitas: {item.lastActiveAt ? `${new Date(item.lastActiveAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })} ${new Date(item.lastActiveAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} WIB` : '-'}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                    {item.isActive && (
-                      <Button
-                        onClick={async () => {
-                          await handleTerminateSession({
-                            id: item.id,
-                            name: viewingUserSessions.name,
-                            username: viewingUserSessions.username,
-                            device: item.device,
-                          })
-                          setViewingUserSessions(null)
-                        }}
-                        disabled={terminatingSessionId === item.id}
-                        size="sm"
-                        variant="outline"
-                        title="Putus & Keluarkan Sesi Ini"
-                        className="h-7 px-2.5 text-[10px] font-bold rounded-lg border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 gap-1"
-                      >
-                        <LogOut className={`w-3 h-3 text-amber-400 ${terminatingSessionId === item.id ? 'animate-spin' : ''}`} />
-                        <span>Putus</span>
-                      </Button>
-                    )}
-
-                    <Button
-                      onClick={() => handleDeleteSingleSession({
-                        id: item.id,
-                        name: viewingUserSessions.name,
-                        device: item.device,
-                      })}
-                      disabled={deletingSessionId === item.id}
-                      size="sm"
-                      variant="outline"
-                      title="Hapus Permanen Riwayat Sesi Ini dari Database"
-                      className="h-7 px-2.5 text-[10px] font-bold rounded-lg border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1"
-                    >
-                      <Trash2 className={`w-3 h-3 text-rose-400 ${deletingSessionId === item.id ? 'animate-spin' : ''}`} />
-                      <span>Hapus Log</span>
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex justify-end">
-              <Button
-                onClick={() => setViewingUserSessions(null)}
-                variant="outline"
-                size="sm"
-                className="text-xs rounded-xl border-slate-700 text-slate-300"
-              >
-                Tutup
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* POP-UP MODAL: LIHAT SEMUA SESI PENGGUNA TERKONEKSI (SUPERVISOR ALL LIVE SESSIONS) */}
-      {showAllSessionsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
-          <Card className="w-full max-w-4xl max-h-[85vh] bg-slate-900 border-slate-700 text-white rounded-3xl shadow-2xl flex flex-col overflow-hidden">
-            {/* Header Modal */}
-            <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                  <Laptop className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
-                    Semua Sesi Pengguna Terkoneksi
-                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px]">
-                      {(allUserSessionsData || []).filter(u => u.isLiveOnline).length} Online
-                    </Badge>
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Pengawasan seluruh sesi login pengguna aktif & riwayat sesi sistem SIMASMUH
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handleTerminateAllSessions}
-                  disabled={terminatingAll}
-                  size="sm"
-                  variant="outline"
-                  title="Keluarkan Semua Sesi Pengguna Lain yang Sedang Aktif"
-                  className="h-8 px-2.5 text-xs font-bold rounded-xl border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 gap-1.5"
-                >
-                  <LogOut className={`w-3.5 h-3.5 text-amber-400 ${terminatingAll ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Akhiri Semua Sesi</span>
-                </Button>
-                <Button
-                  onClick={handleDeleteAllSessionLogs}
-                  disabled={deletingAllLogs}
-                  size="sm"
-                  variant="outline"
-                  title="Hapus Seluruh Riwayat Sesi Semua Pengguna dari Database"
-                  className="h-8 px-2.5 text-xs font-bold rounded-xl border-rose-500/50 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1.5"
-                >
-                  <Trash2 className={`w-3.5 h-3.5 text-rose-400 ${deletingAllLogs ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Hapus Semua Riwayat</span>
-                </Button>
-                <Button
-                  onClick={() => refetchAllSessions()}
-                  variant="outline"
-                  size="sm"
-                  title="Muat Ulang Sesi"
-                  className="h-8 px-2.5 text-xs rounded-xl border-slate-700 bg-slate-800 text-slate-200"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loadingAllSessions ? 'animate-spin' : ''}`} />
-                </Button>
-                <Button
-                  onClick={() => setShowAllSessionsModal(false)}
-                  variant="ghost"
-                  size="sm"
-                  className="text-slate-400 hover:text-white rounded-xl h-8 w-8 p-0"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Filter Search */}
-            <div className="p-3 sm:p-4 bg-slate-950/40 border-b border-slate-800/80 shrink-0">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Cari pengguna berdasarkan nama, username, peran, atau IP address..."
-                  value={searchSessionQuery}
-                  onChange={(e) => setSearchSessionQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-            </div>
-
-            {/* Content Table */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {loadingAllSessions ? (
-                <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
-                  <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
-                  <span className="text-xs">Memuat daftar semua sesi pengguna...</span>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                        <th className="py-2 px-3">Pengguna</th>
-                        <th className="py-2 px-3">Peran</th>
-                        <th className="py-2 px-3">Perangkat Utama</th>
-                        <th className="py-2 px-3">IP Address</th>
-                        <th className="py-2 px-3">Aktivitas Terakhir</th>
-                        <th className="py-2 px-3">Status</th>
-                        <th className="py-2 px-3 text-center">Perangkat</th>
-                        <th className="py-2 px-3 text-right">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      {((allUserSessionsData || []).filter((u: any) => {
-                        if (!searchSessionQuery) return true
-                        const q = searchSessionQuery.toLowerCase()
-                        return (
-                          u.name?.toLowerCase().includes(q) ||
-                          u.username?.toLowerCase().includes(q) ||
-                          u.role?.toLowerCase().includes(q) ||
-                          u.ipAddress?.toLowerCase().includes(q) ||
-                          u.device?.toLowerCase().includes(q)
-                        )
-                      })).length === 0 ? (
-                        <tr>
-                          <td colSpan={8} className="py-8 text-center text-slate-500">
-                            Tidak ditemukan data sesi pengguna yang sesuai
-                          </td>
-                        </tr>
-                      ) : (
-                        (allUserSessionsData || []).filter((u: any) => {
-                          if (!searchSessionQuery) return true
-                          const q = searchSessionQuery.toLowerCase()
-                          return (
-                            u.name?.toLowerCase().includes(q) ||
-                            u.username?.toLowerCase().includes(q) ||
-                            u.role?.toLowerCase().includes(q) ||
-                            u.ipAddress?.toLowerCase().includes(q) ||
-                            u.device?.toLowerCase().includes(q)
-                          )
-                        }).map((s: any, idx: number) => (
-                          <tr key={s.userId || idx} className="hover:bg-slate-950/50">
-                            <td className="py-2.5 px-3 font-bold text-slate-200">
-                              {s.name}
-                              <span className="text-[10px] text-slate-400 block font-normal font-mono">@{s.username || s.userId}</span>
-                            </td>
-                            <td className="py-2.5 px-3">
-                              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                                {s.role}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-slate-300">
-                              {s.device || 'Desktop'}
-                              <span className="text-[10px] text-slate-500 block">{s.browser || 'Browser'} &bull; {s.os || 'OS'}</span>
-                            </td>
-                            <td className="py-2.5 px-3 font-mono text-slate-400 text-[11px]">{s.ipAddress}</td>
-                            <td className="py-2.5 px-3 text-slate-300 text-[11px]">
-                              {s.lastActiveAt ? (
-                                <div>
-                                  <span className="text-slate-200 font-medium block">
-                                    {new Date(s.lastActiveAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {new Date(s.lastActiveAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} WIB
-                                  </span>
-                                </div>
-                              ) : '-'}
-                            </td>
-                            <td className="py-2.5 px-3">
-                              {s.isLiveOnline ? (
-                                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/30 shadow-xs">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                  Online
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded-full border border-slate-700/60">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                                  Offline
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-center">
-                              <Button
-                                onClick={() => setViewingUserSessions(s)}
-                                size="sm"
-                                variant="outline"
-                                className="h-7 px-2 text-[10px] font-bold rounded-lg border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 gap-1 mx-auto"
-                              >
-                                <Eye className="w-3 h-3 text-cyan-400" />
-                                <span>{s.sessions?.length || 1} Sesi</span>
-                              </Button>
-                            </td>
-                            <td className="py-2.5 px-3 text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                {s.isActive && (
-                                  <Button
-                                    onClick={async () => {
-                                      await handleTerminateSession({
-                                        id: s.primarySessionId || s.sessions?.[0]?.id,
-                                        name: s.name,
-                                        username: s.username,
-                                        device: s.device,
-                                      })
-                                      refetchAllSessions()
-                                    }}
-                                    disabled={terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id)}
-                                    size="sm"
-                                    variant="outline"
-                                    title="Putus & Keluarkan Sesi Ini"
-                                    className="h-7 px-2 text-[10px] font-bold rounded-lg border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 gap-1"
-                                  >
-                                    <LogOut className={`w-3 h-3 text-amber-400 ${terminatingSessionId === (s.primarySessionId || s.sessions?.[0]?.id) ? 'animate-spin' : ''}`} />
-                                    <span>Putus</span>
-                                  </Button>
-                                )}
-
-                                <Button
-                                  onClick={() => handleDeleteUserSessions(s)}
-                                  disabled={deletingSessionId === s.userId}
-                                  size="sm"
-                                  variant="outline"
-                                  title="Hapus Permanen Seluruh Riwayat Sesi Pengguna Ini dari Database"
-                                  className="h-7 px-2 text-[10px] font-bold rounded-lg border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 gap-1"
-                                >
-                                  <Trash2 className={`w-3 h-3 text-rose-400 ${deletingSessionId === s.userId ? 'animate-spin' : ''}`} />
-                                  <span>Hapus</span>
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Footer Modal */}
-            <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
-              <span>Menampilkan seluruh pengguna terdaftar dengan status sesi login</span>
-              <Button
-                onClick={() => setShowAllSessionsModal(false)}
-                variant="outline"
-                size="sm"
-                className="text-xs rounded-xl border-slate-700 text-slate-300"
-              >
-                Tutup
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
 
       {/* Kartu Statistika Populasi (Khusus Admin TU / BAU) */}
       {(role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') && (

@@ -95,6 +95,31 @@ export class FinanceCalculationController {
     );
   }
 
+  private checkPayrollAccess(req: any) {
+    const user = req.user;
+    if (!user) {
+      throw new ForbiddenException('Akses ditolak. Sesi pengguna tidak valid.');
+    }
+    const userRoles = [
+      user.role,
+      user.subRole,
+      user.subRole2,
+      user.subRole3,
+      user.subRole4,
+      user.subRole5,
+    ].filter(Boolean);
+
+    const isKeuanganLengkap = userRoles.some((r) =>
+      ['KEUANGAN_ALL', 'SUPERVISOR_KEUANGAN', 'KEUANGAN', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
+    );
+
+    if (!isKeuanganLengkap) {
+      throw new ForbiddenException(
+        'Akses ditolak. Perhitungan dan data penggajian payroll hanya dapat diakses oleh Keuangan Lengkap (Keuangan All).',
+      );
+    }
+  }
+
   // ============================================================
   // PAYROLL CALCULATIONS
   // ============================================================
@@ -102,10 +127,14 @@ export class FinanceCalculationController {
   @Get('payroll/:userId')
   @RequirePermissions(PaymentPermission.VIEW_FINANCIAL_REPORTS)
   async calculateMonthlySalary(
+    @Req() req: any,
     @Param('userId') userId: string,
     @Query('year') year: string,
     @Query('month') month: string,
   ) {
+    if (req.user?.id !== userId) {
+      this.checkPayrollAccess(req);
+    }
     return this.financeCalculationService.calculateMonthlySalary(
       userId,
       parseInt(year, 10),
@@ -120,30 +149,7 @@ export class FinanceCalculationController {
     @Query('year') year: string,
     @Query('month') month: string,
   ) {
-    const userSubRoles = [
-      req.user?.subRole,
-      req.user?.subRole2,
-      req.user?.subRole3,
-      req.user?.subRole4,
-      req.user?.subRole5,
-      req.user?.role,
-    ];
-    const isKeuanganStaff = userSubRoles.some((r) =>
-      [
-        'KEUANGAN_ALL',
-        'KEUANGAN_MASUK',
-        'KEUANGAN_KELUAR',
-        'SUPERADMIN',
-        'ADMIN_IT',
-        'KEPALA_SEKOLAH',
-      ].includes(r),
-    );
-
-    if (!isKeuanganStaff) {
-      throw new ForbiddenException(
-        'Akses ditolak. Penggajian pegawai hanya dapat diakses oleh bagian Keuangan / Superadmin.',
-      );
-    }
+    this.checkPayrollAccess(req);
 
     return this.financeCalculationService.calculatePayrollSummary(
       parseInt(year, 10),

@@ -29,6 +29,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [showGuideMobile, setShowGuideMobile] = useState(false)
   const [helpdeskPhone, setHelpdeskPhone] = useState('088293733330')
+  const [helpdeskEmail, setHelpdeskEmail] = useState('raza@muhipo.sch.id')
   const [backgroundMaster, setBackgroundMaster] = useState('/muhipo-log.jpg')
   const [logoMaster, setLogoMaster] = useState<string | null>(null)
 
@@ -66,6 +67,8 @@ export default function LoginPage() {
       if (cachedLogo) setLogoMaster(cachedLogo)
       const cachedPhone = localStorage.getItem('simasmuh_helpdesk_phone')
       if (cachedPhone) setHelpdeskPhone(cachedPhone)
+      const cachedEmail = localStorage.getItem('simasmuh_helpdesk_email')
+      if (cachedEmail) setHelpdeskEmail(cachedEmail)
     } catch {}
 
     async function loadPublicSettings() {
@@ -81,6 +84,10 @@ export default function LoginPage() {
           if (data?.helpdeskPhone) {
             setHelpdeskPhone(data.helpdeskPhone)
             try { localStorage.setItem('simasmuh_helpdesk_phone', data.helpdeskPhone) } catch {}
+          }
+          if (data?.email) {
+            setHelpdeskEmail(data.email)
+            try { localStorage.setItem('simasmuh_helpdesk_email', data.email) } catch {}
           }
           if (data?.backgroundUrl) {
             setBackgroundMaster(data.backgroundUrl)
@@ -577,7 +584,7 @@ export default function LoginPage() {
                   <div className="text-xs space-y-0.5 w-full">
                     <div className="font-bold text-purple-700 dark:text-purple-300">Wali Murid / Orang Tua</div>
                     <div className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                      Username: <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">No. WhatsApp</span> & Kata Sandi: <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">NIS Siswa</span>.
+                      Username: <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">No. HP / Telepon</span> & Kata Sandi: <span className="font-mono font-bold bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">NIS Siswa</span>.
                     </div>
                   </div>
                 </div>
@@ -603,17 +610,15 @@ export default function LoginPage() {
                 <span>Kendala Akses atau Lupa Kata Sandi?</span>
               </div>
               <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                Hubungi <span className="font-bold text-slate-900 dark:text-white">Layanan Bantuan</span> WhatsApp <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{helpdeskPhone}</span> jika akun Anda bermasalah.
+                Hubungi <span className="font-bold text-slate-900 dark:text-white">Layanan Bantuan SIMASMUH</span> di <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{helpdeskEmail}</span> atau telepon <span className="font-mono font-bold text-slate-900 dark:text-white">{helpdeskPhone}</span> jika akun Anda bermasalah.
               </p>
               <div className="pt-0.5 flex flex-wrap items-center gap-2">
                 <a
-                  href={`https://wa.me/${helpdeskPhone.replace(/[^0-9]/g, '').replace(/^0/, '62')}?text=Halo%20Admin%20SIMASMUH,%20saya%20membutuhkan%20bantuan%20kendala%20login%20akun.`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs touch-manipulation min-h-[38px]"
+                  href={`mailto:${helpdeskEmail}?subject=Bantuan%20Akses%20SIMASMUH`}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs touch-manipulation min-h-[38px]"
                 >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span>Hubungi Helpdesk WhatsApp</span>
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Kirim Email Bantuan</span>
                 </a>
                 <button
                   type="button"

@@ -367,7 +367,7 @@ export default function WaliMuridPage() {
     e.preventDefault()
     const cleanPhone = (formData.phone || '').trim()
     if (!cleanPhone) {
-      alert('Nomor WhatsApp / telepon wajib diisi untuk username dan notifikasi WhatsApp!')
+      alert('Nomor telepon wajib diisi untuk username login akun!')
       return
     }
 
@@ -586,7 +586,7 @@ export default function WaliMuridPage() {
             <div>
               <CardTitle className="text-lg">Daftar Akun Pengguna Wali Murid</CardTitle>
               <CardDescription>
-                Username login berupa No. WhatsApp aktif, dengan kata sandi default berupa NIS siswa.
+                Username login berupa No. Telepon / HP aktif, dengan kata sandi default berupa NIS siswa.
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -634,7 +634,7 @@ export default function WaliMuridPage() {
                   </TableHead>
                   <TableHead>Nama Wali Murid</TableHead>
                   <TableHead>Status Akun</TableHead>
-                  <TableHead>No. WhatsApp / Username</TableHead>
+                  <TableHead>No. HP / Username</TableHead>
                   <TableHead>Siswa Terhubung</TableHead>
                   <TableHead>Password Awal</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
@@ -699,17 +699,6 @@ export default function WaliMuridPage() {
                             <span className="font-mono text-sm font-semibold text-slate-800 dark:text-slate-200">
                               {parent.phone || parent.username}
                             </span>
-                            {parent.phone && parent.phone !== '-' && (
-                              <a
-                                href={`https://wa.me/${parent.phone.replace(/[^0-9]/g, '')}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="p-1 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400"
-                                title="Buka WhatsApp"
-                              >
-                                <Phone className="w-3.5 h-3.5" />
-                              </a>
-                            )}
                           </div>
                           <span className="text-[11px] text-slate-400">Username Login</span>
                         </TableCell>
@@ -817,7 +806,7 @@ export default function WaliMuridPage() {
                 {isEdit ? 'Ubah Data Akun Wali Murid' : 'Tambah Akun Wali Murid Baru'}
               </DialogTitle>
               <DialogDescription>
-                Hubungkan satu akun wali murid dengan satu atau beberapa siswa untuk monitoring dan notifikasi WhatsApp.
+                Hubungkan satu akun wali murid dengan satu atau beberapa siswa untuk monitoring dan notifikasi email/dashboard.
               </DialogDescription>
             </DialogHeader>
 
@@ -908,7 +897,7 @@ export default function WaliMuridPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="parentPhone">No. WhatsApp Aktif (Username) *</Label>
+                  <Label htmlFor="parentPhone">No. Telepon / HP Aktif (Username) *</Label>
                   <Input
                     id="parentPhone"
                     value={formData.phone}
@@ -916,7 +905,7 @@ export default function WaliMuridPage() {
                     placeholder="Contoh: 081234567890"
                     required
                   />
-                  <p className="text-[11px] text-slate-500">Digunakan sebagai username login & tujuan notifikasi WA.</p>
+                  <p className="text-[11px] text-slate-500">Digunakan sebagai username login akun wali murid.</p>
                 </div>
               </div>
 
@@ -1010,13 +999,13 @@ export default function WaliMuridPage() {
               Sinkronisasi Akun dari Data Siswa
             </DialogTitle>
             <DialogDescription>
-              Fitur ini akan secara otomatis memindai seluruh data siswa yang memiliki informasi No. WhatsApp orang tua / biodata ayah/ibu/wali, lalu membuatkan akun Wali Murid dengan kredensial:
+              Fitur ini akan secara otomatis memindai seluruh data siswa yang memiliki informasi No. Telepon orang tua / biodata ayah/ibu/wali, lalu membuatkan akun Wali Murid dengan kredensial:
             </DialogDescription>
           </DialogHeader>
           <div className="p-4 bg-indigo-50/70 dark:bg-indigo-950/40 rounded-lg text-xs space-y-2 text-slate-700 dark:text-slate-300 border border-indigo-100 dark:border-indigo-900">
             <div className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-              <span><strong>Username:</strong> Nomor WhatsApp orang tua siswa</span>
+              <span><strong>Username:</strong> Nomor telepon orang tua siswa</span>
             </div>
             <div className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />

@@ -145,25 +145,25 @@ export function SingleReceiptPrintModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="max-w-[94vw] sm:max-w-lg lg:max-w-xl w-full p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+      <DialogContent showCloseButton={false} className="max-w-[94vw] sm:max-w-lg lg:max-w-xl w-full p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
         {/* Header Modal */}
-        <div className="shrink-0 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 p-4 sm:p-5 text-white shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md border border-white/15">
-              <Receipt className="w-5 h-5 text-blue-200" />
+        <div className="shrink-0 bg-white dark:bg-slate-900 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-50 dark:bg-blue-950/60 rounded-xl border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400">
+              <Receipt className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle className="text-base sm:text-lg font-black text-white">
+              <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                 Kwitansi Bukti Pembayaran
               </DialogTitle>
-              <DialogDescription className="text-blue-100 text-xs">
+              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Bukti sah transaksi loket keuangan SIKU SIMASMUH.
               </DialogDescription>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-1.5 rounded-xl hover:bg-white/10 text-white/80 hover:text-white transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

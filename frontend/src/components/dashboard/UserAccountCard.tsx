@@ -54,10 +54,6 @@ export function UserAccountCard({
 
   const effectiveStatus = isAccountActive ? 'Aktif' : 'Nonaktif'
 
-  const effectiveStatusColor = isAccountActive
-    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-    : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
-
   // Resolusi adaptif URL CBT Ujian (Port 3010)
   const getCbtUrl = () => {
     if (typeof window !== 'undefined') {
@@ -69,37 +65,40 @@ export function UserAccountCard({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-3.5 sm:p-4 flex flex-col gap-3">
-      {/* Top Header Card: Title + Status Badge */}
-      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-        <div className="flex items-center gap-1.5 font-extrabold text-xs sm:text-sm text-slate-800 dark:text-slate-100">
-          <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-          <span>Profil Akun</span>
+    <div className="bg-white/95 dark:bg-slate-900/90 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs p-4 flex flex-col gap-3.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-700">
+      {/* Top Header Card: Title + Status Indicator */}
+      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/60 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <User className="w-3.5 h-3.5" />
+          </div>
+          <span className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            Identitas Akun
+          </span>
         </div>
-        <Badge variant="outline" className={`text-[10px] font-bold px-2 py-0.5 max-w-[150px] truncate ${effectiveStatusColor}`}>
-          {effectiveStatus}
-        </Badge>
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300">
+          <span className={`w-1.5 h-1.5 rounded-full ${isAccountActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+          <span>{effectiveStatus}</span>
+        </div>
       </div>
 
-      {/* Center Profile Bingkai & Shortcuts */}
+      {/* Profile Row: Avatar & Metadata */}
       <div className="flex items-center gap-3">
-        {/* Avatar Bingkai terhubung foto profil dan shortcut ubah foto */}
         <Link 
           href="/pengaturan/profil" 
           title="Klik untuk ubah foto profil"
-          className="group/avatar relative w-13 h-13 sm:w-14 sm:h-14 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-slate-900 text-white font-black text-lg flex items-center justify-center shadow-xs shrink-0 border-2 border-slate-100 dark:border-slate-800 hover:ring-2 hover:ring-blue-500 transition-all cursor-pointer"
+          className="group relative w-12 h-12 sm:w-13 sm:h-13 rounded-xl overflow-hidden bg-slate-900 text-white font-extrabold text-base flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs hover:border-blue-500 transition-all cursor-pointer"
         >
           {activeAvatar ? (
-            <img src={activeAvatar} alt={userName} className="w-full h-full object-cover group-hover/avatar:scale-105 transition-transform duration-300" />
+            <img src={activeAvatar} alt={userName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           ) : (
-            <span className="group-hover/avatar:scale-105 transition-transform">{userName.charAt(0).toUpperCase()}</span>
+            <span className="group-hover:scale-105 transition-transform">{userName.charAt(0).toUpperCase()}</span>
           )}
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
-            <Camera className="w-4 h-4 text-white" />
+          <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <Camera className="w-3.5 h-3.5 text-white" />
           </div>
         </Link>
 
-        {/* Info Pengguna */}
         <div className="space-y-0.5 min-w-0 flex-1">
           <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-tight truncate" title={userName}>
             {userName}
@@ -107,46 +106,50 @@ export function UserAccountCard({
           <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
             {userIdentifier}
           </p>
-          <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider truncate">
-            {userRole}
-          </p>
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <span className="inline-block px-1.5 py-0.2 rounded text-[9.5px] font-bold tracking-wide uppercase bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/60 truncate max-w-full">
+              {userRole}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Quick App Badges (Pintasan Ekosistem Aplikasi SIMASMUH) */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* App Shortcuts Grid */}
+      <div className="grid grid-cols-2 gap-1.5 sm:gap-2 pt-0.5">
         <a
           href={getCbtUrl()}
           target="_blank"
           rel="noreferrer"
           title="CBT Ujian Online (Port 3010)"
-          className="flex items-center justify-center gap-1.5 p-1.5 rounded-xl bg-blue-50/80 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors group border border-blue-200/50 dark:border-blue-900/50"
+          className="flex items-center justify-center gap-1.5 py-1.5 sm:py-2 px-2 rounded-xl bg-slate-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 hover:text-blue-700 dark:text-slate-300 dark:hover:text-blue-300 transition-all group text-center shadow-2xs active:scale-95"
         >
-          <Laptop className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] font-extrabold text-blue-700 dark:text-blue-300 truncate">CBT Ujian</span>
+          <Laptop className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform shrink-0" />
+          <span className="text-[11px] font-bold truncate">CBT Ujian</span>
         </a>
 
         <Link
           href={role === 'SISWA' || role === 'WALI_MURID' ? '/presensi/kehadiran-siswa' : '/presensi/kehadiran-pegawai'}
           title="Presensi & Absensi"
-          className="flex items-center justify-center gap-1.5 p-1.5 rounded-xl bg-emerald-50/80 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors group border border-emerald-200/50 dark:border-emerald-900/50"
+          className="flex items-center justify-center gap-1.5 py-1.5 sm:py-2 px-2 rounded-xl bg-slate-50 hover:bg-emerald-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 hover:text-emerald-700 dark:text-slate-300 dark:hover:text-emerald-300 transition-all group text-center shadow-2xs active:scale-95"
         >
-          <CalendarCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-300 truncate">Presensi</span>
+          <CalendarCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
+          <span className="text-[11px] font-bold truncate">Presensi</span>
         </Link>
       </div>
 
-      {/* Edit Profile Button */}
-      <Link href="/pengaturan/profil" className="w-full">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full font-bold text-xs h-7 sm:h-8 rounded-xl border-slate-200 dark:border-slate-700 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-slate-800 transition-all gap-1.5"
-        >
-          <UserCog className="w-3.5 h-3.5 text-blue-600" />
-          Edit Profil
-        </Button>
-      </Link>
+      {/* Action Buttons: Edit Profile & Keamanan */}
+      <div className="grid grid-cols-1 gap-1.5 pt-0.5">
+        <Link href="/pengaturan/profil" className="w-full">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full font-bold text-xs h-8 rounded-xl border-slate-200 dark:border-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-slate-800 dark:hover:text-white transition-all gap-1.5 shadow-2xs active:scale-95"
+          >
+            <UserCog className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            Pengaturan Akun & Profil
+          </Button>
+        </Link>
+      </div>
     </div>
   )
 }

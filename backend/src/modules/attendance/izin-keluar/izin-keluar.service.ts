@@ -220,7 +220,7 @@ export class IzinKeluarService {
     if (category === 'SISWA') {
       where.user = { role: 'SISWA' };
     } else if (category === 'PEGAWAI') {
-      where.user = { role: { notIn: ['SISWA', 'WALI_MURID'] } };
+      where.user = { role: { notIn: ['SISWA', 'WALI_MURID', 'HONORER'] } };
     }
 
     return this.prisma.izinKeluar.findMany({
@@ -340,7 +340,7 @@ export class IzinKeluarService {
       // Ignore conflict error
     }
 
-    // Kirim notifikasi WhatsApp pemberitahuan persetujuan izin + link QR E-Sign
+    // Kirim notifikasi Email pemberitahuan persetujuan izin + link QR E-Sign
     if (izin.user) {
       const targetUser = izin.user;
       const dateFormatted = new Date(izin.date).toLocaleDateString('id-ID', {

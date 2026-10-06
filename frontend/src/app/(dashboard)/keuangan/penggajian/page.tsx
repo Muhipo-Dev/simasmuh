@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -11,7 +13,8 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { 
   Loader2, Banknote, Settings, Download, CheckCircle2, DollarSign, Calculator,
-  FileText, Printer, Plus, Trash2, Clock, Calendar, ShieldCheck, UserCheck, Eye, Sparkles, RotateCcw
+  FileText, Printer, Plus, Trash2, Clock, Calendar, ShieldCheck, UserCheck, Eye, Sparkles, RotateCcw, ShieldAlert,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
@@ -104,10 +107,28 @@ const STANDARD_DEDUCTIONS = [
 ]
 
 export default function PenggajianPage() {
+  const { data: session, status: sessionStatus } = useSession()
+  const router = useRouter()
   const queryClient = useQueryClient()
   const authenticatedFetch = useAuthenticatedFetch()
   const authenticatedQuery = useAuthenticatedQuery()
   const printSlipRef = useRef<HTMLDivElement>(null)
+
+  const u = session?.user as any
+  const userRoles = [
+    u?.role,
+    u?.subRole,
+    u?.subRole2,
+    u?.subRole3,
+    u?.subRole4,
+    u?.subRole5,
+  ].filter(Boolean) as string[]
+
+  const isKeuanganLengkap = userRoles.some(r =>
+    ['KEUANGAN_ALL', 'SUPERVISOR_KEUANGAN', 'KEUANGAN', 'SUPERADMIN', 'ADMIN_IT'].includes(r)
+  )
+
+  const isAuthorized = isKeuanganLengkap
 
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString())
@@ -159,7 +180,10 @@ export default function PenggajianPage() {
         !['SISWA', 'WALI_MURID'].includes(item.role) &&
         !['SISWA', 'WALI_MURID'].includes(item.roles)
       )
-    }
+    },
+    enabled: isAuthorized && sessionStatus === 'authenticated',
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   // Fetch Rekap Matriks Presensi Bulanan (Gambar 1)
@@ -171,7 +195,9 @@ export default function PenggajianPage() {
       )
       return res || null
     },
-    enabled: showMatrixModal,
+    enabled: isAuthorized && showMatrixModal,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   // Fetch Rekap Keuangan Kehadiran & Makan Guru Karyawan (Gambar 2 & 3)
@@ -183,7 +209,9 @@ export default function PenggajianPage() {
       )
       return res || null
     },
-    enabled: showRekapKeuanganModal,
+    enabled: isAuthorized && showRekapKeuanganModal,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   // Helper render HTML Card Slip Gaji untuk cetak (Presisi format fisik & hemat tempat)
@@ -1329,6 +1357,20 @@ export default function PenggajianPage() {
   const { sortConfig, handleSort, sortedItems: sortedPayroll } = useSorting(payroll || [])
   const searchedPayroll = filterDataBySearch(sortedPayroll, searchQuery)
 
+  // Pagination states for ultra-smooth rendering (Optimized for 2GB RAM devices)
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  const totalPages = Math.max(1, Math.ceil(searchedPayroll.length / pageSize))
+  const paginatedPayroll = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize
+    return searchedPayroll.slice(startIdx, startIdx + pageSize)
+  }, [searchedPayroll, currentPage, pageSize])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedMonth, selectedYear, pageSize])
+
   // Perhitungan Kalkulasi Live Preview di Modal
   const previewBase = (parseFloat(formHours) || 0) * (parseFloat(formHourlyRate) || 0)
   const previewKelebihan = parseFloat(formKelebihanJam) || 0
@@ -1349,6 +1391,25 @@ export default function PenggajianPage() {
   const formatRpSlip = (num: number | undefined | null) => {
     if (!num || num === 0) return 'Rp-';
     return `Rp${new Intl.NumberFormat('id-ID').format(num)}.00`;
+  }
+
+  if (sessionStatus !== 'loading' && !isAuthorized) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center p-4">
+        <Card className="max-w-md w-full text-center p-6 border-rose-200 bg-rose-50/50 dark:bg-rose-950/20 shadow-lg">
+          <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Akses Terbatas</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+            Modul dan pengelolaan Penggajian Payroll hanya dapat diakses dan dikelola oleh Keuangan Lengkap (Keuangan All).
+          </p>
+          <Button onClick={() => router.replace('/dashboard')} className="w-full bg-slate-900 hover:bg-slate-800 text-white">
+            Kembali ke Dashboard
+          </Button>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -1563,35 +1624,31 @@ export default function PenggajianPage() {
                       title="Pilih Semua Pegawai"
                     />
                   </TableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="name" className="w-[190px] max-w-[210px] px-2.5 py-3">Pegawai / NIP</SortableTableHead>
-                  <TableHead className="text-center w-[95px] px-1 py-3">Status Jabatan</TableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="totalHadir" className="text-center w-[90px] px-1.5 py-3">Presensi</SortableTableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="baseSalary" className="text-right w-[100px] px-2 py-3">Gaji Pokok</SortableTableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="totalAllowance" className="text-right w-[100px] px-2 py-3">Tunjangan</SortableTableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="totalDeduction" className="text-right w-[90px] px-2 py-3">Potongan</SortableTableHead>
-                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="netSalary" className="text-right w-[105px] px-2 py-3">Gaji Bersih</SortableTableHead>
-                  <TableHead className="text-center w-[105px] px-2 py-3">Aksi</TableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="name" className="w-[200px] max-w-[240px] px-2.5 py-3">Pegawai / NIP</SortableTableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="totalHadir" className="text-center w-[95px] px-1.5 py-3">Presensi</SortableTableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="netSalary" className="text-right w-[110px] px-2.5 py-3">Gaji Bersih</SortableTableHead>
+                  <TableHead className="text-center w-[110px] px-2 py-3">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
+                    <TableCell colSpan={5} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-slate-500">
                         <Loader2 className="w-6 h-6 animate-spin mb-2 text-emerald-600" />
                         Memuat data penggajian...
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : searchedPayroll.length === 0 ? (
+                ) : paginatedPayroll.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-slate-500">
+                    <TableCell colSpan={5} className="text-center py-12 text-slate-500">
                       {searchQuery ? 'Tidak ada data pegawai yang sesuai dengan pencarian.' : 'Tidak ada data pegawai.'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  searchedPayroll.map((item) => {
+                  paginatedPayroll.map((item: PayrollStaff) => {
                     const isSelected = selectedStaffIds.includes(item.id)
                     return (
                       <TableRow key={item.id} className={`hover:bg-slate-50/60 transition-colors border-b border-slate-100 ${isSelected ? 'bg-emerald-50/40' : ''}`}>
@@ -1610,9 +1667,14 @@ export default function PenggajianPage() {
                           />
                         </TableCell>
                         
-                        {/* Nama Pegawai & NIP & Rekening Bank */}
-                        <TableCell className="w-[190px] max-w-[210px] px-2.5 py-2.5">
-                          <p className="font-bold text-slate-900 text-sm leading-tight truncate" title={item.name}>{item.name}</p>
+                        {/* Nama Pegawai & NIP & Status Jabatan Badge & Rekening Bank */}
+                        <TableCell className="w-[200px] max-w-[240px] px-2.5 py-2.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-bold text-slate-900 text-sm leading-tight truncate" title={item.name}>{item.name}</p>
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                              {item.employmentStatus || 'GTTP'}
+                            </span>
+                          </div>
                           <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
                             <span className="shrink-0">NIP: {item.nip || '-'}</span>
                             <span>•</span>
@@ -1629,27 +1691,6 @@ export default function PenggajianPage() {
                           )}
                         </TableCell>
 
-                        {/* Status Jabatan Dropdown Inline */}
-                        <TableCell className="text-center px-1 py-2.5">
-                          <Select 
-                            value={item.employmentStatus || 'GTTP'} 
-                            onValueChange={(val) => {
-                              if (val) updateStatusMutation.mutate({ userId: item.id, status: val })
-                            }}
-                          >
-                            <SelectTrigger className="h-7 text-xs font-bold w-full bg-white px-2">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {EMPLOYMENT_STATUS_OPTIONS.map(opt => (
-                                <SelectItem key={opt.value} value={opt.value} className="text-xs font-medium">
-                                  {opt.value} - {opt.label.split('(')[1]?.replace(')', '') || opt.value}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-
                         {/* Kehadiran & Jam */}
                         <TableCell className="text-center px-1.5 py-2.5">
                           <div className="flex flex-col items-center">
@@ -1662,47 +1703,9 @@ export default function PenggajianPage() {
                           </div>
                         </TableCell>
 
-                        {/* Gaji Pokok (Jam x Tarif) */}
-                        <TableCell className="text-right px-2 py-2.5">
-                          <span className="font-semibold text-slate-900 text-xs whitespace-nowrap">
-                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.baseSalary || 0)}
-                          </span>
-                          {item.totalHours > 0 && item.hourlyRate > 0 && (
-                            <p className="text-[10px] text-slate-400 whitespace-nowrap">
-                              {item.totalHours} jam × Rp{new Intl.NumberFormat('id-ID').format(item.hourlyRate)}
-                            </p>
-                          )}
-                        </TableCell>
-
-                        {/* Tunjangan (Transport + Makan + Manual) */}
-                        <TableCell className="text-right px-2 py-2.5">
-                          <span className="font-semibold text-emerald-700 text-xs whitespace-nowrap">
-                            +{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.totalAllowance || 0)}
-                          </span>
-                          <div className="flex flex-col items-end gap-0.5 text-[9px] text-slate-500">
-                            {item.mealAllowance > 0 && (
-                              <span className="whitespace-nowrap">Abs Mkn: {new Intl.NumberFormat('id-ID').format(item.mealAllowance)}</span>
-                            )}
-                            {item.transportAllowance > 0 && (
-                              <span className="whitespace-nowrap">Transport: {new Intl.NumberFormat('id-ID').format(item.transportAllowance)}</span>
-                            )}
-                          </div>
-                        </TableCell>
-
-                        {/* Potongan Manual */}
-                        <TableCell className="text-right px-2 py-2.5">
-                          {item.totalDeduction > 0 ? (
-                            <span className="font-semibold text-rose-600 text-xs whitespace-nowrap">
-                              -{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.totalDeduction || 0)}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-xs font-medium whitespace-nowrap">Rp0</span>
-                          )}
-                        </TableCell>
-
                         {/* Gaji Bersih Netto */}
-                        <TableCell className="text-right px-2 py-2.5">
-                          <span className="font-extrabold text-slate-900 text-sm whitespace-nowrap">
+                        <TableCell className="text-right px-2.5 py-2.5">
+                          <span className="font-extrabold text-emerald-700 text-sm whitespace-nowrap">
                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.netSalary || 0)}
                           </span>
                         </TableCell>
@@ -1751,6 +1754,84 @@ export default function PenggajianPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination Bar */}
+          <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-xs text-slate-500">
+              Menampilkan <span className="font-semibold text-slate-900">
+                {searchedPayroll.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+              </span> – <span className="font-semibold text-slate-900">
+                {Math.min(currentPage * pageSize, searchedPayroll.length)}
+              </span> dari <span className="font-semibold text-slate-900">{searchedPayroll.length}</span> pegawai
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span>Baris:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value))
+                    setCurrentPage(1)
+                  }}
+                  className="px-2 py-1 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 outline-none"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  title="Awal"
+                >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  title="Sebelumnya"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </Button>
+
+                <span className="px-2 text-xs font-semibold text-slate-700">
+                  {currentPage} / {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  title="Selanjutnya"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage >= totalPages}
+                  title="Akhir"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -135,7 +135,7 @@ export class ParentsService {
     const rawPhone = (data.phone || '').trim();
     if (!rawPhone) {
       throw new BadRequestException(
-        'Nomor telepon wali murid wajib diisi sebagai nomor WhatsApp dan username login',
+        'Nomor telepon wali murid wajib diisi sebagai username login',
       );
     }
 
@@ -150,7 +150,7 @@ export class ParentsService {
 
     if (existingUser) {
       throw new BadRequestException(
-        `Pengguna atau nomor WhatsApp ${rawPhone} sudah terdaftar di sistem`,
+        `Pengguna atau nomor telepon ${rawPhone} sudah terdaftar di sistem`,
       );
     }
 
@@ -280,7 +280,7 @@ export class ParentsService {
       });
       if (existing) {
         throw new BadRequestException(
-          `Nomor WhatsApp/Username ${rawPhone} sudah digunakan akun lain`,
+          `Nomor Telepon/Username ${rawPhone} sudah digunakan akun lain`,
         );
       }
       updateData.phone = rawPhone;
@@ -958,7 +958,7 @@ export class ParentsService {
         notifTagihanBaru: true,
         notifTagihanLunas: true,
         notifPengumuman: true,
-        whatsappTargetNumber: user.phone || user.username,
+        emailTarget: user.email || '',
       },
     };
   }

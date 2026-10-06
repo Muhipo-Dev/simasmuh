@@ -20,7 +20,7 @@ export class FinanceService {
     private prisma: PrismaService,
     private eventEmitter: EventEmitter2,
     private systemLogService: SystemLogService,
-  ) {}
+  ) { }
 
   // ============================================================
   // PAYROLL & SALARY CALCULATION SYSTEM (SIMASMUH)
@@ -283,7 +283,7 @@ export class FinanceService {
 
     const staffList = await this.prisma.user.findMany({
       where: {
-        role: { notIn: ['SISWA', 'WALI_MURID'] },
+        role: { notIn: ['SISWA', 'WALI_MURID', 'HONORER'] },
       },
       select: {
         id: true,
@@ -361,7 +361,7 @@ export class FinanceService {
       let parsedMeta: any = {};
       try {
         if (rawNotes.startsWith('{')) parsedMeta = JSON.parse(rawNotes);
-      } catch (e) {}
+      } catch (e) { }
 
       const masaKerja = parsedMeta.masaKerja ?? 0;
       const kelebihanJam = Number(parsedMeta.kelebihanJam) || 0;
@@ -729,7 +729,7 @@ export class FinanceService {
     let parsedMeta: any = {};
     try {
       if (rawNotes.startsWith('{')) parsedMeta = JSON.parse(rawNotes);
-    } catch (e) {}
+    } catch (e) { }
 
     const masaKerja = parsedMeta.masaKerja ?? 0;
     const kelebihanJam = Number(parsedMeta.kelebihanJam) || 0;
@@ -903,7 +903,7 @@ export class FinanceService {
 
     const staffList = await this.prisma.user.findMany({
       where: {
-        role: { notIn: ['SISWA', 'WALI_MURID'] },
+        role: { notIn: ['SISWA', 'WALI_MURID', 'HONORER'] },
       },
       select: {
         id: true,
@@ -996,7 +996,7 @@ export class FinanceService {
 
     const staffList = await this.prisma.user.findMany({
       where: {
-        role: { notIn: ['SISWA', 'WALI_MURID'] },
+        role: { notIn: ['SISWA', 'WALI_MURID', 'HONORER'] },
       },
       select: {
         id: true,
@@ -1374,7 +1374,7 @@ export class FinanceService {
 
     // Tanda Tangan Pengesahan (Kepala Sekolah & Bendahara)
     const ttdDateStr = `PONOROGO, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}`;
-    
+
     const ttdRow1 = worksheet.addRow(['', 'KEPALA SEKOLAH', '', '', ttdDateStr, '']);
     worksheet.mergeCells(`E${ttdRow1.number}:F${ttdRow1.number}`);
     ttdRow1.getCell(2).font = { name: 'Times New Roman', size: 10, bold: true };
@@ -1419,6 +1419,7 @@ export class FinanceService {
         nis: true,
         name: true,
         gender: true,
+        isActive: true,
         program: true,
         gelombang: true,
         jalurPendaftaran: true,
@@ -1465,6 +1466,7 @@ export class FinanceService {
         nis: s.nis,
         name: s.name,
         gender: s.gender,
+        isActive: s.isActive ?? true,
         program: s.program || null,
         gelombang: s.gelombang || 'Gelombang 1',
         jalurPendaftaran: s.jalurPendaftaran || 'Mandiri',
@@ -1518,12 +1520,12 @@ export class FinanceService {
         try {
           const beasiswaInfo = JSON.parse(beasiswaMatch[1]);
           originalAmount = beasiswaInfo.originalAmount || t.amount;
-        } catch {}
+        } catch { }
       } else if (discountMatch) {
         try {
           const discountInfo = JSON.parse(discountMatch[1]);
           originalAmount = discountInfo.originalAmount || t.amount;
-        } catch {}
+        } catch { }
       }
 
       const cleanNotes = (t.notes || '')
@@ -1752,7 +1754,7 @@ export class FinanceService {
       dto.beasiswaPercentage !== undefined && dto.beasiswaPercentage > 0
         ? dto.beasiswaReason
         : student.beasiswaReason ||
-          (effectivePct > 0 ? 'Beasiswa Default Siswa' : null);
+        (effectivePct > 0 ? 'Beasiswa Default Siswa' : null);
 
     if (effectivePct > 0) {
       const validPct = [25, 50, 75, 100].includes(effectivePct)
@@ -1826,7 +1828,7 @@ export class FinanceService {
       try {
         const beasiswaInfo = JSON.parse(beasiswaMatch[1]);
         baseAmount = beasiswaInfo.originalAmount || existing.amount;
-      } catch {}
+      } catch { }
     }
 
     let cleanNotes =
@@ -1870,7 +1872,7 @@ export class FinanceService {
           reason: dto.beasiswaReason || oldInfo.reason || '-',
         };
         cleanNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}BEASISWA_INFO: ${JSON.stringify(beasiswaInfo)}`;
-      } catch {}
+      } catch { }
     }
 
     return this.prisma.tagihan.update({
@@ -1952,7 +1954,7 @@ export class FinanceService {
         dto.discountPercentage !== undefined && dto.discountPercentage > 0
           ? dto.discountReason
           : s.beasiswaReason ||
-            (effectivePct > 0 ? 'Beasiswa Default Siswa' : null);
+          (effectivePct > 0 ? 'Beasiswa Default Siswa' : null);
 
       if (effectivePct > 0) {
         const validPct = [25, 50, 75, 100].includes(effectivePct)
@@ -2029,12 +2031,12 @@ export class FinanceService {
           try {
             const parsedInfo = JSON.parse(beasiswaMatch[1]);
             orig = parsedInfo.originalAmount || baseAmount;
-          } catch {}
+          } catch { }
         } else if (discountMatch) {
           try {
             const parsedInfo = JSON.parse(discountMatch[1]);
             orig = parsedInfo.originalAmount || baseAmount;
-          } catch {}
+          } catch { }
         }
         const beasiswaAmount = Math.round(orig * (validPct / 100));
         baseAmount = orig - beasiswaAmount;
@@ -2125,6 +2127,49 @@ export class FinanceService {
           : `Pembayaran angsuran berhasil dicatat. Sisa kurang bayar: Rp ${sisaKurangBayar.toLocaleString('id-ID')}`,
       };
     });
+  }
+
+  /** Multi pembayaran tunai kasir (batch pelunasan / angsuran sekaligus) */
+  async batchLunasiTagihan(
+    dto: {
+      payments: Array<{
+        tagihanId: string;
+        paymentAmount: number;
+        beasiswaPercentage?: number;
+        beasiswaReason?: string;
+        notes?: string;
+      }>;
+      globalNotes?: string;
+    },
+  ) {
+    if (!dto.payments || dto.payments.length === 0) {
+      throw new BadRequestException('Pilih setidaknya 1 tagihan untuk dibayar');
+    }
+
+    const results: any[] = [];
+    for (const item of dto.payments) {
+      const res = await this.lunasiTagihan(item.tagihanId, {
+        paymentAmount: item.paymentAmount,
+        beasiswaPercentage: item.beasiswaPercentage,
+        beasiswaReason: item.beasiswaReason,
+        notes: item.notes || dto.globalNotes,
+      });
+      results.push(res);
+    }
+
+    const totalPaid = results.reduce((sum: number, r: any) => sum + (r.payAmount || 0), 0);
+    const allLunas = results.every((r: any) => r.isLunas);
+
+    return {
+      success: true,
+      processedCount: results.length,
+      totalPaid,
+      allLunas,
+      results,
+      message: allLunas
+        ? `Berhasil melunasi ${results.length} tagihan senilai Rp ${totalPaid.toLocaleString('id-ID')}.`
+        : `Berhasil mencatat pembayaran ${results.length} tagihan senilai Rp ${totalPaid.toLocaleString('id-ID')}.`,
+    };
   }
 
   /** Batalkan status LUNAS / reset angsuran */
@@ -2272,7 +2317,7 @@ export class FinanceService {
       const effectiveReason = hasBulkBeasiswa
         ? dto.beasiswaReason
         : s.beasiswaReason ||
-          (effectivePct > 0 ? 'Beasiswa Default Siswa' : null);
+        (effectivePct > 0 ? 'Beasiswa Default Siswa' : null);
 
       if (effectivePct > 0) {
         const validPct = [25, 50, 75, 100].includes(effectivePct)
@@ -2323,17 +2368,20 @@ export class FinanceService {
     return result;
   }
 
-  /** Rilis tagihan 1 tahun penuh */
+  /** Rilis tagihan 1 tahun penuh atau per semester */
   async releaseYearlyBills(
     userId: string,
     dto: {
       academicYear?: string;
-      targetScope: 'STUDENT' | 'CLASS' | 'GRADE' | 'MULTI_CLASS';
+      targetScope: 'STUDENT' | 'STUDENTS' | 'CLASS' | 'GRADE' | 'MULTI_CLASS';
       classId?: string;
       classIds?: string[];
       studentId?: string;
+      studentIds?: string[];
       gradeLevel?: number;
       yearStart?: number;
+      releaseDuration?: 'TAHUN' | 'SEMESTER';
+      targetSemester?: 1 | 2; // 1 = Ganjil (Juli-Desember), 2 = Genap (Januari-Juni)
       sppStartMonth?: number;
       sppStartYear?: number;
       customSppMonthly?: number;
@@ -2359,7 +2407,11 @@ export class FinanceService {
   ) {
     let studentQueryWhere: any = {};
 
-    if (dto.targetScope === 'STUDENT' && dto.studentId) {
+    if (dto.targetScope === 'STUDENTS' && Array.isArray(dto.studentIds) && dto.studentIds.length > 0) {
+      studentQueryWhere = { id: { in: dto.studentIds } };
+    } else if (dto.targetScope === 'STUDENTS') {
+      throw new BadRequestException('Pilih minimal 1 siswa untuk set tagihan');
+    } else if (dto.targetScope === 'STUDENT' && dto.studentId) {
       studentQueryWhere = { id: dto.studentId };
     } else if (dto.classIds && Array.isArray(dto.classIds) && dto.classIds.length > 0) {
       studentQueryWhere = { classId: { in: dto.classIds } };
@@ -2425,6 +2477,8 @@ export class FinanceService {
 
     const yearStart = dto.yearStart || new Date().getFullYear();
     const academicYearStr = dto.academicYear || `${yearStart}/${yearStart + 1}`;
+    const isSemesterMode = dto.releaseDuration === 'SEMESTER';
+    const targetSemester = dto.targetSemester || (dto.sppStartMonth && dto.sppStartMonth <= 6 ? 2 : 1);
 
     const settings = await this.prisma.setting.findFirst();
     const allProgramConfigs = await this.prisma.programConfig.findMany();
@@ -2451,15 +2505,28 @@ export class FinanceService {
     const summaryPerStudent: any[] = [];
 
     const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-    
-    const startSppM = dto.sppStartMonth ? Number(dto.sppStartMonth) : 7;
-    const startSppY = dto.sppStartYear ? Number(dto.sppStartYear) : yearStart;
 
+    let defaultStartMonth = 7;
+    let defaultStartYear = yearStart;
+    if (isSemesterMode) {
+      if (targetSemester === 1) {
+        defaultStartMonth = 7;
+        defaultStartYear = yearStart;
+      } else {
+        defaultStartMonth = 1;
+        defaultStartYear = yearStart + 1;
+      }
+    }
+
+    const startSppM = dto.sppStartMonth ? Number(dto.sppStartMonth) : defaultStartMonth;
+    const startSppY = dto.sppStartYear ? Number(dto.sppStartYear) : defaultStartYear;
+
+    const sppMonthsCount = isSemesterMode ? 6 : 12;
     const sppMonthsToRelease: { month: number; year: number; name: string }[] = [];
     let curMonth = startSppM;
     let curYear = startSppY;
 
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < sppMonthsCount; i++) {
       sppMonthsToRelease.push({
         month: curMonth,
         year: curYear,
@@ -2707,7 +2774,7 @@ export class FinanceService {
       summary: summaryPerStudent,
       message: duplicateDetectedList.length > 0
         ? `Berhasil merilis ${totalCreatedCount} tagihan baru. Sistem mendeteksi ${duplicateDetectedList.length} tagihan yang sudah ada sebelumnya dan secara otomatis ${dto.allowOverrideDuplicates ? 'memperbarui (dengan otorisasi)' : 'melewati (skip) duplikasi untuk melindungi data'}.`
-        : `Berhasil merilis ${totalCreatedCount} tagihan 1 tahun penuh tanpa kendala.`,
+        : `Berhasil merilis ${totalCreatedCount} tagihan ${isSemesterMode ? `Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 tahun penuh'} tanpa kendala.`,
     };
   }
 
@@ -2723,6 +2790,8 @@ export class FinanceService {
       studentId?: string;
       gradeLevel?: number;
       startYear?: number;
+      releaseDuration?: 'TAHUN' | 'SEMESTER';
+      targetSemester?: 1 | 2;
       onlyUnpaid?: boolean;
     },
   ) {
@@ -2768,13 +2837,16 @@ export class FinanceService {
     }
 
     const yearStart = dto.startYear || new Date().getFullYear();
-    const academicYearMonths = [
+    const isSemesterMode = dto.releaseDuration === 'SEMESTER';
+    const sem1Months = [
       { month: 7, year: yearStart },
       { month: 8, year: yearStart },
       { month: 9, year: yearStart },
       { month: 10, year: yearStart },
       { month: 11, year: yearStart },
       { month: 12, year: yearStart },
+    ];
+    const sem2Months = [
       { month: 1, year: yearStart + 1 },
       { month: 2, year: yearStart + 1 },
       { month: 3, year: yearStart + 1 },
@@ -2782,6 +2854,10 @@ export class FinanceService {
       { month: 5, year: yearStart + 1 },
       { month: 6, year: yearStart + 1 },
     ];
+
+    const targetMonths = isSemesterMode
+      ? (dto.targetSemester === 2 ? sem2Months : sem1Months)
+      : [...sem1Months, ...sem2Months];
 
     // Build student query where condition
     const studentQueryWhere: any = {};
@@ -2812,16 +2888,16 @@ export class FinanceService {
         where: {
           studentId: { in: studentIds },
           OR: [
-            // SPP / Monthly bills in academic year months
-            ...academicYearMonths.map((m) => ({
+            // SPP / Monthly bills in target months
+            ...targetMonths.map((m) => ({
               month: m.month,
               year: m.year,
             })),
-            // Annual non-monthly bills (DPP, UIS, UKA, UKS, SERAGAM, LKS) in yearStart or yearStart + 1
-            {
+            // Annual non-monthly bills (DPP, UIS, UKA, UKS, SERAGAM, LKS)
+            ...(!isSemesterMode ? [{
               month: null,
               year: { in: [yearStart, yearStart + 1] },
-            },
+            }] : []),
           ],
           ...(dto.onlyUnpaid ? { status: { not: 'LUNAS' } } : {}),
         },
@@ -2845,7 +2921,7 @@ export class FinanceService {
           success: true,
           deletedBillsCount: deleteRes.count,
           studentCount: students.length,
-          message: `Berhasil mereset ${deleteRes.count} tagihan tahun ajaran ${yearStart}/${yearStart + 1} dari ${students.length} siswa.`,
+          message: `Berhasil mereset ${deleteRes.count} tagihan ${isSemesterMode ? `Semester ${dto.targetSemester === 2 ? 'Genap' : 'Ganjil'}` : 'Tahun Ajaran'} ${yearStart}/${yearStart + 1} dari ${students.length} siswa.`,
         };
       }
 
@@ -2853,7 +2929,7 @@ export class FinanceService {
         success: true,
         deletedBillsCount: 0,
         studentCount: students.length,
-        message: `Tidak ditemukan tagihan tahun ajaran ${yearStart}/${yearStart + 1} untuk di-reset pada siswa terpilih.`,
+        message: `Tidak ditemukan tagihan ${isSemesterMode ? `Semester ${dto.targetSemester === 2 ? 'Genap' : 'Ganjil'}` : 'Tahun Ajaran'} ${yearStart}/${yearStart + 1} untuk di-reset pada siswa terpilih.`,
       };
     });
   }
@@ -3143,12 +3219,12 @@ export class FinanceService {
       try {
         const beasiswaInfo = JSON.parse(beasiswaMatch[1]);
         originalAmount = beasiswaInfo.originalAmount || tagihan.amount;
-      } catch {}
+      } catch { }
     } else if (discountMatch) {
       try {
         const discountInfo = JSON.parse(discountMatch[1]);
         originalAmount = discountInfo.originalAmount || tagihan.amount;
-      } catch {}
+      } catch { }
     }
 
     // SERVER-SIDE CALCULATION: Calculate beasiswa amount
@@ -3272,7 +3348,7 @@ export class FinanceService {
       if (beasiswaMatch) {
         try {
           info = JSON.parse(beasiswaMatch[1]);
-        } catch {}
+        } catch { }
       } else if (discountMatch) {
         try {
           const discountInfo = JSON.parse(discountMatch[1]);
@@ -3282,7 +3358,7 @@ export class FinanceService {
             beasiswaAmount: discountInfo.discountAmount,
             reason: discountInfo.reason,
           };
-        } catch {}
+        } catch { }
       }
 
       return {
@@ -3324,9 +3400,9 @@ export class FinanceService {
     // Tagihan LUNAS / ANGSURAN bulanan
     const monthlyPaid = month
       ? await this.prisma.tagihan.findMany({
-          where: { year, month, status: { in: ['LUNAS', 'ANGSURAN'] } },
-          select: { type: true, amount: true, amountPaid: true, status: true },
-        })
+        where: { year, month, status: { in: ['LUNAS', 'ANGSURAN'] } },
+        select: { type: true, amount: true, amountPaid: true, status: true },
+      })
       : [];
 
     // Tagihan BELUM LUNAS / Sisa ANGSURAN (piutang)

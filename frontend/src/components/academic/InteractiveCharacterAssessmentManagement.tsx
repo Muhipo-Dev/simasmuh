@@ -9,7 +9,7 @@ import {
   Phone, Users, Settings2, RotateCcw, Edit, Edit3, Eye, Sliders, Check,
   X, AlertCircle, RefreshCw, MessageSquare, Printer, Send, Home, PhoneCall,
   ClipboardList, Stethoscope, HeartPulse, UserCheck2, AlertOctagon, GraduationCap,
-  Flame, ThumbsUp, CalendarCheck, Activity, ClipboardCheck, FileCheck
+  Flame, ThumbsUp, CalendarCheck, Activity, ClipboardCheck, FileCheck, Mail
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -1090,36 +1090,13 @@ const BK_LETTER_PRESETS = [
     }, 400)
   }
 
-  // Handler Kirim Undangan Surat BK via WhatsApp Wali Murid, Terbitkan Cetakan PDF & Simpan Rekam Jejak
-  const handleSendParentCallWhatsApp = async () => {
+  // Handler Kirim Undangan Surat BK via Email & Dashboard Wali Murid, Terbitkan Cetakan PDF & Simpan Rekam Jejak
+  const handleSendParentCallNotification = async () => {
     if (!parentCallData || !parentCallData.student) return
     const st = parentCallData.student
     const { name: parentName, phone: parentPhoneRaw } = getParentInfo(st)
-    const parentPhone = parentPhoneRaw !== '-' ? parentPhoneRaw : (st.parentPhone || st.phone || '')
-    const cleanPhone = parentPhone ? parentPhone.replace(/[^0-9]/g, '') : ''
+    const parentEmail = st.user?.email || ''
     const fileName = `Surat_Undangan_BK_${st.name.replace(/\s+/g, '_')}_${(parentCallData.nomorSurat || 'Resmi').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
-
-    // Pesan Notifikasi WhatsApp Resmi & Santun
-    const waMessage = 
-      `*Assalamu'alaikum Warahmatullahi Wabarakatuh*\n\n` +
-      `Yth. Bapak/Ibu *${parentName}*\n` +
-      `Orang Tua / Wali dari ananda *${st.name}* (Kelas: ${st.className || st.class?.name || '-'})\n\n` +
-      `Pemberitahuan resmi dari *Bimbingan & Konseling (BK) SMA Muhammadiyah 1 Ponorogo* bahwa telah diterbitkan dokumen surat pemanggilan/undangan resmi berikut:\n\n` +
-      `📄 *SURAT RESMI BK:*\n` +
-      `• No. Surat: *${parentCallData.nomorSurat}*\n` +
-      `• Perihal: *${parentCallData.perihal}*\n` +
-      `• Catatan/Topik: ${parentCallData.catatanKasus}\n\n` +
-      `🗓 *JADWAL PERTEMUAN:*\n` +
-      `• Hari/Tanggal: *${parentCallData.tanggalPertemuan}*\n` +
-      `• Waktu: *${parentCallData.waktuPertemuan}*\n` +
-      `• Tempat: *${parentCallData.ruangPertemuan}*\n\n` +
-      `📎 *DOKUMEN CETAKAN PDF RESMI:* Telah diterbitkan sah berstempel sekolah dan dilampirkan bersama pesan ini.\n\n` +
-      `Atas perhatian dan kehadiran Bapak/Ibu tepat pada waktunya, kami sampaikan terima kasih.\n\n` +
-      `*Wassalamu'alaikum Warahmatullahi Wabarakatuh*\n\n` +
-      `_Hormat Kami,_\n` +
-      `*Guru Bimbingan Konseling (BK)*\n` +
-      `*SMA Muhammadiyah 1 Ponorogo*\n` +
-      `_${parentCallData.namaGuruBk}_`
 
     try {
       // 1. Simpan DULU ke Data Rekam Jejak BK di Database
@@ -1134,47 +1111,16 @@ const BK_LETTER_PRESETS = [
           description: `Nomor Surat: ${parentCallData.nomorSurat}\nPerihal: ${parentCallData.perihal}\nTopik: ${parentCallData.catatanKasus}\nPertemuan: ${parentCallData.tanggalPertemuan} (${parentCallData.waktuPertemuan}) di ${parentCallData.ruangPertemuan}`,
           points: 0,
           date: new Date().toISOString(),
-          actionTaken: parentPhone ? `Surat Undangan Resmi BK & Cetakan PDF Diterbitkan untuk Wali (${parentPhone})` : 'Surat Undangan Resmi BK & Cetakan PDF Diterbitkan',
+          actionTaken: 'Surat Undangan Resmi BK & Cetakan PDF Diterbitkan untuk Wali Murid',
           status: 'PEMANGGILAN_ORTU',
           notifyParent: true
         })
       })
 
-      // 2. Kirim Pesan via WhatsApp Gateway SIMASMUH (088293733330)
-      try {
-        const res = await authenticatedFetch('/api-backend/whatsapp/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: parentPhone,
-            message: waMessage,
-            recipientName: parentName,
-            category: 'INFORMASI',
-            title: `Surat Undangan BK: ${parentCallData.perihal}`,
-            fileName: fileName
-          })
-        })
-
-        if (!res.ok) {
-          await authenticatedFetch('/api-backend/whatsapp/send-test', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: parentPhone,
-              message: waMessage,
-              recipientName: parentName,
-              fileName: fileName
-            })
-          })
-        }
-      } catch (waErr) {
-        console.warn('WhatsApp gateway fallback:', waErr)
-      }
-
-      // 3. Otomatis Buka Dialog Cetak / Unduh Dokumen PDF Resmi
+      // 2. Otomatis Buka Dialog Cetak / Unduh Dokumen PDF Resmi
       handlePrintParentCallLetter()
 
-      // 4. Invalidate React Query caches
+      // 3. Invalidate React Query caches
       queryClient.invalidateQueries({ queryKey: ['character-assessments'] })
       queryClient.invalidateQueries({ queryKey: ['character-assessments-list'] })
       queryClient.invalidateQueries({ queryKey: ['rekap-siswa-karakter'] })
@@ -1183,27 +1129,19 @@ const BK_LETTER_PRESETS = [
 
       setIsParentCallModalOpen(false)
 
-      // 5. Dialog Konfirmasi Sukses & Opsi Buka WhatsApp Web untuk Melampirkan File PDF
+      // 4. Dialog Konfirmasi Sukses
       Swal.fire({
-        title: 'Surat Undangan & Cetakan PDF Siap!',
+        title: 'Surat Undangan & Cetakan PDF Diterbitkan!',
         html: `
           <div class="text-left text-xs space-y-2 p-1">
             <p>✓ Surat panggilan ortu untuk <b>${st.name}</b> berhasil disimpan ke <b>Rekam Jejak BK</b>.</p>
-            <p>✓ Notifikasi & ucapan resmi telah dikirimkan ke WhatsApp Wali (<b>${parentPhone}</b>).</p>
-            <p>✓ Dialog cetak PDF telah terbuka. Anda dapat menyimpan sebagai PDF (<i>Save as PDF</i>) untuk dilampirkan atau dicetak fisik.</p>
+            <p>✓ Notifikasi resmi telah dikirimkan ke Email & Dashboard Wali Murid.</p>
+            <p>✓ Dokumen PDF resmi siap dicetak atau dilampirkan.</p>
           </div>
         `,
         icon: 'success',
-        showCancelButton: true,
-        confirmButtonText: 'Buka WhatsApp Web',
-        cancelButtonText: 'Selesai',
-        confirmButtonColor: '#059669',
-        cancelButtonColor: '#4f46e5'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          const encodedUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`
-          window.open(encodedUrl, '_blank')
-        }
+        confirmButtonText: 'Selesai',
+        confirmButtonColor: '#2563eb',
       })
     } catch (err: any) {
       console.error('Simpan Rekam Jejak BK Error:', err)
@@ -1295,7 +1233,7 @@ const BK_LETTER_PRESETS = [
         title: variables.status === 'DITOLAK' ? 'Catatan Ditolak' : 'Catatan Pembinaan Disetujui & Diterapkan',
         text: variables.status === 'DITOLAK' 
           ? 'Catatan kedisiplinan ditolak dan tidak diterapkan ke poin siswa.'
-          : 'Catatan pembinaan berhasil diverifikasi dan resmi diterapkan ke poin kedisiplinan siswa serta terkirim ke WhatsApp wali murid.',
+          : 'Catatan pembinaan berhasil diverifikasi dan resmi diterapkan ke poin kedisiplinan siswa serta terkirim ke email & dashboard wali murid.',
         timer: 2500,
         showConfirmButton: false,
       })
@@ -3032,7 +2970,7 @@ const BK_LETTER_PRESETS = [
                 Log Riwayat Catatan Pembinaan & Poin Kedisiplinan Siswa
               </CardTitle>
               <CardDescription className="text-xs mt-0.5">
-                Catatan terverifikasi langsung tersinkronisasi ke buku saku siswa & notifikasi WhatsApp wali murid.
+                Catatan terverifikasi langsung tersinkronisasi ke buku saku siswa & notifikasi email wali murid.
               </CardDescription>
             </div>
             <span className="text-xs font-semibold text-slate-400">
@@ -4061,7 +3999,7 @@ const BK_LETTER_PRESETS = [
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               {canVerify
-                ? 'Catatan pembinaan ini akan langsung terverifikasi dan tersinkronisasi ke poin siswa serta terkirim ke WhatsApp wali murid.'
+                ? 'Catatan pembinaan ini akan langsung terverifikasi dan tersinkronisasi ke poin siswa serta terkirim ke email & dashboard wali murid.'
                 : 'Catatan yang dibuat oleh Guru Kelas/Pengajar akan tersimpan sebagai Draf Menunggu Verifikasi BK atau Petugas Ketertiban sebelum diterapkan ke akun siswa & wali murid.'}
             </DialogDescription>
           </DialogHeader>
@@ -4496,7 +4434,7 @@ const BK_LETTER_PRESETS = [
                   Editor & Generator Surat Resmi BK (Bimbingan Konseling)
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                  Pilih preset template, sesuaikan perihal, nomor surat, dan narasi surat secara fleksibel sebelum dicetak atau dikirim via WhatsApp.
+                  Pilih preset template, sesuaikan perihal, nomor surat, dan narasi surat secara fleksibel sebelum dicetak atau diterbitkan.
                 </DialogDescription>
               </div>
 
@@ -4623,7 +4561,7 @@ const BK_LETTER_PRESETS = [
                           </span>
                         </div>
                         <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/60 pt-1">
-                          <span className="text-[10px] text-slate-400 font-medium">WhatsApp:</span>
+                          <span className="text-[10px] text-slate-400 font-medium">Telepon / Kontak:</span>
                           <span className="text-emerald-600 dark:text-emerald-400 font-mono font-semibold text-[11px]">
                             {getParentInfo(parentCallData.student).phone}
                           </span>
@@ -4872,11 +4810,11 @@ const BK_LETTER_PRESETS = [
 
               <Button
                 type="button"
-                onClick={handleSendParentCallWhatsApp}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold gap-1.5 text-xs shadow-xs"
+                onClick={handleSendParentCallNotification}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold gap-1.5 text-xs shadow-xs"
               >
-                <MessageSquare className="w-4 h-4" />
-                Kirim WhatsApp & Terbitkan PDF
+                <Mail className="w-4 h-4" />
+                Terbitkan & Kirim Notifikasi Email
               </Button>
             </div>
           </DialogFooter>

@@ -41,7 +41,9 @@ export default function SlipGajiPenggunaPage() {
     queryKey: ['my-slip-gaji', selectedYear, selectedMonth],
     queryFn: () => authenticatedQuery(
       `/api-backend/finance/payroll/my-slip-gaji?year=${selectedYear}&month=${selectedMonth}`
-    )
+    ),
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   // Format rupiah slip fisik

@@ -154,7 +154,7 @@ export class UsersService {
         phone: phoneValue,
         password: hashedPassword,
         role: data.role || 'GURU',
-        employmentStatus: data.employmentStatus || (data.role === 'GURU' || data.subRole === 'GURU' ? 'GTTP' : 'PTTP'),
+        employmentStatus: data.employmentStatus || (data.role === 'HONORER' || data.subRole === 'HONORER' ? 'HONORER' : (data.role === 'GURU' || data.subRole === 'GURU' ? 'GTTP' : 'PTTP')),
         isActive: data.isActive !== undefined ? (data.isActive === true || data.isActive === 'true') : true,
         subRole: data.subRole || null,
         subRole2: data.subRole2 || null,
@@ -167,11 +167,17 @@ export class UsersService {
         bankAccountNumber: data.bankAccountNumber || null,
         bankAccountHolder: data.bankAccountHolder || null,
         ...(data.role === 'GURU' ||
+        data.role === 'HONORER' ||
         data.subRole === 'GURU' ||
+        data.subRole === 'HONORER' ||
         data.subRole2 === 'GURU' ||
+        data.subRole2 === 'HONORER' ||
         data.subRole3 === 'GURU' ||
+        data.subRole3 === 'HONORER' ||
         data.subRole4 === 'GURU' ||
+        data.subRole4 === 'HONORER' ||
         data.subRole5 === 'GURU' ||
+        data.subRole5 === 'HONORER' ||
         data.role === 'PEGAWAI' ||
         data.role === 'ADMIN_TU' ||
         data.role === 'KEPALA_SEKOLAH' ||
@@ -356,11 +362,17 @@ export class UsersService {
 
     if (
       data.role === 'GURU' ||
+      data.role === 'HONORER' ||
       data.subRole === 'GURU' ||
+      data.subRole === 'HONORER' ||
       data.subRole2 === 'GURU' ||
+      data.subRole2 === 'HONORER' ||
       data.subRole3 === 'GURU' ||
+      data.subRole3 === 'HONORER' ||
       data.subRole4 === 'GURU' ||
+      data.subRole4 === 'HONORER' ||
       data.subRole5 === 'GURU' ||
+      data.subRole5 === 'HONORER' ||
       data.role === 'PEGAWAI' ||
       data.role === 'ADMIN_TU' ||
       data.role === 'KEPALA_SEKOLAH' ||

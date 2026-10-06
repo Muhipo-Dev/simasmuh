@@ -52,13 +52,38 @@ export class StudentsService {
 
   async findByUserId(userId: string) {
     return this.prisma.student.findFirst({
-      where: { userId },
+      where: {
+        OR: [
+          { userId },
+          { user: { id: userId } },
+          { user: { username: userId } },
+          { nis: userId },
+          { nisn: userId },
+        ],
+      },
       include: {
-        class: true,
+        class: {
+          include: {
+            homeroomTeacher: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
         user: true,
         grades: {
           include: {
             subject: true,
+          },
+        },
+        parentRelations: {
+          include: {
+            parent: {
+              include: {
+                user: true,
+              },
+            },
           },
         },
       },
@@ -320,6 +345,56 @@ export class StudentsService {
     );
 
     return updated;
+  }
+
+  async bulkUpdateBeasiswa(dto: {
+    studentIds: string[];
+    beasiswaSeragamPct?: number;
+    beasiswaSppPct?: number;
+    beasiswaDppPct?: number;
+    beasiswaPercentage?: number;
+    beasiswaReason?: string;
+  }) {
+    if (!dto.studentIds || !Array.isArray(dto.studentIds) || dto.studentIds.length === 0) {
+      throw new BadRequestException('Daftar siswa wajib dipilih');
+    }
+
+    const updateData: any = {};
+    if (dto.beasiswaSeragamPct !== undefined) {
+      updateData.beasiswaSeragamPct = Math.min(100, Math.max(0, Number(dto.beasiswaSeragamPct)));
+    }
+    if (dto.beasiswaSppPct !== undefined) {
+      updateData.beasiswaSppPct = Math.min(100, Math.max(0, Number(dto.beasiswaSppPct)));
+    }
+    if (dto.beasiswaDppPct !== undefined) {
+      updateData.beasiswaDppPct = Math.min(100, Math.max(0, Number(dto.beasiswaDppPct)));
+    }
+    if (dto.beasiswaPercentage !== undefined) {
+      updateData.beasiswaPercentage = Math.min(100, Math.max(0, Number(dto.beasiswaPercentage)));
+    }
+    if (dto.beasiswaReason !== undefined) {
+      updateData.beasiswaReason = dto.beasiswaReason;
+    }
+
+    const updated = await (this.prisma.student as any).updateMany({
+      where: { id: { in: dto.studentIds } },
+      data: updateData,
+    });
+
+    // Sinkronkan ke seluruh tagihan siswa yang dipilih
+    for (const studentId of dto.studentIds) {
+      await this.syncStudentBeasiswaToBills(
+        studentId,
+        dto.beasiswaPercentage,
+        dto.beasiswaReason,
+      );
+    }
+
+    return {
+      success: true,
+      count: updated.count,
+      message: `Berhasil mengatur beasiswa untuk ${updated.count} siswa terpilih.`,
+    };
   }
 
   async remove(id: string) {

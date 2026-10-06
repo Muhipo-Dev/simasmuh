@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
 import {
@@ -289,6 +289,141 @@ export class ExtracurricularService {
     return {
       myMemberships: memberships,
       availableCatalog: catalog,
+    };
+  }
+
+  /**
+   * Siswa mendaftar / bergabung ke ekstrakurikuler secara mandiri
+   */
+  async joinExtracurricular(extracurricularId: string, user: any): Promise<any> {
+    const ekskul = await this.findOne(extracurricularId);
+    if (!ekskul.isActive) {
+      throw new BadRequestException('Unit kegiatan ekstrakurikuler ini sedang tidak aktif.');
+    }
+
+    let student: any = null;
+    if (user?.id) {
+      student = await this.prisma.student.findFirst({
+        where: {
+          OR: [
+            { userId: user.id },
+            { nis: user.username },
+            { nisn: user.username },
+          ],
+        },
+        include: { class: true },
+      });
+    }
+
+    if (!student) {
+      throw new NotFoundException('Profil siswa Anda tidak ditemukan di sistem.');
+    }
+
+    const existingMember = await (this.prisma as any).extracurricularMember.findUnique({
+      where: {
+        extracurricularId_studentId: {
+          extracurricularId,
+          studentId: student.id,
+        },
+      },
+    });
+
+    if (existingMember) {
+      throw new ConflictException(`Anda sudah terdaftar sebagai anggota ${ekskul.name}.`);
+    }
+
+    const newMember = await (this.prisma as any).extracurricularMember.create({
+      data: {
+        extracurricularId,
+        studentId: student.id,
+        role: 'ANGGOTA',
+        status: 'AKTIF',
+        catatan: `Mendaftar mandiri melalui Portal Siswa SIMASMUH pada ${new Date().toLocaleDateString('id-ID')}`,
+      },
+      include: {
+        extracurricular: true,
+        student: {
+          include: { class: true },
+        },
+      },
+    });
+
+    await this.systemLogService.log({
+      category: 'AKADEMIK',
+      level: 'INFO',
+      action: 'EXTRACURRICULAR_JOINED',
+      message: `Siswa "${student.name}" (Kelas ${student.class?.name || '-'}) bergabung ke ekstrakurikuler "${ekskul.name}".`,
+      userId: user?.id,
+      details: {
+        extracurricularId,
+        studentId: student.id,
+        membershipId: newMember.id,
+      },
+    });
+
+    return {
+      success: true,
+      message: `Selamat! Anda berhasil bergabung dengan ekstrakurikuler ${ekskul.name}.`,
+      data: newMember,
+    };
+  }
+
+  /**
+   * Siswa keluar / membatalkan keanggotaan ekstrakurikuler mandiri
+   */
+  async leaveExtracurricular(extracurricularId: string, user: any): Promise<any> {
+    const ekskul = await this.findOne(extracurricularId);
+
+    let student: any = null;
+    if (user?.id) {
+      student = await this.prisma.student.findFirst({
+        where: {
+          OR: [
+            { userId: user.id },
+            { nis: user.username },
+            { nisn: user.username },
+          ],
+        },
+        include: { class: true },
+      });
+    }
+
+    if (!student) {
+      throw new NotFoundException('Profil siswa Anda tidak ditemukan di sistem.');
+    }
+
+    const existingMember = await (this.prisma as any).extracurricularMember.findUnique({
+      where: {
+        extracurricularId_studentId: {
+          extracurricularId,
+          studentId: student.id,
+        },
+      },
+    });
+
+    if (!existingMember) {
+      throw new NotFoundException(`Anda tidak terdaftar di ekstrakurikuler ${ekskul.name}.`);
+    }
+
+    await (this.prisma as any).extracurricularMember.delete({
+      where: { id: existingMember.id },
+    });
+
+    await this.systemLogService.log({
+      category: 'AKADEMIK',
+      level: 'INFO',
+      action: 'EXTRACURRICULAR_LEFT',
+      message: `Siswa "${student.name}" keluar dari ekstrakurikuler "${ekskul.name}".`,
+      userId: user?.id,
+      details: {
+        extracurricularId,
+        studentId: student.id,
+      },
+    });
+
+    return {
+      success: true,
+      message: `Anda telah berhasil keluar dari ekstrakurikuler ${ekskul.name}.`,
     };
   }
 

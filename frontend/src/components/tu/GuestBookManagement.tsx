@@ -1103,7 +1103,7 @@ export function GuestBookManagement() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">Nomor WhatsApp / Kontak</Label>
+              <Label className="text-xs">Nomor Telepon / Kontak</Label>
               <Input 
                 placeholder="0812..."
                 value={formState.kontak}

@@ -25,17 +25,16 @@ interface CenterQuickAccessGridProps {
   role?: string
 }
 
-// Curated vibrant 6-color gradient sequence matching the user reference photo
-const cardGradients = [
-  'from-indigo-600 to-cyan-600 shadow-indigo-500/20 text-white',
-  'from-teal-500 to-emerald-600 shadow-teal-500/20 text-white',
-  'from-cyan-600 to-sky-700 shadow-cyan-500/20 text-white',
-  'from-amber-500 to-orange-600 shadow-amber-500/20 text-white',
-  'from-blue-600 to-indigo-700 shadow-blue-500/20 text-white',
-  'from-sky-500 to-indigo-600 shadow-sky-500/20 text-white',
-  'from-rose-500 to-pink-600 shadow-rose-500/20 text-white',
-  'from-purple-600 to-indigo-700 shadow-purple-500/20 text-white',
-  'from-emerald-600 to-teal-700 shadow-emerald-500/20 text-white',
+// Curated clean tactile themes with subtle tinted backgrounds and contrast border
+const cardStyles = [
+  'bg-blue-50/90 text-blue-950 dark:bg-blue-950/40 dark:text-blue-100 border-blue-200/80 dark:border-blue-900/60 hover:border-blue-400 hover:bg-blue-100/80 icon-bg-blue-600',
+  'bg-emerald-50/90 text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100 border-emerald-200/80 dark:border-emerald-900/60 hover:border-emerald-400 hover:bg-emerald-100/80 icon-bg-emerald-600',
+  'bg-indigo-50/90 text-indigo-950 dark:bg-indigo-950/40 dark:text-indigo-100 border-indigo-200/80 dark:border-indigo-900/60 hover:border-indigo-400 hover:bg-indigo-100/80 icon-bg-indigo-600',
+  'bg-amber-50/90 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100 border-amber-200/80 dark:border-amber-900/60 hover:border-amber-400 hover:bg-amber-100/80 icon-bg-amber-600',
+  'bg-purple-50/90 text-purple-950 dark:bg-purple-950/40 dark:text-purple-100 border-purple-200/80 dark:border-purple-900/60 hover:border-purple-400 hover:bg-purple-100/80 icon-bg-purple-600',
+  'bg-teal-50/90 text-teal-950 dark:bg-teal-950/40 dark:text-teal-100 border-teal-200/80 dark:border-teal-900/60 hover:border-teal-400 hover:bg-teal-100/80 icon-bg-teal-600',
+  'bg-rose-50/90 text-rose-950 dark:bg-rose-950/40 dark:text-rose-100 border-rose-200/80 dark:border-rose-900/60 hover:border-rose-400 hover:bg-rose-100/80 icon-bg-rose-600',
+  'bg-slate-50/90 text-slate-950 dark:bg-slate-800/60 dark:text-slate-100 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-400 hover:bg-slate-100/80 icon-bg-slate-700',
 ]
 
 // Icon mapping per category group for visual clarity (Corporate & Commercial Standard)
@@ -94,12 +93,22 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
     groupedLinks[groupName].push(link)
   })
 
-  const groupKeys = Object.keys(groupedLinks)
+  // Urutkan grup:
+  // 1. Paling atas: 'Akses Utama' (Dashboard, Log Presensi, QR Scanner, Disposisi)
+  // 2. Di tengah: Fitur Role & Sub-role (Master Data, Supervisi, Operasional, Administrasi, Konfigurasi, dll.)
+  // 3. Paling bawah: Layanan Mandiri (Slip Gaji, Tunjangan Harian, Izin Keluar, Cuti, Notifikasi)
+  const sortedGroupKeys = Object.keys(groupedLinks).sort((a, b) => {
+    if (a === 'Akses Utama') return -1
+    if (b === 'Akses Utama') return 1
+    if (a === 'Layanan Mandiri') return 1
+    if (b === 'Layanan Mandiri') return -1
+    return 0
+  })
 
   // Jika hanya ada 1 grup atau links kosong
-  if (groupKeys.length <= 1) {
+  if (sortedGroupKeys.length <= 1) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-1.5 sm:gap-2.5">
         {links.map((link, idx) => renderCard(link, idx))}
       </div>
     )
@@ -108,8 +117,8 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
   let globalIndex = 0
 
   return (
-    <div className="space-y-4 sm:space-y-5">
-      {groupKeys.map((groupName) => {
+    <div className="space-y-3 sm:space-y-3.5">
+      {sortedGroupKeys.map((groupName) => {
         const items = groupedLinks[groupName]
         if (!items || items.length === 0) return null
 
@@ -127,14 +136,14 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
           : 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-900/60'
 
         return (
-          <div key={groupName} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className={`text-[11px] font-extrabold uppercase tracking-wider border px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs ${badgeStyle}`}>
+          <div key={groupName} className="space-y-1.5 sm:space-y-2">
+            <div className="flex items-center justify-center">
+              <span className={`text-[10px] sm:text-[10.5px] font-extrabold uppercase tracking-wider border px-2.5 sm:px-3 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs ${badgeStyle}`}>
                 <GroupIcon className="w-3 h-3" />
                 {groupName} ({items.length})
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-2.5">
               {items.map((link) => {
                 const card = renderCard(link, globalIndex)
                 globalIndex++
@@ -150,34 +159,29 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
 
 function renderCard(link: QuickActionItem, idx: number) {
   const Icon = link.icon || BookOpen
-  const gradientClass = link.gradient || cardGradients[idx % cardGradients.length]
+  const styleClass = link.gradient || cardStyles[idx % cardStyles.length]
 
   return (
     <Link
       key={link.href + idx}
       href={link.href}
-      className="group relative block overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
+      className="group relative block rounded-2xl transition-all duration-150 hover:-translate-y-0.5 active:scale-[0.97]"
     >
       <div
-        className={`h-full min-h-[90px] sm:min-h-[96px] p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br ${gradientClass} flex flex-col justify-between gap-2 shadow-xs relative overflow-hidden`}
+        className={`h-full min-h-[72px] sm:min-h-[78px] p-2.5 sm:p-3 rounded-2xl border flex flex-col items-center justify-center text-center gap-1.5 transition-all shadow-2xs ${styleClass}`}
       >
-        {/* Background watermark icon for rich depth */}
-        <Icon className="absolute -right-2 -bottom-2 w-16 sm:w-20 h-16 sm:h-20 text-white/10 pointer-events-none group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500" />
-
-        {/* Top row: Icon */}
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shrink-0 group-hover:scale-105 group-hover:bg-white/30 transition-all duration-300 shadow-inner">
-            <Icon className="w-4 h-4 sm:w-4.5 sm:h-4.5 drop-shadow-xs" />
-          </div>
+        {/* Flat Contrast Icon Badge */}
+        <div className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-xl bg-white dark:bg-slate-900 border border-black/5 dark:border-white/10 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform duration-200 shrink-0">
+          <Icon className="w-4 h-4 text-slate-800 dark:text-slate-100" />
         </div>
 
-        {/* Bottom text info */}
-        <div className="relative z-10 space-y-0.5 min-w-0">
-          <h4 className="font-black text-xs sm:text-[13px] leading-snug tracking-tight text-white drop-shadow-xs line-clamp-2">
+        {/* Text Details */}
+        <div className="space-y-0.5 w-full min-w-0">
+          <h4 className="font-extrabold text-[11.5px] sm:text-xs leading-tight tracking-tight line-clamp-2">
             {link.name}
           </h4>
           {link.subtitle && (
-            <p className="text-[9.5px] sm:text-[10px] text-white/80 font-medium leading-tight truncate">
+            <p className="text-[9.5px] opacity-80 font-medium leading-tight truncate">
               {link.subtitle}
             </p>
           )}

@@ -107,12 +107,17 @@ export default async function Home() {
       </div>
       <div className="fixed inset-0 bg-slate-100/70 dark:bg-slate-950/80 backdrop-blur-[1.5px] -z-20 pointer-events-none" />
 
-      {/* Navbar Induk Terpadu */}
-      <PublicNavbar academicYear={settings?.academicYear} semester={settings?.semester} />
+      {/* Hero Section with Full-Bleed Background & Floating Navbar */}
+      <div className="relative w-full">
+        {/* Floating Navbar directly overlaying the top of the Hero */}
+        <div className="absolute top-0 left-0 right-0 z-30 pointer-events-none">
+          <PublicNavbar academicYear={settings?.academicYear} semester={settings?.semester} />
+        </div>
 
-      {/* Hero Section */}
-      <main className="flex-1 flex flex-col">
         <HeroCarousel schoolName={schoolName} />
+      </div>
+
+      <main className="flex-1 flex flex-col">
 
         {/* Enhanced High-Contrast Royal Blue Stats (Data Count) Section */}
         <div className="relative z-20 mt-4 sm:-mt-10 px-4 sm:px-8 max-w-6xl mx-auto w-full">

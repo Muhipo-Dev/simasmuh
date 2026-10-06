@@ -1851,75 +1851,74 @@ export default function FaceNetAiStandalonePage() {
               <h1 className="text-xs sm:text-sm md:text-base font-black tracking-tight text-white truncate">
                 PRESENSI BIOMETRIK AI
               </h1>
-              <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[10px] font-black border ${
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
                 isOutdoorMode 
                   ? 'bg-emerald-400 text-slate-950 border-emerald-300' 
-                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
               }`}>
-                <Sparkles className="w-3 h-3" />
-                512-D BLAS
+                FaceNet MTCNN
               </span>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-slate-300 font-semibold truncate">
+            <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold truncate">
               SMA MUHAMMADIYAH 1 PONOROGO
             </p>
           </div>
         </div>
 
         {/* Tengah: 4 Tab Navigasi Terpadu (Touch-Target >= 44px) */}
-        <div className="flex items-center gap-1 p-1 bg-slate-950/95 border border-slate-800 rounded-xl overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-1 p-1 bg-slate-950 border border-slate-800 rounded-xl overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('monitor')}
-            className={`flex items-center gap-1.5 min-h-[38px] px-3 text-xs font-black rounded-lg transition-all cursor-pointer touch-manipulation ${
+            className={`flex items-center gap-1.5 min-h-[38px] px-3.5 text-xs font-bold rounded-lg transition-all cursor-pointer touch-manipulation ${
               activeTab === 'monitor' 
-                ? isOutdoorMode ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'bg-indigo-600 text-white shadow-sm' 
-                : 'text-slate-300 hover:text-white'
+                ? isOutdoorMode ? 'bg-emerald-500 text-slate-950 shadow-xs font-black' : 'bg-blue-600 text-white shadow-xs' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
             }`}
           >
-            <Video className="w-4 h-4 shrink-0" />
+            <Video className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Live Monitor</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('config')}
-            className={`flex items-center gap-1.5 min-h-[38px] px-3 text-xs font-bold rounded-lg transition-all cursor-pointer touch-manipulation ${
+            className={`flex items-center gap-1.5 min-h-[38px] px-3.5 text-xs font-bold rounded-lg transition-all cursor-pointer touch-manipulation ${
               activeTab === 'config' 
-                ? isOutdoorMode ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'bg-indigo-600 text-white shadow-sm' 
-                : 'text-slate-300 hover:text-white'
+                ? isOutdoorMode ? 'bg-emerald-500 text-slate-950 shadow-xs font-black' : 'bg-blue-600 text-white shadow-xs' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
             }`}
           >
-            <Sliders className="w-4 h-4 shrink-0" />
+            <Sliders className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Konfigurasi</span>
             {!isSuperAdmin && (
-              <Lock className="w-3 h-3 text-slate-400 ml-0.5 shrink-0" />
+              <Lock className="w-3 h-3 text-slate-500 ml-0.5 shrink-0" />
             )}
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('dataset')}
-            className={`flex items-center gap-1.5 min-h-[38px] px-3 text-xs font-bold rounded-lg transition-all cursor-pointer touch-manipulation ${
+            className={`flex items-center gap-1.5 min-h-[38px] px-3.5 text-xs font-bold rounded-lg transition-all cursor-pointer touch-manipulation ${
               activeTab === 'dataset' 
-                ? isOutdoorMode ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'bg-indigo-600 text-white shadow-sm' 
-                : 'text-slate-300 hover:text-white'
+                ? isOutdoorMode ? 'bg-emerald-500 text-slate-950 shadow-xs font-black' : 'bg-blue-600 text-white shadow-xs' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
             }`}
           >
-            <Users className="w-4 h-4 shrink-0" />
+            <Users className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Dataset ({datasetData?.usersWithPhoto || 0})</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('logs')}
-            className={`flex items-center gap-1.5 min-h-[38px] px-3 text-xs font-bold rounded-lg transition-all cursor-pointer touch-manipulation ${
+            className={`flex items-center gap-1.5 min-h-[38px] px-3.5 text-xs font-bold rounded-lg transition-all cursor-pointer touch-manipulation ${
               activeTab === 'logs' 
-                ? isOutdoorMode ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'bg-indigo-600 text-white shadow-sm' 
-                : 'text-slate-300 hover:text-white'
+                ? isOutdoorMode ? 'bg-emerald-500 text-slate-950 shadow-xs font-black' : 'bg-blue-600 text-white shadow-xs' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
             }`}
           >
-            <Activity className="w-4 h-4 shrink-0" />
+            <Activity className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Riwayat Log</span>
             {logsData && logsData.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/30 text-emerald-300 font-mono font-bold">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-300 font-mono font-bold">
                 {logsData.length}
               </span>
             )}
@@ -1930,7 +1929,7 @@ export default function FaceNetAiStandalonePage() {
         <div className="flex items-center gap-2 shrink-0">
           {/* Tombol Switch AI Microservice Khusus Akses Superadmin */}
           {isSuperAdmin && (
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900 border border-slate-700 shadow-md">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900 border border-slate-800 shadow-xs">
               <span className={`w-2 h-2 rounded-full shrink-0 ml-1.5 ${
                 serviceStatus?.isOnline && serviceStatus?.is_running 
                   ? 'bg-emerald-400' 
@@ -2135,14 +2134,12 @@ export default function FaceNetAiStandalonePage() {
                     {/* Laser Scanner Animation saat Memproses Frame */}
                     {isCapturing && (
                       <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs">
-                        <div className="absolute inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_20px_#22d3ee] animate-bounce top-1/3" />
-                        
-                        <div className="px-5 py-3 rounded-2xl bg-slate-950/95 border-2 border-cyan-400 shadow-2xl text-center space-y-1">
-                          <div className="flex items-center justify-center gap-2.5 text-cyan-300">
+                        <div className="px-5 py-3 rounded-2xl bg-slate-950/95 border border-slate-700 shadow-2xl text-center space-y-1">
+                          <div className="flex items-center justify-center gap-2.5 text-blue-400">
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            <span className="text-sm sm:text-base font-black tracking-wide">Menganalisis Biometrik FaceNet...</span>
+                            <span className="text-sm font-bold tracking-wide text-white">Memproses Identifikasi Biometrik...</span>
                           </div>
-                          <p className="text-[11px] text-slate-300 font-mono font-bold">Pencocokan Cepat BLAS Matrix Vector</p>
+                          <p className="text-[11px] text-slate-400 font-mono">Pencocokan Model FaceNet</p>
                         </div>
                       </div>
                     )}
@@ -2154,10 +2151,10 @@ export default function FaceNetAiStandalonePage() {
                           <div className="p-3.5 rounded-2xl bg-slate-950/98 border-2 border-amber-400 shadow-2xl backdrop-blur-2xl text-white space-y-2.5">
                             <div className="flex items-center justify-between gap-2 border-b border-amber-400/40 pb-2">
                               <div className="flex items-center gap-2 text-amber-300">
-                                <AlertTriangle className="w-5 h-5 animate-bounce shrink-0" />
+                                <AlertTriangle className="w-5 h-5 shrink-0" />
                                 <div>
-                                  <h3 className="text-xs sm:text-sm font-black text-amber-300">Deteksi Wajah Mirip</h3>
-                                  <p className="text-[11px] text-slate-200 font-medium">Silakan pilih profil yang sesuai:</p>
+                                  <h3 className="text-xs sm:text-sm font-bold text-amber-300">Deteksi Wajah Serupa</h3>
+                                  <p className="text-[11px] text-slate-300 font-medium">Silakan pilih profil yang sesuai:</p>
                                 </div>
                               </div>
                               <Button
@@ -2184,20 +2181,20 @@ export default function FaceNetAiStandalonePage() {
                                     e.stopPropagation()
                                     handleConfirmTwinAttendance(cand)
                                   }}
-                                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-900 hover:bg-emerald-950 border-2 border-slate-700 hover:border-emerald-400 text-left transition-all cursor-pointer touch-manipulation min-h-[58px]"
+                                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500 text-left transition-all cursor-pointer touch-manipulation min-h-[58px]"
                                 >
-                                  <div className="w-11 h-11 rounded-xl bg-slate-800 overflow-hidden shrink-0 border border-slate-600 flex items-center justify-center">
+                                  <div className="w-11 h-11 rounded-xl bg-slate-800 overflow-hidden shrink-0 border border-slate-700 flex items-center justify-center">
                                     {cand.avatarUrl ? (
                                       <img src={cand.avatarUrl} alt={cand.name} className="w-full h-full object-cover" />
                                     ) : (
-                                      <span className="font-black text-slate-200 text-sm">{cand.name.charAt(0)}</span>
+                                      <span className="font-bold text-slate-300 text-sm">{cand.name.charAt(0)}</span>
                                     )}
                                   </div>
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-xs sm:text-sm font-black text-white truncate">{cand.name}</p>
-                                    <p className="text-[10px] text-slate-300 font-mono font-semibold">{cand.role} • {cand.identifier}</p>
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-400 mt-0.5">
-                                      <CheckCircle className="w-3 3" /> Ketuk Presensi
+                                    <p className="text-xs sm:text-sm font-bold text-white truncate">{cand.name}</p>
+                                    <p className="text-[10px] text-slate-400 font-mono font-medium">{cand.role} • {cand.identifier}</p>
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 mt-0.5">
+                                      <CheckCircle className="w-3 h-3" /> Pilih Presensi
                                     </span>
                                   </div>
                                 </button>
@@ -2205,54 +2202,54 @@ export default function FaceNetAiStandalonePage() {
                             </div>
                           </div>
                         ) : (
-                          <div className={`p-3.5 sm:p-4 rounded-2xl backdrop-blur-2xl border-2 shadow-2xl transition-all duration-200 ${
+                          <div className={`p-3.5 sm:p-4 rounded-2xl backdrop-blur-2xl border shadow-xl transition-all duration-200 ${
                             captureResult.type === 'SUCCESS' 
-                              ? 'bg-slate-950/98 border-emerald-400 shadow-emerald-950/80' 
+                              ? 'bg-slate-950/98 border-emerald-500/80 shadow-emerald-950/50' 
                               : captureResult.type === 'UNKNOWN' 
-                                ? 'bg-slate-950/98 border-amber-400 shadow-amber-950/80' 
-                                : 'bg-slate-950/98 border-rose-400 shadow-rose-950/80'
+                                ? 'bg-slate-950/98 border-amber-500/80 shadow-amber-950/50' 
+                                : 'bg-slate-950/98 border-rose-500/80 shadow-rose-950/50'
                           }`}>
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                               <div className="flex items-center gap-3 min-w-0">
-                                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 font-bold shadow-lg ${
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 font-bold ${
                                   captureResult.type === 'SUCCESS'
-                                    ? 'bg-emerald-500/25 text-emerald-300 border-2 border-emerald-400'
+                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                                     : captureResult.type === 'UNKNOWN'
-                                      ? 'bg-amber-500/25 text-amber-300 border-2 border-amber-400'
-                                      : 'bg-rose-500/25 text-rose-300 border-2 border-rose-400'
+                                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                      : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                                 }`}>
                                   {captureResult.type === 'SUCCESS' ? (
-                                    <CheckCircle className="w-7 h-7" />
+                                    <CheckCircle className="w-6 h-6" />
                                   ) : captureResult.type === 'UNKNOWN' ? (
-                                    <AlertTriangle className="w-7 h-7" />
+                                    <AlertTriangle className="w-6 h-6" />
                                   ) : (
-                                    <AlertCircle className="w-7 h-7" />
+                                    <AlertCircle className="w-6 h-6" />
                                   )}
                                 </div>
                                 <div className="min-w-0">
                                   {captureResult.type === 'SUCCESS' ? (
                                     <>
                                       <div className="flex items-center gap-2 flex-wrap">
-                                        <h3 className="text-sm sm:text-base md:text-lg font-black text-white truncate">{captureResult.name}</h3>
-                                        <Badge className="bg-emerald-400 text-slate-950 border-emerald-300 text-xs py-0.5 px-2 font-mono font-black">
+                                        <h3 className="text-sm sm:text-base font-bold text-white truncate">{captureResult.name}</h3>
+                                        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-xs py-0.5 px-2 font-mono font-bold">
                                           {captureResult.confidence}% Akurat
                                         </Badge>
-                                        <Badge variant="outline" className="text-xs py-0.5 px-2 border-slate-700 text-slate-200 font-bold">
+                                        <Badge variant="outline" className="text-xs py-0.5 px-2 border-slate-700 text-slate-300 font-medium">
                                           {captureResult.role} {captureResult.identifier ? `• ${captureResult.identifier}` : ''}
                                         </Badge>
                                       </div>
-                                      <p className="text-xs sm:text-sm text-emerald-300 font-black mt-0.5 truncate">
+                                      <p className="text-xs sm:text-sm text-emerald-400 font-bold mt-0.5 truncate">
                                         {captureResult.attendanceMsg}
                                       </p>
                                     </>
                                   ) : (
                                     <>
-                                      <h3 className={`text-sm sm:text-base font-black ${
+                                      <h3 className={`text-sm sm:text-base font-bold ${
                                         captureResult.type === 'UNKNOWN' ? 'text-amber-300' : 'text-rose-300'
                                       }`}>
                                         {captureResult.message}
                                       </h3>
-                                      <p className="text-xs text-slate-200 mt-0.5 line-clamp-1 font-medium">
+                                      <p className="text-xs text-slate-300 mt-0.5 line-clamp-1 font-medium">
                                         {captureResult.attendanceMsg}
                                       </p>
                                     </>
@@ -2273,7 +2270,7 @@ export default function FaceNetAiStandalonePage() {
                                       if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
                                     }
                                   }}
-                                  className="min-h-[42px] px-3 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl"
+                                  className="min-h-[40px] px-3 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl"
                                 >
                                   Tutup
                                 </Button>
@@ -2285,7 +2282,7 @@ export default function FaceNetAiStandalonePage() {
                                     executeFaceCapture()
                                   }}
                                   disabled={isCapturing}
-                                  className="min-h-[42px] px-4 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-black gap-1.5 shadow-lg rounded-xl cursor-pointer"
+                                  className="min-h-[40px] px-4 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-1.5 shadow-md rounded-xl cursor-pointer"
                                 >
                                   <Camera className="w-4 h-4" />
                                   <span>Scan Lagi</span>
@@ -2302,7 +2299,7 @@ export default function FaceNetAiStandalonePage() {
                         <Camera className="w-10 h-10 text-rose-400" />
                         <p className="text-sm font-bold text-white">Gagal Mengakses Webcam Browser</p>
                         <p className="text-xs text-slate-300 max-w-sm">{browserCamError}</p>
-                        <Button size="sm" onClick={() => startBrowserWebcam()} className="bg-indigo-600 text-white text-xs min-h-[38px] px-4 rounded-xl">
+                        <Button size="sm" onClick={() => startBrowserWebcam()} className="bg-blue-600 text-white text-xs min-h-[38px] px-4 rounded-xl font-bold">
                           <RefreshCw className="w-3.5 h-3.5 mr-1" /> Coba Lagi
                         </Button>
                       </div>
@@ -2313,7 +2310,7 @@ export default function FaceNetAiStandalonePage() {
                     {isStreamLoading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 z-10">
                         <div className="flex flex-col items-center gap-1.5">
-                          <div className="w-7 h-7 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                           <span className="text-xs text-slate-300 font-bold">Menghubungkan Sinyal Kamera...</span>
                         </div>
                       </div>
@@ -2331,19 +2328,19 @@ export default function FaceNetAiStandalonePage() {
                   </div>
                 ) : (
                   <div className="text-center p-4 space-y-2.5 max-w-md select-none z-10 pointer-events-auto">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-950/90 border border-indigo-500/50 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 flex items-center justify-center mx-auto">
                       <Video className="w-6 h-6" />
                     </div>
                     <div className="space-y-1">
                       <p className="font-bold text-sm text-slate-200">
                         {serviceStatus?.isOnline 
                           ? (serviceStatus?.is_running ? 'Menghubungkan Sinyal Kamera...' : 'AI FaceNet Standby') 
-                          : 'Microservice AI FaceNet Standby / Offline'}
+                          : 'Layanan AI FaceNet Standby'}
                       </p>
                       <p className="text-xs text-slate-400">
                         {serviceStatus?.is_running 
                           ? 'Menunggu sinyal frame aktif dari kamera...'
-                          : 'Nyalakan AI atau pilih Webcam Browser untuk memulai streaming deteksi.'}
+                          : 'Nyalakan AI atau gunakan Webcam Browser untuk memulai pemindaian presensi.'}
                       </p>
                     </div>
                     <div className="flex items-center justify-center gap-2 pt-1">
@@ -2360,7 +2357,7 @@ export default function FaceNetAiStandalonePage() {
                             }
                           }}
                           disabled={isStartingWorker}
-                          className="min-h-[38px] text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 rounded-xl"
+                          className="min-h-[38px] text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 rounded-xl cursor-pointer"
                         >
                           <Power className="w-3.5 h-3.5 mr-1" /> Nyalakan AI
                         </Button>
@@ -2369,7 +2366,7 @@ export default function FaceNetAiStandalonePage() {
                         size="sm"
                         variant="outline"
                         onClick={handleReconnectStream}
-                        className="min-h-[38px] text-xs border-slate-700 text-slate-300 hover:text-white bg-slate-800/80 px-3 rounded-xl"
+                        className="min-h-[38px] text-xs border-slate-700 text-slate-300 hover:text-white bg-slate-900 px-3.5 rounded-xl cursor-pointer"
                       >
                         <RefreshCw className="w-3.5 h-3.5 mr-1" /> Hubungkan Ulang
                       </Button>
@@ -2378,7 +2375,7 @@ export default function FaceNetAiStandalonePage() {
                 )}
 
                 {/* HUD Badges */}
-                <div className="absolute top-2.5 left-2.5 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-xs text-[10px] font-mono text-emerald-400 border border-emerald-500/40 z-20 shadow-md">
+                <div className="absolute top-2.5 left-2.5 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/90 text-[10px] font-mono text-slate-300 border border-slate-800 z-20 shadow-sm">
                   <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                   <span className="font-bold">
                     {isBrowserMode
@@ -2387,39 +2384,42 @@ export default function FaceNetAiStandalonePage() {
                   </span>
                 </div>
 
-                <div className="absolute top-2.5 right-2.5 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-xs text-[10px] font-mono text-slate-200 border border-white/20 z-20 shadow-md">
-                  <span className={`font-black flex items-center gap-1.5 ${scanMode === 'AUTO' ? 'text-amber-300' : 'text-emerald-300'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${scanMode === 'AUTO' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
-                    {scanMode === 'AUTO' ? 'AUTO SCAN AKTIF' : 'MANUAL (KLIK TOMBOL SCAN)'}
+                <div className="absolute top-2.5 right-2.5 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/90 text-[10px] font-mono text-slate-300 border border-slate-800 z-20 shadow-sm">
+                  <span className={`font-bold flex items-center gap-1.5 ${scanMode === 'AUTO' ? 'text-amber-300' : 'text-emerald-300'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${scanMode === 'AUTO' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                    {scanMode === 'AUTO' ? 'AUTO SCAN' : 'MANUAL SCAN'}
                   </span>
                 </div>
 
-                <div className="absolute bottom-2.5 right-2.5 pointer-events-none flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-xs text-[10px] font-mono text-slate-200 border border-white/20 z-20 shadow-md">
-                  <span>Akurasi: {Math.round((currentConfig?.threshold || 0.70) * 100)}%</span>
+                <div className="absolute bottom-2.5 right-2.5 pointer-events-none flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-950/90 text-[10px] font-mono text-slate-400 border border-slate-800 z-20 shadow-sm">
+                  <span>Threshold: {Math.round((currentConfig?.threshold || 0.70) * 100)}%</span>
                   <span>•</span>
                   <span>Cooldown: {currentConfig?.cooldownMinutes || 10}m</span>
                 </div>
               </div>
 
-              {/* ACTION BUTTON BAR (Touch-Target Ergonomis Tablets >= 54px) */}
+              {/* ACTION BUTTON BAR (Touch-Target Ergonomis >= 50px) */}
               <div className={`p-2.5 sm:p-3 border-t flex items-center gap-2.5 shrink-0 ${
-                isOutdoorMode ? 'bg-black border-emerald-500/30' : 'bg-slate-900/95 border-slate-800'
+                isOutdoorMode ? 'bg-black border-slate-800' : 'bg-slate-900 border-slate-800'
               }`}>
                 <Button
                   onClick={() => executeFaceCapture()}
                   disabled={isCapturing || (isBrowserMode ? !isBrowserCamStreaming : (!serviceStatus?.is_running || streamError))}
                   title="Sentuh untuk Input Presensi Wajah (Spasi / Enter)"
-                  className="flex-1 min-h-[54px] sm:min-h-[58px] bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl shadow-xl shadow-emerald-950/70 flex items-center justify-center border-2 border-emerald-400/50 cursor-pointer transition-all active:scale-[0.97] touch-manipulation"
+                  className="flex-1 min-h-[50px] bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-sm flex items-center justify-center border border-emerald-500/40 cursor-pointer transition-all active:scale-[0.98] touch-manipulation font-bold"
                 >
                   {isCapturing ? (
-                    <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 animate-spin text-white" />
+                    <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-white" />
                   ) : (
-                    <Camera className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                    <div className="flex items-center gap-2">
+                      <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                      <span className="text-xs sm:text-sm">Ambil Presensi Wajah</span>
+                    </div>
                   )}
                 </Button>
 
                 {/* Mode Manual/Auto switcher (Touch Target >= 44px) */}
-                <div className="inline-flex p-1 bg-slate-950 rounded-2xl border border-slate-800 shrink-0 shadow-inner">
+                <div className="inline-flex p-1 bg-slate-950 rounded-xl border border-slate-800 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
@@ -2432,12 +2432,12 @@ export default function FaceNetAiStandalonePage() {
                       }
                       toast.info('Mode Manual Aktif: Scanning hanya saat tombol ditekan.')
                     }}
-                    className={`min-h-[44px] px-3.5 text-xs font-black rounded-xl transition-all cursor-pointer touch-manipulation flex items-center gap-1.5 ${
+                    className={`min-h-[42px] px-3.5 text-xs font-bold rounded-lg transition-all cursor-pointer touch-manipulation flex items-center gap-1.5 ${
                       scanMode === 'MANUAL' 
-                        ? 'bg-emerald-600 text-white shadow-md ring-1 ring-emerald-400/50' 
+                        ? 'bg-slate-800 text-white shadow-xs' 
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
-                    title="Mode Manual: Scan saat tombol kamera ditekan (Hemat komputasi & verifikasi manual)"
+                    title="Mode Manual: Scan saat tombol kamera ditekan"
                   >
                     <Camera className="w-3.5 h-3.5" />
                     <span>Manual</span>
@@ -2447,14 +2447,14 @@ export default function FaceNetAiStandalonePage() {
                     onClick={() => {
                       setScanMode('AUTO')
                       setFormConfig((prev) => prev ? { ...prev, autoAttendance: true } : null)
-                      toast.success('Mode Auto Aktif: Scanning dan presensi otomatis setiap 5 detik.')
+                      toast.success('Mode Auto Aktif: Scanning presensi otomatis.')
                     }}
-                    className={`min-h-[44px] px-3.5 text-xs font-black rounded-xl transition-all cursor-pointer touch-manipulation flex items-center gap-1.5 ${
+                    className={`min-h-[42px] px-3.5 text-xs font-bold rounded-lg transition-all cursor-pointer touch-manipulation flex items-center gap-1.5 ${
                       scanMode === 'AUTO' 
-                        ? 'bg-amber-600 text-white shadow-md ring-1 ring-amber-400/50' 
+                        ? 'bg-emerald-600 text-white shadow-xs' 
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
-                    title="Mode Auto: Scan dan presensi otomatis di latar belakang tanpa klik tombol"
+                    title="Mode Auto: Scan dan presensi otomatis"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Auto</span>
@@ -2465,14 +2465,14 @@ export default function FaceNetAiStandalonePage() {
                 <button
                   type="button"
                   onClick={() => setSoundEnabled(!soundEnabled)}
-                  className={`min-h-[48px] w-12 rounded-2xl border flex items-center justify-center cursor-pointer transition-all touch-manipulation shrink-0 ${
+                  className={`min-h-[46px] w-12 rounded-xl border flex items-center justify-center cursor-pointer transition-all touch-manipulation shrink-0 ${
                     soundEnabled 
-                      ? 'text-emerald-300 bg-emerald-950/60 border-emerald-600/60 shadow-md' 
+                      ? 'text-emerald-300 bg-emerald-950/40 border-emerald-600/40 shadow-xs' 
                       : 'text-slate-500 bg-slate-950 border-slate-800'
                   }`}
                   title={soundEnabled ? 'Suara & Voice Greeting Aktif' : 'Suara Senyap'}
                 >
-                  {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                  {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -2480,24 +2480,24 @@ export default function FaceNetAiStandalonePage() {
             {/* KANAN: PANEL JAM & TANGGAL + REALTIME SCANNER LOGS LIST (4 COLS) */}
             <div className="lg:col-span-4 flex flex-col min-h-[380px] lg:h-full gap-2 lg:overflow-hidden">
               {/* KARTU JAM & TANGGAL DIGITAL (ATAS LOG PRESENSI) */}
-              <div className={`p-3 rounded-2xl border shadow-lg flex items-center justify-between gap-3 shrink-0 transition-all ${
+              <div className={`p-3 rounded-2xl border shadow-sm flex items-center justify-between gap-3 shrink-0 transition-all ${
                 isOutdoorMode 
-                  ? 'bg-black border-2 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)] text-white' 
-                  : 'bg-slate-900/95 border-slate-800 shadow-md text-slate-100'
+                  ? 'bg-black border-2 border-emerald-400 text-white' 
+                  : 'bg-slate-900 border-slate-800 text-slate-100'
               }`}>
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
                     isOutdoorMode 
                       ? 'bg-emerald-950/80 border-emerald-400 text-emerald-300' 
-                      : 'bg-indigo-950/80 border-indigo-500/40 text-indigo-400'
+                      : 'bg-slate-800 border-slate-700 text-slate-300'
                   }`}>
-                    <Clock className="w-5 h-5" />
+                    <Clock className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">
                       Waktu Presensi
                     </p>
-                    <p className="text-xs font-black text-slate-200 truncate">
+                    <p className="text-xs font-bold text-slate-200 truncate">
                       {currentDateStr || 'Memuat Tanggal...'}
                     </p>
                   </div>
@@ -2511,26 +2511,26 @@ export default function FaceNetAiStandalonePage() {
                   <div className="text-base sm:text-lg font-black text-emerald-400 tracking-tight leading-tight">
                     {currentClock || '--:--:--'}
                   </div>
-                  <div className="text-[9px] font-bold text-slate-400 leading-none">
-                    WIB (Realtime)
+                  <div className="text-[9px] font-medium text-slate-500 leading-none">
+                    WIB
                   </div>
                 </div>
               </div>
 
               {/* LOG LIST CONTAINER (PERKECIL AREA LOG) */}
-              <div className={`flex-1 min-h-0 flex flex-col overflow-hidden rounded-2xl shadow-xl transition-all ${
+              <div className={`flex-1 min-h-0 flex flex-col overflow-hidden rounded-2xl shadow-sm transition-all ${
                 isOutdoorMode 
                   ? 'bg-black border-2 border-slate-700' 
-                  : 'bg-slate-950/95 border border-slate-800'
+                  : 'bg-slate-950 border border-slate-800'
               }`}>
                 {/* Log Header */}
                 <div className={`px-3 py-2 border-b flex items-center justify-between gap-2 shrink-0 ${
-                  isOutdoorMode ? 'bg-black border-slate-800' : 'bg-slate-900/90 border-slate-800'
+                  isOutdoorMode ? 'bg-black border-slate-800' : 'bg-slate-900 border-slate-800'
                 }`}>
                 <div className="flex items-center gap-2">
-                  <Activity className="w-4.5 h-4.5 text-indigo-400" />
-                  <span className="text-xs sm:text-sm font-black text-white">Scanner Log Realtime</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-950 text-emerald-300 border border-emerald-700">
+                  <Activity className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs sm:text-sm font-bold text-white">Scanner Log Realtime</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
                     Live Sync
                   </span>
                 </div>
@@ -2540,8 +2540,8 @@ export default function FaceNetAiStandalonePage() {
                     <button
                       type="button"
                       onClick={() => setLogFilterMode('TODAY')}
-                      className={`min-h-[32px] px-2.5 text-[11px] font-black rounded-lg transition-all cursor-pointer ${
-                        logFilterMode === 'TODAY' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                      className={`min-h-[30px] px-2.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                        logFilterMode === 'TODAY' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
                       }`}
                     >
                       Hari Ini
@@ -2549,15 +2549,15 @@ export default function FaceNetAiStandalonePage() {
                     <button
                       type="button"
                       onClick={() => setLogFilterMode('ALL')}
-                      className={`min-h-[32px] px-2.5 text-[11px] font-black rounded-lg transition-all cursor-pointer ${
-                        logFilterMode === 'ALL' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                      className={`min-h-[30px] px-2.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                        logFilterMode === 'ALL' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
                       }`}
                     >
                       Semua
                     </button>
                   </div>
 
-                  <Button variant="ghost" size="sm" onClick={() => refetchLogs()} title="Segarkan Log" className="h-8 w-8 p-0 text-slate-300 hover:text-white rounded-lg">
+                  <Button variant="ghost" size="sm" onClick={() => refetchLogs()} title="Segarkan Log" className="h-7 w-7 p-0 text-slate-400 hover:text-white rounded-lg">
                     <RefreshCw className="w-3.5 h-3.5" />
                   </Button>
                   {isSuperAdmin ? (
@@ -2567,7 +2567,7 @@ export default function FaceNetAiStandalonePage() {
                       onClick={handleConfirmClearLogs}
                       disabled={isClearing}
                       title="Reset Seluruh Log Hari Ini"
-                      className="h-8 w-8 p-0 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-lg"
+                      className="h-7 w-7 p-0 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-lg"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -2577,7 +2577,7 @@ export default function FaceNetAiStandalonePage() {
                       size="sm"
                       onClick={() => promptSuperadminAuth(() => handleConfirmClearLogs())}
                       title="Otoritas Superadmin"
-                      className="h-8 w-8 p-0 text-slate-500 hover:text-amber-400 rounded-lg"
+                      className="h-7 w-7 p-0 text-slate-500 hover:text-amber-400 rounded-lg"
                     >
                       <Lock className="w-3.5 h-3.5" />
                     </Button>
@@ -2603,42 +2603,42 @@ export default function FaceNetAiStandalonePage() {
                       key={log.id} 
                       className={`p-3 rounded-2xl transition-all border ${
                         index === 0 
-                          ? 'bg-gradient-to-br from-indigo-950/70 via-slate-900 to-indigo-950/40 border-indigo-500/80 shadow-md ring-1 ring-indigo-400/30' 
-                          : 'bg-slate-900/70 border-slate-800 hover:border-slate-700 shadow-xs'
+                          ? 'bg-slate-900 border-blue-500/60 shadow-sm ring-1 ring-blue-500/20' 
+                          : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700 shadow-2xs'
                       }`}
                     >
                       {/* Header: User identity & Scan status */}
                       <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-800/80">
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="text-xs sm:text-sm font-black text-white truncate">{log.userName}</h4>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
-                              log.userRole?.includes('SISWA') ? 'bg-blue-950 text-blue-300 border border-blue-700' :
-                              log.userRole?.includes('GURU') ? 'bg-purple-950 text-purple-300 border border-purple-700' :
-                              'bg-amber-950 text-amber-300 border border-amber-700'
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="text-xs sm:text-sm font-bold text-white truncate">{log.userName}</h4>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              log.userRole?.includes('SISWA') ? 'bg-blue-950/80 text-blue-300 border border-blue-800/60' :
+                              log.userRole?.includes('GURU') ? 'bg-purple-950/80 text-purple-300 border border-purple-800/60' :
+                              'bg-amber-950/80 text-amber-300 border border-amber-800/60'
                             }`}>
                               {log.userRole}
                             </span>
                           </div>
-                          <p className="text-[11px] font-mono text-slate-300 font-semibold mt-0.5 truncate">
+                          <p className="text-[11px] font-mono text-slate-400 font-medium mt-0.5 truncate">
                             ID: {log.identifier}
                           </p>
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
                           <div className="text-right">
-                            <span className={`inline-flex items-center gap-1 text-[10px] font-black py-0.5 px-2.5 rounded-full ${
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold py-0.5 px-2.5 rounded-full ${
                               log.scanType === 'MASUK' 
-                                ? 'bg-emerald-400 text-slate-950 border border-emerald-300' 
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
                                 : log.scanType === 'PULANG' 
-                                  ? 'bg-blue-400 text-slate-950 border border-blue-300' 
+                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' 
                                   : 'bg-slate-800 text-slate-300'
                             }`}>
                               <CheckCircle2 className="w-3 h-3 shrink-0" />
                               {log.scanType}
                             </span>
-                            <p className="text-[11px] font-mono font-bold text-slate-300 mt-0.5 flex items-center justify-end gap-1 flex-wrap">
-                              <span className="text-[10px] font-semibold text-slate-400">{log.dateFormatted || log.date}</span>
+                            <p className="text-[11px] font-mono font-medium text-slate-400 mt-0.5 flex items-center justify-end gap-1 flex-wrap">
+                              <span className="text-[10px] text-slate-400">{log.dateFormatted || log.date}</span>
                               <span className="text-slate-600">•</span>
                               <span className="flex items-center gap-0.5">
                                 <Clock className="w-3 h-3 text-slate-400" />
@@ -2651,22 +2651,22 @@ export default function FaceNetAiStandalonePage() {
 
                       {/* Middle: Visual Comparison Box */}
                       <div className="py-2 grid grid-cols-2 gap-2.5 items-center">
-                        <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-800/80 border border-slate-700 min-w-0">
+                        <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-800/60 border border-slate-700/60 min-w-0">
                           <div className="w-10 h-10 rounded-xl bg-slate-700 overflow-hidden shrink-0 border border-slate-600 flex items-center justify-center">
                             {log.avatarUrl ? (
                               <img src={log.avatarUrl} alt={log.userName} className="w-full h-full object-cover" />
                             ) : (
-                              <span className="font-black text-slate-300 text-xs">{log.userName.charAt(0)}</span>
+                              <span className="font-bold text-slate-300 text-xs">{log.userName.charAt(0)}</span>
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Database</span>
-                            <p className="text-xs font-bold text-slate-200 truncate">Foto Profil</p>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Database</span>
+                            <p className="text-xs font-semibold text-slate-200 truncate">Foto Profil</p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2.5 p-2 rounded-xl bg-emerald-950/40 border border-emerald-700/80 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-slate-900 overflow-hidden shrink-0 border-2 border-emerald-400 flex items-center justify-center">
+                        <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-800/60 border border-slate-700/60 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-slate-900 overflow-hidden shrink-0 border border-slate-600 flex items-center justify-center">
                             {log.snapshotUrl ? (
                               <img src={log.snapshotUrl} alt="Snapshot Kamera" className="w-full h-full object-cover" />
                             ) : (
@@ -2674,8 +2674,8 @@ export default function FaceNetAiStandalonePage() {
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider block">Realtime</span>
-                            <p className="text-xs font-bold text-emerald-200 truncate">Snapshot AI</p>
+                            <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider block">Realtime</span>
+                            <p className="text-xs font-semibold text-emerald-200 truncate">Snapshot AI</p>
                           </div>
                         </div>
                       </div>
@@ -2683,17 +2683,16 @@ export default function FaceNetAiStandalonePage() {
                       {/* Footer: Matching Confidence Bar */}
                       <div className="pt-1.5 border-t border-slate-800/80 space-y-1">
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-slate-300 font-medium flex items-center gap-1">
-                            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                            Kemiripan Biometrik:
+                          <span className="text-slate-400 font-medium">
+                            Tingkat Kemiripan:
                           </span>
-                          <span className="font-black text-emerald-400 font-mono">
+                          <span className="font-bold text-emerald-400 font-mono">
                             {Math.round(log.confidence * 100)}%
                           </span>
                         </div>
                         <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                           <div 
-                            className="h-full bg-gradient-to-r from-emerald-400 to-indigo-500 rounded-full transition-all"
+                            className="h-full bg-emerald-500 rounded-full transition-all"
                             style={{ width: `${Math.min(100, Math.max(0, log.confidence * 100))}%` }}
                           />
                         </div>
@@ -3507,42 +3506,25 @@ export default function FaceNetAiStandalonePage() {
           </div>
         )}
 
-        {/* BOTTOM TICKER: ARSITEKTUR ALGORITMA AI (Ultra-Compact Single Line ~28px) */}
-        <div className="shrink-0 px-3 py-1 bg-slate-950/90 border border-slate-800/80 rounded-xl text-[10px] flex items-center justify-between text-slate-400 gap-2 backdrop-blur-xs">
-          <div className="flex items-center gap-1.5 min-w-0 shrink-0">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-            <span className="font-bold text-slate-200 truncate">
-              Bio-Fusion AI:
+        {/* FOOTER BAR: STATUS SISTEM BIOMETRIK */}
+        <div className="shrink-0 px-3.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-[11px] flex flex-wrap items-center justify-between text-slate-400 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${serviceStatus?.is_running ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            <span className="font-bold text-slate-300">
+              {serviceStatus?.is_running ? 'Sistem Presensi Wajah Aktif' : 'Sistem Presensi Wajah Standby'}
             </span>
-            <span className="text-slate-400 truncate hidden sm:inline">
-              8 Algoritma
+            <span className="text-slate-600 hidden sm:inline">•</span>
+            <span className="text-slate-400 hidden sm:inline">
+              SMA Muhammadiyah 1 Ponorogo
             </span>
           </div>
 
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar text-[9px]">
-            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-indigo-300 font-semibold" title="Multi-Task Cascaded CNN 5-Point Landmark Detector">
-              MTCNN 5-Point
+          <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
+            <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
+              Model: FaceNet 512-D
             </span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-indigo-300 font-semibold font-mono" title="Inception-ResNet-v1 512-Dimensional Deep Vector">
-              Inception-ResNet-v1 (512-D)
-            </span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-indigo-300 font-semibold" title="VGGFace2 Pretrained Biometric Feature Weights">
-              VGGFace2
-            </span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-purple-800/50 text-purple-300 font-semibold" title="Dual-Stream Periocular (Solusi Siswa Kembar / Wajah Mirip)">
-              Periocular
-            </span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-teal-800/50 text-teal-300 font-semibold" title="OpenCV CLAHE Adaptive Contrast & Anti-Glare Kacamata">
-              CLAHE Anti-Glare
-            </span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-teal-800/50 text-teal-300 font-semibold" title="5-Point Similarity Affine Face Alignment">
-              Affine 5-Point
-            </span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-cyan-800/50 text-cyan-300 font-semibold font-mono" title="BLAS Matrix Vectorized Dot-Product (<0.05ms)">
-              BLAS (&lt;0.05ms)
-            </span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-cyan-800/50 text-cyan-300 font-semibold" title="YOLO Multi-Angle Vision Tracker">
-              YOLO Tracker
+            <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
+              Detector: MTCNN
             </span>
           </div>
         </div>

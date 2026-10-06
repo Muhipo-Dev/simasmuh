@@ -366,7 +366,7 @@ export function IzinSiswaManagement() {
         Swal.fire({
           icon: 'success',
           title: actionDialog.type === 'APPROVE' ? 'Izin Siswa Terverifikasi' : 'Izin Ditolak',
-          text: `Status izin siswa diperbarui dan notifikasi WhatsApp resmi telah dikirimkan ke orang tua.`,
+          text: `Status izin siswa diperbarui dan notifikasi resmi telah dikirimkan ke email orang tua.`,
           timer: 2000,
           showConfirmButton: false,
         })
@@ -597,28 +597,18 @@ export function IzinSiswaManagement() {
               ? 'Monitoring, supervisi, dan rekonsiliasi log riwayat permohonan izin siswa (Sakit, Dispensasi, dan Keperluan Keluarga) yang sedang berlangsung di sekolah secara real-time.'
               : isWaliKelas
                 ? 'Kelola, verifikasi permohonan izin siswa perwalian, atau tambahkan izin secara sah bagi siswa yang melapor di luar sistem SIMASMUH.'
-                : 'Pengajuan izin sakit dan keperluan keluarga dapat dilakukan via sistem aplikasi dan WhatsApp Chatbot resmi sekolah (+62 882-9373-3330). Seluruh data tersimpan aman dan terintegrasi otomatis.'}
+                : 'Pengajuan permohonan izin sakit dan keperluan keluarga ananda tersimpan aman dan terintegrasi langsung dengan presensi sekolah serta notifikasi email.'}
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
-          <a
-            href="https://wa.me/6288293733330?text=IZIN"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition-all"
-          >
-            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-            Lapor via WhatsApp
-          </a>
-
           {canCreate && (
             <Button
               onClick={() => setShowForm(!showForm)}
               className="bg-white text-blue-700 hover:bg-blue-50 font-black rounded-2xl shadow-md transition-all px-4 py-5 flex items-center gap-2 text-xs"
             >
               <Plus className="w-4 h-4" />
-              {isWaliKelas ? 'Tambahkan Izin Siswa' : 'Ajukan di Web'}
+              {isWaliKelas ? 'Tambahkan Izin Siswa' : 'Ajukan Permohonan Izin'}
             </Button>
           )}
         </div>
@@ -926,7 +916,7 @@ export function IzinSiswaManagement() {
             <DialogTitle>{actionDialog.type === 'APPROVE' ? 'Verifikasi & Setujui Izin Siswa' : 'Tolak Izin Siswa'}</DialogTitle>
             <DialogDescription>
               {actionDialog.type === 'APPROVE' 
-                ? 'Persetujuan izin akan otomatis mengubah presensi siswa hari ini menjadi IZIN dan mengirimkan notifikasi WhatsApp resmi ke orang tua.' 
+                ? 'Persetujuan izin akan otomatis mengubah presensi siswa hari ini menjadi IZIN dan mengirimkan notifikasi resmi ke email orang tua.' 
                 : 'Berikan catatan penolakan untuk disampaikan kepada orang tua siswa.'}
             </DialogDescription>
           </DialogHeader>

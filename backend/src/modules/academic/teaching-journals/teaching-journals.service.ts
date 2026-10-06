@@ -8,7 +8,11 @@ export class TeachingJournalsService {
   async findAll(query?: { userId?: string; teacherId?: string; date?: string; scheduleId?: string }) {
     const where: any = {};
     if (query?.scheduleId) {
-      where.scheduleId = query.scheduleId;
+      if (query.scheduleId.includes(',')) {
+        where.scheduleId = { in: query.scheduleId.split(',').map(s => s.trim()).filter(Boolean) };
+      } else {
+        where.scheduleId = query.scheduleId;
+      }
     }
     if (query?.teacherId) {
       where.teacherId = query.teacherId;

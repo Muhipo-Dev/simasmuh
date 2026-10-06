@@ -40,6 +40,7 @@ const ROLE_CONFIG: Record<string, { label: string; bg: string; text: string; bor
   BAU: { label: 'ADMIN TU', bg: 'bg-sky-50 dark:bg-sky-950/80', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
   TATA_USAHA: { label: 'ADMIN TU', bg: 'bg-sky-50 dark:bg-sky-950/80', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-200 dark:border-sky-800' },
   GURU: { label: 'GURU', bg: 'bg-emerald-50 dark:bg-emerald-950/80', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
+  HONORER: { label: 'HONORER', bg: 'bg-amber-50 dark:bg-amber-950/80', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
   PEGAWAI: { label: 'PEGAWAI', bg: 'bg-cyan-50 dark:bg-cyan-950/80', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
   KARYAWAN: { label: 'PEGAWAI', bg: 'bg-cyan-50 dark:bg-cyan-950/80', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
   WALI_MURID: { label: 'WALI MURID', bg: 'bg-blue-50 dark:bg-blue-950/80', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
@@ -73,6 +74,7 @@ const SUB_ROLE_OPTIONS = [
   { value: 'ISMUBA', label: 'ISMUBA' },
   { value: 'KESEHATAN_SEKOLAH', label: 'Kesehatan Sekolah (UKS)' },
   { value: 'UKS', label: 'Pengelola UKS' },
+  { value: 'HONORER', label: 'Guru Honorer / Guru Panggilan' },
   { value: 'GURU', label: 'Guru' },
   { value: 'PEGAWAI', label: 'Pegawai / Karyawan' },
   { value: 'KEPALA_SEKOLAH', label: 'Kepala Sekolah' },
@@ -110,6 +112,7 @@ const SUB_ROLE_CONFIG: Record<string, { label: string; bg: string; text: string;
   ISMUBA: { label: 'ISMUBA', bg: 'bg-emerald-50/90 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
   KESEHATAN_SEKOLAH: { label: 'Kesehatan Sekolah (UKS)', bg: 'bg-teal-50/90 dark:bg-teal-950/60', text: 'text-teal-700 dark:text-teal-300', border: 'border-teal-200 dark:border-teal-800' },
   UKS: { label: 'Kesehatan Sekolah (UKS)', bg: 'bg-teal-50/90 dark:bg-teal-950/60', text: 'text-teal-700 dark:text-teal-300', border: 'border-teal-200 dark:border-teal-800' },
+  HONORER: { label: 'Guru Honorer / Guru Panggilan', bg: 'bg-amber-50/90 dark:bg-amber-950/60', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
   GURU: { label: 'Guru', bg: 'bg-emerald-50/90 dark:bg-emerald-950/60', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800' },
   PEGAWAI: { label: 'Pegawai / Karyawan', bg: 'bg-cyan-50/90 dark:bg-cyan-950/60', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800' },
   KEPALA_SEKOLAH: { label: 'Kepala Sekolah', bg: 'bg-amber-50/90 dark:bg-amber-950/60', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
@@ -644,7 +647,7 @@ export default function UsersPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="phone" className="text-xs font-semibold">No. WhatsApp (Opsional)</Label>
+                  <Label htmlFor="phone" className="text-xs font-semibold">No. Telepon / HP (Opsional)</Label>
                   <Input 
                     id="phone" 
                     value={formData.phone}
@@ -652,7 +655,7 @@ export default function UsersPage() {
                     placeholder="Contoh: 088293733330"
                     className="h-10 text-xs"
                   />
-                  <p className="text-[10px] text-slate-500">Untuk notifikasi WhatsApp.</p>
+                  <p className="text-[10px] text-slate-500">Nomor kontak pengguna.</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="email" className="text-xs font-semibold">Email (Opsional)</Label>
@@ -694,6 +697,7 @@ export default function UsersPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="GURU">GURU (Tenaga Pendidik)</SelectItem>
+                      <SelectItem value="HONORER">HONORER (Guru Panggilan / Sementara)</SelectItem>
                       <SelectItem value="PEGAWAI">PEGAWAI (Karyawan / Staf)</SelectItem>
                       <SelectItem value="ADMIN_TU">ADMIN TU (Tata Usaha / BAU)</SelectItem>
                       <SelectItem value="KEUANGAN">KEUANGAN (Bendahara Sekolah)</SelectItem>

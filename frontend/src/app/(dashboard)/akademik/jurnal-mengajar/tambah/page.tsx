@@ -16,7 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 
-const DAYS_NAME = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+import { 
+  mergeConsecutiveSchedules, 
+  DAYS_NAME 
+} from '@/lib/schedule-utils'
 
 function TambahJurnalContent() {
   const authenticatedFetch = useAuthenticatedFetch()
@@ -72,7 +75,7 @@ function TambahJurnalContent() {
     enabled: !isKepalaSekolahPure
   })
 
-  const schedules = (Array.isArray(rawSchedules) ? rawSchedules : []).filter(s => {
+  const filteredRawSchedules = (Array.isArray(rawSchedules) ? rawSchedules : []).filter(s => {
     if ((userRole === 'ADMIN_IT' || userRole === 'SUPERADMIN') && !userRolesList.includes('GURU')) return true
     return (
       s?.teacher?.userId === userId || 
@@ -81,10 +84,20 @@ function TambahJurnalContent() {
     )
   })
 
+  // Menggabungkan jadwal yang bersambung pada hari, guru, kelas, dan mapel yang sama
+  const schedules = React.useMemo(() => {
+    return mergeConsecutiveSchedules(filteredRawSchedules)
+  }, [filteredRawSchedules])
+
   // Otomatis pilih jadwal hari ini jika tidak ada query param
   useEffect(() => {
-    if (urlScheduleId) {
-      setSelectedScheduleId(urlScheduleId)
+    if (urlScheduleId && schedules.length > 0) {
+      const matched = schedules.find(s => s.id === urlScheduleId || s.scheduleIds?.includes(urlScheduleId))
+      if (matched) {
+        setSelectedScheduleId(matched.id)
+      } else {
+        setSelectedScheduleId(urlScheduleId)
+      }
     } else if (schedules.length > 0 && !selectedScheduleId) {
       const currentDay = new Date().getDay()
       const todaySchedule = schedules.find(s => Number(s.dayOfWeek) === currentDay)
@@ -96,19 +109,20 @@ function TambahJurnalContent() {
     }
   }, [urlScheduleId, schedules, selectedScheduleId])
 
-  const selectedSchedule = (Array.isArray(schedules) ? schedules : []).find(s => s.id === selectedScheduleId)
+  const selectedSchedule = (Array.isArray(schedules) ? schedules : []).find(
+    s => s.id === selectedScheduleId || s.scheduleIds?.includes(selectedScheduleId)
+  )
 
   // Otomatis isi jam ke & durasi dari waktu jadwal jika tersedia
   useEffect(() => {
     if (selectedSchedule) {
-      if (!formData.period && selectedSchedule.startTime && selectedSchedule.endTime) {
-        setFormData(prev => ({
-          ...prev,
-          period: `${selectedSchedule.startTime} - ${selectedSchedule.endTime}`
-        }))
-      }
+      setFormData(prev => ({
+        ...prev,
+        period: selectedSchedule.startTime && selectedSchedule.endTime ? `${selectedSchedule.startTime} - ${selectedSchedule.endTime}` : prev.period,
+        duration: String(selectedSchedule.totalPeriods || 2)
+      }))
     }
-  }, [selectedSchedule, formData.period])
+  }, [selectedSchedule])
 
   // 2. Jika jadwal sudah dipilih, ambil data kelas untuk mendapatkan daftar siswa
   const { data: classData, isLoading: loadingStudents } = useQuery<any>({
@@ -257,14 +271,14 @@ function TambahJurnalContent() {
                   <SelectTrigger className="font-medium">
                     <SelectValue placeholder={loadingSchedules ? "Memuat jadwal..." : "Pilih Jadwal"}>
                       {selectedSchedule
-                        ? `[${DAYS_NAME[selectedSchedule.dayOfWeek] || ''}] ${selectedSchedule.class?.name || ''} - ${selectedSchedule.subject?.name || ''} (${selectedSchedule.startTime || ''}-${selectedSchedule.endTime || ''})`
+                        ? `[${DAYS_NAME[selectedSchedule.dayOfWeek] || ''}] ${selectedSchedule.class?.name || ''} - ${selectedSchedule.subject?.name || ''} (${selectedSchedule.startTime || ''}-${selectedSchedule.endTime || ''}${selectedSchedule.totalPeriods > 1 ? ` • ${selectedSchedule.totalPeriods} JP` : ''})`
                         : undefined}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {(Array.isArray(schedules) ? schedules : []).map(s => (
                       <SelectItem key={s.id} value={s.id}>
-                        [{DAYS_NAME[s.dayOfWeek]}] {s.class?.name} - {s.subject?.name} ({s.startTime}-{s.endTime})
+                        [{DAYS_NAME[s.dayOfWeek]}] {s.class?.name} - {s.subject?.name} ({s.startTime}-{s.endTime}{s.totalPeriods > 1 ? ` • ${s.totalPeriods} JP` : ''})
                       </SelectItem>
                     ))}
                   </SelectContent>

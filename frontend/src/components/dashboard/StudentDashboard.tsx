@@ -16,7 +16,6 @@ import { Badge } from '@/components/ui/badge'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import { ActivityCalendarWidget } from '@/components/dashboard/ActivityCalendarWidget'
 import { SystemInfoWidget } from '@/components/dashboard/SystemInfoWidget'
-import { PrayerTimesWidget } from '@/components/dashboard/PrayerTimesWidget'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import Swal from 'sweetalert2'
 
@@ -26,7 +25,6 @@ interface StudentDashboardProps {
   studentClass: any
   classmates?: any[]
   schedules?: any[]
-  grades?: any[]
   dailyAttendanceHistory?: any[]
   studentTagihans?: any
   announcements?: any[]
@@ -44,7 +42,6 @@ export function StudentDashboard({
   studentClass,
   classmates = [],
   schedules = [],
-  grades = [],
   dailyAttendanceHistory = [],
   studentTagihans,
   announcements = [],
@@ -271,7 +268,7 @@ export function StudentDashboard({
   const currentGradeLevel = studentClass?.gradeLevel || 10
   const currentSemester = currentGradeLevel === 10 ? 2 : currentGradeLevel === 11 ? 4 : 6
 
-  // Distinct subjects for student's class with real CBT & SIMASMUH grades
+  // Distinct subjects for student's class
   const classSubjects = useMemo(() => {
     const map = new Map<string, any>()
     const classSchedules = (schedules || []).filter((s: any) => s.classId === studentClass?.id)
@@ -298,108 +295,11 @@ export function StudentDashboard({
       })
     }
 
-    const list = Array.from(map.values())
-    return list.map((sub) => {
-      const gradeMatch = (grades || []).find((g: any) => 
-        g.subjectId === sub.id || 
-        g.subject?.code === sub.code ||
-        g.subject?.name?.toLowerCase() === sub.name?.toLowerCase()
-      )
-
-      const score = gradeMatch ? Number(gradeMatch.score) : 0
-      const kkm = 75
-      const hasScore = score > 0
-      const isTuntas = score >= kkm
-
-      let predikat = '-'
-      if (hasScore) {
-        if (score >= 90) predikat = 'A'
-        else if (score >= 85) predikat = 'A-'
-        else if (score >= 80) predikat = 'B+'
-        else if (score >= 75) predikat = 'B'
-        else predikat = 'C'
-      }
-
-      return {
-        ...sub,
-        teacher: sub.teacherName,
-        kkm,
-        score: hasScore ? score : '-',
-        numScore: hasScore ? score : null,
-        predikat,
-        statusKetuntasan: hasScore ? (isTuntas ? 'TUNTAS' : 'BELUM_TUNTAS') : 'BERJALAN'
-      }
-    })
-  }, [schedules, studentClass, subjectsFromDb, homeroomTeacherName, grades])
-
-  // Academic Grade Stats & Semesters (Live dynamic calculation)
-  const semesterScores = useMemo(() => {
-    const semConfig = [
-      { semester: 'Sem 1', mapelCount: 16, kkm: 75 },
-      { semester: 'Sem 2', mapelCount: 16, kkm: 75 },
-      { semester: 'Sem 3', mapelCount: 17, kkm: 75 },
-      { semester: 'Sem 4', mapelCount: 17, kkm: 75 },
-      { semester: 'Sem 5', mapelCount: 18, kkm: 75 },
-      { semester: 'Sem 6', mapelCount: 18, kkm: 75 },
-    ]
-
-    const bySem: { [key: number]: number[] } = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] }
-    
-    // Add SIMASMUH grades
-    ;(grades || []).forEach((g: any) => {
-      const sem = g.semester || currentSemester
-      if (bySem[sem] && typeof g.score === 'number' && g.score > 0) {
-        bySem[sem].push(g.score)
-      }
-    })
-
-    return semConfig.map((item, idx) => {
-      const semNum = idx + 1
-      const scores = bySem[semNum]
-      const actualCount = classSubjects.length > 0 ? classSubjects.length : item.mapelCount
-
-      if (scores && scores.length > 0) {
-        const avg = scores.reduce((a, b) => a + b, 0) / scores.length
-        const roundedAvg = Math.round(avg * 10) / 10
-        return {
-          semester: item.semester,
-          score: roundedAvg,
-          gpa: Math.round(((roundedAvg / 100) * 4) * 100) / 100,
-          mapelCount: actualCount,
-          kkm: item.kkm,
-          isReal: true,
-        }
-      }
-
-      const fallbackScore = semNum === 1 ? 84.5 : semNum === 2 ? 86.0 : semNum === 3 ? 85.2 : semNum === 4 ? 88.4 : semNum === 5 ? 89.6 : 91.0
-      return {
-        semester: item.semester,
-        score: fallbackScore,
-        gpa: Math.round(((fallbackScore / 100) * 4) * 100) / 100,
-        mapelCount: item.mapelCount,
-        kkm: item.kkm,
-        isReal: false,
-      }
-    })
-  }, [grades, currentSemester, classSubjects])
-
-  // Current Average Score & Predicate
-  const currentAvgScore = useMemo(() => {
-    const scoredList = classSubjects.filter((s: any) => typeof s.numScore === 'number' && s.numScore > 0)
-    if (scoredList.length > 0) {
-      const sum = scoredList.reduce((acc: number, s: any) => acc + s.numScore, 0)
-      return Math.round((sum / scoredList.length) * 10) / 10
-    }
-    return semesterScores[currentSemester - 1]?.score || 88.4
-  }, [classSubjects, semesterScores, currentSemester])
-
-  const gpaPredikat = useMemo(() => {
-    if (currentAvgScore >= 90) return 'Sangat Memuaskan'
-    if (currentAvgScore >= 85) return 'Memuaskan'
-    if (currentAvgScore >= 80) return 'Baik Sekali'
-    if (currentAvgScore >= 75) return 'Baik (Tuntas)'
-    return 'Cukup'
-  }, [currentAvgScore])
+    return Array.from(map.values()).map((sub) => ({
+      ...sub,
+      teacher: sub.teacherName,
+    }))
+  }, [schedules, studentClass, subjectsFromDb, homeroomTeacherName])
 
   // Attendance Statistics (Live Realtime)
   const attendanceStats = useMemo(() => {
@@ -444,39 +344,30 @@ export function StudentDashboard({
     )
   }, [classmates, classmateSearch])
 
-  // Quick Absensi Action
+  // Quick Absensi Action (Terpusat ke Biometrik Face AI / QR Scanner)
   const handleQuickPresensi = () => {
     Swal.fire({
-      title: 'Presensi Harian Siswa',
+      title: 'Presensi Biometrik AI & QR',
       html: `
         <div class="text-left space-y-3 p-2 text-xs">
-          <div class="p-3 bg-blue-50 dark:bg-slate-800 rounded-xl border border-blue-200">
-            <p class="font-bold text-blue-900 dark:text-blue-200">Konfirmasi Kehadiran Hari Ini</p>
+          <div class="p-3 bg-blue-50 dark:bg-slate-800 rounded-xl border border-blue-200 dark:border-blue-900/60">
+            <p class="font-bold text-blue-900 dark:text-blue-200">Presensi Terpusat SIMASMUH</p>
             <p class="text-slate-600 dark:text-slate-400 mt-0.5">Waktu Server: <b>${clock.timeString} WIB</b></p>
             <p class="text-slate-600 dark:text-slate-400">Lokasi: <b>SMA Muhammadiyah 1 Ponorogo</b></p>
           </div>
-          <p class="text-slate-500">Pilih metode pencatatan presensi Anda:</p>
+          <p class="text-slate-600 dark:text-slate-300">
+            Presensi siswa dicatat secara otomatis melalui <b>Gate Biometrik Face AI</b> di pintu masuk sekolah atau pemindaian <b>QR Code Cadangan</b> oleh petugas.
+          </p>
         </div>
       `,
-      icon: 'question',
+      icon: 'info',
       showCancelButton: true,
-      showDenyButton: true,
-      confirmButtonText: 'Scan Face / QR',
-      denyButtonText: 'Check-in Mandiri',
+      confirmButtonText: 'Buka Log & Scan QR',
       cancelButtonText: 'Tutup',
       confirmButtonColor: '#2563eb',
-      denyButtonColor: '#10b981'
     }).then((res) => {
       if (res.isConfirmed) {
         window.location.href = '/presensi/kehadiran-siswa'
-      } else if (res.isDenied) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Presensi Berhasil Dicatat!',
-          text: `Kehadiran siswa ${session?.user?.name || ''} tercatat pada ${clock.timeString} WIB.`,
-          timer: 2500,
-          showConfirmButton: false
-        })
       }
     })
   }
@@ -727,17 +618,13 @@ export function StudentDashboard({
         </div>
       </div>
 
-      {/* 2. MAIN HERO PROFILE BANNER (SIAKAD UMPO BLUE BANNER STYLE) */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white shadow-md border border-blue-900/40 p-4 sm:p-5">
-        {/* Subtle geometric glass shine effect */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-        <div className="absolute bottom-0 left-1/3 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      {/* 2. MAIN HERO PROFILE BANNER (SIMASMUH INSTITUTIONAL STYLE) */}
+      <div className="simas-dash-header p-3.5 sm:p-4 md:p-5 text-white">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
           {/* Left: Avatar & Identity Details */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5 sm:gap-4">
+          <div className="flex flex-row items-center gap-3 sm:gap-4">
               <div className="relative shrink-0">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-100 dark:bg-slate-800 border-3 border-white/20 shadow-inner flex items-center justify-center overflow-hidden">
+                <div className="w-13 h-13 sm:w-16 sm:h-16 md:w-18 md:h-18 rounded-full bg-slate-100 dark:bg-slate-800 border-2 sm:border-3 border-white/20 shadow-inner flex items-center justify-center overflow-hidden">
                   {(session?.user as any)?.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -746,13 +633,13 @@ export function StudentDashboard({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white text-2xl font-black">
+                    <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white text-xl sm:text-2xl font-black">
                       {(session?.user?.name || 'S').charAt(0).toUpperCase()}
                     </div>
                   )}
                 </div>
                 <div 
-                  className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-slate-900 flex items-center justify-center ${
+                  className={`absolute bottom-0 right-0 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 border-slate-900 flex items-center justify-center ${
                     activeStudent?.isActive !== false && (session?.user as any)?.isActive !== false
                       ? 'bg-emerald-500'
                       : 'bg-rose-500'
@@ -762,18 +649,18 @@ export function StudentDashboard({
               </div>
 
               {/* Student Info */}
-              <div className="space-y-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">
+              <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  <h2 className="text-sm sm:text-base md:text-lg font-black tracking-tight text-white uppercase truncate max-w-[200px] sm:max-w-none">
                     {clock.greeting}, <span className="text-blue-300">{session?.user?.name || 'MUH NAILAR RAZA'}</span>
                   </h2>
                   {activeStudent?.isActive !== false && (session?.user as any)?.isActive !== false ? (
-                    <Badge className="bg-emerald-500/90 text-white font-bold text-[9.5px] px-2 py-0.2 rounded-full border-none shadow-xs flex items-center gap-1">
+                    <Badge className="bg-emerald-500/90 text-white font-bold text-[9px] sm:text-[9.5px] px-1.5 sm:px-2 py-0.2 rounded-full border-none shadow-xs flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                       Aktif
                     </Badge>
                   ) : (
-                    <Badge className="bg-rose-500/90 text-white font-bold text-[9.5px] px-2 py-0.2 rounded-full border-none shadow-xs flex items-center gap-1">
+                    <Badge className="bg-rose-500/90 text-white font-bold text-[9px] sm:text-[9.5px] px-1.5 sm:px-2 py-0.2 rounded-full border-none shadow-xs flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-white" />
                       Nonaktif
                     </Badge>
@@ -781,10 +668,10 @@ export function StudentDashboard({
                 </div>
 
               {/* Subtitle Details: NISN, Class, Program, Homeroom Teacher */}
-              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] sm:text-xs text-blue-100/90 font-medium">
-                <span>NISN/NIS: <b className="text-white font-mono">{activeStudent?.nisn || activeStudent?.nis || (session?.user as any)?.username || '21533407'}</b></span>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px] md:text-xs text-blue-100/90 font-medium">
+                <span>NISN/NIS: <b className="text-white font-mono">{activeStudent?.nisn || activeStudent?.nis || (session?.user as any)?.username || '-'}</b></span>
                 <span>•</span>
-                <span>Kelas: <b className="text-white">{studentClass?.name || 'X 1'}</b> ({activeStudent?.program || 'Reguler'})</span>
+                <span>Kelas: <b className="text-white">{studentClass?.name || activeStudent?.class?.name || '-'}</b> ({activeStudent?.program || 'Reguler'})</span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <User className="w-3 h-3 text-blue-300" />
@@ -793,55 +680,47 @@ export function StudentDashboard({
               </div>
 
               {/* 3 Bottom Badged Pills */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <div className="px-2.5 py-0.5 rounded-lg bg-white/10 hover:bg-white/15 backdrop-blur-md text-[10px] sm:text-[11px] font-semibold text-blue-100 flex items-center gap-1 border border-white/10 transition-colors">
+              <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 pt-0.5 sm:pt-1">
+                <div className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/15 backdrop-blur-md text-[9.5px] sm:text-[10.5px] font-semibold text-blue-100 flex items-center gap-1 border border-white/10 transition-colors">
                   <CalendarDays className="w-3 h-3 text-blue-300" />
                   <span>{clock.dateString || 'Jumat, 11 September 2026'}</span>
                 </div>
-                <div className="px-2.5 py-0.5 rounded-lg bg-white/10 hover:bg-white/15 backdrop-blur-md text-[10px] sm:text-[11px] font-semibold text-blue-100 flex items-center gap-1 border border-white/10 transition-colors">
+                <div className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/15 backdrop-blur-md text-[9.5px] sm:text-[10.5px] font-semibold text-blue-100 flex items-center gap-1 border border-white/10 transition-colors">
                   <BookOpen className="w-3 h-3 text-indigo-300" />
                   <span>Semester {currentSemester} ({currentSemester % 2 === 0 ? 'Genap' : 'Ganjil'})</span>
                 </div>
-                <div className="px-2.5 py-0.5 rounded-lg bg-white/10 hover:bg-white/15 backdrop-blur-md text-[10px] sm:text-[11px] font-semibold text-blue-100 flex items-center gap-1 border border-white/10 transition-colors">
+                <div className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/15 backdrop-blur-md text-[9.5px] sm:text-[10.5px] font-semibold text-blue-100 flex items-center gap-1 border border-white/10 transition-colors">
                   <GraduationCap className="w-3 h-3 text-emerald-300" />
-                  <span>Angkatan 2024 • {studentClass?.name || 'X 1'}</span>
+                  <span>Kelas {studentClass?.name || activeStudent?.class?.name || '-'}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right: Prominent Actions (ABSENSI SISWA, BUKU INDUK, KARTU PELAJAR & Secondary Buttons) */}
-          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-2 shrink-0">
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              <Button
-                onClick={handleQuickPresensi}
-                className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs sm:text-sm h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl shadow-md shadow-emerald-600/30 border border-emerald-400/40 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-1.5 uppercase tracking-wide"
-              >
-                <QrCode className="w-4 h-4" />
-                <span>Absensi</span>
-              </Button>
-
+          {/* Right: Prominent Actions (BUKU INDUK, KARTU PELAJAR & Secondary Buttons) */}
+          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-1.5 sm:gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
               <Link
                 href="/siswa/buku-induk"
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 h-9 sm:h-10 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-teal-600/20 border border-teal-400/40 transition-all transform hover:-translate-y-0.5"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 h-8 sm:h-9 md:h-10 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-teal-600/20 border border-teal-400/40 transition-all transform hover:-translate-y-0.5"
               >
-                <BookMarked className="w-4 h-4" />
+                <BookMarked className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span>Buku Induk</span>
               </Link>
 
               <Link
                 href="/pengaturan/profil#kartu-pelajar"
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 h-9 sm:h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 border border-blue-400/40 transition-all transform hover:-translate-y-0.5"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 h-8 sm:h-9 md:h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 border border-blue-400/40 transition-all transform hover:-translate-y-0.5"
               >
-                <CreditCard className="w-4 h-4" />
+                <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span>Kartu Pelajar</span>
               </Link>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-start sm:justify-end">
+            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 w-full sm:w-auto justify-start sm:justify-end">
               <Link
                 href="/agenda"
-                className="inline-flex items-center bg-white/10 hover:bg-white/20 text-white border border-white/20 text-[11px] h-7.5 px-2.5 rounded-lg font-semibold backdrop-blur-sm transition-colors"
+                className="inline-flex items-center bg-white/10 hover:bg-white/20 text-white border border-white/20 text-[10px] sm:text-[11px] h-7 px-2 sm:px-2.5 rounded-lg font-semibold backdrop-blur-sm transition-colors"
                 title="Buka Halaman Khusus Kalender Akademik"
               >
                 <CalendarDays className="w-3 h-3 mr-1 text-blue-300" />
@@ -851,7 +730,7 @@ export function StudentDashboard({
                 variant="outline"
                 size="sm"
                 onClick={() => setShowClassmatesModal(true)}
-                className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-[11px] h-7.5 px-2.5 rounded-lg font-semibold backdrop-blur-sm"
+                className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-[10px] sm:text-[11px] h-7 px-2 sm:px-2.5 rounded-lg font-semibold backdrop-blur-sm"
               >
                 <Users className="w-3 h-3 mr-1 text-emerald-300" />
                 Teman Sekelas ({classmates.length || 32})
@@ -861,11 +740,54 @@ export function StudentDashboard({
         </div>
       </div>
 
-      {/* JADWAL SHOLAT & KHGT MUHAMMADIYAH REALTIME BANNER */}
-      <PrayerTimesWidget variant="banner" />
+      {/* NOTIFIKASI & AREA TAGIHAN KEUANGAN SISWA (STANDAR SINKRONISASI KEUANGAN) */}
+      {allUnpaid.length > 0 ? (
+        <div className="relative overflow-hidden p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-rose-950/90 via-amber-950/80 to-slate-900 border-2 border-rose-500/50 shadow-md text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in-50">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 text-white font-black flex items-center justify-center shrink-0 shadow-md shadow-rose-600/30">
+              <Receipt className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-black uppercase tracking-wide text-rose-300">
+                  Pemberitahuan Tagihan Siswa
+                </span>
+                <Badge className="bg-rose-500 text-white font-extrabold text-[9.5px] px-2 py-0 border-none shadow-2xs">
+                  {allUnpaid.length} Tagihan Aktif
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-200 truncate">
+                Total kewajiban: <strong className="text-rose-400 font-mono font-black text-sm">{formatCurrency(totalUnpaidAmount)}</strong>
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => setShowPaymentPopup(true)}
+            className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-slate-950 font-black text-xs h-9 sm:h-10 px-4 rounded-xl shadow-md shadow-rose-950/40 shrink-0 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+          >
+            <CreditCard className="w-4 h-4 text-slate-950" />
+            <span>Bayar / Rincian Tagihan</span>
+          </Button>
+        </div>
+      ) : (
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-semibold">Alhamdulillah, seluruh administrasi keuangan &amp; SPP siswa telah lunas tercatat.</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowPaymentPopup(true)}
+            className="h-7 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100/60 shrink-0"
+          >
+            Riwayat &rarr;
+          </Button>
+        </div>
+      )}
 
-      {/* 3. TOP 5 METRIC SUMMARY CARDS (COMPACT RESPONSIVE) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+      {/* 3. TOP 4 METRIC SUMMARY CARDS (COMPACT RESPONSIVE) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         {/* Card 1: Mapel & Jam Hari Ini */}
         <Card className="border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-all rounded-xl p-3 flex flex-col justify-between">
           <div className="flex items-start justify-between">
@@ -910,29 +832,7 @@ export function StudentDashboard({
           </div>
         </Card>
 
-        {/* Card 3: Rata-rata Nilai */}
-        <Card className="border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-all rounded-xl p-3 flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-tight block">
-                Rata-rata Nilai
-              </span>
-              <h3 className="text-xl font-black text-blue-600 dark:text-blue-400 mt-0.5">
-                {currentAvgScore}
-              </h3>
-            </div>
-            <div className="w-7.5 h-7.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center shrink-0">
-              <Award className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-300 font-semibold truncate block">
-              {gpaPredikat}
-            </span>
-          </div>
-        </Card>
-
-        {/* Card 4: Status Presensi Hari Ini */}
+        {/* Card 3: Status Presensi Hari Ini */}
         <Card className="border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-all rounded-xl p-3 flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div>
@@ -949,50 +849,61 @@ export function StudentDashboard({
           </div>
           <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
             <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate block">
-              {todayAttendance?.checkInTime || todayAttendance?.time ? `Masuk: ${todayAttendance.checkInTime || todayAttendance.time} WIB` : 'Presensi Mandiri / QR'}
+              {todayAttendance?.checkInTime || todayAttendance?.time ? `Masuk: ${todayAttendance.checkInTime || todayAttendance.time} WIB` : 'Biometrik Face AI / QR'}
             </span>
           </div>
         </Card>
 
-        {/* Card 5: Status Tagihan & SPP */}
+        {/* Card 4: Status Tagihan & SPP (DITONJOLKAN DENGAN BORDER & ACCENT) */}
         <Card
           onClick={() => setShowPaymentPopup(true)}
-          className="border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-all rounded-xl p-3 flex flex-col justify-between cursor-pointer group"
+          className={`border-2 transition-all rounded-xl p-3 flex flex-col justify-between cursor-pointer group hover:shadow-md ${
+            allUnpaid.length > 0
+              ? 'border-rose-400/80 dark:border-rose-500/60 bg-gradient-to-br from-rose-50/60 via-white to-amber-50/40 dark:from-slate-900 dark:to-rose-950/30'
+              : 'border-emerald-300/80 dark:border-emerald-700/60 bg-white dark:bg-slate-900 shadow-2xs'
+          }`}
         >
           <div className="flex items-start justify-between">
             <div>
-              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-tight block">
-                Tagihan SPP
+              <span className="text-[10px] font-extrabold text-slate-600 dark:text-slate-300 uppercase tracking-tight block">
+                Tagihan SPP &amp; Keuangan
               </span>
-              <h3 className={`text-xl font-black mt-0.5 ${allUnpaid.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600'}`}>
+              <h3 className={`text-xl font-black mt-0.5 ${allUnpaid.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600'}`}>
                 {allUnpaid.length > 0 ? `${allUnpaid.length} Tagihan` : 'Lunas'}
               </h3>
             </div>
-            <div className="w-7.5 h-7.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 group-hover:scale-110 transition-transform flex items-center justify-center shrink-0">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${
+              allUnpaid.length > 0
+                ? 'bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-300'
+                : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600'
+            }`}>
               <Receipt className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-            <span className={`text-[10px] font-bold truncate block ${allUnpaid.length > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+          <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+            <span className={`text-[10px] font-black truncate ${allUnpaid.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600'}`}>
               {allUnpaid.length > 0 ? formatCurrency(totalUnpaidAmount) : 'Bebas Tunggakan'}
+            </span>
+            <span className="text-[9.5px] text-blue-600 dark:text-blue-400 font-bold group-hover:underline">
+              Detail &rarr;
             </span>
           </div>
         </Card>
       </div>
 
       {/* 4. PINTASAN LAYANAN AKADEMIK SISWA (7 SERVICE SHORTCUT CARDS) */}
-      <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3 sm:p-4">
-        <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-100 dark:border-slate-800">
+      <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3 sm:p-3.5">
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-1.5">
             <div className="w-5 h-5 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             </div>
             <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
-              Pintasan Layanan Akademik Siswa
+              Pintasan Layanan Siswa
             </h3>
           </div>
-          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 hidden sm:inline">
-            Portal Siswa SMA Muhammadiyah 1 Ponorogo
+          <span className="text-[10px] sm:text-[10.5px] font-semibold text-slate-400 hidden sm:inline">
+            Akses Layanan Akademik Mandiri
           </span>
         </div>
 
@@ -1000,31 +911,31 @@ export function StudentDashboard({
           {/* Shortcut 1: Buku Induk Siswa */}
           <Link
             href="/siswa/buku-induk"
-            className="group p-2.5 sm:p-3 rounded-xl border border-teal-200/80 dark:border-teal-900/60 bg-teal-50/50 dark:bg-teal-950/30 hover:bg-white dark:hover:bg-slate-800 hover:border-teal-400 dark:hover:border-teal-600 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
+            className="group p-2 sm:p-2.5 rounded-xl border border-teal-200/80 dark:border-teal-900/60 bg-teal-50/50 dark:bg-teal-950/30 hover:bg-white dark:hover:bg-slate-800 hover:border-teal-400 dark:hover:border-teal-600 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
           >
-            <div className="w-9 h-9 rounded-xl bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-              <BookMarked className="w-4 h-4" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+              <BookMarked className="w-3.5 h-3.5" />
             </div>
-            <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-teal-600 transition-colors">
+            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-teal-600 transition-colors leading-tight">
               Buku Induk
             </h4>
-            <span className="text-[9.5px] text-teal-600 dark:text-teal-400 font-medium mt-0.2">
-              Biodata 57 Butir & F4
+            <span className="text-[9px] text-teal-600 dark:text-teal-400 font-medium mt-0.5 truncate max-w-full">
+              Biodata & F4
             </span>
           </Link>
 
           {/* Shortcut 2: Kartu Pelajar */}
           <Link
             href="/pengaturan/profil#kartu-pelajar"
-            className="group p-2.5 sm:p-3 rounded-xl border border-blue-200/80 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 hover:bg-white dark:hover:bg-slate-800 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
+            className="group p-2 sm:p-2.5 rounded-xl border border-blue-200/80 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 hover:bg-white dark:hover:bg-slate-800 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
           >
-            <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-              <CreditCard className="w-4 h-4" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+              <CreditCard className="w-3.5 h-3.5" />
             </div>
-            <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors leading-tight">
               Kartu Pelajar
             </h4>
-            <span className="text-[9.5px] text-blue-600 dark:text-blue-400 font-medium mt-0.2">
+            <span className="text-[9px] text-blue-600 dark:text-blue-400 font-medium mt-0.5 truncate max-w-full">
               ID Card Digital
             </span>
           </Link>
@@ -1032,31 +943,31 @@ export function StudentDashboard({
           {/* Shortcut 3: Presensi Siswa */}
           <Link
             href="/presensi/kehadiran-siswa"
-            className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
+            className="group p-2 sm:p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
           >
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-              <ClipboardCheck className="w-4 h-4" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+              <ClipboardCheck className="w-3.5 h-3.5" />
             </div>
-            <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">
-              Absensi Siswa
+            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors leading-tight">
+              Log Absensi
             </h4>
-            <span className="text-[9.5px] text-slate-400 font-medium mt-0.2">
-              Presensi QR / Mandiri
+            <span className="text-[9px] text-slate-400 font-medium mt-0.5 truncate max-w-full">
+              Riwayat & QR
             </span>
           </Link>
 
           {/* Shortcut 4: Jadwal Pelajaran */}
           <Link
             href="/akademik/jadwal-pelajaran"
-            className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
+            className="group p-2 sm:p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
           >
-            <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-              <BookOpen className="w-4 h-4" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+              <BookOpen className="w-3.5 h-3.5" />
             </div>
-            <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors">
+            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors leading-tight">
               Jadwal KBM
             </h4>
-            <span className="text-[9.5px] text-slate-400 font-medium mt-0.2">
+            <span className="text-[9px] text-slate-400 font-medium mt-0.5 truncate max-w-full">
               Jadwal Mingguan
             </span>
           </Link>
@@ -1064,15 +975,15 @@ export function StudentDashboard({
           {/* Shortcut 5: Konseling & Izin */}
           <Link
             href="/presensi/izin-siswa"
-            className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
+            className="group p-2 sm:p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
           >
-            <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-              <HeartHandshake className="w-4 h-4" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+              <HeartHandshake className="w-3.5 h-3.5" />
             </div>
-            <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-amber-600 transition-colors">
+            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-amber-600 transition-colors leading-tight">
               Izin & BK
             </h4>
-            <span className="text-[9.5px] text-slate-400 font-medium mt-0.2">
+            <span className="text-[9px] text-slate-400 font-medium mt-0.5 truncate max-w-full">
               Konseling & Izin
             </span>
           </Link>
@@ -1080,15 +991,15 @@ export function StudentDashboard({
           {/* Shortcut 6: Ujian CBT Online */}
           <Link
             href="/demo-waiting-room"
-            className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center"
+            className="group p-2 sm:p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
           >
-            <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-              <Laptop className="w-4 h-4" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+              <Laptop className="w-3.5 h-3.5" />
             </div>
-            <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-rose-600 transition-colors">
+            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-rose-600 transition-colors leading-tight">
               Ujian CBT
             </h4>
-            <span className="text-[9.5px] text-slate-400 font-medium mt-0.2">
+            <span className="text-[9px] text-slate-400 font-medium mt-0.5 truncate max-w-full">
               Asesmen Online
             </span>
           </Link>
@@ -1096,16 +1007,16 @@ export function StudentDashboard({
           {/* Shortcut 7: Tagihan & Keuangan */}
           <button
             onClick={() => setShowPaymentPopup(true)}
-            className="group p-2.5 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center w-full"
+            className="group p-2 sm:p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center w-full min-h-[72px]"
           >
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-              <Receipt className="w-4 h-4" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+              <Receipt className="w-3.5 h-3.5" />
             </div>
-            <h4 className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors">
+            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors leading-tight">
               Tagihan SPP
             </h4>
-            <span className="text-[9.5px] text-slate-400 font-medium mt-0.2">
-              Rincian Keuangan
+            <span className="text-[9px] text-slate-400 font-medium mt-0.5 truncate max-w-full">
+              Rincian Biaya
             </span>
           </button>
         </div>
@@ -1121,7 +1032,7 @@ export function StudentDashboard({
               <div>
                 <CardTitle className="text-xs sm:text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
                   <CalendarDays className="w-4 h-4 text-purple-600" />
-                  Jadwal Pelajaran Kelas {studentClass?.name || 'X 1'}
+                  Jadwal Pelajaran Kelas {studentClass?.name || activeStudent?.class?.name || '-'}
                 </CardTitle>
                 <CardDescription className="text-[11px] mt-0.5 text-slate-500 flex flex-wrap items-center gap-1.5">
                   <span>{scheduleViewTab === 'table' ? 'Tabel Jadwal Mingguan' : `Jadwal Hari Ini (${daysMap[todayDayIndex]})`} • Semester {currentSemester}</span>
@@ -1305,112 +1216,107 @@ export function StudentDashboard({
             </CardContent>
           </Card>
 
-          {/* Card 2: Poin Ketertiban & Evaluasi Karakter Siswa (Pengganti Grafik Nilai) */}
+          {/* Card 2: Log Presensi & Riwayat Kehadiran Siswa (Menggantikan Poin Ketertiban yang duplikat) */}
           <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl overflow-hidden">
             <CardHeader className="p-3.5 sm:p-4 pb-2.5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <CardTitle className="text-xs sm:text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  Poin Ketertiban &amp; Karakter Siswa
+                  <ClipboardCheck className="w-4 h-4 text-emerald-600" />
+                  Log Presensi &amp; Riwayat Kehadiran Siswa
                 </CardTitle>
                 <CardDescription className="text-[11px] mt-0.5 text-slate-500">
-                  Buku saku adab, kedisiplinan, dan rekam jejak tata tertib sekolah
+                  Rekam jejak presensi harian biometrik Face AI, QR code, dan perizinan resmi
                 </CardDescription>
               </div>
 
               <div className="flex items-center gap-2">
-                <Link href="/akademik/etika-tatib">
-                  <Button variant="outline" size="sm" className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/40 h-7 px-2.5 rounded-lg">
-                    Buku Saku &rarr;
+                <Button
+                  onClick={handleQuickPresensi}
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2.5 text-[11px] font-bold text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/40 rounded-lg flex items-center gap-1"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Scan QR / Info</span>
+                </Button>
+                <Link href="/presensi/kehadiran-siswa">
+                  <Button variant="ghost" size="sm" className="text-xs font-bold text-emerald-600 h-7 px-2">
+                    Lengkap &rarr;
                   </Button>
                 </Link>
               </div>
             </CardHeader>
 
             <CardContent className="p-3.5 sm:p-4 space-y-3">
-              {/* 3 Metric Mini Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {/* 1. Poin Kedisiplinan */}
-                <div className="p-2.5 sm:p-3 rounded-xl border border-emerald-100 dark:border-emerald-950/60 bg-emerald-50/40 dark:bg-emerald-950/20 flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-                      Poin Kedisiplinan
-                    </span>
-                    <Award className="w-3.5 h-3.5 text-emerald-600" />
-                  </div>
-                  <div className="flex items-baseline gap-1.5 mt-1">
-                    <h4 className="text-xl font-black text-slate-900 dark:text-white">
-                      {characterSummary?.kedisiplinanScore ?? 100}
-                    </h4>
-                    <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 text-[9px] font-bold px-1.5 py-0">
-                      Grade {characterSummary?.kedisiplinanGrade || ((characterSummary?.kedisiplinanScore ?? 100) >= 90 ? 'A' : (characterSummary?.kedisiplinanScore ?? 100) >= 70 ? 'B' : 'C')}
-                    </Badge>
-                  </div>
-                  <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1 truncate">
-                    <CheckCircle2 className="w-3 h-3" />
-                    {(characterSummary?.kedisiplinanScore ?? 100) >= 90
-                      ? 'Baik / Terpuji'
-                      : (characterSummary?.kedisiplinanScore ?? 100) >= 70
-                      ? 'Bimbingan Ringan'
-                      : 'Perlu Perhatian'}
-                  </p>
+              {/* Summary Stats Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                <div className="p-2 sm:p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-950/60 bg-emerald-50/40 dark:bg-emerald-950/20">
+                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">
+                    Hadir
+                  </span>
+                  <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                    {attendanceStats.hadirCount} <span className="text-[10px] font-normal text-slate-500">Hari</span>
+                  </h4>
+                  <span className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400">
+                    {attendanceStats.rate}% Rasio
+                  </span>
                 </div>
 
-                {/* 2. Amalan Ibadah */}
-                <div className="p-2.5 sm:p-3 rounded-xl border border-teal-100 dark:border-teal-950/60 bg-teal-50/40 dark:bg-teal-950/20 flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-teal-700 dark:text-teal-400 uppercase tracking-wider">
-                      Amalan Ibadah
-                    </span>
-                    <HeartHandshake className="w-3.5 h-3.5 text-teal-600" />
-                  </div>
-                  <div className="flex items-baseline gap-1.5 mt-1">
-                    <h4 className="text-xl font-black text-slate-900 dark:text-white">
-                      Grade {characterSummary?.ibadahGrade || 'A'}
-                    </h4>
-                  </div>
-                  <p className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 mt-0.5 truncate">
-                    {characterSummary?.ibadahStatus || 'Sholat Dzuhur & Dhuha'}
-                  </p>
+                <div className="p-2 sm:p-2.5 rounded-xl border border-amber-100 dark:border-amber-950/60 bg-amber-50/40 dark:bg-amber-950/20">
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider block">
+                    Izin / Sakit
+                  </span>
+                  <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                    {attendanceStats.izinSakitCount} <span className="text-[10px] font-normal text-slate-500">Hari</span>
+                  </h4>
+                  <span className="text-[9.5px] font-semibold text-amber-600 dark:text-amber-400">
+                    {attendanceStats.izinRate}% Izin
+                  </span>
                 </div>
 
-                {/* 3. Adab & Kesantunan */}
-                <div className="p-2.5 sm:p-3 rounded-xl border border-cyan-100 dark:border-cyan-950/60 bg-cyan-50/40 dark:bg-cyan-950/20 flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-cyan-700 dark:text-cyan-400 uppercase tracking-wider">
-                      Adab &amp; Kesantunan
-                    </span>
-                    <Users className="w-3.5 h-3.5 text-cyan-600" />
-                  </div>
-                  <div className="flex items-baseline gap-1.5 mt-1">
-                    <h4 className="text-xl font-black text-slate-900 dark:text-white">
-                      Grade {characterSummary?.perilakuGrade || 'A'}
-                    </h4>
-                  </div>
-                  <p className="text-[10px] font-semibold text-cyan-600 dark:text-cyan-400 mt-0.5 truncate">
-                    {characterSummary?.perilakuStatus || 'Santun kepada Guru'}
-                  </p>
+                <div className="p-2 sm:p-2.5 rounded-xl border border-rose-100 dark:border-rose-950/60 bg-rose-50/40 dark:bg-rose-950/20">
+                  <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider block">
+                    Alpha / Alpa
+                  </span>
+                  <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                    {attendanceStats.alphaCount} <span className="text-[10px] font-normal text-slate-500">Hari</span>
+                  </h4>
+                  <span className="text-[9.5px] font-semibold text-rose-600 dark:text-rose-400">
+                    {attendanceStats.alphaCount === 0 ? 'Nihil (Bagus)' : 'Perlu Diperbaiki'}
+                  </span>
+                </div>
+
+                <div className="p-2 sm:p-2.5 rounded-xl border border-blue-100 dark:border-blue-950/60 bg-blue-50/40 dark:bg-blue-950/20">
+                  <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider block">
+                    Hari Ini
+                  </span>
+                  <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                    {todayAttendance?.status === 'HADIR' ? 'Hadir' : (todayAttendance?.status || 'Belum')}
+                  </h4>
+                  <span className="text-[9.5px] font-semibold text-blue-600 dark:text-blue-400 truncate block">
+                    {todayAttendance?.checkInTime || todayAttendance?.time ? `${todayAttendance.checkInTime || todayAttendance.time} WIB` : 'Gate Biometrik'}
+                  </span>
                 </div>
               </div>
 
-              {/* Riwayat Catatan Evaluasi & Pembinaan Siswa */}
+              {/* Attendance Table */}
               <div className="space-y-1.5 pt-1">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <FileText className="w-3 h-3 text-slate-500" />
-                    Riwayat Pembinaan &amp; Catatan Kedisiplinan Terbaru
+                    <Clock className="w-3 h-3 text-slate-500" />
+                    Riwayat Presensi Terbaru
                   </span>
-                  <span className="text-[9.5px] text-slate-400">Tim Tatib &amp; BK</span>
+                  <span className="text-[9.5px] text-slate-400">Sinkronisasi Real-Time</span>
                 </div>
 
-                {rawAssessments.length === 0 ? (
+                {(!dailyAttendanceHistory || dailyAttendanceHistory.length === 0) ? (
                   <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-800 text-center space-y-0.5">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
+                    <ClipboardCheck className="w-6 h-6 text-slate-400 mx-auto" />
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      Alhamdulillah, tidak ada catatan pelanggaran tata tertib
+                      Belum ada riwayat presensi harian tercatat
                     </p>
                     <p className="text-[10.5px] text-slate-400">
-                      Siswa memiliki rekam jejak kedisiplinan dan amalan ibadah yang sangat baik.
+                      Presensi akan otomatis tercatat saat siswa melewati gate sekolah atau dipindai petugas.
                     </p>
                   </div>
                 ) : (
@@ -1418,47 +1324,49 @@ export function StudentDashboard({
                     <table className="w-full text-left text-[11px]">
                       <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
                         <tr>
-                          <th className="py-1.5 px-2.5">Tanggal</th>
-                          <th className="py-1.5 px-2.5">Kategori</th>
-                          <th className="py-1.5 px-2.5">Poin</th>
-                          <th className="py-1.5 px-2.5">Catatan / Evaluasi</th>
-                          <th className="py-1.5 px-2.5 text-center">Status</th>
+                          <th className="py-2 px-2.5">Tanggal</th>
+                          <th className="py-2 px-2.5">Hari</th>
+                          <th className="py-2 px-2.5">Jam Masuk</th>
+                          <th className="py-2 px-2.5">Metode / Keterangan</th>
+                          <th className="py-2 px-2.5 text-center">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {rawAssessments.slice(0, 5).map((item: any, idx: number) => {
-                          const isNeg = (item.points < 0) || item.category === 'PELANGGARAN' || item.type === 'NEGATIF'
+                        {dailyAttendanceHistory.slice(0, 6).map((item: any, idx: number) => {
+                          const attDate = new Date(item.date || item.createdAt)
+                          const dayName = daysMap[attDate.getDay()] || 'Hari'
+                          const isHadir = item.status === 'HADIR'
+                          const isIzin = ['IZIN', 'SAKIT'].includes(item.status)
+
                           return (
                             <tr key={item.id || idx} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-                              <td className="py-1.5 px-2.5 text-slate-500 whitespace-nowrap">
-                                {new Date(item.date || item.createdAt).toLocaleDateString('id-ID', {
+                              <td className="py-1.5 px-2.5 text-slate-600 dark:text-slate-300 whitespace-nowrap font-mono font-medium">
+                                {attDate.toLocaleDateString('id-ID', {
                                   day: 'numeric',
                                   month: 'short',
                                   year: 'numeric'
                                 })}
                               </td>
-                              <td className="py-1.5 px-2.5">
-                                <Badge
-                                  variant="outline"
-                                  className={`text-[9px] font-bold uppercase px-1.5 py-0 ${
-                                    isNeg
-                                      ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300'
-                                      : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                  }`}
-                                >
-                                  {item.category?.replace('_', ' ') || 'TATA TERTIB'}
-                                </Badge>
+                              <td className="py-1.5 px-2.5 font-semibold text-slate-700 dark:text-slate-200">
+                                {dayName}
                               </td>
-                              <td className={`py-1.5 px-2.5 font-bold font-mono ${isNeg ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                {item.points > 0 ? `+${item.points}` : item.points || 0}
+                              <td className="py-1.5 px-2.5 font-mono text-slate-700 dark:text-slate-300">
+                                {item.checkInTime || item.time || (isHadir ? '06:45 WIB' : '-')}
                               </td>
-                              <td className="py-1.5 px-2.5">
-                                <p className="font-bold text-slate-800 dark:text-slate-100 truncate max-w-[220px]">{item.title}</p>
-                                {item.description && <p className="text-[10px] text-slate-400 truncate max-w-[220px]">{item.description}</p>}
+                              <td className="py-1.5 px-2.5 text-slate-500 dark:text-slate-400 truncate max-w-[200px]">
+                                {item.notes || item.method || (isHadir ? 'Biometrik Face AI' : isIzin ? 'Surat Dispensasi/Izin' : 'Tanpa Keterangan')}
                               </td>
                               <td className="py-1.5 px-2.5 text-center">
-                                <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 text-[9px] font-bold px-1.5 py-0">
-                                  {item.status || 'Tercatat'}
+                                <Badge
+                                  className={`text-[9px] font-bold px-2 py-0 border-none ${
+                                    isHadir
+                                      ? 'bg-emerald-500 text-white'
+                                      : isIzin
+                                      ? 'bg-amber-500 text-white'
+                                      : 'bg-rose-500 text-white'
+                                  }`}
+                                >
+                                  {item.status || 'HADIR'}
                                 </Badge>
                               </td>
                             </tr>
@@ -1475,73 +1383,73 @@ export function StudentDashboard({
 
         {/* RIGHT COLUMN (4 COLS): DONUT CHART, CLASSMATES & ACADEMIC INFO */}
         <div className="lg:col-span-4 flex flex-col gap-3.5 sm:gap-4">
-          {/* Card: Capaian Kehadiran & Target Kelulusan (Donut Chart) */}
+          {/* Card: Poin Ketertiban & Evaluasi Karakter Siswa */}
           <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3.5 sm:p-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <div className="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                 </div>
                 <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                  Capaian Kehadiran
+                  Poin Ketertiban &amp; Adab
                 </h3>
               </div>
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400">Target: 100%</span>
+              <Link href="/akademik/etika-tatib">
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-0.5">
+                  Buku Saku <ChevronRight className="w-3 h-3" />
+                </span>
+              </Link>
             </div>
 
-            <div className="py-3 flex flex-col items-center justify-center">
-              {/* SVG Donut Ring Chart */}
-              <div className="relative w-32 h-32 flex items-center justify-center">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  {/* Background Track */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    strokeWidth="9"
-                    fill="transparent"
-                    className="text-slate-100 dark:text-slate-800 stroke-current"
-                  />
-                  {/* Green Progress Ring */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    strokeWidth="9"
-                    strokeDasharray={238.76}
-                    strokeDashoffset={238.76 * (1 - attendanceStats.rate / 100)}
-                    strokeLinecap="round"
-                    fill="transparent"
-                    className="text-emerald-500 stroke-current transition-all duration-1000"
-                  />
-                </svg>
-                {/* Center Value */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-xl font-black text-slate-900 dark:text-white">{attendanceStats.rate}%</span>
-                  <span className="text-[9px] font-bold uppercase text-emerald-600">Presensi Aktif</span>
+            <div className="py-2.5 space-y-2.5">
+              {/* Main Score Box */}
+              <div className="p-3 rounded-xl bg-gradient-to-tr from-emerald-50 via-teal-50/50 to-white dark:from-slate-800 dark:to-slate-850 border border-emerald-200/70 dark:border-emerald-900/50 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">
+                    Skor Kedisiplinan
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-2xl font-black text-slate-900 dark:text-white">
+                      {characterSummary?.kedisiplinanScore ?? 100}
+                    </span>
+                    <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 text-[10px] font-bold px-1.5 py-0">
+                      Grade {characterSummary?.kedisiplinanGrade || ((characterSummary?.kedisiplinanScore ?? 100) >= 90 ? 'A' : (characterSummary?.kedisiplinanScore ?? 100) >= 70 ? 'B' : 'C')}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center font-black text-sm shrink-0">
+                  <Award className="w-5 h-5" />
                 </div>
               </div>
 
-              {/* Donut Chart Legend */}
-              <div className="grid grid-cols-2 gap-2 w-full mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-[11px]">
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/40">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                  <div>
-                    <span className="text-[10px] text-slate-500 block">Hadir</span>
-                    <span className="font-bold text-emerald-700 dark:text-emerald-300">
-                      {attendanceStats.totalDays > 0 ? `${attendanceStats.hadirCount} Hari (${attendanceStats.rate}%)` : '100% Selesai'}
-                    </span>
+              {/* Mini Indicators */}
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300 font-bold">
+                    <HeartHandshake className="w-3 h-3" />
+                    <span>Ibadah: {characterSummary?.ibadahGrade || 'A'}</span>
                   </div>
+                  <span className="text-[9.5px] text-slate-400 block mt-0.5 truncate">
+                    {characterSummary?.ibadahStatus || 'Tertib Sholat'}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50/60 dark:bg-blue-950/40">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
-                  <div>
-                    <span className="text-[10px] text-slate-500 block">Izin / Sakit</span>
-                    <span className="font-bold text-blue-700 dark:text-blue-300">
-                      {attendanceStats.totalDays > 0 ? `${attendanceStats.izinSakitCount} Hari (${attendanceStats.izinRate}%)` : '0% Sisa'}
-                    </span>
+                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-1 text-cyan-700 dark:text-cyan-300 font-bold">
+                    <Users className="w-3 h-3" />
+                    <span>Adab: {characterSummary?.perilakuGrade || 'A'}</span>
                   </div>
+                  <span className="text-[9.5px] text-slate-400 block mt-0.5 truncate">
+                    {characterSummary?.perilakuStatus || 'Santun & Tertib'}
+                  </span>
                 </div>
+              </div>
+
+              <div className="pt-1 text-[10.5px] text-slate-500 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                  {rawAssessments.length === 0 ? 'Bebas Pelanggaran' : `${rawAssessments.length} Catatan Pembinaan`}
+                </span>
+                <span className="font-semibold text-slate-400">Tim Tatib &amp; BK</span>
               </div>
             </div>
           </Card>

@@ -54,7 +54,8 @@ type BankAccount = {
 
 type PaymentBillingPopupProps = {
   open: boolean
-  onClose: () => void
+  onClose?: () => void
+  onCloseAction?: () => void
   initialTagihanId?: string
   studentId?: string
 }
@@ -121,7 +122,11 @@ const parseDiscountInfo = (notes: string | null) => {
   }
 }
 
-export default function PaymentBillingPopup({ open, onClose, initialTagihanId, studentId }: PaymentBillingPopupProps) {
+export default function PaymentBillingPopup({ open, onClose, onCloseAction, initialTagihanId, studentId }: PaymentBillingPopupProps) {
+  const handleClose = () => {
+    if (onCloseAction) onCloseAction()
+    else if (onClose) onClose()
+  }
   const [selectedTagihan, setSelectedTagihan] = useState<Tagihan | null>(null)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [paymentNotes, setPaymentNotes] = useState('')
@@ -244,7 +249,7 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId, s
       queryClient.invalidateQueries({ queryKey: ['my-all-tagihan'] })
       queryClient.invalidateQueries({ queryKey: ['payment-proofs'] })
       resetForm()
-      onClose()
+      handleClose()
     },
     onError: (error) => {
       Swal.fire({
@@ -332,30 +337,30 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId, s
   if (!open) return null
 
   return (
-    <Dialog open={open} onOpenChange={() => { resetForm(); onClose() }}>
-      <DialogContent className="w-[95vw] sm:max-w-[95vw] md:max-w-[90vw] lg:max-w-[85vw] xl:max-w-7xl max-h-[90vh] flex flex-col p-0 rounded-3xl border-0 shadow-2xl overflow-hidden bg-slate-50 dark:bg-slate-900">
-        {/* Header Banner Modern */}
-        <div className="shrink-0 bg-gradient-to-r from-blue-700 via-indigo-700 to-emerald-700 p-5 sm:p-6 text-white relative shadow-md">
+    <Dialog open={open} onOpenChange={() => { resetForm(); handleClose() }}>
+      <DialogContent className="w-[95vw] sm:max-w-[95vw] md:max-w-[90vw] lg:max-w-[85vw] xl:max-w-7xl max-h-[90vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-slate-50 dark:bg-slate-900">
+        {/* Header Modal Clean */}
+        <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 relative">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/15">
-                  <Receipt className="w-6 h-6 text-emerald-300" />
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-50 dark:bg-blue-950/60 rounded-xl border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400">
+                  <Receipt className="w-5 h-5" />
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight">Tagihan & Pembayaran Siswa</h2>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">Tagihan & Pembayaran Siswa</h2>
               </div>
-              <p className="text-blue-100 text-xs sm:text-sm pl-11 font-medium">
+              <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm pl-10 font-medium">
                 Pilih tagihan yang akan dibayar, sesuaikan angsuran, lalu unggah bukti transfer.
               </p>
             </div>
 
             {studentInfo && (
-              <div className="bg-white/15 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 text-xs sm:text-sm shrink-0">
-                <p className="font-bold text-white flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <div className="bg-slate-50 dark:bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs shrink-0">
+                <p className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   {studentInfo.name}
                 </p>
-                <p className="text-blue-100 text-xs font-mono mt-0.5">NIS: {studentInfo.nis} • Kelas <span className="font-extrabold text-white">{studentInfo.className}</span></p>
+                <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">NIS: {studentInfo.nis} • Kelas <strong className="text-slate-700 dark:text-slate-300 font-bold">{studentInfo.className}</strong></p>
               </div>
             )}
           </div>
@@ -368,11 +373,11 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId, s
               <span className="ml-3 text-lg text-gray-600">Memuat tagihan...</span>
             </div>
           ) : tagihans.length === 0 ? (
-            <Card className="border-green-200 bg-green-50 shadow-sm">
+            <Card className="border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs">
               <CardContent className="text-center py-12">
-                <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-green-800 mb-2">Tidak Ada Tagihan</h3>
-                <p className="text-green-700">Semua tagihan sudah lunas atau belum ada tagihan yang perlu dibayar.</p>
+                <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-emerald-800 dark:text-emerald-300 mb-2">Tidak Ada Tagihan</h3>
+                <p className="text-emerald-700 dark:text-emerald-400">Semua tagihan sudah lunas atau belum ada tagihan yang perlu dibayar.</p>
               </CardContent>
             </Card>
           ) : (
@@ -380,16 +385,16 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId, s
               {/* KOLOM KIRI: Daftar Tagihan & Ringkasan */}
               <div className="lg:col-span-7 space-y-5">
                 {/* Ringkasan Total */}
-                <Card className="border-orange-200 bg-orange-50/80 shadow-sm hover:shadow transition-shadow">
-                  <CardContent className="py-5">
+                <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                  <CardContent className="py-4 sm:py-5">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-orange-700 uppercase tracking-wider mb-1">Total Belum Dibayar</p>
-                        <p className="text-xl sm:text-2xl lg:text-3xl font-black text-orange-900 tracking-tight break-words">{formatCurrency(totalTagihan)}</p>
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Total Belum Dibayar</p>
+                        <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white tracking-tight break-words">{formatCurrency(totalTagihan)}</p>
                       </div>
-                      <div className="text-left sm:text-right bg-orange-100/80 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-orange-200 shrink-0">
-                        <p className="text-xl sm:text-2xl font-bold text-orange-700 leading-none">{tagihans.length}</p>
-                        <p className="text-[10px] sm:text-xs font-bold text-orange-800 mt-0.5 uppercase">Tagihan</p>
+                      <div className="text-left sm:text-right bg-slate-100 dark:bg-slate-800 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-slate-200 dark:border-slate-700 shrink-0">
+                        <p className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-200 leading-none">{tagihans.length}</p>
+                        <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5 uppercase">Tagihan</p>
                       </div>
                     </div>
                   </CardContent>
@@ -397,13 +402,13 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId, s
 
                 {/* AREA TAGIHAN SEDANG DIANGSUR (Siswa View) */}
                 {activeAngsurans.length > 0 && (
-                  <Card className="border-2 border-amber-400/80 bg-gradient-to-br from-amber-50 via-orange-50/50 to-amber-100/40 shadow-sm overflow-hidden">
-                    <CardHeader className="py-3 px-4 bg-amber-500/10 border-b border-amber-200/80 flex flex-row items-center justify-between space-y-0">
-                      <CardTitle className="text-xs sm:text-sm font-black text-amber-900 flex items-center gap-2 uppercase tracking-wider">
-                        <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
+                  <Card className="border border-amber-200 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 shadow-xs overflow-hidden">
+                    <CardHeader className="py-3 px-4 bg-amber-100/50 dark:bg-amber-900/30 border-b border-amber-200/80 dark:border-amber-900/50 flex flex-row items-center justify-between space-y-0">
+                      <CardTitle className="text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                         Area Tagihan Sedang Diangsur ({activeAngsurans.length} Cicilan Aktif)
                       </CardTitle>
-                      <Badge className="bg-amber-200 text-amber-900 border-amber-300 font-extrabold text-[11px]">
+                      <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border-amber-200 dark:border-amber-800 font-semibold text-[11px]">
                         Sisa Kurang Bayar: {formatCurrency(totalSisaAngsuran)}
                       </Badge>
                     </CardHeader>
@@ -599,94 +604,100 @@ export default function PaymentBillingPopup({ open, onClose, initialTagihanId, s
 
               {/* KOLOM KANAN: Form Upload & Info */}
               <div className="lg:col-span-5 space-y-5">
-                {/* Info Penting & Rekening - Dipindah ke atas Form Upload */}
-                <Card className="border-amber-200 bg-amber-50/80 shadow-sm">
-                  <CardContent className="p-4 sm:p-5 space-y-4">
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm">
-                        <p className="font-bold text-amber-900 mb-1.5 uppercase tracking-wide text-xs">Informasi Penting:</p>
-                        <ul className="space-y-1.5 text-amber-800 font-medium leading-relaxed">
-                          <li>• Pastikan nominal transfer <strong>sesuai</strong> dengan tagihan</li>
-                          <li>• Upload bukti transfer yang jelas dan dapat dibaca</li>
-                          <li>• Verifikasi pembayaran akan dilakukan oleh bagian keuangan</li>
-                        </ul>
-                      </div>
+                {/* Info Penting & Rekening - Clean Modern Institutional Style */}
+                <Card className="border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs rounded-xl overflow-hidden">
+                  <div className="p-3.5 sm:p-4 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                     </div>
+                    <span className="font-extrabold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                      Petunjuk Pembayaran
+                    </span>
+                  </div>
+                  <CardContent className="p-3.5 sm:p-4 space-y-3.5 text-xs">
+                    <ul className="space-y-1.5 text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-blue-600 font-bold">•</span>
+                        <span>Pastikan nominal transfer <strong>sesuai</strong> dengan tagihan atau sisa angsuran.</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-blue-600 font-bold">•</span>
+                        <span>Unggah bukti transfer resmi yang jelas dan nominal terbaca.</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-blue-600 font-bold">•</span>
+                        <span>Verifikasi pembayaran diproses otomatis atau oleh staf keuangan sekolah.</span>
+                      </li>
+                    </ul>
                     
                     {/* Virtual Account BNI Siswa */}
                     {studentInfo?.virtualAccount && (
-                      <>
-                        <Separator className="bg-emerald-200/60 dark:bg-emerald-800/60" />
-                        <div className="pt-2">
-                          <p className="font-bold text-emerald-900 dark:text-emerald-300 mb-2.5 flex items-center gap-2 uppercase tracking-wide text-xs">
-                            <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            Virtual Account BNI Siswa:
-                          </p>
-                          <div className="space-y-2 bg-gradient-to-r from-emerald-900 to-teal-900 text-white p-3.5 rounded-xl border border-emerald-500/40 shadow-sm">
-                            <div className="flex justify-between items-center">
-                              <span className="text-[11px] font-semibold text-emerald-200 uppercase tracking-wider">Mitra Bank BNI</span>
-                              <span className="text-[10px] font-black bg-orange-500 text-white px-2 py-0.5 rounded-md">
-                                BNI VA
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center bg-black/20 p-2 rounded-lg border border-white/10">
-                              <span className="font-mono font-black text-emerald-100 text-lg tracking-widest">
-                                {studentInfo.virtualAccount}
-                              </span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => copyToClipboard(studentInfo.virtualAccount)}
-                                className="h-7 px-2 text-xs font-bold text-emerald-300 hover:text-white hover:bg-emerald-700/50 rounded-lg gap-1"
-                              >
-                                <Copy className="w-3.5 h-3.5" /> Salin VA
-                              </Button>
-                            </div>
-                            <p className="text-[10px] text-emerald-200/80 italic">
-                              Transfer langsung melalui ATM, BNI Mobile Banking, atau Bank lain ke nomor VA di atas.
-                            </p>
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <p className="font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+                          <CreditCard className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          Virtual Account Siswa
+                        </p>
+                        <div className="space-y-2 bg-slate-900 text-white p-3 rounded-xl border border-slate-800 shadow-2xs">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[11px] font-medium text-slate-400">Mitra Bank BNI</span>
+                            <span className="text-[10px] font-bold bg-blue-600 text-white px-2 py-0.5 rounded-md">
+                              BNI VA
+                            </span>
                           </div>
+                          <div className="flex justify-between items-center bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                            <span className="font-mono font-bold text-white text-base tracking-wider">
+                              {studentInfo.virtualAccount}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => copyToClipboard(studentInfo.virtualAccount)}
+                              className="h-7 px-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg gap-1"
+                            >
+                              <Copy className="w-3.5 h-3.5" /> Salin VA
+                            </Button>
+                          </div>
+                          <p className="text-[10px] text-slate-400">
+                            Transfer melalui ATM, BNI Mobile Banking, atau transfer antar bank.
+                          </p>
                         </div>
-                      </>
+                      </div>
                     )}
 
                     {bankAccount && (bankAccount.bankName || bankAccount.bankNumber) && (
-                      <>
-                        <Separator className="bg-amber-200/60" />
-                        <div className="pt-2">
-                          <p className="font-bold text-amber-900 mb-3 flex items-center gap-2 uppercase tracking-wide text-xs">
-                            <Building2 className="w-4 h-4" />
-                            Rekening Utama Sekolah:
-                          </p>
-                          <div className="space-y-3 text-sm bg-white/40 p-3 rounded-xl border border-amber-100">
-                            <div className="flex justify-between items-center border-b border-amber-100/50 pb-2">
-                              <span className="text-amber-700 font-medium">Bank</span>
-                              <span className="font-bold text-amber-900 text-right">{bankAccount.bankName || '-'}</span>
-                            </div>
-                            <div className="flex justify-between items-center border-b border-amber-100/50 pb-2">
-                              <span className="text-amber-700 font-medium">Nomor</span>
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono font-bold text-amber-900 text-lg tracking-wide bg-amber-100/50 px-2 py-0.5 rounded-md">{bankAccount.bankNumber || '-'}</span>
-                                {bankAccount.bankNumber && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => copyToClipboard(bankAccount.bankNumber)}
-                                    className="h-7 w-7 p-0 text-amber-600 hover:text-amber-900 hover:bg-amber-200/50 rounded-full"
-                                  >
-                                    <Copy className="w-3.5 h-3.5" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-amber-700 font-medium">A.N.</span>
-                              <span className="font-bold text-amber-900 text-right">{bankAccount.bankOwner || '-'}</span>
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <p className="font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+                          <Building2 className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+                          Rekening Resmi Sekolah
+                        </p>
+                        <div className="space-y-2 text-xs bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                          <div className="flex justify-between items-center border-b border-slate-200/60 dark:border-slate-700 pb-1.5">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Bank</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 text-right">{bankAccount.bankName || '-'}</span>
+                          </div>
+                          <div className="flex justify-between items-center border-b border-slate-200/60 dark:border-slate-700 pb-1.5">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Nomor Rekening</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-slate-900 dark:text-white text-sm bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">{bankAccount.bankNumber || '-'}</span>
+                              {bankAccount.bankNumber && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => copyToClipboard(bankAccount.bankNumber)}
+                                  className="h-6 w-6 p-0 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-md"
+                                  title="Salin No Rekening"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </Button>
+                              )}
                             </div>
                           </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Atas Nama (A.N.)</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 text-right">{bankAccount.bankOwner || '-'}</span>
+                          </div>
                         </div>
-                      </>
+                      </div>
                     )}
                   </CardContent>
                 </Card>

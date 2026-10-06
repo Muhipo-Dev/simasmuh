@@ -127,14 +127,28 @@ export default function JadwalPelajaranPage() {
 
   const classes = useMemo(() => sortClasses(rawClasses || []), [rawClasses])
 
-  // 2. Fetch Daftar Siswa
+  // 2. Fetch Profil Siswa Aktif (Fast direct query untuk SISWA)
+  const { data: myStudentProfile } = useQuery<any>({
+    queryKey: ['my-student-profile-schedule', userId],
+    queryFn: async () => {
+      if (!userId) return null
+      const res = await authenticatedFetch(`/api-backend/students/by-user/${userId}`)
+      if (!res.ok) return null
+      return res.json()
+    },
+    enabled: role === 'SISWA' && !!userId,
+    staleTime: 60000,
+  })
+
+  // Fetch Semua Siswa (hanya untuk role Non-Siswa)
   const { data: students, isLoading: loadingStudents } = useQuery<any[]>({
     queryKey: ['students'],
     queryFn: async () => {
       const res = await authenticatedFetch('/api-backend/students')
       if (!res.ok) return []
       return res.json()
-    }
+    },
+    enabled: role !== 'SISWA'
   })
 
   // 3. Fetch Daftar Mata Pelajaran
@@ -167,10 +181,10 @@ export default function JadwalPelajaranPage() {
     }
   })
 
-  const isLoading = loadingClasses || loadingStudents || loadingSchedules || loadingSubjects || loadingTeachers || status === 'loading'
+  const isLoading = loadingClasses || (role !== 'SISWA' && loadingStudents) || loadingSchedules || loadingSubjects || loadingTeachers || status === 'loading'
 
   // Deteksi kelas siswa yang sedang login
-  const myProfile = students?.find((s: any) => 
+  const myProfile = myStudentProfile || students?.find((s: any) => 
     s.userId === userId || 
     (s.user && (s.user.id === userId || s.user.username === username || s.user.email === userEmail)) ||
     s.nisn === username || 
@@ -179,14 +193,14 @@ export default function JadwalPelajaranPage() {
     s.nis === userEmail ||
     (s.parentRelations && s.parentRelations.some((pr: any) => pr.parent?.userId === userId))
   )
-  const myClassId = myProfile?.classId
-  const activeStudentClass = classes?.find((c: any) => c.id === myClassId) || myProfile?.class || (classes && classes.length > 0 ? classes[0] : null)
+  const myClassId = myProfile?.classId || myStudentProfile?.classId || myStudentProfile?.class?.id
+  const activeStudentClass = myStudentProfile?.class || (classes ? classes.find((c: any) => c.id === myClassId) : null) || myProfile?.class || null
 
   // Default selected class: auto-select first available class for admin/guru or student's class
   useEffect(() => {
     if (classes && classes.length > 0) {
       if (role === 'SISWA' || role === 'WALI_MURID') {
-        if (activeStudentClass?.id) {
+        if (activeStudentClass?.id && selectedClassId !== activeStudentClass.id) {
           setSelectedClassId(activeStudentClass.id)
         }
       } else if (!selectedClassId) {

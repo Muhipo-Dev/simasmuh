@@ -425,7 +425,7 @@ export default function TeachersPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">No. Telepon / WhatsApp</Label>
+                  <Label htmlFor="phone">No. Telepon / HP</Label>
                   <Input 
                     id="phone" 
                     placeholder="081234567890" 
@@ -480,7 +480,7 @@ export default function TeachersPage() {
                       className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
                     />
                     <Label htmlFor="updatePhone" className="font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
-                      Ubah No. HP / WhatsApp Serentak
+                      Ubah No. HP / Telepon Serentak
                     </Label>
                   </div>
                   {bulkEditData.updatePhone && (
@@ -615,14 +615,14 @@ export default function TeachersPage() {
                     Memuat data...
                   </TableCell>
                 </TableRow>
-              ) : filterDataBySearch(teachers, searchQuery)?.length === 0 ? (
+              ) : filterDataBySearch((teachers || []).filter(t => (t.user as any)?.role !== 'HONORER' && (t.user as any)?.subRole !== 'HONORER'), searchQuery)?.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isSuperOrAdmin ? 4 : 2} className="text-center py-8 text-slate-500">
                     {searchQuery ? 'Tidak ada data guru yang sesuai dengan pencarian.' : 'Belum ada data guru.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                filterDataBySearch(teachers, searchQuery)?.map((item) => {
+                filterDataBySearch((teachers || []).filter(t => (t.user as any)?.role !== 'HONORER' && (t.user as any)?.subRole !== 'HONORER'), searchQuery)?.map((item) => {
                   const isSelected = selectedIds.includes(item.id)
                   const nip = item.nip || item.user?.nipNbm
                   return (

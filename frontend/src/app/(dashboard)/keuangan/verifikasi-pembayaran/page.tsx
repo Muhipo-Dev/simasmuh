@@ -1,13 +1,16 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Check, X, Download, FileText, Filter, Eye, Calendar, User, CreditCard, AlertTriangle } from 'lucide-react'
+import {
+  Loader2, Check, X, Download, FileText, Filter, Eye, Calendar, User, CreditCard, AlertTriangle,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
+} from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import Swal from 'sweetalert2'
 import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
@@ -21,17 +24,34 @@ export default function PaymentProofVerificationPage() {
   const authenticatedQuery = useAuthenticatedQuery()
   const authenticatedFetch = useAuthenticatedFetch()
 
-  const { data: paymentProofs, isLoading } = useQuery({
+  const { data: rawProofs = [], isLoading } = useQuery({
     queryKey: ['payment-proofs', filterStatus],
     queryFn: async () => {
       const url = filterStatus 
         ? `/api-backend/payment-proofs?status=${filterStatus}`
         : '/api-backend/payment-proofs'
       const response = await authenticatedQuery(url).catch(() => [])
-      return response?.data || response || []
+      return Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : []
     },
-    refetchInterval: 5000,
+    staleTime: 15000,
+    refetchOnWindowFocus: false,
   })
+
+  const paymentProofs = Array.isArray(rawProofs) ? rawProofs : []
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  const totalPages = Math.max(1, Math.ceil(paymentProofs.length / pageSize))
+  const paginatedProofs = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize
+    return paymentProofs.slice(startIdx, startIdx + pageSize)
+  }, [paymentProofs, currentPage, pageSize])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterStatus, pageSize])
 
   const verifyProofMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -202,13 +222,13 @@ export default function PaymentProofVerificationPage() {
 
           {/* Payment Proofs List */}
           <div className="space-y-3">
-            {paymentProofs.length === 0 ? (
+            {paginatedProofs.length === 0 ? (
               <div className="text-center py-10 text-slate-500 dark:text-slate-400">
                 <FileText className="w-12 h-12 mx-auto mb-2 opacity-30" />
                 <p>Belum ada bukti pembayaran yang perlu diverifikasi</p>
               </div>
             ) : (
-              (paymentProofs).map((proof: any, idx: number) => (
+              paginatedProofs.map((proof: any, idx: number) => (
                 <div key={proof.id || idx} className="p-5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-3 flex-1">
@@ -330,6 +350,84 @@ export default function PaymentProofVerificationPage() {
                 </div>
               ))
             )}
+          </div>
+
+          {/* Pagination Bar */}
+          <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-xs text-slate-500">
+              Menampilkan <span className="font-semibold text-slate-900 dark:text-white">
+                {paymentProofs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+              </span> – <span className="font-semibold text-slate-900 dark:text-white">
+                {Math.min(currentPage * pageSize, paymentProofs.length)}
+              </span> dari <span className="font-semibold text-slate-900 dark:text-white">{paymentProofs.length}</span> bukti pembayaran
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span>Baris:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value))
+                    setCurrentPage(1)
+                  }}
+                  className="px-2 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  title="Awal"
+                >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  title="Sebelumnya"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </Button>
+
+                <span className="px-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {currentPage} / {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  title="Selanjutnya"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage >= totalPages}
+                  title="Akhir"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

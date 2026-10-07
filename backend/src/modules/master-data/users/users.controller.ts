@@ -116,8 +116,8 @@ export class UsersController {
   }
 
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Request() req: any) {
+    return this.usersService.findAll(req?.user);
   }
 
   @Post()
@@ -126,8 +126,8 @@ export class UsersController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.usersService.update(id, data);
+  update(@Param('id') id: string, @Body() data: any, @Request() req: any) {
+    return this.usersService.update(id, data, req?.user);
   }
 
   @Patch(':id/toggle-active')
@@ -151,12 +151,12 @@ export class UsersController {
   }
 
   @Post('bulk-delete')
-  bulkDelete(@Body('ids') ids: string[]) {
-    return this.usersService.removeMany(ids);
+  bulkDelete(@Body('ids') ids: string[], @Request() req: any) {
+    return this.usersService.removeMany(ids, req?.user);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.usersService.remove(id, req?.user);
   }
 }

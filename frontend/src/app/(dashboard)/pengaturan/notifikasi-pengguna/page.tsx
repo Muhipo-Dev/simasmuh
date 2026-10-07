@@ -1,12 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { 
-  BellRing, Mail, CheckCircle2, ShieldCheck, 
-  Send, Save, Loader2, Sparkles, AlertCircle, Globe, RefreshCw,
-  Clock, Check, UserCheck, ShieldAlert, FileCheck, Wallet, CalendarDays,
-  Smartphone
+  Mail, CheckCircle2, Send, Save, Loader2, Sparkles, AlertCircle, Globe,
+  Clock, Check, FileCheck, Banknote, CalendarDays, Megaphone,
+  Wallet, ShieldAlert, UserCheck, ShieldCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,19 +20,19 @@ import { useSession } from 'next-auth/react'
 export default function NotifikasiPenggunaPage() {
   const authenticatedFetch = useAuthenticatedFetch()
   const { data: session } = useSession()
-  const userRole = (session?.user as any)?.role || 'SISWA'
-  const queryClient = useQueryClient()
+  const sessionRole = (session?.user as any)?.role || ''
 
+  // State settings with role-adaptive defaults
   const [settings, setSettings] = useState({
     notifPresensiMasuk: true,
     notifPresensiPulang: true,
+    notifGaji: true,
+    notifDisposisi: true,
+    notifIzinCuti: true,
+    notifPengumuman: true,
     notifTagihan: true,
     notifTagihanLunas: true,
-    notifPengumuman: true,
     notifKedisiplinan: true,
-    notifIzinCuti: true,
-    notifPersuratan: true,
-    notifKepegawaian: true,
     email: '',
   })
 
@@ -53,6 +52,12 @@ export default function NotifikasiPenggunaPage() {
       return res.json()
     },
   })
+
+  // Determine if user is Staff/Guru/Pegawai vs Siswa/Wali
+  const effectiveRole = prefData?.role || sessionRole || 'GURU'
+  const isStaff = prefData?.isStaff !== undefined 
+    ? prefData.isStaff 
+    : !['SISWA', 'WALI_MURID'].includes(effectiveRole.toUpperCase())
 
   useEffect(() => {
     if (prefData) {
@@ -138,33 +143,36 @@ export default function NotifikasiPenggunaPage() {
   }
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header Banner */}
-      <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {/* Header Info Banner */}
+      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <Badge className="bg-primary/20 text-primary border-primary/30">
-                <Sparkles className="mr-1 h-3 w-3" /> Notifikasi Resmi SIMASMUH
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="bg-primary/15 text-primary border-primary/25 font-semibold text-xs">
+                <Sparkles className="mr-1 h-3.5 w-3.5" /> Notifikasi Resmi SIMASMUH
               </Badge>
-              <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-200">
-                <Check className="mr-1 h-3 w-3" /> 100% Bebas Blokir & Gratis
+              <Badge variant="outline" className="text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-xs">
+                <Check className="mr-1 h-3.5 w-3.5" />
+                {isStaff ? 'Mode Guru & Pegawai' : 'Mode Siswa & Wali Murid'}
               </Badge>
             </div>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Pengaturan Notifikasi & Akun Email
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Atur kanal pemberitahuan email otomatis untuk presensi, perizinan, tagihan, kedisiplinan, dan pengumuman sekolah.
+            <p className="mt-1 text-xs sm:text-sm text-muted-foreground max-w-2xl">
+              {isStaff
+                ? 'Kelola kanal notifikasi email resmi untuk absensi harian, rincian slip gaji, disposisi surat masuk, perizinan cuti, dan surat edaran dinas.'
+                : 'Kelola kanal notifikasi email resmi untuk kehadiran harian siswa, tagihan SPP, kwitansi lunas, perizinan, dan pengumuman sekolah.'}
             </p>
           </div>
-          <Button onClick={handleSave} disabled={mutation.isPending} className="gap-2 shrink-0">
+          <Button onClick={handleSave} disabled={mutation.isPending} className="gap-2 shrink-0 h-10 px-5 text-xs sm:text-sm font-semibold">
             {mutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Save className="h-4 w-4" />
             )}
-            Simpan Perubahan
+            Simpan Pengaturan
           </Button>
         </div>
       </div>
@@ -173,7 +181,7 @@ export default function NotifikasiPenggunaPage() {
         {/* Kolom Kiri: Penautan Akun Email & Uji Coba */}
         <div className="space-y-6 lg:col-span-1">
           {/* Card Akun Email */}
-          <Card className="border-border/60 shadow-sm">
+          <Card className="border-border shadow-xs">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
                 <Mail className="h-4 w-4 text-primary" />
@@ -188,11 +196,11 @@ export default function NotifikasiPenggunaPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">Status Akun Email:</span>
                   {settings.email ? (
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+                    <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 text-xs">
                       <CheckCircle2 className="mr-1 h-3 w-3" /> Terhubung
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                    <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 text-xs">
                       <AlertCircle className="mr-1 h-3 w-3" /> Belum Ditautkan
                     </Badge>
                   )}
@@ -205,7 +213,7 @@ export default function NotifikasiPenggunaPage() {
                       value={inputEmail}
                       onChange={(e) => setInputEmail(e.target.value)}
                       placeholder="contoh: nama.anda@gmail.com"
-                      className="text-sm h-9"
+                      className="text-xs sm:text-sm h-9"
                     />
                     <div className="flex gap-2">
                       <Button
@@ -214,7 +222,7 @@ export default function NotifikasiPenggunaPage() {
                           setSettings((prev) => ({ ...prev, email: inputEmail }))
                           setEditingEmail(false)
                         }}
-                        className="h-8 flex-1 text-xs"
+                        className="h-8 flex-1 text-xs font-medium"
                       >
                         Terapkan
                       </Button>
@@ -232,15 +240,15 @@ export default function NotifikasiPenggunaPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="font-mono text-sm font-medium text-foreground truncate max-w-[180px]">
+                  <div className="flex items-center justify-between pt-1 gap-2">
+                    <span className="font-mono text-xs sm:text-sm font-medium text-foreground truncate flex-1 min-w-0" title={settings.email || 'Belum diatur'}>
                       {settings.email || 'Belum diatur'}
                     </span>
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => setEditingEmail(true)}
-                      className="h-7 text-xs text-primary"
+                      className="h-7 px-2.5 text-xs text-primary shrink-0"
                     >
                       Ubah Email
                     </Button>
@@ -255,7 +263,7 @@ export default function NotifikasiPenggunaPage() {
                   size="sm"
                   onClick={handleSendTestEmail}
                   disabled={sendingTest || (!inputEmail && !settings.email)}
-                  className="w-full text-xs gap-2 border-primary/30 hover:bg-primary/5 text-primary"
+                  className="w-full text-xs gap-2 border-primary/30 hover:bg-primary/5 text-primary h-9 font-medium"
                 >
                   {sendingTest ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -269,8 +277,8 @@ export default function NotifikasiPenggunaPage() {
                   <div
                     className={`mt-2.5 rounded-lg p-2.5 text-xs ${
                       testResult.startsWith('Email uji coba berhasil')
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                        : 'bg-rose-50 text-rose-800 border border-rose-200'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                        : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
                     }`}
                   >
                     {testResult}
@@ -278,178 +286,383 @@ export default function NotifikasiPenggunaPage() {
                 )}
               </div>
 
-              <div className="rounded-lg bg-blue-50/70 p-3 text-xs text-blue-900 border border-blue-100 flex gap-2">
-                <Globe className="h-4 w-4 shrink-0 text-blue-600 mt-0.5" />
+              <div className="rounded-lg bg-blue-50/70 dark:bg-blue-950/30 p-3 text-xs text-blue-900 dark:text-blue-300 border border-blue-100 dark:border-blue-900/50 flex gap-2">
+                <Globe className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
                 <p>
-                  Notifikasi email langsung masuk ke aplikasi Gmail di Android / iOS Anda tanpa risiko diblokir atau pulsa SMS terpotong.
+                  Notifikasi email langsung dikirimkan ke kotak masuk Gmail di smartphone Anda secara instan dan tanpa biaya SMS.
                 </p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Kolom Kanan: Pengaturan Kategori Notifikasi */}
+        {/* Kolom Kanan: Pengaturan Kategori Notifikasi Sesuai Peran Pengguna */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Bagian Presensi & Kehadiran */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                <Clock className="h-4 w-4 text-emerald-600" />
-                Notifikasi Presensi & Kehadiran
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Pemberitahuan real-time saat scan QR / Kamera AI berhasil tercatat.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="divide-y divide-border/60 space-y-3 pt-0">
-              <div className="flex items-center justify-between pt-3">
-                <div className="space-y-0.5 pr-4">
-                  <Label className="text-sm font-medium">Presensi Masuk (Datang)</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Kirim email konfirmasi saat presensi masuk tercatat di gerbang / kelas sekolah.
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.notifPresensiMasuk}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => ({ ...prev, notifPresensiMasuk: checked }))
-                  }
-                />
-              </div>
+          {isStaff ? (
+            /* ========================================================
+               KATEGORI NOTIFIKASI KHUSUS GURU / PEGAWAI / KARYAWAN / TU
+               ======================================================== */
+            <>
+              {/* 1. Presensi & Kehadiran Pegawai */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <Clock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    Notifikasi Presensi & Kehadiran Pegawai
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan real-time saat scan QR / Face Biometrik AI pegawai berhasil tercatat.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="divide-y divide-border/60 space-y-3 pt-0">
+                  <div className="flex items-center justify-between pt-3 gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Presensi Masuk (Datang)</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Terima email konfirmasi saat scan presensi kedatangan berhasil masuk ke sistem.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifPresensiMasuk}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifPresensiMasuk: checked }))
+                      }
+                    />
+                  </div>
 
-              <div className="flex items-center justify-between pt-3">
-                <div className="space-y-0.5 pr-4">
-                  <Label className="text-sm font-medium">Presensi Pulang</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Kirim email konfirmasi saat scan presensi kepulangan sekolah berhasil.
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.notifPresensiPulang}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => ({ ...prev, notifPresensiPulang: checked }))
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="flex items-center justify-between pt-3 gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Presensi Kepulangan</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Terima email konfirmasi saat scan presensi kepulangan jam kerja berhasil tercatat.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifPresensiPulang}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifPresensiPulang: checked }))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Bagian Perizinan & Cuti */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                <CalendarDays className="h-4 w-4 text-blue-600" />
-                Notifikasi Perizinan & Cuti
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Pemberitahuan pengajuan dispensasi, izin sakit, dan cuti dinas.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-0">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5 pr-4">
-                  <Label className="text-sm font-medium">Status Persetujuan Izin & Cuti</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Terima email saat permohonan izin keluar/cuti telah diverifikasi & ditandatangani digital oleh Kepala Sekolah.
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.notifIzinCuti}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => ({ ...prev, notifIzinCuti: checked }))
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
+              {/* 2. Gaji & Penggajian (Payroll) Pegawai */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <Banknote className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    Notifikasi Penggajian & Slip Gaji (Payroll)
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan penerbitan slip honorarium, gaji bulanan, dan tunjangan kehadiran.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Penerbitan Slip Gaji & Tunjangan Bulanan</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Kirim notifikasi email saat bendahara mempublikasikan rincian slip gaji, tunjangan harian, dan honor mengajar.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifGaji}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifGaji: checked }))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Bagian Keuangan & SPP (Jika Siswa / Wali / Admin Keuangan) */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                <Wallet className="h-4 w-4 text-amber-600" />
-                Notifikasi Tagihan & Keuangan Sekolah
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Pemberitahuan penerbitan iuran, jatuh tempo SPP, dan kwitansi pembayaran lunas.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="divide-y divide-border/60 space-y-3 pt-0">
-              <div className="flex items-center justify-between pt-3">
-                <div className="space-y-0.5 pr-4">
-                  <Label className="text-sm font-medium">Penerbitan Tagihan Baru & SPP</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Terima rincian tagihan bulanan beserta nomor Virtual Account pembayaran.
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.notifTagihan}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => ({ ...prev, notifTagihan: checked }))
-                  }
-                />
-              </div>
+              {/* 3. Disposisi & Persuratan Dinas */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <FileCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    Notifikasi Lembar Disposisi & Persuratan
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan instruksi lembar disposisi surat masuk dan surat tugas dari Kepala Sekolah / Pimpinan.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Disposisi Surat Masuk & Surat Tugas</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Terima email saat Anda ditugaskan atau menerima lembar disposisi persuratan dan instruksi dinas penting.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifDisposisi}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifDisposisi: checked }))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="flex items-center justify-between pt-3">
-                <div className="space-y-0.5 pr-4">
-                  <Label className="text-sm font-medium">Kwitansi Lunas Terverifikasi</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Kirim konfirmasi pembayaran lunas dan tautan unduh kwitansi digital.
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.notifTagihanLunas}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => ({ ...prev, notifTagihanLunas: checked }))
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
+              {/* 4. Perizinan & Cuti Pegawai */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <CalendarDays className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    Notifikasi Izin Keluar & Cuti Kerja
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan status verifikasi pengajuan izin keluar kantor dan cuti kerja.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Persetujuan Izin Keluar & Cuti Dinas</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Terima email saat permohonan izin keluar kantor saat jam dinas atau cuti telah diverifikasi & disetujui Kepala Sekolah.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifIzinCuti}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifIzinCuti: checked }))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Bagian Kedisiplinan & Pengumuman */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                <ShieldAlert className="h-4 w-4 text-purple-600" />
-                Catatan Karakter & Pengumuman Sekolah
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Pemberitahuan catatan pembinaan adab/tatib dan surat edaran resmi.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="divide-y divide-border/60 space-y-3 pt-0">
-              <div className="flex items-center justify-between pt-3">
-                <div className="space-y-0.5 pr-4">
-                  <Label className="text-sm font-medium">Catatan Prestasi & Kedisiplinan Siswa</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Kirim email pemberitahuan saat terdapat rekor prestasi atau evaluasi adab/tata tertib.
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.notifKedisiplinan}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => ({ ...prev, notifKedisiplinan: checked }))
-                  }
-                />
-              </div>
+              {/* 5. Pengumuman & Informasi Kedinasan */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <Megaphone className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                    Pengumuman & Surat Edaran Kedinasan
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan agenda rapat guru/pegawai, kalender akademik dinas, dan siaran resmi sekolah.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Pengumuman Resmi & Surat Edaran</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Terima informasi edaran dinas, agenda rapat pendidik/tendik, dan pengumuman internal sekolah.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifPengumuman}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifPengumuman: checked }))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            /* ========================================================
+               KATEGORI NOTIFIKASI KHUSUS SISWA & WALI MURID
+               ======================================================== */
+            <>
+              {/* 1. Presensi & Kehadiran Siswa */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <Clock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    Notifikasi Presensi & Kehadiran Siswa
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan saat scan presensi masuk dan kepulangan siswa tercatat.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="divide-y divide-border/60 space-y-3 pt-0">
+                  <div className="flex items-center justify-between pt-3 gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Presensi Masuk (Datang)</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Kirim email konfirmasi saat presensi masuk tercatat di gerbang / kelas sekolah.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifPresensiMasuk}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifPresensiMasuk: checked }))
+                      }
+                    />
+                  </div>
 
-              <div className="flex items-center justify-between pt-3">
-                <div className="space-y-0.5 pr-4">
-                  <Label className="text-sm font-medium">Pengumuman & Surat Edaran Resmi</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Terima informasi siaran massal, kalender akademik, dan rapat sekolah.
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.notifPengumuman}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => ({ ...prev, notifPengumuman: checked }))
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="flex items-center justify-between pt-3 gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Presensi Kepulangan</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Kirim email konfirmasi saat scan presensi kepulangan sekolah berhasil.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifPresensiPulang}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifPresensiPulang: checked }))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 2. Tagihan & Keuangan SPP */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <Wallet className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    Notifikasi Tagihan & Keuangan SPP
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan penerbitan iuran, jatuh tempo SPP, dan kwitansi pembayaran lunas.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="divide-y divide-border/60 space-y-3 pt-0">
+                  <div className="flex items-center justify-between pt-3 gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Penerbitan Tagihan Baru & SPP</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Terima rincian tagihan bulanan beserta nomor Virtual Account pembayaran.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifTagihan}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifTagihan: checked }))
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Kwitansi Pembayaran Lunas</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Kirim konfirmasi pembayaran lunas dan tautan unduh kwitansi tanda terima digital.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifTagihanLunas}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifTagihanLunas: checked }))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 3. Perizinan & Dispensasi Siswa */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <CalendarDays className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    Notifikasi Izin Keluar & Dispensasi
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan pengajuan perizinan keluar gerbang dan dispensasi kegiatan.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Status Persetujuan Izin Siswa</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Terima email saat permohonan izin keluar/dispensasi ananda telah diverifikasi & disetujui pihak sekolah.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifIzinCuti}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifIzinCuti: checked }))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 4. Catatan Karakter & Kedisiplinan Siswa */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <ShieldAlert className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    Catatan Karakter & Kedisiplinan Siswa
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan prestasi dan catatan pembinaan adab/tata tertib.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Catatan Prestasi & Tata Tertib Siswa</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Kirim email pemberitahuan saat terdapat rekor prestasi atau evaluasi adab/tata tertib ananda.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifKedisiplinan}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifKedisiplinan: checked }))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 5. Pengumuman & Surat Edaran Sekolah */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <Megaphone className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                    Pengumuman & Surat Edaran Sekolah
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan informasi kegiatan, kalender akademik, dan surat undangan sekolah.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Pengumuman Resmi & Surat Edaran</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Terima informasi siaran massal, kalender akademik, dan undangan resmi sekolah.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifPengumuman}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifPengumuman: checked }))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {/* Tombol Simpan Bawah Responsif */}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              onClick={handleSave}
+              disabled={mutation.isPending}
+              className="font-semibold text-xs sm:text-sm px-6 h-10 gap-2 shadow-xs"
+            >
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" /> Simpan Pengaturan Notifikasi
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

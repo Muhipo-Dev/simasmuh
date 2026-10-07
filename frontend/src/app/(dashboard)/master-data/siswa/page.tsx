@@ -3,7 +3,7 @@ import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useSession } from 'next-auth/react'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent, Info, UserPlus, RotateCcw, Power, PowerOff, UserCheck, ShieldCheck, CreditCard, Sparkles, Image as ImageIcon, User, Printer, BookOpen, Upload } from 'lucide-react'
+import { Plus, Loader2, FileSpreadsheet, Pencil, Trash2, GraduationCap, Filter, CheckSquare, Square, Edit3, Tag, Percent, Info, UserPlus, RotateCcw, Power, PowerOff, UserCheck, ShieldCheck, CreditCard, Sparkles, Image as ImageIcon, User, Printer, BookOpen, Upload, Archive } from 'lucide-react'
 import Swal from 'sweetalert2'
 import { confirmDelete } from '@/lib/swal-helper'
 import { compressImageFile } from '@/utils/imageCompressor'
@@ -43,6 +43,25 @@ const PROGRAM_OPTIONS = [
 const getProgramBadge = (programValue: string | null | undefined) => {
   if (!programValue) return null
   return PROGRAM_OPTIONS.find(p => p.value === programValue) ?? null
+}
+
+const getStudentStatusInfo = (s: { isActive?: boolean; bioData?: any }) => {
+  let parsed: any = {}
+  if (s.bioData) {
+    try { parsed = typeof s.bioData === 'string' ? JSON.parse(s.bioData) : s.bioData } catch {}
+  }
+  if (s.isActive !== false) {
+    return { status: 'AKTIF', label: 'Aktif', color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' }
+  }
+  const alasan = (parsed?.alasanMeninggalkan || '').toLowerCase()
+  const tamat = (parsed?.tamatBelajar || '').toLowerCase()
+  if (alasan.includes('lulus') || tamat.includes('lulus') || tamat.includes('tamat') || alasan.includes('alumni')) {
+    return { status: 'LULUS', label: parsed?.tamatBelajar ? `Lulus (${parsed.tamatBelajar})` : 'Lulus / Alumni', color: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800' }
+  }
+  if (alasan.includes('keluar') || alasan.includes('pindah')) {
+    return { status: 'KELUAR', label: parsed?.alasanMeninggalkan ? `Pindah (${parsed.alasanMeninggalkan})` : 'Pindah / Keluar', color: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800' }
+  }
+  return { status: 'NONAKTIF', label: 'Nonaktif', color: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800' }
 }
 
 const defaultBioData = {
@@ -1167,6 +1186,114 @@ export default function StudentsPage() {
     }
   })
 
+  // State & Mutations for Student Graduation & Archive Status
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false)
+  const [statusTargetStudent, setStatusTargetStudent] = useState<Student | null>(null)
+  const [targetStatusMode, setTargetStatusMode] = useState<'SINGLE' | 'BULK'>('SINGLE')
+  const [statusForm, setStatusForm] = useState({
+    status: 'LULUS' as 'AKTIF' | 'LULUS' | 'KELUAR' | 'NONAKTIF',
+    tamatBelajar: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
+    noIjazahLulus: '',
+    tglMeninggalkanSekolah: new Date().toISOString().split('T')[0],
+    alasanMeninggalkan: 'Lulus Belajar',
+  })
+
+  const setStatusMutation = useMutation({
+    mutationFn: async ({ id, ...payload }: any) => {
+      const res = await authenticatedFetch(`/api-backend/students/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal mengubah status peserta didik')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+      queryClient.invalidateQueries({ queryKey: ['finance-students'] })
+      setStatusDialogOpen(false)
+      setStatusTargetStudent(null)
+      Swal.fire({
+        title: 'Status Diperbarui',
+        text: data.message || 'Status kelulusan/keaktifan siswa berhasil disimpan.',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal', err.message || 'Terjadi kesalahan sistem', 'error')
+    },
+  })
+
+  const bulkSetStatusMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const res = await authenticatedFetch(`/api-backend/students/bulk-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal mengubah status peserta didik massal')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+      queryClient.invalidateQueries({ queryKey: ['finance-students'] })
+      setStatusDialogOpen(false)
+      setSelectedStudentIds([])
+      Swal.fire({
+        title: 'Status Massal Diperbarui',
+        text: data.message || 'Status seluruh siswa terpilih berhasil diperbarui.',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal', err.message || 'Terjadi kesalahan sistem', 'error')
+    },
+  })
+
+  const openSetStatusDialog = (student: Student) => {
+    setStatusTargetStudent(student)
+    setTargetStatusMode('SINGLE')
+    let parsedBio: any = {}
+    if (student.bioData) {
+      try { parsedBio = typeof student.bioData === 'string' ? JSON.parse(student.bioData) : student.bioData } catch {}
+    }
+    const currentStatus = student.isActive === false
+      ? (parsedBio.tamatBelajar || (parsedBio.alasanMeninggalkan?.toLowerCase().includes('lulus') ? 'LULUS' : 'KELUAR'))
+      : 'AKTIF'
+    setStatusForm({
+      status: (currentStatus === 'AKTIF' || currentStatus === 'LULUS' || currentStatus === 'KELUAR' || currentStatus === 'NONAKTIF') ? currentStatus : 'LULUS',
+      tamatBelajar: parsedBio.tamatBelajar || `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
+      noIjazahLulus: parsedBio.noIjazahLulus || '',
+      tglMeninggalkanSekolah: parsedBio.tglMeninggalkanSekolah || new Date().toISOString().split('T')[0],
+      alasanMeninggalkan: parsedBio.alasanMeninggalkan || (currentStatus === 'LULUS' ? 'Lulus Belajar' : 'Pindah Sekolah'),
+    })
+    setStatusDialogOpen(true)
+  }
+
+  const openBulkSetStatusDialog = () => {
+    if (selectedStudentIds.length === 0) return
+    setStatusTargetStudent(null)
+    setTargetStatusMode('BULK')
+    setStatusForm({
+      status: 'LULUS',
+      tamatBelajar: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
+      noIjazahLulus: '',
+      tglMeninggalkanSekolah: new Date().toISOString().split('T')[0],
+      alasanMeninggalkan: 'Lulus Belajar',
+    })
+    setStatusDialogOpen(true)
+  }
+
   const handleOpenAddDialog = () => {
     setIsEdit(false)
     setActiveFormTab('utama')
@@ -1275,7 +1402,7 @@ export default function StudentsPage() {
     (filterGender && filterGender !== 'ALL') ||
     (filterGelombang && filterGelombang !== 'ALL') ||
     (filterJalur && filterJalur !== 'ALL') ||
-    (filterActive && filterActive !== 'ALL') ||
+    (filterActive && filterActive !== 'ACTIVE') ||
     searchQuery.trim() !== ''
 
   const handleResetFilters = () => {
@@ -1284,9 +1411,12 @@ export default function StudentsPage() {
     setFilterGender('ALL')
     setFilterGelombang('ALL')
     setFilterJalur('ALL')
-    setFilterActive('ALL')
+    setFilterActive('ACTIVE')
     setSearchQuery('')
   }
+
+  const activeCount = useMemo(() => (students || []).filter(s => s.isActive !== false).length, [students])
+  const archiveCount = useMemo(() => (students || []).filter(s => s.isActive === false).length, [students])
 
   const filteredStudents = useMemo(() => {
     const raw = (students || []).filter(s => {
@@ -2946,6 +3076,14 @@ export default function StudentsPage() {
             </Button>
             {isSuperOrAdmin && (
               <>
+                <Button 
+                  size="sm" 
+                  onClick={openBulkSetStatusDialog}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-xs text-xs"
+                >
+                  <GraduationCap className="w-3.5 h-3.5 mr-1.5" />
+                  Set Status / Kelulusan ({selectedStudentIds.length})
+                </Button>
                 <Button
                   size="sm"
                   onClick={() => bulkToggleActiveMutation.mutate({ ids: selectedStudentIds, isActive: true })}
@@ -2970,9 +3108,9 @@ export default function StudentsPage() {
                     setPromoteMode('SELECTED')
                     setPromoteOpen(true)
                   }}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-xs"
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-xs text-xs"
                 >
-                  <GraduationCap className="w-4 h-4 mr-1.5" />
+                  <GraduationCap className="w-3.5 h-3.5 mr-1.5" />
                   Naik / Pindah Kelas
                 </Button>
               </>
@@ -3000,11 +3138,15 @@ export default function StudentsPage() {
       )}
 
       <Card className="shadow-xs border-slate-200 dark:border-slate-800">
-        <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 p-3.5 sm:p-5">
+        <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 p-3.5 sm:p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Daftar Siswa Aktif</CardTitle>
-              <CardDescription className="text-xs sm:text-sm mt-0.5">Menampilkan semua siswa yang terdaftar di sistem.</CardDescription>
+              <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                {filterActive === 'INACTIVE' ? 'Arsip Peserta Didik (Lulus / Keluar / Nonaktif)' : filterActive === 'ALL' ? 'Seluruh Data Peserta Didik' : 'Daftar Peserta Didik Aktif'}
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm mt-0.5">
+                {filterActive === 'INACTIVE' ? 'Data riwayat siswa lulus, alumni, atau pindah sekolah yang tersimpan aman di arsip.' : 'Data master peserta didik SIMASMUH yang terdaftar di sistem.'}
+              </CardDescription>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -3032,7 +3174,7 @@ export default function StudentsPage() {
                   filterGender && filterGender !== 'ALL',
                   filterGelombang && filterGelombang !== 'ALL',
                   filterJalur && filterJalur !== 'ALL',
-                  filterActive && filterActive !== 'ALL',
+                  filterActive && filterActive !== 'ACTIVE',
                 ].filter(Boolean).length}
                 onResetFilters={handleResetFilters}
                 filters={
@@ -3123,15 +3265,15 @@ export default function StudentsPage() {
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Status Akun</Label>
+                        <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Status Siswa</Label>
                         <Select value={filterActive} onValueChange={(v) => setFilterActive(v || 'ALL')}>
                           <SelectTrigger className="w-full h-8 text-xs rounded-xl bg-white dark:bg-slate-950">
                             <SelectValue placeholder="Semua Status" />
                           </SelectTrigger>
                           <SelectContent className="rounded-xl">
-                            <SelectItem value="ALL">Semua Status</SelectItem>
-                            <SelectItem value="ACTIVE">Aktif</SelectItem>
-                            <SelectItem value="INACTIVE">Nonaktif</SelectItem>
+                            <SelectItem value="ACTIVE">Hanya Siswa Aktif</SelectItem>
+                            <SelectItem value="INACTIVE">Arsip Siswa (Lulus/Keluar/Nonaktif)</SelectItem>
+                            <SelectItem value="ALL">Semua Data Siswa</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -3140,6 +3282,54 @@ export default function StudentsPage() {
                 }
               />
             </div>
+          </div>
+
+          {/* Sub-Tabs Status Navigasi */}
+          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/60 w-fit">
+            <button
+              type="button"
+              onClick={() => setFilterActive('ACTIVE')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                filterActive === 'ACTIVE'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              Peserta Didik Aktif
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                {activeCount}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterActive('INACTIVE')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                filterActive === 'INACTIVE'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Archive className="w-3.5 h-3.5" />
+              Arsip Peserta Didik (Lulus / Alumni / Keluar)
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                {archiveCount}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterActive('ALL')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                filterActive === 'ALL'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Semua Data Siswa
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                {(students || []).length}
+              </span>
+            </button>
           </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
@@ -3160,7 +3350,7 @@ export default function StudentsPage() {
                 <TableHead className="w-[60px] pl-4">No</TableHead>
                 <TableHead>NISN / NIS</TableHead>
                 <TableHead>Nama Siswa</TableHead>
-                <TableHead>Status Akun</TableHead>
+                <TableHead>Status Peserta Didik</TableHead>
                 <TableHead>Gelombang</TableHead>
                 <TableHead>Program</TableHead>
                 <TableHead>Jalur Pendaftaran</TableHead>
@@ -3209,14 +3399,15 @@ export default function StudentsPage() {
                       </TableCell>
                       <TableCell className="font-semibold">{item.name}</TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                          item.isActive !== false
-                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                            : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${item.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                          {item.isActive !== false ? 'Aktif' : 'Nonaktif'}
-                        </span>
+                        {(() => {
+                          const statusInfo = getStudentStatusInfo(item)
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusInfo.color}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${item.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                              {statusInfo.label}
+                            </span>
+                          )
+                        })()}
                       </TableCell>
                       <TableCell>
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
@@ -3254,6 +3445,15 @@ export default function StudentsPage() {
                       {isSuperOrAdmin && (
                         <TableCell className="text-right pr-6">
                           <div className="flex justify-end gap-1.5 items-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Set Status / Kelulusan Siswa"
+                              onClick={() => openSetStatusDialog(item)}
+                              className="h-8 w-8 text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/50"
+                            >
+                              <GraduationCap className="w-4 h-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -3732,6 +3932,150 @@ export default function StudentsPage() {
         onOpenChange={setIsBukuIndukDialogOpen}
         studentDataList={bukuIndukTargetStudents}
       />
+
+      {/* Dialog Kelola Status Keaktifan / Kelulusan & Pengarsipan Siswa */}
+      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <form onSubmit={(e) => {
+            e.preventDefault()
+            const payload = {
+              status: statusForm.status,
+              tamatBelajar: statusForm.status === 'LULUS' ? statusForm.tamatBelajar : undefined,
+              noIjazahLulus: statusForm.status === 'LULUS' ? statusForm.noIjazahLulus : undefined,
+              alasanMeninggalkan: statusForm.status === 'LULUS' ? (statusForm.alasanMeninggalkan || 'Lulus Belajar') : statusForm.status === 'KELUAR' ? (statusForm.alasanMeninggalkan || 'Pindah Sekolah') : undefined,
+              tglMeninggalkanSekolah: (statusForm.status === 'LULUS' || statusForm.status === 'KELUAR') ? statusForm.tglMeninggalkanSekolah : undefined,
+            }
+            if (targetStatusMode === 'SINGLE' && statusTargetStudent) {
+              setStatusMutation.mutate({ id: statusTargetStudent.id, ...payload })
+            } else if (targetStatusMode === 'BULK') {
+              bulkSetStatusMutation.mutate({ ids: selectedStudentIds, ...payload })
+            }
+          }}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                <GraduationCap className="w-5 h-5" />
+                {targetStatusMode === 'SINGLE'
+                  ? `Set Status Siswa: ${statusTargetStudent?.name || ''}`
+                  : `Set Status Massal (${selectedStudentIds.length} Siswa Terpilih)`}
+              </DialogTitle>
+              <DialogDescription>
+                Atur status keaktifan, kelulusan, atau kepindahan siswa. Data siswa lulus/keluar akan otomatis diarsipkan dan tetap tersimpan utuh di arsip.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-3 text-xs">
+              <div className="space-y-1.5">
+                <Label className="font-bold text-slate-800 dark:text-slate-200">Status Peserta Didik</Label>
+                <Select
+                  value={statusForm.status}
+                  onValueChange={(val: any) => setStatusForm(prev => ({
+                    ...prev,
+                    status: val,
+                    alasanMeninggalkan: val === 'LULUS' ? 'Lulus Belajar' : val === 'KELUAR' ? 'Pindah Sekolah' : prev.alasanMeninggalkan
+                  }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AKTIF">Aktif (Sedang Belajar)</SelectItem>
+                    <SelectItem value="LULUS">Lulus / Tamat Belajar (Alumni)</SelectItem>
+                    <SelectItem value="KELUAR">Pindah / Keluar Sekolah</SelectItem>
+                    <SelectItem value="NONAKTIF">Nonaktif (Cuti / Diberhentikan)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {statusForm.status === 'LULUS' && (
+                <div className="p-3 bg-purple-50/70 dark:bg-purple-950/40 rounded-xl border border-purple-200 dark:border-purple-800 space-y-3">
+                  <div className="font-semibold text-purple-900 dark:text-purple-300 text-xs">Informasi Kelulusan & Alumni</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold">Tahun Ajaran Lulus</Label>
+                      <Input
+                        value={statusForm.tamatBelajar}
+                        onChange={(e) => setStatusForm(prev => ({ ...prev, tamatBelajar: e.target.value }))}
+                        placeholder="Contoh: 2025/2026"
+                        className="h-8 text-xs bg-white dark:bg-slate-900"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold">Nomor Ijazah (Opsional)</Label>
+                      <Input
+                        value={statusForm.noIjazahLulus}
+                        onChange={(e) => setStatusForm(prev => ({ ...prev, noIjazahLulus: e.target.value }))}
+                        placeholder="DN-05/M-SMA/..."
+                        className="h-8 text-xs bg-white dark:bg-slate-900"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold">Tanggal Kelulusan</Label>
+                      <Input
+                        type="date"
+                        value={statusForm.tglMeninggalkanSekolah}
+                        onChange={(e) => setStatusForm(prev => ({ ...prev, tglMeninggalkanSekolah: e.target.value }))}
+                        className="h-8 text-xs bg-white dark:bg-slate-900"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold">Keterangan / Status Akhir</Label>
+                      <Input
+                        value={statusForm.alasanMeninggalkan}
+                        onChange={(e) => setStatusForm(prev => ({ ...prev, alasanMeninggalkan: e.target.value }))}
+                        placeholder="Lulus Belajar"
+                        className="h-8 text-xs bg-white dark:bg-slate-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {statusForm.status === 'KELUAR' && (
+                <div className="p-3 bg-amber-50/70 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800 space-y-3">
+                  <div className="font-semibold text-amber-900 dark:text-amber-300 text-xs">Informasi Mutasi / Pindah Sekolah</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold">Tanggal Pindah/Keluar</Label>
+                      <Input
+                        type="date"
+                        value={statusForm.tglMeninggalkanSekolah}
+                        onChange={(e) => setStatusForm(prev => ({ ...prev, tglMeninggalkanSekolah: e.target.value }))}
+                        className="h-8 text-xs bg-white dark:bg-slate-900"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold">Alasan Meninggalkan Sekolah</Label>
+                      <Input
+                        value={statusForm.alasanMeninggalkan}
+                        onChange={(e) => setStatusForm(prev => ({ ...prev, alasanMeninggalkan: e.target.value }))}
+                        placeholder="Pindah domisili / mutasi..."
+                        className="h-8 text-xs bg-white dark:bg-slate-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button type="button" variant="outline" size="sm" onClick={() => setStatusDialogOpen(false)}>
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={setStatusMutation.isPending || bulkSetStatusMutation.isPending}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
+              >
+                {(setStatusMutation.isPending || bulkSetStatusMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin mr-1.5" />}
+                Simpan Status
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

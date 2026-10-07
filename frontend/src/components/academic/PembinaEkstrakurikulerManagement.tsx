@@ -6,7 +6,7 @@ import {
   Sparkles, Users, Calendar, PlusCircle, CheckCircle2, Clock, MapPin,
   Search, Trash2, Edit3, Save, FileSpreadsheet, Download, RefreshCw,
   Award, ShieldCheck, UserPlus, Check, X, AlertCircle, Info, ChevronRight,
-  BookOpen, Star, Filter
+  BookOpen, Star, Filter, Settings, FileText
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +37,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
   const [isCreateSessionOpen, setIsCreateSessionOpen] = useState(false)
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
+  const [isEditInfoOpen, setIsEditInfoOpen] = useState(false)
   const [selectedSessionForAttendance, setSelectedSessionForAttendance] = useState<any>(null)
   const [attendanceDraft, setAttendanceDraft] = useState<Record<string, { status: string; notes: string }>>({})
 
@@ -57,6 +58,14 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
     topic: '',
     trainerName: '',
     notes: '',
+  })
+
+  // Edit Info & Jadwal state
+  const [infoForm, setInfoForm] = useState({
+    scheduleDay: '',
+    scheduleTime: '',
+    location: '',
+    description: '',
   })
 
   // Grades draft state
@@ -93,6 +102,18 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
     },
     enabled: !!selectedEkskulId,
   })
+
+  // Sinkronisasi infoForm saat detail ekskul termuat
+  useEffect(() => {
+    if (currentEkskul) {
+      setInfoForm({
+        scheduleDay: currentEkskul.scheduleDay || '',
+        scheduleTime: currentEkskul.scheduleTime || '',
+        location: currentEkskul.location || '',
+        description: currentEkskul.description || '',
+      })
+    }
+  }, [currentEkskul])
 
   // 3. Fetch Rekap Realtime Ekskul
   const { data: recapData, isLoading: isLoadingRecap, refetch: refetchRecap } = useQuery<any>({
@@ -132,7 +153,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
   const availableStudentsToAdd = useMemo(() => {
     if (!currentEkskul || !Array.isArray(allStudents)) return []
     const existingStudentIds = new Set(currentEkskul.members?.map((m: any) => m.studentId) || [])
-    
+
     return allStudents.filter((s: any) => {
       if (existingStudentIds.has(s.id)) return false
       if (selectedClassFilter !== 'ALL' && s.classId !== selectedClassFilter) return false
@@ -154,7 +175,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
         const existingGrade = m.grades?.find(
           (g: any) => g.academicYear === academicYearFilter && g.semester === semesterFilter
         ) || m.grades?.[0]
-        
+
         newDraft[m.id] = {
           score: existingGrade?.score || 85,
           predicate: existingGrade?.predicate || 'A',
@@ -165,7 +186,38 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
     }
   }, [currentEkskul, academicYearFilter, semesterFilter])
 
-  // MUTASI: Tambah Anggota Siswa
+  // MUTASI: Update Info & Jadwal Ekstrakurikuler oleh Pembina
+  const updateInfoMutation = useMutation({
+    mutationFn: async () => {
+      const res = await authenticatedFetch(`/api-backend/extracurricular/${selectedEkskulId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(infoForm),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal memperbarui info kegiatan.')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['extracurricular-detail', selectedEkskulId] })
+      queryClient.invalidateQueries({ queryKey: ['pembina-my-ekskul-list'] })
+      setIsEditInfoOpen(false)
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil Disimpan',
+        text: 'Jadwal, lokasi, dan deskripsi kegiatan berhasil diperbarui.',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal', err.message || 'Gagal menyimpan perubahan.', 'error')
+    },
+  })
+
+  // MUTASI: Tambah Anggota Siswa (Validasi Maks 3 Ekstrakurikuler)
   const addMemberMutation = useMutation({
     mutationFn: async () => {
       if (!selectedStudentToAdd) throw new Error('Silakan pilih siswa.')
@@ -204,7 +256,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
     },
   })
 
-  // MUTASI: Hapus Anggota Siswa
+  // MUTASI: Hapus Anggota Siswa (Hak Khusus Pembina)
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
       const res = await authenticatedFetch(`/api-backend/extracurricular/members/${memberId}`, {
@@ -224,7 +276,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
     },
   })
 
-  // MUTASI: Buat Sesi Pertemuan
+  // MUTASI: Buat Sesi Pertemuan (Jurnal)
   const createSessionMutation = useMutation({
     mutationFn: async () => {
       if (!sessionForm.title || !sessionForm.sessionDate) {
@@ -258,7 +310,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
       Swal.fire({
         icon: 'success',
         title: 'Pertemuan Dibuat',
-        text: 'Sesi latihan mingguan berhasil dicatat ke sistem.',
+        text: 'Sesi latihan mingguan berhasil dicatat dan presensi otomatis disinkronkan.',
         timer: 1500,
         showConfirmButton: false,
       })
@@ -318,7 +370,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
       Swal.fire({
         icon: 'success',
         title: 'Presensi Tersimpan',
-        text: 'Data presensi siswa berhasil diperbarui.',
+        text: 'Data presensi siswa berhasil diperbarui secara realtime.',
         timer: 1500,
         showConfirmButton: false,
       })
@@ -328,7 +380,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
     },
   })
 
-  // MUTASI: Simpan Nilai Massal
+  // MUTASI: Simpan Nilai Rapor Siswa
   const saveGradesMutation = useMutation({
     mutationFn: async () => {
       const grades = Object.entries(gradesDraft).map(([memberId, data]) => {
@@ -361,7 +413,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
       Swal.fire({
         icon: 'success',
         title: 'Nilai Berhasil Disimpan',
-        text: 'Penilaian rapor ekstrakurikuler telah disimpan ke database.',
+        text: 'Penilaian rapor ekstrakurikuler telah disimpan dan tampil di dashboard siswa.',
         timer: 1500,
         showConfirmButton: false,
       })
@@ -430,6 +482,20 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
     )
   }
 
+  if (myEkskuls.length === 0 && !isLoadingEkskuls) {
+    return (
+      <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+        <Sparkles className="w-12 h-12 text-amber-500 mx-auto" />
+        <h3 className="text-base font-bold text-slate-800 dark:text-white">
+          Belum Ada Ekstrakurikuler Binaan
+        </h3>
+        <p className="text-xs text-slate-500 max-w-md mx-auto">
+          Akun Anda belum diasosiasikan sebagai pembina unit ekstrakurikuler. Silakan hubungi <strong>Waka Kesiswaan</strong> untuk penugasan pembina kegiatan.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* Header & Pemilihan Ekstrakurikuler Binaan */}
@@ -441,35 +507,44 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
-                Manajemen Ekstrakurikuler
+                Ruang Kerja Pembina Ekstrakurikuler
               </h1>
               <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-bold">
-                Pembina
+                Pembina Resmi
               </Badge>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Kelola keanggotaan siswa, presensi kegiatan, dan penilaian rapor ekstrakurikuler.
+              Kelola keanggotaan siswa, jurnal sesi latihan & presensi, dan penilaian rapor ekstrakurikuler binaan.
             </p>
           </div>
         </div>
 
-        {/* Dropdown Pemilihan Ekskul Binaan */}
-        <div className="flex items-center gap-2 min-w-[280px]">
-          <Label className="text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
-            Ekskul Binaan:
-          </Label>
-          <Select value={selectedEkskulId} onValueChange={(val) => setSelectedEkskulId(val || '')}>
-            <SelectTrigger className="w-full text-xs font-bold border-amber-400/40 focus:ring-amber-500">
-              <SelectValue placeholder="Pilih Ekstrakurikuler" />
-            </SelectTrigger>
-            <SelectContent>
-              {myEkskuls.map((ekskul) => (
-                <SelectItem key={ekskul.id} value={ekskul.id} className="text-xs font-semibold">
-                  {ekskul.name} ({ekskul._count?.members || 0} Siswa)
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Dropdown Pemilihan Ekskul Binaan & Tombol Pengaturan Info */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 min-w-[220px]">
+            <Select value={selectedEkskulId} onValueChange={(val) => setSelectedEkskulId(val || '')}>
+              <SelectTrigger className="w-full text-xs font-bold border-amber-400/40 focus:ring-amber-500">
+                <SelectValue placeholder="Pilih Ekstrakurikuler" />
+              </SelectTrigger>
+              <SelectContent>
+                {myEkskuls.map((ekskul) => (
+                  <SelectItem key={ekskul.id} value={ekskul.id} className="text-xs font-semibold">
+                    {ekskul.name} ({ekskul._count?.members || 0} Siswa)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setIsEditInfoOpen(true)}
+            className="h-9 text-xs font-bold border-amber-300 dark:border-amber-700/60 hover:bg-amber-50 text-amber-700 dark:text-amber-300 gap-1.5"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            Atur Jadwal & Lokasi
+          </Button>
         </div>
       </div>
 
@@ -570,6 +645,11 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                 </span>
               </div>
             </div>
+            {currentEkskul.description && (
+              <p className="text-[11px] text-slate-500 pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-800">
+                {currentEkskul.description}
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -598,7 +678,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
           }`}
         >
           <Calendar className="h-3.5 w-3.5" />
-          <span>Pertemuan & Presensi</span>
+          <span>Jurnal & Presensi</span>
         </button>
         <button
           type="button"
@@ -752,7 +832,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
         </div>
       )}
 
-      {/* ==================== TAB 2: PERTEMUAN & PRESENSI ==================== */}
+      {/* ==================== TAB 2: JURNAL PERTEMUAN & PRESENSI ==================== */}
       {activeTab === 'pertemuan' && (
         <div className="space-y-4">
           <Card className="border-slate-200/80 dark:border-slate-800 shadow-sm">
@@ -760,10 +840,10 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
               <div>
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-emerald-500" />
-                  Daftar Pertemuan & Sesi Latihan Mingguan
+                  Jurnal Pertemuan &amp; Presensi Latihan
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Pencatatan tanggal pertemuan, topik materi latihan, dan presensi absensi anggota.
+                  Catat agenda latihan mingguan dan presensi kehadiran seluruh anggota secara sinkron.
                 </CardDescription>
               </div>
               <Button
@@ -772,7 +852,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                 onClick={() => setIsCreateSessionOpen(true)}
               >
                 <PlusCircle className="h-3.5 w-3.5" />
-                Buat Pertemuan Baru
+                Buat Sesi Pertemuan
               </Button>
             </CardHeader>
             <CardContent className="p-0">
@@ -781,28 +861,25 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                   <TableHeader>
                     <TableRow className="bg-slate-50 dark:bg-slate-850 text-[11px] font-bold">
                       <TableHead className="w-12 text-center">NO</TableHead>
-                      <TableHead className="w-28 text-center">TANGGAL</TableHead>
+                      <TableHead className="w-32 text-center">TANGGAL</TableHead>
                       <TableHead className="w-24 text-center">WAKTU</TableHead>
-                      <TableHead className="min-w-[180px]">JUDUL & MATERI PERTEMUAN</TableHead>
+                      <TableHead className="min-w-[200px]">JUDUL &amp; AGENDA</TableHead>
                       <TableHead className="w-32">LOKASI</TableHead>
-                      <TableHead className="w-32">PELATIH / PEMBINA</TableHead>
-                      <TableHead className="w-36 text-center">REKAP KEHADIRAN</TableHead>
+                      <TableHead className="w-32">PEMBINA / PELATIH</TableHead>
+                      <TableHead className="w-28 text-center">KEHADIRAN</TableHead>
                       <TableHead className="w-28 text-center">AKSI</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {currentEkskul?.sessions && currentEkskul.sessions.length > 0 ? (
                       currentEkskul.sessions.map((session: any, index: number) => {
-                        const totalAttendances = session.attendances?.length || 0
                         const hadirCount = session.attendances?.filter((a: any) => a.status === 'HADIR').length || 0
-                        const izinCount = session.attendances?.filter((a: any) => a.status === 'IZIN').length || 0
-                        const sakitCount = session.attendances?.filter((a: any) => a.status === 'SAKIT').length || 0
-                        const alfaCount = session.attendances?.filter((a: any) => a.status === 'ALFA').length || 0
+                        const totalMembers = session.attendances?.length || 0
 
                         return (
                           <TableRow key={session.id} className="text-xs hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
                             <TableCell className="text-center font-medium text-slate-500">{index + 1}</TableCell>
-                            <TableCell className="text-center font-semibold text-slate-800 dark:text-slate-100">
+                            <TableCell className="text-center font-semibold text-slate-700 dark:text-slate-300">
                               {new Date(session.sessionDate).toLocaleDateString('id-ID', {
                                 weekday: 'short',
                                 day: 'numeric',
@@ -816,42 +893,30 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                             <TableCell>
                               <p className="font-bold text-slate-800 dark:text-slate-100">{session.title}</p>
                               {session.topic && (
-                                <p className="text-[11px] text-slate-500 truncate max-w-[260px]">
+                                <p className="text-[11px] text-slate-500 truncate max-w-[220px]">
                                   Materi: {session.topic}
                                 </p>
                               )}
                             </TableCell>
-                            <TableCell className="text-slate-600 truncate max-w-[120px]">
+                            <TableCell className="text-slate-600 dark:text-slate-300">
                               {session.location || '-'}
                             </TableCell>
-                            <TableCell className="text-slate-600 truncate max-w-[120px]">
+                            <TableCell className="text-slate-600 dark:text-slate-300">
                               {session.trainerName || '-'}
                             </TableCell>
                             <TableCell className="text-center">
-                              <div className="flex items-center justify-center gap-1 text-[10px] font-bold">
-                                <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded" title="Hadir">
-                                  H: {hadirCount}
-                                </span>
-                                <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded" title="Izin">
-                                  I: {izinCount}
-                                </span>
-                                <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded" title="Sakit">
-                                  S: {sakitCount}
-                                </span>
-                                <span className="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded" title="Alfa">
-                                  A: {alfaCount}
-                                </span>
-                              </div>
+                              <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                                {hadirCount} / {totalMembers} Hadir
+                              </Badge>
                             </TableCell>
                             <TableCell className="text-center">
                               <div className="flex items-center justify-center gap-1">
                                 <Button
-                                  variant="outline"
+                                  variant="ghost"
                                   size="sm"
-                                  className="h-7 text-[10px] font-bold border-amber-400 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 px-2"
+                                  className="h-7 px-2 text-[10px] font-bold text-blue-600 hover:bg-blue-50"
                                   onClick={() => handleOpenAttendanceModal(session)}
                                 >
-                                  <Edit3 className="h-3 w-3 mr-1" />
                                   Presensi
                                 </Button>
                                 <Button
@@ -861,10 +926,11 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                                   onClick={() => {
                                     Swal.fire({
                                       title: 'Hapus Pertemuan?',
-                                      text: `Hapus sesi pertemuan "${session.title}" beserta riwayat presensinya?`,
+                                      text: `Hapus sesi "${session.title}" beserta riwayat presensinya?`,
                                       icon: 'warning',
                                       showCancelButton: true,
                                       confirmButtonColor: '#d33',
+                                      cancelButtonColor: '#3085d6',
                                       confirmButtonText: 'Ya, Hapus',
                                       cancelButtonText: 'Batal',
                                     }).then((result) => {
@@ -884,8 +950,8 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                     ) : (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8 text-slate-400">
-                          <p className="font-semibold text-xs">Belum ada sesi pertemuan tercatat.</p>
-                          <p className="text-[11px] mt-1">Klik tombol &quot;Buat Pertemuan Baru&quot; untuk mencatat sesi latihan.</p>
+                          <p className="font-semibold text-xs">Belum ada sesi pertemuan yang dibuat.</p>
+                          <p className="text-[11px] mt-1">Klik tombol &quot;Buat Sesi Pertemuan&quot; untuk mencatat jurnal dan presensi.</p>
                         </TableCell>
                       </TableRow>
                     )}
@@ -901,46 +967,52 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
       {activeTab === 'penilaian' && (
         <div className="space-y-4">
           <Card className="border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <CardHeader className="p-4 pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <CardHeader className="p-4 pb-2 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <Award className="h-4 w-4 text-purple-500" />
-                  Penilaian & Predikat Rapor Anggota
+                  Input Nilai &amp; Predikat Rapor Ekstrakurikuler
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Input nilai angka (0-100), predikat capaian (A/B/C/D), dan deskripsi kompetensi rapor siswa.
+                  Nilai dan capaian kompetensi akan langsung tersinkronisasi ke portal rapor dan dashboard siswa.
                 </CardDescription>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Select value={academicYearFilter} onValueChange={(val) => setAcademicYearFilter(val || '2025/2026')}>
-                  <SelectTrigger className="h-8 text-xs font-semibold w-28">
-                    <SelectValue placeholder="Tahun" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2025/2026" className="text-xs">2025/2026</SelectItem>
-                    <SelectItem value="2024/2025" className="text-xs">2024/2025</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-[11px] text-slate-500">Tahun:</Label>
+                  <Select value={academicYearFilter} onValueChange={(val) => setAcademicYearFilter(val || '2025/2026')}>
+                    <SelectTrigger className="h-8 text-xs w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2025/2026" className="text-xs">2025/2026</SelectItem>
+                      <SelectItem value="2026/2027" className="text-xs">2026/2027</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <Select value={semesterFilter} onValueChange={(val) => setSemesterFilter(val || 'GANJIL')}>
-                  <SelectTrigger className="h-8 text-xs font-semibold w-24">
-                    <SelectValue placeholder="Semester" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GANJIL" className="text-xs">Ganjil</SelectItem>
-                    <SelectItem value="GENAP" className="text-xs">Genap</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-[11px] text-slate-500">Semester:</Label>
+                  <Select value={semesterFilter} onValueChange={(val) => setSemesterFilter(val || 'GANJIL')}>
+                    <SelectTrigger className="h-8 text-xs w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="GANJIL" className="text-xs">Ganjil</SelectItem>
+                      <SelectItem value="GENAP" className="text-xs">Genap</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 <Button
                   size="sm"
                   className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-1.5 h-8"
                   onClick={() => saveGradesMutation.mutate()}
-                  disabled={saveGradesMutation.isPending}
+                  disabled={saveGradesMutation.isPending || !currentEkskul?.members?.length}
                 >
                   <Save className="h-3.5 w-3.5" />
-                  {saveGradesMutation.isPending ? 'Menyimpan...' : 'Simpan Semua Nilai'}
+                  {saveGradesMutation.isPending ? 'Menyimpan...' : 'Simpan Nilai'}
                 </Button>
               </div>
             </CardHeader>
@@ -953,25 +1025,21 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                       <TableHead className="min-w-[180px]">NAMA SISWA</TableHead>
                       <TableHead className="w-20 text-center">KELAS</TableHead>
                       <TableHead className="w-24 text-center">NILAI (0-100)</TableHead>
-                      <TableHead className="w-32 text-center">PREDIKAT</TableHead>
-                      <TableHead className="min-w-[320px]">DESKRIPSI CAPAIAN KOMPETENSI RAPOR</TableHead>
+                      <TableHead className="w-28 text-center">PREDIKAT</TableHead>
+                      <TableHead className="min-w-[240px]">DESKRIPSI CAPAIAN KOMPETENSI</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {currentEkskul?.members && currentEkskul.members.length > 0 ? (
                       currentEkskul.members.map((member: any, index: number) => {
-                        const currentDraft = gradesDraft[member.id] || {
-                          score: 85,
-                          predicate: 'A',
-                          description: '',
-                        }
+                        const currentData = gradesDraft[member.id] || { score: 85, predicate: 'A', description: '' }
 
                         return (
                           <TableRow key={member.id} className="text-xs hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
                             <TableCell className="text-center font-medium text-slate-500">{index + 1}</TableCell>
                             <TableCell>
                               <p className="font-bold text-slate-800 dark:text-slate-100">{member.student?.name}</p>
-                              <p className="text-[10px] text-slate-400 font-mono">{member.student?.nisn || member.student?.nis}</p>
+                              <p className="text-[10px] text-slate-400">NIS. {member.student?.nis || '-'}</p>
                             </TableCell>
                             <TableCell className="text-center font-semibold text-slate-700 dark:text-slate-300">
                               {member.student?.class?.name || '-'}
@@ -981,24 +1049,29 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                                 type="number"
                                 min={0}
                                 max={100}
-                                value={currentDraft.score}
+                                value={currentData.score}
                                 onChange={(e) => {
                                   const val = Number(e.target.value)
+                                  let pred = 'A'
+                                  if (val < 70) pred = 'D'
+                                  else if (val < 80) pred = 'C'
+                                  else if (val < 90) pred = 'B'
+
                                   setGradesDraft((prev) => ({
                                     ...prev,
                                     [member.id]: {
                                       ...prev[member.id],
                                       score: val,
-                                      predicate: val >= 88 ? 'A' : val >= 75 ? 'B' : val >= 60 ? 'C' : 'D',
+                                      predicate: pred,
                                     },
                                   }))
                                 }}
-                                className="h-8 text-center text-xs font-bold w-18 mx-auto"
+                                className="h-8 w-20 text-center font-mono font-bold text-xs mx-auto"
                               />
                             </TableCell>
                             <TableCell className="text-center">
                               <Select
-                                value={currentDraft.predicate}
+                                value={currentData.predicate}
                                 onValueChange={(val) => {
                                   setGradesDraft((prev) => ({
                                     ...prev,
@@ -1009,20 +1082,21 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                                   }))
                                 }}
                               >
-                                <SelectTrigger className="h-8 text-xs font-bold w-28 mx-auto">
+                                <SelectTrigger className="h-8 text-xs font-bold w-24 mx-auto">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="A" className="text-xs font-bold text-emerald-600">A (Sangat Baik)</SelectItem>
-                                  <SelectItem value="B" className="text-xs font-bold text-blue-600">B (Baik)</SelectItem>
-                                  <SelectItem value="C" className="text-xs font-bold text-amber-600">C (Cukup)</SelectItem>
-                                  <SelectItem value="D" className="text-xs font-bold text-rose-600">D (Kurang)</SelectItem>
+                                  <SelectItem value="A" className="text-xs font-bold">A (Sangat Baik)</SelectItem>
+                                  <SelectItem value="B" className="text-xs font-bold">B (Baik)</SelectItem>
+                                  <SelectItem value="C" className="text-xs font-bold">C (Cukup)</SelectItem>
+                                  <SelectItem value="D" className="text-xs font-bold">D (Kurang)</SelectItem>
                                 </SelectContent>
                               </Select>
                             </TableCell>
                             <TableCell>
                               <Input
-                                value={currentDraft.description}
+                                placeholder="Deskripsi capaian rapor..."
+                                value={currentData.description}
                                 onChange={(e) => {
                                   const val = e.target.value
                                   setGradesDraft((prev) => ({
@@ -1033,7 +1107,6 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                                     },
                                   }))
                                 }}
-                                placeholder="Tuliskan catatan deskripsi capaian kompetensi..."
                                 className="h-8 text-xs"
                               />
                             </TableCell>
@@ -1043,7 +1116,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                     ) : (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-slate-400">
-                          <p className="font-semibold text-xs">Belum ada anggota untuk dinilai.</p>
+                          <p className="font-semibold text-xs">Belum ada anggota siswa untuk dinilai.</p>
                         </TableCell>
                       </TableRow>
                     )}
@@ -1059,35 +1132,25 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
       {activeTab === 'rekap' && (
         <div className="space-y-4">
           <Card className="border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <CardHeader className="p-4 pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
+            <CardHeader className="p-4 pb-2 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <FileSpreadsheet className="h-4 w-4 text-blue-500" />
-                  Rekapitulasi Kehadiran & Nilai Siswa (Realtime)
+                  <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                  Rekapitulasi Kehadiran &amp; Penilaian Siswa
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Hasil kalkulasi otomatis dari seluruh presensi pertemuan dan penilaian rapor.
+                  Rekapitulasi terpadu seluruh sesi presensi dan evaluasi rapor semester berjalan.
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs font-semibold h-8 gap-1.5"
-                  onClick={() => refetchRecap()}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Segarkan
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 h-8"
-                  onClick={handleExportExcel}
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Unduh Excel (.xlsx)
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs font-bold border-emerald-600 text-emerald-600 hover:bg-emerald-50 gap-1.5 h-8"
+                onClick={handleExportExcel}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Ekspor Excel
+              </Button>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -1102,68 +1165,47 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                       <TableHead className="w-16 text-center">SAKIT</TableHead>
                       <TableHead className="w-16 text-center">ALFA</TableHead>
                       <TableHead className="w-24 text-center">% HADIR</TableHead>
-                      <TableHead className="w-20 text-center">NILAI</TableHead>
+                      <TableHead className="w-24 text-center">NILAI</TableHead>
                       <TableHead className="w-24 text-center">PREDIKAT</TableHead>
-                      <TableHead className="min-w-[260px]">DESKRIPSI RAPOR</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {recapData?.memberRecaps && recapData.memberRecaps.length > 0 ? (
-                      recapData.memberRecaps.map((item: any, index: number) => (
-                        <TableRow key={item.memberId} className="text-xs hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
+                      recapData.memberRecaps.map((m: any, index: number) => (
+                        <TableRow key={m.memberId} className="text-xs hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
                           <TableCell className="text-center font-medium text-slate-500">{index + 1}</TableCell>
-                          <TableCell>
-                            <p className="font-bold text-slate-800 dark:text-slate-100">{item.studentName}</p>
-                            <p className="text-[10px] text-slate-400">{item.nisn || item.nis}</p>
+                          <TableCell className="font-bold text-slate-800 dark:text-slate-100">{m.studentName}</TableCell>
+                          <TableCell className="text-center font-semibold text-slate-700 dark:text-slate-300">{m.className}</TableCell>
+                          <TableCell className="text-center font-bold text-emerald-600">{m.hadirCount}</TableCell>
+                          <TableCell className="text-center text-blue-600 font-semibold">{m.izinCount}</TableCell>
+                          <TableCell className="text-center text-amber-600 font-semibold">{m.sakitCount}</TableCell>
+                          <TableCell className="text-center text-rose-600 font-semibold">{m.alfaCount}</TableCell>
+                          <TableCell className="text-center font-bold">
+                            <span className={`px-2 py-0.5 rounded text-[10px] ${
+                              m.attendancePercentage >= 75
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : m.attendancePercentage >= 50
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-rose-100 text-rose-800'
+                            }`}>
+                              {m.attendancePercentage}%
+                            </span>
                           </TableCell>
-                          <TableCell className="text-center font-semibold text-slate-700 dark:text-slate-300">
-                            {item.className}
-                          </TableCell>
-                          <TableCell className="text-center font-bold text-emerald-600">{item.hadirCount}</TableCell>
-                          <TableCell className="text-center font-bold text-blue-600">{item.izinCount}</TableCell>
-                          <TableCell className="text-center font-bold text-amber-600">{item.sakitCount}</TableCell>
-                          <TableCell className="text-center font-bold text-rose-600">{item.alfaCount}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              className={`text-[10px] font-bold ${
-                                item.attendancePercentage >= 80
-                                  ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
-                                  : item.attendancePercentage >= 60
-                                  ? 'bg-amber-500/15 text-amber-600 border-amber-500/30'
-                                  : 'bg-rose-500/15 text-rose-600 border-rose-500/30'
-                              }`}
-                            >
-                              {item.attendancePercentage}%
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center font-mono font-bold text-slate-800 dark:text-slate-200">
-                            {item.grade?.score ?? '-'}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {item.grade?.predicate ? (
-                              <Badge
-                                className={`text-[10px] font-bold ${
-                                  item.grade.predicate === 'A' || item.grade.predicate === 'Sangat Baik'
-                                    ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
-                                    : item.grade.predicate === 'B' || item.grade.predicate === 'Baik'
-                                    ? 'bg-blue-500/15 text-blue-600 border-blue-500/30'
-                                    : 'bg-amber-500/15 text-amber-600 border-amber-500/30'
-                                }`}
-                              >
-                                {item.grade.predicate}
+                          <TableCell className="text-center font-mono font-bold">{m.grade?.score ?? '-'}</TableCell>
+                          <TableCell className="text-center font-bold">
+                            {m.grade?.predicate ? (
+                              <Badge className="bg-purple-600 text-white text-[10px]">
+                                {m.grade.predicate}
                               </Badge>
                             ) : (
-                              <span className="text-slate-400 italic text-[10px]">Belum dinilai</span>
+                              <span className="text-slate-400 text-[10px]">-</span>
                             )}
-                          </TableCell>
-                          <TableCell className="text-slate-600 dark:text-slate-300 text-[11px]">
-                            {item.grade?.description || '-'}
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center py-8 text-slate-400">
+                        <TableCell colSpan={10} className="text-center py-8 text-slate-400">
                           <p className="font-semibold text-xs">Belum ada data rekapitulasi.</p>
                         </TableCell>
                       </TableRow>
@@ -1176,16 +1218,89 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
         </div>
       )}
 
+      {/* ==================== DIALOG: ATUR JADWAL, LOKASI & DESKRIPSI ==================== */}
+      <Dialog open={isEditInfoOpen} onOpenChange={setIsEditInfoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <Settings className="h-4 w-4 text-amber-500" />
+              Atur Jadwal &amp; Lokasi Latihan
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Ubah jadwal hari, waktu, lokasi, dan profil kegiatan untuk {currentEkskul?.name}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold">Hari Latihan</Label>
+                <Input
+                  placeholder="Misal: Jumat, Sabtu"
+                  value={infoForm.scheduleDay}
+                  onChange={(e) => setInfoForm({ ...infoForm, scheduleDay: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold">Waktu Latihan</Label>
+                <Input
+                  placeholder="Misal: 15:30 - 17:00"
+                  value={infoForm.scheduleTime}
+                  onChange={(e) => setInfoForm({ ...infoForm, scheduleTime: e.target.value })}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-bold">Lokasi / Tempat Latihan</Label>
+              <Input
+                placeholder="Misal: Lapangan Basket Utama / Aula Lt. 3"
+                value={infoForm.location}
+                onChange={(e) => setInfoForm({ ...infoForm, location: e.target.value })}
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-bold">Deskripsi / Profil Kegiatan</Label>
+              <Textarea
+                placeholder="Tuliskan tujuan kegiatan, materi pokok, atau pengantar..."
+                value={infoForm.description}
+                onChange={(e) => setInfoForm({ ...infoForm, description: e.target.value })}
+                rows={3}
+                className="text-xs"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsEditInfoOpen(false)} className="text-xs h-8">
+              Batal
+            </Button>
+            <Button
+              size="sm"
+              className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold h-8"
+              onClick={() => updateInfoMutation.mutate()}
+              disabled={updateInfoMutation.isPending}
+            >
+              {updateInfoMutation.isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ==================== DIALOG: TAMBAH ANGGOTA SISWA ==================== */}
       <Dialog open={isAddMemberOpen} onOpenChange={setIsAddMemberOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-sm font-bold flex items-center gap-2">
               <UserPlus className="h-4 w-4 text-amber-500" />
-              Tambah Anggota Siswa ke {currentEkskul?.name}
+              Tambah Anggota Siswa (Maks. 3 Ekskul)
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Pilih siswa aktif dari database sekolah untuk didaftarkan ke ekstrakurikuler ini.
+              Pilih siswa aktif dari database sekolah untuk didaftarkan ke {currentEkskul?.name}.
             </DialogDescription>
           </DialogHeader>
 
@@ -1195,7 +1310,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
               <Label className="text-xs font-semibold">Filter Kelas</Label>
               <Select value={selectedClassFilter} onValueChange={(val) => setSelectedClassFilter(val || 'ALL')}>
                 <SelectTrigger className="h-8 text-xs mt-1">
-                  <SelectValue placeholder="Semua Kelas" />
+                  <SelectValue placeholder="-- Semua Kelas --" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL" className="text-xs">-- Semua Kelas --</SelectItem>
@@ -1251,7 +1366,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ANGGOTA" className="text-xs">Anggota</SelectItem>
-                  <SelectItem value="KETUA" className="text-xs">Ketua</SelectItem>
+                  <SelectItem value="KETUA" className="text-xs">Ketua / Pradana</SelectItem>
                   <SelectItem value="WAKIL_KETUA" className="text-xs">Wakil Ketua</SelectItem>
                   <SelectItem value="SEKRETARIS" className="text-xs">Sekretaris</SelectItem>
                   <SelectItem value="BENDAHARA" className="text-xs">Bendahara</SelectItem>

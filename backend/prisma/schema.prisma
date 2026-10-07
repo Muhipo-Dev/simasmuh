@@ -16,6 +16,7 @@ model User {
   phone             String?
   avatarUrl         String?
   address           String?
+  notificationPreferences Json?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   subRole           String?

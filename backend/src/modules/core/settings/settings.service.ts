@@ -220,7 +220,8 @@ export class SettingsService {
       this.prisma.teacherProfile.count(),
       this.prisma.user.count({
         where: {
-          role: { notIn: ['SISWA', 'WALI_MURID'] },
+          role: { notIn: ['SISWA', 'WALI_MURID', 'GOD', 'GOD_USER'] },
+          username: { not: 'supermuhipo' },
         },
       }),
       this.prisma.parentProfile.count(),

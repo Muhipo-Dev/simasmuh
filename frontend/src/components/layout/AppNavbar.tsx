@@ -92,10 +92,10 @@ export function AppNavbar({
 
   return (
     <header
-      className={`sticky top-0 z-40 w-full pt-3 sm:pt-4 px-4 sm:px-6 md:px-8 lg:px-8 xl:px-10 2xl:px-12 pl-safe pr-safe shrink-0 transition-all duration-300 pointer-events-none print:hidden ${className}`}
+      className={`sticky top-0 z-40 w-full pt-2.5 sm:pt-3 px-3 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-10 pl-safe pr-safe shrink-0 transition-all duration-200 pointer-events-none print:hidden ${className}`}
     >
       <div className="w-full max-w-7xl 2xl:max-w-[1440px] mx-auto pointer-events-auto">
-        <div className="w-full flex items-center justify-between gap-3 sm:gap-4 md:gap-6 h-14 sm:h-16 lg:h-17 px-4 sm:px-6 md:px-7 lg:px-8 rounded-2xl bg-white/90 dark:bg-slate-950/90 border border-slate-200/90 dark:border-white/15 shadow-md shadow-slate-900/5 dark:shadow-slate-950/50 text-slate-900 dark:text-white backdrop-blur-xl transition-all">
+        <div className="w-full flex items-center justify-between gap-2.5 sm:gap-4 md:gap-5 h-13 sm:h-14 lg:h-15 px-3 sm:px-4 md:px-5 lg:px-6 rounded-xl sm:rounded-2xl bg-white/90 dark:bg-slate-950/90 border border-slate-200/90 dark:border-white/15 shadow-sm shadow-slate-900/5 dark:shadow-slate-950/40 text-slate-900 dark:text-white backdrop-blur-xl transition-all">
           {/* SISI KIRI: Logo & Identitas SIMASMUH */}
           <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0 min-w-0 pl-0.5 sm:pl-1">
             <Link href={logoHref} className="flex items-center gap-2 sm:gap-2.5 lg:gap-3 group min-w-0">

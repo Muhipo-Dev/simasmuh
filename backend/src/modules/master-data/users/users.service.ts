@@ -17,8 +17,22 @@ export class UsersService {
     private emailNotificationService: EmailNotificationService,
   ) {}
 
-  async findAll() {
+  async findAll(requestingUser?: any) {
+    const isSuperadminOrGod =
+      requestingUser?.role === 'SUPERADMIN' ||
+      requestingUser?.role === 'ADMIN_IT' ||
+      requestingUser?.role === 'GOD' ||
+      requestingUser?.role === 'GOD_USER' ||
+      requestingUser?.username === 'supermuhipo';
+
+    const whereClause: any = {};
+    if (requestingUser && !isSuperadminOrGod) {
+      whereClause.role = { notIn: ['GOD', 'GOD_USER'] };
+      whereClause.username = { not: 'supermuhipo' };
+    }
+
     return this.prisma.user.findMany({
+      where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
       select: {
         id: true,
         name: true,
@@ -232,10 +246,42 @@ export class UsersService {
     return createdUser;
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, data: any, currentUser?: any) {
+    const userToUpdate = await this.prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!userToUpdate) {
+      throw new NotFoundException('Pengguna tidak ditemukan');
+    }
+
+    // Proteksi Khusus GOD user (supermuhipo)
+    if (userToUpdate.username === 'supermuhipo') {
+      if (currentUser) {
+        const callerRoles = [
+          currentUser.role,
+          currentUser.subRole,
+          currentUser.subRole2,
+          currentUser.subRole3,
+          currentUser.subRole4,
+          currentUser.subRole5,
+        ].filter(Boolean);
+        const isSuperadminCaller =
+          currentUser.username === 'supermuhipo' ||
+          callerRoles.includes('SUPERADMIN') ||
+          currentUser.role === 'SUPERADMIN';
+
+        if (!isSuperadminCaller) {
+          throw new BadRequestException(
+            'Hak perubahan username, password, dan data akun GOD user (supermuhipo) hanya dapat dilakukan oleh pengguna berstatus SUPERADMIN.',
+          );
+        }
+      }
+    }
+
     const updateData: any = {
       name: data.name,
-      role: data.role,
+      role: userToUpdate.username === 'supermuhipo' ? 'SUPERADMIN' : data.role,
       subRole: data.subRole || null,
       subRole2: data.subRole2 || null,
       subRole3: data.subRole3 || null,
@@ -248,7 +294,7 @@ export class UsersService {
     }
 
     if (data.isActive !== undefined) {
-      updateData.isActive = data.isActive === true || data.isActive === 'true';
+      updateData.isActive = userToUpdate.username === 'supermuhipo' ? true : (data.isActive === true || data.isActive === 'true');
     }
 
     // Validasi Keamanan Tunggal (Single Role) Kepala Sekolah pada Update
@@ -444,7 +490,7 @@ export class UsersService {
     return updated;
   }
 
-  async remove(id: string) {
+  async remove(id: string, currentUser?: any) {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
@@ -460,6 +506,13 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('Pengguna tidak ditemukan');
+    }
+
+    // Proteksi Mutlak Akun GOD User (supermuhipo)
+    if (user.username === 'supermuhipo') {
+      throw new BadRequestException(
+        'Akun GOD user (supermuhipo) adalah akun master sistem yang dilindungi dan tidak dapat dihapus.',
+      );
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -521,9 +574,9 @@ export class UsersService {
     });
   }
 
-  async removeMany(ids: string[]) {
+  async removeMany(ids: string[], currentUser?: any) {
     for (const id of ids) {
-      await this.remove(id).catch(() => null);
+      await this.remove(id, currentUser).catch(() => null);
     }
     return { success: true, count: ids.length };
   }
@@ -535,6 +588,13 @@ export class UsersService {
     });
     if (!user) {
       throw new NotFoundException('Pengguna tidak ditemukan');
+    }
+
+    // Proteksi Mutlak Akun GOD User (supermuhipo)
+    if (user.username === 'supermuhipo' && !isActive) {
+      throw new BadRequestException(
+        'Akun GOD user (supermuhipo) adalah akun master sistem yang dilindungi dan tidak dapat dinonaktifkan.',
+      );
     }
 
     // Proteksi Superadmin tunggal agar tidak dinonaktifkan secara keliru
@@ -643,6 +703,7 @@ export class UsersService {
             nisn: true,
             nis: true,
             gender: true,
+            isActive: true,
             bioData: true,
             class: {
               select: {

@@ -81,6 +81,8 @@ export function EmailRecommendationBanner() {
     SUPERADMIN: 'Superadmin',
     BENDAHARA: 'Bendahara Keuangan',
     KEUANGAN: 'Staf Keuangan',
+    GOD: 'GOD ACCESS',
+    GOD_USER: 'GOD ACCESS',
   }
 
   const userRoleLabel = roleLabelMap[role] || (subRole ? roleLabelMap[subRole] || subRole : role || 'Pengguna')

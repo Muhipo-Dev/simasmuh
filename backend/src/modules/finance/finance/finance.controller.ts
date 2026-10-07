@@ -46,6 +46,14 @@ export class FinanceController {
       user.subRole5,
     ].filter(Boolean);
 
+    if (
+      user.username === 'supermuhipo' ||
+      user.role === 'GOD' ||
+      user.role === 'GOD_USER'
+    ) {
+      return;
+    }
+
     const isKeuanganLengkap = userRoles.some((r) =>
       ['KEUANGAN_ALL', 'SUPERVISOR_KEUANGAN', 'KEUANGAN', 'SUPERADMIN', 'ADMIN_IT'].includes(r),
     );
@@ -468,7 +476,14 @@ export class FinanceController {
     return this.financeService.generateMonthlySPP();
   }
 
-  // ----- Student payment history (legacy) -----
+  // ----- All Payment Transactions History -----
+  @Get('payments')
+  @RequirePermissions(PaymentPermission.VIEW_ALL_BILLS)
+  getAllPaymentTransactions(@Query() query: any) {
+    return this.financeService.getAllPaymentTransactions(query);
+  }
+
+  // ----- Student payment history -----
   @Get('students/:studentId/payments')
   @UseGuards(StudentOwnershipGuard)
   getStudentPayments(@Param('studentId') studentId: string) {

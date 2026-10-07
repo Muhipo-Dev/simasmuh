@@ -14,13 +14,13 @@ import {
   TrendingDown, Wallet, Landmark, DollarSign, Activity, CheckCircle2,
   ArrowUpRight, FileText, FileCheck, PieChart, ShieldAlert, BarChart3, Clock,
   ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake, Megaphone, Camera, CornerDownRight,
-  Server, Cpu, HardDrive, Zap, Network, RefreshCw, Radio, Terminal, Laptop, Globe, Check, Key, Send, LogOut, Lock, Eye, Monitor, Smartphone, X, Search, Trash2, Banknote, PenTool
+  Server, Cpu, HardDrive, Zap, Network, RefreshCw, Radio, Terminal, Laptop, Globe, Check, Key, Send, LogOut, Lock, Eye, Monitor, Smartphone, X, Search, Trash2, Banknote, PenTool, UserCog
 } from 'lucide-react'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import Link from 'next/link'
 import Swal from 'sweetalert2'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
-import { getRoleLinks } from '@/lib/nav-links'
+import { getRoleLinks, godLinks } from '@/lib/nav-links'
 import { UserAccountCard } from '@/components/dashboard/UserAccountCard'
 import { CenterQuickAccessGrid } from '@/components/dashboard/CenterQuickAccessGrid'
 import { SystemInfoWidget } from '@/components/dashboard/SystemInfoWidget'
@@ -173,20 +173,21 @@ export default function DashboardPage() {
     enabled: role === 'WALI_MURID'
   })
 
-  // Query Khusus Dashboard Eksekutif & Statistika Lengkap Kepala Sekolah / Keuangan Penuh
+  // Query Khusus Dashboard Eksekutif & Statistika Lengkap Kepala Sekolah / Keuangan Penuh / GOD User
+  const isGod = role === 'GOD' || role === 'GOD_USER' || (session?.user as any)?.username === 'supermuhipo'
   const isKepalaSekolah = role === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH' || subRole2 === 'KEPALA_SEKOLAH' || subRole3 === 'KEPALA_SEKOLAH'
   const isKeuanganAll = [role, subRole, subRole2, subRole3, (session?.user as any)?.subRole4, (session?.user as any)?.subRole5].includes('KEUANGAN_ALL') || role === 'SUPERVISOR_KEUANGAN'
   const isKeuanganMasuk = [role, subRole, subRole2, subRole3].includes('KEUANGAN_MASUK')
   const isKeuanganKeluar = [role, subRole, subRole2, subRole3].includes('KEUANGAN_KELUAR')
-  const isExecOrFinAll = isKepalaSekolah || isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar
+  const isExecOrFinAll = isGod || isKepalaSekolah || isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar
   const { data: execStats, isLoading: loadingExecStats } = useQuery<any>({
     queryKey: ['executive-statistics'],
     queryFn: () => authenticatedQuery('/api-backend/settings/executive-statistics'),
-    enabled: isExecOrFinAll || role === 'SUPERADMIN' || role === 'ADMIN_IT'
+    enabled: isGod || isExecOrFinAll || role === 'SUPERADMIN' || role === 'ADMIN_IT'
   })
 
-  // Query Khusus Supervisor Task Manager & Real-Time Runtime Metrik (Superadmin & Admin IT)
-  const isSuperadminRole = role === 'SUPERADMIN' || role === 'ADMIN_IT' || subRole === 'SUPERADMIN' || subRole === 'ADMIN_IT'
+  // Query Khusus Supervisor Task Manager & Real-Time Runtime Metrik (Superadmin & Admin IT & GOD)
+  const isSuperadminRole = isGod || role === 'SUPERADMIN' || role === 'ADMIN_IT' || subRole === 'SUPERADMIN' || subRole === 'ADMIN_IT'
   const { data: supervisorData, isLoading: loadingSupervisor, refetch: refetchSupervisor, isRefetching: refetchingSupervisor } = useQuery<any>({
     queryKey: ['system-supervisor-metrics'],
     queryFn: () => authenticatedQuery('/api-backend/settings/supervisor-metrics'),
@@ -2926,13 +2927,17 @@ export default function DashboardPage() {
     )
   }
 
-  const currentLinks = getRoleLinks(
-    role,
-    subRole,
-    subRole2,
-    subRole3,
-    (session?.user as any)?.subRole4,
-    (session?.user as any)?.subRole5
+  const currentLinks = (isGod
+    ? godLinks
+    : getRoleLinks(
+        role,
+        subRole,
+        subRole2,
+        subRole3,
+        (session?.user as any)?.subRole4,
+        (session?.user as any)?.subRole5,
+        (session?.user as any)?.username
+      )
   ).filter(link => link.href !== '/dashboard')
 
   const fin = execStats?.keuangan || {}
@@ -2948,24 +2953,32 @@ export default function DashboardPage() {
       <div className="simas-dash-header p-3.5 sm:p-4 md:p-5 text-white flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         <div className="space-y-1 min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="simas-kpi-badge bg-blue-500/20 text-blue-300 border-blue-400/40">
-              {isSuperadminRole ? 'Superadmin' : 'SIMASMUH'}
+            <span className={`simas-kpi-badge ${
+              isGod
+                ? 'bg-amber-500/25 text-amber-300 border-amber-400/50 font-black'
+                : 'bg-blue-500/20 text-blue-300 border-blue-400/40'
+            }`}>
+              {isGod ? 'GOD ACCESS • BYPASS MASTER' : isSuperadminRole ? 'Superadmin' : 'SIMASMUH'}
             </span>
             <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-bold shrink-0">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Sistem Terhubung</span>
+              <span>{isGod ? 'Universal Bypass Aktif' : 'Sistem Terhubung'}</span>
             </div>
           </div>
           <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white truncate" title={`${clock.greeting}, ${(session?.user as any)?.name || 'Pengguna'}`}>
-            {clock.greeting}, <span className="font-extrabold text-blue-200">{(session?.user as any)?.name || 'Pengguna'}</span>
+            {clock.greeting}, <span className={`font-extrabold ${isGod ? 'text-amber-300' : 'text-blue-200'}`}>{(session?.user as any)?.name || 'Pengguna'}</span>
           </h1>
           <p className="text-slate-400 text-xs font-medium line-clamp-1 sm:line-clamp-none">
-            {isSuperadminRole ? 'Monitoring sistem, port operasional, dan sesi aktif secara realtime.' : 'Portal Informasi & Manajemen Pendidikan SMA Muhammadiyah 1 Ponorogo.'}
+            {isGod
+              ? 'Akses bypass universal ke seluruh modul finansial, operasional, supervisi eksekutif, master data, dan tata kelola sistem.'
+              : isSuperadminRole
+              ? 'Monitoring sistem, port operasional, dan sesi aktif secara realtime.'
+              : 'Portal Informasi & Manajemen Pendidikan SMA Muhammadiyah 1 Ponorogo.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 w-full md:w-auto justify-start md:justify-end">
-          {/* Tombol Khusus Kepala Sekolah: Tanda Tangan Digital (E-Sign) & Toggle Statistika */}
-          {isKepalaSekolah && (
+          {/* Tombol Khusus GOD User & Kepala Sekolah: Tanda Tangan Digital (E-Sign) & Toggle Statistika */}
+          {(isGod || isKepalaSekolah) && (
             <>
               <Button
                 size="sm"
@@ -2997,24 +3010,49 @@ export default function DashboardPage() {
             </>
           )}
 
-          {/* Tombol Khusus Superadmin: Akses Langsung FaceNet AI */}
-          {isSuperadminRole && (
-            <Link href="/facenetai" className="shrink-0">
-              <Button
-                size="sm"
-                className="h-8 sm:h-8.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-[11px] shadow-sm gap-1.5 border border-cyan-400/40 active:scale-95 transition-all"
-              >
-                <Camera className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
-                <span>FaceNet AI</span>
-              </Button>
-            </Link>
+          {/* Tombol Khusus GOD User & Superadmin: Akses Langsung FaceNet AI & Pengguna */}
+          {(isGod || isSuperadminRole) && (
+            <>
+              <Link href="/facenetai" className="shrink-0">
+                <Button
+                  size="sm"
+                  className="h-8 sm:h-8.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-[11px] shadow-sm gap-1.5 border border-cyan-400/40 active:scale-95 transition-all"
+                >
+                  <Camera className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+                  <span>FaceNet AI</span>
+                </Button>
+              </Link>
+
+              {isGod && (
+                <Link href="/master-data/pengguna" className="shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 sm:h-8.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border-white/20 font-extrabold text-[11px] gap-1.5 backdrop-blur-md active:scale-95 transition-all"
+                  >
+                    <UserCog className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Akun Pengguna</span>
+                  </Button>
+                </Link>
+              )}
+            </>
           )}
 
-          <span className="px-2.5 py-1 rounded-xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-md border border-white/20 text-white font-bold text-[10px] sm:text-[11px] uppercase tracking-wider shadow-inner flex items-center gap-1.5 shrink-0">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <span className={`px-2.5 py-1 rounded-xl backdrop-blur-md border text-white font-bold text-[10px] sm:text-[11px] uppercase tracking-wider shadow-inner flex items-center gap-1.5 shrink-0 ${
+            isGod
+              ? 'bg-amber-500/20 border-amber-400/40 text-amber-200'
+              : 'bg-white/10 dark:bg-slate-900/60 border-white/20'
+          }`}>
+            <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${isGod ? 'text-amber-400' : 'text-emerald-400'}`} />
             <span>
-              {((role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU') ? 'Tata Usaha' : isKepalaSekolah ? 'Kepala Sekolah' : role)}
-              {subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' && subRole !== 'KEPALA_SEKOLAH' && subRole !== role ? ` • ${subRole}` : ''}
+              {isGod
+                ? 'GOD USER'
+                : ((role === 'ADMIN_TU' || role === 'BAU' || role === 'TATA_USAHA' || subRole === 'ADMIN_TU' || subRole === 'BAU')
+                ? 'Tata Usaha'
+                : isKepalaSekolah
+                ? 'Kepala Sekolah'
+                : role)}
+              {!isGod && subRole && subRole !== 'ADMIN_TU' && subRole !== 'BAU' && subRole !== 'KEPALA_SEKOLAH' && subRole !== role ? ` • ${subRole}` : ''}
             </span>
           </span>
         </div>
@@ -3023,8 +3061,8 @@ export default function DashboardPage() {
       {/* BANNER ALERT NOTIFIKASI DISPOSISI REALTIME GURU / PEGAWAI / PIMPINAN */}
       <DisposisiAlertBanner />
 
-      {/* Panel Detail Statistika Eksekutif (Khusus Kepala Sekolah - Muncul saat tombol Statistika ditekan) */}
-      {isKepalaSekolah && showExecutiveStats && (
+      {/* Panel Detail Statistika Eksekutif (Khusus GOD User & Kepala Sekolah - Muncul saat tombol Statistika ditekan) */}
+      {(isGod || isKepalaSekolah) && showExecutiveStats && (
         <ExecutiveStatsPanel
           execStats={execStats}
           studentsCount={students?.length || 0}
@@ -3034,8 +3072,8 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Kartu Statistika Keuangan (Khusus Staff Keuangan Khusus/Supervisor Keuangan) */}
-      {isKeuanganAll && !isKepalaSekolah && role !== 'SUPERADMIN' && role !== 'ADMIN_IT' && (
+      {/* Kartu Statistika Keuangan (Khusus GOD User atau Staf Keuangan Khusus) */}
+      {(isGod || (isKeuanganAll && !isKepalaSekolah && role !== 'SUPERADMIN' && role !== 'ADMIN_IT')) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Card className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Saldo Kas Bersih</span>
@@ -3064,10 +3102,11 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 3-AREA GENERAL DASHBOARD LAYOUT (Adaptive for Standard & High Zoom 125%-200%) */}
+      {/* 2-COLUMN / 3-COLUMN ADAPTIVE GENERAL DASHBOARD LAYOUT (Adaptive for Standard & High Zoom 125%-200%) */}
+      {/* Khusus Dashboard Guru / Pegawai / Karyawan / Staf: Seluruh Widget berada di Kolom Kiri, Akses Cepat di Kanan */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
-        {/* AREA KIRI: MY ACCOUNT & INFORMASI PENGUMUMAN SISTEM */}
-        <div className="lg:col-span-3 space-y-3.5 sm:space-y-4">
+        {/* AREA KIRI: SELURUH WIDGET (AKUN, INFORMASI SISTEM, BERITA, KALENDER, LOG ABSENSI, DISPOSISI/E-SIGN) */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-3.5 sm:space-y-4">
           <UserAccountCard
             role={role}
             subRole={subRole}
@@ -3152,38 +3191,39 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
-        </div>
-
-        {/* AREA TENGAH: TOMBOL AKSES CEPAT & LOG ABSENSI */}
-        <div className="lg:col-span-6 space-y-3.5 sm:space-y-4">
-          <div>
-            <div className="flex items-center justify-center gap-2 mb-2 sm:mb-2.5">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 tracking-tight">
-                  Akses Cepat Layanan
-                </h3>
-              </div>
-              <span className="text-[9.5px] sm:text-[10px] text-blue-600 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 px-2 py-0.2 rounded-full shadow-2xs">
-                {currentLinks.length} Modul
-              </span>
-            </div>
-            <CenterQuickAccessGrid links={currentLinks} role={role} />
-          </div>
-
           {/* Log Absensi Harian Pegawai / Guru */}
           {(role === 'GURU' || role === 'KARYAWAN' || role === 'PEGAWAI' || role === 'STAFF') && (
             <div>
               {renderAttendanceLog(false)}
             </div>
           )}
+
+          {/* Widget Berita & Pengumuman Sekolah */}
+          <NewsArticleListWidget announcements={announcements} limit={4} />
+
+          {/* Widget Kalender Kegiatan */}
+          <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
+
+          {/* Widget Informasi Sistem */}
+          <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
         </div>
 
-        {/* AREA KANAN: DAFTAR BERITA / ARTIKEL & KALENDER KEGIATAN */}
-        <div className="lg:col-span-3 space-y-3.5 sm:space-y-4">
-          <NewsArticleListWidget announcements={announcements} limit={4} />
-          <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
+        {/* AREA KANAN: TOMBOL AKSES CEPAT LAYANAN UTAMA */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-3.5 sm:space-y-4">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-2.5 px-1">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                  Pusat Akses Layanan & Modul Operasional
+                </h3>
+              </div>
+              <span className="text-[9.5px] sm:text-[10px] text-blue-600 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 px-2.5 py-0.5 rounded-full shadow-2xs">
+                {currentLinks.length} Modul Aktif
+              </span>
+            </div>
+            <CenterQuickAccessGrid links={currentLinks} role={role} />
+          </div>
         </div>
       </div>
 

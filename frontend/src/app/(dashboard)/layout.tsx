@@ -40,6 +40,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     refetchOnWindowFocus: true,
   })
 
+  // Heartbeat otomatis setiap 30 detik untuk memastikan status sesi pengguna sinkron realtime online
+  useQuery({
+    queryKey: ['user-session-heartbeat', userId],
+    queryFn: () => userId ? authenticatedQuery(`/api-backend/users/${userId}/profile`) : Promise.resolve(null),
+    enabled: !!userId && status === 'authenticated',
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  })
+
   useEffect(() => {
     if (status === 'unauthenticated' || (session as any)?.error === 'SessionExpired') {
       if ((session as any)?.error === 'SessionExpired') {
@@ -56,12 +66,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const isAccountActive = u?.isActive !== false
       const roles = [u?.role, u?.subRole, u?.subRole2, u?.subRole3, u?.subRole4, u?.subRole5, u?.username, u?.name].filter(Boolean) as string[]
 
-      // Jika akun dinonaktifkan / purna tugas, batasi hanya boleh melihat /dashboard
-      if (!isAccountActive && pathname !== '/dashboard' && pathname !== '/pengaturan/profil') {
+      // Siswa alumni / lulus / keluar tetap memiliki hak akses penuh ke riwayat pribadi
+      const isSiswa = u?.role === 'SISWA'
+      const allowedSiswaArchivePaths = [
+        '/dashboard',
+        '/pengaturan/profil',
+        '/keuangan/laporan',
+        '/presensi/kehadiran-siswa',
+        '/siswa/buku-induk',
+        '/akademik/e-rapor',
+        '/informasi/prestasi',
+        '/akademik/etika-tatib',
+        '/pengaturan/notifikasi-pengguna',
+      ]
+      const isSiswaArchiveAllowed = isSiswa && allowedSiswaArchivePaths.some(p => pathname === p || pathname.startsWith(`${p}/`))
+
+      // Jika akun dinonaktifkan / purna tugas (kecuali siswa alumni di rute arsip pribadi)
+      if (!isAccountActive && !isSiswaArchiveAllowed && pathname !== '/dashboard' && pathname !== '/pengaturan/profil') {
         Swal.fire({
           icon: 'warning',
           title: 'Status Akun Nonaktif',
-          text: 'Akun Anda saat ini berstatus nonaktif. Anda hanya dapat melihat informasi dan widget di Dashboard.',
+          text: 'Akun Anda saat ini berstatus nonaktif. Anda hanya dapat melihat informasi riwayat di Dashboard dan halaman arsip pribadi.',
           confirmButtonColor: '#4f46e5',
         })
         router.replace('/dashboard')
@@ -70,7 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       // Cek ketat otorisasi rute
       const allowed = isPathAllowedForRoles(pathname, roles)
-      if (!allowed) {
+      if (!allowed && !isSiswaArchiveAllowed) {
         Swal.fire({
           icon: 'error',
           title: 'Akses Ditolak',
@@ -104,10 +129,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const subRole4 = userObj?.subRole4
   const subRole5 = userObj?.subRole5
   const username = userObj?.username
+  const isAccountActive = userObj?.isActive !== false
   
   const displayRole = role
   
-  const currentLinks = getRoleLinks(role, subRole, subRole2, subRole3, subRole4, subRole5, username)
+  const currentLinks = getRoleLinks(role, subRole, subRole2, subRole3, subRole4, subRole5, username, isAccountActive)
   const isDashboardPage = pathname === '/dashboard'
   const hideSidebar = isDashboardPage
 
@@ -146,7 +172,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      <main className={`flex-1 flex flex-col min-h-dvh w-full min-w-0 overflow-x-hidden print:min-h-0 print:m-0 print:p-0 print:w-full print:bg-white print:text-black print:static print:overflow-visible transition-all duration-200 ${hideSidebar ? '' : 'lg:ml-72 xl:ml-76 print:lg:ml-0'}`}>
+      <main className={`flex-1 flex flex-col min-h-dvh w-full min-w-0 overflow-x-hidden print:min-h-0 print:m-0 print:p-0 print:w-full print:bg-white print:text-black print:static print:overflow-visible transition-all duration-200 ${hideSidebar ? '' : 'lg:ml-68 xl:ml-72 print:lg:ml-0'}`}>
         {/* Navbar Induk Terpadu (Kiri Logo, Kanan Info TA, Theme, Profil, Logout) */}
         <div className="print:hidden">
           <AppNavbar
@@ -233,7 +259,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
         </div>
 
-        <div className={`flex-1 w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-8 xl:px-10 2xl:px-12 pt-3 sm:pt-4 md:pt-5 pb-24 sm:pb-28 lg:pb-14 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0 max-w-7xl 2xl:max-w-[1440px]`}>
+        <div className={`flex-1 w-full mx-auto px-3 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-10 pt-2.5 sm:pt-3 md:pt-4 pb-20 sm:pb-24 lg:pb-12 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0 max-w-7xl 2xl:max-w-[1440px]`}>
           <div className="print:hidden">
             <EmailRecommendationBanner />
           </div>

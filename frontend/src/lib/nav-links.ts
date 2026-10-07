@@ -143,7 +143,7 @@ export const pegawaiLinks = [
   { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
 ]
 
-// 5. Siswa (Portal Peserta Didik)
+// 5. Siswa (Portal Peserta Didik Aktif)
 export const siswaLinks = [
   // Fitur Utama & Akademik
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -163,6 +163,19 @@ export const siswaLinks = [
   { name: 'Tagihan & Keuangan', href: '/keuangan/laporan', icon: Wallet, group: 'Layanan Mandiri' },
   { name: 'Tata Tertib & Etika', href: '/akademik/etika-tatib', icon: ShieldCheck, group: 'Layanan Mandiri' },
   { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
+]
+
+// 5b. Alumni & Siswa Purna Belajar (Lulus / Keluar - Akses Khusus Riwayat Data Pribadi)
+export const alumniSiswaLinks = [
+  // Fitur Utama & Arsip Riwayat Pribadi
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Riwayat Kehadiran', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck },
+  { name: 'Riwayat Keuangan & SPP', href: '/keuangan/laporan', icon: Wallet, group: 'Arsip Riwayat Pribadi' },
+  { name: 'Buku Induk Siswa', href: '/siswa/buku-induk', icon: BookMarked, group: 'Arsip Riwayat Pribadi' },
+  { name: 'Riwayat E-Rapor', href: '/akademik/e-rapor', icon: GraduationCap, group: 'Arsip Riwayat Pribadi' },
+  { name: 'Portofolio Prestasi', href: '/informasi/prestasi', icon: Trophy, group: 'Arsip Riwayat Pribadi' },
+  { name: 'Tata Tertib & Etika', href: '/akademik/etika-tatib', icon: ShieldCheck, group: 'Arsip Riwayat Pribadi' },
+  { name: 'Profil & Akun', href: '/pengaturan/profil', icon: UserSquare2, group: 'Layanan Mandiri' },
 ]
 
 // 6. Wali Murid (Portal Orang Tua / Wali)
@@ -296,8 +309,89 @@ export const keuanganKeluarLinks = [
   { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
 ]
 
+// 0. GOD User (Akun Virtual & Akses Penuh ke Segala Modul Sistem)
+export const godLinks = [
+  // Utama & Akses Cepat
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Log Presensi Pegawai', href: '/presensi/kehadiran-pegawai', icon: ClipboardCheck },
+  { name: 'Presensi Siswa', href: '/presensi/kehadiran-siswa', icon: UserCheck },
+  { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
+  { name: 'Disposisi Persuratan', href: '/fitur/disposisi', icon: FileCheck },
+
+  // Master Data
+  { name: 'Pendidik & Tendik', href: '/master-data/guru', icon: Users, group: 'Master Data' },
+  { name: 'Peserta Didik', href: '/master-data/siswa', icon: UserSquare2, group: 'Master Data' },
+  { name: 'Buku Induk', href: '/master-data/buku-induk', icon: BookMarked, group: 'Master Data' },
+  { name: 'Wali Murid', href: '/master-data/wali-murid', icon: Users, group: 'Master Data' },
+  { name: 'Rombongan Belajar', href: '/master-data/kelas', icon: BookOpen, group: 'Master Data' },
+  { name: 'Mata Pelajaran', href: '/master-data/mata-pelajaran', icon: GraduationCap, group: 'Master Data' },
+  { name: 'Jadwal Akademik', href: '/akademik/jadwal-pelajaran', icon: CalendarDays, group: 'Master Data' },
+
+  // Tata Usaha & Administrasi
+  { name: 'Surat Masuk', href: '/fitur/surat-masuk', icon: Inbox, group: 'Administrasi & Persuratan' },
+  { name: 'Surat Keluar', href: '/fitur/surat-keluar', icon: Send, group: 'Administrasi & Persuratan' },
+  { name: 'Arsip Dokumen', href: '/fitur/arsip', icon: Archive, group: 'Administrasi & Persuratan' },
+  { name: 'Inventaris & Sarpras', href: '/fitur/inventaris', icon: Package, group: 'Administrasi & Persuratan' },
+  { name: 'Buku Tamu Instansi', href: '/fitur/buku-tamu', icon: Contact, group: 'Administrasi & Persuratan' },
+  { name: 'Agenda Sekolah', href: '/fitur/kegiatan', icon: Sparkles, group: 'Administrasi & Persuratan' },
+  { name: 'Risalah Rapat', href: '/fitur/notulensi-rapat', icon: FileText, group: 'Administrasi & Persuratan' },
+  { name: 'Manajemen Kepegawaian', href: '/fitur/kepegawaian', icon: UserCheck, group: 'Administrasi & Persuratan' },
+
+  // Supervisi Akademik & Kesiswaan
+  { name: 'Supervisi Akademik & GTK', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'Supervisi Eksekutif' },
+  { name: 'Supervisi Jurnal & KBM', href: '/akademik/supervisi-jurnal', icon: BookOpen, group: 'Supervisi Eksekutif' },
+  { name: 'Supervisi Izin & Dispensasi', href: '/kesiswaan/supervisi-izin-dispensasi', icon: ClipboardCheck, group: 'Supervisi Eksekutif' },
+  { name: 'Verifikasi Dispensasi', href: '/presensi/dispensasi', icon: Award, group: 'Supervisi Eksekutif' },
+  { name: 'Monitoring Perizinan Siswa', href: '/presensi/izin-siswa', icon: DoorOpen, group: 'Supervisi Eksekutif' },
+  { name: 'Otorisasi Cuti Pegawai', href: '/presensi/cuti', icon: CalendarDays, group: 'Supervisi Eksekutif' },
+  { name: 'Izin Keluar Kantor', href: '/presensi/izin-keluar', icon: DoorOpen, group: 'Supervisi Eksekutif' },
+  { name: 'Monitoring Prestasi Siswa', href: '/informasi/prestasi', icon: Trophy, group: 'Supervisi Eksekutif' },
+  { name: 'Tata Kelola Kurikulum', href: '/fitur/kurikulum', icon: GraduationCap, group: 'Supervisi Eksekutif' },
+  { name: 'Perangkat Pembelajaran', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Supervisi Eksekutif' },
+  { name: 'Jurnal Pembelajaran', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Supervisi Eksekutif' },
+  { name: 'Jurnal Perwalian', href: '/akademik/jurnal-wali-kelas', icon: BookOpen, group: 'Supervisi Eksekutif' },
+  { name: 'Jurnal Kinerja Pegawai', href: '/presensi/jurnal-karyawan', icon: BookOpen, group: 'Supervisi Eksekutif' },
+  { name: 'Layanan Konseling (BK)', href: '/fitur/bk-bp', icon: HeartHandshake, group: 'Supervisi Eksekutif' },
+  { name: 'Kedisiplinan Siswa', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Supervisi Eksekutif' },
+  { name: 'Program Tahfidz', href: '/fitur/tahfidz', icon: BookMarked, group: 'Supervisi Eksekutif' },
+  { name: 'Tata Kelola ISMUBA', href: '/fitur/ismuba', icon: BookCheck, group: 'Supervisi Eksekutif' },
+  { name: 'Layanan Perpustakaan', href: '/fitur/perpustakaan', icon: Library, group: 'Supervisi Eksekutif' },
+  { name: 'Ekstrakurikuler', href: '/akademik/ekstrakurikuler', icon: Award, group: 'Supervisi Eksekutif' },
+  { name: 'Layanan Kesehatan (UKS)', href: '/fitur/kesehatan-sekolah', icon: HeartPulse, group: 'Supervisi Eksekutif' },
+  { name: 'Log Piket Harian', href: '/fitur/guru-piket', icon: Clock, group: 'Supervisi Eksekutif' },
+  { name: 'Kebersihan & Sanitasi', href: '/fitur/kebersihan', icon: Sparkles, group: 'Supervisi Eksekutif' },
+  { name: 'Keamanan & Ketertiban', href: '/fitur/keamanan', icon: ShieldCheck, group: 'Supervisi Eksekutif' },
+
+  // Manajemen Keuangan
+  { name: 'Penerimaan Kas & SPP', href: '/keuangan/pemasukan', icon: Wallet, group: 'Manajemen Finansial' },
+  { name: 'Pengeluaran & Belanja', href: '/keuangan/pengeluaran', icon: Receipt, group: 'Manajemen Finansial' },
+  { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote, group: 'Manajemen Finansial' },
+  { name: 'Verifikasi Bukti Bayar', href: '/keuangan/file-explorer', icon: HardDrive, group: 'Manajemen Finansial' },
+  { name: 'Integrasi Virtual Account', href: '/keuangan/virtual-account', icon: Database, group: 'Manajemen Finansial' },
+  { name: 'Laporan Finansial', href: '/keuangan/laporan', icon: FileText, group: 'Manajemen Finansial' },
+  { name: 'Tarif & Skema Biaya', href: '/keuangan/pengaturan', icon: Settings, group: 'Manajemen Finansial' },
+
+  // Konfigurasi Sistem & Advance
+  { name: 'Pusat Berkas & Storage', href: '/fitur/file-explorer', icon: HardDrive, group: 'Konfigurasi Sistem' },
+  { name: 'Terminal Presensi QR', href: '/presensi/manajemen-qr', icon: QrCode, group: 'Konfigurasi Sistem' },
+  { name: 'Manajemen Pengguna', href: '/master-data/pengguna', icon: UserCog, group: 'Konfigurasi Sistem' },
+  { name: 'Biometrik FaceNet AI', href: '/facenetai', icon: Camera, group: 'Konfigurasi Sistem' },
+  { name: 'Pengumuman Sistem', href: '/pengaturan/pengumuman-sistem', icon: BellRing, group: 'Konfigurasi Sistem' },
+  { name: 'Konfigurasi Notifikasi', href: '/pengaturan/notifikasi', icon: Mail, group: 'Konfigurasi Sistem' },
+  { name: 'Pengaturan Sistem', href: '/pengaturan/sistem', icon: Settings, group: 'Konfigurasi Sistem' },
+  { name: 'Publikasi & Informasi', href: '/informasi/pengumuman', icon: Megaphone, group: 'Konfigurasi Sistem' },
+  { name: 'Banner Portal', href: '/informasi/banner', icon: ImageIcon, group: 'Konfigurasi Sistem' },
+
+  // Layanan Akun
+  { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
+]
+
 // Pengecekan Hak Akses Rute Ketat Berdasarkan Role & Sub-Role
 export function isPathAllowedForRoles(pathname: string, roles: string[]): boolean {
+  // GOD User: Universal Bypass ke seluruh rute & modul sistem
+  if (roles.includes('GOD') || roles.includes('GOD_USER') || roles.includes('supermuhipo')) {
+    return true
+  }
   // Pegawai Honorer / Guru Panggilan: Hanya boleh mengakses Dashboard, Jadwal, Jurnal Mengajar, Presensi Siswa, dan Notifikasi Akun
   const isHonorer = roles.includes('HONORER')
   if (isHonorer) {
@@ -551,7 +645,16 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
   return allowedLinks.some(l => pathname.startsWith(l.href))
 }
 
-export function getRoleLinks(role: string, subRole?: string, subRole2?: string, subRole3?: string, subRole4?: string, subRole5?: string, username?: string) {
+export function getRoleLinks(
+  role: string,
+  subRole?: string,
+  subRole2?: string,
+  subRole3?: string,
+  subRole4?: string,
+  subRole5?: string,
+  username?: string,
+  isActive: boolean = true
+) {
   let currentLinks: any[] = []
   
   const addLinks = (links: any[]) => {
@@ -563,7 +666,9 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
   }
 
   // Set base links by main role
-  if (role === 'SUPERADMIN' || role === 'ADMIN_IT') {
+  if (role === 'GOD' || role === 'GOD_USER' || username === 'supermuhipo') {
+    return godLinks
+  } else if (role === 'SUPERADMIN' || role === 'ADMIN_IT') {
     addLinks(superadminLinks)
   } else if (role === 'KEPALA_SEKOLAH') {
     addLinks(kepalaSekolahLinks)
@@ -574,7 +679,11 @@ export function getRoleLinks(role: string, subRole?: string, subRole2?: string, 
   } else if (role === 'GURU') {
     addLinks(guruLinks)
   } else if (role === 'SISWA') {
-    addLinks(siswaLinks)
+    if (!isActive || subRole === 'ALUMNI' || subRole === 'SISWA_NONAKTIF' || subRole === 'LULUS' || subRole === 'KELUAR') {
+      addLinks(alumniSiswaLinks)
+    } else {
+      addLinks(siswaLinks)
+    }
   } else if (role === 'WALI_MURID') {
     addLinks(waliMuridLinks)
   } else if (role === 'PEGAWAI' || role === 'KARYAWAN') {

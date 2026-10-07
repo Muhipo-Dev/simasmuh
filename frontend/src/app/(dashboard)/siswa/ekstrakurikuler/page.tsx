@@ -5,13 +5,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Sparkles, Award, Calendar, Clock, MapPin, Users,
   CheckCircle2, ShieldCheck, BookOpen, AlertCircle, Info,
-  Filter, Search, UserCheck, Star, ChevronRight, UserPlus, LogOut, Loader2
+  Filter, Search, UserCheck, Star, ChevronRight, UserPlus, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch } from '@/components/TableSearch'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -26,7 +25,6 @@ export default function SiswaEkstrakurikulerPage() {
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedMembershipId, setSelectedMembershipId] = useState<string | null>(null)
   const [joiningId, setJoiningId] = useState<string | null>(null)
-  const [leavingId, setLeavingId] = useState<string | null>(null)
 
   // 1. Fetch Aktivitas & Katalog Ekskul Siswa Realtime
   const { data, isLoading } = useQuery<{
@@ -39,17 +37,29 @@ export default function SiswaEkstrakurikulerPage() {
       if (!res.ok) return { myMemberships: [], availableCatalog: [] }
       return res.json()
     },
-    staleTime: 30000,
+    staleTime: 15000,
+    refetchInterval: 30000,
   })
 
   const myMemberships = data?.myMemberships || []
   const availableCatalog = data?.availableCatalog || []
+
+  const isMaxReached = myMemberships.length >= 3
 
   // Set ID ekskul yang sudah diikuti
   const joinedEkskulIds = new Set(myMemberships.map((m: any) => m.extracurricularId || m.extracurricular?.id))
 
   // Handler Gabung Ekstrakurikuler Mandiri
   const handleJoinExtracurricular = async (ekskul: any) => {
+    if (isMaxReached) {
+      Swal.fire({
+        title: 'Batas Maksimal Tercapai',
+        text: 'Anda telah memilih 3 ekstrakurikuler. Siswa hanya dapat mengikuti maksimal hingga 3 unit kegiatan ekstrakurikuler.',
+        icon: 'warning',
+      })
+      return
+    }
+
     const confirm = await Swal.fire({
       title: `Gabung Ekstrakurikuler?`,
       html: `
@@ -60,7 +70,7 @@ export default function SiswaEkstrakurikulerPage() {
             <p class="text-slate-600 dark:text-slate-300"><b>Lokasi:</b> ${ekskul.location || '-'}</p>
             <p class="text-slate-600 dark:text-slate-300"><b>Pembina:</b> ${ekskul.pembinaName || '-'}</p>
           </div>
-          <p class="text-slate-500">Pendaftaran akan langsung tersinkronisasi dengan Guru Pembina dan Bidang Kesiswaan.</p>
+          <p class="text-slate-500">Pendaftaran akan langsung tersinkronisasi dengan Guru Pembina dan Bidang Kesiswaan (Maksimal 3 Ekskul).</p>
         </div>
       `,
       icon: 'question',
@@ -102,49 +112,6 @@ export default function SiswaEkstrakurikulerPage() {
     }
   }
 
-  // Handler Keluar Ekstrakurikuler Mandiri
-  const handleLeaveExtracurricular = async (ekskul: any) => {
-    const confirm = await Swal.fire({
-      title: `Keluar dari Ekstrakurikuler?`,
-      text: `Apakah Anda yakin ingin berhenti dan keluar dari keanggotaan ${ekskul.name}?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Ya, Keluar',
-      cancelButtonText: 'Batal',
-      confirmButtonColor: '#e11d48',
-    })
-
-    if (!confirm.isConfirmed) return
-
-    try {
-      setLeavingId(ekskul.id)
-      const res = await authenticatedFetch(`/api-backend/extracurricular/student/leave/${ekskul.id}`, {
-        method: 'POST',
-      })
-      const result = await res.json()
-      if (!res.ok) throw new Error(result.message || 'Gagal memproses permohonan keluar')
-
-      Swal.fire({
-        title: 'Berhasil Keluar',
-        text: result.message || `Anda telah keluar dari ekstrakurikuler ${ekskul.name}.`,
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false,
-      })
-
-      queryClient.invalidateQueries({ queryKey: ['student-my-extracurriculars'] })
-      queryClient.invalidateQueries({ queryKey: ['student-dashboard-ekskul'] })
-    } catch (err: any) {
-      Swal.fire({
-        title: 'Gagal Keluar',
-        text: err?.message || 'Terjadi kesalahan sistem.',
-        icon: 'error',
-      })
-    } finally {
-      setLeavingId(null)
-    }
-  }
-
   // Pilih membership pertama secara default jika ada
   const activeMembership = myMemberships.find((m) => m.id === selectedMembershipId) || myMemberships[0] || null
 
@@ -175,12 +142,21 @@ export default function SiswaEkstrakurikulerPage() {
                 Ekstrakurikuler Siswa
               </h1>
               <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-bold">
-                MUHIPO Hebat
+                Maks. 3 Ekskul
               </Badge>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Informasi kegiatan ekstrakurikuler yang kamu ikuti, presensi kehadiran, nilai rapor, dan katalog klub resmi.
+              Informasi kegiatan ekstrakurikuler yang kamu ikuti, presensi kehadiran, nilai rapor, dan katalog klub resmi SMA Muhammadiyah 1 Ponorogo.
             </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="px-3.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-right">
+            <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 block">Kuota Ekstrakurikuler</span>
+            <span className="text-sm font-black text-slate-900 dark:text-white">
+              {myMemberships.length} <span className="text-xs font-normal text-slate-400">/ 3 Pilihan</span>
+            </span>
           </div>
         </div>
       </div>
@@ -197,7 +173,7 @@ export default function SiswaEkstrakurikulerPage() {
           }`}
         >
           <Award className="h-3.5 w-3.5" />
-          <span>Ekstrakurikuler Saya ({myMemberships.length})</span>
+          <span>Ekstrakurikuler Saya ({myMemberships.length}/3)</span>
         </button>
         <button
           type="button"
@@ -209,7 +185,7 @@ export default function SiswaEkstrakurikulerPage() {
           }`}
         >
           <BookOpen className="h-3.5 w-3.5" />
-          <span>Katalog Ekskul MUHIPO ({availableCatalog.length})</span>
+          <span>Katalog Ekskul ({availableCatalog.length})</span>
         </button>
       </div>
 
@@ -264,25 +240,9 @@ export default function SiswaEkstrakurikulerPage() {
                           <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 text-xs font-bold">
                             Status: {activeMembership.status}
                           </Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleLeaveExtracurricular(activeMembership.extracurricular)}
-                            disabled={leavingId === activeMembership.extracurricular?.id}
-                            className="h-7 text-[11px] font-bold text-rose-600 border-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                          >
-                            {leavingId === activeMembership.extracurricular?.id ? (
-                              <>
-                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                <span>Keluar...</span>
-                              </>
-                            ) : (
-                              <>
-                                <LogOut className="w-3 h-3 mr-1" />
-                                <span>Keluar Ekskul</span>
-                              </>
-                            )}
-                          </Button>
+                          <span className="text-[10px] text-slate-400 italic">
+                            (Dikelola Pembina)
+                          </span>
                         </div>
                       </div>
                     </CardHeader>
@@ -329,7 +289,7 @@ export default function SiswaEkstrakurikulerPage() {
                           <CardHeader className="p-4 pb-2 border-b border-slate-100 dark:border-slate-800">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                              Rekap Kehadiran Latihan
+                              Rekap Kehadiran Latihan Realtime
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="p-4">
@@ -390,7 +350,7 @@ export default function SiswaEkstrakurikulerPage() {
                               </div>
                             ) : (
                               <div className="py-2 text-center text-xs text-slate-400">
-                                <p>Belum ada nilai yang diinput oleh pembina untuk periode ini.</p>
+                                <p>Belum ada nilai rapor yang diinput oleh pembina untuk periode ini.</p>
                               </div>
                             )}
                           </CardContent>
@@ -451,26 +411,26 @@ export default function SiswaEkstrakurikulerPage() {
                                         </p>
                                       )}
                                     </TableCell>
-                                    <TableCell className="text-slate-600 truncate max-w-[120px]">
+                                    <TableCell className="text-slate-600 dark:text-slate-300">
                                       {session.location || '-'}
                                     </TableCell>
                                     <TableCell className="text-center">
                                       <Badge
                                         className={`text-[10px] font-bold ${
                                           status === 'HADIR'
-                                            ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
+                                            ? 'bg-emerald-600 text-white'
                                             : status === 'IZIN'
-                                            ? 'bg-blue-500/15 text-blue-600 border-blue-500/30'
+                                            ? 'bg-blue-600 text-white'
                                             : status === 'SAKIT'
-                                            ? 'bg-amber-500/15 text-amber-600 border-amber-500/30'
-                                            : 'bg-rose-500/15 text-rose-600 border-rose-500/30'
+                                            ? 'bg-amber-600 text-white'
+                                            : 'bg-rose-600 text-white'
                                         }`}
                                       >
                                         {status}
                                       </Badge>
                                     </TableCell>
                                     <TableCell className="text-slate-500 text-[11px]">
-                                      {myAttendance?.notes || '-'}
+                                      {myAttendance?.notes || session.notes || '-'}
                                     </TableCell>
                                   </TableRow>
                                 )
@@ -491,24 +451,21 @@ export default function SiswaEkstrakurikulerPage() {
               )}
             </div>
           ) : (
-            <Card className="border-slate-200/80 dark:border-slate-800 shadow-sm text-center p-8">
-              <div className="h-12 w-12 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto mb-3">
-                <Sparkles className="h-6 w-6" />
-              </div>
-              <h3 className="font-bold text-slate-800 dark:text-white text-base">
+            <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+              <Sparkles className="w-12 h-12 text-amber-500 mx-auto" />
+              <h3 className="text-base font-bold text-slate-800 dark:text-white">
                 Belum Terdaftar di Ekstrakurikuler
               </h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
-                Kamu belum terdaftar di unit kegiatan ekstrakurikuler manapun. Silakan hubungi pembina ekskul atau kesiswaan untuk pendaftaran.
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Kamu dapat memilih hingga maksimal 3 unit kegiatan ekstrakurikuler untuk mengembangkan minat, bakat, dan karakter.
               </p>
               <Button
-                size="sm"
-                className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold"
                 onClick={() => setActiveTab('catalog')}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs"
               >
                 Lihat Katalog Ekstrakurikuler
               </Button>
-            </Card>
+            </div>
           )}
         </div>
       )}
@@ -516,37 +473,46 @@ export default function SiswaEkstrakurikulerPage() {
       {/* TAB 2: KATALOG SELURUH EKSTRAKURIKULER MUHIPO */}
       {activeTab === 'catalog' && (
         <div className="space-y-4">
-          {/* Filter & Search Bar */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <TableSearch
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Cari ekskul / nama pembina / lokasi..."
-              className="w-full"
-              activeFiltersCount={selectedCategory !== 'ALL' ? 1 : 0}
-              onResetFilters={() => setSelectedCategory('ALL')}
-              filters={
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Kategori Ekstrakurikuler</label>
-                  <Select value={selectedCategory} onValueChange={(val) => setSelectedCategory(val || 'ALL')}>
-                    <SelectTrigger className="w-full h-9 text-xs bg-slate-50 dark:bg-slate-800">
-                      <SelectValue placeholder="Semua Kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL" className="text-xs">-- Semua Kategori --</SelectItem>
-                      <SelectItem value="WAJIB_MUHAMMADIYAH" className="text-xs">Wajib Muhammadiyah (HW, TS)</SelectItem>
-                      <SelectItem value="KEORGANISASIAN" className="text-xs">Keorganisasian (IPM)</SelectItem>
-                      <SelectItem value="KESEHATAN_SOSIAL" className="text-xs">Kesehatan & Sosial (PMR)</SelectItem>
-                      <SelectItem value="KEPEMIMPINAN" className="text-xs">Kepemimpinan (Paskibra)</SelectItem>
-                      <SelectItem value="OLAHRAGA" className="text-xs">Olahraga & Bela Diri</SelectItem>
-                      <SelectItem value="AKADEMIK_SAINS" className="text-xs">Akademik, Robotik & Sains</SelectItem>
-                      <SelectItem value="KEAGAMAAN" className="text-xs">Keagamaan & Tahfidz</SelectItem>
-                      <SelectItem value="SENI_BUDAYA" className="text-xs">Seni & Budaya</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              }
-            />
+          {isMaxReached && (
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
+              <Info className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Anda telah memilih <strong>3 ekstrakurikuler</strong> (batas maksimal tercapai). Untuk perubahan atau pembatalan, silakan hubungi Pembina ekstrakurikuler bersangkutan.</span>
+            </div>
+          )}
+
+          {/* Search & Filter */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="w-full sm:w-80">
+              <TableSearch
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Cari nama ekskul, pembina, tempat..."
+                activeFiltersCount={selectedCategory !== 'ALL' ? 1 : 0}
+                onResetFilters={() => setSelectedCategory('ALL')}
+                filters={
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Kategori Ekstrakurikuler</label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      aria-label="Filter Kategori Ekstrakurikuler"
+                      className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value="ALL">-- Semua Kategori --</option>
+                      <option value="WAJIB_MUHAMMADIYAH">Wajib Muhammadiyah</option>
+                      <option value="OLAHRAGA">Olahraga & Atletik</option>
+                      <option value="SENI_BUDAYA">Seni & Budaya</option>
+                      <option value="KEAGAMAAN">Keagamaan & Tahfidz</option>
+                      <option value="AKADEMIK_SAINS">Sains & Robotika</option>
+                      <option value="KEPANDUAN">Kepanduan & Bela Negara</option>
+                      <option value="KEORGANISASIAN">Organisasi Kesiswaan</option>
+                      <option value="KESEHATAN_SOSIAL">Kesehatan & UKS</option>
+                      <option value="UMUM">Umum / Minat Bakat</option>
+                    </select>
+                  </div>
+                }
+              />
+            </div>
           </div>
 
           {/* Grid Katalog */}
@@ -611,6 +577,15 @@ export default function SiswaEkstrakurikulerPage() {
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
                         Sudah Terdaftar
+                      </Button>
+                    ) : isMaxReached ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled
+                        className="w-full h-8 text-xs font-bold text-slate-400 border-slate-200 bg-slate-50 dark:bg-slate-800"
+                      >
+                        Maksimal 3 Ekskul Terpenuhi
                       </Button>
                     ) : (
                       <Button

@@ -283,7 +283,8 @@ export class FinanceService {
 
     const staffList = await this.prisma.user.findMany({
       where: {
-        role: { notIn: ['SISWA', 'WALI_MURID', 'HONORER'] },
+        role: { notIn: ['SISWA', 'WALI_MURID', 'HONORER', 'GOD', 'GOD_USER'] },
+        username: { not: 'supermuhipo' },
       },
       select: {
         id: true,
@@ -903,7 +904,8 @@ export class FinanceService {
 
     const staffList = await this.prisma.user.findMany({
       where: {
-        role: { notIn: ['SISWA', 'WALI_MURID', 'HONORER'] },
+        role: { notIn: ['SISWA', 'WALI_MURID', 'HONORER', 'GOD', 'GOD_USER'] },
+        username: { not: 'supermuhipo' },
       },
       select: {
         id: true,
@@ -996,7 +998,8 @@ export class FinanceService {
 
     const staffList = await this.prisma.user.findMany({
       where: {
-        role: { notIn: ['SISWA', 'WALI_MURID', 'HONORER'] },
+        role: { notIn: ['SISWA', 'WALI_MURID', 'HONORER', 'GOD', 'GOD_USER'] },
+        username: { not: 'supermuhipo' },
       },
       select: {
         id: true,
@@ -1410,6 +1413,7 @@ export class FinanceService {
   // ============================================================
 
   /** Daftar semua siswa beserta ringkasan tagihan mereka */
+  /** Daftar semua siswa beserta ringkasan tagihan mereka */
   async getStudentsWithTagihan(classId?: string) {
     const students: any[] = await this.prisma.student.findMany({
       where: classId ? { classId } : undefined,
@@ -1420,6 +1424,7 @@ export class FinanceService {
         name: true,
         gender: true,
         isActive: true,
+        bioData: true,
         program: true,
         gelombang: true,
         jalurPendaftaran: true,
@@ -1460,6 +1465,36 @@ export class FinanceService {
       const sppTagihan = tagihansList.filter(
         (t: any) => t.type === 'SPP' && t.status === 'LUNAS',
       );
+
+      let studentStatus = s.isActive === false ? 'NONAKTIF' : 'AKTIF';
+      let statusDetail = s.isActive === false ? 'Nonaktif' : 'Aktif';
+
+      if (s.isActive === false) {
+        let parsedBio: any = {};
+        if (s.bioData) {
+          try {
+            parsedBio =
+              typeof s.bioData === 'string'
+                ? JSON.parse(s.bioData)
+                : s.bioData;
+          } catch {}
+        }
+        const alasan = (parsedBio?.alasanMeninggalkan || '').toLowerCase();
+        const tamat = (parsedBio?.tamatBelajar || '').toLowerCase();
+        if (
+          alasan.includes('lulus') ||
+          tamat.includes('lulus') ||
+          tamat.includes('tamat') ||
+          alasan.includes('alumni')
+        ) {
+          studentStatus = 'LULUS';
+          statusDetail = parsedBio?.tamatBelajar || 'Telah Lulus / Alumni';
+        } else if (alasan.includes('keluar') || alasan.includes('pindah')) {
+          studentStatus = 'KELUAR';
+          statusDetail = parsedBio?.alasanMeninggalkan || 'Pindah / Keluar';
+        }
+      }
+
       return {
         id: s.id,
         nisn: s.nisn,
@@ -1467,6 +1502,9 @@ export class FinanceService {
         name: s.name,
         gender: s.gender,
         isActive: s.isActive ?? true,
+        studentStatus,
+        statusDetail,
+        bioData: s.bioData,
         program: s.program || null,
         gelombang: s.gelombang || 'Gelombang 1',
         jalurPendaftaran: s.jalurPendaftaran || 'Mandiri',
@@ -3469,18 +3507,121 @@ export class FinanceService {
   }
 
   // ============================================================
-  // STUDENT PAYMENT HISTORY (legacy - kept for Payment model)
+  // STUDENT PAYMENT HISTORY & TRANSACTIONS
   // ============================================================
   async getStudentPayments(studentId: string) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
       include: {
         class: { select: { name: true } },
-        payments: { orderBy: { paymentDate: 'desc' } },
+        payments: {
+          orderBy: { paymentDate: 'desc' },
+          include: {
+            tagihan: {
+              select: {
+                id: true,
+                type: true,
+                amount: true,
+                amountPaid: true,
+                status: true,
+                month: true,
+                year: true,
+                notes: true,
+              },
+            },
+          },
+        },
       },
     });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
     return student;
+  }
+
+  /** Mengambil seluruh riwayat transaksi pembayaran masuk dari semua siswa */
+  async getAllPaymentTransactions(query?: {
+    search?: string;
+    studentId?: string;
+    type?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    page?: number;
+  }) {
+    const whereClause: any = {};
+    if (query?.studentId) {
+      whereClause.studentId = query.studentId;
+    }
+    if (query?.type && query.type !== 'ALL') {
+      whereClause.type = query.type;
+    }
+    if (query?.startDate || query?.endDate) {
+      whereClause.paymentDate = {};
+      if (query?.startDate) {
+        whereClause.paymentDate.gte = new Date(query.startDate);
+      }
+      if (query?.endDate) {
+        const end = new Date(query.endDate);
+        end.setHours(23, 59, 59, 999);
+        whereClause.paymentDate.lte = end;
+      }
+    }
+    if (query?.search) {
+      whereClause.OR = [
+        { student: { name: { contains: query.search, mode: 'insensitive' } } },
+        { student: { nisn: { contains: query.search } } },
+        { student: { nis: { contains: query.search } } },
+        { notes: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+
+    const limit = query?.limit ? Math.min(1000, Number(query.limit)) : 300;
+    const page = query?.page ? Math.max(1, Number(query.page)) : 1;
+    const skip = (page - 1) * limit;
+
+    const [total, payments] = await Promise.all([
+      this.prisma.payment.count({ where: whereClause }),
+      this.prisma.payment.findMany({
+        where: whereClause,
+        include: {
+          student: {
+            select: {
+              id: true,
+              name: true,
+              nis: true,
+              nisn: true,
+              gender: true,
+              isActive: true,
+              bioData: true,
+              program: true,
+              class: { select: { name: true } },
+            },
+          },
+          tagihan: {
+            select: {
+              id: true,
+              type: true,
+              amount: true,
+              amountPaid: true,
+              status: true,
+              month: true,
+              year: true,
+              notes: true,
+            },
+          },
+        },
+        orderBy: { paymentDate: 'desc' },
+        take: limit,
+        skip,
+      }),
+    ]);
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      data: payments,
+    };
   }
 
   /** Get unpaid tagihans for student based on userId or studentId */

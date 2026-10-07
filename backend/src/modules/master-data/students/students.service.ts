@@ -861,4 +861,112 @@ export class StudentsService {
     }
     return { success: true, count: successCount, total: ids.length, isActive };
   }
+
+  async setStudentStatus(
+    id: string,
+    status: 'AKTIF' | 'NONAKTIF' | 'LULUS' | 'ALUMNI' | 'KELUAR',
+    details?: {
+      tglKeluar?: string;
+      noIjazah?: string;
+      alasan?: string;
+      tamatBelajar?: string;
+    },
+  ) {
+    const student = await this.prisma.student.findUnique({
+      where: { id },
+    });
+    if (!student) {
+      throw new NotFoundException('Data siswa tidak ditemukan');
+    }
+
+    let parsedBio: any = {};
+    if (student.bioData) {
+      try {
+        parsedBio =
+          typeof student.bioData === 'string'
+            ? JSON.parse(student.bioData)
+            : student.bioData;
+      } catch {
+        parsedBio = {};
+      }
+    }
+
+    const isActive = status === 'AKTIF';
+
+    if (status === 'AKTIF') {
+      parsedBio.alasanMeninggalkan = '';
+      parsedBio.tamatBelajar = '';
+      parsedBio.tglMeninggalkanSekolah = '';
+    } else if (status === 'LULUS' || status === 'ALUMNI') {
+      parsedBio.tamatBelajar =
+        details?.tamatBelajar || 'Tamat Belajar / Lulus';
+      parsedBio.alasanMeninggalkan = 'Lulus';
+      if (details?.noIjazah) parsedBio.noIjazahLulus = details.noIjazah;
+      if (details?.tglKeluar) {
+        parsedBio.tglMeninggalkanSekolah = details.tglKeluar;
+      } else if (!parsedBio.tglMeninggalkanSekolah) {
+        parsedBio.tglMeninggalkanSekolah = new Date().toISOString().split('T')[0];
+      }
+    } else if (status === 'KELUAR') {
+      parsedBio.alasanMeninggalkan =
+        details?.alasan || 'Pindah / Keluar Sekolah';
+      if (details?.tglKeluar) {
+        parsedBio.tglMeninggalkanSekolah = details.tglKeluar;
+      } else if (!parsedBio.tglMeninggalkanSekolah) {
+        parsedBio.tglMeninggalkanSekolah = new Date().toISOString().split('T')[0];
+      }
+    }
+
+    const updated = await this.prisma.student.update({
+      where: { id },
+      data: {
+        isActive,
+        bioData: JSON.stringify(parsedBio),
+      },
+      include: { user: true, class: true },
+    });
+
+    // Siswa yang berstatus LULUS, ALUMNI, atau KELUAR tetap diizinkan login (user.isActive = true)
+    // agar dapat mengakses histori riwayat pembayaran, absensi, dan data pribadi mereka.
+    const userIsActive =
+      status === 'AKTIF' ||
+      status === 'LULUS' ||
+      status === 'ALUMNI' ||
+      status === 'KELUAR';
+
+    if (student.userId) {
+      await this.prisma.user.update({
+        where: { id: student.userId },
+        data: { isActive: userIsActive },
+      });
+    }
+
+    return updated;
+  }
+
+  async bulkSetStudentStatus(
+    ids: string[],
+    status: 'AKTIF' | 'NONAKTIF' | 'LULUS' | 'ALUMNI' | 'KELUAR',
+    details?: {
+      tglKeluar?: string;
+      noIjazah?: string;
+      alasan?: string;
+      tamatBelajar?: string;
+    },
+  ) {
+    let successCount = 0;
+    for (const id of ids) {
+      try {
+        await this.setStudentStatus(id, status, details);
+        successCount++;
+      } catch {}
+    }
+    return {
+      success: true,
+      count: successCount,
+      total: ids.length,
+      status,
+    };
+  }
 }
+

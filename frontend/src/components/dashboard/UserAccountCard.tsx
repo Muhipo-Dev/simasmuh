@@ -49,7 +49,8 @@ export function UserAccountCard({
   const userIdentifier = role === 'SISWA' 
     ? (studentNis ? `NIS: ${studentNis}` : (user?.email || user?.username || '-'))
     : (user?.email || user?.username || '-')
-  const userRole = subRole ? `${role} • ${subRole}` : role
+  const isGodUser = role === 'GOD' || role === 'GOD_USER' || user?.username === 'supermuhipo'
+  const userRole = isGodUser ? 'GOD ACCESS' : (subRole ? `${role} • ${subRole}` : role)
   const isAccountActive = liveProfile?.isActive !== undefined ? liveProfile.isActive !== false : user?.isActive !== false
 
   const effectiveStatus = isAccountActive ? 'Aktif' : 'Nonaktif'

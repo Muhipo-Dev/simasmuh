@@ -135,6 +135,28 @@ export class StudentsController {
     return this.studentsService.bulkToggleActive(ids, isActive);
   }
 
+  @Patch(':id/status')
+  @UseGuards(JwtAuthGuard)
+  setStudentStatus(
+    @Param('id') id: string,
+    @Body('status')
+    status: 'AKTIF' | 'NONAKTIF' | 'LULUS' | 'ALUMNI' | 'KELUAR',
+    @Body('details') details?: any,
+  ) {
+    return this.studentsService.setStudentStatus(id, status, details);
+  }
+
+  @Post('bulk-status')
+  @UseGuards(JwtAuthGuard)
+  bulkSetStudentStatus(
+    @Body('ids') ids: string[],
+    @Body('status')
+    status: 'AKTIF' | 'NONAKTIF' | 'LULUS' | 'ALUMNI' | 'KELUAR',
+    @Body('details') details?: any,
+  ) {
+    return this.studentsService.bulkSetStudentStatus(ids, status, details);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.studentsService.remove(id);

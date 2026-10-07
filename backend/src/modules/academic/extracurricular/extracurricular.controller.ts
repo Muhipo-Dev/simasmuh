@@ -171,7 +171,7 @@ export class ExtracurricularController {
     @Body() dto: UpdateExtracurricularDto,
     @Request() req: any,
   ) {
-    this.checkKesiswaanPermission(req.user);
+    this.checkPembinaOrStaffPermission(req.user);
     return this.extracurricularService.update(id, dto, req.user);
   }
 
@@ -181,7 +181,7 @@ export class ExtracurricularController {
     return this.extracurricularService.delete(id, req.user);
   }
 
-  // ==================== ANGGOTA ====================
+  // ==================== ANGGOTA (KHUSUS PEMBINA BINAAN) ====================
 
   @Post(':id/members')
   addMember(
@@ -199,7 +199,7 @@ export class ExtracurricularController {
     return this.extracurricularService.removeMember(memberId, req.user);
   }
 
-  // ==================== SESI & PRESENSI ====================
+  // ==================== SESI & PRESENSI (KHUSUS PEMBINA BINAAN) ====================
 
   @Post(':id/sessions')
   createSession(
@@ -242,7 +242,7 @@ export class ExtracurricularController {
     return this.extracurricularService.saveSessionAttendance(sessionId, dto, req.user);
   }
 
-  // ==================== PENILAIAN ====================
+  // ==================== PENILAIAN (KHUSUS PEMBINA BINAAN) ====================
 
   @Post(':id/grades')
   saveGrades(

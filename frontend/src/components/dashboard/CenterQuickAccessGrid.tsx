@@ -57,6 +57,7 @@ const groupIcons: Record<string, LucideIcon> = {
   'Administrasi & Persuratan': Package,
   'Administrasi Persuratan': FileCheck,
   'Master Data': Database,
+  'Konfigurasi Sistem': Settings,
   'Konfigurasi Lanjutan': Settings,
   'Operasional Sistem': Settings,
   'Manajemen Finansial': Wallet,

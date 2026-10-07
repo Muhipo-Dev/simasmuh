@@ -46,6 +46,11 @@ export enum NotificationType {
   // Perangkat Ajar & Supervisi
   PERANGKAT_AJAR_SUBMITTED = 'PERANGKAT_AJAR_SUBMITTED',
   PERANGKAT_AJAR_VERIFIED = 'PERANGKAT_AJAR_VERIFIED',
+
+  // Ekstrakurikuler
+  EKSKUL_KEANGGOTAAN = 'EKSKUL_KEANGGOTAAN',
+  EKSKUL_PRESENSI = 'EKSKUL_PRESENSI',
+  EKSKUL_NILAI = 'EKSKUL_NILAI',
 }
 
 export enum NotificationPriority {
@@ -472,6 +477,14 @@ export class NotificationsService {
   }
 
   /**
+   * Helper to check if role is staff/teacher/management vs student/parent
+   */
+  private isStaffRole(role: string): boolean {
+    const normalized = (role || '').toUpperCase();
+    return !['SISWA', 'WALI_MURID'].includes(normalized);
+  }
+
+  /**
    * Get user's Google account link status and email notification preferences
    */
   async getUserEmailPreferences(userId: string) {
@@ -484,6 +497,7 @@ export class NotificationsService {
         phone: true,
         role: true,
         username: true,
+        notificationPreferences: true,
       },
     });
 
@@ -492,19 +506,40 @@ export class NotificationsService {
     }
 
     const isGoogleLinked = !!(user.email && user.email.includes('@'));
+    const isStaff = this.isStaffRole(user.role);
+
+    const defaultStaffPreferences = {
+      notifPresensiMasuk: true,
+      notifPresensiPulang: true,
+      notifGaji: true,
+      notifDisposisi: true,
+      notifIzinCuti: true,
+      notifPengumuman: true,
+    };
+
+    const defaultStudentPreferences = {
+      notifPresensiMasuk: true,
+      notifPresensiPulang: true,
+      notifTagihan: true,
+      notifTagihanLunas: true,
+      notifIzinCuti: true,
+      notifKedisiplinan: true,
+      notifPengumuman: true,
+    };
+
+    const defaultPrefs = isStaff ? defaultStaffPreferences : defaultStudentPreferences;
+    const userSavedPrefs = (user.notificationPreferences as any) || {};
 
     return {
       userId: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
+      isStaff,
       isGoogleLinked,
       preferences: {
-        notifPresensi: true,
-        notifKeuangan: true,
-        notifPengumuman: true,
-        notifKedisiplinan: true,
-        notifPerizinan: true,
+        ...defaultPrefs,
+        ...userSavedPrefs,
       },
     };
   }
@@ -513,6 +548,17 @@ export class NotificationsService {
    * Update user's Google linked email or notification preferences
    */
   async updateUserEmailPreferences(userId: string, data: { email?: string; preferences?: any }) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, notificationPreferences: true },
+    });
+
+    if (!user) {
+      throw new Error('Pengguna tidak ditemukan');
+    }
+
+    const updateData: any = {};
+
     if (data.email) {
       const emailTrimmed = data.email.trim().toLowerCase();
       // Check if email already used by another user
@@ -526,10 +572,21 @@ export class NotificationsService {
       if (existing) {
         throw new Error('Alamat email Google ini sudah ditautkan ke akun lain.');
       }
+      updateData.email = emailTrimmed;
+    }
 
+    if (data.preferences) {
+      const existingPrefs = (user.notificationPreferences as any) || {};
+      updateData.notificationPreferences = {
+        ...existingPrefs,
+        ...data.preferences,
+      };
+    }
+
+    if (Object.keys(updateData).length > 0) {
       await this.prisma.user.update({
         where: { id: userId },
-        data: { email: emailTrimmed },
+        data: updateData,
       });
     }
 
@@ -554,22 +611,27 @@ export class NotificationsService {
       throw new Error('Belum ada akun email aktif yang ditautkan ke profil Anda.');
     }
 
+    const isStaff = this.isStaffRole(user.role);
+    const contentText = isStaff
+      ? 'Email Anda berhasil terhubung dengan SIMASMUH SMA Muhammadiyah 1 Ponorogo. Notifikasi resmi absensi pegawai, slip gaji & tunjangan, lembar disposisi persuratan, perizinan cuti, dan pengumuman dinas akan dikirimkan ke alamat email ini.'
+      : 'Email Anda berhasil terhubung dengan SIMASMUH SMA Muhammadiyah 1 Ponorogo. Notifikasi resmi absensi siswa, rincian tagihan SPP, kwitansi pembayaran lunas, perizinan, dan pengumuman sekolah akan dikirimkan ke alamat email ini.';
+
     const result = await this.emailNotificationService.sendEmailNotification({
       to: targetEmail,
-      subject: `[Uji Coba] Email SIMASMUH`,
-      title: 'Uji Coba Email Berhasil',
+      subject: `[Uji Coba] Notifikasi Email SIMASMUH`,
+      title: 'Uji Coba Notifikasi Email Berhasil',
       category: 'SISTEM',
-      badgeLabel: 'TEST EMAIL',
+      badgeLabel: isStaff ? 'NOTIFIKASI PEGAWAI' : 'NOTIFIKASI SISWA',
       recipientName: user.name,
-      contentText: 'Email Anda terhubung dengan SIMASMUH. Notifikasi presensi, keuangan, dan pengumuman akan dikirim ke alamat ini.',
+      contentText,
       metaDetails: [
-        { label: 'Nama', value: user.name },
-        { label: 'Peran', value: user.role },
-        { label: 'Email', value: targetEmail },
-        { label: 'Waktu', value: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB' },
+        { label: 'Nama Pengguna', value: user.name },
+        { label: 'Peran Akun', value: user.role },
+        { label: 'Alamat Email', value: targetEmail },
+        { label: 'Waktu Pengiriman', value: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB' },
       ],
-      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/pengaturan/notifikasi`,
-      actionText: 'Pengaturan Notifikasi',
+      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/pengaturan/notifikasi-pengguna`,
+      actionText: 'Kelola Pengaturan Notifikasi',
     });
 
     if (!result.success) {

@@ -674,7 +674,8 @@ export default function ProfilePage() {
     ISMUBA: 'ISMUBA', WAKA_ISMUBA: 'Waka ISMUBA', SARPRAS: 'Sarana & Prasarana',
     KEBERSIHAN: 'Kebersihan', KEPALA_SEKOLAH: 'Kepala Sekolah', ADMIN_WEB: 'Admin Web',
     KETERTIBAN: 'Ketertiban', PUSTAKAWAN: 'Pustakawan', GURU_TAHFIDZ: 'Guru Tahfidz', PERSURATAN: 'Persuratan',
-    WALI_KELAS: 'Wali Kelas', GURU_PIKET: 'Guru Piket', WALI_MURID: 'Wali Murid (Orang Tua)', SUPERADMIN: 'Superadmin'
+    WALI_KELAS: 'Wali Kelas', GURU_PIKET: 'Guru Piket', WALI_MURID: 'Wali Murid (Orang Tua)', SUPERADMIN: 'Superadmin',
+    GOD: 'GOD ACCESS', GOD_USER: 'GOD ACCESS'
   }
 
   if (isLoading) {

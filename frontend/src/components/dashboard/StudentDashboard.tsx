@@ -173,6 +173,50 @@ export function StudentDashboard({
     return 'Drs. H. Bambang S., M.Pd.'
   }, [studentClass])
 
+  // Status Keaktifan / Kelulusan Siswa (Alumni / Purna Belajar)
+  const studentStatusInfo = useMemo(() => {
+    let parsedBio: any = {}
+    if (activeStudent?.bioData) {
+      try {
+        parsedBio = typeof activeStudent.bioData === 'string' ? JSON.parse(activeStudent.bioData) : activeStudent.bioData
+      } catch (e) {}
+    }
+    const isAct = activeStudent?.isActive !== false && (session?.user as any)?.isActive !== false
+    if (isAct) {
+      return { status: 'AKTIF', label: 'Siswa Aktif', color: 'bg-emerald-500/90 text-white', dot: 'bg-white', isAlumni: false, desc: '' }
+    }
+    const alasan = (parsedBio?.alasanMeninggalkan || '').toLowerCase()
+    const tamat = (parsedBio?.tamatBelajar || '').toLowerCase()
+    if (alasan.includes('lulus') || tamat.includes('lulus') || tamat.includes('tamat') || alasan.includes('alumni')) {
+      return {
+        status: 'LULUS',
+        label: parsedBio?.tamatBelajar ? `Alumni (Lulus ${parsedBio.tamatBelajar})` : 'Alumni / Lulus',
+        color: 'bg-purple-600 text-white',
+        dot: 'bg-purple-200',
+        isAlumni: true,
+        desc: 'Akun Anda dalam mode arsip riwayat pribadi. Anda dapat melihat riwayat pembayaran & SPP, riwayat absensi, lembar buku induk, e-rapor, dan portofolio prestasi selama menempuh pendidikan di SMA Muhammadiyah 1 Ponorogo.'
+      }
+    }
+    if (alasan.includes('keluar') || alasan.includes('pindah')) {
+      return {
+        status: 'KELUAR',
+        label: parsedBio?.alasanMeninggalkan ? `Pindah (${parsedBio.alasanMeninggalkan})` : 'Pindah / Keluar',
+        color: 'bg-amber-600 text-white',
+        dot: 'bg-amber-200',
+        isAlumni: true,
+        desc: 'Akun Anda dalam mode arsip riwayat pribadi. Seluruh histori pembayaran, absensi, dan data buku induk Anda tersimpan aman dan dapat diakses kapan saja.'
+      }
+    }
+    return {
+      status: 'NONAKTIF',
+      label: 'Siswa Nonaktif',
+      color: 'bg-rose-600 text-white',
+      dot: 'bg-rose-200',
+      isAlumni: true,
+      desc: 'Akun ini dalam mode arsip riwayat pribadi.'
+    }
+  }, [activeStudent, session])
+
   // Schedule view switcher (table matriks mingguan default vs hari ini)
   const [scheduleViewTab, setScheduleViewTab] = useState<'table' | 'today'>('table')
 
@@ -640,11 +684,15 @@ export function StudentDashboard({
                 </div>
                 <div 
                   className={`absolute bottom-0 right-0 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 border-slate-900 flex items-center justify-center ${
-                    activeStudent?.isActive !== false && (session?.user as any)?.isActive !== false
+                    !studentStatusInfo.isAlumni
                       ? 'bg-emerald-500'
+                      : studentStatusInfo.status === 'LULUS'
+                      ? 'bg-purple-500'
+                      : studentStatusInfo.status === 'KELUAR'
+                      ? 'bg-amber-500'
                       : 'bg-rose-500'
                   }`} 
-                  title={activeStudent?.isActive !== false && (session?.user as any)?.isActive !== false ? 'Akun Siswa Aktif' : 'Akun Siswa Nonaktif'} 
+                  title={`Status: ${studentStatusInfo.label}`} 
                 />
               </div>
 
@@ -654,17 +702,10 @@ export function StudentDashboard({
                   <h2 className="text-sm sm:text-base md:text-lg font-black tracking-tight text-white uppercase truncate max-w-[200px] sm:max-w-none">
                     {clock.greeting}, <span className="text-blue-300">{session?.user?.name || 'MUH NAILAR RAZA'}</span>
                   </h2>
-                  {activeStudent?.isActive !== false && (session?.user as any)?.isActive !== false ? (
-                    <Badge className="bg-emerald-500/90 text-white font-bold text-[9px] sm:text-[9.5px] px-1.5 sm:px-2 py-0.2 rounded-full border-none shadow-xs flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                      Aktif
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-rose-500/90 text-white font-bold text-[9px] sm:text-[9.5px] px-1.5 sm:px-2 py-0.2 rounded-full border-none shadow-xs flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                      Nonaktif
-                    </Badge>
-                  )}
+                  <Badge className={`${studentStatusInfo.color} font-bold text-[9px] sm:text-[9.5px] px-2 py-0.5 rounded-full border-none shadow-xs flex items-center gap-1`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${!studentStatusInfo.isAlumni ? 'bg-white animate-pulse' : 'bg-white/80'}`} />
+                    {studentStatusInfo.label}
+                  </Badge>
                 </div>
 
               {/* Subtitle Details: NISN, Class, Program, Homeroom Teacher */}
@@ -739,6 +780,57 @@ export function StudentDashboard({
           </div>
         </div>
       </div>
+
+      {/* BANNER KHUSUS ALUMNI / SISWA PURNA BELAJAR / PINDAH SEKOLAH */}
+      {studentStatusInfo.isAlumni && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/70 via-indigo-950/60 to-slate-900/90 border border-purple-500/40 shadow-md text-white space-y-3 animate-in fade-in-50">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-purple-600/40 border border-purple-400/30 flex items-center justify-center text-purple-300 shrink-0">
+                <GraduationCap className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-purple-200">Mode Arsip Riwayat Pribadi Siswa</h4>
+                <p className="text-[11px] text-slate-300 mt-0.5">{studentStatusInfo.desc}</p>
+              </div>
+            </div>
+            <Badge className="bg-purple-600 text-white font-extrabold text-[10px] px-2.5 py-0.5 shrink-0">
+              {studentStatusInfo.label}
+            </Badge>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-purple-500/20">
+            <Link
+              href="/keuangan/laporan"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all"
+            >
+              <Receipt className="w-3.5 h-3.5 text-blue-200" />
+              <span>Riwayat Pembayaran &amp; SPP</span>
+            </Link>
+            <Link
+              href="/presensi/kehadiran-siswa"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5 text-emerald-200" />
+              <span>Riwayat Absensi Kehadiran</span>
+            </Link>
+            <Link
+              href="/siswa/buku-induk"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition-all"
+            >
+              <BookMarked className="w-3.5 h-3.5 text-teal-200" />
+              <span>Lembar Buku Induk</span>
+            </Link>
+            <Link
+              href="/informasi/prestasi"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-all"
+            >
+              <Award className="w-3.5 h-3.5 text-amber-200" />
+              <span>Portofolio Prestasi</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* NOTIFIKASI & AREA TAGIHAN KEUANGAN SISWA (STANDAR SINKRONISASI KEUANGAN) */}
       {allUnpaid.length > 0 ? (
@@ -1476,13 +1568,17 @@ export function StudentDashboard({
               {studentMemberships.length > 0 ? (
                 studentMemberships.map((m: any) => {
                   const latestGrade = m.grades?.[0]
+                  const totalSessions = m.extracurricular?.sessions?.length || 0
+                  const hadirCount = m.attendances?.filter((a: any) => a.status === 'HADIR').length || 0
+                  const pctHadir = totalSessions > 0 ? Math.round((hadirCount / totalSessions) * 100) : 100
+
                   return (
                     <div
                       key={m.id}
                       className="p-2.5 rounded-xl border border-amber-200/60 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 space-y-1"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate">
+                        <span className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate max-w-[180px]">
                           {m.extracurricular?.name}
                         </span>
                         <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[9px] font-bold">
@@ -1493,11 +1589,16 @@ export function StudentDashboard({
                         <span className="truncate">
                           {m.extracurricular?.scheduleDay || '-'} ({m.extracurricular?.scheduleTime || '-'})
                         </span>
-                        {latestGrade && (
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                            Predikat {latestGrade.predicate}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                            Hadir {pctHadir}%
                           </span>
-                        )}
+                          {latestGrade && (
+                            <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-400/30 text-[9px] font-bold px-1.5 py-0">
+                              {latestGrade.predicate}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )

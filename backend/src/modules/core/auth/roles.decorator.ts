@@ -34,6 +34,8 @@ export enum PaymentPermission {
 
 // User roles
 export enum UserRole {
+  GOD = 'GOD',
+  GOD_USER = 'GOD_USER',
   ADMIN_IT = 'ADMIN_IT',
   SUPERADMIN = 'SUPERADMIN',
   KEPALA_SEKOLAH = 'KEPALA_SEKOLAH',

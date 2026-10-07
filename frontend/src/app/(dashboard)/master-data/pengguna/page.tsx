@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Loader2, Pencil, Trash2, AlertTriangle, ShieldCheck, UserCheck, Info, Power, CheckCircle, XCircle, UserX } from 'lucide-react'
 import Swal from 'sweetalert2'
@@ -33,6 +34,8 @@ type User = {
 }
 
 const ROLE_CONFIG: Record<string, { label: string; bg: string; text: string; border: string; icon?: string }> = {
+  GOD: { label: 'GOD ACCESS', bg: 'bg-amber-100 dark:bg-amber-950', text: 'text-amber-900 dark:text-amber-200', border: 'border-amber-300 dark:border-amber-700' },
+  GOD_USER: { label: 'GOD ACCESS', bg: 'bg-amber-100 dark:bg-amber-950', text: 'text-amber-900 dark:text-amber-200', border: 'border-amber-300 dark:border-amber-700' },
   SUPERADMIN: { label: 'SUPERADMIN', bg: 'bg-purple-50 dark:bg-purple-950/80', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
   ADMIN_IT: { label: 'ADMIN IT', bg: 'bg-indigo-50 dark:bg-indigo-950/80', text: 'text-indigo-700 dark:text-indigo-300', border: 'border-indigo-200 dark:border-indigo-800' },
   KEPALA_SEKOLAH: { label: 'KEPALA SEKOLAH', bg: 'bg-amber-50 dark:bg-amber-950/80', text: 'text-amber-800 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
@@ -322,6 +325,16 @@ export default function UsersPage() {
   })
 
   const handleToggleUserStatus = (user: User) => {
+    if (user.username === 'supermuhipo') {
+      Swal.fire({
+        icon: 'info',
+        title: 'Akun GOD User Dilindungi',
+        text: 'Akun GOD User (supermuhipo) adalah akun darurat/backup sistem dan tidak dapat dinonaktifkan.',
+        confirmButtonColor: '#2563eb',
+      })
+      return
+    }
+
     const nextStatus = user.isActive === false ? true : false
     const actionText = nextStatus ? 'mengaktifkan' : 'menonaktifkan (purna tugas)'
     
@@ -393,6 +406,15 @@ export default function UsersPage() {
   }
 
   const handleOpenDeleteDialog = (user: User) => {
+    if (user.username === 'supermuhipo') {
+      Swal.fire({
+        icon: 'info',
+        title: 'Akun GOD User Dilindungi',
+        text: 'Akun GOD User (supermuhipo) adalah akun master/backup sistem yang dilindungi dan tidak dapat dihapus.',
+        confirmButtonColor: '#2563eb',
+      })
+      return
+    }
     setIsBulkDeleteMode(false)
     setUserToDelete(user)
     setDeleteDialogOpen(true)
@@ -416,14 +438,15 @@ export default function UsersPage() {
 
   const handleSelectAll = (checked: boolean, filteredList: User[] = []) => {
     if (checked) {
-      const allIds = filteredList.map(u => u.id)
+      const allIds = filteredList.filter(u => u.username !== 'supermuhipo').map(u => u.id)
       setSelectedUserIds(allIds)
     } else {
       setSelectedUserIds([])
     }
   }
 
-  const handleToggleSelectOne = (id: string) => {
+  const handleToggleSelectOne = (id: string, username?: string) => {
+    if (username === 'supermuhipo') return
     setSelectedUserIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     )
@@ -487,10 +510,22 @@ export default function UsersPage() {
 
   const isPending = createMutation.isPending || updateMutation.isPending
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  const { data: session } = useSession()
+  const currentUser = session?.user as any
+  const isSuperadminOrGod =
+    currentUser?.role === 'SUPERADMIN' ||
+    currentUser?.role === 'ADMIN_IT' ||
+    currentUser?.role === 'GOD' ||
+    currentUser?.role === 'GOD_USER' ||
+    currentUser?.username === 'supermuhipo'
 
   // Filter khusus akun pegawai, guru, admin, dan pengelola internal (tidak menampilkan wali murid atau siswa)
   const staffUsers = (users || []).filter(u => {
     if (['WALI_MURID', 'SISWA'].includes(u.role)) return false
+    // Akun GOD User hanya boleh terlihat dan dikelola jika yang login adalah Superadmin atau GOD User
+    if ((u.role === 'GOD' || u.role === 'GOD_USER' || u.username === 'supermuhipo') && !isSuperadminOrGod) {
+      return false
+    }
     if (filterStatus === 'ACTIVE') return u.isActive !== false
     if (filterStatus === 'INACTIVE') return u.isActive === false
     return true
@@ -901,25 +936,44 @@ export default function UsersPage() {
                   </TableRow>
                 ) : (
                   filteredUsers.map((item, index) => {
+                    const isGodUser = item.username === 'supermuhipo'
                     const isSelected = selectedUserIds.includes(item.id)
                     const nip = item.nipNbm || item.teacherProfile?.nip
                     return (
-                      <TableRow key={item.id} className={isSelected ? 'bg-blue-50/50 dark:bg-blue-950/30' : ''}>
+                      <TableRow key={item.id} className={isSelected ? 'bg-blue-50/50 dark:bg-blue-950/30' : isGodUser ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''}>
                         <TableCell className="pl-4 text-center">
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer touch-manipulation"
-                            checked={isSelected}
-                            onChange={() => handleToggleSelectOne(item.id)}
-                          />
+                          {isGodUser ? (
+                            <input
+                              type="checkbox"
+                              disabled
+                              checked={false}
+                              title="Akun GOD User dilindungi sistem"
+                              className="w-4 h-4 rounded border-slate-300 opacity-20 cursor-not-allowed touch-manipulation"
+                            />
+                          ) : (
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer touch-manipulation"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectOne(item.id, item.username)}
+                            />
+                          )}
                         </TableCell>
                         <TableCell className="font-medium text-slate-500 text-center text-xs">{index + 1}</TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-0.5 min-w-0">
-                            <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate" title={item.name}>{item.name}</span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate" title={item.name}>{item.name}</span>
+                              {isGodUser && (
+                                <span className="px-1.5 py-0.5 bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 rounded font-black text-[9px] sm:text-[10px] border border-amber-300 dark:border-amber-700 inline-flex items-center gap-1">
+                                  <ShieldCheck className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                                  GOD ACCESS
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-1.5 flex-wrap text-xs text-slate-500 dark:text-slate-400 font-mono">
                               {item.username && (
-                                <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 rounded font-semibold text-[10px] border border-blue-200/60 dark:border-blue-800/60">
+                                <span className={`px-1.5 py-0.5 rounded font-semibold text-[10px] border ${isGodUser ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300/60 dark:border-amber-700/60' : 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/60'}`}>
                                   @{item.username}
                                 </span>
                               )}
@@ -940,12 +994,17 @@ export default function UsersPage() {
                           <div className="flex items-center gap-1 flex-wrap">
                             {/* Role Utama Badge */}
                             {(() => {
-                              const roleCfg = ROLE_CONFIG[item.role] || {
+                              const roleCfg = isGodUser ? {
+                                label: 'GOD ACCESS',
+                                bg: 'bg-amber-100 dark:bg-amber-950',
+                                text: 'text-amber-900 dark:text-amber-200',
+                                border: 'border-amber-300 dark:border-amber-700'
+                              } : (ROLE_CONFIG[item.role] || {
                                 label: item.role,
                                 bg: 'bg-slate-100 dark:bg-slate-800',
                                 text: 'text-slate-700 dark:text-slate-300',
                                 border: 'border-slate-200 dark:border-slate-700'
-                              }
+                              })
                               return (
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-black tracking-tight border shadow-2xs ${roleCfg.bg} ${roleCfg.text} ${roleCfg.border}`}>
                                   {roleCfg.label}
@@ -1035,29 +1094,37 @@ export default function UsersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleUserStatus(item)}
-                            disabled={toggleActiveMutation.isPending}
-                            title={item.isActive !== false ? 'Klik untuk nonaktifkan akun' : 'Klik untuk aktifkan akun'}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-2xs touch-manipulation min-h-[30px] ${
-                              item.isActive !== false
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
-                                : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
-                            }`}
-                          >
-                            <span className={`w-2 h-2 rounded-full ${item.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                            {item.isActive !== false ? 'Aktif' : 'Nonaktif'}
-                          </button>
+                          {isGodUser ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 shadow-2xs">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              Aktif
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleUserStatus(item)}
+                              disabled={toggleActiveMutation.isPending}
+                              title={item.isActive !== false ? 'Klik untuk nonaktifkan akun' : 'Klik untuk aktifkan akun'}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-2xs touch-manipulation min-h-[30px] ${
+                                item.isActive !== false
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                                  : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
+                              }`}
+                            >
+                              <span className={`w-2 h-2 rounded-full ${item.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                              {item.isActive !== false ? 'Aktif' : 'Nonaktif'}
+                            </button>
+                          )}
                         </TableCell>
                         <TableCell className="text-right pr-4">
                           <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className={`h-8 w-8 p-0 rounded-lg touch-manipulation ${item.isActive !== false ? 'text-emerald-600 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
+                              disabled={isGodUser}
+                              className={`h-8 w-8 p-0 rounded-lg touch-manipulation ${isGodUser ? 'opacity-20 cursor-not-allowed' : item.isActive !== false ? 'text-emerald-600 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
                               onClick={() => handleToggleUserStatus(item)}
-                              title={item.isActive !== false ? 'Nonaktifkan Akun' : 'Aktifkan Akun Kembali'}
+                              title={isGodUser ? 'Akun GOD User tidak dapat dinonaktifkan' : item.isActive !== false ? 'Nonaktifkan Akun' : 'Aktifkan Akun Kembali'}
                             >
                               <Power className="w-4 h-4" />
                             </Button>
@@ -1066,16 +1133,17 @@ export default function UsersPage() {
                               size="sm" 
                               className="h-8 w-8 p-0 rounded-lg touch-manipulation" 
                               onClick={() => handleOpenEditDialog(item)}
-                              title="Ubah Data Akun"
+                              title="Ubah Data Akun (Username, Password, dll)"
                             >
                               <Pencil className="w-4 h-4 text-slate-500 hover:text-blue-600" />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="h-8 w-8 p-0 rounded-lg text-red-500 hover:bg-red-50 touch-manipulation" 
+                              disabled={isGodUser}
+                              className={`h-8 w-8 p-0 rounded-lg touch-manipulation ${isGodUser ? 'opacity-20 cursor-not-allowed' : 'text-red-500 hover:bg-red-50'}`}
                               onClick={() => handleOpenDeleteDialog(item)}
-                              title="Hapus Akun"
+                              title={isGodUser ? 'Akun GOD User tidak dapat dihapus' : 'Hapus Akun'}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>

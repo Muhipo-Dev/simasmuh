@@ -1,7 +1,8 @@
-import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
+import { Injectable, NestMiddleware, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
 import * as os from 'os';
+import { PrismaService } from '../prisma/prisma.service';
 
 interface QueueSlot {
   token: string;
@@ -12,7 +13,7 @@ interface QueueSlot {
 }
 
 @Injectable()
-export class WaitingRoomService {
+export class WaitingRoomService implements OnModuleInit {
   private readonly logger = new Logger(WaitingRoomService.name);
 
   // Parameter Kapasitas & Perlindungan Lonjakan Beban (High Capacity)
@@ -40,13 +41,53 @@ export class WaitingRoomService {
 
   private timer: NodeJS.Timeout;
 
-  constructor() {
+  constructor(@Optional() private readonly prisma?: PrismaService) {
     // Monitor RPS, CPU & RAM setiap detik
     this.timer = setInterval(() => {
       this.tick();
     }, 1000);
     if (this.timer && typeof this.timer.unref === 'function') {
       this.timer.unref();
+    }
+  }
+
+  async onModuleInit() {
+    await this.loadPersistedConfig();
+  }
+
+  public async loadPersistedConfig() {
+    if (!this.prisma) return;
+    try {
+      const setting: any = await this.prisma.setting.findFirst({
+        select: {
+          id: true,
+          schoolName: true,
+          principalNip: true,
+        } as any,
+      });
+
+      if (setting?.principalNip && setting.principalNip.startsWith('WR_CFG:')) {
+        const rawJson = setting.principalNip.replace('WR_CFG:', '');
+        const parsed = JSON.parse(rawJson);
+        if (typeof parsed.maxCapacity === 'number' && parsed.maxCapacity > 0) {
+          this.maxConcurrentActive = parsed.maxCapacity;
+        }
+        if (typeof parsed.maxRps === 'number' && parsed.maxRps > 0) {
+          this.maxRpsThreshold = parsed.maxRps;
+        }
+        if (typeof parsed.forceEnabled === 'boolean') {
+          this.forceEnabled = parsed.forceEnabled;
+        }
+        if (typeof parsed.cpuThreshold === 'number') {
+          this.cpuThreshold = parsed.cpuThreshold;
+        }
+        if (typeof parsed.ramThreshold === 'number') {
+          this.ramThreshold = parsed.ramThreshold;
+        }
+        this.logger.log(`⚙️ [Waiting Room] Konfigurasi permanen dimuat: ${JSON.stringify(parsed)}`);
+      }
+    } catch (err) {
+      this.logger.warn(`⚠️ [Waiting Room] Gagal membaca konfigurasi permanen: ${err?.message}`);
     }
   }
 
@@ -290,7 +331,7 @@ export class WaitingRoomService {
     };
   }
 
-  public setCapacity(
+  public async setCapacity(
     maxActive?: number,
     maxRps?: number,
     force?: boolean,
@@ -304,6 +345,28 @@ export class WaitingRoomService {
     if (typeof force === 'boolean') this.forceEnabled = force;
     if (typeof cpuThreshold === 'number') this.cpuThreshold = cpuThreshold;
     if (typeof ramThreshold === 'number') this.ramThreshold = ramThreshold;
+
+    if (this.prisma) {
+      try {
+        const payload = JSON.stringify({
+          maxCapacity: this.maxConcurrentActive,
+          maxRps: this.maxRpsThreshold,
+          forceEnabled: this.forceEnabled,
+          cpuThreshold: this.cpuThreshold,
+          ramThreshold: this.ramThreshold,
+        });
+        const setting = await this.prisma.setting.findFirst({ select: { id: true } });
+        if (setting?.id) {
+          await this.prisma.setting.update({
+            where: { id: setting.id },
+            data: { principalNip: `WR_CFG:${payload}` },
+          });
+        }
+      } catch (err) {
+        this.logger.warn(`⚠️ [Waiting Room] Gagal menyimpan konfigurasi permanen ke database: ${err?.message}`);
+      }
+    }
+
     return this.getMetrics();
   }
 

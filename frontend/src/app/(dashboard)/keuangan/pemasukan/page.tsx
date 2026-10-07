@@ -44,6 +44,9 @@ type StudentSummary = {
   totalLunas: number; sisaTagihan?: number; belumLunasCount: number
   sppLunasCount: number; tagihanCount: number
   isActive?: boolean
+  studentStatus?: string
+  statusDetail?: string
+  bioData?: string | null
   program?: string | null
   gelombang?: string | null
   jalurPendaftaran?: string | null
@@ -59,9 +62,37 @@ type StudentDetail = {
   className: string; gender: string; tagihans: Tagihan[]
   class: { name: string }
   isActive?: boolean
+  studentStatus?: string
+  statusDetail?: string
+  bioData?: string | null
   program?: string | null
   beasiswaPercentage?: number
   beasiswaReason?: string | null
+}
+
+const getFinanceStudentStatus = (s: { isActive?: boolean; studentStatus?: string; statusDetail?: string; bioData?: string | null }) => {
+  if (s.studentStatus) {
+    if (s.studentStatus === 'LULUS') return { status: 'LULUS', label: s.statusDetail || 'Lulus / Alumni', color: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800' }
+    if (s.studentStatus === 'KELUAR') return { status: 'KELUAR', label: s.statusDetail || 'Pindah / Keluar', color: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800' }
+    if (s.studentStatus === 'NONAKTIF' || s.isActive === false) return { status: 'NONAKTIF', label: 'Nonaktif', color: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border-rose-200 dark:border-rose-800' }
+    return { status: 'AKTIF', label: 'Aktif', color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' }
+  }
+  if (s.isActive === false) {
+    let parsed: any = {}
+    if (s.bioData) {
+      try { parsed = typeof s.bioData === 'string' ? JSON.parse(s.bioData) : s.bioData } catch {}
+    }
+    const alasan = (parsed?.alasanMeninggalkan || '').toLowerCase()
+    const tamat = (parsed?.tamatBelajar || '').toLowerCase()
+    if (alasan.includes('lulus') || tamat.includes('lulus') || tamat.includes('tamat') || alasan.includes('alumni')) {
+      return { status: 'LULUS', label: parsed?.tamatBelajar || 'Lulus / Alumni', color: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800' }
+    }
+    if (alasan.includes('keluar') || alasan.includes('pindah')) {
+      return { status: 'KELUAR', label: parsed?.alasanMeninggalkan || 'Pindah / Keluar', color: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800' }
+    }
+    return { status: 'NONAKTIF', label: 'Nonaktif', color: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border-rose-200 dark:border-rose-800' }
+  }
+  return { status: 'AKTIF', label: 'Aktif', color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' }
 }
 
 type Rekap = {
@@ -189,6 +220,7 @@ function TagihanModal({
   const [editId, setEditId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [modalTab, setModalTab] = useState<'tagihan' | 'riwayat'>('tagihan')
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'BELUM_LUNAS' | 'ANGSURAN' | 'LUNAS'>('ALL')
   const [showDiscountModal, setShowDiscountModal] = useState(false)
   const [discountTagihanId, setDiscountTagihanId] = useState<string | null>(null)
@@ -205,6 +237,36 @@ function TagihanModal({
   // Receipt Modal State
   const [receiptModalOpen, setReceiptModalOpen] = useState(false)
   const [receiptData, setReceiptData] = useState<any>(null)
+
+  // Payment History query for student
+  const { data: studentPaymentData, isLoading: isLoadingPayments } = useQuery<{
+    id: string;
+    name: string;
+    payments: Array<{
+      id: string;
+      amount: number;
+      type: string;
+      month: number | null;
+      year: number | null;
+      paymentDate: string;
+      notes: string | null;
+      tagihan?: {
+        id: string;
+        type: string;
+        amount: number;
+        amountPaid: number;
+        status: string;
+        month: number | null;
+        year: number | null;
+        notes: string | null;
+      } | null;
+    }>;
+  }>({
+    queryKey: ['student-payment-history-single', student?.id],
+    queryFn: () => authenticatedQuery(`/api-backend/finance/students/${student?.id}/payments`),
+    enabled: !!student?.id && open,
+    staleTime: 5000,
+  })
 
   // Queries for public settings and program configs to auto-fill fee amounts
   const { data: publicSettings } = useQuery<{ defaultDpp?: number; defaultUka?: number; defaultUks?: number; defaultInfaq?: number; defaultSeragam?: number }>({
@@ -507,11 +569,11 @@ function TagihanModal({
                     <span>Kelas <strong className="text-slate-700 dark:text-slate-200">{student?.class?.name}</strong> · NISN: <span className="font-mono text-slate-700 dark:text-slate-300">{student?.nisn}</span> · NIS: <span className="font-mono text-slate-700 dark:text-slate-300">{student?.nis}</span></span>
                     {student?.isActive === false ? (
                       <span className="font-semibold text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 inline-flex items-center gap-1">
-                        <ShieldAlert className="w-3 h-3" /> Nonaktif
+                        <ShieldAlert className="w-3 h-3" /> Nonaktif / Diarsipkan
                       </span>
                     ) : (
                       <span className="font-semibold text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 inline-flex items-center gap-1">
-                        <ShieldCheck className="w-3 h-3" /> Aktif
+                        <ShieldCheck className="w-3 h-3" /> Siswa Aktif
                       </span>
                     )}
                   </DialogDescription>
@@ -547,10 +609,149 @@ function TagihanModal({
                   )}
                 </div>
               </div>
+
+              {/* Sub-Tab Navigation inside TagihanModal */}
+              <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setModalTab('tagihan')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    modalTab === 'tagihan'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <Receipt className="w-3.5 h-3.5" />
+                  Daftar Tagihan ({tagihans.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalTab('riwayat')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    modalTab === 'riwayat'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  Riwayat Pembayaran & Angsuran ({studentPaymentData?.payments?.length || 0})
+                </button>
+              </div>
             </DialogHeader>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 sm:p-7 space-y-5 custom-scrollbar">
+          {modalTab === 'riwayat' ? (
+            <div className="space-y-4">
+              {/* Riwayat Pembayaran Siswa */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 p-3.5 rounded-xl">
+                  <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">Total Dana Disetor</span>
+                  <p className="text-base sm:text-lg font-black text-emerald-700 dark:text-emerald-400 mt-0.5">
+                    {currency(
+                      (studentPaymentData?.payments || []).reduce((sum, p) => sum + (p.amount || 0), 0)
+                    )}
+                  </p>
+                </div>
+                <div className="bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 p-3.5 rounded-xl">
+                  <span className="text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wider">Total Transaksi</span>
+                  <p className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-400 mt-0.5">
+                    {studentPaymentData?.payments?.length || 0} <span className="text-xs font-normal text-slate-500">Transaksi</span>
+                  </p>
+                </div>
+              </div>
+
+              {isLoadingPayments ? (
+                <div className="text-center py-12">
+                  <Loader2 className="w-5 h-5 animate-spin text-blue-600 mx-auto mb-2" />
+                  <p className="text-xs text-slate-500">Memuat riwayat transaksi...</p>
+                </div>
+              ) : (studentPaymentData?.payments || []).length === 0 ? (
+                <div className="text-center py-10 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                  <Clock className="w-6 h-6 text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs font-semibold text-slate-500">Belum ada riwayat pembayaran yang tercatat untuk siswa ini.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-0.5 custom-scrollbar">
+                  {studentPaymentData!.payments.map((p, pIdx) => {
+                    const payDateStr = new Date(p.paymentDate).toLocaleDateString('id-ID', {
+                      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+                    const isAngsuran = p.notes?.toLowerCase().includes('angsuran') || (p.tagihan && p.tagihan.status === 'ANGSURAN');
+                    return (
+                      <div key={p.id || pIdx} className="p-3.5 bg-slate-50/80 dark:bg-slate-950/70 hover:bg-slate-100/80 dark:hover:bg-slate-900/80 rounded-xl border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors">
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded ${TYPE_COLORS[p.type] || 'bg-slate-100 text-slate-700'}`}>
+                              {p.type}
+                            </span>
+                            {p.month && p.year && (
+                              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                {MONTHS.find(m => m.value === p.month!.toString())?.label} {p.year}
+                              </span>
+                            )}
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              isAngsuran
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-300'
+                                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300'
+                            }`}>
+                              {isAngsuran ? 'Angsuran / Cicilan' : 'Lunas'}
+                            </span>
+                          </div>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-sm font-black text-slate-900 dark:text-white">
+                              {currency(p.amount)}
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-medium">
+                              · {payDateStr}
+                            </span>
+                          </div>
+                          {p.notes && (
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic truncate">
+                              {p.notes}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="shrink-0 flex sm:flex-col justify-end items-end gap-1.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setReceiptData({
+                                receiptNo: `KWT-${student?.nis || '000'}-${p.type}-${p.id.slice(0, 6)}`,
+                                paymentDate: payDateStr,
+                                studentName: student?.name || '',
+                                studentNis: student?.nis || '',
+                                studentNisn: student?.nisn || '',
+                                className: student?.className || student?.class?.name || '',
+                                program: student?.program || '',
+                                paymentType: p.type,
+                                period: p.month && p.year ? `${MONTHS.find(m => m.value === p.month!.toString())?.label} ${p.year}` : (p.year ? `Tahun ${p.year}` : '-'),
+                                originalAmount: p.tagihan?.amount || p.amount,
+                                discountAmount: 0,
+                                discountPct: 0,
+                                paidAmount: p.amount,
+                                remainingAmount: p.tagihan ? Math.max(0, p.tagihan.amount - (p.tagihan.amountPaid || p.amount)) : 0,
+                                status: p.tagihan?.status || (isAngsuran ? 'ANGSURAN' : 'LUNAS'),
+                                cashierName: 'Kasir Keuangan',
+                                notes: p.notes || 'Pembayaran Sistem Keuangan SIMASMUH',
+                              });
+                              setReceiptModalOpen(true);
+                            }}
+                            className="h-8 text-xs font-bold gap-1 rounded-xl border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-blue-600" /> Cetak Kwitansi
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
 
           {/* Summary Cards (3 Kolom Simetris & Clean) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-1">
@@ -1014,6 +1215,8 @@ function TagihanModal({
               )
             })}
           </div>
+          </>
+          )}
         </div>
       </DialogContent>
       </Dialog>
@@ -3225,7 +3428,7 @@ function TabTagihan() {
     }
   })
 
-  const [filterActive, setFilterActive] = useState<'ALL' | 'AKTIF' | 'NONAKTIF'>('ALL')
+  const [filterActive, setFilterActive] = useState<'AKTIF' | 'ARSIP' | 'ALL'>('AKTIF')
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
@@ -3283,7 +3486,7 @@ function TabTagihan() {
 
   // Pagination state for ultra-smooth rendering with large datasets (Optimized for 2GB RAM devices)
   const [currentPage, setCurrentPage] = useState<number>(1)
-  const [pageSize, setPageSize] = useState<number>(10)
+  const [pageSize, setPageSize] = useState<number>(15)
 
   const { data: students = [], isLoading } = useQuery<StudentSummary[]>({
     queryKey: ['finance-students'],
@@ -3305,10 +3508,17 @@ function TabTagihan() {
     staleTime: 10000,
   })
 
+  const activeCount = useMemo(() => students.filter(s => s.isActive !== false).length, [students])
+  const archiveCount = useMemo(() => students.filter(s => s.isActive === false).length, [students])
+
   const filtered = useMemo(() =>
     students.filter(s =>
       (!filterKelas || s.className === filterKelas) &&
-      (filterActive === 'ALL' || (filterActive === 'AKTIF' ? s.isActive !== false : s.isActive === false)) &&
+      (filterActive === 'ALL'
+        ? true
+        : filterActive === 'AKTIF'
+        ? s.isActive !== false
+        : s.isActive === false) &&
       (s.name.toLowerCase().includes(search.toLowerCase()) ||
         s.nisn.includes(search) || s.nis.includes(search) ||
         s.className.toLowerCase().includes(search.toLowerCase()))
@@ -3398,16 +3608,26 @@ function TabTagihan() {
   const openModal = (s: StudentSummary) => { setSelectedStudent(s); setModalOpen(true) }
 
   const handleExport = () => {
-    const data = filtered.map((s, i) => ({
-      No: i + 1, Nama: s.name, NISN: s.nisn, NIS: s.nis, Kelas: s.className,
-      'Total Tagihan (Rp)': s.totalTagihan, 'Total Lunas (Rp)': s.totalLunas,
-      'Sisa (Rp)': s.totalTagihan - s.totalLunas,
-      'Belum Lunas': s.belumLunasCount, 'SPP Lunas': `${s.sppLunasCount}/12`,
-    }))
+    const data = filtered.map((s, i) => {
+      const statusInfo = getFinanceStudentStatus(s)
+      return {
+        No: i + 1,
+        Nama: s.name,
+        NISN: s.nisn,
+        NIS: s.nis,
+        Kelas: s.className,
+        'Status Keaktifan': statusInfo.label,
+        'Total Tagihan (Rp)': s.totalTagihan,
+        'Total Lunas (Rp)': s.totalLunas,
+        'Sisa (Rp)': s.totalTagihan - s.totalLunas,
+        'Belum Lunas': s.belumLunasCount,
+        'SPP Lunas': `${s.sppLunasCount}/12`,
+      }
+    })
     const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Tagihan Siswa')
-    XLSX.writeFile(wb, `Tagihan_Siswa.xlsx`)
+    XLSX.writeFile(wb, `Tagihan_Siswa_${filterActive}.xlsx`)
   }
 
   const uniqueKelas = [...new Set(students.map(s => s.className))].sort()
@@ -3466,6 +3686,65 @@ function TabTagihan() {
 
   return (
     <div className="space-y-3">
+      {/* Sub-Tab Switcher: Siswa Aktif vs Arsip Keuangan Siswa (Lulus/Alumni/Keluar/Nonaktif) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/80">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setFilterActive('AKTIF')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              filterActive === 'AKTIF'
+                ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs ring-1 ring-emerald-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Siswa Aktif</span>
+            <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 rounded-full text-[10px] font-black">
+              {activeCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterActive('ARSIP')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              filterActive === 'ARSIP'
+                ? 'bg-white dark:bg-slate-900 text-purple-700 dark:text-purple-400 shadow-xs ring-1 ring-purple-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 text-purple-600" />
+            <span>Arsip Keuangan Siswa (Lulus / Alumni / Nonaktif)</span>
+            <span className="px-1.5 py-0.2 bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 rounded-full text-[10px] font-black">
+              {archiveCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterActive('ALL')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              filterActive === 'ALL'
+                ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs ring-1 ring-blue-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5 text-blue-600" />
+            <span>Semua Siswa</span>
+            <span className="px-1.5 py-0.2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full text-[10px] font-black">
+              {students.length}
+            </span>
+          </button>
+        </div>
+
+        {filterActive === 'ARSIP' && (
+          <div className="text-[11px] text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200/80 dark:border-purple-800/60 font-medium">
+            💡 Seluruh riwayat tagihan, cicilan, dan pembayaran siswa lulus/alumni tetap tersimpan permanen.
+          </div>
+        )}
+      </div>
+
       {/* Quick Summary Metric Cards - Compact & Clean Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
         {!isKepalaSekolah ? (
@@ -3486,7 +3765,7 @@ function TabTagihan() {
           </button>
         ) : (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 rounded-xl shadow-xs">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Siswa</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Siswa Terfilter</span>
             <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">{stats.totalSiswa} <span className="text-[11px] font-normal text-slate-400">Siswa</span></p>
           </div>
         )}
@@ -3504,13 +3783,13 @@ function TabTagihan() {
         </div>
       </div>
 
-      {/* Toolbar / Search & Actions Filter (Responsive Wrap on Zoom 150%+) */}
+      {/* Toolbar / Search & Actions Filter (Rule 16: Searchbar & Filter Bersebelahan) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 sm:p-2.5 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-[220px]">
           <div className="relative flex-1 min-w-[130px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <Input
-              placeholder="Cari siswa/kelas..."
+              placeholder="Cari nama, NISN, NIS, kelas..."
               className="pl-7.5 h-8 text-xs font-medium bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -3615,6 +3894,18 @@ function TabTagihan() {
             </Button>
             <Button
               size="sm"
+              onClick={() => {
+                const nextIsActive = filterActive === 'ARSIP' ? true : false
+                bulkToggleActiveMutation.mutate({ ids: selectedStudentIds, isActive: nextIsActive })
+              }}
+              disabled={bulkToggleActiveMutation.isPending}
+              className={`font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs text-white ${filterActive === 'ARSIP' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-700 hover:bg-slate-800'}`}
+            >
+              {filterActive === 'ARSIP' ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+              {filterActive === 'ARSIP' ? 'Aktifkan Kembali' : 'Arsipkan Siswa'}
+            </Button>
+            <Button
+              size="sm"
               onClick={() => openResetModal(selectedStudentIds)}
               className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
             >
@@ -3637,7 +3928,7 @@ function TabTagihan() {
       <Card className="shadow-xs border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
         <CardContent className="p-0 max-w-full">
           <div className="overflow-x-auto custom-scrollbar w-full">
-            <Table className="w-full text-xs min-w-[640px] sm:min-w-full border-collapse">
+            <Table className="w-full text-xs min-w-[720px] sm:min-w-full border-collapse">
               <TableHeader className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-bold text-[11px] select-none sticky top-0 z-10">
                 <TableRow className="border-b border-slate-200 dark:border-slate-800">
                   {!isKepalaSekolah && (
@@ -3654,7 +3945,8 @@ function TabTagihan() {
                   )}
                   <TableHead className="w-10 sm:w-12 text-center py-2 px-1 whitespace-nowrap">No</TableHead>
                   <TableHead className="py-2 px-2.5 min-w-[170px] sm:min-w-[220px]">Nama Siswa</TableHead>
-                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1 whitespace-nowrap">Status</TableHead>
+                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1 whitespace-nowrap">Status Siswa</TableHead>
+                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1 whitespace-nowrap">Status Tagihan</TableHead>
                   <TableHead className="w-20 sm:w-24 text-center py-2 px-1 whitespace-nowrap">SPP Lunas</TableHead>
                   <TableHead className="w-28 sm:w-32 text-right py-2 px-2.5 whitespace-nowrap">Sisa Tagihan</TableHead>
                   <TableHead className="w-28 sm:w-32 text-center py-2 px-1.5 whitespace-nowrap sticky right-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">Aksi</TableHead>
@@ -3663,20 +3955,21 @@ function TabTagihan() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-10">
+                    <TableCell colSpan={!isKepalaSekolah ? 8 : 7} className="text-center py-10">
                       <Loader2 className="w-5 h-5 animate-spin text-blue-600 mx-auto mb-1.5" />
                       <p className="text-slate-500 text-[11px] font-medium">Memuat data tagihan siswa...</p>
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={!isKepalaSekolah ? 7 : 6} className="text-center py-10 text-slate-400 text-xs font-medium">
+                    <TableCell colSpan={!isKepalaSekolah ? 8 : 7} className="text-center py-10 text-slate-400 text-xs font-medium">
                       {search || filterKelas ? 'Tidak ada data siswa yang sesuai filter saat ini.' : 'Belum ada data tagihan siswa tercatat.'}
                     </TableCell>
                   </TableRow>
                 ) : paginatedStudents.map((s, idx) => {
                   const isChecked = selectedStudentIds.includes(s.id);
                   const displayIndex = (currentPage - 1) * pageSize + idx + 1;
+                  const statusInfo = getFinanceStudentStatus(s);
                   return (
                     <TableRow key={s.id} className={`transition-colors border-b border-slate-100 dark:border-slate-800/60 ${isChecked ? 'bg-blue-50/60 dark:bg-blue-950/30' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/60'}`}>
                       {!isKepalaSekolah && (
@@ -3703,6 +3996,12 @@ function TabTagihan() {
                             </p>
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-center py-1.5 px-1 whitespace-nowrap">
+                        <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] border inline-flex items-center gap-1 ${statusInfo.color}`}>
+                          {statusInfo.status === 'AKTIF' ? <ShieldCheck className="w-3 h-3 text-emerald-600" /> : <Clock className="w-3 h-3" />}
+                          {statusInfo.label}
+                        </span>
                       </TableCell>
                       <TableCell className="text-center py-1.5 px-1 whitespace-nowrap">
                         {s.belumLunasCount > 0
@@ -3734,15 +4033,32 @@ function TabTagihan() {
                             <span>{isKepalaSekolah ? 'Detail' : 'Kelola'}</span>
                           </Button>
                           {!isKepalaSekolah && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              title="Reset Tagihan Siswa (Otorisasi Password)"
-                              className="border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 h-7 w-7 p-0 rounded-lg shadow-2xs touch-manipulation shrink-0"
-                              onClick={() => openResetModal([s.id])}
-                            >
-                              <RotateCcw className="w-3 h-3" />
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                title={s.isActive !== false ? 'Arsipkan / Nonaktifkan Siswa' : 'Aktifkan Siswa Kembali'}
+                                className={`h-7 w-7 p-0 rounded-lg shadow-2xs touch-manipulation shrink-0 border ${
+                                  s.isActive !== false
+                                    ? 'border-slate-200 dark:border-slate-800 text-slate-600 hover:text-rose-600 hover:bg-rose-50'
+                                    : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                                }`}
+                                onClick={() => {
+                                  toggleActiveMutation.mutate({ id: s.id, isActive: s.isActive === false })
+                                }}
+                              >
+                                {s.isActive !== false ? <ShieldAlert className="w-3 h-3" /> : <ShieldCheck className="w-3 h-3" />}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                title="Reset Tagihan Siswa (Otorisasi Password)"
+                                className="border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 h-7 w-7 p-0 rounded-lg shadow-2xs touch-manipulation shrink-0"
+                                onClick={() => openResetModal([s.id])}
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -4517,16 +4833,591 @@ function TabRekap() {
 }
 
 // ============================================================
+// TAB RIWAYAT PEMBAYARAN & ANGSURAN (Seluruh Transaksi Masuk)
+// ============================================================
+type PaymentTransactionItem = {
+  id: string
+  amount: number
+  paymentDate: string
+  notes: string | null
+  studentId: string
+  student: {
+    id: string
+    name: string
+    nisn: string
+    nis: string
+    isActive?: boolean
+    bioData?: string | null
+    class?: { id: string; name: string }
+  }
+  tagihan?: {
+    id: string
+    type: string
+    amount: number
+    amountPaid: number
+    status: string
+    month: number | null
+    year: number | null
+    notes: string | null
+  }
+}
+
+function TabRiwayatPembayaran() {
+  const authenticatedQuery = useAuthenticatedQuery()
+  const { isKepalaSekolah } = useKeuanganRole()
+
+  const [search, setSearch] = useState('')
+  const [filterType, setFilterType] = useState('ALL')
+  const [filterStartDate, setFilterStartDate] = useState('')
+  const [filterEndDate, setFilterEndDate] = useState('')
+  const [filterStudentStatus, setFilterStudentStatus] = useState<'ALL' | 'AKTIF' | 'ARSIP'>('ALL')
+  const [selectedTxIds, setSelectedTxIds] = useState<string[]>([])
+
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(15)
+
+  // Receipt Modal
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false)
+  const [receiptData, setReceiptData] = useState<any>(null)
+
+  const { data: payments = [], isLoading } = useQuery<PaymentTransactionItem[]>({
+    queryKey: ['all-payments', filterType, filterStartDate, filterEndDate],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (filterType && filterType !== 'ALL') params.append('type', filterType)
+      if (filterStartDate) params.append('startDate', filterStartDate)
+      if (filterEndDate) params.append('endDate', filterEndDate)
+      const q = params.toString() ? `?${params.toString()}` : ''
+      return authenticatedQuery(`/api-backend/finance/payments${q}`)
+    },
+    staleTime: 20000,
+    refetchOnWindowFocus: false,
+  })
+
+  const filtered = useMemo(() => {
+    return payments.filter(p => {
+      const q = search.toLowerCase().trim()
+      const studentName = p.student?.name || ''
+      const studentNis = p.student?.nis || ''
+      const studentNisn = p.student?.nisn || ''
+      const className = p.student?.class?.name || ''
+      const txId = p.id || ''
+      const notes = p.notes || ''
+
+      const matchesSearch = !q || (
+        studentName.toLowerCase().includes(q) ||
+        studentNis.includes(q) ||
+        studentNisn.includes(q) ||
+        className.toLowerCase().includes(q) ||
+        txId.toLowerCase().includes(q) ||
+        notes.toLowerCase().includes(q)
+      )
+
+      const statusInfo = getFinanceStudentStatus(p.student)
+      const matchesStudentStatus = filterStudentStatus === 'ALL'
+        ? true
+        : filterStudentStatus === 'AKTIF'
+        ? p.student?.isActive !== false
+        : p.student?.isActive === false
+
+      return matchesSearch && matchesStudentStatus
+    })
+  }, [payments, search, filterStudentStatus])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, filterType, filterStartDate, filterEndDate, filterStudentStatus, pageSize])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const paginatedList = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize
+    return filtered.slice(startIdx, startIdx + pageSize)
+  }, [filtered, currentPage, pageSize])
+
+  const isAllSelected = useMemo(() =>
+    filtered.length > 0 && filtered.every(p => selectedTxIds.includes(p.id)),
+    [filtered, selectedTxIds]
+  )
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedTxIds([])
+    } else {
+      setSelectedTxIds(filtered.map(p => p.id))
+    }
+  }
+
+  const toggleSelectTx = (id: string) => {
+    setSelectedTxIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
+
+  // Summary Metrics
+  const stats = useMemo(() => {
+    const totalNominal = filtered.reduce((sum, p) => sum + (p.amount || 0), 0)
+    const countTotal = filtered.length
+    const countLunas = filtered.filter(p => p.tagihan?.status === 'LUNAS' || ((p.tagihan?.amountPaid || 0) >= (p.tagihan?.amount || 0) && (p.tagihan?.amount || 0) > 0)).length
+    const countAngsuran = countTotal - countLunas
+    return { totalNominal, countTotal, countLunas, countAngsuran }
+  }, [filtered])
+
+  const handleExport = () => {
+    const data = filtered.map((p, i) => {
+      const studentStatus = getFinanceStudentStatus(p.student)
+      const t = p.tagihan
+      const periodStr = t?.month
+        ? `${MONTHS.find(m => m.value === t.month?.toString())?.label || t.month} ${t.year || ''}`
+        : t?.year ? `Tahun ${t.year}` : '-'
+      return {
+        No: i + 1,
+        'No. Transaksi / Kwitansi': `KW-${p.id.slice(0, 8).toUpperCase()}`,
+        'Tanggal Pembayaran': new Date(p.paymentDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        'Nama Siswa': p.student?.name || '-',
+        'NISN': p.student?.nisn || '-',
+        'NIS': p.student?.nis || '-',
+        'Kelas': p.student?.class?.name || '-',
+        'Status Siswa': studentStatus.label,
+        'Jenis Tagihan': t?.type || 'Tagihan',
+        'Periode': periodStr,
+        'Nominal Bayar (Rp)': p.amount,
+        'Total Tagihan (Rp)': t?.amount || p.amount,
+        'Total Terbayar (Rp)': t?.amountPaid || p.amount,
+        'Status Tagihan': t?.status || 'LUNAS',
+        'Catatan Kasir': p.notes || '-',
+      }
+    })
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Riwayat Pembayaran')
+    XLSX.writeFile(wb, `Riwayat_Transaksi_Pembayaran_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+
+  const printReceipt = (p: PaymentTransactionItem) => {
+    const t = p.tagihan
+    const totalAmount = t?.amount || p.amount
+    const totalPaid = t?.amountPaid || p.amount
+    const remaining = Math.max(0, totalAmount - totalPaid)
+    const periodStr = t?.month
+      ? `${MONTHS.find(m => m.value === t.month?.toString())?.label || t.month} ${t.year || ''}`
+      : t?.year ? `Tahun ${t.year}` : '-'
+
+    setReceiptData({
+      receiptNo: `KW-${p.id.slice(0, 8).toUpperCase()}`,
+      studentName: p.student?.name || '-',
+      studentNis: p.student?.nis || '-',
+      studentNisn: p.student?.nisn || '-',
+      className: p.student?.class?.name || '-',
+      paymentDate: p.paymentDate,
+      billType: t?.type || 'Tagihan Keuangan',
+      billPeriod: periodStr,
+      totalBillAmount: totalAmount,
+      paidAmount: p.amount,
+      accumulatedPaid: totalPaid,
+      remainingAmount: remaining,
+      status: t?.status === 'LUNAS' || remaining <= 0 ? 'LUNAS' : 'ANGSURAN',
+      notes: p.notes,
+    })
+    setReceiptModalOpen(true)
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Sub-Filter Status Siswa */}
+      <div className="flex flex-wrap items-center justify-between gap-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/80">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setFilterStudentStatus('ALL')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              filterStudentStatus === 'ALL'
+                ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs ring-1 ring-blue-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 text-blue-600" />
+            <span>Semua Riwayat Transaksi</span>
+            <span className="px-1.5 py-0.2 bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 rounded-full text-[10px] font-black">
+              {payments.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStudentStatus('AKTIF')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              filterStudentStatus === 'AKTIF'
+                ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs ring-1 ring-emerald-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Transaksi Siswa Aktif</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStudentStatus('ARSIP')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              filterStudentStatus === 'ARSIP'
+                ? 'bg-white dark:bg-slate-900 text-purple-700 dark:text-purple-400 shadow-xs ring-1 ring-purple-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-purple-600" />
+            <span>Arsip Transaksi Siswa Lulus / Nonaktif</span>
+          </button>
+        </div>
+
+        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium px-2 py-0.5">
+          Real-time Audit Log Kasir & Pembayaran
+        </span>
+      </div>
+
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+        <div className="bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 p-2.5 sm:p-3 rounded-xl shadow-xs">
+          <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">Total Dana Masuk</span>
+          <p className="text-base sm:text-lg font-black text-emerald-700 dark:text-emerald-400 mt-0.5 truncate">{currency(stats.totalNominal)}</p>
+        </div>
+        <div className="bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 p-2.5 sm:p-3 rounded-xl shadow-xs">
+          <span className="text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wider">Total Transaksi</span>
+          <p className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-400 mt-0.5">{stats.countTotal} <span className="text-[11px] font-normal text-blue-600/70">Kwitansi</span></p>
+        </div>
+        <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 p-2.5 sm:p-3 rounded-xl shadow-xs">
+          <span className="text-[10px] font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">Transaksi Lunas</span>
+          <p className="text-base sm:text-lg font-black text-indigo-700 dark:text-indigo-400 mt-0.5">{stats.countLunas} <span className="text-[11px] font-normal text-indigo-600/70">Tuntas</span></p>
+        </div>
+        <div className="bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 p-2.5 sm:p-3 rounded-xl shadow-xs">
+          <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">Angsuran / Cicilan</span>
+          <p className="text-base sm:text-lg font-black text-amber-900 dark:text-amber-300 mt-0.5">{stats.countAngsuran} <span className="text-[11px] font-normal text-amber-700/70">Transaksi</span></p>
+        </div>
+      </div>
+
+      {/* Toolbar Search & Filter (Rule 16: Bersebelahan) */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 sm:p-2.5 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-[240px]">
+          <div className="relative flex-1 min-w-[140px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <Input
+              placeholder="Cari siswa, NISN, no kwitansi, catatan..."
+              className="pl-7.5 h-8 text-xs font-medium bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+
+          <Select value={filterType} onValueChange={(v) => setFilterType(v || 'ALL')}>
+            <SelectTrigger className="w-[120px] sm:w-[130px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
+              <SelectValue placeholder="Jenis Tagihan" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Semua Jenis</SelectItem>
+              {PAYMENT_TYPES.map(t => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-1">
+            <Input
+              type="date"
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
+              className="h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-[125px]"
+              title="Dari Tanggal"
+            />
+            <span className="text-[10px] text-slate-400">-</span>
+            <Input
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => setFilterEndDate(e.target.value)}
+              className="h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-[125px]"
+              title="Sampai Tanggal"
+            />
+            {(filterStartDate || filterEndDate || filterType !== 'ALL' || search) && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setSearch('')
+                  setFilterType('ALL')
+                  setFilterStartDate('')
+                  setFilterEndDate('')
+                }}
+                className="h-8 px-2 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg"
+                title="Reset Filter"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={filtered.length === 0}
+            className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 h-8 px-2.5 text-xs font-bold rounded-lg touch-manipulation gap-1"
+          >
+            <Download className="w-3.5 h-3.5" /> <span>Export Excel ({filtered.length})</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Floating Bulk Action Bar */}
+      {selectedTxIds.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200 dark:border-blue-900/60 p-2 rounded-xl flex flex-wrap items-center justify-between gap-1.5 shadow-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-xs text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/60 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
+              {selectedTxIds.length} Transaksi Terpilih
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSelectedTxIds([])}
+              className="text-xs h-7.5 px-2.5 rounded-lg border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100/50"
+            >
+              Batal Pilih
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Table Log Riwayat Pembayaran */}
+      <Card className="shadow-xs border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+        <CardContent className="p-0 max-w-full">
+          <div className="overflow-x-auto custom-scrollbar w-full">
+            <Table className="w-full text-xs min-w-[780px] sm:min-w-full border-collapse">
+              <TableHeader className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-bold text-[11px] select-none sticky top-0 z-10">
+                <TableRow className="border-b border-slate-200 dark:border-slate-800">
+                  <TableHead className="w-9 sm:w-10 text-center px-1.5 py-2 whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer inline-flex items-center justify-center touch-manipulation"
+                      title={isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua Transaksi'}
+                    >
+                      {isAllSelected ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-slate-400" />}
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-10 sm:w-12 text-center py-2 px-1 whitespace-nowrap">No</TableHead>
+                  <TableHead className="w-28 sm:w-32 py-2 px-2 whitespace-nowrap">Waktu Bayar</TableHead>
+                  <TableHead className="py-2 px-2.5 min-w-[160px] sm:min-w-[200px]">Nama Siswa</TableHead>
+                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1 whitespace-nowrap">Status Siswa</TableHead>
+                  <TableHead className="w-28 sm:w-32 py-2 px-2 whitespace-nowrap">Jenis & Periode</TableHead>
+                  <TableHead className="w-28 sm:w-32 text-right py-2 px-2.5 whitespace-nowrap">Nominal Bayar</TableHead>
+                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1 whitespace-nowrap">Status Tagihan</TableHead>
+                  <TableHead className="py-2 px-2 min-w-[120px] max-w-[220px]">Catatan Kasir</TableHead>
+                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1.5 whitespace-nowrap sticky right-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">Kwitansi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-10">
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-600 mx-auto mb-1.5" />
+                      <p className="text-slate-500 text-[11px] font-medium">Memuat riwayat transaksi pembayaran...</p>
+                    </TableCell>
+                  </TableRow>
+                ) : filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-10 text-slate-400 text-xs font-medium">
+                      {search || filterType !== 'ALL' || filterStartDate ? 'Tidak ada transaksi pembayaran yang sesuai filter.' : 'Belum ada transaksi pembayaran masuk tercatat.'}
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedList.map((p, idx) => {
+                  const isChecked = selectedTxIds.includes(p.id)
+                  const displayIndex = (currentPage - 1) * pageSize + idx + 1
+                  const studentStatus = getFinanceStudentStatus(p.student)
+                  const t = p.tagihan
+                  const isLunas = t?.status === 'LUNAS' || ((t?.amountPaid || 0) >= (t?.amount || 0) && (t?.amount || 0) > 0)
+                  const periodStr = t?.month
+                    ? `${MONTHS.find(m => m.value === t.month?.toString())?.label || t.month} ${t.year || ''}`
+                    : t?.year ? `Th ${t.year}` : '-'
+
+                  return (
+                    <TableRow key={p.id} className={`transition-colors border-b border-slate-100 dark:border-slate-800/60 ${isChecked ? 'bg-blue-50/60 dark:bg-blue-950/30' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/60'}`}>
+                      <TableCell className="text-center px-1.5 py-1.5 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelectTx(p.id)}
+                          className="p-1 rounded-md text-slate-400 hover:text-blue-600 transition-colors cursor-pointer inline-flex items-center justify-center touch-manipulation"
+                        >
+                          {isChecked ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-slate-400" />}
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-center text-slate-400 font-medium text-[11px] px-1 py-1.5 whitespace-nowrap">{displayIndex}</TableCell>
+                      <TableCell className="py-1.5 px-2 whitespace-nowrap font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                        <div className="font-semibold text-slate-900 dark:text-white">
+                          {new Date(p.paymentDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {new Date(p.paymentDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-1.5 px-2.5 min-w-[160px] sm:min-w-[200px]">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 dark:text-white text-xs leading-tight truncate" title={p.student?.name}>
+                            {p.student?.name || '-'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono leading-tight truncate mt-0.5">
+                            Kelas: <span className="font-semibold text-slate-600 dark:text-slate-300">{p.student?.class?.name || '-'}</span> · NIS: {p.student?.nis || '-'}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center py-1.5 px-1 whitespace-nowrap">
+                        <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] border inline-flex items-center gap-1 ${studentStatus.color}`}>
+                          {studentStatus.status === 'AKTIF' ? <ShieldCheck className="w-3 h-3 text-emerald-600" /> : <Clock className="w-3 h-3" />}
+                          {studentStatus.label}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-1.5 px-2 whitespace-nowrap">
+                        <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] ${TYPE_COLORS[t?.type || ''] || 'bg-slate-100 text-slate-700'}`}>
+                          {t?.type || 'Pembayaran'}
+                        </span>
+                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">{periodStr}</p>
+                      </TableCell>
+                      <TableCell className="text-right font-extrabold text-emerald-600 dark:text-emerald-400 text-xs py-1.5 px-2.5 whitespace-nowrap">
+                        {currency(p.amount)}
+                      </TableCell>
+                      <TableCell className="text-center py-1.5 px-1 whitespace-nowrap">
+                        {isLunas ? (
+                          <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 px-2 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> LUNAS
+                          </span>
+                        ) : (
+                          <span className="font-bold px-2 py-0.5 rounded-full text-[10px] bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 inline-flex items-center gap-1 whitespace-nowrap">
+                            <Clock className="w-3 h-3" /> Angsuran
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="py-1.5 px-2 text-slate-600 dark:text-slate-400 text-[11px] truncate max-w-[200px]" title={p.notes || '-'}>
+                        {p.notes || '-'}
+                      </TableCell>
+                      <TableCell className="text-center py-1.5 px-1.5 whitespace-nowrap sticky right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => printReceipt(p)}
+                          className="border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-[11px] font-bold h-7 px-2 rounded-lg gap-1 shadow-2xs touch-manipulation"
+                          title="Cetak Kwitansi Pembayaran Ini"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Cetak</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination Toolbar */}
+          {filtered.length > 0 && (
+            <div className="px-3 sm:px-4 py-2 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px] w-full sm:w-auto justify-between sm:justify-start">
+                <span>
+                  <strong>{Math.min(filtered.length, (currentPage - 1) * pageSize + 1)}</strong> - <strong>{Math.min(filtered.length, currentPage * pageSize)}</strong> dari <strong>{filtered.length}</strong> transaksi
+                </span>
+                <div className="flex items-center gap-1.5 ml-2">
+                  <span className="text-[10px] text-slate-400">Baris:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="h-7 px-2 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-200 shadow-2xs cursor-pointer"
+                  >
+                    <option value={15}>15</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1 w-full sm:w-auto justify-center sm:justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(1)}
+                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
+                    title="Halaman Pertama"
+                  >
+                    <ChevronsLeft className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
+                    title="Sebelumnya"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </Button>
+
+                  <span className="px-2.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-300">
+                    {currentPage} / {totalPages}
+                  </span>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
+                    title="Selanjutnya"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(totalPages)}
+                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
+                    title="Halaman Terakhir"
+                  >
+                    <ChevronsRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <SingleReceiptPrintModal
+        open={receiptModalOpen}
+        onClose={() => {
+          setReceiptModalOpen(false)
+          setReceiptData(null)
+        }}
+        data={receiptData}
+      />
+    </div>
+  )
+}
+
+// ============================================================
 // MAIN PAGE
 // ============================================================
 const TABS = [
   { id: 'tagihan', label: 'Tagihan Siswa', icon: Receipt },
+  { id: 'riwayat', label: 'Riwayat Pembayaran', icon: Clock },
   { id: 'verifikasi', label: 'Verifikasi Pembayaran', icon: CheckCircle2 },
   { id: 'rekap', label: 'Rekapitulasi', icon: BarChart3 },
 ]
 
 export default function KeuanganMasukPage() {
-  const authenticatedFetch = useAuthenticatedFetch();
   const { data: session } = useSession()
   const userRole = (session?.user as any)?.role || ''
   const userSubRole = (session?.user as any)?.subRole || ''
@@ -4547,7 +5438,7 @@ export default function KeuanganMasukPage() {
               <h1 className="text-base sm:text-lg lg:text-xl font-black tracking-tight text-slate-900 dark:text-white leading-tight truncate">
                 Keuangan Masuk
               </h1>
-              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">Tagihan, verifikasi pembayaran, & rekapitulasi</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">Tagihan, riwayat transaksi, verifikasi & rekapitulasi</p>
             </div>
           </div>
 
@@ -4569,6 +5460,7 @@ export default function KeuanganMasukPage() {
 
         <div>
           {activeTab === 'tagihan' && <TabTagihan />}
+          {activeTab === 'riwayat' && <TabRiwayatPembayaran />}
           {activeTab === 'verifikasi' && <PaymentProofVerificationPage />}
           {activeTab === 'rekap' && <TabRekap />}
         </div>
@@ -4576,3 +5468,4 @@ export default function KeuanganMasukPage() {
     </KeuanganRoleContext.Provider>
   )
 }
+

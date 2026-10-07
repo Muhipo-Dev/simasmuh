@@ -44,6 +44,24 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-10-07 (v1.9.4 - Manajemen Ekstrakurikuler Dinamis, Auto Sync Akun Siswa & Wali Murid, Optimasi Finansial Pemasukan, Waiting Room Permanen, Notifikasi Personal & Hak Akses Pembina):**
+  * **Waiting Room Permanen & Queue Engine (`waiting-room.service.ts`):**
+    * Penerapan persistensi konfigurasi waiting room (status aktif, kapasitas maksimum, dan interval) langsung ke tabel basis data `Setting` sehingga pengaturan tidak ter-reset saat server restart.
+    * Optimalisasi auto-dequeue dan sinkronisasi status antrean dengan proteksi bypass role `SUPERADMIN` dan `ADMIN`.
+  * **Manajemen & Portal Ekstrakurikuler Dinamis (`extracurricular.service.ts` & `PembinaEkstrakurikulerManagement.tsx`):**
+    * Redesain komprehensif portal pembina dan siswa untuk pendaftaran, presensi anggota, jadwal kegiatan, dan jurnal ekstrakurikuler.
+    * Hak akses dinamis granular untuk peran `PEMBINA_EKSTRAKURIKULER` pada permission guards (`roles.guard.ts` & `permission.guard.ts`).
+    * Dukungan 100% data riil basis data tanpa mock dummy, rekap absensi otomatis, dan export data anggota.
+  * **Otomasi Pembuatan Akun Siswa & Sinkronisasi Wali Murid (`students.service.ts` & `users.service.ts`):**
+    * Fitur pembuatan akun pengguna otomatis (*Auto-generate User Account*) dari master data siswa dengan role `SISWA` dan relasi email default/custom.
+    * Sinkronisasi relasi data orang tua/wali murid dengan format identitas terstandar dan nomor WhatsApp aktif.
+  * **Penyempurnaan Modul Keuangan Pemasukan (`/keuangan/pemasukan`):**
+    * Antarmuka entri dan rekapitulasi pemasukan non-tagihan terpadu (donasi, hibah, laba unit usaha, dana BOS/BPOPP) dengan filter tanggal/kategori, visualisasi statistik, dan bukti transaksi.
+    * Kalkulasi otomatis buku kas dan integrasi jurnal umum keuangan.
+  * **Optimasi Notifikasi Pengguna & UI/UX Multi-Perangkat:**
+    * Perombakan halaman Log Notifikasi Personal (`/pengaturan/notifikasi-pengguna`) dengan pencarian instan, filter per status/kanal (In-App, WhatsApp, Email), dan aksi mark as read massal.
+    * Harmonisasi layout responsive, safe-padding, dan perbaikan penataan grid dashboard mobile, tablet, dan desktop.
+
 * **2026-08-31 (v1.9.3 - Pembaruan Notifikasi Multi-Kanal Terpadu, Dukungan Email Transaksional, Manajemen Notifikasi Pengguna & Wali Murid, dan Harmonisasi Menu Navigasi):**
   * **Integrasi Email Transaksional (`EmailService` & `Nodemailer`):**
     * Penambahan modul layanan pengiriman email transaksional berbasis SMTP (`nodemailer`) dengan konfigurasi dinamis via environment variable (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`).

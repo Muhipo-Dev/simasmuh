@@ -113,10 +113,12 @@
   "allowScripts": {
     "better-sqlite3@12.11.1": true,
     "better-sqlite3@13.0.1": true,
+    "better-sqlite3@13.0.3": true,
     "@prisma/engines@7.9.1": true,
     "prisma@7.9.1": true,
     "unrs-resolver@1.12.2": true,
-    "@swc/core@1.16.0": true
+    "@swc/core@1.16.0": true,
+    "@swc/core@1.16.1": true
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

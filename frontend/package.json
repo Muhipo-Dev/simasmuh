@@ -56,5 +56,13 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "unlighthouse": "^0.18.0"
+  },
+  "allowScripts": {
+    "vue-demi@0.14.10": true,
+    "esbuild@0.27.7": true,
+    "puppeteer@25.8.0": true,
+    "sharp@0.34.5": true,
+    "tesseract.js@7.0.0": true,
+    "unrs-resolver@1.12.2": true
   }
 }

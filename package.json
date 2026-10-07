@@ -3,6 +3,10 @@
   "version": "1.5.3",
   "private": true,
   "description": "Sistem Informasi Manajemen Aset & Administrasi Sekolah Muhammadiyah (SIMASMUH)",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
     "release": "semantic-release",
     "release:dry-run": "semantic-release --dry-run"

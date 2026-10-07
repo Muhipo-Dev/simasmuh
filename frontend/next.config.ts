@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import os from "os";
+import path from "path";
 
 // Dynamically fetch all server local & public IP addresses and hostnames
 function getDynamicServerOrigins() {
@@ -63,6 +64,9 @@ function getDynamicServerOrigins() {
 const dynamicServerData = getDynamicServerOrigins();
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.resolve(__dirname, '..'),
+  },
   compress: true,
   allowedDevOrigins: [
     '*',

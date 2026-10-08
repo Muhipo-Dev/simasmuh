@@ -203,17 +203,7 @@ function Get-AppStatus {
     $faceAiRunning       = Test-PortListening 8089
     $supabaseRunning     = Test-PortListening 54322
     $prismaStudioRunning = Test-PortListening 51212
-
-    Write-Host "  Mengecek status..." -ForegroundColor DarkGray
-    $dbConnected = Test-DatabaseConnection
-    try {
-        if (-not [Console]::IsOutputRedirected) {
-            $y = [Console]::CursorTop - 1
-            [Console]::SetCursorPosition(0, $y)
-            Write-Host (" " * 40)
-            [Console]::SetCursorPosition(0, $y)
-        }
-    } catch {}
+    $dbConnected         = Test-DatabaseConnection
 
     $bMode = if ($backendRunning) { Get-ProcessMode $BACKEND_PID_FILE } else { "" }
     $fMode = if ($frontendRunning) { Get-ProcessMode $FRONTEND_PID_FILE } else { "" }
@@ -250,6 +240,126 @@ function Get-AppStatus {
     Write-Host "  | Database Ping (DB) | " -NoNewline
     Write-Host ($dStatus + "         |") -ForegroundColor $dColor
     Write-Host "  +--------------------+--------------------------+"
+    Write-Host ""
+}
+
+function Test-SystemReadiness {
+    Write-Banner
+    Write-Host "  +==================================================+" -ForegroundColor Green
+    Write-Host "  |        PEMERIKSAAN KESIAPAN SISTEM TOTAL         |" -ForegroundColor Green
+    Write-Host "  +==================================================+" -ForegroundColor Green
+    Write-Host "  Memeriksa seluruh komponen, dependencies, runtime, & database..." -ForegroundColor DarkGray
+    Write-Host ""
+
+    # 1. Runtimes
+    Write-Status "1. Memeriksa Runtime Dasar..." "Cyan"
+    $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+    $npmCmd  = Get-Command npm -ErrorAction SilentlyContinue
+    if ($nodeCmd -and $npmCmd) {
+        $nodeVer = & node -v 2>$null
+        $npmVer  = & npm -v 2>$null
+        Write-Ok "Node.js ($nodeVer) & npm ($npmVer) terpasang aktif"
+    } else {
+        Write-Err "Node.js atau npm belum terdeteksi di PATH!"
+    }
+
+    $pyCmd = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $pyCmd) { $pyCmd = Get-Command py -ErrorAction SilentlyContinue }
+    if ($pyCmd) {
+        $pyVer = & python --version 2>$null
+        Write-Ok "Python ($pyVer) terpasang aktif"
+    } else {
+        Write-Info "Python belum terpasang (Opsional untuk Face AI microservice)"
+    }
+
+    $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
+    if ($dockerCmd) {
+        Write-Ok "Docker CLI terdeteksi (siap untuk Supabase Studio & Database)"
+    } else {
+        Write-Info "Docker belum aktif/terpasang"
+    }
+
+    # 2. File Konfigurasi .env
+    Write-Host ""
+    Write-Status "2. Memeriksa Konfigurasi Berkas .env..." "Cyan"
+    $bEnv = Test-Path (Join-Path $BACKEND_DIR ".env")
+    $fEnv = Test-Path (Join-Path $FRONTEND_DIR ".env")
+    $aEnv = Test-Path (Join-Path $FACE_AI_DIR ".env")
+
+    if ($bEnv) { Write-Ok "Backend .env terpasang" } else { Write-Err "Backend .env BELUM ADA!" }
+    if ($fEnv) { Write-Ok "Frontend .env terpasang" } else { Write-Err "Frontend .env BELUM ADA!" }
+    if ($aEnv) { Write-Ok "Face AI .env terpasang" } else { Write-Info "Face AI .env belum dibuat (gunakan template .env.example jika diperlukan)" }
+
+    # 3. Dependencies
+    Write-Host ""
+    Write-Status "3. Memeriksa Modul & Dependencies..." "Cyan"
+    $bNm = Test-Path (Join-Path $BACKEND_DIR "node_modules")
+    $fNm = Test-Path (Join-Path $FRONTEND_DIR "node_modules")
+    $prismaClient = Test-Path (Join-Path $BACKEND_DIR "node_modules\.prisma\client")
+
+    if ($bNm) { Write-Ok "Backend dependencies (node_modules) siap" } else { Write-Err "Backend node_modules belum diinstall (Pilih Menu 16)" }
+    if ($fNm) { Write-Ok "Frontend dependencies (node_modules) siap" } else { Write-Err "Frontend node_modules belum diinstall (Pilih Menu 16)" }
+    if ($prismaClient) { Write-Ok "Prisma Client engine tergenerate" } else { Write-Info "Prisma Client belum digenerate (Jalankan npx prisma generate)" }
+
+    # 4. Storage Directory
+    Write-Host ""
+    Write-Status "4. Memeriksa Direktori External Storage..." "Cyan"
+    $storageRoots = @(
+        "D:\simasmuh_storage",
+        "C:\simasmuh_storage",
+        (Join-Path $ROOT "..\simasmuh_storage"),
+        (Join-Path $BACKEND_DIR "storage")
+    )
+    $activeStorage = $null
+    foreach ($sr in $storageRoots) {
+        if (Test-Path $sr) {
+            $activeStorage = $sr
+            break
+        }
+    }
+    if ($activeStorage) {
+        Write-Ok "Direktori Storage aktif di: $activeStorage"
+    } else {
+        Write-Info "Direktori storage lokal akan dibuat otomatis saat startup"
+    }
+
+    # 5. Database & Layanan
+    Write-Host ""
+    Write-Status "5. Memeriksa Koneksi Database & Port Layanan..." "Cyan"
+    $dbOk = Test-DatabaseConnection
+    if ($dbOk) {
+        Write-Ok "Koneksi Database TERHUBUNG dengan sukses"
+    } else {
+        Write-Err "Koneksi Database TERPUTUS (Periksa DATABASE_URL / Docker Supabase)"
+    }
+
+    $bListen = Test-PortListening 3001
+    $fListen = Test-PortListening 3000
+    $pListen = Test-PortListening 51212
+    $sListen = Test-PortListening 54322
+
+    Write-Host "  - Frontend Web (Port 3000)  : " -NoNewline
+    if ($fListen) { Write-Ok "AKTIF (Online)" } else { Write-Info "STANDBY (Siap Dijalankan)" }
+    Write-Host "  - Backend API (Port 3001)   : " -NoNewline
+    if ($bListen) { Write-Ok "AKTIF (Online)" } else { Write-Info "STANDBY (Siap Dijalankan)" }
+    Write-Host "  - Prisma Studio (Port 51212): " -NoNewline
+    if ($pListen) { Write-Ok "AKTIF (Online)" } else { Write-Info "STANDBY (Siap Dijalankan)" }
+    Write-Host "  - Supabase DB (Port 54322)  : " -NoNewline
+    if ($sListen) { Write-Ok "AKTIF (Docker Online)" } else { Write-Info "STANDBY / Cloud DB" }
+
+    # 6. Ringkasan Kesiapan
+    Write-Host ""
+    Write-Host "  +==================================================+" -ForegroundColor Green
+    Write-Host "  |          STATUS KESIAPAN KESELURUHAN             |" -ForegroundColor Green
+    Write-Host "  +==================================================+" -ForegroundColor Green
+    if ($bEnv -and $fEnv -and $bNm -and $fNm) {
+        Write-Host "  [OK] SISTEM SIAP DIGUNAKAN 100%!" -ForegroundColor Green
+        Write-Host "  Anda dapat langsung memilih Menu [1] Development atau Menu [2] Production." -ForegroundColor White
+    } else {
+        Write-Host "  [!] SISTEM MEMERLUKAN PERSIAPAN DEPENDENCIES/ENV" -ForegroundColor Yellow
+        Write-Host "  Gunakan Menu [15] Setup .env, [16] Install Deps, atau [17] Setup Lingkungan Baru." -ForegroundColor Yellow
+    }
+    Write-Host "  +==================================================+" -ForegroundColor Green
     Write-Host ""
 }
 
@@ -613,7 +723,7 @@ function Start-PrismaStudio {
         return $true
     }
 
-    $cmdLine = "/c npx prisma studio --port 51212 --browser none"
+    $cmdLine = "/c npm run studio"
     $proc = Start-Process -FilePath "cmd.exe" `
                           -ArgumentList $cmdLine `
                           -WorkingDirectory $BACKEND_DIR `
@@ -1244,6 +1354,8 @@ function Start-TestingSuite {
 if ($Mode -ne "") {
     Write-Banner
     switch -Wildcard ($Mode.ToLower()) {
+        "*readiness*"    { Test-SystemReadiness; return }
+        "*check*"        { Test-SystemReadiness; return }
         "*status*"       { Get-AppStatus }
         "*compress*"     { 
             Compress-All-LogFiles 
@@ -1304,6 +1416,7 @@ while ($true) {
     Write-Host "  |  [8] Rebuild & Restart (Full)           |" -ForegroundColor White
     Write-Host "  |  [9] Menonaktifkan Mode / Stop Aplikasi |" -ForegroundColor Red
     Write-Host "  |  [10] Build Aplikasi (Tanpa Menjalankan)|" -ForegroundColor White
+    Write-Host "  |  [11] Cek Kesiapan Sistem Total (All)   |" -ForegroundColor Green
     Write-Host "  |  [12] Buka Browser (localhost:3000)     |" -ForegroundColor White
     Write-Host "  |  [13] Suite Testing & Diagnostik       |" -ForegroundColor Yellow
     Write-Host "  |  [14] Troubleshoot (Perbaiki Error)    |" -ForegroundColor White
@@ -1408,6 +1521,10 @@ while ($true) {
         "10" {
             Write-Banner
             Start-BuildOnly
+            Read-Host "  Tekan ENTER untuk kembali ke menu"
+        }
+        "11" {
+            Test-SystemReadiness
             Read-Host "  Tekan ENTER untuk kembali ke menu"
         }
         "12" {

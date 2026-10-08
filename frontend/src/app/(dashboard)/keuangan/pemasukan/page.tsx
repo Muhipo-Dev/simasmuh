@@ -41,8 +41,8 @@ type Tagihan = {
 type StudentSummary = {
   id: string; nisn: string; nis: string; name: string
   gender: string; className: string; totalTagihan: number
-  totalLunas: number; sisaTagihan?: number; belumLunasCount: number
-  sppLunasCount: number; tagihanCount: number
+  totalLunas: number; totalAngsuran?: number; sisaTagihan?: number; belumLunasCount: number
+  angsuranCount?: number; sppLunasCount: number; tagihanCount: number
   isActive?: boolean
   studentStatus?: string
   statusDetail?: string
@@ -421,7 +421,12 @@ function TagihanModal({
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] })
+      qc.invalidateQueries({ queryKey: ['student-payment-history-single', student?.id] })
       qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['all-payments'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      qc.invalidateQueries({ queryKey: ['my-tagihans'] })
+      qc.invalidateQueries({ queryKey: ['my-all-tagihan'] })
       closePayDialog()
     },
   })
@@ -432,7 +437,15 @@ function TagihanModal({
       if (!res.ok) throw new Error('Gagal')
       return res.json()
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] }); qc.invalidateQueries({ queryKey: ['finance-students'] }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] })
+      qc.invalidateQueries({ queryKey: ['student-payment-history-single', student?.id] })
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['all-payments'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      qc.invalidateQueries({ queryKey: ['my-tagihans'] })
+      qc.invalidateQueries({ queryKey: ['my-all-tagihan'] })
+    },
   })
 
   const discountMut = useMutation({
@@ -523,6 +536,8 @@ function TagihanModal({
   }
 
   const tagihans = student?.tagihans ?? []
+  const studentStatusInfo = student ? getFinanceStudentStatus(student) : null
+  const isStudentNonaktif = studentStatusInfo ? studentStatusInfo.status !== 'AKTIF' : false
   const lunasTagihans = tagihans.filter(t => t.status === 'LUNAS' || ((t.amountPaid || 0) >= t.amount && t.amount > 0))
   const angsuranTagihans = tagihans.filter(t => !lunasTagihans.includes(t) && (t.status === 'ANGSURAN' || (t.amountPaid || 0) > 0))
   const belumLunasTagihans = tagihans.filter(t => !lunasTagihans.includes(t) && !angsuranTagihans.includes(t))
@@ -578,36 +593,38 @@ function TagihanModal({
                     )}
                   </DialogDescription>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      if (student) {
-                        onClose();
-                        window.dispatchEvent(new CustomEvent('open-beasiswa-dialog', { detail: student }));
-                      }
-                    }}
-                    className="border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-xs font-semibold gap-1.5 h-9 rounded-xl transition-all"
-                  >
-                    <Percent className="w-3.5 h-3.5" />
-                    Set Beasiswa (%)
-                  </Button>
-                  {student && onResetStudent && (
+                {!isStudentNonaktif && (
+                  <div className="flex items-center gap-2 shrink-0">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        onClose();
-                        onResetStudent(student.id);
+                        if (student) {
+                          onClose();
+                          window.dispatchEvent(new CustomEvent('open-beasiswa-dialog', { detail: student }));
+                        }
                       }}
-                      className="border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-semibold gap-1.5 h-9 rounded-xl transition-all"
+                      className="border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-xs font-semibold gap-1.5 h-9 rounded-xl transition-all"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      Reset Tagihan Siswa
+                      <Percent className="w-3.5 h-3.5" />
+                      Set Beasiswa (%)
                     </Button>
-                  )}
-                </div>
+                    {student && onResetStudent && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          onClose();
+                          onResetStudent(student.id);
+                        }}
+                        className="border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-semibold gap-1.5 h-9 rounded-xl transition-all"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Reset Tagihan Siswa
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Sub-Tab Navigation inside TagihanModal */}
@@ -854,7 +871,12 @@ function TagihanModal({
           )}
 
           {/* Form Tagihan Baru / Edit */}
-          {!showForm ? (
+          {isStudentNonaktif ? (
+            <div className="p-3.5 bg-slate-100/90 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2.5 my-2">
+              <Info className="w-4 h-4 text-slate-500 shrink-0" />
+              <span>Siswa berstatus <strong>Nonaktif / Diarsipkan</strong>. Seluruh data tagihan dan pembayaran hanya dapat dilihat historinya dan tidak dapat ditambahkan tagihan baru.</span>
+            </div>
+          ) : !showForm ? (
             <Button onClick={() => setShowForm(true)} className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-md gap-2 my-1">
               <PlusCircle className="w-4 h-4" /> Tambah Tagihan Baru
             </Button>
@@ -2727,9 +2749,13 @@ function ManualCashPaymentModal({
       qc.invalidateQueries({ queryKey: ['finance-students'] })
       qc.invalidateQueries({ queryKey: ['student-tagihan'] })
       qc.invalidateQueries({ queryKey: ['student-tagihan-cash'] })
+      qc.invalidateQueries({ queryKey: ['student-payment-history-single'] })
+      qc.invalidateQueries({ queryKey: ['all-payments'] })
       qc.invalidateQueries({ queryKey: ['finance-rekap'] })
       qc.invalidateQueries({ queryKey: ['quarterly-rekap'] })
       qc.invalidateQueries({ queryKey: ['payment-proofs'] })
+      qc.invalidateQueries({ queryKey: ['my-tagihans'] })
+      qc.invalidateQueries({ queryKey: ['my-all-tagihan'] })
       Swal.fire({
         title: data?.allLunas ? 'Pelunasan Multi Tagihan Berhasil!' : 'Pembayaran Berhasil Dicatat!',
         text: data?.message || 'Pembayaran tunai berhasil dicatat.',
@@ -3306,6 +3332,8 @@ function TabTagihan() {
   const { isKepalaSekolah } = useKeuanganRole()
   const [search, setSearch] = useState('')
   const [filterKelas, setFilterKelas] = useState('')
+  const [filterBulan, setFilterBulan] = useState<string>(String(new Date().getMonth() + 1))
+  const [filterTahun, setFilterTahun] = useState<string>(String(new Date().getFullYear()))
   const [selectedStudent, setSelectedStudent] = useState<StudentSummary | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [massalOpen, setMassalOpen] = useState(false)
@@ -3429,60 +3457,6 @@ function TabTagihan() {
   })
 
   const [filterActive, setFilterActive] = useState<'AKTIF' | 'ARSIP' | 'ALL'>('AKTIF')
-
-  const toggleActiveMutation = useMutation({
-    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const res = await authenticatedFetch(`/api-backend/students/${id}/toggle-active`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive })
-      })
-      if (!res.ok) throw new Error('Gagal memperbarui status keaktifan siswa')
-      return res.json()
-    },
-    onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: ['finance-students'] })
-      if (selectedStudent) {
-        qc.invalidateQueries({ queryKey: ['student-tagihan', selectedStudent.id] })
-      }
-      Swal.fire({
-        title: 'Status Keaktifan Diperbarui',
-        text: `Status peserta didik berhasil di-${variables.isActive ? 'aktifkan' : 'nonaktifkan'}.`,
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false,
-      })
-    },
-    onError: (err: any) => {
-      Swal.fire('Gagal', err.message || 'Gagal mengubah status keaktifan siswa', 'error')
-    }
-  })
-
-  const bulkToggleActiveMutation = useMutation({
-    mutationFn: async ({ ids, isActive }: { ids: string[]; isActive: boolean }) => {
-      const res = await authenticatedFetch(`/api-backend/students/bulk-toggle-active`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids, isActive })
-      })
-      if (!res.ok) throw new Error('Gagal memperbarui status keaktifan siswa massal')
-      return res.json()
-    },
-    onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: ['finance-students'] })
-      setSelectedStudentIds([])
-      Swal.fire({
-        title: 'Status Keaktifan Massal Diperbarui',
-        text: `${variables.ids.length} peserta didik berhasil di-${variables.isActive ? 'aktifkan' : 'nonaktifkan'}.`,
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false,
-      })
-    },
-    onError: (err: any) => {
-      Swal.fire('Gagal', err.message || 'Gagal mengubah status keaktifan massal', 'error')
-    }
-  })
 
   // Pagination state for ultra-smooth rendering with large datasets (Optimized for 2GB RAM devices)
   const [currentPage, setCurrentPage] = useState<number>(1)
@@ -3610,6 +3584,15 @@ function TabTagihan() {
   const handleExport = () => {
     const data = filtered.map((s, i) => {
       const statusInfo = getFinanceStudentStatus(s)
+      const sisa = (s.sisaTagihan !== undefined && s.sisaTagihan >= 0) ? s.sisaTagihan : Math.max(0, s.totalTagihan - s.totalLunas)
+      const statusKeuangan = s.totalTagihan === 0
+        ? 'BEBAS BIAYA'
+        : sisa === 0
+        ? 'LUNAS'
+        : (s.totalLunas > 0 || (s.totalAngsuran && s.totalAngsuran > 0))
+        ? 'ANGSURAN'
+        : 'BELUM LUNAS'
+
       return {
         No: i + 1,
         Nama: s.name,
@@ -3618,17 +3601,35 @@ function TabTagihan() {
         Kelas: s.className,
         'Status Keaktifan': statusInfo.label,
         'Total Tagihan (Rp)': s.totalTagihan,
-        'Total Lunas (Rp)': s.totalLunas,
-        'Sisa (Rp)': s.totalTagihan - s.totalLunas,
-        'Belum Lunas': s.belumLunasCount,
+        'Total Terbayar (Rp)': s.totalLunas,
+        'Dana Angsuran (Rp)': s.totalAngsuran || 0,
+        'Sisa Tunggakan (Rp)': sisa,
+        'Status Keuangan': statusKeuangan,
+        'Item Belum Lunas': s.belumLunasCount,
+        'Item Angsuran': s.angsuranCount || 0,
         'SPP Lunas': `${s.sppLunasCount}/12`,
       }
     })
     const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Tagihan Siswa')
-    XLSX.writeFile(wb, `Tagihan_Siswa_${filterActive}.xlsx`)
+    XLSX.writeFile(wb, `Tagihan_Siswa_${filterKelas ? filterKelas.replace(/\s+/g, '_') : filterActive}.xlsx`)
   }
+
+  const monthOptions = [
+    { value: '7', label: 'Juli' },
+    { value: '8', label: 'Agustus' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'Oktober' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'Desember' },
+    { value: '1', label: 'Januari' },
+    { value: '2', label: 'Februari' },
+    { value: '3', label: 'Maret' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'Mei' },
+    { value: '6', label: 'Juni' },
+  ]
 
   const uniqueKelas = [...new Set(students.map(s => s.className))].sort()
 
@@ -3636,7 +3637,7 @@ function TabTagihan() {
     if (!filterKelas) {
       Swal.fire({
         title: 'Pilih Kelas Terlebih Dahulu',
-        text: 'Silakan pilih kelas pada filter untuk mengunduh Rekap Keuangan Eksport Excel per Kelas.',
+        text: 'Silakan pilih kelas pada filter dropdown untuk mengunduh Rekap Keuangan & Tagihan Lengkap per Kelas.',
         icon: 'warning',
         confirmButtonColor: '#2563eb',
       })
@@ -3647,25 +3648,38 @@ function TabTagihan() {
     if (!targetClass) {
       Swal.fire({
         title: 'Kelas Tidak Ditemukan',
-        text: 'Data ID kelas tidak ditemukan.',
+        text: 'Data ID kelas tidak ditemukan di sistem.',
         icon: 'error',
         confirmButtonColor: '#2563eb',
       })
       return
     }
 
+    const monthObj = monthOptions.find(m => m.value === filterBulan)
+    const monthLabel = monthObj ? monthObj.label : 'Oktober'
+
+    Swal.fire({
+      title: 'Memproses Rekap Excel...',
+      text: `Menyinkronkan data keuangan Kelas ${filterKelas} (Bulan ${monthLabel} ${filterTahun})...`,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading()
+      },
+    })
+
     try {
-      const res = await authenticatedFetch(`/api-backend/finance/export-rekap-kelas?classId=${targetClass.id}`)
+      const res = await authenticatedFetch(`/api-backend/finance/export-rekap-kelas?classId=${targetClass.id}&month=${filterBulan}&year=${filterTahun}`)
       if (!res.ok) throw new Error('Gagal mengunduh rekap keuangan kelas')
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `rekap_keuangan_kelas_${filterKelas.replace(/\s+/g, '_')}.xlsx`
+      a.download = `rekap_keuangan_kelas_${filterKelas.replace(/\s+/g, '_')}_${monthLabel.toLowerCase()}_${filterTahun}.xlsx`
       document.body.appendChild(a)
       a.click()
       a.remove()
       window.URL.revokeObjectURL(url)
+      Swal.close()
     } catch (err: any) {
       Swal.fire({
         title: 'Gagal Ekspor',
@@ -3715,7 +3729,7 @@ function TabTagihan() {
             }`}
           >
             <Clock className="w-3.5 h-3.5 text-purple-600" />
-            <span>Arsip Keuangan Siswa (Lulus / Alumni / Nonaktif)</span>
+            <span>Arsip Tagihan Siswa</span>
             <span className="px-1.5 py-0.2 bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 rounded-full text-[10px] font-black">
               {archiveCount}
             </span>
@@ -3804,6 +3818,17 @@ function TabTagihan() {
               {uniqueKelas.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
             </SelectContent>
           </Select>
+
+          <Select value={filterBulan} onValueChange={(v) => { if (v) setFilterBulan(v) }}>
+            <SelectTrigger className="w-[110px] sm:w-[125px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0" title="Bulan Rekapitulasi">
+              <SelectValue placeholder="Pilih Bulan">
+                {monthOptions.find(m => m.value === filterBulan)?.label || 'Bulan'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
@@ -3831,29 +3856,11 @@ function TabTagihan() {
               </Button>
             </>
           )}
-          <Button
-            variant="outline"
-            onClick={() => setExamCardModalOpen(true)}
-            className="border-pink-200 dark:border-pink-800 text-pink-700 dark:text-pink-300 hover:bg-pink-50 dark:hover:bg-pink-950/50 h-8 px-2 sm:px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1 touch-manipulation"
-            title="Cetak Kartu Peserta Ujian Siswa (STS / SAS / SAT / CBT)">
-            <CreditCard className="w-3.5 h-3.5 text-pink-600" /> <span>Kartu Ujian</span>
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setSklModalOpen(true)}
-            className="border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 h-8 px-2 sm:px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1 touch-manipulation"
-            title="Cetak Surat Keterangan Lulus & Bebas Keuangan (SKL)">
-            <FileCheck className="w-3.5 h-3.5 text-emerald-600" /> <span>SKL</span>
-          </Button>
           <Button variant="outline" onClick={handleExportRekapKelas}
-            className="border-indigo-200 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 h-8 px-2 text-xs font-bold rounded-lg touch-manipulation"
+            className="border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 h-8 px-2.5 text-xs font-bold rounded-lg shadow-2xs touch-manipulation gap-1.5"
             title="Eksport Excel Rekap Keuangan Per Kelas">
-            <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" /> <span>Excel</span>
-          </Button>
-          <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}
-            className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 h-8 px-2 text-xs font-bold rounded-lg touch-manipulation"
-            title="Export Seluruh Data">
-            <Download className="w-3.5 h-3.5" /> <span>Export</span>
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Ekspor Kelas</span>
           </Button>
         </div>
       </div>
@@ -3894,18 +3901,6 @@ function TabTagihan() {
             </Button>
             <Button
               size="sm"
-              onClick={() => {
-                const nextIsActive = filterActive === 'ARSIP' ? true : false
-                bulkToggleActiveMutation.mutate({ ids: selectedStudentIds, isActive: nextIsActive })
-              }}
-              disabled={bulkToggleActiveMutation.isPending}
-              className={`font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs text-white ${filterActive === 'ARSIP' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-700 hover:bg-slate-800'}`}
-            >
-              {filterActive === 'ARSIP' ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
-              {filterActive === 'ARSIP' ? 'Aktifkan Kembali' : 'Arsipkan Siswa'}
-            </Button>
-            <Button
-              size="sm"
               onClick={() => openResetModal(selectedStudentIds)}
               className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
             >
@@ -3932,7 +3927,7 @@ function TabTagihan() {
               <TableHeader className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-bold text-[11px] select-none sticky top-0 z-10">
                 <TableRow className="border-b border-slate-200 dark:border-slate-800">
                   {!isKepalaSekolah && (
-                    <TableHead className="w-9 sm:w-10 text-center px-1.5 py-2 whitespace-nowrap">
+                    <TableHead className="w-10 text-center px-2 py-2.5 whitespace-nowrap">
                       <button
                         type="button"
                         onClick={toggleSelectAll}
@@ -3943,26 +3938,24 @@ function TabTagihan() {
                       </button>
                     </TableHead>
                   )}
-                  <TableHead className="w-10 sm:w-12 text-center py-2 px-1 whitespace-nowrap">No</TableHead>
-                  <TableHead className="py-2 px-2.5 min-w-[170px] sm:min-w-[220px]">Nama Siswa</TableHead>
-                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1 whitespace-nowrap">Status Siswa</TableHead>
-                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1 whitespace-nowrap">Status Tagihan</TableHead>
-                  <TableHead className="w-20 sm:w-24 text-center py-2 px-1 whitespace-nowrap">SPP Lunas</TableHead>
-                  <TableHead className="w-28 sm:w-32 text-right py-2 px-2.5 whitespace-nowrap">Sisa Tagihan</TableHead>
-                  <TableHead className="w-28 sm:w-32 text-center py-2 px-1.5 whitespace-nowrap sticky right-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">Aksi</TableHead>
+                  <TableHead className="w-12 text-center py-2.5 px-2 whitespace-nowrap">NO</TableHead>
+                  <TableHead className="py-2.5 px-3 min-w-[220px] max-w-[320px]">NAMA SISWA</TableHead>
+                  <TableHead className="w-36 sm:w-44 text-center py-2.5 px-3 whitespace-nowrap">STATUS TAGIHAN</TableHead>
+                  <TableHead className="w-44 sm:w-52 text-right py-2.5 px-4 whitespace-nowrap">SISA TAGIHAN</TableHead>
+                  <TableHead className="w-32 sm:w-36 text-center py-2.5 px-3 whitespace-nowrap sticky right-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">AKSI</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={!isKepalaSekolah ? 8 : 7} className="text-center py-10">
+                    <TableCell colSpan={!isKepalaSekolah ? 6 : 5} className="text-center py-10">
                       <Loader2 className="w-5 h-5 animate-spin text-blue-600 mx-auto mb-1.5" />
                       <p className="text-slate-500 text-[11px] font-medium">Memuat data tagihan siswa...</p>
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={!isKepalaSekolah ? 8 : 7} className="text-center py-10 text-slate-400 text-xs font-medium">
+                    <TableCell colSpan={!isKepalaSekolah ? 6 : 5} className="text-center py-10 text-slate-400 text-xs font-medium">
                       {search || filterKelas ? 'Tidak ada data siswa yang sesuai filter saat ini.' : 'Belum ada data tagihan siswa tercatat.'}
                     </TableCell>
                   </TableRow>
@@ -3970,10 +3963,20 @@ function TabTagihan() {
                   const isChecked = selectedStudentIds.includes(s.id);
                   const displayIndex = (currentPage - 1) * pageSize + idx + 1;
                   const statusInfo = getFinanceStudentStatus(s);
+                  const isNonaktif = statusInfo.status !== 'AKTIF';
                   return (
-                    <TableRow key={s.id} className={`transition-colors border-b border-slate-100 dark:border-slate-800/60 ${isChecked ? 'bg-blue-50/60 dark:bg-blue-950/30' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/60'}`}>
+                    <TableRow 
+                      key={s.id} 
+                      className={`transition-colors border-b border-slate-100 dark:border-slate-800/60 ${
+                        isNonaktif
+                          ? 'bg-slate-50/90 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500 hover:bg-slate-100/80 dark:hover:bg-slate-850/60 opacity-80'
+                          : isChecked 
+                          ? 'bg-blue-50/60 dark:bg-blue-950/30' 
+                          : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
                       {!isKepalaSekolah && (
-                        <TableCell className="text-center px-1.5 py-1.5 whitespace-nowrap">
+                        <TableCell className="text-center px-2 py-2 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => toggleSelectStudent(s.id)}
@@ -3983,82 +3986,70 @@ function TabTagihan() {
                           </button>
                         </TableCell>
                       )}
-                      <TableCell className="text-center text-slate-400 font-medium text-[11px] px-1 py-1.5 whitespace-nowrap">{displayIndex}</TableCell>
-                      <TableCell className="py-1.5 px-2.5 min-w-[170px] sm:min-w-[220px]">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 shadow-2xs ${s.gender === 'Laki-laki' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' : 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300'}`}>
+                      <TableCell className="text-center text-slate-400 font-medium text-[11px] px-2 py-2 whitespace-nowrap">{displayIndex}</TableCell>
+                      <TableCell className="py-2 px-3 min-w-[220px] max-w-[320px]">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 shadow-2xs ${
+                            isNonaktif 
+                              ? 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400' 
+                              : s.gender === 'Laki-laki' 
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' 
+                              : 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300'
+                          }`}>
                             {s.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="font-bold text-slate-900 dark:text-white text-xs leading-tight truncate" title={s.name}>{s.name}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className={`font-bold text-xs leading-tight truncate ${isNonaktif ? 'text-slate-600 dark:text-slate-400' : 'text-slate-900 dark:text-white'}`} title={s.name}>
+                                {s.name}
+                              </p>
+                              {isNonaktif && (
+                                <span className={`text-[9.5px] font-extrabold px-1.5 py-0.2 rounded-full border inline-flex items-center gap-0.5 shrink-0 ${statusInfo.color}`}>
+                                  <Clock className="w-2.5 h-2.5" />
+                                  {statusInfo.label}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono leading-tight truncate mt-0.5">
-                              NISN: {s.nisn || '-'} · <span className="font-semibold text-slate-600 dark:text-slate-300">{s.className}</span>
+                              NISN: {s.nisn || '-'} · <span className={`font-semibold ${isNonaktif ? 'text-slate-500' : 'text-slate-600 dark:text-slate-300'}`}>{s.className}</span>
                             </p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-center py-1.5 px-1 whitespace-nowrap">
-                        <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] border inline-flex items-center gap-1 ${statusInfo.color}`}>
-                          {statusInfo.status === 'AKTIF' ? <ShieldCheck className="w-3 h-3 text-emerald-600" /> : <Clock className="w-3 h-3" />}
-                          {statusInfo.label}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center py-1.5 px-1 whitespace-nowrap">
+                      <TableCell className="text-center py-2 px-3 whitespace-nowrap">
                         {s.belumLunasCount > 0
-                          ? <span className="font-bold px-2 py-0.5 rounded-full text-[10px] bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 inline-block whitespace-nowrap">{s.belumLunasCount} Tagihan</span>
-                          : <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 px-2 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3 h-3 text-emerald-600" /> LUNAS</span>
+                          ? <span className="font-bold px-2.5 py-0.5 rounded-full text-[10px] bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 inline-block whitespace-nowrap">{s.belumLunasCount} Tagihan</span>
+                          : <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3 h-3 text-emerald-600" /> LUNAS</span>
                         }
                       </TableCell>
-                      <TableCell className="text-center py-1.5 px-1 whitespace-nowrap">
-                        <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] inline-block whitespace-nowrap ${s.sppLunasCount >= 12 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900' : s.sppLunasCount > 0 ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'}`}>
-                          {s.sppLunasCount}/12 Bln
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-slate-900 dark:text-white text-xs py-1.5 px-2.5 whitespace-nowrap">
+                      <TableCell className="text-right font-bold text-xs py-2 px-4 whitespace-nowrap">
                         {s.sisaTagihan !== undefined && s.sisaTagihan > 0 ? (
-                          <span className="text-rose-600 dark:text-rose-400 font-extrabold">{currency(s.sisaTagihan)}</span>
+                          <span className={`font-extrabold text-sm ${isNonaktif ? 'text-rose-500 dark:text-rose-400' : 'text-rose-600 dark:text-rose-400'}`}>{currency(s.sisaTagihan)}</span>
                         ) : (
                           <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rp 0 (Lunas)</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center py-1.5 px-1.5 whitespace-nowrap sticky right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">
+                      <TableCell className="text-center py-2 px-3 whitespace-nowrap sticky right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">
                         <div className="flex justify-center items-center gap-1.5">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-blue-200 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-[11px] gap-1 h-7 px-2 rounded-lg font-bold shadow-2xs touch-manipulation"
+                            className="border-blue-200 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-[11px] gap-1 h-7.5 px-2.5 rounded-lg font-bold shadow-2xs touch-manipulation"
                             onClick={() => openModal(s)}
                           >
                             <Receipt className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                            <span>{isKepalaSekolah ? 'Detail' : 'Kelola'}</span>
+                            <span>{isKepalaSekolah ? 'Detail' : isNonaktif ? 'Histori' : 'Kelola'}</span>
                           </Button>
-                          {!isKepalaSekolah && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                title={s.isActive !== false ? 'Arsipkan / Nonaktifkan Siswa' : 'Aktifkan Siswa Kembali'}
-                                className={`h-7 w-7 p-0 rounded-lg shadow-2xs touch-manipulation shrink-0 border ${
-                                  s.isActive !== false
-                                    ? 'border-slate-200 dark:border-slate-800 text-slate-600 hover:text-rose-600 hover:bg-rose-50'
-                                    : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
-                                }`}
-                                onClick={() => {
-                                  toggleActiveMutation.mutate({ id: s.id, isActive: s.isActive === false })
-                                }}
-                              >
-                                {s.isActive !== false ? <ShieldAlert className="w-3 h-3" /> : <ShieldCheck className="w-3 h-3" />}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                title="Reset Tagihan Siswa (Otorisasi Password)"
-                                className="border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 h-7 w-7 p-0 rounded-lg shadow-2xs touch-manipulation shrink-0"
-                                onClick={() => openResetModal([s.id])}
-                              >
-                                <RotateCcw className="w-3 h-3" />
-                              </Button>
-                            </>
+                          {!isKepalaSekolah && !isNonaktif && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              title="Reset Tagihan Siswa (Otorisasi Password)"
+                              className="border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 h-7.5 w-7.5 p-0 rounded-lg shadow-2xs touch-manipulation shrink-0"
+                              onClick={() => openResetModal([s.id])}
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                            </Button>
                           )}
                         </div>
                       </TableCell>
@@ -4868,6 +4859,8 @@ function TabRiwayatPembayaran() {
 
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('ALL')
+  const [filterKelas, setFilterKelas] = useState('ALL')
+  const [filterYear, setFilterYear] = useState('ALL')
   const [filterStartDate, setFilterStartDate] = useState('')
   const [filterEndDate, setFilterEndDate] = useState('')
   const [filterStudentStatus, setFilterStudentStatus] = useState<'ALL' | 'AKTIF' | 'ARSIP'>('ALL')
@@ -4880,7 +4873,7 @@ function TabRiwayatPembayaran() {
   const [receiptModalOpen, setReceiptModalOpen] = useState(false)
   const [receiptData, setReceiptData] = useState<any>(null)
 
-  const { data: payments = [], isLoading } = useQuery<PaymentTransactionItem[]>({
+  const { data: rawPayments, isLoading, refetch: refetchPayments, isFetching } = useQuery<any>({
     queryKey: ['all-payments', filterType, filterStartDate, filterEndDate],
     queryFn: () => {
       const params = new URLSearchParams()
@@ -4890,9 +4883,33 @@ function TabRiwayatPembayaran() {
       const q = params.toString() ? `?${params.toString()}` : ''
       return authenticatedQuery(`/api-backend/finance/payments${q}`)
     },
-    staleTime: 20000,
-    refetchOnWindowFocus: false,
+    staleTime: 5000,
+    refetchOnWindowFocus: true,
   })
+
+  const payments: PaymentTransactionItem[] = useMemo(() => {
+    if (Array.isArray(rawPayments)) return rawPayments
+    if (rawPayments && Array.isArray(rawPayments.data)) return rawPayments.data
+    return []
+  }, [rawPayments])
+
+  // Extract unique class list and years
+  const uniqueKelas = useMemo(() => {
+    const set = new Set<string>()
+    payments.forEach(p => {
+      if (p.student?.class?.name) set.add(p.student.class.name)
+    })
+    return Array.from(set).sort()
+  }, [payments])
+
+  const uniqueYears = useMemo(() => {
+    const set = new Set<number>()
+    payments.forEach(p => {
+      if (p.tagihan?.year) set.add(p.tagihan.year)
+      else if (p.paymentDate) set.add(new Date(p.paymentDate).getFullYear())
+    })
+    return Array.from(set).sort((a, b) => b - a)
+  }, [payments])
 
   const filtered = useMemo(() => {
     return payments.filter(p => {
@@ -4913,6 +4930,11 @@ function TabRiwayatPembayaran() {
         notes.toLowerCase().includes(q)
       )
 
+      const matchesKelas = filterKelas === 'ALL' || className === filterKelas
+
+      const paymentYear = p.tagihan?.year || (p.paymentDate ? new Date(p.paymentDate).getFullYear() : null)
+      const matchesYear = filterYear === 'ALL' || (paymentYear !== null && String(paymentYear) === filterYear)
+
       const statusInfo = getFinanceStudentStatus(p.student)
       const matchesStudentStatus = filterStudentStatus === 'ALL'
         ? true
@@ -4920,13 +4942,13 @@ function TabRiwayatPembayaran() {
         ? p.student?.isActive !== false
         : p.student?.isActive === false
 
-      return matchesSearch && matchesStudentStatus
+      return matchesSearch && matchesKelas && matchesYear && matchesStudentStatus
     })
-  }, [payments, search, filterStudentStatus])
+  }, [payments, search, filterKelas, filterYear, filterStudentStatus])
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, filterType, filterStartDate, filterEndDate, filterStudentStatus, pageSize])
+  }, [search, filterType, filterKelas, filterYear, filterStartDate, filterEndDate, filterStudentStatus, pageSize])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const paginatedList = useMemo(() => {
@@ -5021,11 +5043,26 @@ function TabRiwayatPembayaran() {
     setReceiptModalOpen(true)
   }
 
+  // Student History Details Modal State
+  const [studentHistoryModalOpen, setStudentHistoryModalOpen] = useState(false)
+  const [selectedStudentForHistory, setSelectedStudentForHistory] = useState<any>(null)
+
+  const openStudentHistoryModal = (p: PaymentTransactionItem) => {
+    // Cari semua transaksi untuk siswa ini (opsional difilter sesuai filterYear jika diset)
+    const studentPayments = payments.filter(item => item.studentId === p.studentId)
+    setSelectedStudentForHistory({
+      student: p.student,
+      targetPayment: p,
+      payments: studentPayments
+    })
+    setStudentHistoryModalOpen(true)
+  }
+
   return (
     <div className="space-y-3">
       {/* Sub-Filter Status Siswa */}
       <div className="flex flex-wrap items-center justify-between gap-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/80">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           <button
             type="button"
             onClick={() => setFilterStudentStatus('ALL')}
@@ -5036,7 +5073,7 @@ function TabRiwayatPembayaran() {
             }`}
           >
             <Clock className="w-3.5 h-3.5 text-blue-600" />
-            <span>Semua Riwayat Transaksi</span>
+            <span>Semua Transaksi</span>
             <span className="px-1.5 py-0.2 bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 rounded-full text-[10px] font-black">
               {payments.length}
             </span>
@@ -5052,7 +5089,7 @@ function TabRiwayatPembayaran() {
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Transaksi Siswa Aktif</span>
+            <span>Siswa Aktif</span>
           </button>
 
           <button
@@ -5065,13 +5102,9 @@ function TabRiwayatPembayaran() {
             }`}
           >
             <Layers className="w-3.5 h-3.5 text-purple-600" />
-            <span>Arsip Transaksi Siswa Lulus / Nonaktif</span>
+            <span>Arsip Siswa</span>
           </button>
         </div>
-
-        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium px-2 py-0.5">
-          Real-time Audit Log Kasir & Pembayaran
-        </span>
       </div>
 
       {/* Summary Metrics */}
@@ -5097,7 +5130,7 @@ function TabRiwayatPembayaran() {
       {/* Toolbar Search & Filter (Rule 16: Bersebelahan) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 sm:p-2.5 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-[240px]">
-          <div className="relative flex-1 min-w-[140px]">
+          <div className="relative flex-1 min-w-[130px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <Input
               placeholder="Cari siswa, NISN, no kwitansi, catatan..."
@@ -5107,8 +5140,32 @@ function TabRiwayatPembayaran() {
             />
           </div>
 
+          <Select value={filterKelas} onValueChange={(v) => setFilterKelas(v || 'ALL')}>
+            <SelectTrigger className="w-[105px] sm:w-[120px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
+              <SelectValue placeholder="Kelas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Semua Kelas</SelectItem>
+              {uniqueKelas.map(k => (
+                <SelectItem key={k} value={k}>{k}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterYear} onValueChange={(v) => setFilterYear(v || 'ALL')}>
+            <SelectTrigger className="w-[105px] sm:w-[120px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
+              <SelectValue placeholder="Tahun" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Semua Tahun</SelectItem>
+              {uniqueYears.map(yr => (
+                <SelectItem key={yr} value={String(yr)}>Tahun {yr}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={filterType} onValueChange={(v) => setFilterType(v || 'ALL')}>
-            <SelectTrigger className="w-[120px] sm:w-[130px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
+            <SelectTrigger className="w-[110px] sm:w-[125px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
               <SelectValue placeholder="Jenis Tagihan" />
             </SelectTrigger>
             <SelectContent>
@@ -5124,7 +5181,7 @@ function TabRiwayatPembayaran() {
               type="date"
               value={filterStartDate}
               onChange={(e) => setFilterStartDate(e.target.value)}
-              className="h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-[125px]"
+              className="h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-[120px]"
               title="Dari Tanggal"
             />
             <span className="text-[10px] text-slate-400">-</span>
@@ -5132,16 +5189,18 @@ function TabRiwayatPembayaran() {
               type="date"
               value={filterEndDate}
               onChange={(e) => setFilterEndDate(e.target.value)}
-              className="h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-[125px]"
+              className="h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-[120px]"
               title="Sampai Tanggal"
             />
-            {(filterStartDate || filterEndDate || filterType !== 'ALL' || search) && (
+            {(filterStartDate || filterEndDate || filterType !== 'ALL' || filterKelas !== 'ALL' || filterYear !== 'ALL' || search) && (
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => {
                   setSearch('')
                   setFilterType('ALL')
+                  setFilterKelas('ALL')
+                  setFilterYear('ALL')
                   setFilterStartDate('')
                   setFilterEndDate('')
                 }}
@@ -5155,6 +5214,17 @@ function TabRiwayatPembayaran() {
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetchPayments()}
+            disabled={isFetching}
+            className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 h-8 px-2.5 text-xs font-bold rounded-lg touch-manipulation gap-1"
+            title="Refresh Data Transaksi"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin text-blue-600' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
           <Button
             variant="outline"
             onClick={handleExport}
@@ -5189,14 +5259,14 @@ function TabRiwayatPembayaran() {
         </div>
       )}
 
-      {/* Table Log Riwayat Pembayaran */}
+      {/* Table Ringkas Riwayat Transaksi */}
       <Card className="shadow-xs border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
         <CardContent className="p-0 max-w-full">
           <div className="overflow-x-auto custom-scrollbar w-full">
-            <Table className="w-full text-xs min-w-[780px] sm:min-w-full border-collapse">
+            <Table className="w-full text-xs min-w-[620px] sm:min-w-full border-collapse">
               <TableHeader className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-bold text-[11px] select-none sticky top-0 z-10">
                 <TableRow className="border-b border-slate-200 dark:border-slate-800">
-                  <TableHead className="w-9 sm:w-10 text-center px-1.5 py-2 whitespace-nowrap">
+                  <TableHead className="w-9 sm:w-10 text-center px-1.5 py-2.5 whitespace-nowrap">
                     <button
                       type="button"
                       onClick={toggleSelectAll}
@@ -5206,44 +5276,40 @@ function TabRiwayatPembayaran() {
                       {isAllSelected ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-slate-400" />}
                     </button>
                   </TableHead>
-                  <TableHead className="w-10 sm:w-12 text-center py-2 px-1 whitespace-nowrap">No</TableHead>
-                  <TableHead className="w-28 sm:w-32 py-2 px-2 whitespace-nowrap">Waktu Bayar</TableHead>
-                  <TableHead className="py-2 px-2.5 min-w-[160px] sm:min-w-[200px]">Nama Siswa</TableHead>
-                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1 whitespace-nowrap">Status Siswa</TableHead>
-                  <TableHead className="w-28 sm:w-32 py-2 px-2 whitespace-nowrap">Jenis & Periode</TableHead>
-                  <TableHead className="w-28 sm:w-32 text-right py-2 px-2.5 whitespace-nowrap">Nominal Bayar</TableHead>
-                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1 whitespace-nowrap">Status Tagihan</TableHead>
-                  <TableHead className="py-2 px-2 min-w-[120px] max-w-[220px]">Catatan Kasir</TableHead>
-                  <TableHead className="w-24 sm:w-28 text-center py-2 px-1.5 whitespace-nowrap sticky right-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">Kwitansi</TableHead>
+                  <TableHead className="w-12 text-center py-2.5 px-2 whitespace-nowrap">NO</TableHead>
+                  <TableHead className="py-2.5 px-3 min-w-[200px] max-w-[320px]">NAMA SISWA & NIS</TableHead>
+                  <TableHead className="py-2.5 px-3 min-w-[160px] whitespace-nowrap">JENIS & PERIODE</TableHead>
+                  <TableHead className="w-32 sm:w-36 text-center py-2.5 px-3 whitespace-nowrap sticky right-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">AKSI</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-10">
+                    <TableCell colSpan={5} className="text-center py-10">
                       <Loader2 className="w-5 h-5 animate-spin text-blue-600 mx-auto mb-1.5" />
                       <p className="text-slate-500 text-[11px] font-medium">Memuat riwayat transaksi pembayaran...</p>
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-10 text-slate-400 text-xs font-medium">
-                      {search || filterType !== 'ALL' || filterStartDate ? 'Tidak ada transaksi pembayaran yang sesuai filter.' : 'Belum ada transaksi pembayaran masuk tercatat.'}
+                    <TableCell colSpan={5} className="text-center py-10 text-slate-400 text-xs font-medium">
+                      {search || filterType !== 'ALL' || filterStartDate || filterKelas !== 'ALL' || filterYear !== 'ALL' ? 'Tidak ada transaksi pembayaran yang sesuai filter.' : 'Belum ada transaksi pembayaran masuk tercatat.'}
                     </TableCell>
                   </TableRow>
                 ) : paginatedList.map((p, idx) => {
                   const isChecked = selectedTxIds.includes(p.id)
                   const displayIndex = (currentPage - 1) * pageSize + idx + 1
                   const studentStatus = getFinanceStudentStatus(p.student)
+                  const isNonaktif = studentStatus.status !== 'AKTIF'
                   const t = p.tagihan
                   const isLunas = t?.status === 'LUNAS' || ((t?.amountPaid || 0) >= (t?.amount || 0) && (t?.amount || 0) > 0)
                   const periodStr = t?.month
                     ? `${MONTHS.find(m => m.value === t.month?.toString())?.label || t.month} ${t.year || ''}`
-                    : t?.year ? `Th ${t.year}` : '-'
+                    : t?.year ? `Tahun ${t.year}` : '-'
 
                   return (
                     <TableRow key={p.id} className={`transition-colors border-b border-slate-100 dark:border-slate-800/60 ${isChecked ? 'bg-blue-50/60 dark:bg-blue-950/30' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/60'}`}>
-                      <TableCell className="text-center px-1.5 py-1.5 whitespace-nowrap">
+                      <TableCell className="text-center px-1.5 py-2 whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => toggleSelectTx(p.id)}
@@ -5252,65 +5318,69 @@ function TabRiwayatPembayaran() {
                           {isChecked ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-slate-400" />}
                         </button>
                       </TableCell>
-                      <TableCell className="text-center text-slate-400 font-medium text-[11px] px-1 py-1.5 whitespace-nowrap">{displayIndex}</TableCell>
-                      <TableCell className="py-1.5 px-2 whitespace-nowrap font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                        <div className="font-semibold text-slate-900 dark:text-white">
-                          {new Date(p.paymentDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      <TableCell className="text-center text-slate-400 font-medium text-[11px] px-2 py-2 whitespace-nowrap">{displayIndex}</TableCell>
+                      <TableCell className="py-2 px-3 min-w-[200px] max-w-[320px]">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 shadow-2xs ${
+                            isNonaktif 
+                              ? 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400' 
+                              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                          }`}>
+                            {(p.student?.name || 'S').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className={`font-bold text-xs leading-tight truncate ${isNonaktif ? 'text-slate-600 dark:text-slate-400' : 'text-slate-900 dark:text-white'}`} title={p.student?.name}>
+                                {p.student?.name || '-'}
+                              </p>
+                              {isNonaktif && (
+                                <span className={`text-[9.5px] font-extrabold px-1.5 py-0.2 rounded-full border inline-flex items-center gap-0.5 shrink-0 ${studentStatus.color}`}>
+                                  <Clock className="w-2.5 h-2.5" />
+                                  {studentStatus.label}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono leading-tight truncate mt-0.5">
+                              NIS: {p.student?.nis || '-'} · <span className={`font-semibold ${isNonaktif ? 'text-slate-500' : 'text-slate-600 dark:text-slate-300'}`}>{p.student?.class?.name || '-'}</span>
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-[10px] text-slate-400">
-                          {new Date(p.paymentDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
-                        </div>
                       </TableCell>
-                      <TableCell className="py-1.5 px-2.5 min-w-[160px] sm:min-w-[200px]">
-                        <div className="min-w-0">
-                          <p className="font-bold text-slate-900 dark:text-white text-xs leading-tight truncate" title={p.student?.name}>
-                            {p.student?.name || '-'}
-                          </p>
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono leading-tight truncate mt-0.5">
-                            Kelas: <span className="font-semibold text-slate-600 dark:text-slate-300">{p.student?.class?.name || '-'}</span> · NIS: {p.student?.nis || '-'}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center py-1.5 px-1 whitespace-nowrap">
-                        <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] border inline-flex items-center gap-1 ${studentStatus.color}`}>
-                          {studentStatus.status === 'AKTIF' ? <ShieldCheck className="w-3 h-3 text-emerald-600" /> : <Clock className="w-3 h-3" />}
-                          {studentStatus.label}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-1.5 px-2 whitespace-nowrap">
-                        <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] ${TYPE_COLORS[t?.type || ''] || 'bg-slate-100 text-slate-700'}`}>
-                          {t?.type || 'Pembayaran'}
-                        </span>
-                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">{periodStr}</p>
-                      </TableCell>
-                      <TableCell className="text-right font-extrabold text-emerald-600 dark:text-emerald-400 text-xs py-1.5 px-2.5 whitespace-nowrap">
-                        {currency(p.amount)}
-                      </TableCell>
-                      <TableCell className="text-center py-1.5 px-1 whitespace-nowrap">
-                        {isLunas ? (
-                          <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 px-2 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> LUNAS
+                      <TableCell className="py-2 px-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] shrink-0 ${TYPE_COLORS[t?.type || ''] || 'bg-slate-100 text-slate-700'}`}>
+                            {t?.type || 'Tagihan'}
                           </span>
-                        ) : (
-                          <span className="font-bold px-2 py-0.5 rounded-full text-[10px] bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 inline-flex items-center gap-1 whitespace-nowrap">
-                            <Clock className="w-3 h-3" /> Angsuran
+                          <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                            {periodStr}
                           </span>
-                        )}
+                        </div>
+                        <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold mt-0.5">
+                          Bayar: {currency(p.amount)} <span className="text-slate-400 font-normal">({new Date(p.paymentDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })})</span>
+                        </p>
                       </TableCell>
-                      <TableCell className="py-1.5 px-2 text-slate-600 dark:text-slate-400 text-[11px] truncate max-w-[200px]" title={p.notes || '-'}>
-                        {p.notes || '-'}
-                      </TableCell>
-                      <TableCell className="text-center py-1.5 px-1.5 whitespace-nowrap sticky right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => printReceipt(p)}
-                          className="border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-[11px] font-bold h-7 px-2 rounded-lg gap-1 shadow-2xs touch-manipulation"
-                          title="Cetak Kwitansi Pembayaran Ini"
-                        >
-                          <Printer className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Cetak</span>
-                        </Button>
+                      <TableCell className="text-center py-2 px-3 whitespace-nowrap sticky right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">
+                        <div className="flex justify-center items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openStudentHistoryModal(p)}
+                            className="border-blue-200 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-[11px] gap-1 h-7.5 px-2.5 rounded-lg font-bold shadow-2xs touch-manipulation"
+                            title="Buka Seluruh Riwayat Pembayaran Siswa Ini"
+                          >
+                            <Receipt className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                            <span>Riwayat</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => printReceipt(p)}
+                            className="border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-[11px] font-bold h-7.5 w-7.5 p-0 rounded-lg shadow-2xs touch-manipulation shrink-0"
+                            title="Cetak Kwitansi Pembayaran Ini"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-emerald-600" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -5394,6 +5464,142 @@ function TabRiwayatPembayaran() {
           )}
         </CardContent>
       </Card>
+
+      {/* MODAL POPUP DETAIL SEMUA RIWAYAT TRANSAKSI SISWA */}
+      <Dialog open={studentHistoryModalOpen} onOpenChange={(open) => {
+        if (!open) {
+          setStudentHistoryModalOpen(false)
+          setSelectedStudentForHistory(null)
+        }
+      }}>
+        <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="shrink-0 p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950 flex items-center justify-between">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-2xs">
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <span>Riwayat Transaksi Siswa</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
+                {selectedStudentForHistory?.student?.name} (NIS: {selectedStudentForHistory?.student?.nis || '-'} · Kelas: {selectedStudentForHistory?.student?.class?.name || '-'})
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar">
+            {/* Info Ringkasan Siswa */}
+            <div className="p-3 bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/50 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold block">Total Transaksi Tercatat</span>
+                <span className="text-sm sm:text-base font-black text-blue-700 dark:text-blue-300">
+                  {selectedStudentForHistory?.payments?.length || 0} Pembayaran
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold block">Akumulasi Terbayar</span>
+                <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400">
+                  {currency(selectedStudentForHistory?.payments?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0)}
+                </span>
+              </div>
+            </div>
+
+            {/* Tabel List Transaksi Siswa */}
+            <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+              <Table className="w-full text-xs">
+                <TableHeader className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-bold text-[11px]">
+                  <TableRow>
+                    <TableHead className="w-10 text-center py-2 px-1">No</TableHead>
+                    <TableHead className="py-2 px-2.5">Waktu Bayar</TableHead>
+                    <TableHead className="py-2 px-2.5">Jenis & Periode</TableHead>
+                    <TableHead className="text-right py-2 px-3">Nominal</TableHead>
+                    <TableHead className="text-center py-2 px-2">Status</TableHead>
+                    <TableHead className="w-20 text-center py-2 px-2">Kwitansi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(!selectedStudentForHistory?.payments || selectedStudentForHistory.payments.length === 0) ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-6 text-slate-400 text-xs">
+                        Tidak ada riwayat transaksi lain untuk siswa ini.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    selectedStudentForHistory.payments.map((item: any, i: number) => {
+                      const t = item.tagihan
+                      const isLunas = t?.status === 'LUNAS' || ((t?.amountPaid || 0) >= (t?.amount || 0) && (t?.amount || 0) > 0)
+                      const periodStr = t?.month
+                        ? `${MONTHS.find(m => m.value === t.month?.toString())?.label || t.month} ${t.year || ''}`
+                        : t?.year ? `Tahun ${t.year}` : '-'
+
+                      return (
+                        <TableRow key={item.id || i} className="border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/70 dark:hover:bg-slate-800/50">
+                          <TableCell className="text-center text-slate-400 font-medium text-[11px] py-2 px-1">{i + 1}</TableCell>
+                          <TableCell className="py-2 px-2.5 font-mono text-[11px]">
+                            <div className="font-semibold text-slate-900 dark:text-white">
+                              {new Date(item.paymentDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {new Date(item.paymentDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-2 px-2.5">
+                            <span className={`font-bold px-1.5 py-0.2 rounded text-[10px] inline-block mb-0.5 ${TYPE_COLORS[t?.type || ''] || 'bg-slate-100 text-slate-700'}`}>
+                              {t?.type || 'Tagihan'}
+                            </span>
+                            <p className="text-[10px] text-slate-600 dark:text-slate-300 font-semibold">{periodStr}</p>
+                            {item.notes && <p className="text-[9.5px] text-slate-400 truncate max-w-[160px]">{item.notes}</p>}
+                          </TableCell>
+                          <TableCell className="text-right font-black text-emerald-600 dark:text-emerald-400 text-xs py-2 px-3">
+                            {currency(item.amount)}
+                          </TableCell>
+                          <TableCell className="text-center py-2 px-2">
+                            {isLunas ? (
+                              <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-[9.5px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 px-2 py-0.5 rounded-full inline-block whitespace-nowrap">
+                                LUNAS
+                              </span>
+                            ) : (
+                              <span className="text-amber-700 dark:text-amber-300 font-bold text-[9.5px] bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900/60 px-2 py-0.5 rounded-full inline-block whitespace-nowrap">
+                                Angsuran
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center py-2 px-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => printReceipt(item)}
+                              className="h-7 px-2 text-[10px] font-bold rounded-md border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 gap-1"
+                              title="Cetak Kwitansi Ini"
+                            >
+                              <Printer className="w-3 h-3 text-emerald-600" />
+                              <span>Kwitansi</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <div className="shrink-0 p-3 sm:p-4 bg-slate-50/60 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setStudentHistoryModalOpen(false)
+                setSelectedStudentForHistory(null)
+              }}
+              className="h-9 rounded-xl text-xs font-semibold px-4"
+            >
+              Tutup
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <SingleReceiptPrintModal
         open={receiptModalOpen}

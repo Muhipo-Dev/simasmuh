@@ -67,16 +67,19 @@ export class SettingsService {
           defaultUka: 500000,
           defaultUks: 100000,
           defaultInfaq: 300000,
-          defaultSeragam: 2000000,
-          helpdeskPhone: '088293733330',
-        } as any,
-      });
-      await this.cacheManager.set(cacheKey, created, 60000); // 60s cache
-      return created;
-    }
-    await this.cacheManager.set(cacheKey, settings, 60000);
-    return settings;
+        defaultSeragam: 2000000,
+        helpdeskPhone: '088293733330',
+        publicDomainUrl: process.env.PUBLIC_DOMAIN_URL || 'https://simasmuh.razagopo.my.id',
+        googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+        googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
+      } as any,
+    });
+    await this.cacheManager.set(cacheKey, created, 60000); // 60s cache
+    return created;
   }
+  await this.cacheManager.set(cacheKey, settings, 60000);
+  return settings;
+}
 
   async getPublicSettings(): Promise<any> {
     const cacheKey = 'app_settings_public';
@@ -102,6 +105,8 @@ export class SettingsService {
         defaultSeragam: true,
         helpdeskPhone: true,
         studentCardTemplateUrl: true,
+        publicDomainUrl: true,
+        googleClientId: true,
       } as any,
     });
     if (!settings) {
@@ -123,6 +128,8 @@ export class SettingsService {
         defaultInfaq: 300000,
         defaultSeragam: 2000000,
         helpdeskPhone: '088293733330',
+        publicDomainUrl: process.env.PUBLIC_DOMAIN_URL || 'https://simasmuh.razagopo.my.id',
+        googleClientId: process.env.GOOGLE_CLIENT_ID || null,
       };
       await this.cacheManager.set(cacheKey, defaultPublic, 60000);
       return defaultPublic;

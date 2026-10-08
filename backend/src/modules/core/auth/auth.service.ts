@@ -211,6 +211,157 @@ export class AuthService {
     };
   }
 
+  async loginWithGoogle(
+    googlePayload: {
+      email: string;
+      name?: string;
+      image?: string;
+      googleId?: string;
+    },
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    if (!googlePayload.email) {
+      throw new BadRequestException('Email Google tidak valid atau kosong.');
+    }
+
+    const cleanEmail = googlePayload.email.trim().toLowerCase();
+
+    // 1. Cari user berdasarkan email
+    const user = await this.prisma.user.findFirst({
+      where: {
+        email: {
+          equals: cleanEmail,
+          mode: 'insensitive',
+        },
+      },
+      include: {
+        student: true,
+        teacherProfile: true,
+        parentProfile: {
+          include: {
+            students: {
+              include: {
+                student: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 3. Jika akun belum terdaftar sama sekali di sistem
+    if (!user) {
+      await this.systemLogService.log({
+        category: 'AUTH',
+        level: 'WARN',
+        action: 'GOOGLE_LOGIN_UNREGISTERED',
+        message: `Percobaan Google Login akun '${cleanEmail}' gagal: Email belum terdaftar di SIMASMUH.`,
+        ipAddress,
+        userAgent,
+      });
+      throw new NotFoundException(
+        `Email Google (${cleanEmail}) belum terdaftar di SIMASMUH. Silakan hubungi Administrator atau gunakan akun yang telah terdaftar.`,
+      );
+    }
+
+    // Update avatar jika belum ada dan ada foto dari Google
+    if (!user.avatarUrl && googlePayload.image) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { avatarUrl: googlePayload.image },
+      }).catch(() => {});
+    }
+
+    // Parse Device Information
+    let devType = 'Desktop / Laptop';
+    let devOs = 'Windows';
+    let devBrowser = 'Browser';
+
+    if (userAgent) {
+      if (
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          userAgent,
+        )
+      ) {
+        devType = 'Ponsel / Tablet';
+      }
+      if (/Windows/i.test(userAgent)) devOs = 'Windows';
+      else if (/Android/i.test(userAgent)) devOs = 'Android';
+      else if (/iPhone|iPad|iPod/i.test(userAgent)) devOs = 'iOS';
+      else if (/Macintosh|Mac OS/i.test(userAgent)) devOs = 'macOS';
+      else if (/Linux/i.test(userAgent)) devOs = 'Linux';
+
+      if (/Edg/i.test(userAgent)) devBrowser = 'Microsoft Edge';
+      else if (/Chrome/i.test(userAgent)) devBrowser = 'Google Chrome';
+      else if (/Safari/i.test(userAgent) && !/Chrome/i.test(userAgent))
+        devBrowser = 'Safari';
+      else if (/Firefox/i.test(userAgent)) devBrowser = 'Mozilla Firefox';
+    }
+
+    // Buat record sesi aktif
+    const sessionRecord = await this.prisma.userSession.create({
+      data: {
+        userId: user.id,
+        ipAddress: ipAddress || '127.0.0.1',
+        userAgent: userAgent || 'Google OAuth Login',
+        device: `${devType} (${devOs}) - Google OAuth`,
+        os: devOs,
+        browser: devBrowser,
+        isActive: true,
+        lastActiveAt: new Date(),
+      },
+    });
+
+    const payload = {
+      sub: user.id,
+      sessionId: sessionRecord.id,
+      email: user.email || cleanEmail,
+      username: user.username,
+      nipNbm: user.nipNbm || user.teacherProfile?.nip || null,
+      name: user.name,
+      role: user.role,
+      isActive: user.isActive !== false,
+      subRole: user.subRole,
+      subRole2: user.subRole2,
+      subRole3: user.subRole3,
+      subRole4: user.subRole4,
+      subRole5: user.subRole5,
+    };
+    const token = this.jwtService.sign(payload);
+
+    await this.systemLogService.log({
+      category: 'AUTH',
+      level: 'INFO',
+      action: 'GOOGLE_LOGIN_SUCCESS',
+      message: `User '${user.username}' (${user.name} - ${user.role}) berhasil masuk via Google OAuth (${cleanEmail}).`,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      ipAddress,
+      userAgent,
+    });
+
+    return {
+      access_token: token,
+      sessionId: sessionRecord.id,
+      user: {
+        id: user.id,
+        email: user.email || cleanEmail,
+        username: user.username,
+        nipNbm: user.nipNbm || user.teacherProfile?.nip || null,
+        name: user.name,
+        role: user.role,
+        isActive: user.isActive !== false,
+        subRole: user.subRole,
+        subRole2: user.subRole2,
+        subRole3: user.subRole3,
+        subRole4: user.subRole4,
+        subRole5: user.subRole5,
+      },
+    };
+  }
+
   async logoutSession(
     userId: string,
     sessionId?: string,

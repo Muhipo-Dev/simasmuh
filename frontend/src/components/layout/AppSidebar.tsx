@@ -42,18 +42,18 @@ export function AppSidebar({
 
       {/* Sidebar Frame Persis CBT MUHIPO dengan Floating Glassmorphism di Desktop */}
       <aside
-        className={`w-72 bg-white/95 dark:bg-slate-950/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-white backdrop-blur-2xl flex flex-col fixed z-50 transition-all duration-300 ease-in-out shadow-xl lg:translate-x-0 inset-y-0 lg:inset-y-auto lg:top-3.5 lg:bottom-3.5 lg:left-3.5 lg:w-64 xl:w-68 lg:rounded-2xl overflow-hidden ${
+        className={`w-72 bg-white/95 dark:bg-slate-950/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-white backdrop-blur-2xl flex flex-col fixed z-50 transition-all duration-300 ease-in-out shadow-xl lg:translate-x-0 inset-y-0 lg:inset-y-auto lg:top-4 lg:bottom-4 lg:left-4 lg:w-64 xl:w-68 lg:rounded-xl overflow-hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Sidebar Header: Area Informasi Waktu Tanggal dan Jam Real-Time */}
-        <div className="h-16 flex items-center justify-between px-4 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-blue-600/10 dark:from-blue-900/60 dark:to-indigo-900/60 border-b border-slate-200 dark:border-white/10 backdrop-blur-md shrink-0">
+        <div className="h-15 flex items-center justify-between px-3.5 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-blue-600/10 dark:from-blue-900/60 dark:to-indigo-900/60 border-b border-slate-200 dark:border-white/10 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 shadow-inner flex items-center justify-center shrink-0">
-              <Clock className="w-5 h-5 animate-pulse" />
+            <div className="p-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 shadow-inner flex items-center justify-center shrink-0">
+              <Clock className="w-4.5 h-4.5 animate-pulse" />
             </div>
             <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900 dark:text-white text-base tracking-tight leading-none">
+              <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight leading-none">
                 <span>{clock.timeString}</span>
                 <span className="text-[10px] font-sans font-semibold px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">WIB</span>
               </div>
@@ -65,14 +65,14 @@ export function AppSidebar({
           <button
             type="button"
             onClick={onClose}
-            className="lg:hidden p-2 text-slate-500 dark:text-white/70 hover:text-slate-800 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+            className="lg:hidden p-1.5 text-slate-500 dark:text-white/70 hover:text-slate-800 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Sidebar Menu Items */}
-        <div className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto py-2.5 px-2 space-y-0.5 custom-scrollbar">
           {links.map((link, idx) => {
             const Icon = link.icon
             const isActive =
@@ -85,7 +85,7 @@ export function AppSidebar({
             return (
               <React.Fragment key={link.href}>
                 {isNewGroup && (
-                  <div className="pt-3 pb-1 px-3 mt-1 flex items-center gap-2">
+                  <div className="pt-2.5 pb-1 px-2.5 mt-1 flex items-center gap-2">
                     <span className="text-[10px] uppercase tracking-wider font-extrabold text-blue-600 dark:text-blue-400 shrink-0">
                       {link.group}
                     </span>
@@ -94,7 +94,7 @@ export function AppSidebar({
                 )}
                 <Link href={link.href} onClick={onClose}>
                   <div
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all duration-200 text-xs sm:text-sm font-semibold ${
+                    className={`flex items-center gap-2.5 px-2.5 py-1.5 sm:py-2 rounded-lg transition-all duration-200 text-xs sm:text-sm font-semibold ${
                       isActive
                         ? 'bg-blue-50 dark:bg-blue-600/25 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-400/30 backdrop-blur-md shadow-xs'
                         : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-950 dark:hover:text-white'

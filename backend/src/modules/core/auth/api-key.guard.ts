@@ -33,7 +33,7 @@ export class ApiKeyGuard implements CanActivate {
       request.url.startsWith('/uploads/') ||
       request.url.startsWith('/waiting-room') ||
       request.url.startsWith('/guest-book/public') ||
-      request.url.startsWith('/auth/login') ||
+      request.url.startsWith('/auth/') ||
       request.url === '/'
     ) {
       return true;

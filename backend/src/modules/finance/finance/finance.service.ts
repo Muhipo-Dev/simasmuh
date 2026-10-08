@@ -631,16 +631,23 @@ export class FinanceService {
     };
   }
 
-  /** Update status jabatan kepegawaian (PTTP, GTTP, GTP, PTP) */
-  async updateStaffEmploymentStatus(userId: string, employmentStatus: string) {
+  /** Update status jabatan kepegawaian (PTTP, GTTP, GTP, PTP, CS) dan Masa Kerja Tetap */
+  async updateStaffEmploymentStatus(
+    userId: string,
+    employmentStatus?: string,
+    masaKerja?: number,
+  ) {
     const validStatuses = ['PTTP', 'GTTP', 'CS', 'GTP', 'PTP'];
-    if (!validStatuses.includes(employmentStatus)) {
+    if (employmentStatus && !validStatuses.includes(employmentStatus)) {
       throw new BadRequestException('Label status kepegawaian tidak valid (PTTP, GTTP, CS, GTP, PTP)');
     }
 
+    const updateData: any = {};
+    if (employmentStatus) updateData.employmentStatus = employmentStatus;
+
     const updated = await this.prisma.user.update({
       where: { id: userId },
-      data: { employmentStatus },
+      data: updateData,
       select: {
         id: true,
         name: true,
@@ -649,8 +656,54 @@ export class FinanceService {
       },
     });
 
+    // Jika masaKerja atau employmentStatus diupdate, sinkronkan catatan payrollRecord aktif pegawai
+    if (masaKerja !== undefined || employmentStatus) {
+      const records = await this.prisma.payrollRecord.findMany({
+        where: { userId },
+      });
+
+      for (const rec of records) {
+        let meta: any = {};
+        try {
+          if (rec.notes && rec.notes.startsWith('{')) meta = JSON.parse(rec.notes);
+        } catch (e) { }
+
+        if (masaKerja !== undefined) {
+          meta.masaKerja = Number(masaKerja) || 0;
+        }
+
+        const updateRec: any = {
+          notes: JSON.stringify(meta),
+        };
+        if (employmentStatus) {
+          updateRec.employmentStatus = employmentStatus;
+        }
+
+        await this.prisma.payrollRecord.update({
+          where: { id: rec.id },
+          data: updateRec,
+        });
+      }
+
+      // Jika belum ada record sama sekali dan masaKerja diset, buat record dummy periode ini agar tersimpan
+      if (records.length === 0 && masaKerja !== undefined) {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        await this.prisma.payrollRecord.create({
+          data: {
+            userId,
+            year: currentYear,
+            month: currentMonth,
+            employmentStatus: employmentStatus || updated.employmentStatus || 'GTTP',
+            notes: JSON.stringify({ masaKerja: Number(masaKerja) || 0 }),
+          },
+        });
+      }
+    }
+
     return {
-      message: `Status kepegawaian ${updated.name} berhasil diubah menjadi ${employmentStatus}`,
+      message: `Data kepegawaian ${updated.name} berhasil diperbarui!`,
       user: updated,
     };
   }
@@ -1495,6 +1548,15 @@ export class FinanceService {
         }
       }
 
+      const totalAngsuran = tagihansList
+        .filter((t: any) => t.status !== 'LUNAS' && (t.amountPaid || 0) > 0)
+        .reduce((sum: number, t: any) => sum + (t.amountPaid || 0), 0);
+      const angsuranCount = tagihansList.filter(
+        (t: any) =>
+          t.status === 'SEBAGIAN' ||
+          (t.status !== 'LUNAS' && (t.amountPaid || 0) > 0),
+      ).length;
+
       return {
         id: s.id,
         nisn: s.nisn,
@@ -1511,6 +1573,8 @@ export class FinanceService {
         className: s.class?.name || '-',
         totalTagihan,
         totalLunas,
+        totalAngsuran,
+        angsuranCount,
         sisaTagihan,
         belumLunasCount,
         sppLunasCount: sppTagihan.length,
@@ -4246,7 +4310,11 @@ export class FinanceService {
     });
   }
 
-  async exportRekapKeuanganKelas(classId: string): Promise<Buffer> {
+  async exportRekapKeuanganKelas(
+    classId: string,
+    month?: number,
+    year?: number,
+  ): Promise<Buffer> {
     const cls = await this.prisma.class.findUnique({
       where: { id: classId },
       include: {
@@ -4257,7 +4325,19 @@ export class FinanceService {
           orderBy: { name: 'asc' },
           include: {
             tagihans: {
-              include: { payments: true },
+              orderBy: [
+                { year: 'asc' },
+                { month: 'asc' },
+                { type: 'asc' },
+              ],
+              include: {
+                payments: {
+                  orderBy: { paymentDate: 'asc' },
+                },
+              },
+            },
+            payments: {
+              orderBy: { paymentDate: 'desc' },
             },
           },
         },
@@ -4270,101 +4350,31 @@ export class FinanceService {
 
     const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(`Rekap Keuangan - ${cls.name}`);
+    workbook.creator = 'SIMASMUH Keuangan';
+    workbook.created = new Date();
 
-    // Header Title (Kop Laporan Cetak Kelas)
-    worksheet.mergeCells('A1:J1');
-    const titleCell = worksheet.getCell('A1');
-    titleCell.value = `REKAPAN KEUANGAN SISWA KELAS ${cls.name.toUpperCase()}`;
-    titleCell.font = { name: 'Arial', size: 14, bold: true };
-    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-
-    worksheet.mergeCells('A2:J2');
-    const subCell = worksheet.getCell('A2');
-    subCell.value = `Tahun Ajaran: ${cls.academicYear || '2026/2027'} | Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`;
-    subCell.font = { name: 'Arial', size: 10, italic: true };
-    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
-
-    worksheet.addRow([]);
-
-    // Information Box: Kelas & Wali Kelas
-    const waliKelasName =
-      (cls.homeroomTeacher as any)?.user?.name ||
-      (cls.homeroomTeacher as any)?.name ||
-      'Belum Ditentukan';
-
-    const infoRow1 = worksheet.addRow([
-      '  KELAS',
-      '',
-      `: ${cls.name}`,
-      '',
-      '',
-      'WALI KELAS',
-      '',
-      `: ${waliKelasName}`,
-    ]);
-    infoRow1.eachCell((cell) => {
-      cell.font = { name: 'Arial', size: 11, bold: true };
-    });
-    worksheet.mergeCells(`A${infoRow1.number}:B${infoRow1.number}`);
-    worksheet.mergeCells(`C${infoRow1.number}:E${infoRow1.number}`);
-    worksheet.mergeCells(`F${infoRow1.number}:G${infoRow1.number}`);
-    worksheet.mergeCells(`H${infoRow1.number}:J${infoRow1.number}`);
-
-    const infoRow2 = worksheet.addRow([
-      '  JUMLAH SISWA',
-      '',
-      `: ${cls.students.length} Siswa`,
-      '',
-      '',
-      'STATUS CETAK',
-      '',
-      ': DOKUMEN RESMI KELAS',
-    ]);
-    infoRow2.eachCell((cell) => {
-      cell.font = { name: 'Arial', size: 10, italic: true };
-    });
-    worksheet.mergeCells(`A${infoRow2.number}:B${infoRow2.number}`);
-    worksheet.mergeCells(`C${infoRow2.number}:E${infoRow2.number}`);
-    worksheet.mergeCells(`F${infoRow2.number}:G${infoRow2.number}`);
-    worksheet.mergeCells(`H${infoRow2.number}:J${infoRow2.number}`);
-
-    worksheet.addRow([]);
-
-    // Table Headers
-    const headers = [
-      'No',
-      'Nama',
-      'Frekuensi/Bulan',
-      'Bulan',
-      'SPP',
-      'Tag Kelas Non DPP',
-      'UKS',
-      'UIS/UAK',
-      'DPP',
-      'Total Siswa',
+    const fullMonthNames = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
-    const headerRow = worksheet.addRow(headers);
-    headerRow.eachCell((cell) => {
-      cell.font = {
-        name: 'Arial',
-        size: 11,
-        bold: true,
-        color: { argb: 'FFFFFF' },
-      };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: '1E3A8A' },
-      };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' },
-      };
-    });
+
+    const targetMonth =
+      month && month >= 1 && month <= 12
+        ? month
+        : new Date().getMonth() + 1;
+    const targetYear = year || new Date().getFullYear();
+    const monthName = fullMonthNames[targetMonth - 1] || 'Oktober';
+    const periodeLabel = `${monthName.toUpperCase()} ${targetYear}`;
 
     const monthNamesShort = [
       'JUL',
@@ -4381,25 +4391,35 @@ export class FinanceService {
       'JUN',
     ];
 
-    let rowIndex = 1;
-    let grandTotalSpp = 0;
-    let grandTotalNonDpp = 0;
-    let grandTotalUks = 0;
-    let grandTotalUis = 0;
-    let grandTotalDpp = 0;
-    let grandTotalAll = 0;
-    let totalFrekuensi = 0;
+    const waliKelasName =
+      (cls.homeroomTeacher as any)?.user?.name ||
+      (cls.homeroomTeacher as any)?.name ||
+      'Belum Ditentukan';
 
-    for (const student of cls.students) {
-      const sppTagihans = student.tagihans.filter(
-        (t) => t.type === 'SPP' && t.status === 'LUNAS',
+    // Pre-calculate Student Financial Data
+    const studentDataList = cls.students.map((student, idx) => {
+      const tagihans = student.tagihans || [];
+
+      // SPP
+      const sppTagihans = tagihans.filter(
+        (t) => t.type.toUpperCase() === 'SPP',
       );
-      const frekuensi = sppTagihans.length;
-      totalFrekuensi += frekuensi;
+      const sppLunasList = sppTagihans.filter((t) => t.status === 'LUNAS');
+      const sppLunasCount = sppLunasList.length;
+      const sppPaid = sppTagihans.reduce(
+        (sum, t) =>
+          sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
+        0,
+      );
+      const sppTotal = sppTagihans.reduce((sum, t) => sum + t.amount, 0);
+      const sppAngsuran = sppTagihans
+        .filter((t) => t.status !== 'LUNAS' && (t.amountPaid || 0) > 0)
+        .reduce((sum, t) => sum + (t.amountPaid || 0), 0);
+      const sppSisa = Math.max(0, sppTotal - sppPaid);
 
       let bulanStr = '-';
-      if (frekuensi > 0) {
-        const monthsPaid = sppTagihans
+      if (sppLunasCount > 0) {
+        const monthsPaid = sppLunasList
           .map((t) => t.month)
           .filter((m): m is number => m !== null && m >= 1 && m <= 12)
           .sort((a, b) => a - b);
@@ -4416,136 +4436,697 @@ export class FinanceService {
         }
       }
 
-      const totalSppPaid = sppTagihans.reduce(
-        (sum, t) => sum + (t.amountPaid || t.amount),
-        0,
+      // DPP
+      const dppTagihans = tagihans.filter(
+        (t) => t.type.toUpperCase() === 'DPP',
       );
-
-      const nonDppTagihans = student.tagihans.filter(
-        (t) =>
-          !['SPP', 'DPP', 'UKS', 'UIS', 'UAK'].includes(t.type.toUpperCase()),
-      );
-      const tagKelasNonDpp = nonDppTagihans.reduce(
+      const dppPaid = dppTagihans.reduce(
         (sum, t) =>
           sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
         0,
       );
+      const dppTotal = dppTagihans.reduce((sum, t) => sum + t.amount, 0);
+      const dppAngsuran = dppTagihans
+        .filter((t) => t.status !== 'LUNAS' && (t.amountPaid || 0) > 0)
+        .reduce((sum, t) => sum + (t.amountPaid || 0), 0);
+      const dppSisa = Math.max(0, dppTotal - dppPaid);
 
-      const uksPaid = student.tagihans
-        .filter((t) => t.type.toUpperCase() === 'UKS')
-        .reduce(
-          (sum, t) =>
-            sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
-          0,
-        );
+      // UKS
+      const uksTagihans = tagihans.filter(
+        (t) => t.type.toUpperCase() === 'UKS',
+      );
+      const uksPaid = uksTagihans.reduce(
+        (sum, t) =>
+          sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
+        0,
+      );
+      const uksTotal = uksTagihans.reduce((sum, t) => sum + t.amount, 0);
+      const uksAngsuran = uksTagihans
+        .filter((t) => t.status !== 'LUNAS' && (t.amountPaid || 0) > 0)
+        .reduce((sum, t) => sum + (t.amountPaid || 0), 0);
+      const uksSisa = Math.max(0, uksTotal - uksPaid);
 
-      const uisPaid = student.tagihans
-        .filter((t) => ['UIS', 'UAK', 'UIS/UAK'].includes(t.type.toUpperCase()))
-        .reduce(
-          (sum, t) =>
-            sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
-          0,
-        );
+      // UIS / UAK / INFAQ
+      const uisTagihans = tagihans.filter((t) =>
+        ['UIS', 'UAK', 'UIS/UAK', 'INFAQ'].includes(t.type.toUpperCase()),
+      );
+      const uisPaid = uisTagihans.reduce(
+        (sum, t) =>
+          sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
+        0,
+      );
+      const uisTotal = uisTagihans.reduce((sum, t) => sum + t.amount, 0);
+      const uisAngsuran = uisTagihans
+        .filter((t) => t.status !== 'LUNAS' && (t.amountPaid || 0) > 0)
+        .reduce((sum, t) => sum + (t.amountPaid || 0), 0);
+      const uisSisa = Math.max(0, uisTotal - uisPaid);
 
-      const dppPaid = student.tagihans
-        .filter((t) => t.type.toUpperCase() === 'DPP')
-        .reduce(
-          (sum, t) =>
-            sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
-          0,
-        );
+      // Non DPP / Tagihan Lainnya
+      const otherTagihans = tagihans.filter(
+        (t) =>
+          ![
+            'SPP',
+            'DPP',
+            'UKS',
+            'UIS',
+            'UAK',
+            'UIS/UAK',
+            'INFAQ',
+          ].includes(t.type.toUpperCase()),
+      );
+      const otherPaid = otherTagihans.reduce(
+        (sum, t) =>
+          sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
+        0,
+      );
+      const otherTotal = otherTagihans.reduce((sum, t) => sum + t.amount, 0);
+      const otherAngsuran = otherTagihans
+        .filter((t) => t.status !== 'LUNAS' && (t.amountPaid || 0) > 0)
+        .reduce((sum, t) => sum + (t.amountPaid || 0), 0);
+      const otherSisa = Math.max(0, otherTotal - otherPaid);
 
-      const rowTotal =
-        totalSppPaid + tagKelasNonDpp + uksPaid + uisPaid + dppPaid;
+      // Overall Student Totals
+      const totalTagihan = tagihans.reduce((sum, t) => sum + t.amount, 0);
+      const totalPaid = tagihans.reduce(
+        (sum, t) =>
+          sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
+        0,
+      );
+      const totalAngsuran = tagihans
+        .filter((t) => t.status !== 'LUNAS' && (t.amountPaid || 0) > 0)
+        .reduce((sum, t) => sum + (t.amountPaid || 0), 0);
+      const totalUnpaid = Math.max(0, totalTagihan - totalPaid);
+      const unpaidCount = tagihans.filter((t) => t.status !== 'LUNAS').length;
+      const angsuranCount = tagihans.filter(
+        (t) =>
+          t.status === 'SEBAGIAN' ||
+          (t.status !== 'LUNAS' && (t.amountPaid || 0) > 0),
+      ).length;
 
-      grandTotalSpp += totalSppPaid;
-      grandTotalNonDpp += tagKelasNonDpp;
-      grandTotalUks += uksPaid;
-      grandTotalUis += uisPaid;
-      grandTotalDpp += dppPaid;
-      grandTotalAll += rowTotal;
+      let statusKeuangan = 'BELUM LUNAS';
+      if (totalTagihan === 0) {
+        statusKeuangan = 'BEBAS BIAYA';
+      } else if (totalUnpaid === 0) {
+        statusKeuangan = 'LUNAS';
+      } else if (totalAngsuran > 0 || totalPaid > 0) {
+        statusKeuangan = 'ANGSURAN';
+      } else {
+        statusKeuangan = 'BELUM LUNAS';
+      }
 
-      const dataRow = worksheet.addRow([
-        rowIndex++,
-        student.name,
-        frekuensi,
+      return {
+        no: idx + 1,
+        studentId: student.id,
+        nisn: student.nisn || '-',
+        nis: student.nis || '-',
+        name: student.name,
+        gender: student.gender || '-',
+        program: student.program || 'Reguler',
+        sppLunasCount,
+        sppPaid,
+        sppAngsuran,
+        sppSisa,
         bulanStr,
-        totalSppPaid,
-        tagKelasNonDpp,
-        uksPaid,
-        uisPaid,
         dppPaid,
-        rowTotal,
+        dppAngsuran,
+        dppSisa,
+        uksPaid,
+        uksAngsuran,
+        uksSisa,
+        uisPaid,
+        uisAngsuran,
+        uisSisa,
+        otherPaid,
+        otherAngsuran,
+        otherSisa,
+        totalPaid,
+        totalAngsuran,
+        totalUnpaid,
+        totalTagihan,
+        unpaidCount,
+        angsuranCount,
+        statusKeuangan,
+        tagihans,
+        payments: student.payments || [],
+      };
+    });
+
+    const lunasStudentsCount = studentDataList.filter(
+      (s) => s.statusKeuangan === 'LUNAS',
+    ).length;
+    const angsuranStudentsCount = studentDataList.filter(
+      (s) => s.statusKeuangan === 'ANGSURAN',
+    ).length;
+    const menunggakStudentsCount = studentDataList.filter(
+      (s) => s.statusKeuangan === 'BELUM LUNAS',
+    ).length;
+
+    // ============================================================
+    // SHEET 1: REKAPITULASI KEUANGAN KELAS (UTAMA)
+    // ============================================================
+    const ws1 = workbook.addWorksheet(`Rekap Keuangan - ${cls.name}`);
+
+    // Header Title (Kop Laporan Cetak Kelas)
+    ws1.mergeCells('A1:P1');
+    const titleCell = ws1.getCell('A1');
+    titleCell.value = `REKAPITULASI KEUANGAN & TAGIHAN SISWA KELAS ${cls.name.toUpperCase()}`;
+    titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: '1E3A8A' } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    ws1.mergeCells('A2:P2');
+    const subCell = ws1.getCell('A2');
+    subCell.value = `Periode: ${monthName} ${targetYear} | Tahun Ajaran: ${cls.academicYear || '2026/2027'} | Tanggal Ekspor: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    subCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: '4B5563' } };
+    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    ws1.addRow([]);
+
+    // Information Box: HANYA BULAN, KELAS, dan WALI KELAS
+    const infoRow = ws1.addRow([
+      '  BULAN',
+      `: ${periodeLabel}`,
+      '',
+      '',
+      'KELAS',
+      `: ${cls.name}`,
+      '',
+      '',
+      'WALI KELAS',
+      `: ${waliKelasName}`,
+    ]);
+    infoRow.height = 24;
+    infoRow.eachCell((cell) => {
+      cell.font = { name: 'Arial', size: 11, bold: true, color: { argb: '0F172A' } };
+      cell.alignment = { vertical: 'middle' };
+    });
+    ws1.mergeCells(`A${infoRow.number}:A${infoRow.number}`);
+    ws1.mergeCells(`B${infoRow.number}:D${infoRow.number}`);
+    ws1.mergeCells(`E${infoRow.number}:E${infoRow.number}`);
+    ws1.mergeCells(`F${infoRow.number}:H${infoRow.number}`);
+    ws1.mergeCells(`I${infoRow.number}:I${infoRow.number}`);
+    ws1.mergeCells(`J${infoRow.number}:P${infoRow.number}`);
+
+    ws1.addRow([]);
+
+    // Table Headers
+    const headers1 = [
+      'No',
+      'NISN',
+      'NIS',
+      'Nama Siswa',
+      'Frek SPP',
+      'Bulan SPP Terbayar',
+      'SPP Terbayar (Rp)',
+      'DPP Terbayar (Rp)',
+      'UKS Terbayar (Rp)',
+      'UIS/UAK Terbayar (Rp)',
+      'Tag Lain Terbayar (Rp)',
+      'Total Terbayar (Rp)',
+      'Dana Angsuran (Rp)',
+      'Sisa Tunggakan (Rp)',
+      'Total Tagihan (Rp)',
+      'Status Keuangan',
+    ];
+    const headerRow1 = ws1.addRow(headers1);
+    headerRow1.height = 28;
+    headerRow1.eachCell((cell) => {
+      cell.font = {
+        name: 'Arial',
+        size: 10,
+        bold: true,
+        color: { argb: 'FFFFFF' },
+      };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '1E3A8A' },
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'CBD5E1' } },
+        left: { style: 'thin', color: { argb: 'CBD5E1' } },
+        bottom: { style: 'medium', color: { argb: '0F172A' } },
+        right: { style: 'thin', color: { argb: 'CBD5E1' } },
+      };
+    });
+
+    let grandTotalSpp = 0;
+    let grandTotalDpp = 0;
+    let grandTotalUks = 0;
+    let grandTotalUis = 0;
+    let grandTotalOther = 0;
+    let grandTotalPaid = 0;
+    let grandTotalAngsuran = 0;
+    let grandTotalUnpaid = 0;
+    let grandTotalTagihan = 0;
+    let totalFrekuensiSpp = 0;
+
+    for (const student of studentDataList) {
+      grandTotalSpp += student.sppPaid;
+      grandTotalDpp += student.dppPaid;
+      grandTotalUks += student.uksPaid;
+      grandTotalUis += student.uisPaid;
+      grandTotalOther += student.otherPaid;
+      grandTotalPaid += student.totalPaid;
+      grandTotalAngsuran += student.totalAngsuran;
+      grandTotalUnpaid += student.totalUnpaid;
+      grandTotalTagihan += student.totalTagihan;
+      totalFrekuensiSpp += student.sppLunasCount;
+
+      const dataRow = ws1.addRow([
+        student.no,
+        student.nisn,
+        student.nis,
+        student.name,
+        `${student.sppLunasCount}/12`,
+        student.bulanStr,
+        student.sppPaid,
+        student.dppPaid,
+        student.uksPaid,
+        student.uisPaid,
+        student.otherPaid,
+        student.totalPaid,
+        student.totalAngsuran,
+        student.totalUnpaid,
+        student.totalTagihan,
+        student.statusKeuangan,
       ]);
 
+      dataRow.height = 20;
+
       dataRow.eachCell((cell, colNumber) => {
-        cell.font = { name: 'Arial', size: 10 };
+        cell.font = { name: 'Arial', size: 9.5 };
         cell.border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' },
+          top: { style: 'thin', color: { argb: 'E2E8F0' } },
+          left: { style: 'thin', color: { argb: 'E2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'E2E8F0' } },
+          right: { style: 'thin', color: { argb: 'E2E8F0' } },
         };
-        if (colNumber === 1 || colNumber === 3 || colNumber === 4) {
+
+        if (colNumber === 1 || colNumber === 2 || colNumber === 3 || colNumber === 5 || colNumber === 6) {
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        } else if (colNumber >= 5) {
+        } else if (colNumber === 4) {
+          cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        } else if (colNumber >= 7 && colNumber <= 15) {
           cell.numFmt = '#,##0';
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
-        } else {
-          cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        } else if (colNumber === 16) {
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.font = { name: 'Arial', size: 9.5, bold: true };
+          if (student.statusKeuangan === 'LUNAS') {
+            cell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: '047857' } };
+          } else if (student.statusKeuangan === 'ANGSURAN') {
+            cell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'B45309' } };
+          } else if (student.statusKeuangan === 'BELUM LUNAS') {
+            cell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'B91C1C' } };
+          }
         }
       });
     }
 
-    // Add Summary Total Row at the bottom
-    const summaryRow = worksheet.addRow([
-      'JUMLAH TOTAL',
+    // Add Summary Total Row at the bottom of Sheet 1
+    const summaryRow1 = ws1.addRow([
+      'JUMLAH TOTAL KELAS',
       '',
-      totalFrekuensi,
+      '',
+      '',
+      `${totalFrekuensiSpp} Bln`,
       '-',
       grandTotalSpp,
-      grandTotalNonDpp,
+      grandTotalDpp,
       grandTotalUks,
       grandTotalUis,
-      grandTotalDpp,
-      grandTotalAll,
+      grandTotalOther,
+      grandTotalPaid,
+      grandTotalAngsuran,
+      grandTotalUnpaid,
+      grandTotalTagihan,
+      grandTotalUnpaid === 0 ? 'SEMUA LUNAS' : `${menunggakStudentsCount + angsuranStudentsCount} MENGUNGGAK/ANGSUR`,
     ]);
 
-    worksheet.mergeCells(`A${summaryRow.number}:B${summaryRow.number}`);
+    summaryRow1.height = 24;
+    ws1.mergeCells(`A${summaryRow1.number}:D${summaryRow1.number}`);
 
-    summaryRow.eachCell((cell, colNumber) => {
-      cell.font = { name: 'Arial', size: 11, bold: true };
+    summaryRow1.eachCell((cell, colNumber) => {
+      cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: '0F172A' } };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'F3F4F6' },
+        fgColor: { argb: 'F1F5F9' },
       };
       cell.border = {
-        top: { style: 'double' },
-        left: { style: 'thin' },
-        bottom: { style: 'double' },
-        right: { style: 'thin' },
+        top: { style: 'medium', color: { argb: '1E3A8A' } },
+        left: { style: 'thin', color: { argb: 'CBD5E1' } },
+        bottom: { style: 'double', color: { argb: '1E3A8A' } },
+        right: { style: 'thin', color: { argb: 'CBD5E1' } },
       };
-      if (colNumber === 1 || colNumber === 3 || colNumber === 4) {
+      if (colNumber === 1 || colNumber === 5 || colNumber === 6 || colNumber === 16) {
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      } else if (colNumber >= 5) {
+      } else if (colNumber >= 7 && colNumber <= 15) {
         cell.numFmt = '#,##0';
         cell.alignment = { horizontal: 'right', vertical: 'middle' };
       }
     });
 
-    // Adjust Column Widths
-    worksheet.columns = [
+    // Column Widths for Sheet 1
+    ws1.columns = [
       { width: 6 }, // No
+      { width: 16 }, // NISN
+      { width: 14 }, // NIS
+      { width: 30 }, // Nama Siswa
+      { width: 12 }, // Frek SPP
+      { width: 20 }, // Bulan SPP Terbayar
+      { width: 18 }, // SPP Terbayar
+      { width: 18 }, // DPP Terbayar
+      { width: 16 }, // UKS Terbayar
+      { width: 18 }, // UIS/UAK Terbayar
+      { width: 18 }, // Tag Lain Terbayar
+      { width: 20 }, // Total Terbayar
+      { width: 18 }, // Dana Angsuran
+      { width: 20 }, // Sisa Tunggakan
+      { width: 20 }, // Total Tagihan
+      { width: 18 }, // Status Keuangan
+    ];
+
+    // ============================================================
+    // SHEET 2: RINCIAN TAGIHAN BELUM LUNAS & ANGSURAN BERJALAN
+    // ============================================================
+    const ws2 = workbook.addWorksheet('Tagihan Belum Lunas & Angsuran');
+
+    ws2.mergeCells('A1:L1');
+    const titleCell2 = ws2.getCell('A1');
+    titleCell2.value = `DAFTAR RINCIAN TAGIHAN BELUM LUNAS & ANGSURAN - KELAS ${cls.name.toUpperCase()}`;
+    titleCell2.font = { name: 'Arial', size: 13, bold: true, color: { argb: 'B91C1C' } };
+    titleCell2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    ws2.mergeCells('A2:L2');
+    const subCell2 = ws2.getCell('A2');
+    subCell2.value = `Periode: ${monthName} ${targetYear} | Kelas: ${cls.name} | Wali Kelas: ${waliKelasName} | Tahun Ajaran: ${cls.academicYear || '2026/2027'}`;
+    subCell2.font = { name: 'Arial', size: 9.5, italic: true, color: { argb: '4B5563' } };
+    subCell2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    ws2.addRow([]);
+
+    const headers2 = [
+      'No',
+      'NIS',
+      'Nama Siswa',
+      'Jenis Tagihan',
+      'Bulan / Periode',
+      'Tahun',
+      'Total Tagihan (Rp)',
+      'Terbayar / Angsuran (Rp)',
+      'Sisa Belum Dibayar (Rp)',
+      'Status Tagihan',
+      'Jatuh Tempo',
+      'Catatan / Keterangan',
+    ];
+    const headerRow2 = ws2.addRow(headers2);
+    headerRow2.height = 26;
+    headerRow2.eachCell((cell) => {
+      cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '991B1B' }, // Dark Red Header
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'medium' },
+        right: { style: 'thin' },
+      };
+    });
+
+    let unpaidItemIdx = 1;
+    let sumTotalUnpaidTagihan = 0;
+    let sumTotalAngsuranTagihan = 0;
+    let sumTotalSisaUnpaidTagihan = 0;
+
+    for (const student of studentDataList) {
+      const unpaidTagihans = student.tagihans.filter((t: any) => t.status !== 'LUNAS');
+      for (const t of unpaidTagihans) {
+        const itemAmount = t.amount || 0;
+        const itemPaid = t.amountPaid || 0;
+        const itemSisa = Math.max(0, itemAmount - itemPaid);
+        const itemStatus = itemPaid > 0 ? 'ANGSURAN SEBAGIAN' : 'BELUM DIBAYAR';
+
+        let monthLabel = '-';
+        if (t.month && t.month >= 1 && t.month <= 12) {
+          monthLabel = monthNamesShort[t.month - 1] || `Bulan ${t.month}`;
+        }
+
+        sumTotalUnpaidTagihan += itemAmount;
+        sumTotalAngsuranTagihan += itemPaid;
+        sumTotalSisaUnpaidTagihan += itemSisa;
+
+        const row = ws2.addRow([
+          unpaidItemIdx++,
+          student.nis,
+          student.name,
+          t.type,
+          monthLabel,
+          t.year || cls.academicYear || '-',
+          itemAmount,
+          itemPaid,
+          itemSisa,
+          itemStatus,
+          t.dueDate ? new Date(t.dueDate).toLocaleDateString('id-ID') : '-',
+          t.notes || '-',
+        ]);
+
+        row.height = 19;
+        row.eachCell((cell, colNumber) => {
+          cell.font = { name: 'Arial', size: 9.5 };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'E2E8F0' } },
+            left: { style: 'thin', color: { argb: 'E2E8F0' } },
+            bottom: { style: 'thin', color: { argb: 'E2E8F0' } },
+            right: { style: 'thin', color: { argb: 'E2E8F0' } },
+          };
+
+          if (colNumber === 1 || colNumber === 2 || colNumber === 4 || colNumber === 5 || colNumber === 6 || colNumber === 11) {
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          } else if (colNumber === 3 || colNumber === 12) {
+            cell.alignment = { horizontal: 'left', vertical: 'middle' };
+          } else if (colNumber >= 7 && colNumber <= 9) {
+            cell.numFmt = '#,##0';
+            cell.alignment = { horizontal: 'right', vertical: 'middle' };
+          } else if (colNumber === 10) {
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.font = {
+              name: 'Arial',
+              size: 9,
+              bold: true,
+              color: { argb: itemPaid > 0 ? 'B45309' : 'B91C1C' },
+            };
+          }
+        });
+      }
+    }
+
+    // Summary Row for Sheet 2
+    const summaryRow2 = ws2.addRow([
+      'TOTAL TAGIHAN BELUM LUNAS & ANGSURAN',
+      '',
+      '',
+      '',
+      '',
+      '',
+      sumTotalUnpaidTagihan,
+      sumTotalAngsuranTagihan,
+      sumTotalSisaUnpaidTagihan,
+      `${unpaidItemIdx - 1} Item Tagihan`,
+      '',
+      '',
+    ]);
+    summaryRow2.height = 24;
+    ws2.mergeCells(`A${summaryRow2.number}:F${summaryRow2.number}`);
+
+    summaryRow2.eachCell((cell, colNumber) => {
+      cell.font = { name: 'Arial', size: 10, bold: true };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FEE2E2' },
+      };
+      cell.border = {
+        top: { style: 'medium', color: { argb: '991B1B' } },
+        left: { style: 'thin', color: { argb: 'CBD5E1' } },
+        bottom: { style: 'double', color: { argb: '991B1B' } },
+        right: { style: 'thin', color: { argb: 'CBD5E1' } },
+      };
+      if (colNumber >= 7 && colNumber <= 9) {
+        cell.numFmt = '#,##0';
+        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      } else {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      }
+    });
+
+    ws2.columns = [
+      { width: 6 }, // No
+      { width: 14 }, // NIS
       { width: 28 }, // Nama
-      { width: 16 }, // Frekuensi/Bulan
-      { width: 16 }, // Bulan
-      { width: 15 }, // SPP
-      { width: 22 }, // Tag Kelas Non DPP
-      { width: 15 }, // UKS
-      { width: 15 }, // UIS/UAK
-      { width: 18 }, // DPP
-      { width: 20 }, // Total Siswa
+      { width: 16 }, // Jenis Tagihan
+      { width: 16 }, // Bulan / Periode
+      { width: 12 }, // Tahun
+      { width: 18 }, // Total Tagihan
+      { width: 20 }, // Terbayar / Angsuran
+      { width: 20 }, // Sisa Belum Dibayar
+      { width: 20 }, // Status Tagihan
+      { width: 15 }, // Jatuh Tempo
+      { width: 25 }, // Catatan
+    ];
+
+    // ============================================================
+    // SHEET 3: LOG RIWAYAT PEMBAYARAN & CICILAN MASUK
+    // ============================================================
+    const ws3 = workbook.addWorksheet('Riwayat Pembayaran & Cicilan');
+
+    ws3.mergeCells('A1:H1');
+    const titleCell3 = ws3.getCell('A1');
+    titleCell3.value = `LOG RIWAYAT PEMBAYARAN & CICILAN ANGSURAN - KELAS ${cls.name.toUpperCase()}`;
+    titleCell3.font = { name: 'Arial', size: 13, bold: true, color: { argb: '047857' } };
+    titleCell3.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    ws3.mergeCells('A2:H2');
+    const subCell3 = ws3.getCell('A2');
+    subCell3.value = `Periode: ${monthName} ${targetYear} | Kelas: ${cls.name} | Wali Kelas: ${waliKelasName} | Tahun Ajaran: ${cls.academicYear || '2026/2027'}`;
+    subCell3.font = { name: 'Arial', size: 9.5, italic: true, color: { argb: '4B5563' } };
+    subCell3.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    ws3.addRow([]);
+
+    const headers3 = [
+      'No',
+      'Tanggal Bayar',
+      'NIS',
+      'Nama Siswa',
+      'Jenis Tagihan',
+      'Bulan / Periode',
+      'Nominal Pembayaran (Rp)',
+      'Keterangan / Catatan Transaksi',
+    ];
+    const headerRow3 = ws3.addRow(headers3);
+    headerRow3.height = 26;
+    headerRow3.eachCell((cell) => {
+      cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '065F46' }, // Dark Green Header
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'medium' },
+        right: { style: 'thin' },
+      };
+    });
+
+    let paymentItemIdx = 1;
+    let sumTotalLoggedPayments = 0;
+
+    // Collect all payments from all students
+    const allStudentPayments: any[] = [];
+    for (const student of studentDataList) {
+      for (const p of student.payments) {
+        allStudentPayments.push({
+          ...p,
+          studentNis: student.nis,
+          studentName: student.name,
+        });
+      }
+    }
+
+    allStudentPayments.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+
+    for (const p of allStudentPayments) {
+      sumTotalLoggedPayments += p.amount || 0;
+      let monthLabel = '-';
+      if (p.month && p.month >= 1 && p.month <= 12) {
+        monthLabel = monthNamesShort[p.month - 1] || `Bulan ${p.month}`;
+      }
+
+      const row = ws3.addRow([
+        paymentItemIdx++,
+        p.paymentDate ? new Date(p.paymentDate).toLocaleDateString('id-ID') : '-',
+        p.studentNis,
+        p.studentName,
+        p.type || 'Pembayaran',
+        monthLabel,
+        p.amount || 0,
+        p.notes || 'Pembayaran Berhasil Diverifikasi',
+      ]);
+
+      row.height = 19;
+      row.eachCell((cell, colNumber) => {
+        cell.font = { name: 'Arial', size: 9.5 };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'E2E8F0' } },
+          left: { style: 'thin', color: { argb: 'E2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'E2E8F0' } },
+          right: { style: 'thin', color: { argb: 'E2E8F0' } },
+        };
+
+        if (colNumber === 1 || colNumber === 2 || colNumber === 3 || colNumber === 5 || colNumber === 6) {
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        } else if (colNumber === 4 || colNumber === 8) {
+          cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        } else if (colNumber === 7) {
+          cell.numFmt = '#,##0';
+          cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        }
+      });
+    }
+
+    // Summary Row for Sheet 3
+    const summaryRow3 = ws3.addRow([
+      'TOTAL DANA PEMBAYARAN MASUK',
+      '',
+      '',
+      '',
+      '',
+      '',
+      sumTotalLoggedPayments,
+      `${allStudentPayments.length} Transaksi Pembayaran`,
+    ]);
+    summaryRow3.height = 24;
+    ws3.mergeCells(`A${summaryRow3.number}:F${summaryRow3.number}`);
+
+    summaryRow3.eachCell((cell, colNumber) => {
+      cell.font = { name: 'Arial', size: 10, bold: true };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'D1FAE5' },
+      };
+      cell.border = {
+        top: { style: 'medium', color: { argb: '065F46' } },
+        left: { style: 'thin', color: { argb: 'CBD5E1' } },
+        bottom: { style: 'double', color: { argb: '065F46' } },
+        right: { style: 'thin', color: { argb: 'CBD5E1' } },
+      };
+      if (colNumber === 7) {
+        cell.numFmt = '#,##0';
+        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      } else {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      }
+    });
+
+    ws3.columns = [
+      { width: 6 }, // No
+      { width: 16 }, // Tanggal Bayar
+      { width: 14 }, // NIS
+      { width: 28 }, // Nama Siswa
+      { width: 16 }, // Jenis Tagihan
+      { width: 16 }, // Bulan / Periode
+      { width: 22 }, // Nominal Pembayaran
+      { width: 32 }, // Catatan Transaksi
     ];
 
     const buffer = await workbook.xlsx.writeBuffer();

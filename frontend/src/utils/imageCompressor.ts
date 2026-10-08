@@ -9,6 +9,7 @@ export interface CompressOptions {
   maxHeight?: number;
   quality?: number; // 0.1 to 1.0 (default 0.75)
   outputFormat?: 'image/webp' | 'image/jpeg' | 'image/png';
+  maxSizeBytes?: number; // Default 1MB (1024 * 1024)
 }
 
 export interface CompressResult {
@@ -22,19 +23,20 @@ export interface CompressResult {
 }
 
 /**
- * Kompres file gambar dari input pengguna
+ * Kompres file gambar dari input pengguna (Otomatis dibatasi <= 1MB)
  */
 export async function compressImageFile(
   file: File,
   options: CompressOptions = {}
 ): Promise<CompressResult> {
   const {
-    maxWidth = 1080,
-    maxHeight = 1080,
-    quality = 0.75,
-    outputFormat = 'image/webp'
+    maxWidth = 1600,
+    maxHeight = 1600,
+    outputFormat = 'image/webp',
+    maxSizeBytes = 1024 * 1024 // 1MB
   } = options;
 
+  let quality = options.quality ?? 0.8;
   const originalSizeKb = Math.round(file.size / 1024);
 
   return new Promise((resolve, reject) => {
@@ -43,59 +45,84 @@ export async function compressImageFile(
     reader.onload = (e) => {
       const img = new Image();
 
-      img.onload = () => {
-        // Hitung rasio aspek dan dimensi baru
+      img.onload = async () => {
         let { width, height } = img;
-        if (width > maxWidth || height > maxHeight) {
-          const widthRatio = maxWidth / width;
-          const heightRatio = maxHeight / height;
-          const bestRatio = Math.min(widthRatio, heightRatio);
+        let currentMaxWidth = maxWidth;
+        let currentMaxHeight = maxHeight;
 
-          width = Math.round(width * bestRatio);
-          height = Math.round(height * bestRatio);
+        // Multi-pass compression loop to guarantee <= 1MB
+        let blob: Blob | null = null;
+        let dataUrl = '';
+        let mime = outputFormat;
+        let pass = 0;
+        const maxPasses = 4;
+
+        while (pass < maxPasses) {
+          let targetW = width;
+          let targetH = height;
+
+          if (targetW > currentMaxWidth || targetH > currentMaxHeight) {
+            const widthRatio = currentMaxWidth / targetW;
+            const heightRatio = currentMaxHeight / targetH;
+            const bestRatio = Math.min(widthRatio, heightRatio);
+
+            targetW = Math.round(targetW * bestRatio);
+            targetH = Math.round(targetH * bestRatio);
+          }
+
+          // Gambar ke HTML5 Canvas
+          const canvas = document.createElement('canvas');
+          canvas.width = targetW;
+          canvas.height = targetH;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Gagal mendapatkan konteks canvas untuk kompresi gambar.'));
+            return;
+          }
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, targetW, targetH);
+
+          let format = outputFormat;
+          dataUrl = canvas.toDataURL(format, quality);
+
+          if (format === 'image/webp' && (!dataUrl || !dataUrl.startsWith('data:image/webp'))) {
+            format = 'image/jpeg';
+            dataUrl = canvas.toDataURL(format, quality);
+          }
+
+          const arr = dataUrl.split(',');
+          mime = (arr[0].match(/:(.*?);/)?.[1] || format) as any;
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+
+          blob = new Blob([u8arr], { type: mime });
+
+          // Jika sudah <= maxSizeBytes atau sudah pass maksimal, berhenti
+          if (blob.size <= maxSizeBytes) {
+            break;
+          }
+
+          // Kurangi parameter untuk pass berikutnya
+          pass++;
+          quality = Math.max(0.4, quality * 0.75);
+          currentMaxWidth = Math.floor(currentMaxWidth * 0.8);
+          currentMaxHeight = Math.floor(currentMaxHeight * 0.8);
         }
 
-        // Gambar ke HTML5 Canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Gagal mendapatkan konteks canvas untuk kompresi gambar.'));
+        if (!blob) {
+          reject(new Error('Gagal mengompres gambar.'));
           return;
         }
 
-        // Gambar ulang dengan kualitas tinggi
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Export ke DataURL terkompres (default WEBP atau JPEG fallback)
-        let format = outputFormat;
-        let dataUrl = canvas.toDataURL(format, quality);
-
-        // Jika browser tidak mendukung webp, gunakan jpeg
-        if (format === 'image/webp' && (!dataUrl || !dataUrl.startsWith('data:image/webp'))) {
-          format = 'image/jpeg';
-          dataUrl = canvas.toDataURL(format, quality);
-        }
-
-        // Konversi DataURL ke Blob & File
-        const arr = dataUrl.split(',');
-        const mime = arr[0].match(/:(.*?);/)?.[1] || format;
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n);
-        }
-
-        const blob = new Blob([u8arr], { type: mime });
         const compressedSizeKb = Math.round(blob.size / 1024);
-
-        // Buat nama file terkompres dengan ekstensi yang sesuai
         const ext = mime === 'image/webp' ? '.webp' : mime === 'image/png' ? '.png' : '.jpg';
         const newFileName = file.name.replace(/\.[^/.]+$/, '') + '_compressed' + ext;
         const compressedFile = new File([blob], newFileName, { type: mime });

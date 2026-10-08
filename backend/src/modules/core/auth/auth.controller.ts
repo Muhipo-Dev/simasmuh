@@ -18,6 +18,15 @@ export class AuthController {
     return this.authService.login(username, password, ipAddress, userAgent);
   }
 
+  // 🛡️ Otentikasi Google OAuth
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Post('google')
+  async googleLogin(@Body() body: any, @Req() req: Request) {
+    const ipAddress = extractClientRealIp(req);
+    const userAgent = req.headers['user-agent'];
+    return this.authService.loginWithGoogle(body, ipAddress, userAgent);
+  }
+
   @Post('logout')
   async logout(
     @Body() body: { userId: string; sessionId?: string },

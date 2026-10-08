@@ -12,7 +12,13 @@ import {
   Loader2, 
   Sparkles,
   Phone,
-  CalendarDays
+  CalendarDays,
+  Globe,
+  ShieldCheck,
+  Copy,
+  Check,
+  ExternalLink,
+  KeyRound
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
@@ -31,6 +37,9 @@ type Setting = {
   logoUrl: string | null
   backgroundUrl?: string | null
   studentCardTemplateUrl?: string | null
+  publicDomainUrl?: string | null
+  googleClientId?: string | null
+  googleClientSecret?: string | null
   academicYear: string | null
   semester: string | null
   helpdeskPhone?: string | null
@@ -58,6 +67,9 @@ export default function SettingsPage() {
     logoUrl: '',
     backgroundUrl: '',
     studentCardTemplateUrl: '',
+    publicDomainUrl: 'https://simasmuh.razagopo.my.id',
+    googleClientId: '935196029927-ii64fis1cd7gjgcj92jvpl5bmv9m0ql0.apps.googleusercontent.com',
+    googleClientSecret: '',
     helpdeskPhone: '088293733330',
     academicYear: '2026/2027',
     semester: 'Ganjil',
@@ -98,6 +110,9 @@ export default function SettingsPage() {
         logoUrl: settings.logoUrl || '',
         backgroundUrl: settings.backgroundUrl || '',
         studentCardTemplateUrl: settings.studentCardTemplateUrl || '',
+        publicDomainUrl: settings.publicDomainUrl || 'https://simasmuh.razagopo.my.id',
+        googleClientId: settings.googleClientId || '',
+        googleClientSecret: settings.googleClientSecret || '',
         helpdeskPhone: settings.helpdeskPhone || '088293733330',
         academicYear: settings.academicYear || '2026/2027',
         semester: settings.semester || 'Ganjil',
@@ -586,8 +601,241 @@ export default function SettingsPage() {
             </CardFooter>
           </form>
         </Card>
+
+        {/* Pengaturan Domain Publik & Google OAuth Terpusat */}
+        <PublicDomainOAuthConfigCard
+          publicDomainUrl={formData.publicDomainUrl || 'https://simasmuh.razagopo.my.id'}
+          googleClientId={formData.googleClientId || ''}
+          googleClientSecret={formData.googleClientSecret || ''}
+          onSave={async (domainConfig) => {
+            await mutation.mutateAsync({
+              ...formData,
+              publicDomainUrl: domainConfig.publicDomainUrl,
+              googleClientId: domainConfig.googleClientId,
+              googleClientSecret: domainConfig.googleClientSecret,
+            })
+          }}
+          isSaving={mutation.isPending}
+        />
       </div>
     </div>
+  )
+}
+
+function PublicDomainOAuthConfigCard({
+  publicDomainUrl,
+  googleClientId,
+  googleClientSecret,
+  onSave,
+  isSaving,
+}: {
+  publicDomainUrl: string
+  googleClientId: string
+  googleClientSecret: string
+  onSave: (data: { publicDomainUrl: string; googleClientId: string; googleClientSecret: string }) => Promise<void>
+  isSaving: boolean
+}) {
+  const [domain, setDomain] = useState(publicDomainUrl)
+  const [clientId, setClientId] = useState(googleClientId)
+  const [clientSecret, setClientSecret] = useState(googleClientSecret)
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+
+  const [currentClientOrigin, setCurrentClientOrigin] = useState('')
+
+  useEffect(() => {
+    setDomain(publicDomainUrl)
+    setClientId(googleClientId)
+    setClientSecret(googleClientSecret)
+    if (typeof window !== 'undefined') {
+      setCurrentClientOrigin(window.location.origin)
+    }
+  }, [publicDomainUrl, googleClientId, googleClientSecret])
+
+  const cleanOrigin = (domain || currentClientOrigin || 'https://simasmuh.razagopo.my.id').replace(/\/+$/, '')
+  const redirectUri = `${cleanOrigin}/api/auth/callback/google`
+  const activeClientRedirectUri = currentClientOrigin ? `${currentClientOrigin.replace(/\/+$/, '')}/api/auth/callback/google` : ''
+
+  const copyToClipboard = (text: string, key: string) => {
+    try {
+      navigator.clipboard.writeText(text)
+      setCopiedKey(key)
+      setTimeout(() => setCopiedKey(null), 2000)
+    } catch {}
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await onSave({
+      publicDomainUrl: domain.trim(),
+      googleClientId: clientId.trim(),
+      googleClientSecret: clientSecret.trim(),
+    })
+  }
+
+  return (
+    <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl rounded-2xl overflow-hidden md:col-span-2">
+      <form onSubmit={handleSubmit}>
+        <CardHeader className="border-b border-slate-100 dark:border-slate-800/80 p-5 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-extrabold text-base sm:text-lg">
+                <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                Domain Publik & Integrasi Google OAuth Terpusat
+              </CardTitle>
+              <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs sm:text-sm">
+                Kelola alamat domain publik resmi, URL callback sistem, dan kredensial Google OAuth tanpa menyentuh file server.
+              </CardDescription>
+            </div>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-200 dark:border-blue-800 shrink-0">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Tersinkronisasi Otomatis
+            </span>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-5 sm:p-6 space-y-6">
+          {/* Domain Publik Utama */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="publicDomain" className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                Domain Publik Utama Sistem (Production / Tunnel)
+              </Label>
+              <span className="text-[11px] text-slate-500">Gunakan protokol https:// atau http://</span>
+            </div>
+            <Input
+              id="publicDomain"
+              type="url"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              placeholder="Contoh: https://simasmuh.smamuhipo.sch.id"
+              required
+              className="font-mono text-sm h-11 bg-white dark:bg-slate-900"
+            />
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              Domain ini dipakai secara terpusat untuk tautan verifikasi tanda tangan digital, tautan bukti pembayaran, serta rute resmi pengiriman email notifikasi.
+            </p>
+          </div>
+
+          {/* Quick Copy Snippets untuk Google Cloud Console */}
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-amber-500" />
+                Kebutuhan Konfigurasi di Google Cloud Console
+              </h4>
+              <a
+                href="https://console.cloud.google.com/apis/credentials"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+              >
+                Buka Google Console <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              {/* Authorized Origins */}
+              <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                  <span>1. Authorized JavaScript Origins</span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(cleanOrigin, 'origin')}
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-1 font-semibold"
+                  >
+                    {copiedKey === 'origin' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                    {copiedKey === 'origin' ? 'Tersalin' : 'Salin'}
+                  </button>
+                </div>
+                <div className="font-mono text-xs text-slate-800 dark:text-slate-200 truncate bg-slate-50 dark:bg-slate-950 p-2 rounded border border-slate-200/70 dark:border-slate-800/70" title={cleanOrigin}>
+                  {cleanOrigin}
+                </div>
+              </div>
+
+              {/* Authorized Redirect URIs */}
+              <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                  <span>2. Authorized Redirect URIs</span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(redirectUri, 'redirect')}
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-1 font-semibold"
+                  >
+                    {copiedKey === 'redirect' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                    {copiedKey === 'redirect' ? 'Tersalin' : 'Salin'}
+                  </button>
+                </div>
+                <div className="font-mono text-xs text-slate-800 dark:text-slate-200 truncate bg-slate-50 dark:bg-slate-950 p-2 rounded border border-slate-200/70 dark:border-slate-800/70" title={redirectUri}>
+                  {redirectUri}
+                </div>
+              </div>
+            </div>
+
+            {/* Jika sedang diakses melalui IP Server / Domain Alternatif */}
+            {currentClientOrigin && currentClientOrigin !== cleanOrigin && (
+              <div className="mt-2 pt-2 border-t border-slate-200/70 dark:border-slate-800/70">
+                <div className="text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1 flex items-center justify-between">
+                  <span>Host / Alamat Akses Client Aktif ({currentClientOrigin})</span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(activeClientRedirectUri, 'clientRedirect')}
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-1 text-[11px] font-semibold"
+                  >
+                    {copiedKey === 'clientRedirect' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                    {copiedKey === 'clientRedirect' ? 'Tersalin' : 'Salin Redirect URI Akses Aktif'}
+                  </button>
+                </div>
+                <div className="font-mono text-[11px] text-slate-700 dark:text-slate-300 bg-slate-100/80 dark:bg-slate-900/80 p-1.5 rounded border border-slate-200 dark:border-slate-800 truncate" title={activeClientRedirectUri}>
+                  {activeClientRedirectUri}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Kredensial Google OAuth */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="googleClientId" className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                Google Client ID
+              </Label>
+              <Input
+                id="googleClientId"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                placeholder="Contoh: 935196029927-xxxx.apps.googleusercontent.com"
+                className="font-mono text-xs bg-white dark:bg-slate-900"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="googleClientSecret" className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                Google Client Secret
+              </Label>
+              <Input
+                id="googleClientSecret"
+                type="password"
+                value={clientSecret}
+                onChange={(e) => setClientSecret(e.target.value)}
+                placeholder="GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxx"
+                className="font-mono text-xs bg-white dark:bg-slate-900"
+              />
+            </div>
+          </div>
+        </CardContent>
+
+        <CardFooter className="bg-slate-50/50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800/80 p-5 sm:p-6">
+          <Button
+            type="submit"
+            disabled={isSaving}
+            className="w-full bg-blue-600 hover:bg-blue-700 font-bold rounded-xl shadow-sm text-white"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+            Simpan Konfigurasi Domain & Google OAuth
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
   )
 }
 

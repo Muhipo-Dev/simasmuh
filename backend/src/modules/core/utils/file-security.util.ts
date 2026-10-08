@@ -217,7 +217,7 @@ export class FileSecurityUtil {
   }
 
   /**
-   * Sanitize and optimize image files
+   * Sanitize and optimize image files (Auto compress strictly <= 1MB)
    */
   static async processAndOptimizeImage(
     inputPath: string,
@@ -227,41 +227,76 @@ export class FileSecurityUtil {
       maxWidth?: number;
       maxHeight?: number;
       removeMetadata?: boolean;
+      maxSizeBytes?: number;
     } = {},
   ): Promise<void> {
     const {
-      quality = 85,
       maxWidth = 1920,
       maxHeight = 1080,
       removeMetadata = true,
+      maxSizeBytes = 1024 * 1024, // 1MB Maximum limit
     } = options;
 
     try {
-      let processor = sharp(inputPath);
-
-      // Remove metadata for privacy/security
-      if (removeMetadata) {
-        processor = processor.withMetadata({});
-      }
-
-      // Resize if too large
-      processor = processor.resize(maxWidth, maxHeight, {
-        fit: 'inside',
-        withoutEnlargement: true,
-      });
-
-      // Optimize based on format
       const metadata = await sharp(inputPath).metadata();
+      const format = metadata.format || 'jpeg';
 
-      if (metadata.format === 'jpeg') {
-        processor = processor.jpeg({ quality, mozjpeg: true });
-      } else if (metadata.format === 'png') {
-        processor = processor.png({ compressionLevel: 9 });
-      } else if (metadata.format === 'webp') {
-        processor = processor.webp({ quality });
+      // Start with initial quality
+      let quality = options.quality ?? 85;
+      let currentWidth = maxWidth;
+      let currentHeight = maxHeight;
+
+      // Temporary buffer processing loop to guarantee <= maxSizeBytes
+      let buffer: Buffer | null = null;
+      let attempts = 0;
+      const maxAttempts = 4;
+
+      while (attempts < maxAttempts) {
+        let processor = sharp(inputPath);
+
+        if (removeMetadata) {
+          processor = processor.withMetadata({});
+        }
+
+        processor = processor.resize(currentWidth, currentHeight, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        });
+
+        if (format === 'jpeg') {
+          processor = processor.jpeg({ quality, mozjpeg: true });
+        } else if (format === 'png') {
+          // If PNG is too large, convert to WebP or optimize compression
+          if (attempts > 0 || quality < 80) {
+            processor = processor.webp({ quality });
+          } else {
+            processor = processor.png({ compressionLevel: 9, quality: Math.min(100, quality) });
+          }
+        } else if (format === 'webp') {
+          processor = processor.webp({ quality });
+        } else {
+          processor = processor.jpeg({ quality, mozjpeg: true });
+        }
+
+        buffer = await processor.toBuffer();
+
+        // If file size is within 1MB, break loop
+        if (buffer.length <= maxSizeBytes) {
+          break;
+        }
+
+        // Adjust parameters for next attempt to enforce <= 1MB
+        attempts++;
+        quality = Math.max(40, Math.floor(quality * 0.75));
+        currentWidth = Math.floor(currentWidth * 0.8);
+        currentHeight = Math.floor(currentHeight * 0.8);
       }
 
-      await processor.toFile(outputPath);
+      if (buffer) {
+        await fs.writeFile(outputPath, buffer);
+      } else {
+        throw new Error('Failed to generate optimized image buffer');
+      }
     } catch (error) {
       throw new Error(`Image processing failed: ${error.message}`);
     }

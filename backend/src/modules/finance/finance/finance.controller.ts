@@ -140,13 +140,14 @@ export class FinanceController {
   async updateStaffEmploymentStatus(
     @Req() req: any,
     @Param('userId') userId: string,
-    @Body('employmentStatus') employmentStatus: string,
+    @Body() body: { employmentStatus?: string; masaKerja?: number },
   ) {
     this.checkPayrollAccess(req);
 
     return this.financeService.updateStaffEmploymentStatus(
       userId,
-      employmentStatus,
+      body.employmentStatus,
+      body.masaKerja,
     );
   }
 
@@ -589,17 +590,21 @@ export class FinanceController {
 
   @Get('export-rekap-kelas')
   async exportRekapKelas(
-    @Query('classId') classId: string,
     @Res() res: Response,
+    @Query('classId') classId: string,
+    @Query('month') month?: string,
+    @Query('year') year?: string,
   ) {
-    const buffer = await this.financeService.exportRekapKeuanganKelas(classId);
+    const m = month ? parseInt(month, 10) : undefined;
+    const y = year ? parseInt(year, 10) : undefined;
+    const buffer = await this.financeService.exportRekapKeuanganKelas(classId, m, y);
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=rekap_keuangan_kelas_${classId}.xlsx`,
+      `attachment; filename=rekap_keuangan_kelas_${classId}_bulan_${m || new Date().getMonth() + 1}.xlsx`,
     );
     res.send(buffer);
   }

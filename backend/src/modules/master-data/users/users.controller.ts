@@ -24,6 +24,16 @@ export class UsersController {
     return this.usersService.getProfile(id);
   }
 
+  @Post(':id/link-google-oauth')
+  linkGoogleOAuth(
+    @Param('id') id: string,
+    @Body('email') email: string,
+    @Body('name') name?: string,
+    @Body('avatarUrl') avatarUrl?: string,
+  ) {
+    return this.usersService.linkGoogleOAuth(id, email, name, avatarUrl);
+  }
+
   @Get(':id/login-history')
   getLoginHistory(@Param('id') id: string) {
     return this.usersService.getLoginHistory(id);

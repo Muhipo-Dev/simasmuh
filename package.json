@@ -1,6 +1,6 @@
 {
   "name": "simasmuh",
-  "version": "1.5.3",
+  "version": "1.9.5",
   "private": true,
   "description": "Sistem Informasi Manajemen Aset & Administrasi Sekolah Muhammadiyah (SIMASMUH)",
   "workspaces": [
@@ -8,6 +8,13 @@
     "backend"
   ],
   "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run start:dev",
+    "studio": "npm --prefix backend run studio",
+    "prisma:studio": "npm --prefix backend run studio",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "build": "npm run build:backend && npm run build:frontend",
     "release": "semantic-release",
     "release:dry-run": "semantic-release --dry-run"
   },

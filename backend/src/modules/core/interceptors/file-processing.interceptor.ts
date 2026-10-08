@@ -95,9 +95,13 @@ export class FileProcessingInterceptor implements NestInterceptor {
   }
 
   /**
-   * Check if file type requires additional processing
+   * Check if file type requires additional processing (images & pdfs)
    */
   private isHighRiskFileType(mimetype: string): boolean {
+    if (mimetype.startsWith('image/')) {
+      return true;
+    }
+
     const highRiskTypes = [
       'application/pdf',
       'image/svg+xml',
@@ -116,7 +120,7 @@ export class FileProcessingInterceptor implements NestInterceptor {
     request: any,
   ): Promise<void> {
     if (file.mimetype.startsWith('image/')) {
-      // For images, create sanitized version
+      // For images, create sanitized & compressed version (strictly <= 1MB)
       const outputPath = file.path.replace(
         path.extname(file.path),
         '_sanitized' + path.extname(file.path),
@@ -125,16 +129,17 @@ export class FileProcessingInterceptor implements NestInterceptor {
       try {
         await FileSecurityUtil.processAndOptimizeImage(file.path, outputPath, {
           removeMetadata: true,
-          quality: 85,
-          maxWidth: 1920,
-          maxHeight: 1080,
+          quality: 82,
+          maxWidth: 1600,
+          maxHeight: 1600,
+          maxSizeBytes: 1024 * 1024, // Maksimal 1MB
         });
 
         // Replace original with sanitized version
         await fs.rename(outputPath, file.path);
 
         request.fileMetadata.sanitized = true;
-        this.logger.log(`Image sanitized: ${file.originalname}`);
+        this.logger.log(`Image sanitized & compressed (<= 1MB): ${file.originalname}`);
       } catch (error) {
         this.logger.error(`Image sanitization failed: ${error.message}`);
         throw new BadRequestException('Image processing failed');

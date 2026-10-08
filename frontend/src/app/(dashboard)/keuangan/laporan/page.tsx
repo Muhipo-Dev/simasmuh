@@ -83,11 +83,24 @@ const parseDiscountInfo = (notes: string | null) => {
   }
 }
 
+import SingleReceiptPrintModal, { ReceiptPaymentData } from '@/components/finance/SingleReceiptPrintModal'
+
+type PaymentItem = {
+  id: string
+  amount: number
+  paymentDate: string
+  paymentMethod?: string
+  notes?: string | null
+  type?: string
+  createdAt?: string
+}
+
 type Tagihan = {
   id: string; type: string; amount: number; amountPaid?: number
   month: number | null; year: number | null
   dueDate: string | null; status: 'BELUM_LUNAS' | 'LUNAS' | 'ANGSURAN'
   paidDate: string | null; notes: string | null; createdAt: string
+  payments?: PaymentItem[]
 }
 
 type StudentDetail = {
@@ -181,6 +194,9 @@ function SppStatusGrid({ tagihans, year }: { tagihans: Tagihan[]; year: number }
 function StudentFinanceView({ student }: { student: StudentDetail }) {
   const [isPaymentPopupOpen, setIsPaymentPopupOpen] = useState(false)
   const [selectedTagihanId, setSelectedTagihanId] = useState<string | undefined>()
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false)
+  const [receiptData, setReceiptData] = useState<ReceiptPaymentData | null>(null)
+  const [activeViewTab, setActiveViewTab] = useState<'tagihan' | 'riwayat'>('tagihan')
   const currentYear = new Date().getFullYear()
 
   const tagihans = student.tagihans ?? []
@@ -189,6 +205,55 @@ function StudentFinanceView({ student }: { student: StudentDetail }) {
   const totalTagihan = tagihans.reduce((s, t) => s + t.amount, 0)
   const totalLunas = sudahLunas.reduce((s, t) => s + t.amount, 0)
   const totalBelumLunas = belumLunas.reduce((s, t) => s + Math.max(0, t.amount - (t.amountPaid || 0)), 0)
+
+  // Ekstrak semua payment records dari seluruh tagihan siswa
+  const allPayments = tagihans.flatMap(t => 
+    (t.payments || []).map(p => ({
+      ...p,
+      tagihanType: t.type,
+      tagihanAmount: t.amount,
+      tagihanAmountPaid: t.amountPaid || 0,
+      tagihanStatus: t.status,
+      month: t.month,
+      year: t.year,
+      tagihanNotes: t.notes,
+    }))
+  ).sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())
+
+  const totalAllPaid = allPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+
+  const handleOpenReceipt = (payment: any) => {
+    const periodStr = payment.month && payment.year 
+      ? `${MONTHS[payment.month - 1]} ${payment.year}`
+      : payment.year ? `Tahun ${payment.year}` : '-'
+
+    const discInfo = parseDiscountInfo(payment.tagihanNotes)
+
+    setReceiptData({
+      receiptNumber: `KWT-${student.nis || '000'}-${payment.tagihanType}-${payment.id.slice(0, 6)}`,
+      studentName: student.name,
+      nisn: student.nisn || '-',
+      nis: student.nis || '-',
+      className: student.class?.name || '-',
+      program: student.program || 'Reguler',
+      tagihanType: payment.tagihanType,
+      periodInfo: periodStr,
+      originalAmount: discInfo?.originalAmount || payment.tagihanAmount,
+      discountAmount: discInfo?.beasiswaAmount || 0,
+      discountPercentage: discInfo?.beasiswaPercentage || student.beasiswaPercentage || 0,
+      discountReason: discInfo?.reason || student.beasiswaReason || '',
+      amountPaidNow: payment.amount,
+      totalPaidPrevious: Math.max(0, (payment.tagihanAmountPaid || 0) - payment.amount),
+      remainingAmount: Math.max(0, payment.tagihanAmount - (payment.tagihanAmountPaid || 0)),
+      isLunas: payment.tagihanStatus === 'LUNAS',
+      paymentDate: new Date(payment.paymentDate).toLocaleDateString('id-ID', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      }),
+      notes: payment.notes || 'Pembayaran SIMASMUH',
+      officerName: 'Kasir Keuangan SIMASMUH',
+    })
+    setReceiptModalOpen(true)
+  }
 
   const sudahLunasPerType = PAYMENT_TYPES.map(t => ({
     ...t,
@@ -366,131 +431,266 @@ function StudentFinanceView({ student }: { student: StudentDetail }) {
         </CardContent>
       </Card>
 
-      {/* Tagihan Belum Lunas */}
-      {belumLunas.length > 0 && (
-        <Card className="border-red-200 bg-red-50/50 dark:bg-red-950/20 dark:border-red-900/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold text-red-700 dark:text-red-300 flex items-center gap-2">
-              <AlertCircle className="w-4.5 h-4.5 shrink-0" />
-              Tagihan Belum Lunas ({belumLunas.length} item)
-            </CardTitle>
-            <CardDescription className="text-red-600 dark:text-red-400 font-medium">
-              Segera lakukan pembayaran. Total: <strong className="font-extrabold">{currency(totalBelumLunas)}</strong>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2.5">
-            {belumLunas.map(t => {
-              const typeInfo = PAYMENT_TYPES.find(p => p.value === t.type)
-              const isOverdue = t.dueDate && new Date(t.dueDate) < new Date()
-              const discInfo = parseDiscountInfo(t.notes)
-              const hasDiscount = discInfo || (student.beasiswaPercentage && student.beasiswaPercentage > 0 && t.type === 'SPP')
-              const discPct = discInfo?.beasiswaPercentage || student.beasiswaPercentage || 0
+      {/* Navigation Sub-Tab: Tagihan Aktif vs Riwayat Transaksi Pembayaran */}
+      <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveViewTab('tagihan')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            activeViewTab === 'tagihan'
+              ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Receipt className="w-3.5 h-3.5" />
+          <span>Status & Tagihan Siswa</span>
+          {belumLunas.length > 0 && (
+            <span className="px-1.5 py-0.2 bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 rounded-full text-[10px] font-black">
+              {belumLunas.length}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveViewTab('riwayat')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            activeViewTab === 'riwayat'
+              ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span>Riwayat Transaksi Pembayaran</span>
+          <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 rounded-full text-[10px] font-black">
+            {allPayments.length}
+          </span>
+        </button>
+      </div>
 
-              return (
-                <div key={t.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-xl border bg-white dark:bg-slate-900/80 gap-3 ${isOverdue ? 'border-red-300 dark:border-red-800' : 'border-red-100 dark:border-slate-800'}`}>
-                  <div className="flex items-start sm:items-center gap-3 min-w-0">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeInfo?.bg} shrink-0 mt-0.5 sm:mt-0`}>
-                      {typeInfo && <typeInfo.icon className={`w-4 h-4 ${typeInfo.text}`} />}
-                    </div>
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${typeInfo?.badge}`}>{t.type}</span>
-                        {t.month && t.year && (
-                          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{MONTHS[t.month - 1]} {t.year}</span>
-                        )}
-                        {hasDiscount && (
-                          <span className="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-md font-extrabold flex items-center gap-1">
-                            <Sparkles className="w-3 h-3 text-emerald-600" />
-                            Beasiswa {discPct}% {discInfo?.beasiswaAmount ? `(-${currency(discInfo.beasiswaAmount)})` : ''}
-                          </span>
-                        )}
-                        {isOverdue && (
-                          <span className="text-[10px] bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1.5 py-0.5 rounded font-bold">LEWAT JATUH TEMPO</span>
-                        )}
-                      </div>
-                      {t.dueDate && (
-                        <p className={`text-xs ${isOverdue ? 'text-red-500 font-semibold' : 'text-slate-500 dark:text-slate-400'}`}>
-                          Jatuh tempo: {formatDateShort(t.dueDate)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
-                    <span className="font-extrabold text-red-700 dark:text-red-300 text-base sm:text-lg">
-                      {t.amountPaid && t.amountPaid > 0 ? (
-                        <div className="text-right">
-                          <span className="text-xs line-through text-slate-400 block font-normal">{currency(t.amount)}</span>
-                          <span className="text-xs text-slate-500 font-bold block">Sisa Bayar:</span>
-                          <span>{currency(t.amount - t.amountPaid)}</span>
+      {activeViewTab === 'tagihan' ? (
+        <div className="space-y-6">
+          {/* Tagihan Belum Lunas */}
+          {belumLunas.length > 0 && (
+            <Card className="border-red-200 bg-red-50/50 dark:bg-red-950/20 dark:border-red-900/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-bold text-red-700 dark:text-red-300 flex items-center gap-2">
+                  <AlertCircle className="w-4.5 h-4.5 shrink-0" />
+                  Tagihan Belum Lunas ({belumLunas.length} item)
+                </CardTitle>
+                <CardDescription className="text-red-600 dark:text-red-400 font-medium">
+                  Segera lakukan pembayaran. Total: <strong className="font-extrabold">{currency(totalBelumLunas)}</strong>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2.5">
+                {belumLunas.map(t => {
+                  const typeInfo = PAYMENT_TYPES.find(p => p.value === t.type)
+                  const isOverdue = t.dueDate && new Date(t.dueDate) < new Date()
+                  const discInfo = parseDiscountInfo(t.notes)
+                  const hasDiscount = discInfo || (student.beasiswaPercentage && student.beasiswaPercentage > 0 && t.type === 'SPP')
+                  const discPct = discInfo?.beasiswaPercentage || student.beasiswaPercentage || 0
+
+                  return (
+                    <div key={t.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-xl border bg-white dark:bg-slate-900/80 gap-3 ${isOverdue ? 'border-red-300 dark:border-red-800' : 'border-red-100 dark:border-slate-800'}`}>
+                      <div className="flex items-start sm:items-center gap-3 min-w-0">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeInfo?.bg} shrink-0 mt-0.5 sm:mt-0`}>
+                          {typeInfo && <typeInfo.icon className={`w-4 h-4 ${typeInfo.text}`} />}
                         </div>
-                      ) : (
-                        currency(t.amount)
-                      )}
-                    </span>
-                    <Button 
-                      size="sm"
-                      className="h-8 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-2xs"
-                      onClick={() => {
-                        setSelectedTagihanId(t.id)
-                        setIsPaymentPopupOpen(true)
-                      }}
-                    >
-                      Bayar Sekarang
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* SPP Grid */}
-      <SppStatusGrid tagihans={tagihans} year={currentYear} />
-
-      {/* Riwayat Lunas */}
-      {sudahLunasPerType.map(t => {
-        const Icon = t.icon
-        return (
-          <Card key={t.value} className={`border ${t.border} shadow-2xs`}>
-            <CardHeader className={`${t.bg} rounded-t-xl pb-3`}>
-              <CardTitle className={`text-base flex items-center gap-2 ${t.text}`}>
-                <Icon className="w-4 h-4" />
-                {t.label}
-                <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full ${t.badge}`}>
-                  {t.items.length} lunas
-                </span>
-              </CardTitle>
-              <CardDescription className={`${t.text} opacity-70`}>{t.desc}</CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 space-y-2">
-              {t.items.map(p => (
-                <div key={p.id} className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{currency(p.amount)}</span>
-                      {p.month && p.year && (
-                        <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${t.badge}`}>
-                          {MONTHS[p.month - 1]} {p.year}
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${typeInfo?.badge}`}>{t.type}</span>
+                            {t.month && t.year && (
+                              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{MONTHS[t.month - 1]} {t.year}</span>
+                            )}
+                            {hasDiscount && (
+                              <span className="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-md font-extrabold flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-emerald-600" />
+                                Beasiswa {discPct}% {discInfo?.beasiswaAmount ? `(-${currency(discInfo.beasiswaAmount)})` : ''}
+                              </span>
+                            )}
+                            {isOverdue && (
+                              <span className="text-[10px] bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1.5 py-0.5 rounded font-bold">LEWAT JATUH TEMPO</span>
+                            )}
+                          </div>
+                          {t.dueDate && (
+                            <p className={`text-xs ${isOverdue ? 'text-red-500 font-semibold' : 'text-slate-500 dark:text-slate-400'}`}>
+                              Jatuh tempo: {formatDateShort(t.dueDate)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
+                        <span className="font-extrabold text-red-700 dark:text-red-300 text-base sm:text-lg">
+                          {t.amountPaid && t.amountPaid > 0 ? (
+                            <div className="text-right">
+                              <span className="text-xs line-through text-slate-400 block font-normal">{currency(t.amount)}</span>
+                              <span className="text-xs text-slate-500 font-bold block">Sisa Bayar:</span>
+                              <span>{currency(t.amount - t.amountPaid)}</span>
+                            </div>
+                          ) : (
+                            currency(t.amount)
+                          )}
                         </span>
-                      )}
+                        <Button 
+                          size="sm"
+                          className="h-8 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-2xs"
+                          onClick={() => {
+                            setSelectedTagihanId(t.id)
+                            setIsPaymentPopupOpen(true)
+                          }}
+                        >
+                          Bayar Sekarang
+                        </Button>
+                      </div>
                     </div>
-                    {p.paidDate && (
-                      <p className="text-xs text-emerald-500 ml-6 mt-0.5">Dibayar: {formatDate(p.paidDate)}</p>
-                    )}
-                    {p.notes && <p className="text-xs text-slate-400 ml-6 mt-0.5 italic">"{p.notes}"</p>}
+                  )
+                })}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* SPP Grid */}
+          <SppStatusGrid tagihans={tagihans} year={currentYear} />
+
+          {/* Riwayat Lunas */}
+          {sudahLunasPerType.map(t => {
+            const Icon = t.icon
+            return (
+              <Card key={t.value} className={`border ${t.border} shadow-2xs`}>
+                <CardHeader className={`${t.bg} rounded-t-xl pb-3`}>
+                  <CardTitle className={`text-base flex items-center gap-2 ${t.text}`}>
+                    <Icon className="w-4 h-4" />
+                    {t.label}
+                    <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full ${t.badge}`}>
+                      {t.items.length} lunas
+                    </span>
+                  </CardTitle>
+                  <CardDescription className={`${t.text} opacity-70`}>{t.desc}</CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 space-y-2">
+                  {t.items.map(p => (
+                    <div key={p.id} className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">{currency(p.amount)}</span>
+                          {p.month && p.year && (
+                            <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${t.badge}`}>
+                              {MONTHS[p.month - 1]} {p.year}
+                            </span>
+                          )}
+                        </div>
+                        {p.paidDate && (
+                          <p className="text-xs text-emerald-500 ml-6 mt-0.5">Dibayar: {formatDate(p.paidDate)}</p>
+                        )}
+                        {p.notes && <p className="text-xs text-slate-400 ml-6 mt-0.5 italic">"{p.notes}"</p>}
+                      </div>
+                    </div>
+                  ))}
+                  <div className={`flex justify-between items-center pt-2 font-bold ${t.text}`}>
+                    <span>Total {t.label}</span>
+                    <span>{currency(t.total)}</span>
                   </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      ) : (
+        /* TAB RIWAYAT TRANSAKSI PEMBAYARAN SISWA */
+        <div className="space-y-4">
+          <Card className="border border-emerald-100 dark:border-slate-800 shadow-xs">
+            <CardHeader className="pb-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-t-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base font-extrabold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                    <Clock className="w-4.5 h-4.5 text-emerald-600" />
+                    Log Riwayat Transaksi & Kwitansi Pembayaran
+                  </CardTitle>
+                  <CardDescription className="text-slate-500 dark:text-slate-400">
+                    Seluruh mutasi pembayaran (Lunas & Angsuran) yang telah berhasil disetorkan
+                  </CardDescription>
                 </div>
-              ))}
-              <div className={`flex justify-between items-center pt-2 font-bold ${t.text}`}>
-                <span>Total {t.label}</span>
-                <span>{currency(t.total)}</span>
+                <div className="text-left sm:text-right">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">Total Dana Disetor</span>
+                  <span className="text-base sm:text-lg font-black text-emerald-700 dark:text-emerald-300">
+                    {currency(totalAllPaid)}
+                  </span>
+                </div>
               </div>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-5">
+              {allPayments.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 space-y-2">
+                  <Receipt className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600" />
+                  <p className="font-medium text-sm">Belum ada riwayat transaksi pembayaran tercatat.</p>
+                  <p className="text-xs text-slate-400">Setiap setoran tunai, transfer VA, atau verifikasi bukti bayar akan muncul di sini secara rinci.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {allPayments.map((p, idx) => {
+                    const payDateFormatted = new Date(p.paymentDate).toLocaleDateString('id-ID', {
+                      weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    })
+                    const isAngsuran = p.notes?.toLowerCase().includes('angsuran') || p.tagihanStatus === 'ANGSURAN'
+
+                    return (
+                      <div
+                        key={p.id || idx}
+                        className="p-3.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-200 dark:hover:border-emerald-800 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+                      >
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 text-xs font-black px-2 py-0.5 rounded-md">
+                              {p.tagihanType}
+                            </span>
+                            {p.month && p.year && (
+                              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                {MONTHS[p.month - 1]} {p.year}
+                              </span>
+                            )}
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              isAngsuran
+                                ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                            }`}>
+                              {isAngsuran ? 'Angsuran / Cicilan' : 'Setoran Lunas'}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-baseline gap-2">
+                            <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                              {currency(p.amount)}
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              · {payDateFormatted}
+                            </span>
+                          </div>
+                          {p.notes && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                              Catatan: "{p.notes}"
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="shrink-0 flex items-center justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenReceipt(p)}
+                            className="h-8.5 px-3 text-xs font-bold border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg flex items-center gap-1.5 shadow-2xs"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-emerald-600" />
+                            Cetak Kwitansi
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
-        )
-      })}
+        </div>
+      )}
 
       {tagihans.length === 0 && (
         <Card className="border-dashed border-slate-200 dark:border-slate-800">
@@ -501,6 +701,15 @@ function StudentFinanceView({ student }: { student: StudentDetail }) {
           </CardContent>
         </Card>
       )}
+
+      <SingleReceiptPrintModal
+        open={receiptModalOpen}
+        onClose={() => {
+          setReceiptModalOpen(false)
+          setReceiptData(null)
+        }}
+        data={receiptData}
+      />
     </div>
   )
 }

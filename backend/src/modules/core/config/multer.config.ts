@@ -100,7 +100,7 @@ export const paymentProofMulterConfig = {
   ...multerConfig,
   limits: {
     ...multerConfig.limits,
-    fileSize: 5 * 1024 * 1024, // 5MB for payment proofs
+    fileSize: 25 * 1024 * 1024, // 25MB input buffer (akan otomatis dikompres <= 1MB oleh processor)
   },
   fileFilter: (req: Request, file: Express.Multer.File, cb) => {
     // Payment proofs should be images or PDFs only

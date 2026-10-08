@@ -73,12 +73,38 @@ export class UploadService {
 
     if (isImage) {
       try {
-        // Optimasi kompresi WebP dengan mempertahankan kualitas visual tinggi & ukuran file ringan
-        await sharp(buffer)
-          .rotate() // Menyesuaikan orientasi EXIF
-          .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
-          .webp({ quality: 82, effort: 4 })
-          .toFile(filePath);
+        // Multi-pass auto compression strictly <= 1MB (1024 * 1024 bytes)
+        const MAX_IMAGE_BYTES = 1024 * 1024; // 1MB
+        let quality = 82;
+        let targetWidth = 1600;
+        let targetHeight = 1600;
+        let outputBuffer: Buffer | null = null;
+        let pass = 0;
+        const maxPasses = 4;
+
+        while (pass < maxPasses) {
+          outputBuffer = await sharp(buffer)
+            .rotate() // Menyesuaikan orientasi EXIF kamera HP
+            .resize({ width: targetWidth, height: targetHeight, fit: 'inside', withoutEnlargement: true })
+            .webp({ quality, effort: 4 })
+            .toBuffer();
+
+          if (outputBuffer.length <= MAX_IMAGE_BYTES) {
+            break;
+          }
+
+          pass++;
+          quality = Math.max(40, Math.floor(quality * 0.75));
+          targetWidth = Math.floor(targetWidth * 0.8);
+          targetHeight = Math.floor(targetHeight * 0.8);
+        }
+
+        if (outputBuffer) {
+          await fs.promises.writeFile(filePath, outputBuffer);
+          this.logger.log(`Image compressed & saved (<= 1MB): ${filename} (${Math.round(outputBuffer.length / 1024)} KB, pass ${pass})`);
+        } else {
+          await fs.promises.writeFile(filePath, buffer);
+        }
       } catch (sharpError) {
         this.logger.warn(`Sharp conversion fallback: ${sharpError}`);
         await fs.promises.writeFile(filePath, buffer);
@@ -111,11 +137,34 @@ export class UploadService {
     const filePath = path.join(uploadPath, filename);
 
     try {
-      await sharp(buffer)
-        .rotate()
-        .resize({ width: 1920, height: 1080, fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 85 })
-        .toFile(filePath);
+      // Multi-pass auto compression strictly <= 1MB
+      const MAX_IMAGE_BYTES = 1024 * 1024;
+      let quality = 82;
+      let targetWidth = 1920;
+      let targetHeight = 1080;
+      let outputBuffer: Buffer | null = null;
+      let pass = 0;
+
+      while (pass < 4) {
+        outputBuffer = await sharp(buffer)
+          .rotate()
+          .resize({ width: targetWidth, height: targetHeight, fit: 'inside', withoutEnlargement: true })
+          .webp({ quality, effort: 4 })
+          .toBuffer();
+
+        if (outputBuffer.length <= MAX_IMAGE_BYTES) break;
+
+        pass++;
+        quality = Math.max(40, Math.floor(quality * 0.75));
+        targetWidth = Math.floor(targetWidth * 0.8);
+        targetHeight = Math.floor(targetHeight * 0.8);
+      }
+
+      if (outputBuffer) {
+        await fs.promises.writeFile(filePath, outputBuffer);
+      } else {
+        await fs.promises.writeFile(filePath, buffer);
+      }
     } catch {
       await fs.promises.writeFile(filePath, buffer);
     }

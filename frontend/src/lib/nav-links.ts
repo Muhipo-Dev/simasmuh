@@ -252,7 +252,7 @@ export const keuanganAllLinks = [
   { name: 'Penerimaan Kas & SPP', href: '/keuangan/pemasukan', icon: Wallet, group: 'Manajemen Finansial' },
   { name: 'Pengeluaran & Belanja', href: '/keuangan/pengeluaran', icon: Receipt, group: 'Manajemen Finansial' },
   { name: 'Integrasi Virtual Account', href: '/keuangan/virtual-account', icon: Database, group: 'Manajemen Finansial' },
-  { name: 'Verifikasi Bukti Transaksi', href: '/keuangan/file-explorer', icon: HardDrive, group: 'Manajemen Finansial' },
+  { name: 'Verifikasi Bukti Bayar', href: '/keuangan/verifikasi-pembayaran', icon: FileCheck, group: 'Manajemen Finansial' },
   { name: 'Penggajian & Payroll', href: '/keuangan/penggajian', icon: Banknote, group: 'Manajemen Finansial' },
   { name: 'Tarif & Skema Biaya', href: '/keuangan/pengaturan', icon: Settings, group: 'Manajemen Finansial' },
   { name: 'Laporan Arus Kas & Finansial', href: '/keuangan/laporan', icon: FileText, group: 'Manajemen Finansial' },
@@ -276,7 +276,7 @@ export const keuanganMasukLinks = [
   // Fitur Keuangan Masuk
   { name: 'Penerimaan Kas & SPP', href: '/keuangan/pemasukan', icon: Wallet, group: 'Penerimaan Kas' },
   { name: 'Integrasi Virtual Account', href: '/keuangan/virtual-account', icon: Database, group: 'Penerimaan Kas' },
-  { name: 'Verifikasi Bukti Bayar', href: '/keuangan/file-explorer', icon: HardDrive, group: 'Penerimaan Kas' },
+  { name: 'Verifikasi Bukti Bayar', href: '/keuangan/verifikasi-pembayaran', icon: FileCheck, group: 'Penerimaan Kas' },
   { name: 'Tarif & Skema Biaya', href: '/keuangan/pengaturan', icon: Settings, group: 'Penerimaan Kas' },
   { name: 'Laporan Penerimaan', href: '/keuangan/laporan', icon: FileText, group: 'Penerimaan Kas' },
 
@@ -298,7 +298,6 @@ export const keuanganKeluarLinks = [
 
   // Fitur Keuangan Keluar
   { name: 'Pengeluaran & Belanja', href: '/keuangan/pengeluaran', icon: Receipt, group: 'Pengeluaran Kas' },
-  { name: 'Verifikasi Bukti Belanja', href: '/keuangan/file-explorer', icon: HardDrive, group: 'Pengeluaran Kas' },
   { name: 'Laporan Pengeluaran', href: '/keuangan/laporan', icon: FileText, group: 'Pengeluaran Kas' },
 
   // Layanan Pribadi (Paling Bawah)
@@ -366,7 +365,7 @@ export const godLinks = [
   { name: 'Penerimaan Kas & SPP', href: '/keuangan/pemasukan', icon: Wallet, group: 'Manajemen Finansial' },
   { name: 'Pengeluaran & Belanja', href: '/keuangan/pengeluaran', icon: Receipt, group: 'Manajemen Finansial' },
   { name: 'Penggajian Pegawai', href: '/keuangan/penggajian', icon: Banknote, group: 'Manajemen Finansial' },
-  { name: 'Verifikasi Bukti Bayar', href: '/keuangan/file-explorer', icon: HardDrive, group: 'Manajemen Finansial' },
+  { name: 'Verifikasi Bukti Bayar', href: '/keuangan/verifikasi-pembayaran', icon: FileCheck, group: 'Manajemen Finansial' },
   { name: 'Integrasi Virtual Account', href: '/keuangan/virtual-account', icon: Database, group: 'Manajemen Finansial' },
   { name: 'Laporan Finansial', href: '/keuangan/laporan', icon: FileText, group: 'Manajemen Finansial' },
   { name: 'Tarif & Skema Biaya', href: '/keuangan/pengaturan', icon: Settings, group: 'Manajemen Finansial' },

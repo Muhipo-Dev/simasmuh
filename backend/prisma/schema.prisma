@@ -330,6 +330,9 @@ model Setting {
   smtpFrom             String? @default("dev@smamuhipo.sch.id")
   smtpFromName         String? @default("SIMASMUH SMA Muhammadiyah 1 Ponorogo")
   studentCardTemplateUrl String?
+  publicDomainUrl        String? @default("https://simasmuh.razagopo.my.id")
+  googleClientId         String?
+  googleClientSecret     String?
 }
 
 model Announcement {

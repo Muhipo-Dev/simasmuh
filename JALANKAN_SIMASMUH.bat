@@ -37,7 +37,11 @@ if not defined PS_EXEC (
 :: 3. Jika PowerShell ditemukan dan simasmuh.ps1 tersedia, jalankan PowerShell Engine
 if defined PS_EXEC (
     if exist "%ROOT_DIR%simasmuh.ps1" (
-        "%PS_EXEC%" -NoProfile -ExecutionPolicy Bypass -File "%ROOT_DIR%simasmuh.ps1" -Mode "%~1"
+        if "%~1"=="" (
+            "%PS_EXEC%" -NoProfile -ExecutionPolicy Bypass -File "%ROOT_DIR%simasmuh.ps1"
+        ) else (
+            "%PS_EXEC%" -NoProfile -ExecutionPolicy Bypass -File "%ROOT_DIR%simasmuh.ps1" -Mode "%~1"
+        )
         if not errorlevel 1 (
             exit /b 0
         )
@@ -82,6 +86,7 @@ echo  |  [7] Restart Aplikasi                   |
 echo  |  [8] Rebuild ^& Restart (Full)           |
 echo  |  [9] Menonaktifkan Mode / Stop Aplikasi |
 echo  |  [10] Build Aplikasi (Tanpa Menjalankan)|
+echo  |  [11] Cek Kesiapan Sistem Total (All)   |
 echo  |  [12] Buka Browser (localhost:3000)     |
 echo  |  [15] Setup File .env                  |
 echo  |  [16] Install Dependencies (Semua)     |
@@ -98,6 +103,7 @@ if "%CHOICE%"=="7" goto CMD_RESTART
 if "%CHOICE%"=="8" goto CMD_REBUILD_RESTART
 if "%CHOICE%"=="9" goto CMD_STOP_APPS
 if "%CHOICE%"=="10" goto CMD_BUILD_ONLY
+if "%CHOICE%"=="11" goto CMD_CHECK_READINESS
 if "%CHOICE%"=="12" goto CMD_OPEN_BROWSER
 if "%CHOICE%"=="15" goto CMD_SETUP_ENV
 if "%CHOICE%"=="16" goto CMD_INSTALL_DEPS
@@ -135,10 +141,10 @@ echo  >> Menjalankan Backend API (Port 3001)...
 start "SIMASMUH-Backend" /D "%BACKEND_DIR%" cmd /c "npm run start:dev"
 
 echo  >> Menjalankan Frontend Web (Port 3000)...
-start "SIMASMUH-Frontend" /D "%FRONTEND_DIR%" cmd /c "npm run dev"
+start "SIMASMUH-Frontend" /D "%FRONTEND_DIR%" cmd /c "set NEXTAUTH_URL=http://localhost:3000&& npm run dev"
 
 echo  >> Menjalankan Prisma Studio (Port 51212)...
-start "SIMASMUH-PrismaStudio" /D "%BACKEND_DIR%" cmd /c "npx prisma studio --port 51212 --browser none"
+start "SIMASMUH-PrismaStudio" /D "%BACKEND_DIR%" cmd /c "npm run studio"
 
 echo.
 echo  [OK] Seluruh layanan SIMASMUH Mode Development telah diluncurkan!
@@ -161,10 +167,10 @@ echo  >> Menjalankan Backend API (Port 3001)...
 start "SIMASMUH-Backend" /D "%BACKEND_DIR%" cmd /c "npm run start:prod"
 
 echo  >> Menjalankan Frontend Web (Port 3000)...
-start "SIMASMUH-Frontend" /D "%FRONTEND_DIR%" cmd /c "npm run start"
+start "SIMASMUH-Frontend" /D "%FRONTEND_DIR%" cmd /c "set NEXTAUTH_URL=http://localhost:3000&& npm run start"
 
 echo  >> Menjalankan Prisma Studio (Port 51212)...
-start "SIMASMUH-PrismaStudio" /D "%BACKEND_DIR%" cmd /c "npx prisma studio --port 51212 --browser none"
+start "SIMASMUH-PrismaStudio" /D "%BACKEND_DIR%" cmd /c "npm run studio"
 
 echo.
 echo  [OK] Seluruh layanan SIMASMUH Mode Production telah diluncurkan!
@@ -183,8 +189,8 @@ echo.
 echo  >> Menjalankan SIMASMUH dalam Mode Testing/Debugging...
 call :CMD_STOP_PORTS
 start "SIMASMUH-Backend" /D "%BACKEND_DIR%" cmd /c "npm run start:debug"
-start "SIMASMUH-Frontend" /D "%FRONTEND_DIR%" cmd /c "npm run dev"
-start "SIMASMUH-PrismaStudio" /D "%BACKEND_DIR%" cmd /c "npx prisma studio --port 51212 --browser none"
+start "SIMASMUH-Frontend" /D "%FRONTEND_DIR%" cmd /c "set NEXTAUTH_URL=http://localhost:3000&& npm run dev"
+start "SIMASMUH-PrismaStudio" /D "%BACKEND_DIR%" cmd /c "npm run studio"
 echo  [OK] Mode Debugging aktif.
 pause
 goto CMD_MAIN_MENU
@@ -244,6 +250,119 @@ call npm run build
 cd /d "%ROOT_DIR%"
 echo.
 echo  [OK] Proses Build selesai.
+pause
+goto CMD_MAIN_MENU
+
+:: ------------------------------------------------------------
+:: MENU 11: CEK KESIAPAN SISTEM TOTAL
+:: ------------------------------------------------------------
+:CMD_CHECK_READINESS
+cls
+echo.
+echo  +==================================================+
+echo  |        PEMERIKSAAN KESIAPAN SISTEM TOTAL         |
+echo  +==================================================+
+echo.
+echo  1. Memeriksa Runtimes Dasar Sistem...
+where node >nul 2>&1
+if not errorlevel 1 (
+    for /f "tokens=*" %%v in ('node -v 2^>nul') do echo  [OK] Node.js terpasang: %%v
+) else (
+    echo  [ERR] Node.js belum terpasang di PATH!
+)
+
+where npm >nul 2>&1
+if not errorlevel 1 (
+    for /f "tokens=*" %%v in ('npm -v 2^>nul') do echo  [OK] NPM terpasang: %%v
+) else (
+    echo  [ERR] NPM belum terpasang di PATH!
+)
+
+where python >nul 2>&1
+if not errorlevel 1 (
+    for /f "tokens=*" %%v in ('python --version 2^>nul') do echo  [OK] Python terpasang: %%v
+) else (
+    echo  [i]  Python belum terpasang (Opsional untuk Face AI)
+)
+
+where docker >nul 2>&1
+if not errorlevel 1 (
+    echo  [OK] Docker CLI terdeteksi (Siap untuk Supabase Studio port 54323 ^& DB 54322)
+) else (
+    echo  [i]  Docker Desktop belum aktif
+)
+
+echo.
+echo  2. Memeriksa Berkas Konfigurasi .env...
+if exist "%BACKEND_DIR%\.env" (
+    echo  [OK] Backend .env terpasang
+) else (
+    echo  [ERR] Backend .env BELUM ADA! (Pilih Menu 15)
+)
+
+if exist "%FRONTEND_DIR%\.env" (
+    echo  [OK] Frontend .env terpasang
+) else (
+    echo  [ERR] Frontend .env BELUM ADA! (Pilih Menu 15)
+)
+
+if exist "%FACE_AI_DIR%\.env" (
+    echo  [OK] Face AI .env terpasang
+) else (
+    echo  [i]  Face AI .env belum dibuat (Opsional)
+)
+
+echo.
+echo  3. Memeriksa Modul ^& Dependencies...
+if exist "%BACKEND_DIR%\node_modules" (
+    echo  [OK] Backend dependencies (node_modules) siap
+) else (
+    echo  [ERR] Backend node_modules belum diinstall! (Pilih Menu 16)
+)
+
+if exist "%FRONTEND_DIR%\node_modules" (
+    echo  [OK] Frontend dependencies (node_modules) siap
+) else (
+    echo  [ERR] Frontend node_modules belum diinstall! (Pilih Menu 16)
+)
+
+if exist "%BACKEND_DIR%\node_modules\.prisma\client" (
+    echo  [OK] Prisma Client Engine tergenerate
+) else (
+    echo  [i]  Prisma Client Engine belum digenerate
+)
+
+echo.
+echo  4. Memeriksa Direktori External Storage...
+set "STORAGE_FOUND=C:\simasmuh_storage"
+if exist "D:\simasmuh_storage" set "STORAGE_FOUND=D:\simasmuh_storage"
+if exist "%STORAGE_FOUND%" (
+    echo  [OK] Folder storage aktif: %STORAGE_FOUND%
+) else (
+    echo  [i]  Folder storage akan dibuat otomatis saat startup
+)
+
+echo.
+echo  5. Memeriksa Port Layanan ^& Koneksi...
+call :CHECK_PORT_STATUS 3000 "Frontend Web     "
+call :CHECK_PORT_STATUS 3001 "Backend API      "
+call :CHECK_PORT_STATUS 51212 "Prisma Studio    "
+call :CHECK_PORT_STATUS 54323 "Supabase Studio  "
+call :CHECK_PORT_STATUS 54322 "Supabase DB Port "
+
+echo.
+echo  +==================================================+
+echo  |          STATUS KESIAPAN KESELURUHAN             |
+echo  +==================================================+
+if exist "%BACKEND_DIR%\node_modules" if exist "%FRONTEND_DIR%\node_modules" (
+    echo  [OK] SISTEM SIAP DIGUNAKAN 100%!
+    echo  Silakan pilih Menu 1 (Mode Dev) atau Menu 2 (Mode Prod).
+) else (
+    echo  [!] SISTEM MEMERLUKAN SETUP DEPENDENCIES/ENV
+    echo  Silakan jalankan Menu 15, 16, atau 17.
+)
+echo  +==================================================+
+echo.
 pause
 goto CMD_MAIN_MENU
 

@@ -44,6 +44,23 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-10-08 (v1.9.5 - Integrasi Terpadu Google OAuth, Manajemen Domain Publik Terpusat, Adaptive Dynamic Routing, Banner Rekomendasi Email Akun, dan Optimasi Autentikasi Institusional):**
+  * **Integrasi Google OAuth Terpadu (`auth.service.ts` & NextAuth GoogleProvider):**
+    * Penambahan alur autentikasi Google OAuth untuk login 1-klik akun terdaftar (Pegawai/Guru, Siswa, Wali Murid) dengan pencocokan email pengguna terverifikasi di basis data PostgreSQL.
+    * Penerapan endpoint khusus penautan akun Google (`/users/:id/link-google-oauth`) pada menu Profil Pengguna lengkap dengan badge status verifikasi terhubung.
+    * Pembaruan tampilan halaman login (`/login`) dengan tombol "Masuk dengan Google" berestetika institusional modern dan pemisah "Atau Autentikasi Terintegrasi".
+  * **Manajemen Domain Publik & Kredensial OAuth Terpusat (`/pengaturan/sistem`):**
+    * Penambahan panel konfigurasi *Domain Publik Utama Sistem & Integrasi Google OAuth* di menu Pengaturan Sistem dengan persistensi database pada model `Setting` (`publicDomainUrl`, `googleClientId`, `googleClientSecret`).
+    * Fitur penyalin otomatis satu klik (*One-Click Copy*) untuk *Authorized JavaScript Origins* dan *Authorized Redirect URIs* (baik domain publik resmi maupun IP/Host akses aktif client) yang siap digunakan di Google Cloud Console.
+  * **Adaptive Network & Trusted Host Dynamic Resolver (`route.ts` & `api-config.ts`):**
+    * Penerapan standar Rule 10 `AGENTS.md` di mana handler NextAuth secara dinamis mengekstrak header host request aktif (`Host`, `X-Forwarded-Host`, `X-Forwarded-Proto`) dan memadukannya dengan domain terkonfigurasi di Pengaturan Sistem sebagai *trusted origins*.
+    * Peniadaan hardcoded redirect localhost; pengalihan pasca-login secara otomatis mengikuti domain publik, tunnel, maupun IP LAN/Wi-Fi server yang sedang dibuka oleh client.
+  * **Banner Notifikasi Rekomendasi Lengkapi Email (`EmailRecommendationBanner.tsx`):**
+    * Banner interaktif di dashboard bagi akun yang belum memiliki email terdaftar untuk menghubungkan akun Google (Gmail) secara cepat melalui modal dialog instan tanpa harus berpindah halaman.
+    * Sinkronisasi otomatis dengan status profil pengguna dan sistem pengiriman notifikasi resmi sekolah.
+  * **Penyelarasan Desain Institusional & Type-Safe Integrity:**
+    * Eliminasi istilah kasual/non-institusional pada alur login, penyesuaian padding layout, dan validasi penuh TypeScript (0 error) & build produksi Next.js Turbopack.
+
 * **2026-10-07 (v1.9.4 - Manajemen Ekstrakurikuler Dinamis, Auto Sync Akun Siswa & Wali Murid, Optimasi Finansial Pemasukan, Waiting Room Permanen, Notifikasi Personal & Hak Akses Pembina):**
   * **Waiting Room Permanen & Queue Engine (`waiting-room.service.ts`):**
     * Penerapan persistensi konfigurasi waiting room (status aktif, kapasitas maksimum, dan interval) langsung ke tabel basis data `Setting` sehingga pengaturan tidak ter-reset saat server restart.

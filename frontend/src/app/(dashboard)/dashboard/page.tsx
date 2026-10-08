@@ -3191,13 +3191,6 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          {/* Log Absensi Harian Pegawai / Guru */}
-          {(role === 'GURU' || role === 'KARYAWAN' || role === 'PEGAWAI' || role === 'STAFF') && (
-            <div>
-              {renderAttendanceLog(false)}
-            </div>
-          )}
-
           {/* Widget Berita & Pengumuman Sekolah */}
           <NewsArticleListWidget announcements={announcements} limit={4} />
 

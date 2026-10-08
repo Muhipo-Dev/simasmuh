@@ -168,6 +168,11 @@ export default function PenggajianPage() {
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([])
   const [isBulkPrinting, setIsBulkPrinting] = useState(false)
 
+  // State Modal Set Pegawai / Status Jabatan Tetap (Fixed GTP, PTP, GTTP, PTTP, CS)
+  const [showStaffStatusModal, setShowStaffStatusModal] = useState(false)
+  const [staffStatusSearch, setStaffStatusSearch] = useState('')
+  const [updatingStaffId, setUpdatingStaffId] = useState<string | null>(null)
+
   // Fetch Summary Penggajian
   const { data: payroll, isLoading } = useQuery<PayrollStaff[]>({
     queryKey: ['payroll-summary', selectedYear, selectedMonth],
@@ -417,7 +422,7 @@ export default function PenggajianPage() {
     `
   }
 
-  // Common Print Window Generator (A4 Portrait, 2 slip per lembar)
+  // Common Print Window Generator (A4 Landscape, 2 slip per lembar - kiri & kanan)
   const openPrintSlipsWindow = (slipsHtml: string, title = 'Cetak Slip Gaji') => {
     const printWindow = window.open('', '_blank')
     if (!printWindow) return
@@ -430,8 +435,8 @@ export default function PenggajianPage() {
           <title>${title}</title>
           <style>
             @page {
-              size: A4 portrait;
-              margin: 0.7cm 1cm;
+              size: A4 landscape;
+              margin: 6mm 8mm;
             }
             * {
               box-sizing: border-box;
@@ -440,27 +445,41 @@ export default function PenggajianPage() {
             }
             body { 
               font-family: 'Courier New', Courier, monospace, 'Arial', sans-serif; 
-              font-size: 10px; 
+              font-size: 8.5pt; 
               color: #111827; 
               line-height: 1.15;
               padding: 0;
               margin: 0;
               background: #fff;
             }
-            .slip-card-print {
-              border: 1px solid #475569;
-              padding: 7px 12px;
-              margin-bottom: 10px;
+            .slip-page-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              column-gap: 8mm;
+              width: 100%;
               page-break-inside: avoid;
               break-inside: avoid;
-              background: #fff;
-              border-radius: 4px;
-            }
-            /* Setiap 2 slip dalam 1 halaman A4 */
-            .slip-card-print:nth-of-type(2n) {
-              margin-bottom: 0px;
               page-break-after: always;
               break-after: page;
+              min-height: calc(100vh - 12mm);
+            }
+            .slip-page-grid:last-of-type {
+              page-break-after: auto;
+              break-after: auto;
+            }
+            .slip-card-print {
+              border: 1px solid #334155;
+              padding: 6px 10px;
+              background: #fff;
+              border-radius: 4px;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              box-sizing: border-box;
+            }
+            .slip-placeholder {
+              visibility: hidden;
+              border: 1px dashed transparent;
             }
             .header-kop {
               display: flex;
@@ -569,14 +588,19 @@ export default function PenggajianPage() {
     printWindow.document.close()
   }
 
-  // Handler Cetak Slip Gaji Single
+  // Handler Cetak Slip Gaji Single (A4 Lanskap 1 Lembar)
   const handlePrintSlip = () => {
     if (!slipData) return
-    const slipHtml = renderSingleSlipHtml(slipData)
+    const slipHtml = `
+      <div class="slip-page-grid">
+        ${renderSingleSlipHtml(slipData)}
+        <div class="slip-card-print slip-placeholder"></div>
+      </div>
+    `
     openPrintSlipsWindow(slipHtml, `Slip Gaji - ${slipData?.staff?.name || 'Pegawai'}`)
   }
 
-  // Handler Cetak Banyak Slip Gaji (Semua / Terpilih)
+  // Handler Cetak Banyak Slip Gaji (Semua / Terpilih - A4 Lanskap 2 Slip per Lembar)
   const handlePrintBulkSlips = async (targetStaffIds: string[]) => {
     if (!targetStaffIds || targetStaffIds.length === 0) {
       Swal.fire({
@@ -603,7 +627,20 @@ export default function PenggajianPage() {
         throw new Error('Tidak ada data slip gaji yang dapat dimuat.')
       }
 
-      const combinedHtml = allSlips.map(s => renderSingleSlipHtml(s)).join('\n')
+      // Gabungkan per 2 slip dalam 1 halaman grid A4 Lanskap (kiri & kanan)
+      const pagesHtml: string[] = []
+      for (let i = 0; i < allSlips.length; i += 2) {
+        const slip1 = renderSingleSlipHtml(allSlips[i])
+        const slip2 = allSlips[i + 1] ? renderSingleSlipHtml(allSlips[i + 1]) : '<div class="slip-card-print slip-placeholder"></div>'
+        pagesHtml.push(`
+          <div class="slip-page-grid">
+            ${slip1}
+            ${slip2}
+          </div>
+        `)
+      }
+
+      const combinedHtml = pagesHtml.join('\n')
       openPrintSlipsWindow(combinedHtml, `Slip Gaji Massal (${allSlips.length} Pegawai)`)
     } catch (err: any) {
       Swal.fire({
@@ -1031,25 +1068,27 @@ export default function PenggajianPage() {
     }
   })
 
-  // Mutation Update Status Kepegawaian (PTTP, GTTP, GTP, PTP)
+  // Mutation Update Status Kepegawaian & Masa Kerja (Fixed Basis Data)
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ userId, status }: { userId: string; status: string }) => {
+    mutationFn: async ({ userId, status, masaKerja }: { userId: string; status?: string; masaKerja?: number }) => {
+      setUpdatingStaffId(userId)
       const res = await authenticatedFetch(`/api-backend/finance/payroll/employment-status/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employmentStatus: status }),
+        body: JSON.stringify({ employmentStatus: status, masaKerja }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => null)
-        throw new Error(err?.message || 'Gagal mengubah status jabatan')
+        throw new Error(err?.message || 'Gagal mengubah status / masa kerja')
       }
       return res.json()
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['payroll-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['attendance-finance-rekap'] })
       Swal.fire({
-        title: 'Status Diperbarui',
-        text: data?.message || 'Status jabatan pegawai berhasil diubah!',
+        title: 'Data Diperbarui',
+        text: data?.message || 'Pengaturan status & masa kerja pegawai berhasil disimpan secara tetap (fixed)!',
         icon: 'success',
         timer: 1500,
         showConfirmButton: false,
@@ -1058,9 +1097,12 @@ export default function PenggajianPage() {
     onError: (err: any) => {
       Swal.fire({
         title: 'Gagal',
-        text: err?.message || 'Gagal memperbarui status kepegawaian',
+        text: err?.message || 'Gagal memperbarui data kepegawaian',
         icon: 'error',
       })
+    },
+    onSettled: () => {
+      setUpdatingStaffId(null)
     }
   })
 
@@ -1454,6 +1496,16 @@ export default function PenggajianPage() {
           </div>
 
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Button
+              onClick={() => setShowStaffStatusModal(true)}
+              variant="outline"
+              className="border-teal-500 text-teal-800 bg-teal-50/80 hover:bg-teal-100 font-bold text-xs h-9"
+              title="Atur Status Jabatan Pegawai Tetap (GTP, PTP, GTTP, PTTP, CS) Secara Fixed Tanpa Mengubah Tiap Bulan"
+            >
+              <UserCheck className="w-3.5 h-3.5 mr-1.5 text-teal-600" />
+              Set Status Pegawai
+            </Button>
+
             <Button
               onClick={() => setShowMatrixModal(true)}
               variant="outline"
@@ -2729,6 +2781,173 @@ export default function PenggajianPage() {
             </span>
             <Button variant="outline" onClick={() => setShowRekapKeuanganModal(false)}>
               Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* MODAL SET STATUS PEGAWAI (FIXED/PERMANEN GTP, PTP, GTTP, PTTP, CS)       */}
+      {/* ========================================================================= */}
+      <Dialog open={showStaffStatusModal} onOpenChange={setShowStaffStatusModal}>
+        <DialogContent className="sm:max-w-4xl lg:max-w-5xl w-[95vw] max-h-[92vh] flex flex-col p-4 sm:p-6 overflow-hidden">
+          <DialogHeader className="pb-3 border-b border-slate-200 shrink-0">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <DialogTitle className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center shrink-0">
+                    <UserCheck className="w-4 h-4" />
+                  </div>
+                  Pengaturan Status Pegawai Tetap (Fixed)
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-1">
+                  Atur status kepegawaian (GTP, PTP, GTTP, PTTP, CS) secara permanen di database tanpa perlu diatur ulang setiap bulannya.
+                </DialogDescription>
+              </div>
+            </div>
+
+            {/* Searchbar Filter Pegawai */}
+            <div className="mt-3">
+              <Input
+                placeholder="Cari nama pegawai, NIP, atau jabatan..."
+                value={staffStatusSearch}
+                onChange={(e) => setStaffStatusSearch(e.target.value)}
+                className="h-9 text-xs bg-slate-50 border-slate-200"
+              />
+            </div>
+          </DialogHeader>
+
+          {/* Konten Daftar Tabel Pegawai */}
+          <div className="flex-1 overflow-y-auto py-2">
+            <div className="rounded-md border border-slate-200 overflow-hidden">
+              <Table className="text-xs">
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead className="w-12 text-center">No</TableHead>
+                    <TableHead className="min-w-[220px]">Nama Pegawai & Identitas</TableHead>
+                    <TableHead className="w-44 text-center">Peran / Posisi</TableHead>
+                    <TableHead className="w-48 text-center">Status Jabatan Tetap</TableHead>
+                    <TableHead className="w-36 text-center">Masa Kerja (Thn)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-10 text-slate-500">
+                        <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-teal-600" />
+                        Memuat daftar pegawai...
+                      </TableCell>
+                    </TableRow>
+                  ) : !payroll || payroll.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-10 text-slate-500">
+                        Belum ada data pegawai.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    payroll
+                      .filter((p) => {
+                        if (!staffStatusSearch) return true
+                        const q = staffStatusSearch.toLowerCase()
+                        return (
+                          (p.name && p.name.toLowerCase().includes(q)) ||
+                          (p.nip && p.nip.toLowerCase().includes(q)) ||
+                          (p.roles && p.roles.toLowerCase().includes(q)) ||
+                          (p.employmentStatus && p.employmentStatus.toLowerCase().includes(q))
+                        )
+                      })
+                      .map((p, idx) => {
+                        const isUpdating = updatingStaffId === p.id
+                        return (
+                          <TableRow key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                            <TableCell className="text-center font-medium text-slate-500">{idx + 1}</TableCell>
+                            <TableCell>
+                              <div className="font-bold text-slate-900">{p.name}</div>
+                              <div className="text-[11px] text-slate-500 mt-0.5">
+                                NIP: {p.nip || '-'} • Telp: {p.phone || '-'}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 inline-block max-w-[170px] truncate" title={p.roles}>
+                                {p.roles || p.role}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <Select
+                                  value={p.employmentStatus || 'GTTP'}
+                                  onValueChange={(val) => {
+                                    if (val && val !== p.employmentStatus) {
+                                      updateStatusMutation.mutate({ userId: p.id, status: val })
+                                    }
+                                  }}
+                                  disabled={isUpdating}
+                                >
+                                  <SelectTrigger className="w-[140px] h-8 text-xs font-bold bg-white border-slate-300">
+                                    {isUpdating ? (
+                                      <div className="flex items-center gap-1.5 text-teal-600">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        <span>Menyimpan...</span>
+                                      </div>
+                                    ) : (
+                                      <SelectValue placeholder="Pilih Status" />
+                                    )}
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="GTP" className="font-semibold text-emerald-700">GTP (Guru Tetap)</SelectItem>
+                                    <SelectItem value="PTP" className="font-semibold text-blue-700">PTP (Pegawai Tetap)</SelectItem>
+                                    <SelectItem value="GTTP" className="font-semibold text-amber-700">GTTP (Guru Tdk Tetap)</SelectItem>
+                                    <SelectItem value="PTTP" className="font-semibold text-purple-700">PTTP (Peg. Tdk Tetap)</SelectItem>
+                                    <SelectItem value="CS" className="font-semibold text-slate-700">CS (Kebersihan)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  defaultValue={p.masaKerja ?? 0}
+                                  key={`mk-${p.id}-${p.masaKerja}`}
+                                  className="w-20 h-8 text-xs text-center font-bold bg-white border-slate-300"
+                                  disabled={isUpdating}
+                                  onBlur={(e) => {
+                                    const val = parseInt(e.target.value, 10) || 0
+                                    if (val !== (p.masaKerja ?? 0)) {
+                                      updateStatusMutation.mutate({ userId: p.id, masaKerja: val })
+                                    }
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const val = parseInt((e.target as HTMLInputElement).value, 10) || 0
+                                      if (val !== (p.masaKerja ?? 0)) {
+                                        updateStatusMutation.mutate({ userId: p.id, masaKerja: val })
+                                      }
+                                    }
+                                  }}
+                                />
+                                <span className="text-[11px] text-slate-500 font-medium">Tahun</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row justify-between items-center pt-3 border-t border-slate-200 shrink-0 gap-2">
+            <span className="text-xs text-slate-500">
+              Perubahan status jabatan & masa kerja otomatis disimpan tetap untuk seluruh perhitungan slip gaji & penggajian.
+            </span>
+            <Button
+              className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8 px-4"
+              onClick={() => setShowStaffStatusModal(false)}
+            >
+              Selesai
             </Button>
           </DialogFooter>
         </DialogContent>

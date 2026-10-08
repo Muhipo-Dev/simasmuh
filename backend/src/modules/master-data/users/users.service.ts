@@ -475,9 +475,6 @@ export class UsersService {
         subRole5: true,
         avatarUrl: true,
         address: true,
-        employmentStatus: true,
-        bankName: true,
-        bankAccountNumber: true,
         bankAccountHolder: true,
         teacherProfile: true,
       },
@@ -488,6 +485,78 @@ export class UsersService {
     }
 
     return updated;
+  }
+
+  async linkGoogleOAuth(
+    userId: string,
+    email: string,
+    name?: string,
+    avatarUrl?: string,
+  ) {
+    if (!email || !email.includes('@')) {
+      throw new BadRequestException('Format email Google tidak valid');
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Cek apakah email sudah terdaftar pada user lain
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        email: { equals: cleanEmail, mode: 'insensitive' },
+        NOT: { id: userId },
+      },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException(
+        `Email '${cleanEmail}' sudah terhubung ke akun '${existingUser.username}' (${existingUser.name}). Silakan gunakan email lain.`,
+      );
+    }
+
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!currentUser) {
+      throw new NotFoundException('Data pengguna tidak ditemukan');
+    }
+
+    const updateData: any = {
+      email: cleanEmail,
+    };
+
+    if (!currentUser.avatarUrl && avatarUrl) {
+      updateData.avatarUrl = avatarUrl;
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        username: true,
+        role: true,
+        avatarUrl: true,
+      },
+    });
+
+    await this.systemLogService.log({
+      category: 'AUTH',
+      level: 'INFO',
+      action: 'GOOGLE_OAUTH_LINKED',
+      message: `Akun '${currentUser.username}' (${currentUser.name}) berhasil dihubungkan dengan Google OAuth (${cleanEmail}).`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+    });
+
+    return {
+      success: true,
+      message: `Email ${cleanEmail} berhasil dihubungkan dengan akun Anda! Sekarang Anda dapat login dengan 1-klik melalui tombol Masuk dengan Google.`,
+      user: updated,
+    };
   }
 
   async remove(id: string, currentUser?: any) {

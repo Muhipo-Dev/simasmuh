@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
+import { RolesGuard } from '../../core/auth/roles.guard';
+import { Roles, UserRole } from '../../core/auth/roles.decorator';
 import { SuperadminGuard } from '../../core/auth/permission.guard';
 import type { Response } from 'express';
 
@@ -118,7 +120,8 @@ export class StudentsController {
   }
 
   @Patch(':id/toggle-active')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.ADMIN_TU, 'KEPEGAWAIAN', 'SDM', 'WAKA_HUMAS_SDM', 'HUMAS_SDM', 'KESISWAAN', 'WAKA_KESISWAAN')
   toggleActive(
     @Param('id') id: string,
     @Body('isActive') isActive: boolean,
@@ -127,7 +130,8 @@ export class StudentsController {
   }
 
   @Post('bulk-toggle-active')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.ADMIN_TU, 'KEPEGAWAIAN', 'SDM', 'WAKA_HUMAS_SDM', 'HUMAS_SDM', 'KESISWAAN', 'WAKA_KESISWAAN')
   bulkToggleActive(
     @Body('ids') ids: string[],
     @Body('isActive') isActive: boolean,
@@ -136,7 +140,8 @@ export class StudentsController {
   }
 
   @Patch(':id/status')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.ADMIN_TU, 'KEPEGAWAIAN', 'SDM', 'WAKA_HUMAS_SDM', 'HUMAS_SDM', 'KESISWAAN', 'WAKA_KESISWAAN')
   setStudentStatus(
     @Param('id') id: string,
     @Body('status')
@@ -147,7 +152,8 @@ export class StudentsController {
   }
 
   @Post('bulk-status')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.ADMIN_TU, 'KEPEGAWAIAN', 'SDM', 'WAKA_HUMAS_SDM', 'HUMAS_SDM', 'KESISWAAN', 'WAKA_KESISWAAN')
   bulkSetStudentStatus(
     @Body('ids') ids: string[],
     @Body('status')

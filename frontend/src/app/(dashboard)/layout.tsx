@@ -172,7 +172,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      <main className={`flex-1 flex flex-col min-h-dvh w-full min-w-0 overflow-x-hidden print:min-h-0 print:m-0 print:p-0 print:w-full print:bg-white print:text-black print:static print:overflow-visible transition-all duration-200 ${hideSidebar ? '' : 'lg:ml-68 xl:ml-72 print:lg:ml-0'}`}>
+      <main className={`flex-1 flex flex-col min-h-dvh w-full min-w-0 overflow-x-hidden print:min-h-0 print:m-0 print:p-0 print:w-full print:bg-white print:text-black print:static print:overflow-visible transition-all duration-200 ${hideSidebar ? '' : 'lg:ml-70 xl:ml-74 2xl:ml-76 lg:pr-4 xl:pr-5 2xl:pr-6 print:lg:ml-0 print:lg:pr-0'}`}>
         {/* Navbar Induk Terpadu (Kiri Logo, Kanan Info TA, Theme, Profil, Logout) */}
         <div className="print:hidden">
           <AppNavbar
@@ -185,7 +185,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
 
                 {/* Tahun Ajaran Badge (Otomatis menyesuaikan saat zoom tinggi / viewport sempit) */}
-                <div className="hidden lg:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-[10px] sm:text-xs shadow-2xs shrink-0 backdrop-blur-md">
+                <div className="hidden lg:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-[10px] sm:text-xs shadow-2xs shrink-0 backdrop-blur-md">
                   <CalendarDays className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                   <span>TA: {systemSettings?.academicYear || '2026/2027'}</span>
                   {systemSettings?.semester && (
@@ -202,8 +202,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 
                 {/* Profile Card & Logout */}
                 <div className="flex items-center gap-1 sm:gap-1.5">
-                  <Link href="/pengaturan/profil" className="flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-white/10 p-0.5 sm:p-1 sm:pr-2 rounded-full transition-colors border border-slate-200/80 dark:border-white/10 shrink-0 max-w-[180px] sm:max-w-[220px]">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 relative rounded-full overflow-hidden bg-blue-600/10 dark:bg-blue-600/30 flex items-center justify-center text-blue-600 dark:text-blue-300 font-black text-xs sm:text-sm border border-blue-200/60 dark:border-white/20 shadow-xs shrink-0">
+                  <Link href="/pengaturan/profil" className="flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-white/10 p-0.5 sm:p-1 sm:pr-2 rounded-lg transition-colors border border-slate-200/80 dark:border-white/10 shrink-0 max-w-[180px] sm:max-w-[220px]">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 relative rounded-md overflow-hidden bg-blue-600/10 dark:bg-blue-600/30 flex items-center justify-center text-blue-600 dark:text-blue-300 font-black text-xs sm:text-sm border border-blue-200/60 dark:border-white/20 shadow-xs shrink-0">
                       {profileData?.avatarUrl ? (
                         <NextImage src={profileData.avatarUrl} alt="Avatar" fill className="object-cover" />
                       ) : (
@@ -219,7 +219,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7.5 w-7.5 sm:h-8 sm:w-8 text-slate-600 dark:text-slate-300 hover:text-white hover:bg-red-600 rounded-full transition-colors shadow-xs bg-slate-100 dark:bg-slate-800/60 border border-slate-200/80 dark:border-white/10 backdrop-blur-md shrink-0"
+                    className="h-7.5 w-7.5 sm:h-8 sm:w-8 text-slate-600 dark:text-slate-300 hover:text-white hover:bg-red-600 rounded-lg transition-colors shadow-xs bg-slate-100 dark:bg-slate-800/60 border border-slate-200/80 dark:border-white/10 backdrop-blur-md shrink-0"
                     onClick={async () => {
                       if (userId) {
                         try {
@@ -247,7 +247,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <button
                       type="button"
                       onClick={() => setIsMobileMenuOpen(true)}
-                      className="lg:hidden h-7.5 w-7.5 sm:h-8 sm:w-8 flex items-center justify-center rounded-xl bg-blue-600/80 hover:bg-blue-600 border border-blue-400/30 text-white transition-colors active:scale-95 shadow-sm backdrop-blur-md shrink-0"
+                      className="lg:hidden h-7.5 w-7.5 sm:h-8 sm:w-8 flex items-center justify-center rounded-lg bg-blue-600/80 hover:bg-blue-600 border border-blue-400/30 text-white transition-colors active:scale-95 shadow-sm backdrop-blur-md shrink-0"
                       aria-label="Buka Menu"
                     >
                       <Menu className="w-4 h-4" />
@@ -259,11 +259,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
         </div>
 
-        <div className={`flex-1 w-full mx-auto px-3 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-10 pt-2.5 sm:pt-3 md:pt-4 pb-20 sm:pb-24 lg:pb-12 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0 max-w-7xl 2xl:max-w-[1440px]`}>
-          <div className="print:hidden">
-            <EmailRecommendationBanner />
+        <div className={`flex-1 w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-3 sm:pt-4 md:pt-5 pb-20 sm:pb-24 lg:pb-12 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0`}>
+          <div className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto space-y-4">
+            <div className="w-full print:hidden">
+              <EmailRecommendationBanner />
+            </div>
+            <div className="w-full">
+              {children}
+            </div>
           </div>
-          {children}
         </div>
 
         {/* Mobile Bottom Navigation Bar - Otomatis tersembunyi jika sedang di halaman Dashboard */}
@@ -272,10 +276,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-end justify-around h-16 px-1 relative pb-1">
               {(() => {
                 const dashLink = currentLinks.find(l => l.href === '/dashboard') || { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }
-                const otherLinks = currentLinks.filter(l => l.href !== '/dashboard' && l.href !== '/presensi/scan-qr')
-                const left1 = otherLinks[0]
-                const left2 = otherLinks[1]
-                const right1 = otherLinks[2]
+
+                // Filter link selain dashboard dan menu scanner QR
+                const availableLinks = currentLinks.filter(l => l.href !== '/dashboard' && l.href !== '/presensi/scan-qr')
+
+                // Prioritaskan link modul fitur spesifik role (group selain 'Layanan Mandiri' dan bukan menu umum presensi/disposisi jika ada fitur inti)
+                const coreRoleFeatures = availableLinks.filter(l => {
+                  const isPersonal = l.group === 'Layanan Mandiri'
+                  const isGeneralTop = ['/presensi/kehadiran-pegawai', '/presensi/kehadiran-siswa', '/fitur/disposisi'].includes(l.href)
+                  return !isPersonal && !isGeneralTop
+                })
+
+                const secondaryFeatures = availableLinks.filter(l => !coreRoleFeatures.includes(l))
+                const prioritizedLinks = [...coreRoleFeatures, ...secondaryFeatures]
+
+                const left1 = prioritizedLinks[0] || availableLinks[0]
+                const left2 = prioritizedLinks[1] || availableLinks[1]
+                const right1 = prioritizedLinks[2] || availableLinks[2]
+                const right2 = prioritizedLinks[3] || availableLinks[3]
 
                 const renderNavButton = (link: any, isCenter: boolean = false) => {
                   if (!link) return <div className="flex-1" key={Math.random()} />
@@ -323,17 +341,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     {renderNavButton(left2)}
                     {renderNavButton(dashLink, true)}
                     {renderNavButton(right1)}
-                    <button
-                      onClick={() => setIsMobileMenuOpen(true)}
-                      className="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 min-w-0 transition-colors active:scale-95 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-                    >
-                      <div className="relative flex items-center justify-center w-10 h-8 rounded-full mb-0.5 transition-all duration-300 bg-transparent">
-                        <Menu className="w-5 h-5 scale-100 text-slate-500 dark:text-slate-400" />
-                      </div>
-                      <span className="text-[10px] font-semibold tracking-wide truncate w-full text-center">
-                        Lainnya
-                      </span>
-                    </button>
+                    {prioritizedLinks.length > 4 ? (
+                      <button
+                        onClick={() => setIsMobileMenuOpen(true)}
+                        className="flex flex-col items-center justify-center gap-0.5 flex-1 px-1 min-w-0 transition-colors active:scale-95 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                      >
+                        <div className="relative flex items-center justify-center w-10 h-8 rounded-full mb-0.5 transition-all duration-300 bg-transparent">
+                          <Menu className="w-5 h-5 scale-100 text-slate-500 dark:text-slate-400" />
+                        </div>
+                        <span className="text-[10px] font-semibold tracking-wide truncate w-full text-center">
+                          Lainnya
+                        </span>
+                      </button>
+                    ) : (
+                      renderNavButton(right2)
+                    )}
                   </>
                 )
               })()}

@@ -9,6 +9,9 @@ import {
 import Swal from 'sweetalert2'
 import * as XLSX from 'xlsx'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { TablePagination } from '@/components/TablePagination'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
 
 interface StudentVA {
   id: string
@@ -464,37 +467,103 @@ export default function VirtualAccountPage() {
 
       {/* Filter & Table Area */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        {/* Controls */}
-        <div className="p-4 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Cari NIS, Nama, atau VA..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-            />
-          </form>
+        {/* Controls (Rule 16: Searchbar & Tombol Filter Terpusat Bersebelahan) */}
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-1 min-w-0 max-w-lg">
+            <form onSubmit={handleSearchSubmit} className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Cari NIS, Nama, atau VA..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('')
+                    setTimeout(() => fetchData(), 0)
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </form>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <Filter className="w-3.5 h-3.5" />
-              <span>Kelas:</span>
-            </div>
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-            >
-              <option value="">Semua Kelas</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} (Tingkat {c.gradeLevel})
-                </option>
-              ))}
-            </select>
+            {/* Tombol Filter Terpusat (Popover) */}
+            <Popover>
+              <PopoverTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant={selectedClass ? 'default' : 'outline'}
+                    size="sm"
+                    className={`h-8.5 px-3 rounded-xl text-xs font-bold gap-1.5 shrink-0 transition-all cursor-pointer ${
+                      selectedClass
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                    title="Filter Kelas"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                    <span>Filter</span>
+                    {selectedClass && (
+                      <span className="bg-white/25 text-white px-1.5 py-0.2 rounded-full text-[10px] font-black">
+                        1
+                      </span>
+                    )}
+                  </Button>
+                }
+              />
+              <PopoverContent
+                align="start"
+                className="w-[calc(100vw-2rem)] sm:w-72 p-3.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl space-y-3 z-50"
+              >
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-1.5">
+                    <Filter className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Filter Kelas</span>
+                    {selectedClass && (
+                      <span className="bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        1 aktif
+                      </span>
+                    )}
+                  </div>
+                  {selectedClass && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedClass('')}
+                      className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Reset
+                    </button>
+                  )}
+                </div>
 
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Pilih Kelas</label>
+                  <select
+                    value={selectedClass}
+                    onChange={(e) => setSelectedClass(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                  >
+                    <option value="">Semua Kelas</option>
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} (Tingkat {c.gradeLevel})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
               onClick={fetchData}
               className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl transition-all"
@@ -612,75 +681,17 @@ export default function VirtualAccountPage() {
           </table>
         </div>
 
-        {/* Pagination Bar */}
-        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-slate-500 dark:text-slate-400">
-            Menampilkan <span className="font-semibold text-slate-900 dark:text-white">
-              {students.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
-            </span> – <span className="font-semibold text-slate-900 dark:text-white">
-              {Math.min(currentPage * pageSize, students.length)}
-            </span> dari <span className="font-semibold text-slate-900 dark:text-white">{students.length}</span> siswa
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <span>Baris per halaman:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value))
-                  setCurrentPage(1)
-                }}
-                className="px-2 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none"
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                title="Halaman Pertama"
-              >
-                <ChevronsLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                title="Sebelumnya"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              <span className="px-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                {currentPage} / {totalPages}
-              </span>
-
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages}
-                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                title="Selanjutnya"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage >= totalPages}
-                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                title="Halaman Terakhir"
-              >
-                <ChevronsRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* Pagination Bar (Rule 20) */}
+        {students.length > 0 && (
+          <TablePagination
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalItems={students.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            itemLabel="siswa"
+          />
+        )}
       </div>
 
       {/* MODAL IMPORT VIRTUAL ACCOUNT */}

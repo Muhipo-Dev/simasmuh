@@ -991,7 +991,10 @@ export class FaceAttendanceService implements OnModuleInit {
       ];
       for (const url of endpoints) {
         try {
-          const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+          const res = await fetch(url, {
+            headers: { 'Connection': 'close' },
+            signal: AbortSignal.timeout(2000),
+          });
           if (res.ok) {
             const data = await res.json();
             return { isOnline: true, ...data };
@@ -1110,6 +1113,7 @@ export class FaceAttendanceService implements OnModuleInit {
         try {
           const res = await fetch(url, {
             method: 'POST',
+            headers: { 'Connection': 'close' },
             signal: AbortSignal.timeout(5000),
           });
           if (res.ok) {
@@ -1159,6 +1163,7 @@ export class FaceAttendanceService implements OnModuleInit {
         try {
           const res = await fetch(ep, {
             method: 'POST',
+            headers: { 'Connection': 'close' },
             signal: AbortSignal.timeout(3000),
           });
           if (res.ok) {
@@ -1186,6 +1191,7 @@ export class FaceAttendanceService implements OnModuleInit {
         try {
           const res = await fetch(url, {
             method: 'POST',
+            headers: { 'Connection': 'close' },
             signal: AbortSignal.timeout(15000),
           });
           if (res.ok) {
@@ -1263,7 +1269,10 @@ export class FaceAttendanceService implements OnModuleInit {
         try {
           const res = await fetch(ep, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Connection': 'close',
+            },
             body: JSON.stringify(payload),
             signal: AbortSignal.timeout(10000),
           });
@@ -1285,9 +1294,12 @@ export class FaceAttendanceService implements OnModuleInit {
     try {
       const res = await fetch('http://127.0.0.1:8089/scan_frame', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Connection': 'close',
+        },
         body: JSON.stringify({ image: imageBase64, recordAttendance, force }),
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(5000),
       });
       if (res.ok) {
         return await res.json();
@@ -1302,9 +1314,12 @@ export class FaceAttendanceService implements OnModuleInit {
     try {
       const res = await fetch('http://127.0.0.1:8089/confirm_attendance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Connection': 'close',
+        },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(5000),
       });
       if (res.ok) {
         return await res.json();

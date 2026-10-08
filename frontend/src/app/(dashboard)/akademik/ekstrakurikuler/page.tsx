@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -138,6 +139,19 @@ export default function EkstrakurikulerPage() {
   const filteredEkskul = useMemo(() => {
     return filterDataBySearch(ekskulList, searchQuery)
   }, [ekskulList, searchQuery])
+
+  // Rule 20 Pagination
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedCategory, pageSize])
+
+  const paginatedEkskul = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredEkskul.slice(startIndex, startIndex + pageSize)
+  }, [filteredEkskul, currentPage, pageSize])
 
   // Mutasi Simpan (Tambah / Edit Master Ekstrakurikuler oleh Waka Kesiswaan)
   const saveEkskulMutation = useMutation({
@@ -434,11 +448,11 @@ export default function EkstrakurikulerPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredEkskul.map((item, idx) => {
+                    paginatedEkskul.map((item, idx) => {
                       const catObj = KATEGORI_EKSKUL.find(k => k.id === item.category)
                       return (
                         <TableRow key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
-                          <TableCell className="pl-6 font-medium text-slate-500 text-xs">{idx + 1}</TableCell>
+                          <TableCell className="pl-6 font-medium text-slate-500 text-xs">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
                           <TableCell className="text-xs">
                             <div className="font-bold text-slate-900 dark:text-white">
                               {item.name}
@@ -555,6 +569,18 @@ export default function EkstrakurikulerPage() {
                 </TableBody>
               </Table>
             </CardContent>
+            {filteredEkskul.length > 0 && (
+              <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+                <TablePagination
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  totalItems={filteredEkskul.length}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="ekstrakurikuler"
+                />
+              </div>
+            )}
           </Card>
         </div>
       )}

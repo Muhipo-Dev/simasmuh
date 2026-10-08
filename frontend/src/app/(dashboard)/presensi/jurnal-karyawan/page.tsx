@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Swal from 'sweetalert2'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Loader2, Pencil, Trash2, Calendar, FileText } from 'lucide-react'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { useSession } from 'next-auth/react'
 import { format } from 'date-fns'
 import { id } from 'date-fns/locale'
@@ -71,6 +72,18 @@ export default function JurnalKaryawanPage() {
   const { sortConfig, handleSort, sortedItems: sortedJournals } = useSorting(journals || [])
   const searchedJournals = filterDataBySearch(sortedJournals, searchQuery)
 
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, pageSize])
+
+  const paginatedJournals = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return searchedJournals.slice(startIndex, startIndex + pageSize)
+  }, [searchedJournals, currentPage, pageSize])
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -98,70 +111,82 @@ export default function JurnalKaryawanPage() {
             placeholder="Cari jurnal (aktivitas/catatan)..."
           />
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-slate-50 dark:bg-slate-900">
-              <TableRow>
-                <TableHead className="w-[60px] pl-6">No</TableHead>
-                <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="date" className="w-[180px]">Tanggal</SortableTableHead>
-                <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="activity">Aktivitas</SortableTableHead>
-                <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="notes">Catatan</SortableTableHead>
-                <TableHead>Bukti</TableHead>
-                <TableHead className="text-right pr-6">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50 dark:bg-slate-900">
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10">
-                    <div className="flex flex-col items-center justify-center text-slate-500">
-                      <Loader2 className="w-6 h-6 animate-spin mb-2 text-blue-600" />
-                      Memuat data jurnal...
-                    </div>
-                  </TableCell>
+                  <TableHead className="w-[60px] pl-6">No</TableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="date" className="w-[180px]">Tanggal</SortableTableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="activity">Aktivitas</SortableTableHead>
+                  <SortableTableHead sortConfig={sortConfig} onSort={handleSort} sortKey="notes">Catatan</SortableTableHead>
+                  <TableHead>Bukti</TableHead>
+                  <TableHead className="text-right pr-6">Aksi</TableHead>
                 </TableRow>
-              ) : searchedJournals.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-slate-500">
-                    <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                    <p className="text-sm font-medium">{searchQuery ? 'Tidak ada jurnal yang sesuai dengan pencarian.' : 'Anda belum mengisi jurnal hari ini.'}</p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                searchedJournals.map((item, index) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="pl-6 font-medium text-slate-500">{index + 1}</TableCell>
-                    <TableCell className="font-semibold text-slate-900 dark:text-white">
-                      {format(new Date(item.date), 'EEEE, dd MMMM yyyy', { locale: id })}
-                    </TableCell>
-                    <TableCell className="font-bold text-slate-900 dark:text-white">{item.activity}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-300 italic">{item.notes || '-'}</TableCell>
-                    <TableCell>
-                      {item.evidence ? (
-                        <a href={item.evidence} target="_blank" rel="noreferrer" className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline">
-                          Lihat Bukti
-                        </a>
-                      ) : (
-                        <span className="text-xs text-slate-400">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <div className="flex justify-end gap-1.5">
-                        <Link href={`/presensi/jurnal-karyawan/edit/${item.id}`}>
-                          <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                        </Link>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} disabled={deleteMutation.isPending} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-10">
+                      <div className="flex flex-col items-center justify-center text-slate-500">
+                        <Loader2 className="w-6 h-6 animate-spin mb-2 text-blue-600" />
+                        Memuat data jurnal...
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : searchedJournals.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                      <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm font-medium">{searchQuery ? 'Tidak ada jurnal yang sesuai dengan pencarian.' : 'Anda belum mengisi jurnal hari ini.'}</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedJournals.map((item, index) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="pl-6 font-medium text-slate-500">{(currentPage - 1) * pageSize + index + 1}</TableCell>
+                      <TableCell className="font-semibold text-slate-900 dark:text-white">
+                        {format(new Date(item.date), 'EEEE, dd MMMM yyyy', { locale: id })}
+                      </TableCell>
+                      <TableCell className="font-bold text-slate-900 dark:text-white">{item.activity}</TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-300 italic">{item.notes || '-'}</TableCell>
+                      <TableCell>
+                        {item.evidence ? (
+                          <a href={item.evidence} target="_blank" rel="noreferrer" className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline">
+                            Lihat Bukti
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <div className="flex justify-end gap-1.5">
+                          <Link href={`/presensi/jurnal-karyawan/edit/${item.id}`}>
+                            <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} disabled={deleteMutation.isPending} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          {!isLoading && searchedJournals.length > 0 && (
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={searchedJournals.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="jurnal"
+            />
+          )}
         </CardContent>
       </Card>
     </div>

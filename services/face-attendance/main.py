@@ -322,4 +322,4 @@ def terminate_service():
 
 if __name__ == "__main__":
     print(f"[INFO] Menjalankan Uvicorn server pada 0.0.0.0:{SERVICE_PORT}...")
-    uvicorn.run(app, host="0.0.0.0", port=SERVICE_PORT, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=SERVICE_PORT, log_level="info", timeout_keep_alive=65, limit_concurrency=200)

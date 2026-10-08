@@ -14,17 +14,60 @@ function getDynamicServerOrigins() {
     '[IP_ADDRESS]'
   ]);
 
-  // Include environment variable overrides if configured
-  if (process.env.ALLOWED_ORIGINS) {
-    process.env.ALLOWED_ORIGINS.split(',').forEach((o) => {
-      const trimmed = o.trim();
-      if (trimmed) hostnames.add(trimmed);
-    });
+  // Scan OS hostname & FQDN
+  try {
+    const host = os.hostname();
+    if (host) {
+      hostnames.add(host);
+      hostnames.add(`${host}.local`);
+      hostnames.add(`${host}.lan`);
+    }
+  } catch (err) {
+    console.warn("Unable to fetch OS hostname:", err);
   }
 
-  if (process.env.SERVER_IP) {
-    hostnames.add(process.env.SERVER_IP.trim());
-  }
+  // Include environment variable overrides for custom domains & tunnel URLs
+  const envDomainVars = [
+    process.env.ALLOWED_ORIGINS,
+    process.env.DOMAIN,
+    process.env.CUSTOM_DOMAIN,
+    process.env.NEXTAUTH_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.APP_URL,
+    process.env.SERVER_IP
+  ];
+
+  envDomainVars.forEach((val) => {
+    if (!val) return;
+    val.split(',').forEach((item) => {
+      const trimmed = item.trim();
+      if (trimmed) {
+        try {
+          if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            const parsedUrl = new URL(trimmed);
+            hostnames.add(parsedUrl.hostname);
+          } else {
+            hostnames.add(trimmed);
+          }
+        } catch {
+          hostnames.add(trimmed);
+        }
+      }
+    });
+  });
+
+  // Dynamic domain wildcard patterns & popular tunnel / local domain resolvers
+  const commonDomainSuffixes = [
+    '*.loca.lt',
+    '*.ngrok-free.app',
+    '*.ngrok.io',
+    '*.trycloudflare.com',
+    '*.nip.io',
+    '*.sslip.io',
+    '*.local',
+    '*.lan'
+  ];
+  commonDomainSuffixes.forEach((d) => hostnames.add(d));
 
   // Scan all network interfaces dynamically (Wi-Fi, Ethernet, VPN, Hotspot, Public IP)
   try {
@@ -102,7 +145,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: false, // Prevents duplicate double-invocations in dev for faster response
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
-  serverExternalPackages: ['@react-pdf/renderer'],
+  // next-auth v4 → openid-client v5 memakai url.parse(); jika dibundel ke .next, Node 24 memunculkan DEP0169.
+  // Externalize openid-client agar dimuat dari node_modules (DEP0169 tidak dipicu dari node_modules).
+  // Catatan: jangan externalize 'next-auth' (memicu duplikasi instance React saat prerender).
+  serverExternalPackages: ['@react-pdf/renderer', 'openid-client'],
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },

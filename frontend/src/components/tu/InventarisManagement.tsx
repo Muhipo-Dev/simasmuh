@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
   Package, Boxes, Plus, Search, Filter, Printer, Download, 
@@ -22,6 +22,7 @@ import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
 import { TableSearch } from '@/components/TableSearch'
 import { TableSelectionBar, TableCheckboxHeader, TableCheckboxCell } from '@/components/TableSelectionBar'
+import { TablePagination } from '@/components/TablePagination'
 
 export interface ItemInventaris {
   id: string
@@ -136,6 +137,19 @@ export function InventarisManagement() {
       return matchSearch && matchKategori && matchKondisi && matchStatus
     })
   }, [inventarisList, searchQuery, filterKategori, filterKondisi, filterStatus])
+
+  // Pagination states (Rule 20)
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, filterKategori, filterKondisi, filterStatus, pageSize])
+
+  const paginatedInventaris = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize
+    return filteredInventaris.slice(startIdx, startIdx + pageSize)
+  }, [filteredInventaris, currentPage, pageSize])
 
   // Statistics Summary
   const stats = useMemo(() => {
@@ -594,8 +608,9 @@ export function InventarisManagement() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredInventaris.map((item, idx) => {
+                        paginatedInventaris.map((item, idx) => {
                           const isSelected = selectedInventarisIds.includes(item.id)
+                          const rowNumber = (currentPage - 1) * pageSize + idx + 1
                           return (
                           <TableRow key={item.id} className={`hover:bg-slate-50/60 dark:hover:bg-slate-900/60 transition-colors ${isSelected ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : ''}`}>
                             <TableCell className="text-center pl-4">
@@ -611,7 +626,7 @@ export function InventarisManagement() {
                               />
                             </TableCell>
                             <TableCell className="text-center font-bold text-slate-500 text-xs px-2">
-                              {idx + 1}
+                              {rowNumber}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-start gap-2.5">
@@ -699,6 +714,16 @@ export function InventarisManagement() {
                     </TableBody>
                   </Table>
                 </div>
+                {filteredInventaris.length > 0 && (
+                  <TablePagination
+                    currentPage={currentPage}
+                    pageSize={pageSize}
+                    totalItems={filteredInventaris.length}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={setPageSize}
+                    itemLabel="aset"
+                  />
+                )}
               </CardContent>
             </Card>
           </div>

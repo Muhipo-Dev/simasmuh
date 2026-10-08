@@ -11,12 +11,14 @@ import { Input, PasswordInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Wallet, Users, BarChart3, Building2, Search, Pencil, Trash2,
   Loader2, PlusCircle, CheckCircle2, TrendingUp, X, Download,
   AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, Sparkles,
   ShieldAlert, ShieldCheck, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check, Info,
-  CreditCard, FileCheck, Printer, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
+  CreditCard, FileCheck, Printer, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter,
+  Save, Bookmark, FolderArchive, Timer, CalendarClock, Play, FileText
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
@@ -26,6 +28,7 @@ import PaymentProofVerificationPage from '../verifikasi-pembayaran/page'
 import ExamCardPrintDialog from '@/components/finance/ExamCardPrintDialog'
 import SklPrintDialog from '@/components/finance/SklPrintDialog'
 import SingleReceiptPrintModal from '@/components/finance/SingleReceiptPrintModal'
+import { TablePagination } from '@/components/TablePagination'
 
 // ============================================================
 // TYPES
@@ -33,7 +36,7 @@ import SingleReceiptPrintModal from '@/components/finance/SingleReceiptPrintModa
 type Tagihan = {
   id: string; studentId: string; type: string; amount: number
   amountPaid?: number; month: number | null; year: number | null; dueDate: string | null
-  status: 'BELUM_LUNAS' | 'ANGSURAN' | 'LUNAS'; paidDate: string | null
+  status: 'DRAFT' | 'BELUM_LUNAS' | 'ANGSURAN' | 'LUNAS'; paidDate: string | null
   notes: string | null; createdAt: string
   payments?: { id: string; amount: number; paymentDate: string; notes?: string }[]
 }
@@ -221,7 +224,7 @@ function TagihanModal({
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [modalTab, setModalTab] = useState<'tagihan' | 'riwayat'>('tagihan')
-  const [filterStatus, setFilterStatus] = useState<'ALL' | 'BELUM_LUNAS' | 'ANGSURAN' | 'LUNAS'>('ALL')
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'DRAFT' | 'BELUM_LUNAS' | 'ANGSURAN' | 'LUNAS'>('ALL')
   const [showDiscountModal, setShowDiscountModal] = useState(false)
   const [discountTagihanId, setDiscountTagihanId] = useState<string | null>(null)
   const [discountPercentage, setDiscountPercentage] = useState<25 | 50 | 75 | 100>(25)
@@ -1074,11 +1077,11 @@ function TagihanModal({
           )}
 
           {/* Filter */}
-          <div className="flex gap-2">
-            {(['ALL', 'BELUM_LUNAS', 'ANGSURAN', 'LUNAS'] as const).map(s => (
+          <div className="flex gap-2 flex-wrap">
+            {(['ALL', 'DRAFT', 'BELUM_LUNAS', 'ANGSURAN', 'LUNAS'] as const).map(s => (
               <button key={s} onClick={() => setFilterStatus(s)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${filterStatus === s ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
-                {s === 'ALL' ? 'Semua' : s === 'BELUM_LUNAS' ? 'Belum Lunas' : s === 'ANGSURAN' ? 'Angsuran' : 'Lunas'}
+                {s === 'ALL' ? 'Semua' : s === 'DRAFT' ? 'Draf' : s === 'BELUM_LUNAS' ? 'Belum Lunas' : s === 'ANGSURAN' ? 'Angsuran' : 'Lunas'}
                 {s !== 'ALL' && <span className="ml-1">({tagihans.filter(t => t.status === s).length})</span>}
               </button>
             ))}
@@ -1111,7 +1114,9 @@ function TagihanModal({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-lg ${TYPE_COLORS[t.type] || 'bg-slate-100 text-slate-600'}`}>{t.type}</span>
-                        {t.status === 'LUNAS' ? (
+                        {t.status === 'DRAFT' ? (
+                          <span className="text-xs font-black text-sky-800 dark:text-sky-300 bg-sky-100 dark:bg-sky-950/80 px-2.5 py-0.5 rounded-full border border-sky-300 dark:border-sky-800 flex items-center gap-1"><Bookmark className="w-3.5 h-3.5" /> DRAF (BELUM RILIS)</span>
+                        ) : t.status === 'LUNAS' ? (
                           <span className="text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> LUNAS</span>
                         ) : t.status === 'ANGSURAN' ? (
                           <span className="text-xs font-black text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-800 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> ANGSURAN ({pct}%)</span>
@@ -1456,6 +1461,739 @@ function TagihanModal({
 }
 
 // ============================================================
+// TEMPAT KHUSUS MANAJEMEN DRAF RILIS TAGIHAN KEUANGAN
+// ============================================================
+const FINANCE_DRAFT_KEY = 'SIMASMUH_FINANCE_RELEASE_DRAFT'
+
+interface FinanceDraftData {
+  savedAt: string
+  title?: string
+  scope: 'CLASS' | 'MULTI_CLASS' | 'GRADE' | 'ALL' | 'STUDENTS'
+  releaseDuration: 'TAHUN' | 'SEMESTER'
+  targetSemester: 1 | 2
+  classId: string
+  selectedClassIds: string[]
+  gradeLevel: number
+  startYear: number
+  customAcademicYear: string
+  isManualAcademicYear: boolean
+  sppStartMonth: number
+  sppStartYear: number
+  notes: string
+  includeSpp: boolean
+  sppMonthly: number
+  includeDpp: boolean
+  dppAmount: number
+  includeUis: boolean
+  uisAmount: number
+  includeUka: boolean
+  ukaAmount: number
+  includeUks: boolean
+  uksAmount: number
+  includeSeragam: boolean
+  seragamGender: 'PUTRA' | 'PUTRI' | 'ALL'
+  seragamPutraAmount: number
+  seragamPutriAmount: number
+  includeLks: boolean
+  lksAmount: number
+  lksPeriod: 'SEMESTER_1' | 'SEMESTER_2' | 'TAHUNAN'
+  scheduledReleaseAt?: string | null
+}
+
+function getStoredFinanceDraft(): FinanceDraftData | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(FINANCE_DRAFT_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function saveStoredFinanceDraft(draft: FinanceDraftData): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(FINANCE_DRAFT_KEY, JSON.stringify(draft))
+    window.dispatchEvent(new CustomEvent('simasmuh-finance-draft-updated'))
+  } catch (err) {
+    console.error('Failed to save finance draft:', err)
+  }
+}
+
+function removeStoredFinanceDraft(): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.removeItem(FINANCE_DRAFT_KEY)
+    window.dispatchEvent(new CustomEvent('simasmuh-finance-draft-updated'))
+  } catch (err) {
+    console.error('Failed to clear finance draft:', err)
+  }
+}
+
+function DraftDrawerModal({
+  open,
+  onClose,
+  classes,
+  onOpenReleaseForm,
+}: {
+  open: boolean
+  onClose: () => void
+  classes: ClassItem[]
+  onOpenReleaseForm: () => void
+}) {
+  const authenticatedFetch = useAuthenticatedFetch()
+  const qc = useQueryClient()
+  const [draft, setDraft] = useState<FinanceDraftData | null>(null)
+  const [isReleasing, setIsReleasing] = useState(false)
+  
+  // Timer scheduler state
+  const [schedulerOpen, setSchedulerOpen] = useState(false)
+  const [timerDurationMinutes, setTimerDurationMinutes] = useState<number>(5)
+  const [customDateTime, setCustomDateTime] = useState<string>('')
+  const [countdownText, setCountdownText] = useState<string | null>(null)
+
+  const reloadDraft = () => {
+    const d = getStoredFinanceDraft()
+    setDraft(d)
+  }
+
+  useEffect(() => {
+    if (open) {
+      reloadDraft()
+    }
+  }, [open])
+
+  useEffect(() => {
+    const handleUpdate = () => reloadDraft()
+    window.addEventListener('simasmuh-finance-draft-updated', handleUpdate)
+    return () => window.removeEventListener('simasmuh-finance-draft-updated', handleUpdate)
+  }, [])
+
+  // Auto-tick timer scheduler countdown & auto release
+  useEffect(() => {
+    if (!draft?.scheduledReleaseAt) {
+      setCountdownText(null)
+      return
+    }
+
+    const interval = setInterval(() => {
+      const now = new Date().getTime()
+      const target = new Date(draft.scheduledReleaseAt!).getTime()
+      const diff = target - now
+
+      if (diff <= 0) {
+        setCountdownText('Waktu Rilis Tercapai! Memproses...')
+        clearInterval(interval)
+        executeRelease(true) // Auto execute on timer expiration
+      } else {
+        const hours = Math.floor(diff / (1000 * 60 * 60))
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+        
+        if (hours > 0) {
+          setCountdownText(`${hours} jam ${minutes} mnt ${seconds} dtk`)
+        } else if (minutes > 0) {
+          setCountdownText(`${minutes} menit ${seconds} detik`)
+        } else {
+          setCountdownText(`${seconds} detik`)
+        }
+      }
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [draft?.scheduledReleaseAt])
+
+  const executeRelease = async (fromTimer = false) => {
+    const currentDraft = getStoredFinanceDraft()
+    if (!currentDraft) {
+      Swal.fire('Draf Tidak Ditemukan', 'Tidak ada data draf tagihan yang tersimpan.', 'warning')
+      return
+    }
+
+    if (!fromTimer) {
+      const confirm = await Swal.fire({
+        title: 'Rilis Tagihan Sekarang?',
+        text: `Menerbitkan seluruh paket tagihan (${currentDraft.releaseDuration === 'SEMESTER' ? `Semester ${currentDraft.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun Ajaran'}) langsung ke database siswa.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Rilis Sekarang',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#2563eb',
+      })
+      if (!confirm.isConfirmed) return
+    }
+
+    setIsReleasing(true)
+    try {
+      const payload = {
+        academicYear: currentDraft.customAcademicYear || `${currentDraft.startYear}/${currentDraft.startYear + 1}`,
+        targetScope: currentDraft.scope,
+        classId: currentDraft.scope === 'CLASS' ? currentDraft.classId : undefined,
+        classIds: currentDraft.scope === 'MULTI_CLASS' ? currentDraft.selectedClassIds : undefined,
+        gradeLevel: currentDraft.scope === 'GRADE' ? currentDraft.gradeLevel : undefined,
+        yearStart: Number(currentDraft.startYear),
+        releaseDuration: currentDraft.releaseDuration,
+        targetSemester: currentDraft.releaseDuration === 'SEMESTER' ? currentDraft.targetSemester : undefined,
+        sppStartMonth: Number(currentDraft.sppStartMonth),
+        sppStartYear: Number(currentDraft.sppStartYear),
+        customSppMonthly: currentDraft.includeSpp ? currentDraft.sppMonthly : 0,
+        customDpp: currentDraft.includeDpp ? currentDraft.dppAmount : 0,
+        customUis: currentDraft.includeUis ? currentDraft.uisAmount : 0,
+        customUka: currentDraft.includeUka ? currentDraft.ukaAmount : 0,
+        customUks: currentDraft.includeUks ? currentDraft.uksAmount : 0,
+        customSeragam: currentDraft.includeSeragam ? (currentDraft.seragamGender === 'PUTRI' ? currentDraft.seragamPutriAmount : currentDraft.seragamPutraAmount) : 0,
+        customLks: currentDraft.includeLks ? currentDraft.lksAmount : 0,
+        lksType: currentDraft.lksPeriod === 'TAHUNAN' ? 'SETAHUN' : 'SEMESTER',
+        itemsSelection: {
+          spp: currentDraft.includeSpp,
+          dpp: currentDraft.includeDpp,
+          uis: currentDraft.includeUis,
+          uka: currentDraft.includeUka,
+          uks: currentDraft.includeUks,
+          seragam: currentDraft.includeSeragam,
+          lks: currentDraft.includeLks,
+        },
+        allowOverrideDuplicates: false,
+      }
+
+      const res = await authenticatedFetch('/api-backend/finance/tagihan/release-yearly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      // Also publish any existing DRAFT bills matching scope
+      await authenticatedFetch('/api-backend/finance/tagihan/publish-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope: currentDraft.scope,
+          classId: currentDraft.scope === 'CLASS' ? currentDraft.classId : undefined,
+          classIds: currentDraft.scope === 'MULTI_CLASS' ? currentDraft.selectedClassIds : undefined,
+          gradeLevel: currentDraft.scope === 'GRADE' ? currentDraft.gradeLevel : undefined,
+          startYear: Number(currentDraft.startYear),
+        }),
+      }).catch(() => null)
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal merilis tagihan dari draf')
+      }
+
+      const data = await res.json()
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+
+      removeStoredFinanceDraft()
+      setDraft(null)
+      onClose()
+
+      Swal.fire({
+        title: fromTimer ? 'Rilis Timer Otomatis Berhasil!' : 'Rilis Draf Berhasil!',
+        text: data.message || 'Seluruh tagihan draf berhasil diterbitkan ke akun siswa.',
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+    } catch (err: any) {
+      Swal.fire('Gagal Merilis Draf', err.message || 'Terjadi kesalahan sistem', 'error')
+    } finally {
+      setIsReleasing(false)
+    }
+  }
+
+  const handleSetTimerScheduler = () => {
+    if (!draft) return
+
+    let targetDate: Date
+    if (customDateTime) {
+      targetDate = new Date(customDateTime)
+      if (isNaN(targetDate.getTime()) || targetDate.getTime() <= Date.now()) {
+        Swal.fire('Waktu Tidak Valid', 'Silakan pilih jadwal waktu yang akan datang.', 'warning')
+        return
+      }
+    } else {
+      targetDate = new Date(Date.now() + timerDurationMinutes * 60 * 1000)
+    }
+
+    const updated = {
+      ...draft,
+      scheduledReleaseAt: targetDate.toISOString(),
+    }
+    saveStoredFinanceDraft(updated)
+    setDraft(updated)
+    setSchedulerOpen(false)
+
+    Swal.fire({
+      title: 'Timer Scheduler Diset!',
+      text: `Rilis tagihan otomatis dijadwalkan pada ${targetDate.toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}.`,
+      icon: 'success',
+      timer: 2500,
+      showConfirmButton: false,
+    })
+  }
+
+  const handleCancelTimerScheduler = () => {
+    if (!draft) return
+    const updated = {
+      ...draft,
+      scheduledReleaseAt: null,
+    }
+    saveStoredFinanceDraft(updated)
+    setDraft(updated)
+    setCountdownText(null)
+    Swal.fire({
+      title: 'Jadwal Dibatalkan',
+      text: 'Timer scheduler rilis otomatis telah dinonaktifkan.',
+      icon: 'info',
+      timer: 1500,
+      showConfirmButton: false,
+    })
+  }
+
+  const handleClearDraft = () => {
+    Swal.fire({
+      title: 'Hapus Draf Tagihan?',
+      text: 'Data konfigurasi rilis tagihan yang tersimpan di draf akan dihapus secara permanen.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Hapus Draf',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#e11d48',
+    }).then((res) => {
+      if (res.isConfirmed) {
+        removeStoredFinanceDraft()
+        setDraft(null)
+        Swal.fire({
+          title: 'Draf Dihapus',
+          text: 'Tempat draf tagihan telah dikosongkan.',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false,
+        })
+      }
+    })
+  }
+
+  const handleRetractActiveBills = async () => {
+    const confirm = await Swal.fire({
+      title: 'Tarik Tagihan ke Draf?',
+      text: 'Tagihan yang sudah rilis (yang belum lunas) akan ditarik kembali ke draf dan disembunyikan sepenuhnya dari portal siswa dan wali murid.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Tarik ke Draf',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#f59e0b',
+    })
+    if (!confirm.isConfirmed) return
+
+    setIsReleasing(true)
+    try {
+      const currentDraft = getStoredFinanceDraft()
+      const payload = {
+        scope: currentDraft?.scope || 'ALL',
+        classId: currentDraft?.classId,
+        classIds: currentDraft?.selectedClassIds,
+        gradeLevel: currentDraft?.gradeLevel,
+        startYear: currentDraft ? Number(currentDraft.startYear) : Number(currentYear),
+        releaseDuration: currentDraft?.releaseDuration || 'TAHUN',
+        targetSemester: currentDraft?.targetSemester,
+      }
+
+      const res = await authenticatedFetch('/api-backend/finance/tagihan/retract-to-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal menarik tagihan ke draf')
+      }
+
+      const data = await res.json()
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+
+      // Jika belum ada draf di localStorage, simpan konfigurasi standar sebagai draf tersimpan
+      if (!currentDraft) {
+        const defaultDraft: FinanceDraftData = {
+          savedAt: new Date().toISOString(),
+          scope: 'ALL',
+          releaseDuration: 'TAHUN',
+          targetSemester: 1,
+          classId: classes?.[0]?.id || '',
+          selectedClassIds: classes?.map((c) => c.id) || [],
+          gradeLevel: 10,
+          startYear: currentYear,
+          customAcademicYear: `${currentYear}/${currentYear + 1}`,
+          isManualAcademicYear: false,
+          sppStartMonth: 7,
+          sppStartYear: currentYear,
+          notes: 'Draf tagihan ditarik dari rilis publik',
+          includeSpp: true,
+          sppMonthly: 300000,
+          includeDpp: true,
+          dppAmount: 3000000,
+          includeUis: true,
+          uisAmount: 200000,
+          includeUka: true,
+          ukaAmount: 1200000,
+          includeUks: true,
+          uksAmount: 900000,
+          includeSeragam: false,
+          seragamGender: 'ALL',
+          seragamPutraAmount: 1300000,
+          seragamPutriAmount: 1575000,
+          includeLks: false,
+          lksAmount: 0,
+          lksPeriod: 'TAHUNAN',
+        }
+        saveStoredFinanceDraft(defaultDraft)
+        setDraft(defaultDraft)
+      }
+
+      Swal.fire({
+        title: 'Berhasil Dipindahkan ke Draf!',
+        text: data.message || 'Data tagihan berhasil dipindahkan ke draf dan disembunyikan dari siswa & wali murid.',
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+    } catch (err: any) {
+      Swal.fire('Gagal Menarik ke Draf', err.message || 'Terjadi kesalahan sistem', 'error')
+    } finally {
+      setIsReleasing(false)
+    }
+  }
+
+  const getScopeLabel = () => {
+    if (!draft) return '-'
+    if (draft.scope === 'ALL') return 'Seluruh Siswa Sekolah'
+    if (draft.scope === 'GRADE') return `Semua Siswa Kelas ${draft.gradeLevel}`
+    if (draft.scope === 'MULTI_CLASS') return `${draft.selectedClassIds?.length || 0} Kelas Terpilih`
+    if (draft.scope === 'CLASS') {
+      const cls = classes.find((c) => c.id === draft.classId)
+      return cls ? `Kelas ${cls.name}` : 'Satu Kelas'
+    }
+    if (draft.scope === 'STUDENTS') return 'Siswa Terpilih'
+    return '-'
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <DialogContent className="max-w-xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+        <div className="shrink-0 p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
+          <DialogHeader className="space-y-0.5">
+            <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-slate-100 text-base font-bold">
+              <div className="p-1.5 bg-sky-50 dark:bg-sky-950/60 rounded-lg border border-sky-100 dark:border-sky-900/50 text-sky-600 dark:text-sky-400">
+                <Bookmark className="w-4 h-4" />
+              </div>
+              Draf Penetapan Tagihan
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs">
+              Kelola draf, publikasikan resmi, atau jadwalkan rilis tagihan.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar text-slate-800 dark:text-slate-100">
+          {!draft ? (
+            <div className="text-center py-10 space-y-3 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
+              <div className="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-900/60 text-sky-500 mx-auto flex items-center justify-center">
+                <FolderArchive className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Belum Ada Draf Penetapan Tagihan</p>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Konfigurasi penetapan tagihan dapat disusun melalui formulir rilis tagihan kemudian disimpan ke dalam <strong>Draf</strong> sebelum dipublikasikan resmi.
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  onOpenReleaseForm()
+                }}
+                className="h-9 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs gap-1.5"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                Susun Draf Penetapan Baru
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* STATUS SCHEDULER BANNER */}
+              {draft.scheduledReleaseAt && (
+                <div className="p-4 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 dark:border-amber-800/80 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
+                      <Timer className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-pulse" />
+                      Timer Scheduler Rilis Aktif
+                    </span>
+                    <span className="text-[10px] font-mono font-black bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-md">
+                      {countdownText || 'Menghitung...'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Tagihan ini akan otomatis dirilis pada:{' '}
+                    <strong className="text-slate-900 dark:text-white">
+                      {new Date(draft.scheduledReleaseAt).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}
+                    </strong>
+                  </p>
+                  <div className="pt-1 flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCancelTimerScheduler}
+                      className="h-7 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-lg"
+                    >
+                      Batalkan Timer
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* CARD RINCIAN DRAF */}
+              <div className="p-4.5 bg-slate-50/70 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3.5">
+                <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">Draf Rilis Tagihan</span>
+                    <span className="text-[10px] font-semibold bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full border border-sky-200 dark:border-sky-800">
+                      {draft.releaseDuration === 'SEMESTER' ? `Semester ${draft.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun Penuh'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    Disimpan: {new Date(draft.savedAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 block font-medium">Sasaran Tagihan</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
+                      {getScopeLabel()}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 block font-medium">Tahun Ajaran</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
+                      {draft.customAcademicYear || `${draft.startYear}/${draft.startYear + 1}`}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 col-span-2 sm:col-span-1">
+                    <span className="text-[10px] text-slate-400 block font-medium">Awal Bulan SPP</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
+                      Bulan {draft.sppStartMonth} ({draft.sppStartYear})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Komponen Biaya Ringkas */}
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 space-y-2">
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
+                    Komponen Biaya yang Disertakan:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 text-[11px]">
+                    {draft.includeSpp && (
+                      <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-medium border border-blue-100 dark:border-blue-900">
+                        SPP (Rp {draft.sppMonthly.toLocaleString('id-ID')}/bln)
+                      </span>
+                    )}
+                    {draft.includeDpp && (
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-medium border border-emerald-100 dark:border-emerald-900">
+                        DPP (Rp {draft.dppAmount.toLocaleString('id-ID')})
+                      </span>
+                    )}
+                    {draft.includeUis && (
+                      <span className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium border border-indigo-100 dark:border-indigo-900">
+                        UIS (Rp {draft.uisAmount.toLocaleString('id-ID')})
+                      </span>
+                    )}
+                    {draft.includeUka && (
+                      <span className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-medium border border-purple-100 dark:border-purple-900">
+                        UKA (Rp {draft.ukaAmount.toLocaleString('id-ID')})
+                      </span>
+                    )}
+                    {draft.includeUks && (
+                      <span className="px-2 py-0.5 rounded-md bg-pink-50 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 font-medium border border-pink-100 dark:border-pink-900">
+                        UKS (Rp {draft.uksAmount.toLocaleString('id-ID')})
+                      </span>
+                    )}
+                    {draft.includeSeragam && (
+                      <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-medium border border-amber-100 dark:border-amber-900">
+                        Seragam
+                      </span>
+                    )}
+                    {draft.includeLks && (
+                      <span className="px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 font-medium border border-teal-100 dark:border-teal-900">
+                        LKS (Rp {draft.lksAmount.toLocaleString('id-ID')})
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {draft.notes && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                    Catatan: "{draft.notes}"
+                  </p>
+                )}
+              </div>
+
+              {/* SCHEDULER POPUP BOX */}
+              {schedulerOpen && (
+                <div className="p-4 bg-sky-50/80 dark:bg-sky-950/40 border border-sky-300 dark:border-sky-800 rounded-xl space-y-3 animate-in fade-in duration-150">
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                    <span className="text-xs font-bold text-sky-900 dark:text-sky-200">
+                      Atur Timer Scheduler Rilis Otomatis
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-600 dark:text-slate-400">Pilihan Cepat Countdown Timer:</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { label: '5 Menit', min: 5 },
+                        { label: '15 Menit', min: 15 },
+                        { label: '30 Menit', min: 30 },
+                        { label: '1 Jam', min: 60 },
+                        { label: '3 Jam', min: 180 },
+                        { label: '6 Jam', min: 360 },
+                      ].map((t) => (
+                        <button
+                          key={t.min}
+                          type="button"
+                          onClick={() => {
+                            setTimerDurationMinutes(t.min)
+                            setCustomDateTime('')
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                            timerDurationMinutes === t.min && !customDateTime
+                              ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100'
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-600 dark:text-slate-400">Atau Pilih Waktu Spesifik:</Label>
+                    <Input
+                      type="datetime-local"
+                      value={customDateTime}
+                      onChange={(e) => setCustomDateTime(e.target.value)}
+                      className="h-8.5 text-xs bg-white dark:bg-slate-900 rounded-lg border-slate-200 dark:border-slate-800"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSchedulerOpen(false)}
+                      className="h-8 text-xs font-semibold text-slate-500 rounded-lg"
+                    >
+                      Tutup
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleSetTimerScheduler}
+                      className="h-8 text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white rounded-lg shadow-xs gap-1.5"
+                    >
+                      <Timer className="w-3.5 h-3.5" />
+                      Aktifkan Timer Rilis
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* FOOTER AKSI */}
+        <div className="shrink-0 p-4 sm:p-5 bg-slate-50/60 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {draft && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClearDraft}
+                className="h-9 px-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-xl gap-1"
+                title="Hapus konfigurasi draf dari penyimpanan"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus Draf</span>
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRetractActiveBills}
+              disabled={isReleasing}
+              className="h-9 px-2.5 text-xs font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 border-amber-300 dark:border-amber-800 rounded-xl gap-1.5 shadow-2xs"
+              title="Tarik seluruh tagihan aktif yang belum lunas kembali ke status draf dan sembunyikan dari siswa & wali murid"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+              <span>Tarik Tagihan ke Draf</span>
+            </Button>
+          </div>
+
+          <div className="flex flex-col-reverse sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="h-9 text-xs rounded-xl font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+            >
+              Tutup
+            </Button>
+            {draft && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    onClose()
+                    onOpenReleaseForm()
+                  }}
+                  className="h-9 text-xs font-semibold border-sky-200 dark:border-sky-800/60 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-xl gap-1.5"
+                  title="Buka formulir rilis untuk menyesuaikan kembali parameter penetapan"
+                >
+                  <Pencil className="w-3.5 h-3.5 text-sky-600" />
+                  Ubah Parameter
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSchedulerOpen(!schedulerOpen)}
+                  className="h-9 text-xs font-bold border-amber-300 dark:border-amber-800/80 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-xl gap-1.5"
+                >
+                  <Timer className="w-3.5 h-3.5 text-amber-600" />
+                  Jadwal Publikasi
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => executeRelease(false)}
+                  disabled={isReleasing}
+                  className="h-9 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs gap-1.5 px-3.5"
+                >
+                  {isReleasing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                  Publikasikan Sekarang
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ============================================================
 // MODAL RILIS TAGIHAN 1 TAHUN KEDEPAN (MASSAL / PER KELAS / PER SISWA)
 // ============================================================
 function ReleaseYearlyModal({
@@ -1522,6 +2260,183 @@ function ReleaseYearlyModal({
   const [resetPassword, setResetPassword] = useState('')
   const [resetOnlyUnpaid, setResetOnlyUnpaid] = useState(false)
   const [resetError, setResetError] = useState('')
+
+  // State & Handler Manajemen Draf Rilis Tagihan
+  const [hasSavedDraft, setHasSavedDraft] = useState(false)
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+
+  // Cek apakah ada draf tersimpan saat modal dibuka
+  useEffect(() => {
+    if (open) {
+      const d = getStoredFinanceDraft()
+      if (d) {
+        setHasSavedDraft(true)
+        setDraftSavedAt(d.savedAt || null)
+      } else {
+        setHasSavedDraft(false)
+        setDraftSavedAt(null)
+      }
+    }
+  }, [open])
+
+  // Simpan konfigurasi form saat ini ke draf & otomatis masuk ke data tagihan (status DRAFT / belum dipublikasikan)
+  const handleSaveDraft = async () => {
+    try {
+      const draftData: FinanceDraftData = {
+        savedAt: new Date().toISOString(),
+        scope,
+        releaseDuration,
+        targetSemester,
+        classId,
+        selectedClassIds,
+        gradeLevel,
+        startYear,
+        customAcademicYear,
+        isManualAcademicYear,
+        sppStartMonth,
+        sppStartYear,
+        notes,
+        includeSpp,
+        sppMonthly,
+        includeDpp,
+        dppAmount,
+        includeUis,
+        uisAmount,
+        includeUka,
+        ukaAmount,
+        includeUks,
+        uksAmount,
+        includeSeragam,
+        seragamGender,
+        seragamPutraAmount,
+        seragamPutriAmount,
+        includeLks,
+        lksAmount,
+        lksPeriod,
+      }
+      saveStoredFinanceDraft(draftData)
+      setHasSavedDraft(true)
+      setDraftSavedAt(draftData.savedAt)
+
+      // Otomatis buat/sinkronkan data tagihan di database dengan status DRAFT (belum dipublikasikan)
+      const payload = {
+        academicYear: customAcademicYear || `${startYear}/${startYear + 1}`,
+        targetScope: scope === 'STUDENTS' ? 'STUDENTS' : scope === 'CLASS' ? 'CLASS' : scope === 'MULTI_CLASS' ? 'MULTI_CLASS' : scope === 'GRADE' ? 'GRADE' : 'ALL',
+        studentIds: scope === 'STUDENTS' ? studentIds : undefined,
+        classId: scope === 'CLASS' ? classId : undefined,
+        classIds: scope === 'MULTI_CLASS' ? selectedClassIds : undefined,
+        gradeLevel: scope === 'GRADE' ? gradeLevel : undefined,
+        yearStart: Number(startYear),
+        releaseDuration,
+        targetSemester: releaseDuration === 'SEMESTER' ? targetSemester : undefined,
+        sppStartMonth: Number(sppStartMonth),
+        sppStartYear: Number(sppStartYear),
+        customSppMonthly: includeSpp ? sppMonthly : 0,
+        customDpp: includeDpp ? dppAmount : 0,
+        customUis: includeUis ? uisAmount : 0,
+        customUka: includeUka ? ukaAmount : 0,
+        customUks: includeUks ? uksAmount : 0,
+        customSeragam: includeSeragam ? (seragamGender === 'PUTRI' ? seragamPutriAmount : seragamPutraAmount) : 0,
+        customLks: includeLks ? lksAmount : 0,
+        lksType: lksPeriod === 'TAHUNAN' ? 'SETAHUN' : 'SEMESTER',
+        itemsSelection: {
+          spp: includeSpp,
+          dpp: includeDpp,
+          uis: includeUis,
+          uka: includeUka,
+          uks: includeUks,
+          seragam: includeSeragam,
+          lks: includeLks,
+        },
+        allowOverrideDuplicates: false,
+        isDraft: true,
+      }
+
+      await authenticatedFetch('/api-backend/finance/tagihan/release-yearly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => null)
+
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+
+      Swal.fire({
+        title: 'Draf Tagihan Disimpan!',
+        text: 'Tagihan otomatis tercatat di data tagihan staf dengan status Draf (belum dipublikasikan) dan disembunyikan dari portal siswa & wali murid.',
+        icon: 'success',
+        timer: 2500,
+        showConfirmButton: false,
+      })
+    } catch {
+      Swal.fire('Gagal Menyimpan Draf', 'Terjadi kesalahan saat menyimpan draf rilis tagihan.', 'error')
+    }
+  }
+
+  // Muat data dari draf tersimpan
+  const handleLoadDraft = () => {
+    try {
+      const draft = getStoredFinanceDraft()
+      if (!draft) return
+      if (draft.scope) setScope(draft.scope)
+      if (draft.releaseDuration) setReleaseDuration(draft.releaseDuration)
+      if (draft.targetSemester) setTargetSemester(draft.targetSemester)
+      if (draft.classId) setClassId(draft.classId)
+      if (draft.selectedClassIds) setSelectedClassIds(draft.selectedClassIds)
+      if (draft.gradeLevel) setGradeLevel(draft.gradeLevel)
+      if (draft.startYear) setStartYear(draft.startYear)
+      if (draft.customAcademicYear) setCustomAcademicYear(draft.customAcademicYear)
+      if (typeof draft.isManualAcademicYear === 'boolean') setIsManualAcademicYear(draft.isManualAcademicYear)
+      if (draft.sppStartMonth) setSppStartMonth(draft.sppStartMonth)
+      if (draft.sppStartYear) setSppStartYear(draft.sppStartYear)
+      if (typeof draft.notes === 'string') setNotes(draft.notes)
+      if (typeof draft.includeSpp === 'boolean') setIncludeSpp(draft.includeSpp)
+      if (draft.sppMonthly !== undefined) setSppMonthly(draft.sppMonthly)
+      if (typeof draft.includeDpp === 'boolean') setIncludeDpp(draft.includeDpp)
+      if (draft.dppAmount !== undefined) setDppAmount(draft.dppAmount)
+      if (typeof draft.includeUis === 'boolean') setIncludeUis(draft.includeUis)
+      if (draft.uisAmount !== undefined) setUisAmount(draft.uisAmount)
+      if (typeof draft.includeUka === 'boolean') setIncludeUka(draft.includeUka)
+      if (draft.ukaAmount !== undefined) setUkaAmount(draft.ukaAmount)
+      if (typeof draft.includeUks === 'boolean') setIncludeUks(draft.includeUks)
+      if (draft.uksAmount !== undefined) setUksAmount(draft.uksAmount)
+      if (typeof draft.includeSeragam === 'boolean') setIncludeSeragam(draft.includeSeragam)
+      if (draft.seragamGender) setSeragamGender(draft.seragamGender)
+      if (draft.seragamPutraAmount !== undefined) setSeragamPutraAmount(draft.seragamPutraAmount)
+      if (draft.seragamPutriAmount !== undefined) setSeragamPutriAmount(draft.seragamPutriAmount)
+      if (typeof draft.includeLks === 'boolean') setIncludeLks(draft.includeLks)
+      if (draft.lksAmount !== undefined) setLksAmount(draft.lksAmount)
+      if (draft.lksPeriod) setLksPeriod(draft.lksPeriod)
+
+      Swal.fire({
+        title: 'Draf Dimuat!',
+        text: 'Konfigurasi rilis berhasil dipulihkan dari draf.',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    } catch {
+      Swal.fire('Gagal Memuat Draf', 'Format data draf tidak valid.', 'error')
+    }
+  }
+
+  // Hapus draf tersimpan
+  const handleClearDraft = () => {
+    try {
+      removeStoredFinanceDraft()
+      setHasSavedDraft(false)
+      setDraftSavedAt(null)
+      Swal.fire({
+        title: 'Draf Dihapus',
+        text: 'Data draf rilis tagihan telah dibersihkan.',
+        icon: 'info',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => {
     if (classes && classes.length > 0 && !classId) {
@@ -1638,6 +2553,7 @@ function ReleaseYearlyModal({
       setOverrideModalOpen(false)
       setOverridePassword('')
       setOverrideError('')
+      removeStoredFinanceDraft()
       
       const isDuplicatedDetected = data.duplicatesDetected > 0
       Swal.fire({
@@ -1747,6 +2663,50 @@ function ReleaseYearlyModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 custom-scrollbar text-slate-800 dark:text-slate-100">
+          {/* Banner Indikator Draf Tersimpan */}
+          {hasSavedDraft && (
+            <div className="p-3.5 bg-sky-50/80 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/70 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs animate-in fade-in duration-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-lg">
+                  <Bookmark className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-sky-950 dark:text-sky-200">Draf Konfigurasi Tersedia</span>
+                    <span className="text-[10px] font-semibold bg-sky-200/60 dark:bg-sky-900/60 text-sky-800 dark:text-sky-300 px-2 py-0.5 rounded-full">
+                      Tersimpan {draftSavedAt ? new Date(draftSavedAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Lokal'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-sky-800/80 dark:text-sky-300/80 mt-0.5">
+                    Ada draf rilis tagihan yang belum dirilis publik. Anda dapat memuatnya kembali atau memperbarui dengan data saat ini.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleLoadDraft}
+                  className="h-8 text-xs font-semibold bg-white dark:bg-slate-900 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 hover:bg-sky-100/50 rounded-lg gap-1.5"
+                >
+                  <FolderArchive className="w-3.5 h-3.5 text-sky-600" />
+                  Terapkan Draf
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleClearDraft}
+                  className="h-8 px-2 text-xs font-medium text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg"
+                  title="Hapus Draf"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Target & Scope */}
           <div className="bg-slate-50/70 dark:bg-slate-950/50 p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -2264,21 +3224,33 @@ function ReleaseYearlyModal({
         </div>
 
         <div className="shrink-0 p-4 sm:p-5 bg-slate-50/60 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5">
-          {scope !== 'STUDENTS' ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => { setResetModalOpen(true); setResetPassword(''); setResetError(''); }}
-            className="h-10 border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl font-semibold gap-1.5 text-xs"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
-            {releaseDuration === 'SEMESTER' ? `Reset Rilis Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Reset Rilis Tagihan Tahunan'}
-          </Button>
-          ) : <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Target: <strong className="text-blue-600 dark:text-blue-400">{studentIds?.length || 0} siswa</strong> terpilih</span>}
+          <div className="flex items-center gap-2">
+            {scope !== 'STUDENTS' ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setResetModalOpen(true); setResetPassword(''); setResetError(''); }}
+              className="h-10 border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl font-semibold gap-1.5 text-xs"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+              {releaseDuration === 'SEMESTER' ? `Reset Rilis Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Reset Rilis Tagihan Tahunan'}
+            </Button>
+            ) : <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Target: <strong className="text-blue-600 dark:text-blue-400">{studentIds?.length || 0} siswa</strong> terpilih</span>}
+          </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-2">
             <Button variant="outline" onClick={onClose} className="h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
               Batal
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSaveDraft}
+              className="h-10 border-sky-200 dark:border-sky-800/60 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-xl font-semibold gap-1.5 text-xs"
+              title="Simpan konfigurasi rilis ini sebagai draf tanpa menerbitkan tagihan ke publik"
+            >
+              <Save className="w-3.5 h-3.5 text-sky-600" />
+              Simpan Draf
             </Button>
             <Button
               type="button"
@@ -3340,8 +4312,21 @@ function TabTagihan() {
   const [cashModalOpen, setCashModalOpen] = useState(false)
   const [examCardModalOpen, setExamCardModalOpen] = useState(false)
   const [sklModalOpen, setSklModalOpen] = useState(false)
+  const [draftDrawerOpen, setDraftDrawerOpen] = useState(false)
+  const [hasDraftBadge, setHasDraftBadge] = useState(false)
   const authenticatedQuery = useAuthenticatedQuery()
   const qc = useQueryClient()
+
+  // Pantau ketersediaan draf tersimpan secara real-time
+  useEffect(() => {
+    const checkDraft = () => {
+      const d = getStoredFinanceDraft()
+      setHasDraftBadge(!!d)
+    }
+    checkDraft()
+    window.addEventListener('simasmuh-finance-draft-updated', checkDraft)
+    return () => window.removeEventListener('simasmuh-finance-draft-updated', checkDraft)
+  }, [])
 
   // Selection & Restricted Reset States
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
@@ -3460,7 +4445,7 @@ function TabTagihan() {
 
   // Pagination state for ultra-smooth rendering with large datasets (Optimized for 2GB RAM devices)
   const [currentPage, setCurrentPage] = useState<number>(1)
-  const [pageSize, setPageSize] = useState<number>(15)
+  const [pageSize, setPageSize] = useState<number>(10)
 
   const { data: students = [], isLoading } = useQuery<StudentSummary[]>({
     queryKey: ['finance-students'],
@@ -3578,6 +4563,57 @@ function TabTagihan() {
       setAuthError(err.message || 'Password otorisasi tidak valid')
     },
   })
+
+  // Mutasi untuk memindahkan tagihan siswa terpilih ke draf & sembunyikan dari siswa & wali murid
+  const retractSelectedToDraftMut = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        scope: 'STUDENTS',
+        studentIds: selectedStudentIds,
+        releaseDuration: 'TAHUN',
+      }
+      const res = await authenticatedFetch('/api-backend/finance/tagihan/retract-to-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal memindahkan tagihan ke draf')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      setSelectedStudentIds([])
+      Swal.fire({
+        title: 'Dipindahkan ke Draf!',
+        text: data.message || 'Tagihan berhasil dipindahkan ke draf dan disembunyikan dari siswa & wali murid.',
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal Memindahkan ke Draf', err.message || 'Terjadi kesalahan sistem', 'error')
+    },
+  })
+
+  const handlePromptRetractSelected = async () => {
+    if (selectedStudentIds.length === 0) return
+    const confirm = await Swal.fire({
+      title: 'Pindahkan ke Draf?',
+      text: `Tarik tagihan ${selectedStudentIds.length} siswa terpilih kembali ke status draf dan sembunyikan dari siswa & wali murid.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Pindahkan ke Draf',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#f59e0b',
+    })
+    if (confirm.isConfirmed) {
+      retractSelectedToDraftMut.mutate()
+    }
+  }
 
   const openModal = (s: StudentSummary) => { setSelectedStudent(s); setModalOpen(true) }
 
@@ -3834,6 +4870,22 @@ function TabTagihan() {
         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
           {!isKepalaSekolah && (
             <>
+              <Button
+                variant="outline"
+                onClick={() => setDraftDrawerOpen(true)}
+                className={`h-8 px-2 sm:px-2.5 text-xs font-bold rounded-lg shadow-2xs touch-manipulation gap-1.5 relative transition-all ${
+                  hasDraftBadge
+                    ? 'border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 ring-1 ring-sky-500/20'
+                    : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+                title="Buka Tempat Khusus Draf Rilis Tagihan & Timer Scheduler"
+              >
+                <Bookmark className={`w-3.5 h-3.5 ${hasDraftBadge ? 'text-sky-600 dark:text-sky-400' : 'text-slate-500'}`} />
+                <span>Draf</span>
+                {hasDraftBadge && (
+                  <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse inline-block shrink-0" />
+                )}
+              </Button>
               <Button onClick={() => setMassalOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white gap-1 h-8 px-2 sm:px-2.5 text-xs font-bold rounded-lg shadow-xs touch-manipulation">
                 <Layers className="w-3.5 h-3.5" /> <span>Rilis Th / Sem</span>
@@ -3898,6 +4950,16 @@ function TabTagihan() {
             >
               <Layers className="w-3.5 h-3.5" />
               Set Tagihan
+            </Button>
+            <Button
+              size="sm"
+              onClick={handlePromptRetractSelected}
+              disabled={retractSelectedToDraftMut.isPending}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
+              title="Tarik tagihan siswa terpilih kembali ke draf dan sembunyikan dari portal siswa & wali murid"
+            >
+              <Bookmark className="w-3.5 h-3.5" />
+              Tarik ke Draf
             </Button>
             <Button
               size="sm"
@@ -4060,78 +5122,16 @@ function TabTagihan() {
             </Table>
           </div>
 
-          {/* Pagination Toolbar */}
+          {/* Pagination Toolbar (Rule 20) */}
           {filtered.length > 0 && (
-            <div className="px-3 sm:px-4 py-2 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
-              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px] w-full sm:w-auto justify-between sm:justify-start">
-                <span>
-                  <strong>{Math.min(filtered.length, (currentPage - 1) * pageSize + 1)}</strong> - <strong>{Math.min(filtered.length, currentPage * pageSize)}</strong> dari <strong>{filtered.length}</strong> siswa
-                </span>
-                <div className="flex items-center gap-1.5 ml-2">
-                  <span className="text-[10px] text-slate-400">Baris:</span>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => setPageSize(Number(e.target.value))}
-                    className="h-7 px-2 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-200 shadow-2xs cursor-pointer"
-                  >
-                    <option value={15}>15</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-              </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center gap-1 w-full sm:w-auto justify-center sm:justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(1)}
-                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
-                    title="Halaman Pertama"
-                  >
-                    <ChevronsLeft className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
-                    title="Sebelumnya"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </Button>
-
-                  <span className="px-2.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-300">
-                    {currentPage} / {totalPages}
-                  </span>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
-                    title="Selanjutnya"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(totalPages)}
-                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
-                    title="Halaman Terakhir"
-                  >
-                    <ChevronsRight className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              )}
-            </div>
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filtered.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="siswa"
+            />
           )}
         </CardContent>
       </Card>
@@ -4368,6 +5368,12 @@ function TabTagihan() {
         onClose={() => setBulkTagihanOpen(false)}
         classes={classes}
         studentIds={bulkTagihanOpen ? selectedStudentIds : undefined}
+      />
+      <DraftDrawerModal
+        open={draftDrawerOpen}
+        onClose={() => setDraftDrawerOpen(false)}
+        classes={classes}
+        onOpenReleaseForm={() => setMassalOpen(true)}
       />
 
       {/* BULK SET BEASISWA DIALOG */}
@@ -4867,7 +5873,7 @@ function TabRiwayatPembayaran() {
   const [selectedTxIds, setSelectedTxIds] = useState<string[]>([])
 
   const [currentPage, setCurrentPage] = useState<number>(1)
-  const [pageSize, setPageSize] = useState<number>(15)
+  const [pageSize, setPageSize] = useState<number>(10)
 
   // Receipt Modal
   const [receiptModalOpen, setReceiptModalOpen] = useState(false)
@@ -4910,6 +5916,16 @@ function TabRiwayatPembayaran() {
     })
     return Array.from(set).sort((a, b) => b - a)
   }, [payments])
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0
+    if (filterKelas && filterKelas !== 'ALL') count++
+    if (filterYear && filterYear !== 'ALL') count++
+    if (filterType && filterType !== 'ALL') count++
+    if (filterStartDate) count++
+    if (filterEndDate) count++
+    return count
+  }, [filterKelas, filterYear, filterType, filterStartDate, filterEndDate])
 
   const filtered = useMemo(() => {
     return payments.filter(p => {
@@ -5127,90 +6143,158 @@ function TabRiwayatPembayaran() {
         </div>
       </div>
 
-      {/* Toolbar Search & Filter (Rule 16: Bersebelahan) */}
+      {/* Toolbar Search & Filter (Rule 16: Searchbar & Tombol Filter Bersebelahan) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 sm:p-2.5 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-[240px]">
-          <div className="relative flex-1 min-w-[130px]">
+        <div className="flex items-center gap-1.5 flex-1 min-w-[220px] max-w-xl">
+          <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <Input
               placeholder="Cari siswa, NISN, no kwitansi, catatan..."
-              className="pl-7.5 h-8 text-xs font-medium bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg"
+              className="pl-7.5 pr-7 h-8 text-xs font-medium bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
-          </div>
-
-          <Select value={filterKelas} onValueChange={(v) => setFilterKelas(v || 'ALL')}>
-            <SelectTrigger className="w-[105px] sm:w-[120px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
-              <SelectValue placeholder="Kelas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Semua Kelas</SelectItem>
-              {uniqueKelas.map(k => (
-                <SelectItem key={k} value={k}>{k}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={filterYear} onValueChange={(v) => setFilterYear(v || 'ALL')}>
-            <SelectTrigger className="w-[105px] sm:w-[120px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
-              <SelectValue placeholder="Tahun" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Semua Tahun</SelectItem>
-              {uniqueYears.map(yr => (
-                <SelectItem key={yr} value={String(yr)}>Tahun {yr}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={filterType} onValueChange={(v) => setFilterType(v || 'ALL')}>
-            <SelectTrigger className="w-[110px] sm:w-[125px] h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
-              <SelectValue placeholder="Jenis Tagihan" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Semua Jenis</SelectItem>
-              {PAYMENT_TYPES.map(t => (
-                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="flex items-center gap-1">
-            <Input
-              type="date"
-              value={filterStartDate}
-              onChange={(e) => setFilterStartDate(e.target.value)}
-              className="h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-[120px]"
-              title="Dari Tanggal"
-            />
-            <span className="text-[10px] text-slate-400">-</span>
-            <Input
-              type="date"
-              value={filterEndDate}
-              onChange={(e) => setFilterEndDate(e.target.value)}
-              className="h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-[120px]"
-              title="Sampai Tanggal"
-            />
-            {(filterStartDate || filterEndDate || filterType !== 'ALL' || filterKelas !== 'ALL' || filterYear !== 'ALL' || search) && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setSearch('')
-                  setFilterType('ALL')
-                  setFilterKelas('ALL')
-                  setFilterYear('ALL')
-                  setFilterStartDate('')
-                  setFilterEndDate('')
-                }}
-                className="h-8 px-2 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg"
-                title="Reset Filter"
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
-                <RotateCcw className="w-3 h-3" />
-              </Button>
+                <X className="w-3.5 h-3.5" />
+              </button>
             )}
           </div>
+
+          <Popover>
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  variant={activeFiltersCount > 0 ? 'default' : 'outline'}
+                  size="sm"
+                  className={`h-8 px-2.5 rounded-lg text-xs font-bold gap-1.5 shrink-0 transition-all cursor-pointer ${
+                    activeFiltersCount > 0
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                  title="Filter Data Pembayaran"
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>Filter</span>
+                  {activeFiltersCount > 0 && (
+                    <span className="bg-white/25 text-white px-1.5 py-0.2 rounded-full text-[10px] font-black">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </Button>
+              }
+            />
+            <PopoverContent
+              align="start"
+              className="w-[calc(100vw-2rem)] sm:w-80 md:w-96 p-3.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl space-y-3 z-50"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-1.5">
+                  <Filter className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Filter Riwayat Pembayaran</span>
+                  {activeFiltersCount > 0 && (
+                    <span className="bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      {activeFiltersCount} aktif
+                    </span>
+                  )}
+                </div>
+                {activeFiltersCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterType('ALL')
+                      setFilterKelas('ALL')
+                      setFilterYear('ALL')
+                      setFilterStartDate('')
+                      setFilterEndDate('')
+                    }}
+                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Reset
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Kelas</Label>
+                  <Select value={filterKelas} onValueChange={(v) => setFilterKelas(v || 'ALL')}>
+                    <SelectTrigger className="w-full h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg">
+                      <SelectValue placeholder="Semua Kelas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Semua Kelas</SelectItem>
+                      {uniqueKelas.map(k => (
+                        <SelectItem key={k} value={k}>{k}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Tahun Tagihan</Label>
+                    <Select value={filterYear} onValueChange={(v) => setFilterYear(v || 'ALL')}>
+                      <SelectTrigger className="w-full h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg">
+                        <SelectValue placeholder="Semua Tahun" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Semua Tahun</SelectItem>
+                        {uniqueYears.map(yr => (
+                          <SelectItem key={yr} value={String(yr)}>Tahun {yr}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Jenis Tagihan</Label>
+                    <Select value={filterType} onValueChange={(v) => setFilterType(v || 'ALL')}>
+                      <SelectTrigger className="w-full h-8 font-bold text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg">
+                        <SelectValue placeholder="Semua Jenis" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Semua Jenis</SelectItem>
+                        {PAYMENT_TYPES.map(t => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                  <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Rentang Tanggal Bayar</Label>
+                  <div className="grid grid-cols-2 gap-1.5 items-center">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block mb-0.5">Dari</span>
+                      <Input
+                        type="date"
+                        value={filterStartDate}
+                        onChange={(e) => setFilterStartDate(e.target.value)}
+                        className="h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-full"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block mb-0.5">Sampai</span>
+                      <Input
+                        type="date"
+                        value={filterEndDate}
+                        onChange={(e) => setFilterEndDate(e.target.value)}
+                        className="h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -5389,78 +6473,16 @@ function TabRiwayatPembayaran() {
             </Table>
           </div>
 
-          {/* Pagination Toolbar */}
+          {/* Pagination Toolbar (Rule 20) */}
           {filtered.length > 0 && (
-            <div className="px-3 sm:px-4 py-2 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
-              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px] w-full sm:w-auto justify-between sm:justify-start">
-                <span>
-                  <strong>{Math.min(filtered.length, (currentPage - 1) * pageSize + 1)}</strong> - <strong>{Math.min(filtered.length, currentPage * pageSize)}</strong> dari <strong>{filtered.length}</strong> transaksi
-                </span>
-                <div className="flex items-center gap-1.5 ml-2">
-                  <span className="text-[10px] text-slate-400">Baris:</span>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => setPageSize(Number(e.target.value))}
-                    className="h-7 px-2 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-200 shadow-2xs cursor-pointer"
-                  >
-                    <option value={15}>15</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-              </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center gap-1 w-full sm:w-auto justify-center sm:justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(1)}
-                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
-                    title="Halaman Pertama"
-                  >
-                    <ChevronsLeft className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
-                    title="Sebelumnya"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </Button>
-
-                  <span className="px-2.5 text-[11px] font-extrabold text-slate-700 dark:text-slate-300">
-                    {currentPage} / {totalPages}
-                  </span>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
-                    title="Selanjutnya"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(totalPages)}
-                    className="h-7.5 w-7.5 p-0 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation disabled:opacity-40"
-                    title="Halaman Terakhir"
-                  >
-                    <ChevronsRight className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              )}
-            </div>
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filtered.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="transaksi"
+            />
           )}
         </CardContent>
       </Card>

@@ -257,6 +257,61 @@ export default function FaceAttendanceCameraPage() {
   const [capturedSnapshotUrl, setCapturedSnapshotUrl] = useState<string | null>(null)
   const autoClearTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const activeAudioRef = useRef<HTMLAudioElement | null>(null)
+  const [twinCountdown, setTwinCountdown] = useState<number>(0)
+  const twinCountdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const clearTwinCountdown = () => {
+    if (twinCountdownIntervalRef.current) {
+      clearInterval(twinCountdownIntervalRef.current)
+      twinCountdownIntervalRef.current = null
+    }
+    setTwinCountdown(0)
+  }
+
+  const startTwinCountdown = () => {
+    clearTwinCountdown()
+    if (autoClearTimeoutRef.current) {
+      clearTimeout(autoClearTimeoutRef.current)
+      autoClearTimeoutRef.current = null
+    }
+    setTwinCountdown(15)
+    twinCountdownIntervalRef.current = setInterval(() => {
+      setTwinCountdown((prev) => {
+        if (prev <= 1) {
+          if (twinCountdownIntervalRef.current) {
+            clearInterval(twinCountdownIntervalRef.current)
+            twinCountdownIntervalRef.current = null
+          }
+          setCaptureResult(null)
+          setCapturedSnapshotUrl(null)
+          const canvas = overlayCanvasRef.current
+          if (canvas) {
+            const cCtx = canvas.getContext('2d')
+            if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+          }
+          toast.info('Batas waktu pemilihan berakhir. Kamera kembali memindai.')
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  const cancelTwinSelection = () => {
+    clearTwinCountdown()
+    if (autoClearTimeoutRef.current) {
+      clearTimeout(autoClearTimeoutRef.current)
+      autoClearTimeoutRef.current = null
+    }
+    setCaptureResult(null)
+    setCapturedSnapshotUrl(null)
+    const canvas = overlayCanvasRef.current
+    if (canvas) {
+      const cCtx = canvas.getContext('2d')
+      if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+    }
+    toast.info('Pemilihan dibatalkan. Kamera siap memindai.')
+  }
 
   // Dataset filter states
   const [searchQuery, setSearchQuery] = useState('')
@@ -905,6 +960,8 @@ export default function FaceAttendanceCameraPage() {
       autoClearTimeoutRef.current = null
     }
 
+    let isAmbiguousResult = false
+
     try {
       setCapturedSnapshotUrl(base64)
 
@@ -950,6 +1007,7 @@ export default function FaceAttendanceCameraPage() {
         const registeredFace = sortedFaces.find((f: any) => f.is_registered && (f.confidence || 0) >= minThresh)
 
         if (ambiguousFace) {
+          isAmbiguousResult = true
           playBiometricAudio('warning')
           speakVoiceGreeting(undefined, undefined, 'TWIN_AMBIGUOUS')
           setCaptureResult({
@@ -958,6 +1016,7 @@ export default function FaceAttendanceCameraPage() {
             attendanceMsg: 'Terdeteksi kemiripan profil biometrik. Silakan pilih nama Anda pada layar untuk konfirmasi:',
             twinCandidates: ambiguousFace.twin_candidates || [],
           })
+          startTwinCountdown()
           toast.info('Terdeteksi kemiripan profil biometrik. Silakan pilih nama yang sesuai.')
         } else if (registeredFace && (registeredFace.meets_attendance_threshold === false || Math.round(registeredFace.confidence * 100) < 91)) {
           // Wajah terdeteksi tapi confidence BELUM mencapai 91% — presensi TIDAK direkam
@@ -1057,15 +1116,17 @@ export default function FaceAttendanceCameraPage() {
       toast.error('Gagal memproses pemindaian wajah ke server FaceNet.')
     } finally {
       setIsCapturing(false)
-      autoClearTimeoutRef.current = setTimeout(() => {
-        setCaptureResult(null)
-        setCapturedSnapshotUrl(null)
-        const canvas = overlayCanvasRef.current
-        if (canvas) {
-          const cCtx = canvas.getContext('2d')
-          if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
-        }
-      }, 1250) // Reset cepat 1.25s: frame langsung bersih & siap menyambut siswa antrian berikutnya
+      if (!isAmbiguousResult) {
+        autoClearTimeoutRef.current = setTimeout(() => {
+          setCaptureResult(null)
+          setCapturedSnapshotUrl(null)
+          const canvas = overlayCanvasRef.current
+          if (canvas) {
+            const cCtx = canvas.getContext('2d')
+            if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+          }
+        }, 1250) // Reset cepat 1.25s: frame langsung bersih & siap menyambut siswa antrian berikutnya
+      }
     }
   }
 
@@ -1078,6 +1139,7 @@ export default function FaceAttendanceCameraPage() {
     confidence: number
   }) => {
     if (isConfirmingTwin) return
+    clearTwinCountdown()
     setIsConfirmingTwin(true)
     try {
       const res = await authenticatedFetch('/api-backend/face-attendance/confirm-attendance', {
@@ -1111,6 +1173,19 @@ export default function FaceAttendanceCameraPage() {
       toast.success(`Presensi Terverifikasi: ${candidate.name}`)
       queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
       queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+
+      if (autoClearTimeoutRef.current) {
+        clearTimeout(autoClearTimeoutRef.current)
+      }
+      autoClearTimeoutRef.current = setTimeout(() => {
+        setCaptureResult(null)
+        setCapturedSnapshotUrl(null)
+        const canvas = overlayCanvasRef.current
+        if (canvas) {
+          const cCtx = canvas.getContext('2d')
+          if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+        }
+      }, 2500)
     } catch (err: any) {
       toast.error(err?.message || 'Gagal mengonfirmasi presensi')
     } finally {
@@ -1130,7 +1205,7 @@ export default function FaceAttendanceCameraPage() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activeTab, isCapturing, isBrowserCamStreaming, scanMode])
+  }, [activeTab, isCapturing, isBrowserCamStreaming, scanMode, isConfirmingTwin, twinCountdown])
 
   // Persistent offscreen canvas ref to prevent garbage collection hiccups and lag
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -1153,7 +1228,15 @@ export default function FaceAttendanceCameraPage() {
     let autoScanCooldownUntil = 0
 
     const interval = setInterval(async () => {
-      if (isProcessing || isCapturing || !localVideoRef.current || !overlayCanvasRef.current) return
+      if (
+        isProcessing || 
+        isCapturing || 
+        isConfirmingTwin || 
+        twinCountdownIntervalRef.current !== null || 
+        captureResult?.type === 'TWIN_AMBIGUOUS' || 
+        !localVideoRef.current || 
+        !overlayCanvasRef.current
+      ) return
       const video = localVideoRef.current
       if (video.readyState < 2 || video.videoWidth === 0) return
 
@@ -1199,6 +1282,27 @@ export default function FaceAttendanceCameraPage() {
             }))
             drawYoloBoundingBoxes(scaledFaces, video.videoWidth, video.videoHeight)
             if (shouldRecordNow && rawFaces.length > 0) {
+              const sortedFaces = [...rawFaces].sort((a: any, b: any) => {
+                const aDist = Math.hypot((a.box[0] + a.box[2]/2.0) - video.videoWidth/2.0, (a.box[1] + a.box[3]/2.0) - video.videoHeight/2.0)
+                const bDist = Math.hypot((b.box[0] + b.box[2]/2.0) - video.videoWidth/2.0, (b.box[1] + b.box[3]/2.0) - video.videoHeight/2.0)
+                return aDist - bDist
+              })
+
+              const ambiguousFace = sortedFaces.find((f: any) => f.is_twin_ambiguous && f.twin_candidates && f.twin_candidates.length > 1)
+              if (ambiguousFace) {
+                playBiometricAudio('warning')
+                speakVoiceGreeting(undefined, undefined, 'TWIN_AMBIGUOUS')
+                setCaptureResult({
+                  type: 'TWIN_AMBIGUOUS',
+                  message: 'Verifikasi Identitas Biometrik',
+                  attendanceMsg: 'Terdeteksi kemiripan profil biometrik. Silakan pilih nama Anda pada layar untuk konfirmasi:',
+                  twinCandidates: ambiguousFace.twin_candidates || [],
+                })
+                startTwinCountdown()
+                toast.info('Terdeteksi kemiripan profil biometrik. Silakan pilih nama yang sesuai.')
+                return
+              }
+
               const regFace = rawFaces.find((f: any) => f.is_registered && (f.confidence || 0) >= (currentConfig?.threshold || 0.70))
               if (regFace && regFace.attendance && regFace.attendance.success) {
                 autoScanCooldownUntil = Date.now() + 5000
@@ -1241,7 +1345,7 @@ export default function FaceAttendanceCameraPage() {
     }, 150)
 
     return () => clearInterval(interval)
-  }, [isBrowserCamStreaming, scanMode, isCapturing, currentConfig?.autoAttendance, currentConfig?.threshold])
+  }, [isBrowserCamStreaming, scanMode, isCapturing, isConfirmingTwin, currentConfig?.autoAttendance, currentConfig?.threshold])
 
   // 2. Fetch Users Dataset stats
   const { data: datasetData, isLoading: isDatasetLoading, refetch: refetchDataset } = useQuery<UsersDatasetResponse>({
@@ -2046,37 +2150,63 @@ export default function FaceAttendanceCameraPage() {
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
-                                  <Button
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setCaptureResult(null)
-                                      setCapturedSnapshotUrl(null)
-                                      const canvas = overlayCanvasRef.current
-                                      if (canvas) {
-                                        const cCtx = canvas.getContext('2d')
-                                        if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
-                                      }
-                                    }}
-                                    className="min-h-[42px] px-3.5 text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 touch-manipulation"
-                                  >
-                                    Tutup
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setCapturedSnapshotUrl(null)
-                                      executeFaceCapture()
-                                    }}
-                                    disabled={isCapturing}
-                                    className="min-h-[42px] px-4 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-black gap-1.5 shadow-md touch-manipulation"
-                                  >
-                                    <Camera className="w-4 h-4" />
-                                    <span>Scan Lagi</span>
-                                  </Button>
+                                  {captureResult.type === 'TWIN_AMBIGUOUS' ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        cancelTwinSelection()
+                                      }}
+                                      className="min-h-[42px] px-3.5 text-xs sm:text-sm font-bold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 rounded-xl touch-manipulation"
+                                    >
+                                      Batal / Pindai Ulang
+                                    </Button>
+                                  ) : (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setCaptureResult(null)
+                                          setCapturedSnapshotUrl(null)
+                                          const canvas = overlayCanvasRef.current
+                                          if (canvas) {
+                                            const cCtx = canvas.getContext('2d')
+                                            if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+                                          }
+                                        }}
+                                        className="min-h-[42px] px-3.5 text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 touch-manipulation"
+                                      >
+                                        Tutup
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setCapturedSnapshotUrl(null)
+                                          executeFaceCapture()
+                                        }}
+                                        disabled={isCapturing}
+                                        className="min-h-[42px] px-4 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-black gap-1.5 shadow-md touch-manipulation"
+                                      >
+                                        <Camera className="w-4 h-4" />
+                                        <span>Scan Lagi</span>
+                                      </Button>
+                                    </>
+                                  )}
                                 </div>
                               </div>
+
+                              {/* Progress bar countdown 15s */}
+                              {captureResult.type === 'TWIN_AMBIGUOUS' && twinCountdown > 0 && (
+                                <div className="w-full bg-slate-800/80 h-1.5 rounded-full overflow-hidden">
+                                  <div 
+                                    className="bg-gradient-to-r from-cyan-500 to-cyan-300 h-full transition-all duration-1000 ease-linear"
+                                    style={{ width: `${Math.min(100, Math.max(0, (twinCountdown / 15) * 100))}%` }}
+                                  />
+                                </div>
+                              )}
 
                               {/* Twin Candidates Option Buttons */}
                               {captureResult.type === 'TWIN_AMBIGUOUS' && captureResult.twinCandidates && captureResult.twinCandidates.length > 0 && (
@@ -2090,16 +2220,26 @@ export default function FaceAttendanceCameraPage() {
                                         e.stopPropagation()
                                         handleConfirmTwinAttendance(cand)
                                       }}
-                                      className="min-h-[56px] flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-cyan-950 border-2 border-cyan-500/40 hover:border-cyan-400 transition-all text-left text-xs group cursor-pointer touch-manipulation"
+                                      className="min-h-[58px] flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-cyan-950/80 border-2 border-cyan-500/40 hover:border-cyan-400 active:scale-[0.99] transition-all text-left text-xs group cursor-pointer touch-manipulation disabled:opacity-50"
                                     >
-                                      <div className="min-w-0 pr-2">
-                                        <p className="font-extrabold text-white group-hover:text-cyan-300 truncate text-sm">{cand.name}</p>
-                                        <p className="text-[11px] text-slate-300 mt-0.5 truncate font-medium">
-                                          {cand.className || cand.role} • {cand.identifier}
-                                        </p>
+                                      <div className="flex items-center gap-3 min-w-0 pr-2">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-800 overflow-hidden shrink-0 border border-slate-700 flex items-center justify-center">
+                                          {cand.avatarUrl ? (
+                                            <img src={cand.avatarUrl} alt={cand.name} className="w-full h-full object-cover" />
+                                          ) : (
+                                            <span className="font-bold text-slate-300 text-sm">{cand.name.charAt(0)}</span>
+                                          )}
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="font-extrabold text-white group-hover:text-cyan-300 truncate text-sm">{cand.name}</p>
+                                          <p className="text-[11px] text-slate-300 mt-0.5 truncate font-medium">
+                                            {cand.className || cand.role} • {cand.identifier}
+                                          </p>
+                                        </div>
                                       </div>
-                                      <span className="shrink-0 px-3 py-1.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs shadow-md">
-                                        Pilih Ini →
+                                      <span className="shrink-0 px-3 py-1.5 rounded-lg bg-cyan-400 group-hover:bg-cyan-300 text-slate-950 font-black text-xs shadow-md inline-flex items-center gap-1">
+                                        {isConfirmingTwin ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                                        <span>Pilih Ini →</span>
                                       </span>
                                     </button>
                                   ))}

@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -378,6 +379,34 @@ export default function PerangkatAjarPage() {
   const { sortConfig, handleSort, sortedItems } = useSorting(filteredList)
   const searchedItems = filterDataBySearch(sortedItems, searchQuery)
 
+  // Rule 20 Pagination States
+  const [docPage, setDocPage] = useState<number>(1)
+  const [docPageSize, setDocPageSize] = useState<number>(10)
+  const [rekapPage, setRekapPage] = useState<number>(1)
+  const [rekapPageSize, setRekapPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setDocPage(1)
+  }, [searchQuery, filterJenis, filterStatus, filterTeacher, docPageSize])
+
+  const paginatedDocs = useMemo(() => {
+    const startIndex = (docPage - 1) * docPageSize
+    return searchedItems.slice(startIndex, startIndex + docPageSize)
+  }, [searchedItems, docPage, docPageSize])
+
+  const filteredRekapList = useMemo(() => {
+    return rekapList.filter((t) => !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [rekapList, searchQuery])
+
+  useEffect(() => {
+    setRekapPage(1)
+  }, [searchQuery, rekapPageSize])
+
+  const paginatedRekapList = useMemo(() => {
+    const startIndex = (rekapPage - 1) * rekapPageSize
+    return filteredRekapList.slice(startIndex, startIndex + rekapPageSize)
+  }, [filteredRekapList, rekapPage, rekapPageSize])
+
   // Status Badge Helper
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -623,10 +652,10 @@ export default function PerangkatAjarPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    searchedItems.map((doc, idx) => (
+                    paginatedDocs.map((doc, idx) => (
                       <TableRow key={doc.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
                         <TableCell className="pl-6 text-center font-medium text-slate-400 text-xs">
-                          {idx + 1}
+                          {(docPage - 1) * docPageSize + idx + 1}
                         </TableCell>
 
                         {(activeTab === 'verifikasi' || isKurikulumOrPimpinan) && (
@@ -739,6 +768,16 @@ export default function PerangkatAjarPage() {
                 </TableBody>
               </Table>
             </CardContent>
+            {!loadingPerangkat && searchedItems.length > 0 && (
+              <TablePagination
+                currentPage={docPage}
+                pageSize={docPageSize}
+                totalItems={searchedItems.length}
+                onPageChange={setDocPage}
+                onPageSizeChange={setDocPageSize}
+                itemLabel="dokumen perangkat"
+              />
+            )}
           </Card>
         </div>
       )}
@@ -847,13 +886,12 @@ export default function PerangkatAjarPage() {
                         Memuat rekapitulasi data perangkat...
                       </TableCell>
                     </TableRow>
-                  ) : rekapList
-                      .filter((t) => !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                      .map((t, idx) => (
-                        <TableRow key={t.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
-                          <TableCell className="pl-6 text-center font-medium text-slate-400 text-xs">
-                            {idx + 1}
-                          </TableCell>
+                  ) : (
+                    paginatedRekapList.map((t, idx) => (
+                      <TableRow key={t.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
+                        <TableCell className="pl-6 text-center font-medium text-slate-400 text-xs">
+                          {(rekapPage - 1) * rekapPageSize + idx + 1}
+                        </TableCell>
 
                           <TableCell className="text-xs font-bold text-slate-900 dark:text-white">
                             {t.name}
@@ -943,10 +981,21 @@ export default function PerangkatAjarPage() {
                             )}
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ))
+                    )}
                 </TableBody>
               </Table>
             </CardContent>
+            {!loadingRekap && filteredRekapList.length > 0 && (
+              <TablePagination
+                currentPage={rekapPage}
+                pageSize={rekapPageSize}
+                totalItems={filteredRekapList.length}
+                onPageChange={setRekapPage}
+                onPageSizeChange={setRekapPageSize}
+                itemLabel="rekapitulasi guru"
+              />
+            )}
           </Card>
         </div>
       )}

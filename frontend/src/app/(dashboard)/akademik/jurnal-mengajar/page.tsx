@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
 import { 
   Plus, 
@@ -23,8 +24,15 @@ import {
   BookCheck,
   Filter,
   CheckSquare,
-  Square
+  Square,
+  Camera,
+  UploadCloud,
+  RefreshCcw,
+  Sparkles,
+  Copy,
+  Check
 } from 'lucide-react'
+import Webcam from 'react-webcam'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -61,13 +69,19 @@ export default function JurnalMengajarPage() {
   const [selectedJournalIds, setSelectedJournalIds] = useState<string[]>([])
   const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([])
 
+  const editWebcamRef = React.useRef<Webcam>(null)
+  const [isCameraActive, setIsCameraActive] = useState(false)
+  const [editPhotoSrc, setEditPhotoSrc] = useState<string | null>(null)
+  const [copiedRecentInEdit, setCopiedRecentInEdit] = useState(false)
+
   const [formData, setFormData] = useState({
     id: '',
     date: new Date().toISOString().split('T')[0],
     material: '',
     notes: '',
     scheduleId: '',
-    teacherId: ''
+    teacherId: '',
+    photoUrl: ''
   })
 
   const userRolesList = [userRole, (session?.user as any)?.subRole, (session?.user as any)?.subRole2].filter(Boolean)
@@ -197,11 +211,25 @@ export default function JurnalMengajarPage() {
   // Mutations
   const updateMutation = useMutation({
     mutationFn: async (updatedJournal: any) => {
-      const { id, ...payload } = updatedJournal
+      let { id, photoUrl, ...payload } = updatedJournal
+
+      // Upload if photo is base64 data URI
+      if (photoUrl && photoUrl.startsWith('data:image')) {
+        const uploadRes = await authenticatedFetch('/api-backend/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: photoUrl, folder: 'journals' })
+        })
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json()
+          photoUrl = uploadData.url
+        }
+      }
+
       const res = await authenticatedFetch(`/api-backend/teaching-journals/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ ...payload, photoUrl: photoUrl || undefined })
       })
       if (!res.ok) throw new Error('Gagal memperbarui jurnal')
       return res.json()
@@ -209,6 +237,8 @@ export default function JurnalMengajarPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-teaching-journals'] })
       setOpen(false)
+      setIsCameraActive(false)
+      setEditPhotoSrc(null)
     }
   })
 
@@ -235,13 +265,71 @@ export default function JurnalMengajarPage() {
   const handleOpenEditDialog = (item: any) => {
     setFormData({ 
       id: item.id, 
-      date: new Date(item.date).toISOString().split('T')[0], 
+      date: item.date ? new Date(item.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0], 
       material: item.material || '', 
       notes: item.notes || '', 
       scheduleId: item.scheduleId || '', 
-      teacherId: item.teacherId || '' 
+      teacherId: item.teacherId || '',
+      photoUrl: item.photoUrl || ''
     })
+    setEditPhotoSrc(item.photoUrl || null)
+    setIsCameraActive(false)
+    setCopiedRecentInEdit(false)
     setOpen(true)
+  }
+
+  // Cari jurnal terdahulu untuk kelas & mapel yang sama pada dialog edit
+  const editSameClassLastJournal = useMemo(() => {
+    if (!open || !formData.id || !myJournals || !Array.isArray(myJournals)) return null
+    const currentJournal = myJournals.find(j => j.id === formData.id)
+    const targetClassId = currentJournal?.schedule?.classId || currentJournal?.schedule?.class?.id
+    const targetSubjectId = currentJournal?.schedule?.subjectId || currentJournal?.schedule?.subject?.id
+    if (!targetClassId) return null
+
+    return myJournals.find(j => {
+      if (j.id === formData.id) return false
+      const jClassId = j.schedule?.classId || j.schedule?.class?.id
+      const jSubjectId = j.schedule?.subjectId || j.schedule?.subject?.id
+      return jClassId === targetClassId && (!targetSubjectId || jSubjectId === targetSubjectId) && j.material
+    }) || null
+  }, [open, formData.id, myJournals])
+
+  const handleCopyFromRecentInEdit = () => {
+    if (editSameClassLastJournal) {
+      setFormData(prev => ({
+        ...prev,
+        material: editSameClassLastJournal.material || prev.material,
+        notes: editSameClassLastJournal.notes || prev.notes
+      }))
+      setCopiedRecentInEdit(true)
+      setTimeout(() => setCopiedRecentInEdit(false), 2500)
+    }
+  }
+
+  const captureEditPhoto = () => {
+    if (editWebcamRef.current) {
+      const imageSrc = editWebcamRef.current.getScreenshot()
+      if (imageSrc) {
+        setEditPhotoSrc(imageSrc)
+        setFormData(prev => ({ ...prev, photoUrl: imageSrc }))
+        setIsCameraActive(false)
+      }
+    }
+  }
+
+  const handleEditFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setEditPhotoSrc(reader.result)
+          setFormData(prev => ({ ...prev, photoUrl: reader.result as string }))
+          setIsCameraActive(false)
+        }
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
   const handleDelete = (id: string) => {
@@ -254,6 +342,7 @@ export default function JurnalMengajarPage() {
     e.preventDefault()
     updateMutation.mutate({
       ...formData,
+      photoUrl: editPhotoSrc || formData.photoUrl || '',
       date: new Date(formData.date).toISOString()
     })
   }
@@ -263,6 +352,30 @@ export default function JurnalMengajarPage() {
 
   const { sortConfig: scheduleSort, handleSort: handleScheduleSort, sortedItems: sortedSchedules } = useSorting(filteredWeeklySchedules)
   const searchedWeeklySchedules = filterDataBySearch(sortedSchedules, searchQuery)
+
+  // Rule 20 Pagination States
+  const [journalPage, setJournalPage] = useState<number>(1)
+  const [journalPageSize, setJournalPageSize] = useState<number>(10)
+  const [schedulePage, setSchedulePage] = useState<number>(1)
+  const [schedulePageSize, setSchedulePageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setJournalPage(1)
+  }, [searchQuery, historyClassFilter, journalPageSize])
+
+  useEffect(() => {
+    setSchedulePage(1)
+  }, [searchQuery, scheduleDayFilter, scheduleClassFilter, schedulePageSize])
+
+  const paginatedJournals = useMemo(() => {
+    const startIndex = (journalPage - 1) * journalPageSize
+    return searchedJournals.slice(startIndex, startIndex + journalPageSize)
+  }, [searchedJournals, journalPage, journalPageSize])
+
+  const paginatedWeeklySchedules = useMemo(() => {
+    const startIndex = (schedulePage - 1) * schedulePageSize
+    return searchedWeeklySchedules.slice(startIndex, startIndex + schedulePageSize)
+  }, [searchedWeeklySchedules, schedulePage, schedulePageSize])
 
   // Selection Helpers - Journals
   const handleSelectAllJournals = () => {
@@ -638,8 +751,9 @@ export default function JurnalMengajarPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  searchedJournals.map((jurnal, index) => {
+                  paginatedJournals.map((jurnal, index) => {
                     const isSelected = selectedJournalIds.includes(jurnal.id)
+                    const rowNumber = (journalPage - 1) * journalPageSize + index + 1
                     return (
                       <TableRow key={jurnal.id} className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/40 text-xs ${isSelected ? 'bg-blue-50/30 dark:bg-blue-950/20' : ''}`}>
                         {/* Checkbox Row (Rule 16) */}
@@ -656,7 +770,7 @@ export default function JurnalMengajarPage() {
                             )}
                           </button>
                         </TableCell>
-                        <TableCell className="font-mono text-slate-500">{index + 1}</TableCell>
+                        <TableCell className="font-mono text-slate-500">{rowNumber}</TableCell>
                         <TableCell className="font-medium text-slate-900 dark:text-white whitespace-nowrap">
                           {format(new Date(jurnal.date), 'dd MMM yyyy', { locale: localeId })}
                         </TableCell>
@@ -713,6 +827,16 @@ export default function JurnalMengajarPage() {
               </TableBody>
             </Table>
           </CardContent>
+          {!loadingJournals && searchedJournals.length > 0 && (
+            <TablePagination
+              currentPage={journalPage}
+              pageSize={journalPageSize}
+              totalItems={searchedJournals.length}
+              onPageChange={setJournalPage}
+              onPageSizeChange={setJournalPageSize}
+              itemLabel="riwayat jurnal"
+            />
+          )}
         </Card>
       )}
 
@@ -819,7 +943,7 @@ export default function JurnalMengajarPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  searchedWeeklySchedules.map((item) => {
+                  paginatedWeeklySchedules.map((item) => {
                     const isSelected = selectedScheduleIds.includes(item.id)
                     return (
                       <TableRow key={item.id} className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/40 text-xs ${isSelected ? 'bg-blue-50/30 dark:bg-blue-950/20' : ''}`}>
@@ -870,6 +994,16 @@ export default function JurnalMengajarPage() {
               </TableBody>
             </Table>
           </CardContent>
+          {!loadingSchedules && searchedWeeklySchedules.length > 0 && (
+            <TablePagination
+              currentPage={schedulePage}
+              pageSize={schedulePageSize}
+              totalItems={searchedWeeklySchedules.length}
+              onPageChange={setSchedulePage}
+              onPageSizeChange={setSchedulePageSize}
+              itemLabel="jadwal mengajar"
+            />
+          )}
         </Card>
       )}
 
@@ -964,8 +1098,49 @@ export default function JurnalMengajarPage() {
                   className="h-9 text-xs"
                 />
               </div>
+              {editSameClassLastJournal && (
+                <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span className="text-amber-900 dark:text-amber-200 truncate text-[11px]">
+                      Materi sebelumnya: &ldquo;{editSameClassLastJournal.material}&rdquo;
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCopyFromRecentInEdit}
+                    className="h-6 px-2 text-[10px] bg-white dark:bg-slate-900 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 shrink-0"
+                  >
+                    {copiedRecentInEdit ? (
+                      <>
+                        <Check className="w-3 h-3 mr-1 text-emerald-600" />
+                        Tersalin!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3 mr-1" />
+                        Salin
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Materi Pembelajaran</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold">Materi Pembelajaran</Label>
+                  {editSameClassLastJournal && !copiedRecentInEdit && (
+                    <button
+                      type="button"
+                      onClick={handleCopyFromRecentInEdit}
+                      className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium"
+                    >
+                      <Copy className="w-2.5 h-2.5" /> Samakan dari Kelas Terakhir
+                    </button>
+                  )}
+                </div>
                 <Input 
                   value={formData.material} 
                   onChange={e => setFormData({...formData, material: e.target.value})} 
@@ -974,6 +1149,7 @@ export default function JurnalMengajarPage() {
                   className="h-9 text-xs"
                 />
               </div>
+
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Catatan Khusus (Opsional)</Label>
                 <Input 
@@ -983,9 +1159,99 @@ export default function JurnalMengajarPage() {
                   className="h-9 text-xs"
                 />
               </div>
+
+              {/* Bukti Dokumentasi Foto */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold">Dokumentasi Foto KBM</Label>
+                  {editPhotoSrc && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditPhotoSrc(null)
+                        setFormData(prev => ({ ...prev, photoUrl: '' }))
+                      }}
+                      className="text-[10px] text-rose-600 dark:text-rose-400 hover:underline"
+                    >
+                      Hapus Foto
+                    </button>
+                  )}
+                </div>
+
+                {editPhotoSrc && !isCameraActive ? (
+                  <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 max-h-36 flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={editPhotoSrc} alt="Dokumentasi" className="h-36 w-full object-contain" />
+                    <div className="absolute bottom-2 right-2 flex gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setIsCameraActive(true)}
+                        className="h-6 px-2 text-[10px] bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-xs"
+                      >
+                        <Camera className="w-3 h-3 mr-1" /> Ambil Ulang
+                      </Button>
+                    </div>
+                  </div>
+                ) : isCameraActive ? (
+                  <div className="space-y-2">
+                    <div className="w-full rounded-lg overflow-hidden border border-slate-200 bg-black flex items-center justify-center max-h-48">
+                      <Webcam
+                        audio={false}
+                        ref={editWebcamRef}
+                        screenshotFormat="image/jpeg"
+                        className="w-full max-h-48 object-contain"
+                        videoConstraints={{ facingMode: "user" }}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsCameraActive(false)}
+                        className="h-7 text-xs"
+                      >
+                        Batal Kamera
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={captureEditPhoto}
+                        className="h-7 text-xs bg-slate-900 hover:bg-slate-800 text-white font-semibold"
+                      >
+                        <Camera className="w-3 h-3 mr-1" /> Tangkap Foto
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsCameraActive(true)}
+                      className="h-7 text-xs bg-white dark:bg-slate-800"
+                    >
+                      <Camera className="w-3.5 h-3.5 mr-1" /> Buka Kamera
+                    </Button>
+                    <label className="cursor-pointer inline-flex items-center justify-center rounded-md text-xs font-semibold ring-offset-background transition-colors border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 h-7 px-2.5">
+                      <UploadCloud className="w-3.5 h-3.5 mr-1" />
+                      Unggah Berkas
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleEditFileUpload} 
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="text-xs h-8">Batal</Button>
+            <DialogFooter className="mt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => { setOpen(false); setIsCameraActive(false) }} className="text-xs h-8">Batal</Button>
               <Button type="submit" size="sm" disabled={updateMutation.isPending} className="bg-blue-600 font-semibold text-xs h-8">
                 {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
                 Simpan Perubahan

@@ -1,12 +1,13 @@
 'use client'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
 import { Input, PasswordInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -62,6 +63,8 @@ export default function TeachersPage() {
   // Bulk Selection & Edit States
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(10)
   const [bulkEditOpen, setBulkEditOpen] = useState(false)
   const [bulkEditData, setBulkEditData] = useState({
     updatePhone: false,
@@ -303,7 +306,28 @@ export default function TeachersPage() {
   }
 
 
-  const isAllSelected = !!(teachers && teachers.length > 0 && selectedIds.length === teachers.length)
+  const filteredTeachers = useMemo(() => {
+    const raw = (teachers || []).filter(t => (t.user as any)?.role !== 'HONORER' && (t.user as any)?.subRole !== 'HONORER')
+    return filterDataBySearch(raw, searchQuery, [
+      'user.name',
+      'user.username',
+      'user.email',
+      'nip',
+      'user.nipNbm',
+      'phone'
+    ])
+  }, [teachers, searchQuery])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
+  const paginatedTeachers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredTeachers.slice(start, start + pageSize)
+  }, [filteredTeachers, currentPage, pageSize])
+
+  const isAllSelected = !!(filteredTeachers.length > 0 && selectedIds.length === filteredTeachers.length)
 
   return (
     <>
@@ -615,14 +639,14 @@ export default function TeachersPage() {
                     Memuat data...
                   </TableCell>
                 </TableRow>
-              ) : filterDataBySearch((teachers || []).filter(t => (t.user as any)?.role !== 'HONORER' && (t.user as any)?.subRole !== 'HONORER'), searchQuery)?.length === 0 ? (
+              ) : filteredTeachers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isSuperOrAdmin ? 4 : 2} className="text-center py-8 text-slate-500">
                     {searchQuery ? 'Tidak ada data guru yang sesuai dengan pencarian.' : 'Belum ada data guru.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                filterDataBySearch((teachers || []).filter(t => (t.user as any)?.role !== 'HONORER' && (t.user as any)?.subRole !== 'HONORER'), searchQuery)?.map((item) => {
+                paginatedTeachers.map((item) => {
                   const isSelected = selectedIds.includes(item.id)
                   const nip = item.nip || item.user?.nipNbm
                   return (
@@ -709,6 +733,15 @@ export default function TeachersPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalItems={filteredTeachers.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 50, 100]}
+            itemLabel="guru"
+          />
         </CardContent>
       </Card>
     </div>

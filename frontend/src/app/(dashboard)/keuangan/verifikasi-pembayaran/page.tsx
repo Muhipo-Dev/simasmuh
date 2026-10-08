@@ -17,6 +17,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { TablePagination } from '@/components/TablePagination'
 import Swal from 'sweetalert2'
 import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 
@@ -165,6 +167,13 @@ export default function PaymentProofVerificationPage() {
 
     return { total, pending, verified, rejected, totalAmount, verifiedAmount }
   }, [paymentProofs])
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0
+    if (statusFilter && statusFilter !== 'ALL') count++
+    if (typeFilter && typeFilter !== 'ALL') count++
+    return count
+  }, [statusFilter, typeFilter])
 
   // Filtered proofs
   const filteredProofs = useMemo(() => {
@@ -455,10 +464,10 @@ export default function PaymentProofVerificationPage() {
         {/* Searchbar & Filter Bersebelahan (Rule 16 STRICT) */}
         <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
-            {/* Sisi Kiri: Searchbar & Filter Bersebelahan */}
-            <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+            {/* Sisi Kiri: Searchbar & Filter Terpusat Bersebelahan (Rule 16 STRICT) */}
+            <div className="flex items-center gap-2 flex-1 min-w-0 max-w-lg">
               {/* Searchbar */}
-              <div className="relative flex-1 min-w-[200px] sm:min-w-[260px] max-w-md">
+              <div className="relative flex-1 min-w-[180px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
                   type="text"
@@ -477,46 +486,104 @@ export default function PaymentProofVerificationPage() {
                 )}
               </div>
 
-              {/* Filter Status */}
-              <div className="w-[150px] shrink-0">
-                <Select
-                  value={statusFilter}
-                  onValueChange={(val: any) => setStatusFilter(val || 'ALL')}
+              {/* Tombol Filter Terpusat (Popover) */}
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant={activeFiltersCount > 0 ? 'default' : 'outline'}
+                      size="sm"
+                      className={`h-9 px-3 rounded-lg text-xs font-bold gap-1.5 shrink-0 transition-all cursor-pointer ${
+                        activeFiltersCount > 0
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                          : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                      title="Filter Bukti Pembayaran"
+                    >
+                      <Filter className="w-3.5 h-3.5" />
+                      <span>Filter</span>
+                      {activeFiltersCount > 0 && (
+                        <span className="bg-white/25 text-white px-1.5 py-0.2 rounded-full text-[10px] font-black">
+                          {activeFiltersCount}
+                        </span>
+                      )}
+                    </Button>
+                  }
+                />
+                <PopoverContent
+                  align="start"
+                  className="w-[calc(100vw-2rem)] sm:w-80 p-3.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl space-y-3 z-50"
                 >
-                  <SelectTrigger className="h-9 text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg">
-                    <SelectValue placeholder="Status Bukti" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Semua Status</SelectItem>
-                    <SelectItem value="MENUNGGU_VERIFIKASI">Menunggu</SelectItem>
-                    <SelectItem value="DIVERIFIKASI">Diverifikasi</SelectItem>
-                    <SelectItem value="DITOLAK">Ditolak</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-1.5">
+                      <Filter className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Filter Bukti Pembayaran</span>
+                      {activeFiltersCount > 0 && (
+                        <span className="bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                          {activeFiltersCount} aktif
+                        </span>
+                      )}
+                    </div>
+                    {activeFiltersCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStatusFilter('ALL')
+                          setTypeFilter('ALL')
+                        }}
+                        className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        Reset
+                      </button>
+                    )}
+                  </div>
 
-              {/* Filter Jenis Tagihan */}
-              <div className="w-[140px] shrink-0">
-                <Select
-                  value={typeFilter}
-                  onValueChange={(val: any) => setTypeFilter(val || 'ALL')}
-                >
-                  <SelectTrigger className="h-9 text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg">
-                    <SelectValue placeholder="Jenis Tagihan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Semua Pos</SelectItem>
-                    <SelectItem value="SPP">SPP</SelectItem>
-                    <SelectItem value="DPP">DPP</SelectItem>
-                    <SelectItem value="UIS">UIS</SelectItem>
-                    <SelectItem value="UKA">UKA</SelectItem>
-                    <SelectItem value="UKS">UKS</SelectItem>
-                    <SelectItem value="SERAGAM">Seragam</SelectItem>
-                    <SelectItem value="LKS">Buku / LKS</SelectItem>
-                    <SelectItem value="INFAQ">Infaq</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2.5">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Status Verifikasi</label>
+                      <Select
+                        value={statusFilter}
+                        onValueChange={(val: any) => setStatusFilter(val || 'ALL')}
+                      >
+                        <SelectTrigger className="h-8.5 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-full">
+                          <SelectValue placeholder="Semua Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">Semua Status</SelectItem>
+                          <SelectItem value="MENUNGGU_VERIFIKASI">Menunggu Verifikasi</SelectItem>
+                          <SelectItem value="DIVERIFIKASI">Diverifikasi</SelectItem>
+                          <SelectItem value="DITOLAK">Ditolak</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Jenis / Pos Tagihan</label>
+                      <Select
+                        value={typeFilter}
+                        onValueChange={(val: any) => setTypeFilter(val || 'ALL')}
+                      >
+                        <SelectTrigger className="h-8.5 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-lg w-full">
+                          <SelectValue placeholder="Semua Pos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">Semua Pos Tagihan</SelectItem>
+                          <SelectItem value="SPP">SPP</SelectItem>
+                          <SelectItem value="DPP">DPP</SelectItem>
+                          <SelectItem value="UIS">UIS</SelectItem>
+                          <SelectItem value="UKA">UKA</SelectItem>
+                          <SelectItem value="UKS">UKS</SelectItem>
+                          <SelectItem value="SERAGAM">Seragam</SelectItem>
+                          <SelectItem value="LKS">Buku / LKS</SelectItem>
+                          <SelectItem value="INFAQ">Infaq</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Sisi Kanan: Bulk Action Bar saat ada baris terseleksi (Rule 16) */}
@@ -775,83 +842,17 @@ export default function PaymentProofVerificationPage() {
           </Table>
         </div>
 
-        {/* Pagination Bar (Rule 15, 18) */}
-        <div className="p-3 sm:px-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="text-xs text-slate-500 dark:text-slate-400">
-            Menampilkan <span className="font-semibold text-slate-900 dark:text-white">
-              {filteredProofs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
-            </span> – <span className="font-semibold text-slate-900 dark:text-white">
-              {Math.min(currentPage * pageSize, filteredProofs.length)}
-            </span> dari <span className="font-semibold text-slate-900 dark:text-white">{filteredProofs.length}</span> data
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span>Baris:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value))
-                  setCurrentPage(1)
-                }}
-                className="px-2 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none cursor-pointer"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700"
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-                title="Awal"
-              >
-                <ChevronsLeft className="w-3.5 h-3.5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                title="Sebelumnya"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </Button>
-
-              <span className="px-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                {currentPage} / {totalPages}
-              </span>
-
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages}
-                title="Selanjutnya"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage >= totalPages}
-                title="Akhir"
-              >
-                <ChevronsRight className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
-        </div>
+        {/* Pagination Bar (Rule 20) */}
+        {filteredProofs.length > 0 && (
+          <TablePagination
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalItems={filteredProofs.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            itemLabel="data"
+          />
+        )}
       </Card>
 
       {/* MODAL PREVIEW BUKTI BAYAR LENGKAP */}

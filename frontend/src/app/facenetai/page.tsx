@@ -290,6 +290,62 @@ export default function FaceNetAiStandalonePage() {
   } | null>(null)
   const [capturedSnapshotUrl, setCapturedSnapshotUrl] = useState<string | null>(null)
   const autoClearTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [isConfirmingTwin, setIsConfirmingTwin] = useState(false)
+  const [twinCountdown, setTwinCountdown] = useState<number>(0)
+  const twinCountdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const clearTwinCountdown = () => {
+    if (twinCountdownIntervalRef.current) {
+      clearInterval(twinCountdownIntervalRef.current)
+      twinCountdownIntervalRef.current = null
+    }
+    setTwinCountdown(0)
+  }
+
+  const startTwinCountdown = () => {
+    clearTwinCountdown()
+    if (autoClearTimeoutRef.current) {
+      clearTimeout(autoClearTimeoutRef.current)
+      autoClearTimeoutRef.current = null
+    }
+    setTwinCountdown(15)
+    twinCountdownIntervalRef.current = setInterval(() => {
+      setTwinCountdown((prev) => {
+        if (prev <= 1) {
+          if (twinCountdownIntervalRef.current) {
+            clearInterval(twinCountdownIntervalRef.current)
+            twinCountdownIntervalRef.current = null
+          }
+          setCaptureResult(null)
+          setCapturedSnapshotUrl(null)
+          const canvas = overlayCanvasRef.current
+          if (canvas) {
+            const cCtx = canvas.getContext('2d')
+            if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+          }
+          toast.info('Batas waktu pemilihan berakhir. Kamera kembali memindai.')
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  const cancelTwinSelection = () => {
+    clearTwinCountdown()
+    if (autoClearTimeoutRef.current) {
+      clearTimeout(autoClearTimeoutRef.current)
+      autoClearTimeoutRef.current = null
+    }
+    setCaptureResult(null)
+    setCapturedSnapshotUrl(null)
+    const canvas = overlayCanvasRef.current
+    if (canvas) {
+      const cCtx = canvas.getContext('2d')
+      if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+    }
+    toast.info('Pemilihan dibatalkan. Kamera siap memindai.')
+  }
 
   // Dataset filter states
   const [searchQuery, setSearchQuery] = useState('')
@@ -872,12 +928,14 @@ export default function FaceNetAiStandalonePage() {
 
   // Konfirmasi Presensi Siswa Kembar / Wajah Mirip secara Instan (1 Ketukan)
   const handleConfirmTwinAttendance = async (candidate: any) => {
+    if (isConfirmingTwin) return
+    clearTwinCountdown()
     try {
-      setIsCapturing(true)
+      setIsConfirmingTwin(true)
       const res = await authenticatedFetch('/api-backend/face-attendance/confirm-attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: candidate.userId, confidence: candidate.confidence || 0.95 }),
+        body: JSON.stringify({ userId: candidate.userId, confidence: candidate.confidence || 0.95, snapshot: capturedSnapshotUrl }),
       })
       if (res.ok) {
         const data = await res.json()
@@ -892,25 +950,38 @@ export default function FaceNetAiStandalonePage() {
           confidence: Math.round((candidate.confidence || 0.95) * 100),
           scanType: data?.attendance?.scanType || 'HADIR',
           message: 'Wajah Terverifikasi!',
-          attendanceMsg: data?.message || 'Presensi berhasil dicatat!',
+          attendanceMsg: data?.message || 'Presensi berhasil dikonfirmasi!',
           time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         })
         toast.success(`Presensi Berhasil: ${candidate.name}`)
         queryClient.invalidateQueries({ queryKey: ['face-attendance-logs'] })
         queryClient.invalidateQueries({ queryKey: ['face-attendance-service-status'] })
+
+        if (autoClearTimeoutRef.current) {
+          clearTimeout(autoClearTimeoutRef.current)
+        }
+        autoClearTimeoutRef.current = setTimeout(() => {
+          setCaptureResult(null)
+          setCapturedSnapshotUrl(null)
+          const canvas = overlayCanvasRef.current
+          if (canvas) {
+            const cCtx = canvas.getContext('2d')
+            if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+          }
+        }, 2500)
       } else {
         toast.error('Gagal mengonfirmasi presensi.')
       }
     } catch (err) {
       toast.error('Kendala jaringan saat konfirmasi presensi.')
     } finally {
-      setIsCapturing(false)
+      setIsConfirmingTwin(false)
     }
   }
 
   // Fungsi Eksekusi Capture & Verifikasi Presensi Wajah (Mendukung Browser Webcam & Server MJPEG Stream)
   const executeFaceCapture = async () => {
-    if (isCapturing) return
+    if (isCapturing || isConfirmingTwin || twinCountdownIntervalRef.current !== null) return
 
     const video = localVideoRef.current
     const streamImg = streamImgRef.current
@@ -968,6 +1039,8 @@ export default function FaceNetAiStandalonePage() {
       autoClearTimeoutRef.current = null
     }
 
+    let isAmbiguousResult = false
+
     try {
       setCapturedSnapshotUrl(base64)
 
@@ -1013,6 +1086,7 @@ export default function FaceNetAiStandalonePage() {
         if (registeredFace) {
           // Kasus Siswa Kembar / Wajah Mirip yang memerlukan verifikasi cepat
           if (registeredFace.is_twin_ambiguous && registeredFace.twin_candidates && registeredFace.twin_candidates.length > 1) {
+            isAmbiguousResult = true
             playBiometricAudio('warning')
             speakVoiceGreeting(registeredFace.name, undefined, 'TWIN_AMBIGUOUS')
             setCaptureResult({
@@ -1025,6 +1099,7 @@ export default function FaceNetAiStandalonePage() {
               attendanceMsg: 'Terdeteksi kemiripan profil biometrik. Silakan pilih nama Anda pada layar untuk konfirmasi:',
               twinCandidates: registeredFace.twin_candidates,
             })
+            startTwinCountdown()
             toast.info('Terdeteksi kemiripan profil biometrik. Silakan pilih nama yang sesuai.')
           } else if (registeredFace.meets_attendance_threshold === false || (registeredFace.confidence || 0) < minThresh) {
             // Wajah terdeteksi tapi confidence BELUM mencapai threshold — presensi TIDAK direkam, berikan voice feedback instruktif
@@ -1125,15 +1200,17 @@ export default function FaceNetAiStandalonePage() {
       toast.error('Gagal memproses pemindaian wajah ke server FaceNet.')
     } finally {
       setIsCapturing(false)
-      autoClearTimeoutRef.current = setTimeout(() => {
-        setCaptureResult(null)
-        setCapturedSnapshotUrl(null)
-        const canvas = overlayCanvasRef.current
-        if (canvas) {
-          const cCtx = canvas.getContext('2d')
-          if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
-        }
-      }, 1250)
+      if (!isAmbiguousResult) {
+        autoClearTimeoutRef.current = setTimeout(() => {
+          setCaptureResult(null)
+          setCapturedSnapshotUrl(null)
+          const canvas = overlayCanvasRef.current
+          if (canvas) {
+            const cCtx = canvas.getContext('2d')
+            if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
+          }
+        }, 1250)
+      }
     }
   }
 
@@ -1149,7 +1226,7 @@ export default function FaceNetAiStandalonePage() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activeTab, isCapturing, isBrowserCamStreaming, scanMode])
+  }, [activeTab, isCapturing, isBrowserCamStreaming, scanMode, isConfirmingTwin, twinCountdown])
 
   // Persistent offscreen canvas ref to prevent garbage collection hiccups and lag
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -1177,7 +1254,15 @@ export default function FaceNetAiStandalonePage() {
       : 120
 
     const interval = setInterval(async () => {
-      if (isProcessing || isCapturing || !localVideoRef.current || !overlayCanvasRef.current) return
+      if (
+        isProcessing || 
+        isCapturing || 
+        isConfirmingTwin || 
+        twinCountdownIntervalRef.current !== null || 
+        captureResult?.type === 'TWIN_AMBIGUOUS' || 
+        !localVideoRef.current || 
+        !overlayCanvasRef.current
+      ) return
       const video = localVideoRef.current
       if (video.readyState < 2 || video.videoWidth === 0) return
 
@@ -1227,6 +1312,31 @@ export default function FaceNetAiStandalonePage() {
 
             // Jika dalam mode AUTO dan ada wajah terdaftar yang baru saja diproses presensinya
             if (shouldRecordNow && rawFaces.length > 0) {
+              const sortedFaces = [...rawFaces].sort((a: any, b: any) => {
+                const aDist = Math.hypot((a.box[0] + a.box[2]/2.0) - video.videoWidth/2.0, (a.box[1] + a.box[3]/2.0) - video.videoHeight/2.0)
+                const bDist = Math.hypot((b.box[0] + b.box[2]/2.0) - video.videoWidth/2.0, (b.box[1] + b.box[3]/2.0) - video.videoHeight/2.0)
+                return aDist - bDist
+              })
+
+              const ambiguousFace = sortedFaces.find((f: any) => f.is_twin_ambiguous && f.twin_candidates && f.twin_candidates.length > 1)
+              if (ambiguousFace) {
+                playBiometricAudio('warning')
+                speakVoiceGreeting(ambiguousFace.name, undefined, 'TWIN_AMBIGUOUS')
+                setCaptureResult({
+                  type: 'TWIN_AMBIGUOUS',
+                  name: ambiguousFace.name,
+                  role: ambiguousFace.role,
+                  identifier: ambiguousFace.identifier,
+                  confidence: Math.round(ambiguousFace.confidence * 100),
+                  message: 'Verifikasi Identitas Biometrik',
+                  attendanceMsg: 'Terdeteksi kemiripan profil biometrik. Silakan pilih nama Anda pada layar untuk konfirmasi:',
+                  twinCandidates: ambiguousFace.twin_candidates,
+                })
+                startTwinCountdown()
+                toast.info('Terdeteksi kemiripan profil biometrik. Silakan pilih nama yang sesuai.')
+                return
+              }
+
               const regFace = rawFaces.find((f: any) => f.is_registered && f.attendance && f.attendance.success)
               if (regFace) {
                 // Kunci jeda scan berikutnya selama 5 detik
@@ -1303,7 +1413,7 @@ export default function FaceNetAiStandalonePage() {
     }, scanDelay)
 
     return () => clearInterval(interval)
-  }, [isBrowserCamStreaming, activeTab, isCapturing, currentConfig?.continuousScanNoDelay, currentConfig?.scanIntervalMs, currentConfig?.autoAttendance, scanMode])
+  }, [isBrowserCamStreaming, activeTab, isCapturing, isConfirmingTwin, currentConfig?.continuousScanNoDelay, currentConfig?.scanIntervalMs, currentConfig?.autoAttendance, scanMode])
 
   // 2. Fetch Users Dataset (Diizinkan untuk dilihat oleh semua pengunjung)
   const { data: datasetData, refetch: refetchDataset } = useQuery<UsersDatasetResponse>({
@@ -2148,28 +2258,44 @@ export default function FaceNetAiStandalonePage() {
                     {captureResult && (
                       <div className="absolute inset-x-2 sm:inset-x-4 bottom-3 z-30 pointer-events-auto animate-in fade-in slide-in-from-bottom-3 duration-200">
                         {captureResult.type === 'TWIN_AMBIGUOUS' ? (
-                          <div className="p-3.5 rounded-2xl bg-slate-950/98 border-2 border-amber-400 shadow-2xl backdrop-blur-2xl text-white space-y-2.5">
+                          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-950/98 border-2 border-amber-400 shadow-2xl backdrop-blur-2xl text-white space-y-3">
                             <div className="flex items-center justify-between gap-2 border-b border-amber-400/40 pb-2">
                               <div className="flex items-center gap-2 text-amber-300">
-                                <AlertTriangle className="w-5 h-5 shrink-0" />
+                                <AlertTriangle className="w-5 h-5 shrink-0 animate-bounce" />
                                 <div>
-                                  <h3 className="text-xs sm:text-sm font-bold text-amber-300">Deteksi Wajah Serupa</h3>
-                                  <p className="text-[11px] text-slate-300 font-medium">Silakan pilih profil yang sesuai:</p>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-xs sm:text-sm font-bold text-amber-300">Deteksi Kemiripan Wajah</h3>
+                                    {twinCountdown > 0 && (
+                                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold">
+                                        ⏳ {twinCountdown}s
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-slate-300 font-medium">Sistem mendeteksi kemiripan profil biometrik. Silakan sentuh nama Anda:</p>
                                 </div>
                               </div>
                               <Button
                                 size="sm"
-                                variant="ghost"
+                                variant="outline"
                                 onClick={(e) => {
-                                   e.stopPropagation()
-                                   setCaptureResult(null)
-                                   setCapturedSnapshotUrl(null)
+                                  e.stopPropagation()
+                                  cancelTwinSelection()
                                 }}
-                                className="min-h-[36px] text-xs text-slate-300 hover:text-white"
+                                className="min-h-[36px] text-xs border-slate-700 text-slate-300 hover:text-white bg-slate-900 rounded-xl px-3 font-semibold"
                               >
-                                Tutup
+                                Batal / Pindai Ulang
                               </Button>
                             </div>
+
+                            {/* Progress bar countdown 15s */}
+                            {twinCountdown > 0 && (
+                              <div className="w-full bg-slate-800/80 h-1.5 rounded-full overflow-hidden">
+                                <div 
+                                  className="bg-gradient-to-r from-amber-500 to-amber-300 h-full transition-all duration-1000 ease-linear"
+                                  style={{ width: `${Math.min(100, Math.max(0, (twinCountdown / 15) * 100))}%` }}
+                                />
+                              </div>
+                            )}
 
                             {/* Twin candidate list */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -2177,26 +2303,30 @@ export default function FaceNetAiStandalonePage() {
                                 <button
                                   key={cand.userId || cIdx}
                                   type="button"
+                                  disabled={isConfirmingTwin}
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     handleConfirmTwinAttendance(cand)
                                   }}
-                                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500 text-left transition-all cursor-pointer touch-manipulation min-h-[58px]"
+                                  className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border-2 border-amber-500/40 hover:border-amber-400 active:scale-[0.99] text-left transition-all cursor-pointer touch-manipulation min-h-[60px] group shadow-sm disabled:opacity-50"
                                 >
-                                  <div className="w-11 h-11 rounded-xl bg-slate-800 overflow-hidden shrink-0 border border-slate-700 flex items-center justify-center">
-                                    {cand.avatarUrl ? (
-                                      <img src={cand.avatarUrl} alt={cand.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                      <span className="font-bold text-slate-300 text-sm">{cand.name.charAt(0)}</span>
-                                    )}
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-11 h-11 rounded-xl bg-slate-800 overflow-hidden shrink-0 border border-slate-700 flex items-center justify-center">
+                                      {cand.avatarUrl ? (
+                                        <img src={cand.avatarUrl} alt={cand.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <span className="font-bold text-slate-300 text-sm">{cand.name.charAt(0)}</span>
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-xs sm:text-sm font-bold text-white group-hover:text-amber-300 truncate">{cand.name}</p>
+                                      <p className="text-[10px] text-slate-300 font-mono font-medium truncate">{cand.role} • {cand.identifier}</p>
+                                    </div>
                                   </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-xs sm:text-sm font-bold text-white truncate">{cand.name}</p>
-                                    <p className="text-[10px] text-slate-400 font-mono font-medium">{cand.role} • {cand.identifier}</p>
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 mt-0.5">
-                                      <CheckCircle className="w-3 h-3" /> Pilih Presensi
-                                    </span>
-                                  </div>
+                                  <span className="shrink-0 inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-amber-400 group-hover:bg-amber-300 text-slate-950 shadow-md">
+                                    {isConfirmingTwin ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                                    <span>Pilih Ini →</span>
+                                  </span>
                                 </button>
                               ))}
                             </div>

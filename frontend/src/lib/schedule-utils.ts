@@ -132,14 +132,9 @@ export function findJournalForSchedule(
       return true
     }
 
-    // Match by schedule entity relation
-    if (j.schedule) {
-      const isSameClass = (j.schedule.classId === schedule.classId) || (j.schedule.class?.name && j.schedule.class?.name === schedule.class?.name)
-      const isSameSubject = (j.schedule.subjectId === schedule.subjectId) || (j.schedule.subject?.code && j.schedule.subject?.code === schedule.subject?.code)
-      const isSameTeacher = (j.teacherId === schedule.teacherId) || (j.schedule.teacherId === schedule.teacherId)
-      if (isSameClass && isSameSubject && isSameTeacher) {
-        return true
-      }
+    // Direct match if journal has loaded schedule relation with matching ID
+    if (j.schedule && (scheduleIds.includes(j.schedule.id) || j.schedule.id === schedule.id)) {
+      return true
     }
 
     return false

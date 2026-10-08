@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { 
@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { TablePagination } from '@/components/TablePagination'
 import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { InteractiveCharacterAssessmentManagement } from '@/components/academic/InteractiveCharacterAssessmentManagement'
 
@@ -20,6 +21,8 @@ export default function EtikaTatibPage() {
   const authenticatedFetch = useAuthenticatedFetch()
   const authenticatedQuery = useAuthenticatedQuery()
   const [selectedChildIndex, setSelectedChildIndex] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // Ambil profil akun pengguna saat ini untuk verifikasi peran
   const { data: userProfile, isLoading: isProfileLoading } = useQuery<any>({
@@ -76,6 +79,22 @@ export default function EtikaTatibPage() {
     enabled: !isStaffOrManagement,
   })
 
+  const students = dashboardData?.students || []
+  const currentStudent = students[selectedChildIndex] || students[0]
+  const etika = currentStudent?.etikaTataTertib || {}
+  const assessmentHistory = etika.assessments || []
+
+  // Auto reset page on student or data length change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedChildIndex, assessmentHistory.length])
+
+  // Paginasi Data Sesuai Aturan No. 20
+  const paginatedHistory = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return assessmentHistory.slice(start, start + pageSize)
+  }, [assessmentHistory, currentPage, pageSize])
+
   // Jika akun adalah Manajemen / Kepala Sekolah / Guru / Tatib / BK, tampilkan antarmuka statistik & rekap seluruh siswa
   if (isStaffOrManagement) {
     const isBk = userRoles.includes('BK_BP') || userRoles.includes('BK')
@@ -83,11 +102,6 @@ export default function EtikaTatibPage() {
     const mode = isBk ? 'BK' : isTatib ? 'KETERTIBAN' : 'ALL'
     return <InteractiveCharacterAssessmentManagement mode={mode} />
   }
-
-  const students = dashboardData?.students || []
-  const currentStudent = students[selectedChildIndex] || students[0]
-  const etika = currentStudent?.etikaTataTertib || {}
-  const assessmentHistory = etika.assessments || []
 
   return (
     <div className="space-y-6">
@@ -299,7 +313,7 @@ export default function EtikaTatibPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {assessmentHistory.map((item: any, idx: number) => {
+                  {paginatedHistory.map((item: any, idx: number) => {
                     const isNeg = item.points < 0 || item.category === 'PELANGGARAN' || item.type === 'NEGATIF'
                     const isVerified = item.status === 'SELESAI' || item.status === 'TERVERIFIKASI'
                     const isPending = item.status === 'MENUNGGU' || item.status === 'MENUNGGU_VERIFIKASI'
@@ -307,7 +321,9 @@ export default function EtikaTatibPage() {
 
                     return (
                       <TableRow key={item.id || idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 text-xs">
-                        <TableCell className="text-center text-slate-400 font-medium">{idx + 1}</TableCell>
+                        <TableCell className="text-center text-slate-400 font-medium">
+                          {(currentPage - 1) * pageSize + idx + 1}
+                        </TableCell>
                         <TableCell className="font-medium whitespace-nowrap text-slate-600 dark:text-slate-300">
                           {new Date(item.date).toLocaleDateString('id-ID', {
                             day: 'numeric',
@@ -374,6 +390,20 @@ export default function EtikaTatibPage() {
                 </TableBody>
               </Table>
             </div>
+          )}
+
+          {/* Pagination Aturan No. 20 */}
+          {assessmentHistory.length > 0 && (
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={assessmentHistory.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize)
+                setCurrentPage(1)
+              }}
+            />
           )}
         </CardContent>
       </Card>

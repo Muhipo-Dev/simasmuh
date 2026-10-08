@@ -22,6 +22,7 @@ import { getPublicApiUrl } from '@/lib/api-config'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { TableSearch } from '@/components/TableSearch'
 import { TableSelectionBar, TableCheckboxHeader, TableCheckboxCell } from '@/components/TableSelectionBar'
+import { TablePagination } from '@/components/TablePagination'
 
 export type GuestEntry = {
   id: string
@@ -105,6 +106,19 @@ export function GuestBookManagement() {
       return matchKategori && matchStatus && matchSearch
     })
   }, [guests, selectedKategori, selectedStatus, searchQuery])
+
+  // Pagination states (Rule 20)
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedKategori, selectedStatus, pageSize])
+
+  const paginatedGuests = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize
+    return filteredGuests.slice(startIdx, startIdx + pageSize)
+  }, [filteredGuests, currentPage, pageSize])
 
   const handleCopyLink = () => {
     if (!qrUrl) return
@@ -947,8 +961,9 @@ export function GuestBookManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredGuests.map((g, idx) => {
+                  {paginatedGuests.map((g, idx) => {
                     const isSelected = selectedGuestIds.includes(g.id)
+                    const rowNumber = (currentPage - 1) * pageSize + idx + 1
                     return (
                       <TableRow key={g.id} className={`hover:bg-slate-50/80 dark:hover:bg-slate-900/50 text-xs ${isSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}`}>
                         <TableCell className="text-center pl-4">
@@ -963,7 +978,7 @@ export function GuestBookManagement() {
                             }}
                           />
                         </TableCell>
-                        <TableCell className="text-center font-medium text-slate-500 px-2">{idx + 1}</TableCell>
+                        <TableCell className="text-center font-medium text-slate-500 px-2">{rowNumber}</TableCell>
                         <TableCell>
                           <div className="font-bold text-slate-900 dark:text-white">{g.namaTamu}</div>
                           <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
@@ -1032,6 +1047,16 @@ export function GuestBookManagement() {
                 </TableBody>
               </Table>
             </div>
+          )}
+          {filteredGuests.length > 0 && (
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filteredGuests.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="tamu"
+            />
           )}
         </CardContent>
       </Card>

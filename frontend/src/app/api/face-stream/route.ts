@@ -18,7 +18,37 @@ export async function GET(request: NextRequest) {
       return new Response('Microservice video stream not ready', { status: 503 })
     }
 
-    return new Response(res.body, {
+    const reader = res.body.getReader()
+    const safeStream = new ReadableStream({
+      async start(controller) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) {
+              try { controller.close() } catch {}
+              break
+            }
+            controller.enqueue(value)
+          }
+        } catch {
+          // Tangani koneksi terputus/ECONNRESET dari sumber python tanpa menyebabkan unhandled pipe error
+          try {
+            controller.close()
+          } catch {}
+        } finally {
+          try {
+            reader.releaseLock()
+          } catch {}
+        }
+      },
+      cancel() {
+        try {
+          reader.cancel()
+        } catch {}
+      }
+    })
+
+    return new Response(safeStream, {
       status: 200,
       headers: {
         'Content-Type': res.headers.get('Content-Type') || 'multipart/x-mixed-replace; boundary=frame',

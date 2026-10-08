@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useSession } from 'next-auth/react'
@@ -22,6 +22,7 @@ import {
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { TablePagination } from '@/components/TablePagination'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -194,6 +195,19 @@ export function WaliKelasSiswaManagement({
     return filterDataBySearch(classSummary, searchQuery, ['name', 'nis', 'nisn', 'statusHariIni', 'keteranganHariIni'])
   }, [classSummary, searchQuery])
 
+  // Rule 20 Pagination untuk Siswa & Presensi
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, targetDate, period, pageSize])
+
+  const paginatedStudents = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredStudents.slice(startIndex, startIndex + pageSize)
+  }, [filteredStudents, currentPage, pageSize])
+
   // Filter Data Izin & Dispensasi
   const filteredIzin = useMemo(() => {
     let list = classIzinList
@@ -204,6 +218,19 @@ export function WaliKelasSiswaManagement({
     }
     return filterDataBySearch(list, searchQuery, ['user.name', 'user.student.name', 'user.student.nis', 'alasan', 'status'])
   }, [classIzinList, izinSubFilter, searchQuery])
+
+  // Rule 20 Pagination untuk Izin
+  const [izinPage, setIzinPage] = useState<number>(1)
+  const [izinPageSize, setIzinPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setIzinPage(1)
+  }, [searchQuery, izinSubFilter, izinPageSize])
+
+  const paginatedIzin = useMemo(() => {
+    const startIndex = (izinPage - 1) * izinPageSize
+    return filteredIzin.slice(startIndex, startIndex + izinPageSize)
+  }, [filteredIzin, izinPage, izinPageSize])
 
   // Hitung Metrik Hari Ini
   const metrics = useMemo(() => {
@@ -629,9 +656,9 @@ export function WaliKelasSiswaManagement({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredStudents.map((std, idx) => (
+                      paginatedStudents.map((std, idx) => (
                         <TableRow key={std.studentId} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/50">
-                          <TableCell className="pl-4 font-medium text-slate-400 text-xs">{idx + 1}</TableCell>
+                          <TableCell className="pl-4 font-medium text-slate-400 text-xs">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
                           <TableCell>
                             <div className="flex flex-col">
                               <span className="font-bold text-slate-900 dark:text-white font-mono text-xs">{std.nis}</span>
@@ -700,11 +727,11 @@ export function WaliKelasSiswaManagement({
                     Tidak ada siswa ditemukan.
                   </div>
                 ) : (
-                  filteredStudents.map((std, idx) => (
+                  paginatedStudents.map((std, idx) => (
                     <div key={std.studentId} className="p-3 flex items-center justify-between gap-2 hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">
-                          {idx + 1}
+                          {(currentPage - 1) * pageSize + idx + 1}
                         </div>
                         <div className="min-w-0">
                           <p className="font-bold text-xs text-slate-900 dark:text-white truncate">{std.name}</p>
@@ -745,6 +772,19 @@ export function WaliKelasSiswaManagement({
                   ))
                 )}
               </div>
+
+              {filteredStudents.length > 0 && (
+                <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+                  <TablePagination
+                    currentPage={currentPage}
+                    pageSize={pageSize}
+                    totalItems={filteredStudents.length}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={setPageSize}
+                    itemLabel="siswa"
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -784,14 +824,14 @@ export function WaliKelasSiswaManagement({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredStudents.map((std, idx) => (
+                      paginatedStudents.map((std, idx) => (
                         <TableRow key={std.studentId} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/50">
-                          <TableCell className="pl-4 font-medium text-slate-400 text-xs">{idx + 1}</TableCell>
+                          <TableCell className="pl-4 font-medium text-slate-400 text-xs">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
                           <TableCell className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">{std.nis}</TableCell>
                           <TableCell className="font-semibold text-xs text-slate-900 dark:text-slate-100">{std.name}</TableCell>
                           <TableCell>
                             {std.statusHariIni === 'HADIR' ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                                 Hadir
                               </span>
                             ) : std.statusHariIni === 'IZIN' ? (
@@ -845,7 +885,7 @@ export function WaliKelasSiswaManagement({
                     Tidak ada catatan presensi.
                   </div>
                 ) : (
-                  filteredStudents.map((std) => (
+                  paginatedStudents.map((std) => (
                     <div key={std.studentId} className="p-3 flex items-center justify-between gap-2 hover:bg-slate-50/50">
                       <div className="min-w-0">
                         <p className="font-bold text-xs text-slate-900 dark:text-white truncate">{std.name}</p>
@@ -873,6 +913,19 @@ export function WaliKelasSiswaManagement({
                   ))
                 )}
               </div>
+
+              {filteredStudents.length > 0 && (
+                <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+                  <TablePagination
+                    currentPage={currentPage}
+                    pageSize={pageSize}
+                    totalItems={filteredStudents.length}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={setPageSize}
+                    itemLabel="log presensi"
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -911,11 +964,11 @@ export function WaliKelasSiswaManagement({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredIzin.map((iz: any, idx: number) => {
+                      paginatedIzin.map((iz: any, idx: number) => {
                         const isDispensasi = iz.alasan?.toUpperCase().includes('DISPENSASI')
                         return (
                           <TableRow key={iz.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/50">
-                            <TableCell className="pl-4 font-medium text-slate-400 text-xs">{idx + 1}</TableCell>
+                            <TableCell className="pl-4 font-medium text-slate-400 text-xs">{(izinPage - 1) * izinPageSize + idx + 1}</TableCell>
                             <TableCell className="text-xs font-semibold whitespace-nowrap">
                               {new Date(iz.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </TableCell>
@@ -1028,7 +1081,7 @@ export function WaliKelasSiswaManagement({
                     Belum ada permohonan izin atau dispensasi.
                   </div>
                 ) : (
-                  filteredIzin.map((iz: any) => {
+                  paginatedIzin.map((iz: any) => {
                     const isDispensasi = iz.alasan?.toUpperCase().includes('DISPENSASI')
                     return (
                       <div key={iz.id} className="p-3 space-y-2 hover:bg-slate-50/50">
@@ -1116,6 +1169,19 @@ export function WaliKelasSiswaManagement({
                   })
                 )}
               </div>
+
+              {filteredIzin.length > 0 && (
+                <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+                  <TablePagination
+                    currentPage={izinPage}
+                    pageSize={izinPageSize}
+                    totalItems={filteredIzin.length}
+                    onPageChange={setIzinPage}
+                    onPageSizeChange={setIzinPageSize}
+                    itemLabel="izin / dispensasi"
+                  />
+                </div>
+              )}
             </div>
           )}
         </CardContent>

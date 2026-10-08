@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Loader2, Pencil, Trash2, AlertTriangle, ShieldCheck, UserCheck, Info, Power, CheckCircle, XCircle, UserX } from 'lucide-react'
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input, PasswordInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -510,6 +511,8 @@ export default function UsersPage() {
 
   const isPending = createMutation.isPending || updateMutation.isPending
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(10)
   const { data: session } = useSession()
   const currentUser = session?.user as any
   const isSuperadminOrGod =
@@ -520,7 +523,7 @@ export default function UsersPage() {
     currentUser?.username === 'supermuhipo'
 
   // Filter khusus akun pegawai, guru, admin, dan pengelola internal (tidak menampilkan wali murid atau siswa)
-  const staffUsers = (users || []).filter(u => {
+  const staffUsers = useMemo(() => (users || []).filter(u => {
     if (['WALI_MURID', 'SISWA'].includes(u.role)) return false
     // Akun GOD User hanya boleh terlihat dan dikelola jika yang login adalah Superadmin atau GOD User
     if ((u.role === 'GOD' || u.role === 'GOD_USER' || u.username === 'supermuhipo') && !isSuperadminOrGod) {
@@ -529,8 +532,19 @@ export default function UsersPage() {
     if (filterStatus === 'ACTIVE') return u.isActive !== false
     if (filterStatus === 'INACTIVE') return u.isActive === false
     return true
-  })
-  const filteredUsers = filterDataBySearch(staffUsers, searchQuery) || []
+  }), [users, filterStatus, isSuperadminOrGod])
+
+  const filteredUsers = useMemo(() => filterDataBySearch(staffUsers, searchQuery) || [], [staffUsers, searchQuery])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterStatus, searchQuery])
+
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredUsers.slice(start, start + pageSize)
+  }, [filteredUsers, currentPage, pageSize])
+
   const isAllSelected = filteredUsers.length > 0 && filteredUsers.every(u => selectedUserIds.includes(u.id))
 
   // Deteksi Pejabat Kepala Sekolah Aktif
@@ -935,10 +949,11 @@ export default function UsersPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUsers.map((item, index) => {
+                  paginatedUsers.map((item, index) => {
                     const isGodUser = item.username === 'supermuhipo'
                     const isSelected = selectedUserIds.includes(item.id)
                     const nip = item.nipNbm || item.teacherProfile?.nip
+                    const rowNumber = (currentPage - 1) * pageSize + index + 1
                     return (
                       <TableRow key={item.id} className={isSelected ? 'bg-blue-50/50 dark:bg-blue-950/30' : isGodUser ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''}>
                         <TableCell className="pl-4 text-center">
@@ -959,7 +974,7 @@ export default function UsersPage() {
                             />
                           )}
                         </TableCell>
-                        <TableCell className="font-medium text-slate-500 text-center text-xs">{index + 1}</TableCell>
+                        <TableCell className="font-medium text-slate-500 text-center text-xs">{rowNumber}</TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-0.5 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
@@ -1156,6 +1171,15 @@ export default function UsersPage() {
               </TableBody>
             </Table>
           </div>
+          <TablePagination
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalItems={filteredUsers.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 50, 100]}
+            itemLabel="akun pengguna"
+          />
         </CardContent>
       </Card>
 

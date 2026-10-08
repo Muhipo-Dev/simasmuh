@@ -139,11 +139,13 @@
     -webkit-tap-highlight-color: transparent;
   }
   html {
-    font-size: 16px; /* Base 16px font size for maximum readability for parents */
+    font-size: 100%; /* Menghormati dan mengikuti ukuran font default perangkat pengguna */
     scroll-behavior: smooth;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   body {
     @apply bg-background text-foreground antialiased;
@@ -288,6 +290,7 @@
 
   /* ==========================================================================
      ULTRA-RESPONSIVITY & MOBILE ERGONOMIC DESIGN (ANDROID & IOS PHONES/TABLETS)
+     Low-resource rendering, 60 FPS scrolling, and jitter-free layout
      ========================================================================== */
   @media (max-width: 1023px) {
     /* 1. Pencegahan Auto-Zoom di Safari iOS & Chrome Android saat fokus kolom form */
@@ -297,7 +300,7 @@
       font-size: 16px !important;
     }
 
-    /* 2. Responsifitas & Sentuhan Halus di Layar Sentuh */
+    /* 2. Responsifitas & Sentuhan Halus di Layar Sentuh tanpa delay 300ms */
     button, [role="button"], a.btn, input[type="submit"], input[type="button"] {
       touch-action: manipulation;
     }
@@ -325,44 +328,53 @@
       background: rgba(148, 163, 184, 0.4);
       border-radius: 9999px;
     }
+
+    /* Optimasi Low-Spec: Meringankan filter blur berat di layar HP */
+    .backdrop-blur-xl,
+    .backdrop-blur-2xl,
+    .backdrop-blur-3xl {
+      backdrop-filter: blur(8px) !important;
+      -webkit-backdrop-filter: blur(8px) !important;
+    }
   }
 
   /* ==========================================================================
-     OPTIMASI LAYAR KECIL & RESOLUSI DI BAWAH 720P (COMPACT & COMFORTABLE UI/UX)
+     OPTIMASI LAYAR PONSEL PORTRAIT & MULTI-DEVICE (STABIL, LOW-SPEC & ANTI-LAG)
      ========================================================================== */
   @media (max-width: 720px) {
     html {
-      font-size: 14.5px; /* Skala proporsional agar elemen muat nyaman & teks tetap tajam */
+      /* Mengikuti default perangkat pengguna + sedikit ditingkatkan agar lebih besar & jelas dibaca */
+      font-size: clamp(15px, 101.5%, 17.5px);
     }
 
     /* Penyesuaian padding kontainer & kartu agar hemat ruang tapi tetap bernapas */
     [data-slot="card-header"],
     .card-header {
-      padding: 0.875rem 1rem !important;
+      padding: 0.75rem 0.875rem !important;
     }
 
     [data-slot="card-content"],
     .card-content {
-      padding: 0.875rem 1rem !important;
+      padding: 0.75rem 0.875rem !important;
     }
 
     [data-slot="card-footer"],
     .card-footer {
-      padding: 0.75rem 1rem !important;
+      padding: 0.625rem 0.875rem !important;
     }
 
     /* Spasi tabel data di layar kecil */
     table th,
     [data-slot="table-head"] {
       padding: 0.5rem 0.625rem !important;
-      font-size: 0.75rem !important;
+      font-size: 0.8125rem !important;
       white-space: nowrap;
     }
 
     table td,
     [data-slot="table-cell"] {
       padding: 0.5rem 0.625rem !important;
-      font-size: 0.8125rem !important;
+      font-size: 0.84375rem !important;
     }
 
     /* Tombol & aksi sentuh ergonomis ringkas */
@@ -372,26 +384,28 @@
       min-height: 38px;
     }
 
-    /* Dialog modal & sheet agar pas memenuhi layar ponsel */
+    /* Dialog modal & sheet pas memenuhi layar ponsel tanpa jitter */
     [role="dialog"],
     [data-slot="dialog-content"] {
-      max-width: calc(100vw - 1.5rem) !important;
-      padding: 1.125rem !important;
-      border-radius: 16px !important;
+      max-width: calc(100vw - 1rem) !important;
+      padding: 1rem !important;
+      border-radius: 14px !important;
       margin: 0 auto;
     }
 
     /* Input & form controls */
     input, select, textarea {
-      padding-top: 0.5rem !important;
-      padding-bottom: 0.5rem !important;
+      padding-top: 0.45rem !important;
+      padding-bottom: 0.45rem !important;
       border-radius: 8px !important;
     }
   }
 
-  @media (max-width: 480px) {
+  /* Ponsel Layar Portrait / Layar Padat */
+  @media (max-width: 480px) and (orientation: portrait), (max-width: 440px) {
     html {
-      font-size: 14px;
+      /* Proporsional mengikuti default perangkat ponsel, jelas terbaca & stabil tanpa overflow horizontal */
+      font-size: clamp(15px, 102.5%, 18px);
     }
 
     [data-slot="card-header"],
@@ -399,7 +413,7 @@
       padding: 0.75rem 0.875rem !important;
     }
 
-    /* Grid & Flex stack helper pada layar ekstra kecil */
+    /* Grid & Flex stack helper pada layar ponsel potrait */
     .mobile-compact-gap {
       gap: 0.5rem !important;
     }

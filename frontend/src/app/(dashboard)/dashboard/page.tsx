@@ -6,6 +6,8 @@ import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Users, UserSquare2, CalendarDays, ClipboardCheck, Loader2,
@@ -146,6 +148,7 @@ export default function DashboardPage() {
   const [selectedStatCategory, setSelectedStatCategory] = useState<string>('SEMUA')
   const [selectedCurveType, setSelectedCurveType] = useState<'PRESENSI' | 'KEUANGAN' | 'PRESTASI' | 'DEMOGRAFI'>('PRESENSI')
   const [showAllKsMenus, setShowAllKsMenus] = useState(false)
+  const [ksMenuSearch, setKsMenuSearch] = useState('')
   const [showSignaturePad, setShowSignaturePad] = useState(false)
   const [showExecutiveStats, setShowExecutiveStats] = useState(false)
 
@@ -1379,8 +1382,8 @@ export default function DashboardPage() {
 
               {/* Panel Menu Lengkap yang Diizinkan untuk Kepala Sekolah (Expandable / Toggle) */}
               {showAllKsMenus && (
-                <div className="mt-4 p-4 sm:p-5 rounded-3xl bg-slate-50/90 dark:bg-slate-900/90 border border-amber-200/70 dark:border-amber-900/50 shadow-inner space-y-5 animate-in fade-in slide-in-from-top-3 duration-300">
-                  <div className="flex items-center justify-between border-b border-slate-200/70 dark:border-slate-800 pb-3">
+                <div className="mt-4 p-4 sm:p-5 rounded-3xl bg-slate-50/90 dark:bg-slate-900/90 border border-amber-200/70 dark:border-amber-900/50 shadow-inner space-y-4 animate-in fade-in slide-in-from-top-3 duration-300">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/70 dark:border-slate-800 pb-3">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
                         <ShieldCheck className="w-4 h-4" />
@@ -1394,43 +1397,104 @@ export default function DashboardPage() {
                         </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800 text-[10px] font-bold">
-                      Akses Terotorisasi
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <div className="relative w-full sm:w-56">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                        <Input
+                          type="text"
+                          value={ksMenuSearch}
+                          onChange={(e) => setKsMenuSearch(e.target.value)}
+                          placeholder="Cari direktori menu KS..."
+                          className="pl-7.5 pr-7 h-8 text-xs bg-white dark:bg-slate-950/80 border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs"
+                        />
+                        {ksMenuSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setKsMenuSearch('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 hover:text-slate-600 transition-colors"
+                            title="Hapus pencarian"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800 text-[10px] font-bold shrink-0">
+                        Akses Terotorisasi
+                      </Badge>
+                    </div>
                   </div>
 
-                  <div className="space-y-4">
-                    {allPermittedKsLinks.map((sec, sIdx) => (
-                      <div key={sIdx} className="space-y-2">
-                        <h4 className="text-xs font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider flex items-center gap-1.5 px-1">
-                          <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-                          {sec.category}
-                        </h4>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
-                          {sec.items.map((item, iIdx) => {
-                            const ItemIcon = item.icon
-                            return (
-                              <Link key={iIdx} href={item.href} className="group">
-                                <div className="h-full p-3 rounded-2xl bg-white dark:bg-slate-950/80 border border-slate-200/70 dark:border-slate-800/80 hover:border-amber-500 hover:shadow-md transition-all flex flex-col justify-between gap-1.5">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                                      <ItemIcon className="w-3.5 h-3.5" />
-                                    </div>
-                                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-1">
-                                      {item.name}
-                                    </span>
-                                  </div>
-                                  <span className="text-[10px] text-slate-400 font-medium line-clamp-1 pl-0.5">
-                                    {item.desc}
-                                  </span>
-                                </div>
-                              </Link>
-                            )
-                          })}
+                  {(() => {
+                    const filteredKsCategories = allPermittedKsLinks
+                      .map((sec) => {
+                        const matchingItems = sec.items.filter((item) => {
+                          if (!ksMenuSearch.trim()) return true
+                          const q = ksMenuSearch.toLowerCase().trim()
+                          return item.name.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q) || item.href.toLowerCase().includes(q) || sec.category.toLowerCase().includes(q)
+                        })
+                        return {
+                          ...sec,
+                          items: matchingItems,
+                        }
+                      })
+                      .filter((sec) => sec.items.length > 0)
+
+                    if (filteredKsCategories.length === 0) {
+                      return (
+                        <div className="py-6 text-center rounded-2xl bg-white/60 dark:bg-slate-950/40 border border-dashed border-amber-200 dark:border-amber-900/50 space-y-1.5">
+                          <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Menu tidak ditemukan
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            Tidak ada menu layanan yang cocok dengan kata kunci &quot;{ksMenuSearch}&quot;
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setKsMenuSearch('')}
+                            className="h-7 text-xs font-bold rounded-lg border-amber-300 dark:border-amber-800 mt-1"
+                          >
+                            Reset Pencarian
+                          </Button>
                         </div>
+                      )
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        {filteredKsCategories.map((sec, sIdx) => (
+                          <div key={sIdx} className="space-y-2">
+                            <h4 className="text-xs font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider flex items-center gap-1.5 px-1">
+                              <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                              {sec.category} ({sec.items.length})
+                            </h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+                              {sec.items.map((item, iIdx) => {
+                                const ItemIcon = item.icon
+                                return (
+                                  <Link key={iIdx} href={item.href} className="group">
+                                    <div className="h-full p-3 rounded-2xl bg-white dark:bg-slate-950/80 border border-slate-200/70 dark:border-slate-800/80 hover:border-amber-500 hover:shadow-md transition-all flex flex-col justify-between gap-1.5">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                                          <ItemIcon className="w-3.5 h-3.5" />
+                                        </div>
+                                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-1">
+                                          {item.name}
+                                        </span>
+                                      </div>
+                                      <span className="text-[10px] text-slate-400 font-medium line-clamp-1 pl-0.5">
+                                        {item.desc}
+                                      </span>
+                                    </div>
+                                  </Link>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )
+                  })()}
                 </div>
               )}
             </div>

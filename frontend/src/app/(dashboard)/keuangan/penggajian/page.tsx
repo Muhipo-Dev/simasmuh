@@ -20,6 +20,7 @@ import Swal from 'sweetalert2'
 import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 
 type ManualItem = {
   name: string
@@ -1808,83 +1809,17 @@ export default function PenggajianPage() {
             </Table>
           </div>
 
-          {/* Pagination Bar */}
-          <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-xs text-slate-500">
-              Menampilkan <span className="font-semibold text-slate-900">
-                {searchedPayroll.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
-              </span> – <span className="font-semibold text-slate-900">
-                {Math.min(currentPage * pageSize, searchedPayroll.length)}
-              </span> dari <span className="font-semibold text-slate-900">{searchedPayroll.length}</span> pegawai
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                <span>Baris:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value))
-                    setCurrentPage(1)
-                  }}
-                  className="px-2 py-1 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 outline-none"
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  title="Awal"
-                >
-                  <ChevronsLeft className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  title="Sebelumnya"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </Button>
-
-                <span className="px-2 text-xs font-semibold text-slate-700">
-                  {currentPage} / {totalPages}
-                </span>
-
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                  title="Selanjutnya"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage >= totalPages}
-                  title="Akhir"
-                >
-                  <ChevronsRight className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            </div>
-          </div>
+          {/* Pagination Bar (Rule 20) */}
+          {searchedPayroll.length > 0 && (
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={searchedPayroll.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="pegawai"
+            />
+          )}
         </CardContent>
       </Card>
 

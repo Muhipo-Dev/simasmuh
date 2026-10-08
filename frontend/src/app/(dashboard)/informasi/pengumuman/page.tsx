@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -214,6 +215,19 @@ export default function AnnouncementsPage() {
   })
 
   const filteredData = filterDataBySearch(categoryFilteredAnnouncements, searchQuery)
+
+  // Rule 20 Pagination
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedCategoryTab, pageSize])
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredData.slice(startIndex, startIndex + pageSize)
+  }, [filteredData, currentPage, pageSize])
 
   return (
     <div className="space-y-6">
@@ -446,7 +460,7 @@ export default function AnnouncementsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredData?.map((item) => (
+                  paginatedData?.map((item) => (
                     <TableRow key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                       <TableCell>
                         <div className="flex items-start gap-3">
@@ -537,6 +551,18 @@ export default function AnnouncementsPage() {
             </Table>
           </div>
         </CardContent>
+        {filteredData?.length > 0 && (
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filteredData.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="konten"
+            />
+          </div>
+        )}
       </Card>
     </div>
   )

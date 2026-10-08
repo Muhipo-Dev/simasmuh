@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
 import { 
   Loader2, 
@@ -176,6 +177,30 @@ export default function SupervisiJurnalPage() {
   const { sortConfig, handleSort, sortedItems: sortedJournals } = useSorting(filteredJournals)
   const searchedJournals = filterDataBySearch(sortedJournals, searchQuery)
   const searchedWeeklySchedules = filterDataBySearch(allWeeklySchedules, searchQuery)
+
+  // Rule 20 Pagination States
+  const [historyPage, setHistoryPage] = useState<number>(1)
+  const [historyPageSize, setHistoryPageSize] = useState<number>(10)
+  const [schedulePage, setSchedulePage] = useState<number>(1)
+  const [schedulePageSize, setSchedulePageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setHistoryPage(1)
+  }, [searchQuery, selectedTeacherFilter, selectedClassFilter, historyPageSize])
+
+  useEffect(() => {
+    setSchedulePage(1)
+  }, [searchQuery, selectedTeacherFilter, selectedClassFilter, schedulePageSize])
+
+  const paginatedJournals = useMemo(() => {
+    const startIndex = (historyPage - 1) * historyPageSize
+    return searchedJournals.slice(startIndex, startIndex + historyPageSize)
+  }, [searchedJournals, historyPage, historyPageSize])
+
+  const paginatedWeeklySchedules = useMemo(() => {
+    const startIndex = (schedulePage - 1) * schedulePageSize
+    return searchedWeeklySchedules.slice(startIndex, startIndex + schedulePageSize)
+  }, [searchedWeeklySchedules, schedulePage, schedulePageSize])
 
   // Ringkasan metrik hari ini
   const totalToday = todaySchedules.length
@@ -538,9 +563,9 @@ export default function SupervisiJurnalPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  searchedJournals.map((jurnal, index) => (
+                  paginatedJournals.map((jurnal, index) => (
                     <TableRow key={jurnal.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
-                      <TableCell className="pl-6 font-medium text-slate-500">{index + 1}</TableCell>
+                      <TableCell className="pl-6 font-medium text-slate-500">{(historyPage - 1) * historyPageSize + index + 1}</TableCell>
                       <TableCell className="font-semibold text-slate-900 dark:text-white whitespace-nowrap">
                         {format(new Date(jurnal.date), 'dd MMM yyyy', { locale: localeId })}
                       </TableCell>
@@ -580,6 +605,18 @@ export default function SupervisiJurnalPage() {
               </TableBody>
             </Table>
           </CardContent>
+          {searchedJournals.length > 0 && (
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+              <TablePagination
+                currentPage={historyPage}
+                pageSize={historyPageSize}
+                totalItems={searchedJournals.length}
+                onPageChange={setHistoryPage}
+                onPageSizeChange={setHistoryPageSize}
+                itemLabel="jurnal"
+              />
+            </div>
+          )}
         </Card>
       )}
 
@@ -638,7 +675,7 @@ export default function SupervisiJurnalPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  searchedWeeklySchedules.map((item) => (
+                  paginatedWeeklySchedules.map((item) => (
                     <TableRow key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
                       <TableCell className="pl-6 font-bold text-slate-900 dark:text-slate-100">
                         <span className="inline-block py-0.5 px-2.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs">
@@ -665,6 +702,18 @@ export default function SupervisiJurnalPage() {
               </TableBody>
             </Table>
           </CardContent>
+          {searchedWeeklySchedules.length > 0 && (
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+              <TablePagination
+                currentPage={schedulePage}
+                pageSize={schedulePageSize}
+                totalItems={searchedWeeklySchedules.length}
+                onPageChange={setSchedulePage}
+                onPageSizeChange={setSchedulePageSize}
+                itemLabel="jadwal"
+              />
+            </div>
+          )}
         </Card>
       )}
 

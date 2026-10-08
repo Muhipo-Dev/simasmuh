@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Loader2, Trash2, FileSpreadsheet, Pencil, CheckSquare, Edit3, ShieldCheck } from 'lucide-react'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -54,6 +55,8 @@ export default function ClassesPage() {
   // Bulk Selection & Edit States
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(10)
   const [bulkEditOpen, setBulkEditOpen] = useState(false)
   const [bulkEditData, setBulkEditData] = useState({
     updateGradeLevel: false,
@@ -335,7 +338,20 @@ export default function ClassesPage() {
   }
 
 
-  const isAllSelected = !!(classes && classes.length > 0 && selectedIds.length === classes.length)
+  const filteredClasses = useMemo(() => {
+    return filterDataBySearch(classes, searchQuery, ['name', 'gradeLevel', 'academicYear', 'homeroomTeacher.user.name']) || []
+  }, [classes, searchQuery])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
+  const paginatedClasses = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredClasses.slice(start, start + pageSize)
+  }, [filteredClasses, currentPage, pageSize])
+
+  const isAllSelected = !!(filteredClasses.length > 0 && selectedIds.length === filteredClasses.length)
 
   return (
     <>
@@ -654,14 +670,14 @@ export default function ClassesPage() {
                     Memuat data...
                   </TableCell>
                 </TableRow>
-              ) : filterDataBySearch(classes, searchQuery)?.length === 0 ? (
+              ) : filteredClasses.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isSuperOrAdmin ? 6 : 4} className="text-center py-8 text-slate-500">
                     {searchQuery ? 'Tidak ada data kelas yang sesuai dengan pencarian.' : 'Belum ada data kelas.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                filterDataBySearch(classes, searchQuery)?.map((item) => {
+                paginatedClasses.map((item) => {
                   const isSelected = selectedIds.includes(item.id)
                   return (
                     <TableRow key={item.id} className={isSelected ? 'bg-blue-50/80 dark:bg-blue-950/40' : ''}>
@@ -736,6 +752,15 @@ export default function ClassesPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalItems={filteredClasses.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 50, 100]}
+            itemLabel="kelas"
+          />
         </CardContent>
       </Card>
     </div>

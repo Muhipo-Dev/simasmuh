@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { TablePagination } from '@/components/TablePagination'
 import { 
   Loader2, 
   CalendarDays, 
@@ -174,6 +175,18 @@ export default function LogKehadiranPegawaiPage() {
 
   const { sortConfig, handleSort, sortedItems: sortedLogs } = useSorting(logs || [])
   const searchedLogs = filterDataBySearch(sortedLogs, searchQuery)
+
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedMonth, selectedYear, pageSize])
+
+  const paginatedLogs = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return searchedLogs.slice(startIndex, startIndex + pageSize)
+  }, [searchedLogs, currentPage, pageSize])
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -602,9 +615,10 @@ export default function LogKehadiranPegawaiPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {searchedLogs.map((log, index) => {
+                  {paginatedLogs.map((log, index) => {
                     const isHadir = log.checkIn !== '-'
                     const isSelected = selectedRowDates.includes(log.date)
+                    const rowNumber = (currentPage - 1) * pageSize + index + 1
                     return (
                       <TableRow key={index} className={isSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}>
                         <TableCell className="pl-4 text-center">
@@ -619,7 +633,7 @@ export default function LogKehadiranPegawaiPage() {
                             }}
                           />
                         </TableCell>
-                        <TableCell className="text-center font-medium text-slate-500 text-xs px-2">{index + 1}</TableCell>
+                        <TableCell className="text-center font-medium text-slate-500 text-xs px-2">{rowNumber}</TableCell>
                         <TableCell className="font-bold text-slate-900 dark:text-white text-xs">
                           {log.dayNumber} {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
                         </TableCell>
@@ -647,6 +661,16 @@ export default function LogKehadiranPegawaiPage() {
               </Table>
             )}
           </div>
+          {!isLoading && searchedLogs.length > 0 && (
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={searchedLogs.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="log presensi"
+            />
+          )}
         </CardContent>
       </Card>
     </div>

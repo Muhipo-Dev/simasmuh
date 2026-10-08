@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -15,6 +15,7 @@ import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
 import { TableSelectionBar, TableCheckboxHeader, TableCheckboxCell } from '@/components/TableSelectionBar'
 import { WaliKelasSiswaManagement } from '@/components/academic/WaliKelasSiswaManagement'
+import { TablePagination } from '@/components/TablePagination'
 
 type LogEntry = {
   date: string
@@ -123,6 +124,19 @@ export default function LogPresensiSiswaPage() {
 
   const { sortConfig, handleSort, sortedItems: sortedLogs } = useSorting(logs || [])
   const searchedLogs = filterDataBySearch(sortedLogs, searchQuery)
+
+  // Pagination states (Rule 20)
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedMonth, selectedYear, targetUserId, pageSize])
+
+  const paginatedLogs = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize
+    return searchedLogs.slice(startIdx, startIdx + pageSize)
+  }, [searchedLogs, currentPage, pageSize])
 
   const handleExportExcel = () => {
     if (!logs || logs.length === 0) return;
@@ -346,9 +360,10 @@ export default function LogPresensiSiswaPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                searchedLogs.map((log, index) => {
+                paginatedLogs.map((log, index) => {
                   const isWeekend = log.dayName === 'Sabtu' || log.dayName === 'Minggu'
                   const isSelected = selectedDates.includes(log.date)
+                  const rowNumber = (currentPage - 1) * pageSize + index + 1
                   return (
                     <TableRow key={log.date} className={`h-11 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors ${isSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : isWeekend ? "bg-slate-50/40 dark:bg-slate-900/20" : ""}`}>
                       <TableCell className="pl-4 text-center">
@@ -363,7 +378,7 @@ export default function LogPresensiSiswaPage() {
                           }}
                         />
                       </TableCell>
-                      <TableCell className="text-center font-bold text-xs text-slate-500 px-2">{index + 1}</TableCell>
+                      <TableCell className="text-center font-bold text-xs text-slate-500 px-2">{rowNumber}</TableCell>
                       <TableCell className="py-2">
                         <div className="font-bold text-xs text-slate-900 dark:text-white">{log.dayNumber} {months.find(m => m.value === selectedMonth)?.label} {selectedYear}</div>
                         <div className="text-[11px] font-medium text-slate-500">{log.dayName}</div>
@@ -404,6 +419,16 @@ export default function LogPresensiSiswaPage() {
               )}
             </TableBody>
           </Table>
+          {searchedLogs.length > 0 && (
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={searchedLogs.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="log presensi"
+            />
+          )}
         </CardContent>
       </Card>
     </div>

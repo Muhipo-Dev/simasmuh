@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -124,6 +125,19 @@ export default function SupervisiIzinKesiswaanPage() {
       return true
     })
   }, [listData, filterType, filterStatus, searchQuery])
+
+  // Rule 20 Pagination
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, filterType, filterStatus, filterDate, pageSize])
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredData.slice(startIndex, startIndex + pageSize)
+  }, [filteredData, currentPage, pageSize])
 
   const parseAlasanAndLampiran = (rawAlasan: string) => {
     const lampiranMatch = rawAlasan.match(/\[LAMPIRAN_SURAT\]:\s*([^\s\n]+)/)
@@ -320,7 +334,7 @@ export default function SupervisiIzinKesiswaanPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredData.map((item, idx) => {
+                  {paginatedData.map((item, idx) => {
                     const student = item.user?.student
                     const { cleanAlasan, lampiranUrl } = parseAlasanAndLampiran(item.alasan || '')
                     const isDisp =
@@ -332,7 +346,7 @@ export default function SupervisiIzinKesiswaanPage() {
                     return (
                       <TableRow key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                         <TableCell className="text-center text-xs font-mono text-slate-500">
-                          {idx + 1}
+                          {(currentPage - 1) * pageSize + idx + 1}
                         </TableCell>
                         <TableCell>
                           <div className="space-y-0.5">
@@ -414,6 +428,18 @@ export default function SupervisiIzinKesiswaanPage() {
             </div>
           )}
         </CardContent>
+        {filteredData.length > 0 && (
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filteredData.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="catatan perizinan"
+            />
+          </div>
+        )}
       </Card>
     </div>
   )

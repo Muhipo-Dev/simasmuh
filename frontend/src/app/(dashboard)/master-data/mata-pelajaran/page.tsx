@@ -1,13 +1,14 @@
 'use client'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Loader2, Trash2, FileSpreadsheet, Pencil, CheckSquare, Edit3, UserCheck, Users, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -69,6 +70,8 @@ export default function SubjectsPage() {
   // Bulk Selection & Edit States
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(10)
   const [bulkEditOpen, setBulkEditOpen] = useState(false)
   const [bulkEditData, setBulkEditData] = useState<{
     updateCodePrefix: boolean
@@ -391,10 +394,28 @@ export default function SubjectsPage() {
     }
   }
 
+  const filteredSubjects = useMemo(() => {
+    return filterDataBySearch(subjects, searchQuery, [
+      'code',
+      'name',
+      'teacherSubjects.teacher.user.name',
+      'teacherSubjects.teacher.nip',
+      'teacherSubjects.teacher.user.nipNbm'
+    ]) || []
+  }, [subjects, searchQuery])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
+  const paginatedSubjects = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredSubjects.slice(start, start + pageSize)
+  }, [filteredSubjects, currentPage, pageSize])
+
   const isAllSelected = !!(
-    subjects &&
-    subjects.length > 0 &&
-    selectedIds.length === subjects.length
+    filteredSubjects.length > 0 &&
+    selectedIds.length === filteredSubjects.length
   )
 
   return (
@@ -832,7 +853,7 @@ export default function SubjectsPage() {
                       Memuat data...
                     </TableCell>
                   </TableRow>
-                ) : filterDataBySearch(subjects, searchQuery)?.length === 0 ? (
+                ) : filteredSubjects.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-slate-500">
                       {searchQuery
@@ -841,7 +862,7 @@ export default function SubjectsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filterDataBySearch(subjects, searchQuery)?.map((item) => {
+                  paginatedSubjects.map((item) => {
                     const isSelected = selectedIds.includes(item.id)
                     const assignedTeachers = item.teacherSubjects || []
 
@@ -935,6 +956,15 @@ export default function SubjectsPage() {
                 )}
               </TableBody>
             </Table>
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filteredSubjects.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={[10, 50, 100]}
+              itemLabel="mata pelajaran"
+            />
           </CardContent>
         </Card>
       </div>

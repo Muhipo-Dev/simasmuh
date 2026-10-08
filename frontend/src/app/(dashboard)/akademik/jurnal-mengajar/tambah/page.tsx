@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Webcam from 'react-webcam'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { Camera, RefreshCcw, Save, Loader2, Calendar, Clock, BookOpen } from 'lucide-react'
+import { Camera, RefreshCcw, Save, Loader2, Calendar, Clock, BookOpen, Sparkles, Copy, UploadCloud, Check } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -147,6 +147,44 @@ function TambahJurnalContent() {
     }
   }, [classData])
 
+  // Ambil riwayat jurnal terdahulu untuk deteksi kelas & mapel yang sama
+  const { data: previousJournals } = useQuery<any[]>({
+    queryKey: ['previous-journals-lookup', userId],
+    queryFn: async () => {
+      const url = userId ? `/api-backend/teaching-journals?userId=${userId}` : '/api-backend/teaching-journals'
+      const res = await authenticatedFetch(url)
+      if (!res.ok) return []
+      return res.json()
+    },
+    enabled: !!userId
+  })
+
+  // Temukan materi jurnal terakhir untuk kelas / mapel yang sama
+  const sameClassLastJournal = React.useMemo(() => {
+    if (!previousJournals || !Array.isArray(previousJournals) || !selectedSchedule) return null
+    const targetClassId = selectedSchedule.classId || selectedSchedule.class?.id
+    const targetSubjectId = selectedSchedule.subjectId || selectedSchedule.subject?.id
+    
+    return previousJournals.find(j => {
+      const jClassId = j.schedule?.classId || j.schedule?.class?.id
+      const jSubjectId = j.schedule?.subjectId || j.schedule?.subject?.id
+      return jClassId === targetClassId && jSubjectId === targetSubjectId && j.material
+    }) || null
+  }, [previousJournals, selectedSchedule])
+
+  const [copiedRecent, setCopiedRecent] = useState(false)
+  const handleCopyFromRecent = () => {
+    if (sameClassLastJournal) {
+      setFormData(prev => ({
+        ...prev,
+        topic: sameClassLastJournal.material || prev.topic,
+        notes: sameClassLastJournal.notes || prev.notes
+      }))
+      setCopiedRecent(true)
+      setTimeout(() => setCopiedRecent(false), 2500)
+    }
+  }
+
   const capture = useCallback(() => {
     if (webcamRef.current) {
       const imageSrc = webcamRef.current.getScreenshot()
@@ -156,6 +194,19 @@ function TambahJurnalContent() {
 
   const handleRetake = () => {
     setPhotoSrc(null)
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setPhotoSrc(reader.result)
+        }
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
   const handleAttendanceChange = (studentId: string, status: string) => {
@@ -344,8 +395,54 @@ function TambahJurnalContent() {
               </div>
             </div>
 
+            {sameClassLastJournal && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-amber-900 dark:text-amber-200 block">
+                      Ditemukan Jurnal Sebelumnya untuk Kelas & Mapel Ini
+                    </span>
+                    <span className="text-amber-700 dark:text-amber-300/90 text-[11px] line-clamp-1">
+                      Materi: &ldquo;{sameClassLastJournal.material}&rdquo;
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCopyFromRecent}
+                  className="bg-white dark:bg-slate-900 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs h-7.5 shrink-0 hover:bg-amber-100 dark:hover:bg-amber-950"
+                >
+                  {copiedRecent ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                      Tersalin!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 mr-1" />
+                      Salin Materi Terakhir
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label className="font-semibold">Materi / Topik Pembelajaran</Label>
+              <div className="flex items-center justify-between">
+                <Label className="font-semibold">Materi / Topik Pembelajaran</Label>
+                {sameClassLastJournal && !copiedRecent && (
+                  <button
+                    type="button"
+                    onClick={handleCopyFromRecent}
+                    className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <Copy className="w-3 h-3" /> Samakan dari Kelas Terakhir
+                  </button>
+                )}
+              </div>
               <Input 
                 type="text" 
                 placeholder="Topik atau capaian materi yang diajarkan pada sesi ini..." 
@@ -462,14 +559,14 @@ function TambahJurnalContent() {
         <Card className="shadow-xs border-slate-200 dark:border-slate-800">
           <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
             <CardTitle className="text-base sm:text-lg">Bukti Mengajar (Dokumentasi)</CardTitle>
-            <CardDescription>Ambil foto kondisi kelas sebagai bukti otentik kegiatan belajar mengajar.</CardDescription>
+            <CardDescription>Ambil foto kondisi kelas via kamera atau unggah berkas foto sebagai bukti otentik kegiatan belajar mengajar.</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="flex flex-col items-center gap-4">
               {photoSrc ? (
                 <div className="relative rounded-lg overflow-hidden border border-slate-200 shadow-xs max-w-md w-full">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photoSrc} alt="Bukti Mengajar" className="w-full object-contain" />
+                  <img src={photoSrc} alt="Bukti Mengajar" className="w-full object-contain max-h-64" />
                   <Button 
                     type="button" 
                     variant="secondary" 
@@ -477,7 +574,7 @@ function TambahJurnalContent() {
                     className="absolute top-2 right-2 bg-white/90 hover:bg-white dark:bg-slate-900/90 backdrop-blur shadow-xs text-xs"
                     onClick={handleRetake}
                   >
-                    <RefreshCcw className="w-3.5 h-3.5 mr-1.5" /> Ulangi Foto
+                    <RefreshCcw className="w-3.5 h-3.5 mr-1.5" /> Ganti / Ulangi Foto
                   </Button>
                 </div>
               ) : (
@@ -493,10 +590,22 @@ function TambahJurnalContent() {
               )}
               
               {!photoSrc && (
-                <Button type="button" onClick={capture} className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs">
-                  <Camera className="w-4 h-4 mr-2" />
-                  Ambil Foto Kondisi Kelas
-                </Button>
+                <div className="flex flex-wrap items-center justify-center gap-2.5">
+                  <Button type="button" onClick={capture} className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-8.5">
+                    <Camera className="w-4 h-4 mr-2" />
+                    Ambil Foto Kamera
+                  </Button>
+                  <label className="cursor-pointer inline-flex items-center justify-center rounded-md text-xs font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 h-8.5 px-3">
+                    <UploadCloud className="w-4 h-4 mr-1.5" />
+                    Unggah File Foto
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleFileUpload} 
+                    />
+                  </label>
+                </div>
               )}
             </div>
           </CardContent>

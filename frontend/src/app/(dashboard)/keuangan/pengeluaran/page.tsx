@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -12,12 +12,12 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
-  Wallet, Receipt, Search, PlusCircle, Trash2, Loader2, Calendar,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
+  Wallet, Receipt, Search, PlusCircle, Trash2, Loader2, Calendar
 } from 'lucide-react'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { TableSearch } from '@/components/TableSearch'
 import { TableSelectionBar, TableCheckboxHeader, TableCheckboxCell } from '@/components/TableSelectionBar'
+import { TablePagination } from '@/components/TablePagination'
 import Swal from 'sweetalert2'
 import { confirmDelete } from '@/lib/swal-helper'
 
@@ -79,7 +79,10 @@ export default function KeuanganKeluarPage() {
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [pageSize, setPageSize] = useState<number>(10)
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, categoryFilter, year, month, pageSize])
+
   const paginatedPengeluarans = useMemo(() => {
     const startIdx = (currentPage - 1) * pageSize
     return filtered.slice(startIdx, startIdx + pageSize)
@@ -352,83 +355,17 @@ export default function KeuanganKeluarPage() {
             </Table>
           </div>
 
-          {/* Pagination Bar */}
-          <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-xs text-slate-500">
-              Menampilkan <span className="font-semibold text-slate-900 dark:text-white">
-                {filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
-              </span> – <span className="font-semibold text-slate-900 dark:text-white">
-                {Math.min(currentPage * pageSize, filtered.length)}
-              </span> dari <span className="font-semibold text-slate-900 dark:text-white">{filtered.length}</span> transaksi
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                <span>Baris:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value))
-                    setCurrentPage(1)
-                  }}
-                  className="px-2 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none"
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  title="Awal"
-                >
-                  <ChevronsLeft className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  title="Sebelumnya"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </Button>
-
-                <span className="px-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {currentPage} / {totalPages}
-                </span>
-
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                  title="Selanjutnya"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage >= totalPages}
-                  title="Akhir"
-                >
-                  <ChevronsRight className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            </div>
-          </div>
+          {/* Pagination Bar (Rule 20) */}
+          {filtered.length > 0 && (
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filtered.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="transaksi"
+            />
+          )}
         </CardContent>
       </Card>
 

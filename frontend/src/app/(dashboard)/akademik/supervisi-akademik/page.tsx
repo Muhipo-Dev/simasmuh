@@ -7,6 +7,7 @@ import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthent
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -691,6 +692,52 @@ export default function SupervisiAkademikPage() {
   const { sortConfig, handleSort, sortedItems: sortedSupervisi } = useSorting(filteredSupervisi)
   const searchedSupervisi = filterDataBySearch(sortedSupervisi, searchQuery)
 
+  // Rule 20 Pagination States
+  const [riwayatPage, setRiwayatPage] = useState<number>(1)
+  const [riwayatPageSize, setRiwayatPageSize] = useState<number>(10)
+  const [jadwalPage, setJadwalPage] = useState<number>(1)
+  const [jadwalPageSize, setJadwalPageSize] = useState<number>(10)
+  const [rekapPage, setRekapPage] = useState<number>(1)
+  const [rekapPageSize, setRekapPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setRiwayatPage(1)
+  }, [searchQuery, selectedTeacherFilter, selectedClassFilter, riwayatPageSize])
+
+  useEffect(() => {
+    setJadwalPage(1)
+  }, [searchQuery, jadwalPageSize])
+
+  useEffect(() => {
+    setRekapPage(1)
+  }, [searchQuery, rekapPageSize])
+
+  const paginatedSupervisi = useMemo(() => {
+    const startIndex = (riwayatPage - 1) * riwayatPageSize
+    return searchedSupervisi.slice(startIndex, startIndex + riwayatPageSize)
+  }, [searchedSupervisi, riwayatPage, riwayatPageSize])
+
+  const paginatedJadwal = useMemo(() => {
+    const startIndex = (jadwalPage - 1) * jadwalPageSize
+    return jadwalSupervisiList.slice(startIndex, startIndex + jadwalPageSize)
+  }, [jadwalSupervisiList, jadwalPage, jadwalPageSize])
+
+  const [allSupervisiPage, setAllSupervisiPage] = useState<number>(1)
+  const [allSupervisiPageSize, setAllSupervisiPageSize] = useState<number>(10)
+
+  const filteredAllSupervisi = useMemo(() => {
+    return supervisiRecords.filter(r => !searchQuery || r.teacherName?.toLowerCase().includes(searchQuery.toLowerCase()) || r.supervisorName?.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [supervisiRecords, searchQuery])
+
+  useEffect(() => {
+    setAllSupervisiPage(1)
+  }, [searchQuery, allSupervisiPageSize])
+
+  const paginatedAllSupervisi = useMemo(() => {
+    const startIndex = (allSupervisiPage - 1) * allSupervisiPageSize
+    return filteredAllSupervisi.slice(startIndex, startIndex + allSupervisiPageSize)
+  }, [filteredAllSupervisi, allSupervisiPage, allSupervisiPageSize])
+
   // Status Perangkat Guru (Calculated dynamically from real database records)
   const teacherPerangkatRekap = useMemo(() => {
     return teachersList.map(t => {
@@ -1285,9 +1332,9 @@ export default function SupervisiAkademikPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  searchedSupervisi.map((record, index) => (
+                  paginatedSupervisi.map((record, index) => (
                     <TableRow key={record.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
-                      <TableCell className="pl-6 font-medium text-slate-500 text-xs">{index + 1}</TableCell>
+                      <TableCell className="pl-6 font-medium text-slate-500 text-xs">{(riwayatPage - 1) * riwayatPageSize + index + 1}</TableCell>
                       <TableCell className="font-semibold text-slate-900 dark:text-white whitespace-nowrap text-xs">
                         {format(new Date(record.date), 'dd MMM yyyy', { locale: localeId })}
                       </TableCell>
@@ -1359,6 +1406,16 @@ export default function SupervisiAkademikPage() {
               </TableBody>
             </Table>
           </CardContent>
+          {searchedSupervisi.length > 0 && (
+            <TablePagination
+              currentPage={riwayatPage}
+              pageSize={riwayatPageSize}
+              totalItems={searchedSupervisi.length}
+              onPageChange={setRiwayatPage}
+              onPageSizeChange={setRiwayatPageSize}
+              itemLabel="hasil supervisi"
+            />
+          )}
         </Card>
       )}
 
@@ -1811,9 +1868,9 @@ export default function SupervisiAkademikPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  jadwalSupervisiList.map((item, index) => (
+                  paginatedJadwal.map((item, index) => (
                     <TableRow key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
-                      <TableCell className="pl-6 font-medium text-slate-500 text-xs">{index + 1}</TableCell>
+                      <TableCell className="pl-6 font-medium text-slate-500 text-xs">{(jadwalPage - 1) * jadwalPageSize + index + 1}</TableCell>
                       <TableCell className="font-bold text-slate-900 dark:text-white text-xs whitespace-nowrap">
                         {format(new Date(item.date), 'EEEE, dd MMMM yyyy', { locale: localeId })}
                       </TableCell>
@@ -1866,6 +1923,16 @@ export default function SupervisiAkademikPage() {
               </TableBody>
             </Table>
           </CardContent>
+          {jadwalSupervisiList.length > 0 && (
+            <TablePagination
+              currentPage={jadwalPage}
+              pageSize={jadwalPageSize}
+              totalItems={jadwalSupervisiList.length}
+              onPageChange={setJadwalPage}
+              onPageSizeChange={setJadwalPageSize}
+              itemLabel="jadwal supervisi"
+            />
+          )}
         </Card>
       )}
 
@@ -1979,55 +2046,63 @@ export default function SupervisiAkademikPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    supervisiRecords
-                      .filter(r => !searchQuery || r.teacherName.toLowerCase().includes(searchQuery.toLowerCase()) || r.supervisorName?.toLowerCase().includes(searchQuery.toLowerCase()))
-                      .map((rec, idx) => (
-                        <TableRow key={rec.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
-                          <TableCell className="pl-6 font-medium text-slate-500 text-xs">{idx + 1}</TableCell>
-                          <TableCell className="font-semibold text-slate-900 dark:text-white whitespace-nowrap text-xs">
-                            {format(new Date(rec.date), 'dd MMM yyyy', { locale: localeId })}
-                          </TableCell>
-                          <TableCell className="font-bold text-slate-900 dark:text-white text-xs">
-                            {rec.teacherName}
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            <span className="font-semibold text-slate-900 dark:text-white">{rec.className}</span> &bull; {rec.subjectName}
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                            {rec.supervisorName}
-                          </TableCell>
-                          <TableCell className="text-center font-mono font-bold text-xs">
-                            {rec.finalScore}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={`${
-                              rec.finalScore >= 91 ? 'bg-emerald-600' :
-                              rec.finalScore >= 81 ? 'bg-blue-600' :
-                              rec.finalScore >= 71 ? 'bg-amber-500' : 'bg-rose-600'
-                            } text-white font-bold text-[10px]`}>
-                              {rec.predicate}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="pr-6 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setDetailSupervisi(rec)
-                                setOpenDetailDialog(true)
-                              }}
-                              className="h-8 px-2.5 text-xs text-blue-600 font-bold"
-                            >
-                              <Eye className="w-3.5 h-3.5 mr-1" />
-                              Detail
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                    paginatedAllSupervisi.map((rec, idx) => (
+                      <TableRow key={rec.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
+                        <TableCell className="pl-6 font-medium text-slate-500 text-xs">{(allSupervisiPage - 1) * allSupervisiPageSize + idx + 1}</TableCell>
+                        <TableCell className="font-semibold text-slate-900 dark:text-white whitespace-nowrap text-xs">
+                          {format(new Date(rec.date), 'dd MMM yyyy', { locale: localeId })}
+                        </TableCell>
+                        <TableCell className="font-bold text-slate-900 dark:text-white text-xs">
+                          {rec.teacherName}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <span className="font-semibold text-slate-900 dark:text-white">{rec.className}</span> &bull; {rec.subjectName}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                          {rec.supervisorName}
+                        </TableCell>
+                        <TableCell className="text-center font-mono font-bold text-xs">
+                          {rec.finalScore}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${
+                            rec.finalScore >= 91 ? 'bg-emerald-600' :
+                            rec.finalScore >= 81 ? 'bg-blue-600' :
+                            rec.finalScore >= 71 ? 'bg-amber-500' : 'bg-rose-600'
+                          } text-white font-bold text-[10px]`}>
+                            {rec.predicate}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="pr-6 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setDetailSupervisi(rec)
+                              setOpenDetailDialog(true)
+                            }}
+                            className="h-8 px-2.5 text-xs text-blue-600 font-bold"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" />
+                            Detail
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
                 </TableBody>
               </Table>
             </CardContent>
+            {filteredAllSupervisi.length > 0 && (
+              <TablePagination
+                currentPage={allSupervisiPage}
+                pageSize={allSupervisiPageSize}
+                totalItems={filteredAllSupervisi.length}
+                onPageChange={setAllSupervisiPage}
+                onPageSizeChange={setAllSupervisiPageSize}
+                itemLabel="rekap supervisi"
+              />
+            )}
           </Card>
         </div>
       )}

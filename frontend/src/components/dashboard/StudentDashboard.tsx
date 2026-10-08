@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import { ActivityCalendarWidget } from '@/components/dashboard/ActivityCalendarWidget'
 import { SystemInfoWidget } from '@/components/dashboard/SystemInfoWidget'
@@ -54,6 +55,7 @@ export function StudentDashboard({
   const [showPaymentPopup, setShowPaymentPopup] = useState(false)
   const [showClassmatesModal, setShowClassmatesModal] = useState(false)
   const [classmateSearch, setClassmateSearch] = useState('')
+  const [quickActionSearch, setQuickActionSearch] = useState('')
 
   // Identifiers
   const effectiveNis = activeStudent?.nis || activeStudent?.nisn || (session?.user as any)?.username || (session?.user as any)?.nis || ''
@@ -984,135 +986,165 @@ export function StudentDashboard({
       </div>
 
       {/* 4. PINTASAN LAYANAN AKADEMIK SISWA (7 SERVICE SHORTCUT CARDS) */}
-      <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3 sm:p-3.5">
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            </div>
-            <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
-              Pintasan Layanan Siswa
-            </h3>
-          </div>
-          <span className="text-[10px] sm:text-[10.5px] font-semibold text-slate-400 hidden sm:inline">
-            Akses Layanan Akademik Mandiri
-          </span>
-        </div>
+      {(() => {
+        const studentShortcuts = [
+          {
+            name: 'Buku Induk',
+            desc: 'Biodata & F4',
+            href: '/siswa/buku-induk',
+            icon: BookMarked,
+            colorClass: 'border-teal-200/80 dark:border-teal-900/60 bg-teal-50/50 dark:bg-teal-950/30 hover:border-teal-400 dark:hover:border-teal-600',
+            iconBg: 'bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300',
+            textHover: 'group-hover:text-teal-600',
+            subColor: 'text-teal-600 dark:text-teal-400'
+          },
+          {
+            name: 'Kartu Pelajar',
+            desc: 'ID Card Digital',
+            href: '/pengaturan/profil#kartu-pelajar',
+            icon: CreditCard,
+            colorClass: 'border-blue-200/80 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 hover:border-blue-400 dark:hover:border-blue-600',
+            iconBg: 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300',
+            textHover: 'group-hover:text-blue-600',
+            subColor: 'text-blue-600 dark:text-blue-400'
+          },
+          {
+            name: 'Log Absensi',
+            desc: 'Riwayat & QR',
+            href: '/presensi/kehadiran-siswa',
+            icon: ClipboardCheck,
+            colorClass: 'border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-emerald-300 dark:hover:border-emerald-700',
+            iconBg: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400',
+            textHover: 'group-hover:text-emerald-600',
+            subColor: 'text-slate-400'
+          },
+          {
+            name: 'Jadwal KBM',
+            desc: 'Jadwal Mingguan',
+            href: '/akademik/jadwal-pelajaran',
+            icon: BookOpen,
+            colorClass: 'border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-purple-300 dark:hover:border-purple-700',
+            iconBg: 'bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400',
+            textHover: 'group-hover:text-purple-600',
+            subColor: 'text-slate-400'
+          },
+          {
+            name: 'Izin & BK',
+            desc: 'Konseling & Izin',
+            href: '/presensi/izin-siswa',
+            icon: HeartHandshake,
+            colorClass: 'border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-amber-300 dark:hover:border-amber-700',
+            iconBg: 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400',
+            textHover: 'group-hover:text-amber-600',
+            subColor: 'text-slate-400'
+          },
+          {
+            name: 'Ujian CBT',
+            desc: 'Asesmen Online',
+            href: '/demo-waiting-room',
+            icon: Laptop,
+            colorClass: 'border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-rose-300 dark:hover:border-rose-700',
+            iconBg: 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400',
+            textHover: 'group-hover:text-rose-600',
+            subColor: 'text-slate-400'
+          },
+          {
+            name: 'Tagihan SPP',
+            desc: 'Rincian Biaya',
+            action: () => setShowPaymentPopup(true),
+            icon: Receipt,
+            colorClass: 'border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-indigo-300 dark:hover:border-indigo-700',
+            iconBg: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400',
+            textHover: 'group-hover:text-indigo-600',
+            subColor: 'text-slate-400'
+          },
+        ]
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-2.5">
-          {/* Shortcut 1: Buku Induk Siswa */}
-          <Link
-            href="/siswa/buku-induk"
-            className="group p-2 sm:p-2.5 rounded-xl border border-teal-200/80 dark:border-teal-900/60 bg-teal-50/50 dark:bg-teal-950/30 hover:bg-white dark:hover:bg-slate-800 hover:border-teal-400 dark:hover:border-teal-600 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
-          >
-            <div className="w-7.5 h-7.5 rounded-lg bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-              <BookMarked className="w-3.5 h-3.5" />
-            </div>
-            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-teal-600 transition-colors leading-tight">
-              Buku Induk
-            </h4>
-            <span className="text-[9px] text-teal-600 dark:text-teal-400 font-medium mt-0.5 truncate max-w-full">
-              Biodata & F4
-            </span>
-          </Link>
+        const filteredShortcuts = studentShortcuts.filter((sc) => {
+          if (!quickActionSearch.trim()) return true
+          const q = quickActionSearch.toLowerCase().trim()
+          return sc.name.toLowerCase().includes(q) || sc.desc.toLowerCase().includes(q) || (sc.href && sc.href.toLowerCase().includes(q))
+        })
 
-          {/* Shortcut 2: Kartu Pelajar */}
-          <Link
-            href="/pengaturan/profil#kartu-pelajar"
-            className="group p-2 sm:p-2.5 rounded-xl border border-blue-200/80 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 hover:bg-white dark:hover:bg-slate-800 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
-          >
-            <div className="w-7.5 h-7.5 rounded-lg bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-              <CreditCard className="w-3.5 h-3.5" />
+        return (
+          <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3 sm:p-3.5 space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  Pintasan Layanan Siswa
+                </h3>
+              </div>
+              <div className="relative w-full sm:w-56">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                <Input
+                  type="text"
+                  value={quickActionSearch}
+                  onChange={(e) => setQuickActionSearch(e.target.value)}
+                  placeholder="Cari pintasan layanan..."
+                  className="pl-7.5 pr-7 h-7.5 text-xs bg-slate-50/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 rounded-lg shadow-2xs"
+                />
+                {quickActionSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setQuickActionSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 hover:text-slate-600 transition-colors"
+                    title="Hapus pencarian"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
             </div>
-            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors leading-tight">
-              Kartu Pelajar
-            </h4>
-            <span className="text-[9px] text-blue-600 dark:text-blue-400 font-medium mt-0.5 truncate max-w-full">
-              ID Card Digital
-            </span>
-          </Link>
 
-          {/* Shortcut 3: Presensi Siswa */}
-          <Link
-            href="/presensi/kehadiran-siswa"
-            className="group p-2 sm:p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
-          >
-            <div className="w-7.5 h-7.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-              <ClipboardCheck className="w-3.5 h-3.5" />
-            </div>
-            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors leading-tight">
-              Log Absensi
-            </h4>
-            <span className="text-[9px] text-slate-400 font-medium mt-0.5 truncate max-w-full">
-              Riwayat & QR
-            </span>
-          </Link>
+            {filteredShortcuts.length === 0 ? (
+              <div className="py-4 text-center rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-700 text-xs text-slate-500">
+                Pintasan &quot;{quickActionSearch}&quot; tidak ditemukan.
+                <button onClick={() => setQuickActionSearch('')} className="text-blue-600 font-bold ml-1.5 hover:underline">
+                  Reset
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-2.5">
+                {filteredShortcuts.map((sc, idx) => {
+                  const Icon = sc.icon
+                  const content = (
+                    <div
+                      className={`group p-2 sm:p-2.5 rounded-xl border ${sc.colorClass} hover:bg-white dark:hover:bg-slate-800 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px] h-full cursor-pointer`}
+                    >
+                      <div className={`w-7.5 h-7.5 rounded-lg ${sc.iconBg} flex items-center justify-center mb-1 group-hover:scale-105 transition-transform`}>
+                        <Icon className="w-3.5 h-3.5" />
+                      </div>
+                      <h4 className={`text-[11px] font-black text-slate-900 dark:text-white ${sc.textHover} transition-colors leading-tight truncate w-full`}>
+                        {sc.name}
+                      </h4>
+                      <span className={`text-[9px] ${sc.subColor} font-medium mt-0.5 truncate max-w-full block`}>
+                        {sc.desc}
+                      </span>
+                    </div>
+                  )
 
-          {/* Shortcut 4: Jadwal Pelajaran */}
-          <Link
-            href="/akademik/jadwal-pelajaran"
-            className="group p-2 sm:p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
-          >
-            <div className="w-7.5 h-7.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-              <BookOpen className="w-3.5 h-3.5" />
-            </div>
-            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors leading-tight">
-              Jadwal KBM
-            </h4>
-            <span className="text-[9px] text-slate-400 font-medium mt-0.5 truncate max-w-full">
-              Jadwal Mingguan
-            </span>
-          </Link>
+                  if (sc.href) {
+                    return (
+                      <Link key={idx} href={sc.href}>
+                        {content}
+                      </Link>
+                    )
+                  }
 
-          {/* Shortcut 5: Konseling & Izin */}
-          <Link
-            href="/presensi/izin-siswa"
-            className="group p-2 sm:p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
-          >
-            <div className="w-7.5 h-7.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-              <HeartHandshake className="w-3.5 h-3.5" />
-            </div>
-            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-amber-600 transition-colors leading-tight">
-              Izin & BK
-            </h4>
-            <span className="text-[9px] text-slate-400 font-medium mt-0.5 truncate max-w-full">
-              Konseling & Izin
-            </span>
-          </Link>
-
-          {/* Shortcut 6: Ujian CBT Online */}
-          <Link
-            href="/demo-waiting-room"
-            className="group p-2 sm:p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px]"
-          >
-            <div className="w-7.5 h-7.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-              <Laptop className="w-3.5 h-3.5" />
-            </div>
-            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-rose-600 transition-colors leading-tight">
-              Ujian CBT
-            </h4>
-            <span className="text-[9px] text-slate-400 font-medium mt-0.5 truncate max-w-full">
-              Asesmen Online
-            </span>
-          </Link>
-
-          {/* Shortcut 7: Tagihan & Keuangan */}
-          <button
-            onClick={() => setShowPaymentPopup(true)}
-            className="group p-2 sm:p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center w-full min-h-[72px]"
-          >
-            <div className="w-7.5 h-7.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-              <Receipt className="w-3.5 h-3.5" />
-            </div>
-            <h4 className="text-[11px] font-black text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors leading-tight">
-              Tagihan SPP
-            </h4>
-            <span className="text-[9px] text-slate-400 font-medium mt-0.5 truncate max-w-full">
-              Rincian Biaya
-            </span>
-          </button>
-        </div>
-      </Card>
+                  return (
+                    <button key={idx} type="button" onClick={sc.action} className="w-full text-left">
+                      {content}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </Card>
+        )
+      })()}
 
       {/* 5. MAIN BOTTOM SPLIT LAYOUT (8 COLS LEFT + 4 COLS RIGHT) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-stretch">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Loader2, Pencil, Trash2, User, Users, GraduationCap, Eye, BookOpen } from 'lucide-react'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -231,6 +232,18 @@ export default function HomeroomJournalsPage() {
 
   const searchedJournals = filterDataBySearch(displayedJournals, searchQuery)
 
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedTeacherFilter, pageSize])
+
+  const paginatedJournals = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return searchedJournals.slice(startIndex, startIndex + pageSize)
+  }, [searchedJournals, currentPage, pageSize])
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -445,7 +458,7 @@ export default function HomeroomJournalsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                searchedJournals.map((item: any) => (
+                paginatedJournals.map((item: any) => (
                   <TableRow key={item.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50">
                     <TableCell className="pl-6 font-medium text-slate-600 dark:text-slate-400 text-xs">
                       {new Date(item.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -502,6 +515,16 @@ export default function HomeroomJournalsPage() {
               )}
             </TableBody>
           </Table>
+          {!isLoading && searchedJournals.length > 0 && (
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={searchedJournals.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="catatan wali kelas"
+            />
+          )}
         </CardContent>
       </Card>
 

@@ -57,6 +57,8 @@ export default function LoginPage() {
     }
   }, [forgotCooldown])
 
+  const [publicDomainUrl, setPublicDomainUrl] = useState<string | null>(null)
+
   // Ambil nomor Helpdesk & Wallpaper Master dari Pengaturan Superadmin
   useEffect(() => {
     // Muat instan dari cache lokal jika tersedia untuk eliminasi flicker
@@ -69,6 +71,8 @@ export default function LoginPage() {
       if (cachedPhone) setHelpdeskPhone(cachedPhone)
       const cachedEmail = localStorage.getItem('simasmuh_helpdesk_email')
       if (cachedEmail) setHelpdeskEmail(cachedEmail)
+      const cachedDomain = localStorage.getItem('simasmuh_public_domain')
+      if (cachedDomain) setPublicDomainUrl(cachedDomain)
     } catch {}
 
     async function loadPublicSettings() {
@@ -97,6 +101,11 @@ export default function LoginPage() {
             setLogoMaster(data.logoUrl)
             try { localStorage.setItem('simasmuh_logo_master', data.logoUrl) } catch {}
           }
+          if (data?.publicDomainUrl) {
+            const cleanDomain = String(data.publicDomainUrl).trim().replace(/\/+$/, '')
+            setPublicDomainUrl(cleanDomain)
+            try { localStorage.setItem('simasmuh_public_domain', cleanDomain) } catch {}
+          }
         }
       } catch (err) {
         console.error('Gagal memuat setting publik:', err)
@@ -115,6 +124,31 @@ export default function LoginPage() {
     }
     return '/dashboard'
   }
+
+  // Handle pengembalian login Google OAuth dari domain publik kembali ke IP Lokal asal
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      const returnOrigin = url.searchParams.get('return_origin')
+      const oauthSuccess = url.searchParams.get('oauth_success')
+
+      // Jika baru saja login di domain publik dan terdapat return_origin (IP lokal asal)
+      if (oauthSuccess === '1' && returnOrigin) {
+        try {
+          const parsedOrigin = new URL(returnOrigin)
+          const targetLocalUrl = `${parsedOrigin.origin}${url.pathname}${url.search ? url.search : ''}`
+          // Hapus return_origin & oauth_success agar tidak berulang
+          const cleanLocalUrl = new URL(targetLocalUrl)
+          cleanLocalUrl.searchParams.delete('return_origin')
+          cleanLocalUrl.searchParams.delete('oauth_success')
+          window.location.href = cleanLocalUrl.toString()
+          return
+        } catch (e) {
+          console.error('Gagal redirect balik ke IP Lokal:', e)
+        }
+      }
+    }
+  }, [])
 
   // Cek parameter URL untuk sesi kedaluwarsa atau error sign-in
   useEffect(() => {
@@ -152,6 +186,61 @@ export default function LoginPage() {
       }
     }
   }, [])
+
+  // Handler Tombol Masuk dengan Google:
+  // Jika diakses via IP Lokal (192.168.x.x, 10.x.x.x, 172.x.x.x, dsb) dan terdapat domain publik terkonfigurasi,
+  // lakukan handoff redirect ke domain publik terlebih dahulu dengan menyematkan return_origin,
+  // lalu setelah autentikasi Google selesai di domain publik, sistem otomatis mengembalikan pengguna ke IP Lokal asal.
+  const handleGoogleSignIn = () => {
+    setLoading('Menghubungkan ke Google...')
+    if (typeof window === 'undefined') {
+      signIn('google', { callbackUrl: getSafeCallbackUrl() })
+      return
+    }
+
+    const currentHostname = window.location.hostname
+    const isLocalNetworkIp =
+      /^(127\.|192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(currentHostname) ||
+      currentHostname === 'localhost'
+
+    // Jika sedang diakses via IP lokal dan ada domain publik resmi
+    if (isLocalNetworkIp && publicDomainUrl) {
+      try {
+        const pubUrl = new URL(publicDomainUrl)
+        if (pubUrl.hostname !== currentHostname) {
+          const currentOrigin = window.location.origin
+          const safeTarget = getSafeCallbackUrl()
+          const redirectDestination = `${publicDomainUrl}/login?return_origin=${encodeURIComponent(currentOrigin)}&callbackUrl=${encodeURIComponent(safeTarget)}&auto_google=1`
+          window.location.href = redirectDestination
+          return
+        }
+      } catch (err) {
+        console.error('Gagal memformat public domain url:', err)
+      }
+    }
+
+    // Jika sudah di domain publik atau standalone, langsung jalankan Google OAuth signIn NextAuth
+    const safeCallback = getSafeCallbackUrl()
+    const returnOrigin = new URLSearchParams(window.location.search).get('return_origin')
+    let finalCallback = safeCallback
+    if (returnOrigin) {
+      finalCallback = `/login?oauth_success=1&return_origin=${encodeURIComponent(returnOrigin)}&callbackUrl=${encodeURIComponent(safeCallback)}`
+    }
+    signIn('google', { callbackUrl: finalCallback })
+  }
+
+  // Auto trigger Google Sign In jika diarahkan dari handoff IP lokal
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      if (url.searchParams.get('auto_google') === '1' && status !== 'authenticated') {
+        url.searchParams.delete('auto_google')
+        const cleanQuery = url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''
+        window.history.replaceState({}, document.title, `${url.pathname}${cleanQuery}`)
+        handleGoogleSignIn()
+      }
+    }
+  }, [publicDomainUrl, status])
 
   // Jika sudah dalam keadaan login aktif yang valid (bukan setelah expired), arahkan langsung ke callbackUrl atau /dashboard
   useEffect(() => {
@@ -501,10 +590,7 @@ export default function LoginPage() {
                     type="button"
                     variant="outline"
                     disabled={!!loading}
-                    onClick={() => {
-                      setLoading('Menghubungkan ke Google...')
-                      signIn('google', { callbackUrl: getSafeCallbackUrl() })
-                    }}
+                    onClick={handleGoogleSignIn}
                     className="w-full h-11 bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900/90 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-200 font-bold text-sm rounded-xl transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2.5 touch-manipulation"
                   >
                     {loading === 'Menghubungkan ke Google...' ? (

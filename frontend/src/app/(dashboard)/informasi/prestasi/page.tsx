@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useMemo, useRef } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -175,6 +176,19 @@ export default function PrestasiSiswaPage() {
       'student.class.name',
     ])
   }, [achievementsList, searchQuery])
+
+  // Rule 20 Pagination
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedTingkat, selectedKategori, selectedTahun, pageSize])
+
+  const paginatedAchievements = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredAchievements.slice(startIndex, startIndex + pageSize)
+  }, [filteredAchievements, currentPage, pageSize])
 
   // Upload file sertifikat / piagam
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -588,13 +602,13 @@ export default function PrestasiSiswaPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAchievements.map((item: any, idx: number) => {
+                  paginatedAchievements.map((item: any, idx: number) => {
                     const tingkatObj = TINGKAT_PRESTASI.find(t => t.id === item.tingkat)
                     const kategoriObj = KATEGORI_BIDANG.find(k => k.id === item.kategoriBidang)
 
                     return (
                       <TableRow key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
-                        <TableCell className="text-center text-xs font-semibold">{idx + 1}</TableCell>
+                        <TableCell className="text-center text-xs font-semibold">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
                         <TableCell className="text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">
                           {item.tanggal ? format(new Date(item.tanggal), 'dd MMM yyyy', { locale: localeId }) : '-'}
                         </TableCell>
@@ -676,6 +690,18 @@ export default function PrestasiSiswaPage() {
             </Table>
           </div>
         </CardContent>
+        {filteredAchievements.length > 0 && (
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filteredAchievements.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="prestasi"
+            />
+          </div>
+        )}
       </Card>
 
       {/* DIALOG FORM INPUT & EDIT PRESTASI */}

@@ -358,6 +358,22 @@ export class FinanceController {
     return this.financeService.releaseYearlyBills(req.user?.id, body);
   }
 
+  // ----- Publikasikan Tagihan Draf (Publish Draft Bills) -----
+  @Post('tagihan/publish-draft')
+  @RequirePermissions(PaymentPermission.GENERATE_MASS_BILLS)
+  @UseGuards(FinanceOperationGuard)
+  publishDraftBills(@Req() req: any, @Body() body: any) {
+    return this.financeService.publishDraftBills(req.user?.id, body);
+  }
+
+  // ----- Pindahkan Tagihan ke Draf (Retract back to Draft) -----
+  @Post('tagihan/retract-to-draft')
+  @RequirePermissions(PaymentPermission.GENERATE_MASS_BILLS)
+  @UseGuards(FinanceOperationGuard)
+  retractToDraft(@Req() req: any, @Body() body: any) {
+    return this.financeService.retractToDraft(req.user?.id, body);
+  }
+
   // ----- Reset Rilis Tagihan 1 Tahun (Restricted Password Verification) -----
   @Post('tagihan/reset-yearly')
   @RequirePermissions(PaymentPermission.DELETE_BILLS)

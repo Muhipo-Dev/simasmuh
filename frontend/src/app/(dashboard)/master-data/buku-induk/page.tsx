@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { 
@@ -9,6 +9,7 @@ import {
   Sparkles, FileText, CheckSquare, Square, RefreshCw, Eye,
   Pencil, Upload, Loader2, Edit3
 } from 'lucide-react'
+import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -525,6 +526,19 @@ export default function BukuIndukPage() {
     })
   }, [students, selectedClassId, searchQuery, statusFilter])
 
+  // Rule 20 Pagination
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedClassId, statusFilter, pageSize])
+
+  const paginatedStudents = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredStudents.slice(startIndex, startIndex + pageSize)
+  }, [filteredStudents, currentPage, pageSize])
+
   // Handlers Cetak
   const handlePrintSingle = (student: StudentItem) => {
     const formatted = convertStudentToBukuInduk(student)
@@ -771,7 +785,7 @@ export default function BukuIndukPage() {
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map((st, idx) => {
+                paginatedStudents.map((st, idx) => {
                   let bio: any = {}
                   try {
                     bio = typeof st.bioData === 'string' ? JSON.parse(st.bioData) : st.bioData || {}
@@ -801,7 +815,7 @@ export default function BukuIndukPage() {
                           )}
                         </button>
                       </td>
-                      <td className="p-3 text-center text-slate-500 font-medium">{idx + 1}</td>
+                      <td className="p-3 text-center text-slate-500 font-medium">{(currentPage - 1) * pageSize + idx + 1}</td>
                       <td className="p-3 font-mono font-bold text-slate-900 dark:text-white">
                         <div>{st.nis}</div>
                         <div className="text-[10px] text-slate-400 font-normal font-sans">
@@ -874,6 +888,18 @@ export default function BukuIndukPage() {
             </tbody>
           </table>
         </div>
+        {filteredStudents.length > 0 && (
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filteredStudents.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="siswa"
+            />
+          </div>
+        )}
       </div>
 
       {/* Dialog Edit Biodata Buku Induk Lengkap (A s.d. J) */}

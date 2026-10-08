@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
+import { TablePagination } from '@/components/TablePagination'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input, PasswordInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -246,6 +247,8 @@ export default function StudentsPage() {
   const [fromClassId, setFromClassId] = useState<string>('')
   const [toClassId, setToClassId] = useState<string>('')
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(10)
 
   // Bulk Edit States
   const [bulkEditOpen, setBulkEditOpen] = useState(false)
@@ -1459,6 +1462,16 @@ export default function StudentsPage() {
       'class.name'
     ])
   }, [students, filterClassId, filterProgram, filterGender, filterGelombang, filterJalur, filterActive, searchQuery])
+
+  // Reset current page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterClassId, filterProgram, filterGender, filterGelombang, filterJalur, filterActive, searchQuery])
+
+  const paginatedStudents = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredStudents.slice(startIndex, startIndex + pageSize)
+  }, [filteredStudents, currentPage, pageSize])
 
   const toggleSelectStudent = (id: string) => {
     if (selectedStudentIds.includes(id)) {
@@ -3337,7 +3350,7 @@ export default function StudentsPage() {
             <TableHeader className="bg-slate-50 dark:bg-slate-900">
               <TableRow>
                 {isSuperOrAdmin && (
-                  <TableHead className="w-[40px] pl-4">
+                  <TableHead className="w-10 pl-4 text-center">
                     <button type="button" onClick={toggleSelectAll} className="text-slate-500 hover:text-indigo-600">
                       {selectedStudentIds.length > 0 && selectedStudentIds.length === filteredStudents.length ? (
                         <CheckSquare className="w-4 h-4 text-indigo-600" />
@@ -3347,21 +3360,17 @@ export default function StudentsPage() {
                     </button>
                   </TableHead>
                 )}
-                <TableHead className="w-[60px] pl-4">No</TableHead>
-                <TableHead>NISN / NIS</TableHead>
-                <TableHead>Nama Siswa</TableHead>
-                <TableHead>Status Peserta Didik</TableHead>
-                <TableHead>Gelombang</TableHead>
-                <TableHead>Program</TableHead>
-                <TableHead>Jalur Pendaftaran</TableHead>
-                <TableHead>Kelas</TableHead>
-                {isSuperOrAdmin && <TableHead className="text-right pr-6">Aksi</TableHead>}
+                <TableHead className="w-12 pl-4 text-center text-xs">No</TableHead>
+                <TableHead className="w-28 sm:w-32 text-xs">NIS</TableHead>
+                <TableHead className="min-w-[180px] text-xs">Nama Siswa</TableHead>
+                <TableHead className="w-24 sm:w-28 text-center text-xs">Kelas</TableHead>
+                {isSuperOrAdmin && <TableHead className="w-48 text-right pr-4 text-xs">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={isSuperOrAdmin ? 9 : 7} className="text-center py-10">
+                  <TableCell colSpan={isSuperOrAdmin ? 6 : 4} className="text-center py-10">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
                       Memuat data...
@@ -3370,17 +3379,18 @@ export default function StudentsPage() {
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isSuperOrAdmin ? 9 : 7} className="text-center py-10 text-slate-500">
+                  <TableCell colSpan={isSuperOrAdmin ? 6 : 4} className="text-center py-10 text-slate-500 text-xs">
                     Belum ada data siswa untuk kriteria ini.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredStudents.map((item, index) => {
+                paginatedStudents.map((item, index) => {
                   const isSelected = selectedStudentIds.includes(item.id)
+                  const rowNumber = (currentPage - 1) * pageSize + index + 1
                   return (
                     <TableRow key={item.id} className={isSelected ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : ''}>
                       {isSuperOrAdmin && (
-                        <TableCell className="pl-4">
+                        <TableCell className="pl-4 text-center">
                           <button type="button" onClick={() => toggleSelectStudent(item.id)} className="text-slate-500 hover:text-indigo-600">
                             {isSelected ? (
                               <CheckSquare className="w-4 h-4 text-indigo-600" />
@@ -3390,61 +3400,26 @@ export default function StudentsPage() {
                           </button>
                         </TableCell>
                       )}
-                      <TableCell className="pl-4 font-medium text-slate-500">{index + 1}</TableCell>
-                      <TableCell>
+                      <TableCell className="pl-4 font-medium text-slate-500 text-center text-xs">{rowNumber}</TableCell>
+                      <TableCell className="w-28 sm:w-32">
                         <div className="flex flex-col">
-                          <span className="font-semibold text-slate-900 dark:text-white font-mono text-xs">{item.nisn}</span>
-                          <span className="text-xs text-slate-400 font-mono">{item.nis}</span>
+                          <span className="font-semibold text-slate-900 dark:text-white font-mono text-xs">{item.nis || '-'}</span>
+                          {item.nisn && <span className="text-[10px] text-slate-400 font-mono">NISN: {item.nisn}</span>}
                         </div>
                       </TableCell>
-                      <TableCell className="font-semibold">{item.name}</TableCell>
-                      <TableCell>
-                        {(() => {
-                          const statusInfo = getStudentStatusInfo(item)
-                          return (
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusInfo.color}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${item.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                              {statusInfo.label}
-                            </span>
-                          )
-                        })()}
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-                          {item.gelombang || 'Gelombang 1'}
+                      <TableCell className="min-w-[180px]">
+                        <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm block truncate" title={item.name}>
+                          {item.name}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const badge = getProgramBadge(item.program)
-                          return badge ? (
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${badge.color}`}>
-                              {badge.label}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic">Reguler</span>
-                          )
-                        })()}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          item.jalurPendaftaran === 'Kader' || item.jalurPendaftaran === 'Kader Persyarikatan'
-                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
-                            : item.jalurPendaftaran === 'Prestasi' || item.jalurPendaftaran === 'Bidikmisi'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                            : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                        }`}>
-                          {item.jalurPendaftaran || 'Mandiri'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center w-24 sm:w-28">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-xs font-semibold border border-indigo-100 dark:border-indigo-800">
-                          {item.class?.name || 'Belum ada kelas'}
+                          {item.class?.name || '-'}
                         </span>
                       </TableCell>
                       {isSuperOrAdmin && (
-                        <TableCell className="text-right pr-6">
-                          <div className="flex justify-end gap-1.5 items-center">
+                        <TableCell className="text-right pr-4 w-48 shrink-0">
+                          <div className="flex justify-end gap-1 items-center">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -3519,6 +3494,15 @@ export default function StudentsPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalItems={filteredStudents.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 50, 100]}
+            itemLabel="siswa"
+          />
         </CardContent>
       </Card>
     </div>

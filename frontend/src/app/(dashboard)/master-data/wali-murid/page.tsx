@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
   Plus, Loader2, Pencil, Trash2, Search, Users, UserCheck, 
@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { TablePagination } from '@/components/TablePagination'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input, PasswordInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -69,6 +70,8 @@ export default function WaliMuridPage() {
   const [isEdit, setIsEdit] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterActive, setFilterActive] = useState<string>('ALL')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(10)
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
   const [studentSearch, setStudentSearch] = useState('')
   
@@ -424,6 +427,15 @@ export default function WaliMuridPage() {
     })
   }, [parents, searchQuery, filterActive])
 
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, filterActive])
+
+  const paginatedParents = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredParents.slice(start, start + pageSize)
+  }, [filteredParents, currentPage, pageSize])
+
   // Filtered Students for Modal Selection
   const filteredAvailableStudents = useMemo(() => {
     if (!studentSearch.trim()) return availableStudents.slice(0, 30)
@@ -661,7 +673,7 @@ export default function WaliMuridPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredParents.map((parent) => {
+                  paginatedParents.map((parent) => {
                     const isSelected = selectedParentIds.includes(parent.id)
                     return (
                       <TableRow key={parent.id} className={isSelected ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : ''}>
@@ -793,6 +805,15 @@ export default function WaliMuridPage() {
               </TableBody>
             </Table>
           </div>
+          <TablePagination
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalItems={filteredParents.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 50, 100]}
+            itemLabel="wali murid"
+          />
         </CardContent>
       </Card>
 

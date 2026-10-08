@@ -58,8 +58,9 @@
     - **Proporsionalitas Lebar Kotak Kolom & Baris**: Seluruh tabel data wajib mengalokasikan lebar kolom secara presisi dan proporsional sesuai jenis data (contoh: kolom nomor `w-12`, tanggal & badge status `w-28`, tombol aksi `w-32/w-36`, sedangkan teks nama/perihal `min-w-[200px] max-w-[400px] flex-1`).
     - **Peniadaan Area Kosong Berlebih & Offset**: Dilarang membiarkan kolom melar berlebihan (*wasted whitespace*) ataupun kolom tertekan sempit tidak wajar yang menyebabkan offset layout. Teks panjang wajib dibatasi dengan `truncate` / `line-clamp` dan dilengkapi tooltip `title`.
     - **Scroll Horizontal Halus & Responsif di Semua Perangkat**: Pembungkus tabel wajib menggunakan container `overflow-x-auto` yang lembut dan presisi tanpa memotong konten pada perangkat mobile, tablet, maupun layar desktop lebar.
-16. **Standar Mutlak Searchbar, Filter, & Checkbox Seleksi pada Seluruh Tabel (STRICT)**:
-    - **Searchbar & Tombol Filter Bersebelahan**: Seluruh bentuk tabel data dan seluruh layanan yang menggunakan tabel diwajibkan memiliki Searchbar (kolom input pencarian data) yang di sampingnya langsung terdapat Tombol Filter (dropdown/filter kategori, status, tanggal, atau atribut data terkait) secara rapi dan terintegrasi.
+16. **Standar Mutlak Searchbar, Tombol Filter Terpusat (Popover), & Checkbox Seleksi pada Seluruh Tabel (STRICT)**:
+    - **Searchbar & Tombol Filter Terpusat Bersebelahan**: Seluruh bentuk tabel data dan layanan yang menggunakan tabel diwajibkan memiliki Searchbar (kolom pencarian data) yang di sampingnya langsung terdapat **Satu Tombol Filter Terpusat** (menggunakan Popover ringkas berisi seluruh dropdown kategori, status, tanggal, atau parameter terkait).
+    - **Peniadaan Deretan Dropdown Filter Memanjang**: Dilarang menampilkan deretan dropdown/input tanggal bertumpuk-tumpuk secara horizontal di luar tabel yang memakan ruang layar. Seluruh filter wajib diringkas ke dalam popover tombol filter dengan indikator badge jumlah filter aktif serta tombol reset cepat.
     - **Checkbox Seleksi (Select All & Row Select)**: Seluruh tabel data wajib dilengkapi dengan kolom Checkbox Seleksi di sisi paling kiri:
       - Checkbox di header tabel untuk memilih/membatalkan semua baris (*Select All / Deselect All*).
       - Checkbox di setiap baris data untuk seleksi individual (*Row Selection*).
@@ -89,3 +90,9 @@
     - **Ringan & Hemat Sumber Daya (Low-Resource & Fast Loading)**:
       - Desain dan kode wajib sangat ringan, efisien, dan dioptimalkan agar dapat berjalan lancar (*60 FPS*) pada perangkat dengan spesifikasi rendah (*low-end smartphone / PC sekolah / tablet POS*).
       - Hindari animasi berat yang membebani GPU/CPU, minimalisasi re-render yang tidak perlu, dan gunakan teknik CSS performa tinggi (GPU-accelerated transforms, `backdrop-filter` ringan, dan container queries).
+20. **Standar Mutlak Paginasi Tabel & Pembatasan Beban Muat (10 / 50 / 100 per Page) (STRICT)**:
+    - **Pilihan Limit Baris Terstandar**: Seluruh tabel data pada setiap modul dan fitur sistem SIMASMUH **MUTLAK WAJIB** membatasi data yang ditampilkan per halaman (*page*) dengan kontrol pilihan ukuran halaman terstandar: `10`, `50`, dan `100` data per tampilan (menggunakan komponen `<TablePagination />`).
+    - **Pencegahan Beban Rendering DOM (Low-Resource & Anti-Lag)**: Dilarang menampilkan seluruh rekaman data sekaligus (*unpaginated render*) pada tabel data berukuran besar. Pembatasan ini wajib diterapkan baik secara client-side slice maupun server-side query guna menghemat konsumsi memori browser, menjaga fluiditas scroll 60 FPS, dan mempercepat interaksi pengguna.
+    - **Nomor Urut Presisi Sesuai Halaman Aktif**: Nomor urut baris data wajib terhitung dinamis mengikuti rumus: `(currentPage - 1) * pageSize + index + 1` sehingga konsisten di setiap perpindahan halaman.
+    - **Auto-Reset Halaman Saat Filter / Pencarian Berubah**: Ketika pengguna mengetik pencarian di searchbar atau mengubah filter dropdown, halaman aktif wajib otomatis kembali ke halaman 1 (`setCurrentPage(1)`).
+

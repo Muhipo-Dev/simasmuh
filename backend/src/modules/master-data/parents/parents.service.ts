@@ -714,6 +714,7 @@ export class ParentsService {
               },
             },
             tagihans: {
+              where: { status: { not: 'DRAFT' } },
               orderBy: { createdAt: 'desc' },
               include: {
                 payments: { orderBy: { paymentDate: 'desc' } },
@@ -778,6 +779,7 @@ export class ParentsService {
                       },
                     },
                     tagihans: {
+                      where: { status: { not: 'DRAFT' } },
                       orderBy: { createdAt: 'desc' },
                       include: {
                         payments: { orderBy: { paymentDate: 'desc' } },

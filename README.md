@@ -1,8 +1,8 @@
 # SIMASMUH - Sistem Informasi Manajemen SMA Muhipo
 
-Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah ekosistem platform tata kelola sekolah terintegrasi satu pintu (*Single Sign-On Authentication*) berbasis teknologi modern, cerdas, dan aman. Platform ini dirancang khusus untuk mengotomatisasi dan memadukan seluruh pilar operasional sekolah: akademik, tata usaha (persuratan, disposisi & e-sign kriptografi), kesiswaan & bimbingan konseling (penilaian karakter, ibadah, adab & tatib), kepegawaian, tata kelola keuangan (tagihan, pembayaran, penggajian & LPJ), presensi biometrik cerdas (AI Face Recognition & Dynamic QR), buku tamu digital, serta komunikasi terpadu multi-kanal (In-App Notification & WhatsApp Gateway resmi) yang menghubungkan sekolah, pendidik, tenaga kependidikan, siswa, dan orang tua / wali murid secara real-time.
+Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah ekosistem platform tata kelola sekolah terintegrasi satu pintu (*Single Sign-On Authentication & Google OAuth Integration*) berbasis teknologi modern, cerdas, dan aman. Platform ini dirancang khusus untuk mengotomatisasi dan memadukan seluruh pilar operasional sekolah: akademik, tata usaha (persuratan, disposisi & e-sign kriptografi), kesiswaan & bimbingan konseling (penilaian karakter, ibadah, adab & tatib), kepegawaian, tata kelola keuangan (tagihan, pembayaran, penggajian & LPJ), presensi biometrik cerdas (AI Face Recognition & Dynamic QR), buku tamu digital, manajemen domain publik & redirect adaptif terpusat, serta komunikasi terpadu multi-kanal (In-App Notification, WhatsApp Gateway resmi, dan Email SMTP Transaksional) yang menghubungkan sekolah, pendidik, tenaga kependidikan, siswa, dan orang tua / wali murid secara real-time.
 
-Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level Security (RLS)* berlapis, sanitasi SQL injection proaktif, *adaptive rate limiting*, telemetri performa real-time, serta pipeline CI/CD DevSecOps otomatis.
+Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level Security (RLS)* berlapis, sanitasi SQL injection proaktif, *adaptive rate limiting*, telemetri performa real-time, autentikasi terpusat Google OAuth & Credentials, serta pipeline CI/CD DevSecOps otomatis.
 
 ---
 
@@ -11,21 +11,21 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 * **Frontend Web Application:**
   * **Framework & Runtime:** Next.js (App Router, Turbopack, React 19) & TypeScript.
   * **UI & Styling System:** TailwindCSS, Radix UI Primitives, Lucide Icons, Framer Motion (Smooth Staggered Animations & 3D Cards).
-  * **State Management & Data Synchronization:** TanStack React Query v5 & NextAuth.js (Session Caching, Adaptive Network Resolver).
+  * **State Management & Data Synchronization:** TanStack React Query v5 & NextAuth.js (Session Caching, Adaptive Network Resolver, Multi-Provider Google OAuth & Credentials).
   * **Theme & Ergonomics:** Dark/Light adaptive theme system (`next-themes`), Glassmorphism UI tokens, dan Mobile-First Responsive Ergonomics (Zero-Collision Layout).
   * **Public Modules:** Buku Tamu Digital Publik (`/buku-tamu`), Verifikasi E-Sign QR Publik (`/verifikasi-ttd`), dan Display Presensi QR (`/presensi/manajemen-qr`).
 
 * **Backend API & Enterprise Core:**
   * **Framework:** NestJS (Modular Architecture, RESTful API Engine, Dependency Injection).
-  * **Security & Hardening:** `SqlInjectionSanitizerMiddleware`, `AdaptiveThrottlerGuard`, `PermissionGuard` (Granular RBAC), `ApiKeyGuard`, `JwtStrategy`, dan Strict CORS & Adaptive Reverse Proxy Resolver.
+  * **Security & Hardening:** `SqlInjectionSanitizerMiddleware`, `AdaptiveThrottlerGuard`, `PermissionGuard` (Granular RBAC), `ApiKeyGuard`, `JwtStrategy`, Google OAuth JWT Verifier, dan Strict CORS & Adaptive Reverse Proxy Resolver.
   * **Core Modules:**
     * `master-data`: Pengguna, Siswa, Guru, Wali Murid, Kelas, Rombel, Mata Pelajaran, Kurikulum.
     * `academic`: Jadwal Pelajaran, E-Rapor Digital, Penilaian Harian/Ujian, Jurnal Mengajar Guru, Catatan Wali Kelas, Penilaian Karakter & Adab/Tatib.
     * `attendance`: Presensi Harian Siswa & Pegawai, Scan Dynamic QR, Izin Keluar Sekolah, Perizinan Siswa, Cuti Pegawai, dan Integrasi Biometrik Wajah.
     * `finance`: Master Pos Tarif (SPP, DPP, Seragam, Ujian), Tagihan Massal Otomatis, Verifikasi Pembayaran & Bukti Transfer, Penggajian Pegawai Terintegrasi, Rekapitulasi Kas & LPJ Keuangan.
     * `tu`: Persuratan Masuk & Keluar, Penomoran Surat Otomatis, Disposisi Digital, Tanda Tangan Elektronik (E-Sign QR Hash Kriptografi), Inventaris/Sarpras, Kepegawaian TU, dan Manajemen Buku Tamu.
-    * `communication`: Pengumuman Sekolah, Banner Interaktif, Broadcast Notifikasi, dan WhatsApp Socket Gateway Engine (`088293733330`).
-    * `core`: Autentikasi RBAC, Waiting Room Virtual Queue, Telemetri Performa Server Real-time, Manajemen Sesi Multi-Perangkat, Timezone UTC+7 Server-Centric Synchronization.
+    * `communication`: Pengumuman Sekolah, Banner Interaktif, Broadcast Notifikasi, Email Transaksional SMTP, dan WhatsApp Socket Gateway Engine (`088293733330`).
+    * `core`: Autentikasi RBAC & Google OAuth, Waiting Room Virtual Queue, Manajemen Domain Publik & Kredensial Terpusat, Telemetri Performa Server Real-time, Manajemen Sesi Multi-Perangkat, Timezone UTC+7 Server-Centric Synchronization.
   * **ORM & Database Modeling:** Prisma ORM.
 
 * **Database & Cloud Storage:**

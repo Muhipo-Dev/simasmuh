@@ -1,6 +1,6 @@
 # SIMASMUH - Sistem Informasi Manajemen SMA Muhipo
 
-Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah ekosistem platform tata kelola sekolah terintegrasi satu pintu (*Single Sign-On Authentication & Google OAuth Integration*) berbasis teknologi modern, cerdas, dan aman. Platform ini dirancang khusus untuk mengotomatisasi dan memadukan seluruh pilar operasional sekolah: akademik, tata usaha (persuratan, disposisi & e-sign kriptografi), kesiswaan & bimbingan konseling (penilaian karakter, ibadah, adab & tatib), kepegawaian, tata kelola keuangan (tagihan, pembayaran, penggajian & LPJ), presensi biometrik cerdas (AI Face Recognition & Dynamic QR), buku tamu digital, manajemen domain publik & redirect adaptif terpusat, serta komunikasi terpadu multi-kanal (In-App Notification, WhatsApp Gateway resmi, dan Email SMTP Transaksional) yang menghubungkan sekolah, pendidik, tenaga kependidikan, siswa, dan orang tua / wali murid secara real-time.
+Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo (SIMASMUH) adalah ekosistem platform tata kelola sekolah terintegrasi satu pintu (*Single Sign-On Authentication & Google OAuth Integration*) berbasis teknologi modern, cerdas, dan aman. Platform ini dirancang khusus untuk mengotomatisasi dan memadukan seluruh pilar operasional sekolah: akademik, tata usaha (persuratan, disposisi & e-sign kriptografi), kesiswaan & bimbingan konseling (penilaian karakter, ibadah, adab & tatib), kepegawaian, tata kelola keuangan (tagihan, pembayaran, penggajian & LPJ), presensi biometrik cerdas (AI Face Recognition & Dynamic QR), buku tamu digital, manajemen domain publik & redirect adaptif terpusat, serta komunikasi resmi terpadu (In-App Dashboard Notification & Email SMTP Transaksional) yang menghubungkan sekolah, pendidik, tenaga kependidikan, siswa, dan orang tua / wali murid secara real-time.
 
 Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level Security (RLS)* berlapis, sanitasi SQL injection proaktif, *adaptive rate limiting*, telemetri performa real-time, autentikasi terpusat Google OAuth & Credentials, serta pipeline CI/CD DevSecOps otomatis.
 
@@ -24,7 +24,7 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
     * `attendance`: Presensi Harian Siswa & Pegawai, Scan Dynamic QR, Izin Keluar Sekolah, Perizinan Siswa, Cuti Pegawai, dan Integrasi Biometrik Wajah.
     * `finance`: Master Pos Tarif (SPP, DPP, Seragam, Ujian), Tagihan Massal Otomatis, Verifikasi Pembayaran & Bukti Transfer, Penggajian Pegawai Terintegrasi, Rekapitulasi Kas & LPJ Keuangan.
     * `tu`: Persuratan Masuk & Keluar, Penomoran Surat Otomatis, Disposisi Digital, Tanda Tangan Elektronik (E-Sign QR Hash Kriptografi), Inventaris/Sarpras, Kepegawaian TU, dan Manajemen Buku Tamu.
-    * `communication`: Pengumuman Sekolah, Banner Interaktif, Broadcast Notifikasi, Email Transaksional SMTP, dan WhatsApp Socket Gateway Engine (`088293733330`).
+    * `communication`: Pengumuman Sekolah, Banner Interaktif, Log Notifikasi Dashboard Pengguna, dan Layanan Email SMTP Transaksional Resmi.
     * `core`: Autentikasi RBAC & Google OAuth, Waiting Room Virtual Queue, Manajemen Domain Publik & Kredensial Terpusat, Telemetri Performa Server Real-time, Manajemen Sesi Multi-Perangkat, Timezone UTC+7 Server-Centric Synchronization.
   * **ORM & Database Modeling:** Prisma ORM.
 
@@ -34,7 +34,6 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 * **Microservices & AI Biometrics:**
   * **AI Face Attendance Service:** Python Microservice berbasis OpenCV & FaceNet Deep Embedding 512-D (Inception-ResNet-v1 + MTCNN Landmark Alignment) dengan hot-reload vektor dataset foto profil.
-  * **WhatsApp Gateway Service:** Node.js & Baileys Multi-Device WhatsApp Socket Engine untuk notifikasi presensi kedatangan/kepulangan, tagihan/kuitansi keuangan, informasi karakter, dan pengumuman instan.
 
 * **DevSecOps & Multi-Platform Tooling:**
   * **DevSecOps CI Pipeline:** GitHub Actions (`devsecops.yml`) dengan audit otomatis kerentanan dependensi (`npm audit`), Static Application Security Testing (SAST ESLint & TypeScript), serta validasi build frontend & backend.

@@ -901,14 +901,14 @@ function HeaderMaintenanceModeSwitch() {
   })
 
   return (
-    <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-50/90 dark:bg-slate-800/80 p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs">
-      <div className="flex flex-col text-left">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-black text-slate-800 dark:text-slate-200">
+    <div className="flex items-center gap-2.5 bg-slate-50/90 dark:bg-slate-800/80 p-2 sm:px-3 sm:py-2 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs shrink-0">
+      <div className="flex flex-col text-left min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-black text-slate-800 dark:text-slate-200 whitespace-nowrap">
             Maintenance Mode:
           </span>
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 ${
               maintenanceMode
                 ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 animate-pulse'
                 : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
@@ -918,7 +918,7 @@ function HeaderMaintenanceModeSwitch() {
             {maintenanceMode ? 'PEMELIHARAAN' : 'NORMAL'}
           </span>
         </div>
-        <span className="text-[10px] text-slate-400">
+        <span className="text-[10px] text-slate-400 truncate max-w-[170px]">
           {maintenanceMode ? 'Khusus Admin, IT, TU & GOD' : 'Semua role dapat login'}
         </span>
       </div>
@@ -928,25 +928,25 @@ function HeaderMaintenanceModeSwitch() {
         type="button"
         disabled={toggleMutation.isPending || isLoading}
         onClick={() => toggleMutation.mutate(!maintenanceMode)}
-        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
           maintenanceMode
-            ? 'bg-gradient-to-r from-amber-500 to-orange-600 shadow-sm shadow-amber-300'
+            ? 'bg-amber-600'
             : 'bg-slate-300 dark:bg-slate-700'
         }`}
         title={maintenanceMode ? 'Klik untuk matikan mode pemeliharaan' : 'Klik untuk aktifkan mode pemeliharaan'}
       >
         <span className="sr-only">Toggle Maintenance Mode</span>
         <span
-          className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+          className={`pointer-events-none inline-flex h-5 w-5 transform items-center justify-center rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
             maintenanceMode ? 'translate-x-5' : 'translate-x-0'
           }`}
         >
           {toggleMutation.isPending ? (
             <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
           ) : maintenanceMode ? (
-            <Wrench className="w-3 h-3 text-amber-600" />
+            <Wrench className="w-2.5 h-2.5 text-amber-600" />
           ) : (
-            <span className="w-2 h-2 rounded-full bg-slate-400" />
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
           )}
         </span>
       </button>
@@ -999,14 +999,14 @@ function HeaderWaitingRoomSwitch() {
   })
 
   return (
-    <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-50/90 dark:bg-slate-800/80 p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs">
-      <div className="flex flex-col text-left">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-black text-slate-800 dark:text-slate-200">
+    <div className="flex items-center gap-2.5 bg-slate-50/90 dark:bg-slate-800/80 p-2 sm:px-3 sm:py-2 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs shrink-0">
+      <div className="flex flex-col text-left min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-black text-slate-800 dark:text-slate-200 whitespace-nowrap">
             Waiting Room Manual:
           </span>
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 ${
               forceEnabled
                 ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 animate-pulse'
                 : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
@@ -1016,7 +1016,7 @@ function HeaderWaitingRoomSwitch() {
             {forceEnabled ? 'MANUAL AKTIF' : 'OTOMATIS'}
           </span>
         </div>
-        <span className="text-[10px] text-slate-400">
+        <span className="text-[10px] text-slate-400 truncate max-w-[170px]">
           {activeUsers}/{maxCapacity} login aktif • {metrics?.queuedUsers || 0} antre
         </span>
       </div>
@@ -1026,16 +1026,16 @@ function HeaderWaitingRoomSwitch() {
         type="button"
         disabled={toggleMutation.isPending || isLoading}
         onClick={() => toggleMutation.mutate(!forceEnabled)}
-        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
           forceEnabled
-            ? 'bg-gradient-to-r from-pink-500 to-rose-600 shadow-sm shadow-pink-300'
+            ? 'bg-rose-600'
             : 'bg-slate-300 dark:bg-slate-700'
         }`}
         title={forceEnabled ? 'Klik untuk matikan mode manual' : 'Klik untuk aktifkan mode manual'}
       >
         <span className="sr-only">Toggle Waiting Room Manual</span>
         <span
-          className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+          className={`pointer-events-none inline-flex h-5 w-5 transform items-center justify-center rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
             forceEnabled ? 'translate-x-5' : 'translate-x-0'
           }`}
         >

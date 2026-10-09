@@ -161,18 +161,18 @@ export default function LoginPage() {
         const msgParam = url.searchParams.get('msg')
 
         if (errParam === 'MaintenanceMode') {
-          const detailMsg = msgParam || 'Mohon maaf, saat ini sistem SIMASMUH sedang dalam status Lockdown Maintenance (Pemeliharaan Berkala). Seluruh akses masuk dibatasi khusus Administrator & Tim IT/TU.'
+          const detailMsg = msgParam || 'Layanan SIMASMUH sedang dalam pemeliharaan berkala untuk optimalisasi sistem. Akses sementara dibatasi untuk Administrator.'
           setError(detailMsg)
           Swal.fire({
-            title: 'Sistem SIMASMUH Sedang Lockdown Maintenance',
+            title: 'Pemeliharaan Sistem',
             text: detailMsg,
-            icon: 'warning',
-            confirmButtonText: 'Saya Mengerti',
+            icon: 'info',
+            confirmButtonText: 'Tutup',
             confirmButtonColor: '#2563eb',
             customClass: {
-              popup: 'rounded-2xl shadow-2xl border border-amber-200/80 dark:border-amber-900/40 dark:bg-slate-900',
-              title: 'text-slate-900 dark:text-white font-black text-lg',
-              htmlContainer: 'text-slate-600 dark:text-slate-300 text-sm font-medium leading-relaxed',
+              popup: 'rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 dark:bg-slate-900',
+              title: 'text-slate-900 dark:text-white font-extrabold text-base sm:text-lg',
+              htmlContainer: 'text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-medium leading-relaxed',
             }
           })
         } else if (errParam === 'CredentialsSignin') {

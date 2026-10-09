@@ -26,10 +26,10 @@ export function MaintenanceModeHeaderSwitch() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           enabled: nextMode,
-          message: maintStatus?.maintenanceMessage || 'Mohon maaf, saat ini sistem SIMASMUH sedang dalam status Lockdown Maintenance (Pemeliharaan Berkala). Seluruh akses masuk dibatasi khusus Administrator & Tim IT/TU.' 
+          message: maintStatus?.maintenanceMessage || 'Layanan SIMASMUH sedang dalam pemeliharaan berkala untuk optimalisasi sistem. Akses sementara dibatasi untuk Administrator.' 
         }),
       })
-      if (!res.ok) throw new Error('Gagal mengubah mode maintenance')
+      if (!res.ok) throw new Error('Gagal mengubah status pemeliharaan')
       return res.json()
     },
     onSuccess: (data, nextMode) => {
@@ -37,12 +37,12 @@ export function MaintenanceModeHeaderSwitch() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-status'] })
       queryClient.invalidateQueries({ queryKey: ['settings'] })
       Swal.fire({
-        title: nextMode ? 'Mode Pemeliharaan Aktif!' : 'Sistem Dibuka Penuh!',
+        title: nextMode ? 'Pemeliharaan Aktif' : 'Sistem Beroperasi Normal',
         text: nextMode
-          ? 'Hanya akun Superadmin, Admin, Admin IT, Admin TU, dan GOD yang dapat masuk ke SIMASMUH.'
-          : 'Seluruh pengguna (Guru, Siswa, Wali Murid) kini dapat masuk kembali secara normal.',
+          ? 'Akses sistem sementara dibatasi khusus untuk Administrator.'
+          : 'Akses sistem dibuka kembali untuk seluruh pengguna.',
         icon: nextMode ? 'warning' : 'success',
-        timer: 2500,
+        timer: 2000,
         showConfirmButton: false,
       })
     },
@@ -70,7 +70,7 @@ export function MaintenanceModeHeaderSwitch() {
           </span>
         </div>
         <span className="text-[10px] text-slate-400 truncate max-w-[190px]">
-          {maintenanceMode ? 'Khusus Admin, IT, TU & GOD' : 'Semua role dapat login'}
+          {maintenanceMode ? 'Khusus Administrator' : 'Operasional Normal'}
         </span>
       </div>
 

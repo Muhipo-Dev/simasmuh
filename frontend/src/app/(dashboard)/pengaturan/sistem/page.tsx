@@ -875,10 +875,10 @@ function HeaderMaintenanceModeSwitch() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           enabled: nextMode,
-          message: maintStatus?.maintenanceMessage || 'Mohon maaf, saat ini sistem SIMASMUH sedang dalam status Lockdown Maintenance (Pemeliharaan Berkala). Seluruh akses masuk dibatasi khusus Administrator & Tim IT/TU.' 
+          message: maintStatus?.maintenanceMessage || 'Layanan SIMASMUH sedang dalam pemeliharaan berkala untuk optimalisasi sistem. Akses sementara dibatasi untuk Administrator.' 
         }),
       })
-      if (!res.ok) throw new Error('Gagal mengubah mode maintenance')
+      if (!res.ok) throw new Error('Gagal mengubah status pemeliharaan')
       return res.json()
     },
     onSuccess: (data, nextMode) => {
@@ -886,12 +886,12 @@ function HeaderMaintenanceModeSwitch() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-status'] })
       queryClient.invalidateQueries({ queryKey: ['settings'] })
       Swal.fire({
-        title: nextMode ? 'Mode Pemeliharaan Aktif!' : 'Sistem Dibuka Penuh!',
+        title: nextMode ? 'Pemeliharaan Aktif' : 'Sistem Beroperasi Normal',
         text: nextMode
-          ? 'Hanya akun Superadmin, Admin, Admin IT, Admin TU, dan GOD yang dapat masuk ke SIMASMUH.'
-          : 'Seluruh pengguna (Guru, Siswa, Wali Murid) kini dapat masuk kembali secara normal.',
+          ? 'Akses sistem sementara dibatasi khusus untuk Administrator.'
+          : 'Akses sistem dibuka kembali untuk seluruh pengguna.',
         icon: nextMode ? 'warning' : 'success',
-        timer: 2500,
+        timer: 2000,
         showConfirmButton: false,
       })
     },
@@ -1440,10 +1440,10 @@ function MaintenanceModeConfigCard() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-status'] })
       queryClient.invalidateQueries({ queryKey: ['settings'] })
       Swal.fire({
-        title: enabled ? 'Mode Pemeliharaan Aktif!' : 'Mode Pemeliharaan Non-Aktif!',
+        title: enabled ? 'Pemeliharaan Aktif' : 'Sistem Beroperasi Normal',
         text: enabled
-          ? 'Sistem SIMASMUH kini dalam status Lockdown Maintenance. Akses dibatasi untuk Superadmin, Admin, Admin IT, Admin TU, dan GOD.'
-          : 'Sistem SIMASMUH kini kembali normal dan dapat diakses oleh seluruh pengguna.',
+          ? 'Akses sistem sementara dibatasi khusus untuk Administrator.'
+          : 'Akses sistem dibuka kembali untuk seluruh pengguna.',
         icon: enabled ? 'warning' : 'success',
       })
     },
@@ -1456,7 +1456,7 @@ function MaintenanceModeConfigCard() {
     e.preventDefault()
     saveMutation.mutate({
       enabled,
-      message: message.trim() || 'Mohon maaf, saat ini sistem SIMASMUH sedang dalam status Lockdown Maintenance (Pemeliharaan Berkala). Seluruh akses masuk dibatasi khusus Administrator & Tim IT/TU.',
+      message: message.trim() || 'Layanan SIMASMUH sedang dalam pemeliharaan berkala untuk optimalisasi sistem. Akses sementara dibatasi untuk Administrator.',
     })
   }
 
@@ -1468,7 +1468,7 @@ function MaintenanceModeConfigCard() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-600 text-white shadow-xs">
-                  Akses Khusus Admin & IT/TU
+                  Akses Khusus Administrator
                 </span>
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
                   enabled 
@@ -1476,15 +1476,15 @@ function MaintenanceModeConfigCard() {
                     : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${enabled ? 'bg-amber-600' : 'bg-emerald-600'}`} />
-                  {enabled ? 'Maintenance Mode Aktif (Akses Terbatas)' : 'Sistem Normal (Semua Role Aktif)'}
+                  {enabled ? 'Pemeliharaan Aktif' : 'Operasional Normal'}
                 </span>
               </div>
               <CardTitle className="text-slate-900 dark:text-white font-extrabold text-base sm:text-lg flex items-center gap-2">
                 <Wrench className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                Mode Pemeliharaan Sistem (Maintenance Mode)
+                Mode Pemeliharaan Sistem
               </CardTitle>
               <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">
-                Kunci akses login umum (Guru, Siswa, Wali Murid) saat perbaikan atau update data penting. Hanya akun Admin, Superadmin, Admin IT, Admin TU, dan GOD yang dapat login.
+                Pembatasan akses masuk saat optimalisasi sistem. Akses sementara khusus untuk Administrator.
               </CardDescription>
             </div>
           </div>
@@ -1496,7 +1496,7 @@ function MaintenanceModeConfigCard() {
             <div className="p-4 rounded-2xl bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-3">
               <div className="flex items-center justify-between">
                 <Label htmlFor="maintenanceModeToggle" className="font-bold text-slate-900 dark:text-white text-xs">
-                  Status Mode Pemeliharaan
+                  Status Pemeliharaan
                 </Label>
                 <button
                   id="maintenanceModeToggle"
@@ -1519,14 +1519,14 @@ function MaintenanceModeConfigCard() {
                   ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900' 
                   : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900'
               }`}>
-                <span>{enabled ? '🚨 Pemeliharaan: AKTIF' : '🛡️ Akses Normal: TERBUKA'}</span>
+                <span>{enabled ? 'Pemeliharaan: AKTIF' : 'Operasional: NORMAL'}</span>
                 <span className="text-[10px] font-mono">{enabled ? 'MAINTENANCE' : 'NORMAL'}</span>
               </div>
 
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                 {enabled 
-                  ? 'Pengguna non-admin akan ditolak saat login dengan dialog informasi pemeliharaan resmi.' 
-                  : 'Semua role pengguna dapat masuk dan menggunakan seluruh fitur SIMASMUH secara normal.'}
+                  ? 'Pengguna umum akan menerima dialog pemberitahuan pemeliharaan resmi saat mengakses sistem.' 
+                  : 'Seluruh pengguna dapat mengakses sistem dan seluruh layanan SIMASMUH secara normal.'}
               </p>
             </div>
 
@@ -1534,10 +1534,10 @@ function MaintenanceModeConfigCard() {
             <div className="md:col-span-2 p-4 rounded-2xl bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="maintenanceMessageInput" className="font-bold text-slate-900 dark:text-white text-xs">
-                  Pesan Notifikasi Popup Pemeliharaan
+                  Pesan Pemberitahuan Pemeliharaan
                 </Label>
                 <span className="text-[10px] font-semibold text-slate-400">
-                  Tampil pada halaman login & popup penolakan
+                  Ditampilkan pada halaman login & dialog sistem
                 </span>
               </div>
               <textarea
@@ -1545,11 +1545,11 @@ function MaintenanceModeConfigCard() {
                 rows={3}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Contoh: Mohon maaf, saat ini sistem SIMASMUH sedang dalam pemeliharaan berkala. Akses saat ini dibatasi khusus Administrator & Tim IT/TU."
+                placeholder="Contoh: Layanan SIMASMUH sedang dalam pemeliharaan berkala untuk optimalisasi sistem. Akses sementara dibatasi untuk Administrator."
                 className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none leading-relaxed"
               />
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Pesan ini akan otomatis ditampilkan pada popup peringatan saat pengguna umum mencoba melakukan login atau ketika mode pemeliharaan aktif.
+                Pesan ini ditampilkan otomatis pada dialog peringatan bagi pengguna umum saat pemeliharaan sistem aktif.
               </p>
             </div>
           </div>

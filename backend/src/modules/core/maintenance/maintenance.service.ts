@@ -6,7 +6,7 @@ export class MaintenanceService implements OnModuleInit {
   private readonly logger = new Logger(MaintenanceService.name);
 
   public maintenanceMode = false;
-  public maintenanceMessage = 'Sistem SIMASMUH sedang dalam status Lockdown Maintenance (Pemeliharaan Berkala). Seluruh akses masuk dibatasi khusus Administrator & Tim IT/TU.';
+  public maintenanceMessage = 'Layanan SIMASMUH sedang dalam pemeliharaan berkala untuk optimalisasi sistem. Akses sementara dibatasi untuk Administrator.';
 
   constructor(@Optional() private readonly prisma?: PrismaService) {}
 

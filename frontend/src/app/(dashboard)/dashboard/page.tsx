@@ -33,6 +33,7 @@ import { NewsArticleListWidget } from '@/components/dashboard/NewsArticleListWid
 import { StudentDashboard } from '@/components/dashboard/StudentDashboard'
 import { SignaturePadDialog } from '@/components/dashboard/SignaturePadDialog'
 import { ExecutiveStatsPanel } from '@/components/dashboard/ExecutiveStatsPanel'
+import { QuickServerStatusPanel } from '@/components/dashboard/QuickServerStatusPanel'
 import { DisposisiAlertBanner } from '@/components/dashboard/DisposisiAlertBanner'
 
 import { useRealtimeServerClock } from '@/lib/time-sync'
@@ -152,6 +153,7 @@ export default function DashboardPage() {
   const [ksMenuSearch, setKsMenuSearch] = useState('')
   const [showSignaturePad, setShowSignaturePad] = useState(false)
   const [showExecutiveStats, setShowExecutiveStats] = useState(false)
+  const [showServerStatus, setShowServerStatus] = useState(false)
 
   // Query untuk tagihan siswa (khusus siswa & wali murid)
   const { data: studentTagihans } = useQuery<{
@@ -3197,6 +3199,27 @@ export default function DashboardPage() {
           {/* Tombol Khusus GOD User & Superadmin: Akses Langsung FaceNet AI & Pengguna */}
           {(isGod || isSuperadminRole) && (
             <>
+              {/* Tombol Infografis & Akses Cepat Status Server */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowServerStatus(!showServerStatus)}
+                className={`h-9 sm:h-9.5 px-3.5 rounded-xl font-extrabold text-xs gap-1.5 backdrop-blur-md transition-all shrink-0 ${
+                  showServerStatus
+                    ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
+                    : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
+                }`}
+                title="Lihat status server, latensi, port layanan, dan RAM"
+              >
+                <Server className="w-4 h-4 text-cyan-300" />
+                <span>{showServerStatus ? 'Tutup Server' : 'Status Server'}</span>
+                {supervisorData?.taskManager?.activeConnectedSessions !== undefined && (
+                  <Badge className="h-5 px-1.5 bg-white/20 text-white font-mono font-black text-[9.5px] rounded-full ml-0.5">
+                    {supervisorData.taskManager.activeConnectedSessions} Sesi
+                  </Badge>
+                )}
+              </Button>
+
               <Link href="/facenetai" className="shrink-0">
                 <Button
                   size="sm"
@@ -3244,6 +3267,18 @@ export default function DashboardPage() {
 
       {/* BANNER ALERT NOTIFIKASI DISPOSISI REALTIME GURU / PEGAWAI / PIMPINAN */}
       <DisposisiAlertBanner />
+
+      {/* Panel Infografis Status Server & Layanan Singkat (Bisa dibuka/tutup dari tombol Status Server) */}
+      {(isGod || isSuperadminRole) && showServerStatus && (
+        <QuickServerStatusPanel
+          supervisorData={supervisorData}
+          isLoading={loadingSupervisor}
+          isRefetching={refetchingSupervisor}
+          onRefetch={refetchSupervisor}
+          onClose={() => setShowServerStatus(false)}
+          isSuperadminRole={isSuperadminRole}
+        />
+      )}
 
       {/* Panel Detail Statistika Eksekutif (Khusus GOD User & Kepala Sekolah - Muncul saat tombol Statistika ditekan) */}
       {(isGod || isKepalaSekolah) && showExecutiveStats && (

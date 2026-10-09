@@ -46,22 +46,24 @@ export function SystemInfoWidget({
           <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
           <span className="truncate">{title}</span>
         </div>
-        {isSuperadminOrIT ? (
-          <Link
-            href="/pengaturan/pengumuman-sistem"
-            className="text-[10px] sm:text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5 shrink-0"
-          >
-            Kelola <ChevronRight className="w-3 h-3" />
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setShowAllModal(true)}
-            className="text-[10px] sm:text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5 shrink-0 cursor-pointer"
-          >
-            Lihat ({infoList.length}) <ChevronRight className="w-3 h-3" />
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {isSuperadminOrIT ? (
+            <Link
+              href="/pengaturan/pengumuman-sistem"
+              className="text-[10px] sm:text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5 shrink-0"
+            >
+              Kelola <ChevronRight className="w-3 h-3" />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowAllModal(true)}
+              className="text-[10px] sm:text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5 shrink-0 cursor-pointer"
+            >
+              Lihat ({infoList.length}) <ChevronRight className="w-3 h-3" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content items with card bubble styling */}

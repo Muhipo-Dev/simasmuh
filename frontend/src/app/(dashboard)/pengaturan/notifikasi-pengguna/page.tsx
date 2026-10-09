@@ -5,7 +5,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { 
   Mail, CheckCircle2, Send, Save, Loader2, Sparkles, AlertCircle, Globe,
   Clock, Check, FileCheck, Banknote, CalendarDays, Megaphone,
-  Wallet, ShieldAlert, UserCheck, ShieldCheck
+  Wallet, ShieldAlert, UserCheck, ShieldCheck, BookOpen, BellRing
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,6 +26,8 @@ export default function NotifikasiPenggunaPage() {
   const [settings, setSettings] = useState({
     notifPresensiMasuk: true,
     notifPresensiPulang: true,
+    notifJadwalPelajaran: true,
+    notifReminderJadwal: true,
     notifGaji: true,
     notifDisposisi: true,
     notifIzinCuti: true,
@@ -462,6 +464,64 @@ export default function NotifikasiPenggunaPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* 6. Supervisi & Verifikasi Perangkat Ajar (Guru & Tendik) */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                    Notifikasi Supervisi Perangkat Ajar & Akademik
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan status verifikasi modul ajar, ATP/RPP, dan hasil supervisi akademik oleh Kepala Sekolah / Tim Kurikulum.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Verifikasi Modul Ajar & Supervisi</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Terima email saat modul ajar Anda disetujui atau mendapat umpan balik dari tim supervisi.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={(settings as any).notifPerangkatAjar ?? true}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifPerangkatAjar: checked } as any))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 7. Jadwal Mengajar Harian Guru */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <CalendarDays className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    Notifikasi Jadwal Mengajar Harian
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan otomatis ringkasan jadwal mengajar dan kelas yang diampu setiap pagi hari sekolah (06:00 WIB).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Ringkasan Jadwal Mengajar Pagi</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Kirim email ringkasan jadwal kelas, jam mengajar, dan mata pelajaran setiap pagi hari kerja.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={(settings as any).notifJadwalMengajar ?? true}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifJadwalMengajar: checked } as any))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </>
           ) : (
             /* ========================================================
@@ -506,6 +566,40 @@ export default function NotifikasiPenggunaPage() {
                       checked={settings.notifPresensiPulang}
                       onCheckedChange={(checked) =>
                         setSettings((prev) => ({ ...prev, notifPresensiPulang: checked }))
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 2. Jadwal Pelajaran Hari Ini (Setiap Pagi 06:00 WIB) */}
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    Notifikasi Jadwal Pelajaran Harian (Jam 06:00 Pagi)
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Pemberitahuan email resmi satu kali sehari berisi susunan lengkap mata pelajaran, jam pelajaran, dan guru pengampu hari ini.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <Label className="text-xs sm:text-sm font-medium">Jadwal Pelajaran Hari Ini (06:00 WIB)</Label>
+                        <Badge className="bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 text-[10px] py-0 px-1.5 font-bold">
+                          1x Sehari Pagi
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Terima email ringkasan seluruh jadwal mata pelajaran dan guru pengampu hari ini setiap pagi pukul 06:00 WIB sebelum kegiatan belajar dimulai.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.notifJadwalPelajaran}
+                      onCheckedChange={(checked) =>
+                        setSettings((prev) => ({ ...prev, notifJadwalPelajaran: checked }))
                       }
                     />
                   </div>

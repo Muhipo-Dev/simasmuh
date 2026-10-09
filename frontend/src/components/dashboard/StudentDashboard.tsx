@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import { ActivityCalendarWidget } from '@/components/dashboard/ActivityCalendarWidget'
 import { SystemInfoWidget } from '@/components/dashboard/SystemInfoWidget'
+import { NewsArticleListWidget } from '@/components/dashboard/NewsArticleListWidget'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import Swal from 'sweetalert2'
 
@@ -1107,12 +1108,12 @@ export function StudentDashboard({
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-2.5">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-2.5">
                 {filteredShortcuts.map((sc, idx) => {
                   const Icon = sc.icon
                   const content = (
                     <div
-                      className={`group p-2 sm:p-2.5 rounded-xl border ${sc.colorClass} hover:bg-white dark:hover:bg-slate-800 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[72px] h-full cursor-pointer`}
+                      className={`group p-2 sm:p-2.5 rounded-xl border ${sc.colorClass} hover:bg-white dark:hover:bg-slate-800 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[78px] h-full cursor-pointer`}
                     >
                       <div className={`w-7.5 h-7.5 rounded-lg ${sc.iconBg} flex items-center justify-center mb-1 group-hover:scale-105 transition-transform`}>
                         <Icon className="w-3.5 h-3.5" />
@@ -1145,6 +1146,25 @@ export function StudentDashboard({
           </Card>
         )
       })()}
+
+      {/* 4.5. MOBILE ONLY: BERITA, PENGUMUMAN, KALENDER (URUTAN MOBILE RESMI) */}
+      <div className="block lg:hidden space-y-3.5 sm:space-y-4">
+        {/* Berita & Artikel Terkini */}
+        <NewsArticleListWidget limit={3} />
+
+        {/* Informasi & Pengumuman Sistem */}
+        <SystemInfoWidget
+          announcements={systemAnnouncements}
+          title="Informasi & Pengumuman Sistem"
+          limit={3}
+        />
+
+        {/* Kalender Akademik & Libur */}
+        <ActivityCalendarWidget
+          announcements={announcements}
+          title="Kalender Akademik & Libur"
+        />
+      </div>
 
       {/* 5. MAIN BOTTOM SPLIT LAYOUT (8 COLS LEFT + 4 COLS RIGHT) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-stretch">
@@ -1578,7 +1598,26 @@ export function StudentDashboard({
             </div>
           </Card>
 
-          {/* Card: Ekstrakurikuler Siswa Widget */}
+          {/* DESKTOP ONLY WIDGETS (SISTEM, BERITA, KALENDER) */}
+          <div className="hidden lg:flex flex-col gap-3.5 sm:gap-4">
+            {/* 1. Informasi & Pengumuman Sistem */}
+            <SystemInfoWidget
+              announcements={systemAnnouncements}
+              title="Informasi & Pengumuman Sistem"
+              limit={3}
+            />
+
+            {/* 2. Berita & Artikel Terkini */}
+            <NewsArticleListWidget limit={3} />
+
+            {/* 3. Kalender Akademik & Hari Libur Nasional */}
+            <ActivityCalendarWidget
+              announcements={announcements}
+              title="Kalender Akademik & Libur"
+            />
+          </div>
+
+          {/* 4. Ekstrakurikuler Siswa Widget */}
           <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3.5 sm:p-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-1.5">
@@ -1647,19 +1686,6 @@ export function StudentDashboard({
               )}
             </div>
           </Card>
-
-          {/* 1. Kalender Akademik & Hari Libur Nasional */}
-          <ActivityCalendarWidget
-            announcements={announcements}
-            title="Kalender Akademik & Libur"
-          />
-
-          {/* 2. Informasi & Pengumuman Sistem */}
-          <SystemInfoWidget
-            announcements={systemAnnouncements}
-            title="Informasi & Pengumuman Sistem"
-            limit={3}
-          />
         </div>
       </div>
 

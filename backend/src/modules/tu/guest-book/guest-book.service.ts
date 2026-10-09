@@ -85,7 +85,7 @@ export class GuestBookService {
                 { label: 'Dituju', value: guest.dituju },
                 { label: 'Waktu Tiba', value: guest.waktu || '-' },
               ],
-              actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/buku-tamu`,
+              actionUrl: '/buku-tamu',
               actionText: 'Lihat Buku Tamu',
             })
             .catch(() => {});

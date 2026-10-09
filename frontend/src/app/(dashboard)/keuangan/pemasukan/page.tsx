@@ -46,6 +46,10 @@ type StudentSummary = {
   gender: string; className: string; totalTagihan: number
   totalLunas: number; totalAngsuran?: number; sisaTagihan?: number; belumLunasCount: number
   angsuranCount?: number; sppLunasCount: number; tagihanCount: number
+  draftCount?: number
+  activeDraftCount?: number
+  releasedCount?: number
+  draftAmount?: number
   isActive?: boolean
   studentStatus?: string
   statusDetail?: string
@@ -1466,8 +1470,9 @@ function TagihanModal({
 const FINANCE_DRAFT_KEY = 'SIMASMUH_FINANCE_RELEASE_DRAFT'
 
 interface FinanceDraftData {
-  savedAt: string
+  id?: string
   title?: string
+  savedAt: string
   scope: 'CLASS' | 'MULTI_CLASS' | 'GRADE' | 'ALL' | 'STUDENTS'
   releaseDuration: 'TAHUN' | 'SEMESTER'
   targetSemester: 1 | 2
@@ -1500,30 +1505,90 @@ interface FinanceDraftData {
   scheduledReleaseAt?: string | null
 }
 
-function getStoredFinanceDraft(): FinanceDraftData | null {
-  if (typeof window === 'undefined') return null
+function getStoredFinanceDrafts(): FinanceDraftData[] {
+  if (typeof window === 'undefined') return []
   try {
     const raw = localStorage.getItem(FINANCE_DRAFT_KEY)
-    return raw ? JSON.parse(raw) : null
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return parsed
+    }
+    // Backward compatibility for single-draft legacy format
+    if (parsed && typeof parsed === 'object') {
+      const item: FinanceDraftData = {
+        ...parsed,
+        id: parsed.id || 'draft-legacy-1',
+        title: parsed.title || 'Draf Tagihan Utama',
+      }
+      return [item]
+    }
+    return []
   } catch {
-    return null
+    return []
   }
 }
 
-function saveStoredFinanceDraft(draft: FinanceDraftData): void {
-  if (typeof window === 'undefined') return
+function getStoredFinanceDraft(): FinanceDraftData | null {
+  const list = getStoredFinanceDrafts()
+  return list.length > 0 ? list[0] : null
+}
+
+function saveStoredFinanceDraft(draft: FinanceDraftData): boolean {
+  if (typeof window === 'undefined') return false
   try {
-    localStorage.setItem(FINANCE_DRAFT_KEY, JSON.stringify(draft))
+    const currentList = getStoredFinanceDrafts()
+    const draftId = draft.id || `draft-${Date.now()}`
+    const itemWithId: FinanceDraftData = {
+      ...draft,
+      id: draftId,
+      title: draft.title || (draft.releaseDuration === 'SEMESTER' 
+        ? `Draf Semester ${draft.targetSemester === 1 ? 'Ganjil' : 'Genap'} (${draft.customAcademicYear || `${draft.startYear}/${draft.startYear + 1}`})`
+        : `Draf 1 Tahun (${draft.customAcademicYear || `${draft.startYear}/${draft.startYear + 1}`})`),
+    }
+
+    const idx = currentList.findIndex((d) => d.id === itemWithId.id)
+    let updatedList: FinanceDraftData[]
+    if (idx >= 0) {
+      updatedList = [...currentList]
+      updatedList[idx] = itemWithId
+    } else {
+      // Maksimal 10 draf tagihan tersimpan
+      if (currentList.length >= 10) {
+        Swal.fire({
+          title: 'Batas Draf Tercapai',
+          text: 'Penyimpanan draf tagihan telah mencapai batas maksimal 10 draf. Silakan hapus atau rilis salah satu draf sebelum membuat yang baru.',
+          icon: 'warning',
+          confirmButtonColor: '#2563eb',
+        })
+        return false
+      }
+      updatedList = [itemWithId, ...currentList]
+    }
+
+    localStorage.setItem(FINANCE_DRAFT_KEY, JSON.stringify(updatedList))
     window.dispatchEvent(new CustomEvent('simasmuh-finance-draft-updated'))
+    return true
   } catch (err) {
     console.error('Failed to save finance draft:', err)
+    return false
   }
 }
 
-function removeStoredFinanceDraft(): void {
+function removeStoredFinanceDraft(id?: string): void {
   if (typeof window === 'undefined') return
   try {
-    localStorage.removeItem(FINANCE_DRAFT_KEY)
+    if (!id) {
+      localStorage.removeItem(FINANCE_DRAFT_KEY)
+    } else {
+      const currentList = getStoredFinanceDrafts()
+      const updatedList = currentList.filter((d) => d.id !== id)
+      if (updatedList.length === 0) {
+        localStorage.removeItem(FINANCE_DRAFT_KEY)
+      } else {
+        localStorage.setItem(FINANCE_DRAFT_KEY, JSON.stringify(updatedList))
+      }
+    }
     window.dispatchEvent(new CustomEvent('simasmuh-finance-draft-updated'))
   } catch (err) {
     console.error('Failed to clear finance draft:', err)
@@ -1552,9 +1617,20 @@ function DraftDrawerModal({
   const [customDateTime, setCustomDateTime] = useState<string>('')
   const [countdownText, setCountdownText] = useState<string | null>(null)
 
+  const [draftsList, setDraftsList] = useState<FinanceDraftData[]>([])
+  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null)
+
   const reloadDraft = () => {
-    const d = getStoredFinanceDraft()
-    setDraft(d)
+    const list = getStoredFinanceDrafts()
+    setDraftsList(list)
+    if (list.length > 0) {
+      const active = list.find(d => d.id === selectedDraftId) || list[0]
+      setDraft(active)
+      setSelectedDraftId(active.id || null)
+    } else {
+      setDraft(null)
+      setSelectedDraftId(null)
+    }
   }
 
   useEffect(() => {
@@ -1567,7 +1643,7 @@ function DraftDrawerModal({
     const handleUpdate = () => reloadDraft()
     window.addEventListener('simasmuh-finance-draft-updated', handleUpdate)
     return () => window.removeEventListener('simasmuh-finance-draft-updated', handleUpdate)
-  }, [])
+  }, [selectedDraftId])
 
   // Auto-tick timer scheduler countdown & auto release
   useEffect(() => {
@@ -1625,6 +1701,22 @@ function DraftDrawerModal({
 
     setIsReleasing(true)
     try {
+      // 1. Tarik tagihan aktif sebelumnya yang belum lunas ke draf agar sinkron dan tidak tumpang tindih
+      await authenticatedFetch('/api-backend/finance/tagihan/retract-to-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope: currentDraft.scope,
+          classId: currentDraft.classId,
+          classIds: currentDraft.selectedClassIds,
+          gradeLevel: currentDraft.gradeLevel,
+          startYear: Number(currentDraft.startYear),
+          releaseDuration: currentDraft.releaseDuration,
+          targetSemester: currentDraft.targetSemester,
+        }),
+      }).catch(() => null)
+
+      // 2. Rilis draf terpilih dengan proteksi sinkronisasi bukti pembayaran (tagihan lunas & terverifikasi dilewati)
       const payload = {
         academicYear: currentDraft.customAcademicYear || `${currentDraft.startYear}/${currentDraft.startYear + 1}`,
         targetScope: currentDraft.scope,
@@ -1684,13 +1776,17 @@ function DraftDrawerModal({
       qc.invalidateQueries({ queryKey: ['finance-students'] })
       qc.invalidateQueries({ queryKey: ['finance-rekap'] })
 
-      removeStoredFinanceDraft()
-      setDraft(null)
+      if (currentDraft.id) {
+        removeStoredFinanceDraft(currentDraft.id)
+      } else {
+        removeStoredFinanceDraft()
+      }
+      reloadDraft()
       onClose()
 
       Swal.fire({
         title: fromTimer ? 'Rilis Timer Otomatis Berhasil!' : 'Rilis Draf Berhasil!',
-        text: data.message || 'Seluruh tagihan draf berhasil diterbitkan ke akun siswa.',
+        text: data.message || 'Tagihan sebelumnya ditarik dan paket draf terpilih berhasil diterbitkan ke akun siswa.',
         icon: 'success',
         confirmButtonColor: '#2563eb',
       })
@@ -1753,7 +1849,7 @@ function DraftDrawerModal({
   const handleClearDraft = () => {
     Swal.fire({
       title: 'Hapus Draf Tagihan?',
-      text: 'Data konfigurasi rilis tagihan yang tersimpan di draf akan dihapus secara permanen.',
+      text: `Data draf "${draft?.title || 'Draf Tagihan'}" akan dihapus dari penyimpanan.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Ya, Hapus Draf',
@@ -1761,11 +1857,11 @@ function DraftDrawerModal({
       confirmButtonColor: '#e11d48',
     }).then((res) => {
       if (res.isConfirmed) {
-        removeStoredFinanceDraft()
-        setDraft(null)
+        removeStoredFinanceDraft(draft?.id)
+        reloadDraft()
         Swal.fire({
           title: 'Draf Dihapus',
-          text: 'Tempat draf tagihan telah dikosongkan.',
+          text: 'Draf tagihan telah dibersihkan.',
           icon: 'success',
           timer: 1500,
           showConfirmButton: false,
@@ -1880,31 +1976,40 @@ function DraftDrawerModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
-        <div className="shrink-0 p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
+      <DialogContent className="max-w-2xl lg:max-w-3xl w-[94vw] sm:w-full max-h-[88vh] flex flex-col p-0 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden bg-white dark:bg-slate-900 will-change-transform transform-gpu">
+        {/* HEADER MODAL */}
+        <div className="shrink-0 px-4 py-3.5 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
           <DialogHeader className="space-y-0.5">
-            <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-slate-100 text-base font-bold">
-              <div className="p-1.5 bg-sky-50 dark:bg-sky-950/60 rounded-lg border border-sky-100 dark:border-sky-900/50 text-sky-600 dark:text-sky-400">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-sky-50 dark:bg-sky-950/60 rounded-lg border border-sky-100 dark:border-sky-900/50 text-sky-600 dark:text-sky-400 shrink-0">
                 <Bookmark className="w-4 h-4" />
               </div>
-              Draf Penetapan Tagihan
-            </DialogTitle>
-            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs">
-              Kelola draf, publikasikan resmi, atau jadwalkan rilis tagihan.
+              <DialogTitle className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">
+                Draf Penetapan Tagihan
+              </DialogTitle>
+              {draftsList.length > 0 && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                  {draftsList.length}/10 Draf
+                </span>
+              )}
+            </div>
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs">
+              Kelola daftar draf penetapan tarif siswa, publikasikan resmi ke akun siswa, atau jadwalkan rilis otomatis.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar text-slate-800 dark:text-slate-100">
+        {/* ISI KONTEN UTAMA */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar text-slate-800 dark:text-slate-100">
           {!draft ? (
-            <div className="text-center py-10 space-y-3 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
-              <div className="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-900/60 text-sky-500 mx-auto flex items-center justify-center">
+            <div className="text-center py-10 space-y-3 bg-slate-50/70 dark:bg-slate-950/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
+              <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-900/60 text-sky-500 mx-auto flex items-center justify-center">
                 <FolderArchive className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Belum Ada Draf Penetapan Tagihan</p>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Konfigurasi penetapan tagihan dapat disusun melalui formulir rilis tagihan kemudian disimpan ke dalam <strong>Draf</strong> sebelum dipublikasikan resmi.
+                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">Belum Ada Draf Tagihan Tersimpan</p>
+                <p className="text-[11px] text-slate-500 max-w-md mx-auto leading-relaxed">
+                  Konfigurasi penetapan tagihan dapat disusun melalui formulir rilis tagihan lalu disimpan sebagai <strong>Draf</strong> (maksimal 10 draf) sebelum dipublikasikan ke siswa.
                 </p>
               </div>
               <Button
@@ -1913,20 +2018,76 @@ function DraftDrawerModal({
                   onClose()
                   onOpenReleaseForm()
                 }}
-                className="h-9 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs gap-1.5"
+                className="h-8 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-2xs gap-1.5"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
                 Susun Draf Penetapan Baru
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3.5">
+              {/* SELECTOR DAFTAR DRAF (Hingga 10 Draf) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Pilih Draf Tagihan ({draftsList.length} dari maks 10 draf):
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      onClose()
+                      onOpenReleaseForm()
+                    }}
+                    className="h-6.5 px-2 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-md gap-1"
+                  >
+                    <PlusCircle className="w-3 h-3" />
+                    Tambah Draf Baru
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {draftsList.map((d, idx) => {
+                    const isCur = (d.id === selectedDraftId) || (!selectedDraftId && idx === 0)
+                    return (
+                      <button
+                        key={d.id || idx}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDraftId(d.id || null)
+                          setDraft(d)
+                        }}
+                        className={`p-2.5 rounded-lg text-left border transition-all relative flex flex-col justify-between gap-1 ${
+                          isCur
+                            ? 'bg-sky-50 dark:bg-sky-950/50 border-sky-400 dark:border-sky-600 text-sky-950 dark:text-sky-100 ring-1 ring-sky-400/30 font-semibold'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-sky-300'
+                        }`}
+                      >
+                        <div className="w-full">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bold text-xs truncate max-w-[150px] block text-slate-900 dark:text-slate-100">
+                              {d.title || `Draf #${idx + 1}`}
+                            </span>
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 shrink-0">
+                              {d.releaseDuration === 'SEMESTER' ? `Sem ${d.targetSemester}` : '1 Th'}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">
+                            {d.customAcademicYear || `${d.startYear}/${d.startYear + 1}`} • {d.savedAt ? new Date(d.savedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 'Lokal'}
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               {/* STATUS SCHEDULER BANNER */}
               {draft.scheduledReleaseAt && (
-                <div className="p-4 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 dark:border-amber-800/80 rounded-xl space-y-2">
+                <div className="p-3 bg-amber-500/10 border border-amber-300 dark:border-amber-800/80 rounded-lg space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
-                      <Timer className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-pulse" />
+                      <Timer className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                       Timer Scheduler Rilis Aktif
                     </span>
                     <span className="text-[10px] font-mono font-black bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-md">
@@ -1939,13 +2100,13 @@ function DraftDrawerModal({
                       {new Date(draft.scheduledReleaseAt).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}
                     </strong>
                   </p>
-                  <div className="pt-1 flex gap-2">
+                  <div className="pt-0.5 flex gap-2">
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
                       onClick={handleCancelTimerScheduler}
-                      className="h-7 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-lg"
+                      className="h-6.5 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-md"
                     >
                       Batalkan Timer
                     </Button>
@@ -1953,11 +2114,11 @@ function DraftDrawerModal({
                 </div>
               )}
 
-              {/* CARD RINCIAN DRAF */}
-              <div className="p-4.5 bg-slate-50/70 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3.5">
-                <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-2.5">
+              {/* CARD RINCIAN DETAIL DRAF */}
+              <div className="p-4 bg-slate-50/70 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-200/80 dark:border-slate-800 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white">Draf Rilis Tagihan</span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">{draft.title || 'Draf Rilis Tagihan'}</span>
                     <span className="text-[10px] font-semibold bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full border border-sky-200 dark:border-sky-800">
                       {draft.releaseDuration === 'SEMESTER' ? `Semester ${draft.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun Penuh'}
                     </span>
@@ -2115,16 +2276,16 @@ function DraftDrawerModal({
           )}
         </div>
 
-        {/* FOOTER AKSI */}
-        <div className="shrink-0 p-4 sm:p-5 bg-slate-50/60 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        {/* FOOTER AKSI DENGAN TATA LETAK RESPONSIF TANPA COLLISION */}
+        <div className="shrink-0 p-4 sm:px-6 sm:py-4 bg-slate-50/80 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {draft && (
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleClearDraft}
-                className="h-9 px-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-xl gap-1"
-                title="Hapus konfigurasi draf dari penyimpanan"
+                className="h-9 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-xl gap-1.5"
+                title="Hapus draf aktif ini"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Hapus Draf</span>
@@ -2135,15 +2296,15 @@ function DraftDrawerModal({
               variant="outline"
               onClick={handleRetractActiveBills}
               disabled={isReleasing}
-              className="h-9 px-2.5 text-xs font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 border-amber-300 dark:border-amber-800 rounded-xl gap-1.5 shadow-2xs"
-              title="Tarik seluruh tagihan aktif yang belum lunas kembali ke status draf dan sembunyikan dari siswa & wali murid"
+              className="h-9 px-3 text-xs font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 border-amber-300 dark:border-amber-800 rounded-xl gap-1.5 shadow-2xs"
+              title="Tarik tagihan aktif yang belum lunas kembali ke draf"
             >
               <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
               <span>Tarik Tagihan ke Draf</span>
             </Button>
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
               variant="outline"
               onClick={onClose}
@@ -2161,10 +2322,10 @@ function DraftDrawerModal({
                     onOpenReleaseForm()
                   }}
                   className="h-9 text-xs font-semibold border-sky-200 dark:border-sky-800/60 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-xl gap-1.5"
-                  title="Buka formulir rilis untuk menyesuaikan kembali parameter penetapan"
+                  title="Sesuaikan parameter penetapan"
                 >
                   <Pencil className="w-3.5 h-3.5 text-sky-600" />
-                  Ubah Parameter
+                  <span>Ubah Parameter</span>
                 </Button>
                 <Button
                   type="button"
@@ -2173,7 +2334,7 @@ function DraftDrawerModal({
                   className="h-9 text-xs font-bold border-amber-300 dark:border-amber-800/80 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-xl gap-1.5"
                 >
                   <Timer className="w-3.5 h-3.5 text-amber-600" />
-                  Jadwal Publikasi
+                  <span>Jadwal Rilis</span>
                 </Button>
                 <Button
                   type="button"
@@ -2182,7 +2343,7 @@ function DraftDrawerModal({
                   className="h-9 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs gap-1.5 px-3.5"
                 >
                   {isReleasing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                  Publikasikan Sekarang
+                  <span>Rilis Draf Ini</span>
                 </Button>
               </>
             )}
@@ -2261,28 +2422,43 @@ function ReleaseYearlyModal({
   const [resetOnlyUnpaid, setResetOnlyUnpaid] = useState(false)
   const [resetError, setResetError] = useState('')
 
-  // State & Handler Manajemen Draf Rilis Tagihan
-  const [hasSavedDraft, setHasSavedDraft] = useState(false)
-  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+  // State & Handler Manajemen List Draf Rilis Tagihan
+  const [savedDrafts, setSavedDrafts] = useState<FinanceDraftData[]>([])
+  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null)
+  const [showDraftList, setShowDraftList] = useState(true)
+
+  const reloadSavedDrafts = () => {
+    const list = getStoredFinanceDrafts()
+    setSavedDrafts(list)
+    if (list.length > 0 && !selectedDraftId) {
+      setSelectedDraftId(list[0].id || null)
+    }
+  }
 
   // Cek apakah ada draf tersimpan saat modal dibuka
   useEffect(() => {
     if (open) {
-      const d = getStoredFinanceDraft()
-      if (d) {
-        setHasSavedDraft(true)
-        setDraftSavedAt(d.savedAt || null)
-      } else {
-        setHasSavedDraft(false)
-        setDraftSavedAt(null)
-      }
+      reloadSavedDrafts()
     }
   }, [open])
+
+  useEffect(() => {
+    const handleUpdate = () => reloadSavedDrafts()
+    window.addEventListener('simasmuh-finance-draft-updated', handleUpdate)
+    return () => window.removeEventListener('simasmuh-finance-draft-updated', handleUpdate)
+  }, [])
 
   // Simpan konfigurasi form saat ini ke draf & otomatis masuk ke data tagihan (status DRAFT / belum dipublikasikan)
   const handleSaveDraft = async () => {
     try {
+      const draftId = `draft-${Date.now()}`
+      const draftTitle = releaseDuration === 'SEMESTER'
+        ? `Draf Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'} ${customAcademicYear || `${startYear}/${startYear + 1}`}`
+        : `Draf 1 Tahun Ajaran ${customAcademicYear || `${startYear}/${startYear + 1}`}`
+
       const draftData: FinanceDraftData = {
+        id: draftId,
+        title: draftTitle,
         savedAt: new Date().toISOString(),
         scope,
         releaseDuration,
@@ -2315,8 +2491,8 @@ function ReleaseYearlyModal({
         lksPeriod,
       }
       saveStoredFinanceDraft(draftData)
-      setHasSavedDraft(true)
-      setDraftSavedAt(draftData.savedAt)
+      reloadSavedDrafts()
+      setSelectedDraftId(draftId)
 
       // Otomatis buat/sinkronkan data tagihan di database dengan status DRAFT (belum dipublikasikan)
       const payload = {
@@ -2363,9 +2539,9 @@ function ReleaseYearlyModal({
 
       Swal.fire({
         title: 'Draf Tagihan Disimpan!',
-        text: 'Tagihan otomatis tercatat di data tagihan staf dengan status Draf (belum dipublikasikan) dan disembunyikan dari portal siswa & wali murid.',
+        text: 'Draf berhasil ditambahkan ke daftar list draf tersimpan dan tercatat di data tagihan staf.',
         icon: 'success',
-        timer: 2500,
+        timer: 2000,
         showConfirmButton: false,
       })
     } catch {
@@ -2373,44 +2549,44 @@ function ReleaseYearlyModal({
     }
   }
 
-  // Muat data dari draf tersimpan
-  const handleLoadDraft = () => {
+  // Muat data dari draf terpilih ke formulir
+  const handleApplyDraftToForm = (targetDraft: FinanceDraftData) => {
     try {
-      const draft = getStoredFinanceDraft()
-      if (!draft) return
-      if (draft.scope) setScope(draft.scope)
-      if (draft.releaseDuration) setReleaseDuration(draft.releaseDuration)
-      if (draft.targetSemester) setTargetSemester(draft.targetSemester)
-      if (draft.classId) setClassId(draft.classId)
-      if (draft.selectedClassIds) setSelectedClassIds(draft.selectedClassIds)
-      if (draft.gradeLevel) setGradeLevel(draft.gradeLevel)
-      if (draft.startYear) setStartYear(draft.startYear)
-      if (draft.customAcademicYear) setCustomAcademicYear(draft.customAcademicYear)
-      if (typeof draft.isManualAcademicYear === 'boolean') setIsManualAcademicYear(draft.isManualAcademicYear)
-      if (draft.sppStartMonth) setSppStartMonth(draft.sppStartMonth)
-      if (draft.sppStartYear) setSppStartYear(draft.sppStartYear)
-      if (typeof draft.notes === 'string') setNotes(draft.notes)
-      if (typeof draft.includeSpp === 'boolean') setIncludeSpp(draft.includeSpp)
-      if (draft.sppMonthly !== undefined) setSppMonthly(draft.sppMonthly)
-      if (typeof draft.includeDpp === 'boolean') setIncludeDpp(draft.includeDpp)
-      if (draft.dppAmount !== undefined) setDppAmount(draft.dppAmount)
-      if (typeof draft.includeUis === 'boolean') setIncludeUis(draft.includeUis)
-      if (draft.uisAmount !== undefined) setUisAmount(draft.uisAmount)
-      if (typeof draft.includeUka === 'boolean') setIncludeUka(draft.includeUka)
-      if (draft.ukaAmount !== undefined) setUkaAmount(draft.ukaAmount)
-      if (typeof draft.includeUks === 'boolean') setIncludeUks(draft.includeUks)
-      if (draft.uksAmount !== undefined) setUksAmount(draft.uksAmount)
-      if (typeof draft.includeSeragam === 'boolean') setIncludeSeragam(draft.includeSeragam)
-      if (draft.seragamGender) setSeragamGender(draft.seragamGender)
-      if (draft.seragamPutraAmount !== undefined) setSeragamPutraAmount(draft.seragamPutraAmount)
-      if (draft.seragamPutriAmount !== undefined) setSeragamPutriAmount(draft.seragamPutriAmount)
-      if (typeof draft.includeLks === 'boolean') setIncludeLks(draft.includeLks)
-      if (draft.lksAmount !== undefined) setLksAmount(draft.lksAmount)
-      if (draft.lksPeriod) setLksPeriod(draft.lksPeriod)
+      if (targetDraft.scope) setScope(targetDraft.scope)
+      if (targetDraft.releaseDuration) setReleaseDuration(targetDraft.releaseDuration)
+      if (targetDraft.targetSemester) setTargetSemester(targetDraft.targetSemester)
+      if (targetDraft.classId) setClassId(targetDraft.classId)
+      if (targetDraft.selectedClassIds) setSelectedClassIds(targetDraft.selectedClassIds)
+      if (targetDraft.gradeLevel) setGradeLevel(targetDraft.gradeLevel)
+      if (targetDraft.startYear) setStartYear(targetDraft.startYear)
+      if (targetDraft.customAcademicYear) setCustomAcademicYear(targetDraft.customAcademicYear)
+      if (typeof targetDraft.isManualAcademicYear === 'boolean') setIsManualAcademicYear(targetDraft.isManualAcademicYear)
+      if (targetDraft.sppStartMonth) setSppStartMonth(targetDraft.sppStartMonth)
+      if (targetDraft.sppStartYear) setSppStartYear(targetDraft.sppStartYear)
+      if (typeof targetDraft.notes === 'string') setNotes(targetDraft.notes)
+      if (typeof targetDraft.includeSpp === 'boolean') setIncludeSpp(targetDraft.includeSpp)
+      if (targetDraft.sppMonthly !== undefined) setSppMonthly(targetDraft.sppMonthly)
+      if (typeof targetDraft.includeDpp === 'boolean') setIncludeDpp(targetDraft.includeDpp)
+      if (targetDraft.dppAmount !== undefined) setDppAmount(targetDraft.dppAmount)
+      if (typeof targetDraft.includeUis === 'boolean') setIncludeUis(targetDraft.includeUis)
+      if (targetDraft.uisAmount !== undefined) setUisAmount(targetDraft.uisAmount)
+      if (typeof targetDraft.includeUka === 'boolean') setIncludeUka(targetDraft.includeUka)
+      if (targetDraft.ukaAmount !== undefined) setUkaAmount(targetDraft.ukaAmount)
+      if (typeof targetDraft.includeUks === 'boolean') setIncludeUks(targetDraft.includeUks)
+      if (targetDraft.uksAmount !== undefined) setUksAmount(targetDraft.uksAmount)
+      if (typeof targetDraft.includeSeragam === 'boolean') setIncludeSeragam(targetDraft.includeSeragam)
+      if (targetDraft.seragamGender) setSeragamGender(targetDraft.seragamGender)
+      if (targetDraft.seragamPutraAmount !== undefined) setSeragamPutraAmount(targetDraft.seragamPutraAmount)
+      if (targetDraft.seragamPutriAmount !== undefined) setSeragamPutriAmount(targetDraft.seragamPutriAmount)
+      if (typeof targetDraft.includeLks === 'boolean') setIncludeLks(targetDraft.includeLks)
+      if (targetDraft.lksAmount !== undefined) setLksAmount(targetDraft.lksAmount)
+      if (targetDraft.lksPeriod) setLksPeriod(targetDraft.lksPeriod)
+
+      setSelectedDraftId(targetDraft.id || null)
 
       Swal.fire({
-        title: 'Draf Dimuat!',
-        text: 'Konfigurasi rilis berhasil dipulihkan dari draf.',
+        title: 'Parameter Draf Dimuat!',
+        text: `Konfigurasi form disesuaikan dengan "${targetDraft.title || 'Draf Terpilih'}".`,
         icon: 'success',
         timer: 1500,
         showConfirmButton: false,
@@ -2420,12 +2596,118 @@ function ReleaseYearlyModal({
     }
   }
 
-  // Hapus draf tersimpan
-  const handleClearDraft = () => {
+  // Eksekusi rilis langsung dari salah satu draf tersimpan
+  const handleReleaseDirectlyFromDraft = async (targetDraft: FinanceDraftData) => {
+    const confirm = await Swal.fire({
+      title: `Rilis "${targetDraft.title || 'Draf Tagihan'}"?`,
+      text: `Menerbitkan tagihan ${targetDraft.releaseDuration === 'SEMESTER' ? `Semester ${targetDraft.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun Penuh'} langsung ke akun siswa.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Rilis Sekarang',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+    })
+    if (!confirm.isConfirmed) return
+
     try {
-      removeStoredFinanceDraft()
-      setHasSavedDraft(false)
-      setDraftSavedAt(null)
+      // 1. Tarik tagihan aktif sebelumnya yang belum lunas ke draf agar sinkron dan tidak tumpang tindih
+      await authenticatedFetch('/api-backend/finance/tagihan/retract-to-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope: targetDraft.scope,
+          classId: targetDraft.classId,
+          classIds: targetDraft.selectedClassIds,
+          gradeLevel: targetDraft.gradeLevel,
+          startYear: Number(targetDraft.startYear),
+          releaseDuration: targetDraft.releaseDuration,
+          targetSemester: targetDraft.targetSemester,
+        }),
+      }).catch(() => null)
+
+      // 2. Rilis draf terpilih dengan proteksi anti-duplikasi & sinkronisasi verifikasi bukti pembayaran
+      const payload = {
+        academicYear: targetDraft.customAcademicYear || `${targetDraft.startYear}/${targetDraft.startYear + 1}`,
+        targetScope: targetDraft.scope,
+        studentIds: targetDraft.scope === 'STUDENTS' ? studentIds : undefined,
+        classId: targetDraft.scope === 'CLASS' ? targetDraft.classId : undefined,
+        classIds: targetDraft.scope === 'MULTI_CLASS' ? targetDraft.selectedClassIds : undefined,
+        gradeLevel: targetDraft.scope === 'GRADE' ? targetDraft.gradeLevel : undefined,
+        yearStart: Number(targetDraft.startYear),
+        releaseDuration: targetDraft.releaseDuration,
+        targetSemester: targetDraft.releaseDuration === 'SEMESTER' ? targetDraft.targetSemester : undefined,
+        sppStartMonth: Number(targetDraft.sppStartMonth),
+        sppStartYear: Number(targetDraft.sppStartYear),
+        customSppMonthly: targetDraft.includeSpp ? targetDraft.sppMonthly : 0,
+        customDpp: targetDraft.includeDpp ? targetDraft.dppAmount : 0,
+        customUis: targetDraft.includeUis ? targetDraft.uisAmount : 0,
+        customUka: targetDraft.includeUka ? targetDraft.ukaAmount : 0,
+        customUks: targetDraft.includeUks ? targetDraft.uksAmount : 0,
+        customSeragam: targetDraft.includeSeragam ? (targetDraft.seragamGender === 'PUTRI' ? targetDraft.seragamPutriAmount : targetDraft.seragamPutraAmount) : 0,
+        customLks: targetDraft.includeLks ? targetDraft.lksAmount : 0,
+        lksType: targetDraft.lksPeriod === 'TAHUNAN' ? 'SETAHUN' : 'SEMESTER',
+        itemsSelection: {
+          spp: targetDraft.includeSpp,
+          dpp: targetDraft.includeDpp,
+          uis: targetDraft.includeUis,
+          uka: targetDraft.includeUka,
+          uks: targetDraft.includeUks,
+          seragam: targetDraft.includeSeragam,
+          lks: targetDraft.includeLks,
+        },
+        allowOverrideDuplicates: false,
+      }
+
+      const res = await authenticatedFetch('/api-backend/finance/tagihan/release-yearly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      // Also publish draft bills matching scope
+      await authenticatedFetch('/api-backend/finance/tagihan/publish-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope: targetDraft.scope,
+          classId: targetDraft.scope === 'CLASS' ? targetDraft.classId : undefined,
+          classIds: targetDraft.scope === 'MULTI_CLASS' ? targetDraft.selectedClassIds : undefined,
+          gradeLevel: targetDraft.scope === 'GRADE' ? targetDraft.gradeLevel : undefined,
+          startYear: Number(targetDraft.startYear),
+        }),
+      }).catch(() => null)
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal merilis tagihan dari draf')
+      }
+
+      const data = await res.json()
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+
+      if (targetDraft.id) {
+        removeStoredFinanceDraft(targetDraft.id)
+        reloadSavedDrafts()
+      }
+
+      Swal.fire({
+        title: 'Rilis Draf Berhasil!',
+        text: data.message || 'Paket tagihan draf berhasil diterbitkan ke akun siswa.',
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+      onClose()
+    } catch (err: any) {
+      Swal.fire('Gagal Merilis Draf', err.message || 'Terjadi kesalahan sistem', 'error')
+    }
+  }
+
+  // Hapus draf tersimpan tertentu
+  const handleDeleteDraftItem = (id?: string) => {
+    try {
+      removeStoredFinanceDraft(id)
+      reloadSavedDrafts()
       Swal.fire({
         title: 'Draf Dihapus',
         text: 'Data draf rilis tagihan telah dibersihkan.',
@@ -2647,63 +2929,138 @@ function ReleaseYearlyModal({
   return (
     <>
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[95vw] sm:w-full max-h-[92vh] flex flex-col p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
-        <div className="shrink-0 p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
-              <div className="p-2 bg-blue-50 dark:bg-blue-950/60 rounded-xl border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400">
-                <Layers className="w-5 h-5" />
+      <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[94vw] sm:w-full max-h-[88vh] flex flex-col p-0 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden bg-white dark:bg-slate-900 will-change-transform transform-gpu">
+        <div className="shrink-0 px-4 py-3.5 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <DialogHeader className="space-y-0.5">
+            <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-slate-100 text-sm sm:text-base font-bold">
+              <div className="p-1.5 bg-blue-50 dark:bg-blue-950/60 rounded-lg border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400">
+                <Layers className="w-4 h-4" />
               </div>
               Rilis Tagihan {releaseDuration === 'SEMESTER' ? `Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun'} ({sppRangePreview})
             </DialogTitle>
-            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs">
               Rilis tagihan {sppMonthsCount} bulan SPP ({sppRangePreview}), DPP, UIS, UKA, UKS, Seragam, & LKS ({customAcademicYear ? `TA ${customAcademicYear}` : `Tahun ${startYear}`}).
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 custom-scrollbar text-slate-800 dark:text-slate-100">
-          {/* Banner Indikator Draf Tersimpan */}
-          {hasSavedDraft && (
-            <div className="p-3.5 bg-sky-50/80 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/70 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs animate-in fade-in duration-200">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-lg">
-                  <Bookmark className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-sky-950 dark:text-sky-200">Draf Konfigurasi Tersedia</span>
-                    <span className="text-[10px] font-semibold bg-sky-200/60 dark:bg-sky-900/60 text-sky-800 dark:text-sky-300 px-2 py-0.5 rounded-full">
-                      Tersimpan {draftSavedAt ? new Date(draftSavedAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Lokal'}
-                    </span>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar text-slate-800 dark:text-slate-100">
+          {/* DAFTAR DRAF TERSIMPAN & AKSI RILIS LANGSUNG */}
+          {savedDrafts.length > 0 && (
+            <div className="p-3.5 bg-sky-50/70 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/80 rounded-xl space-y-2.5 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-md">
+                    <Bookmark className="w-3.5 h-3.5" />
                   </div>
-                  <p className="text-[11px] text-sky-800/80 dark:text-sky-300/80 mt-0.5">
-                    Ada draf rilis tagihan yang belum dirilis publik. Anda dapat memuatnya kembali atau memperbarui dengan data saat ini.
-                  </p>
+                  <div>
+                    <span className="text-xs font-bold text-sky-950 dark:text-sky-200">
+                      Daftar Draf Tagihan Tersimpan ({savedDrafts.length}/10)
+                    </span>
+                    <p className="text-[10px] text-sky-800/80 dark:text-sky-300/80">
+                      Pilih draf untuk dirilis langsung atau terapkan parameternya ke formulir.
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
                 <Button
                   type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleLoadDraft}
-                  className="h-8 text-xs font-semibold bg-white dark:bg-slate-900 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 hover:bg-sky-100/50 rounded-lg gap-1.5"
-                >
-                  <FolderArchive className="w-3.5 h-3.5 text-sky-600" />
-                  Terapkan Draf
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
                   variant="ghost"
-                  onClick={handleClearDraft}
-                  className="h-8 px-2 text-xs font-medium text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg"
-                  title="Hapus Draf"
+                  size="sm"
+                  onClick={() => setShowDraftList(!showDraftList)}
+                  className="h-7 px-2 text-xs text-sky-700 dark:text-sky-300 hover:bg-sky-100/60 rounded-lg"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  {showDraftList ? 'Sembunyikan' : 'Tampilkan'}
                 </Button>
               </div>
+
+              {showDraftList && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+                  {savedDrafts.map((d, idx) => {
+                    const isSelected = selectedDraftId === d.id || (!selectedDraftId && idx === 0)
+                    const dScope = d.scope === 'ALL' ? 'Semua Siswa' : d.scope === 'GRADE' ? `Tingkat ${d.gradeLevel}` : d.scope === 'MULTI_CLASS' ? `${d.selectedClassIds?.length || 0} Kelas` : d.scope === 'CLASS' ? (classes.find(c => c.id === d.classId)?.name ? `Kelas ${classes.find(c => c.id === d.classId)?.name}` : 'Satu Kelas') : 'Siswa Terpilih'
+                    const dDuration = d.releaseDuration === 'SEMESTER' ? `Semester ${d.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun'
+                    const dSpp = d.includeSpp ? `SPP ${d.sppMonthly.toLocaleString('id-ID')}` : null
+
+                    return (
+                      <div
+                        key={d.id || idx}
+                        className={`p-3 rounded-xl border transition-all flex flex-col justify-between gap-2.5 ${
+                          isSelected
+                            ? 'bg-white dark:bg-slate-900 border-sky-400 dark:border-sky-600 shadow-xs ring-1 ring-sky-400/30'
+                            : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 hover:border-sky-300'
+                        }`}
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate" title={d.title}>
+                                {d.title || `Draf #${idx + 1}`}
+                              </h4>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                {d.savedAt ? new Date(d.savedAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Lokal'}
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 shrink-0 border border-sky-200/60 dark:border-sky-800">
+                              {dDuration}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap gap-1 text-[10px]">
+                            <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                              {dScope}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                              {d.customAcademicYear || `${d.startYear}/${d.startYear + 1}`}
+                            </span>
+                            {dSpp && (
+                              <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-medium">
+                                {dSpp}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleApplyDraftToForm(d)}
+                              className="h-7 px-2 text-[11px] font-semibold bg-sky-50/50 hover:bg-sky-100 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 rounded-lg gap-1"
+                              title="Terapkan draf ini ke formulir"
+                            >
+                              <Pencil className="w-3 h-3 text-sky-600" />
+                              <span>Gunakan</span>
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteDraftItem(d.id)}
+                              className="h-7 px-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg"
+                              title="Hapus draf ini"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleReleaseDirectlyFromDraft(d)}
+                            className="h-7 px-2.5 text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-2xs gap-1"
+                            title="Rilis langsung draf ini sekarang"
+                          >
+                            <Send className="w-3 h-3" />
+                            <span>Rilis Draf Ini</span>
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -4873,22 +5230,22 @@ function TabTagihan() {
               <Button
                 variant="outline"
                 onClick={() => setDraftDrawerOpen(true)}
-                className={`h-8 px-2 sm:px-2.5 text-xs font-bold rounded-lg shadow-2xs touch-manipulation gap-1.5 relative transition-all ${
+                className={`h-8 px-2.5 sm:px-3 text-xs font-bold rounded-lg shadow-2xs touch-manipulation gap-1.5 relative transition-all border ${
                   hasDraftBadge
-                    ? 'border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 ring-1 ring-sky-500/20'
-                    : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    ? 'border-amber-300 dark:border-amber-700/80 bg-amber-50/90 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 ring-1 ring-amber-500/30'
+                    : 'border-slate-300 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
                 title="Buka Tempat Khusus Draf Rilis Tagihan & Timer Scheduler"
               >
-                <Bookmark className={`w-3.5 h-3.5 ${hasDraftBadge ? 'text-sky-600 dark:text-sky-400' : 'text-slate-500'}`} />
-                <span>Draf</span>
+                <Bookmark className={`w-3.5 h-3.5 ${hasDraftBadge ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400'}`} />
+                <span>Draf Tagihan</span>
                 {hasDraftBadge && (
-                  <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse inline-block shrink-0" />
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse inline-block shrink-0" />
                 )}
               </Button>
               <Button onClick={() => setMassalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white gap-1 h-8 px-2 sm:px-2.5 text-xs font-bold rounded-lg shadow-xs touch-manipulation">
-                <Layers className="w-3.5 h-3.5" /> <span>Rilis Th / Sem</span>
+                className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 h-8 px-2.5 sm:px-3 text-xs font-bold rounded-lg shadow-xs touch-manipulation">
+                <Layers className="w-3.5 h-3.5" /> <span>Rilis</span>
               </Button>
               <Button
                 variant="outline"
@@ -5026,6 +5383,9 @@ function TabTagihan() {
                   const displayIndex = (currentPage - 1) * pageSize + idx + 1;
                   const statusInfo = getFinanceStudentStatus(s);
                   const isNonaktif = statusInfo.status !== 'AKTIF';
+                  const hasOnlyDraft = s.belumLunasCount > 0 && s.draftCount !== undefined && s.draftCount > 0 && (!s.releasedCount || s.releasedCount === 0);
+                  const hasDraft = (s.draftCount !== undefined && s.draftCount > 0);
+
                   return (
                     <TableRow 
                       key={s.id} 
@@ -5065,12 +5425,17 @@ function TabTagihan() {
                               <p className={`font-bold text-xs leading-tight truncate ${isNonaktif ? 'text-slate-600 dark:text-slate-400' : 'text-slate-900 dark:text-white'}`} title={s.name}>
                                 {s.name}
                               </p>
-                              {isNonaktif && (
+                              {isNonaktif ? (
                                 <span className={`text-[9.5px] font-extrabold px-1.5 py-0.2 rounded-full border inline-flex items-center gap-0.5 shrink-0 ${statusInfo.color}`}>
                                   <Clock className="w-2.5 h-2.5" />
                                   {statusInfo.label}
                                 </span>
-                              )}
+                              ) : hasOnlyDraft ? (
+                                <span className="text-[9.5px] font-extrabold px-1.5 py-0.2 rounded-full border bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-300 dark:border-slate-700 inline-flex items-center gap-0.5 shrink-0" title="Tagihan masih berstatus Draf dan belum dirilis">
+                                  <Bookmark className="w-2.5 h-2.5 text-slate-400" />
+                                  Draf
+                                </span>
+                              ) : null}
                             </div>
                             <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono leading-tight truncate mt-0.5">
                               NISN: {s.nisn || '-'} · <span className={`font-semibold ${isNonaktif ? 'text-slate-500' : 'text-slate-600 dark:text-slate-300'}`}>{s.className}</span>
@@ -5079,14 +5444,45 @@ function TabTagihan() {
                         </div>
                       </TableCell>
                       <TableCell className="text-center py-2 px-3 whitespace-nowrap">
-                        {s.belumLunasCount > 0
-                          ? <span className="font-bold px-2.5 py-0.5 rounded-full text-[10px] bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 inline-block whitespace-nowrap">{s.belumLunasCount} Tagihan</span>
-                          : <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-3 h-3 text-emerald-600" /> LUNAS</span>
-                        }
+                        {s.belumLunasCount > 0 ? (
+                          hasOnlyDraft ? (
+                            <span 
+                              className="font-bold px-2.5 py-0.5 rounded-full text-[10px] bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 inline-flex items-center gap-1 whitespace-nowrap opacity-85"
+                              title="Tagihan telah diatur namun masih berstatus DRAF (belum dirilis)"
+                            >
+                              <Bookmark className="w-3 h-3 text-slate-400" />
+                              {s.belumLunasCount} Draf (Belum Rilis)
+                            </span>
+                          ) : (
+                            <span className="font-bold px-2.5 py-0.5 rounded-full text-[10px] bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 inline-block whitespace-nowrap">
+                              {s.belumLunasCount} Tagihan
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> LUNAS
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-bold text-xs py-2 px-4 whitespace-nowrap">
                         {s.sisaTagihan !== undefined && s.sisaTagihan > 0 ? (
-                          <span className={`font-extrabold text-sm ${isNonaktif ? 'text-rose-500 dark:text-rose-400' : 'text-rose-600 dark:text-rose-400'}`}>{currency(s.sisaTagihan)}</span>
+                          hasOnlyDraft ? (
+                            <div className="flex flex-col items-end">
+                              <span 
+                                className="font-extrabold text-sm text-slate-400 dark:text-slate-500 opacity-90"
+                                title="Nominal sisa tagihan draf yang telah diatur (belum dirilis)"
+                              >
+                                {currency(s.sisaTagihan)}
+                              </span>
+                              <span className="text-[9.5px] font-semibold text-slate-400/80 -mt-0.5">
+                                (Draf Belum Rilis)
+                              </span>
+                            </div>
+                          ) : (
+                            <span className={`font-extrabold text-sm ${isNonaktif ? 'text-rose-500 dark:text-rose-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                              {currency(s.sisaTagihan)}
+                            </span>
+                          )
                         ) : (
                           <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rp 0 (Lunas)</span>
                         )}

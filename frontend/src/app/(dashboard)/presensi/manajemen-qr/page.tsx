@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2, Copy, RefreshCw, QrCode, ShieldAlert } from 'lucide-react'
 import Swal from 'sweetalert2'
+import { getAppFeatureUrl } from '@/lib/api-config'
 
 export default function QrManagerPage() {
   const queryClient = useQueryClient()
@@ -46,8 +47,7 @@ export default function QrManagerPage() {
     }
   })
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const publicLink = data?.token ? `${baseUrl}/qr-display/${data.token}` : ''
+  const publicLink = data?.token ? getAppFeatureUrl(`/qr-display/${data.token}`) : ''
 
   const handleCopy = async () => {
     if (!publicLink) return

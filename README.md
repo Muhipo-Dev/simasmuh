@@ -43,6 +43,26 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-10-09 (v1.9.6 - Fitur Terpisah Lockdown Maintenance Mode, Jadwal Sholat Bulanan Muhammadiyah KHGT, Standar Notifikasi Penggajian Email SMTP, Hapus Foto Profil, Backup-Restore Otomatis Launcher, dan Optimasi Face Recognition AI):**
+  * **Pemisahan Modul Lockdown Maintenance Mode & Waiting Room (`maintenance.service.ts` & `waiting-room.service.ts`):**
+    * Pemisahan arsitektur antara **Mode Pemeliharaan (Lockdown Maintenance)** dan **Waiting Room (Kapasitas & Kuota)** menjadi sub-modul mandiri di backend (`MaintenanceModule`) dan frontend.
+    * Akses khusus saat maintenance aktif dibatasi hanya untuk staf Administrator (`SUPERADMIN`, `ADMIN`, `ADMIN_IT`, `ADMIN_TU` / `BAU`, dan `GOD` / `supermuhipo`).
+    * Seluruh pengguna lain (`GURU`, `SISWA`, `WALI_MURID`, Karyawan) ditolak secara elegan saat login dan disajikan popup dialog resmi SweetAlert2: *"Sistem SIMASMUH Sedang Lockdown Maintenance"* beserta pesan pemeliharaan kustom.
+    * Penyediaan switch kontrol cepat (*Quick Switcher*) dan kartu konfigurasi khusus di menu Pengaturan Sistem (`/pengaturan/sistem`).
+  * **Jadwal Sholat Bulanan Muhammadiyah Kalender Hijriah Global Tunggal (KHGT) (`KHGTPrayerScheduleModal.tsx` & `FullCalendarView.tsx`):**
+    * Penambahan modal interaktif jadwal sholat lengkap satu bulan penuh berbasis hisab KHGT Muhammadiyah (Imsak, Shubuh, Terbit, Dhuha, Dzuhur, Ashar, Maghrib, Isya) untuk wilayah Ponorogo dan sekitarnya.
+    * Integrasi langsung dengan Kalender Kegiatan dan Dashboard Utama dengan kalkulasi waktu real-time.
+  * **Pengaturan Notifikasi Sistem Penggajian Pegawai & Email SMTP Transaksional (`finance.service.ts` & `email.service.ts`):**
+    * Implementasi pengiriman notifikasi slip gaji otomatis melalui Email SMTP resmi langsung ke kotak masuk email aktif pegawai/guru saat penggajian diverifikasi atau diterbitkan.
+    * Penyediaan log notifikasi dashboard transaksional secara real-time.
+  * **Fitur Hapus Foto Profil Pengguna (`/pengaturan/profil` & `users.service.ts`):**
+    * Penambahan tombol dan dialog konfirmasi hapus foto profil mandiri pada menu Profil Pengguna, mengembalikan avatar ke inisial nama standar secara instan dan aman.
+  * **Otomasi Backup-Restore Database & Log Terpusat di Launcher (`simasmuh.ps1` & `JALANKAN_SIMASMUH.bat`):**
+    * Penambahan menu resmi **Pencadangan (Backup) & Pemulihan (Restore) Database PostgreSQL** satu klik pada launcher SIMASMUH guna memenuhi kepatuhan Rule 21 `AGENTS.md`.
+    * Integrasi utilitas logging sistem terpusat (`database-backup.service.ts` & `system-logger.util.ts`).
+  * **Optimasi Disambiguasi Kemiripan Wajah FaceNet AI (`face_vectors_cache.npz` & `face_attendance_service.py`):**
+    * Peningkatan akurasi pencocokan vektor wajah embedding 512-D dengan sistem countdown disambiguasi 15 detik dan pencegahan interupsi auto-scan.
+
 * **2026-10-08 (v1.9.5 - Integrasi Terpadu Google OAuth, Manajemen Domain Publik Terpusat, Adaptive Dynamic Routing, Banner Rekomendasi Email Akun, dan Optimasi Autentikasi Institusional):**
   * **Integrasi Google OAuth Terpadu (`auth.service.ts` & NextAuth GoogleProvider):**
     * Penambahan alur autentikasi Google OAuth untuk login 1-klik akun terdaftar (Pegawai/Guru, Siswa, Wali Murid) dengan pencocokan email pengguna terverifikasi di basis data PostgreSQL.

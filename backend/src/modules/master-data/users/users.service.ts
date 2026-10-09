@@ -281,7 +281,7 @@ export class UsersService {
 
     const updateData: any = {
       name: data.name,
-      role: userToUpdate.username === 'supermuhipo' ? 'SUPERADMIN' : data.role,
+      role: userToUpdate.username === 'supermuhipo' ? (data.role || userToUpdate.role || 'GOD_USER') : data.role,
       subRole: data.subRole || null,
       subRole2: data.subRole2 || null,
       subRole3: data.subRole3 || null,
@@ -1161,7 +1161,7 @@ export class UsersService {
           { label: 'Peran Akun', value: user.role },
           { label: 'Masa Berlaku', value: '24 Jam' },
         ],
-        actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}${resetUrl}`,
+        actionUrl: resetUrl,
         actionText: 'Reset Kata Sandi',
       });
     }

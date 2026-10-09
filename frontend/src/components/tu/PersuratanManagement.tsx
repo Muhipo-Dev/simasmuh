@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { QRCodeSVG } from 'qrcode.react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
+import { getAppFeatureUrl } from '@/lib/api-config'
 
 // Tipe Data Surat Masuk & Disposisi
 export interface SuratMasuk {
@@ -1032,7 +1033,7 @@ export function PersuratanManagement({
 
     const signatureDataUrl = canvas.toDataURL('image/png')
     const timestamp = new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })
-    const verifyBaseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+    const verifyBaseUrl = getAppFeatureUrl('')
 
     // ALUR E-SIGN CANVAS KEPSEK UNTUK DISPOSISI SURAT MASUK
     if (selectedSuratMasukForDisposisiESign) {
@@ -1261,7 +1262,7 @@ export function PersuratanManagement({
     const updatedList = suratKeluarList.map(s => {
       if (s.status === 'MENUNGGU_TTD') {
         const tokenEsign = s.eSignToken || generateESignToken()
-        const verifyBaseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+        const verifyBaseUrl = getAppFeatureUrl('')
         const qrDataPayload = JSON.stringify({
           issuer: 'SIMASMUH - SMA Muhammadiyah 1 Ponorogo',
           docType: 'Naskah Dinas / Surat Keluar Resmi Terbitan Masal',
@@ -2215,8 +2216,7 @@ export function PersuratanManagement({
     const stafNama = targetObj.stafNama || ''
 
     const tokenEsign = disp?.eSignToken || 'DSP8492'
-    const verifyBaseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://simasmuh.razagopo.my.id'
-    const verifyUrl = `${verifyBaseUrl}/verifikasi-ttd?token=${tokenEsign}`
+    const verifyUrl = getAppFeatureUrl(`/verifikasi-ttd?token=${tokenEsign}`)
     const isSigned = disp?.statusEsign === 'DISETUJUI' || disp?.status === 'DITINDAKLANJUTI' || !disp?.statusEsign
 
     printWindow.document.write(`
@@ -4938,7 +4938,7 @@ export function PersuratanManagement({
                                 penandatangan: templateForm.namaPenandatangan,
                                 nbm: templateForm.nbmPenandatangan,
                                 status: 'DOKUMEN_SAH_TERDAFTAR_SIMASMUH',
-                                verifyUrl: `http://localhost:3000/fitur/persuratan?verify=${templateForm.nomorSurat.replace(/[^a-zA-Z0-9]/g, '')}`
+                                verifyUrl: getAppFeatureUrl(`/fitur/persuratan?verify=${templateForm.nomorSurat.replace(/[^a-zA-Z0-9]/g, '')}`)
                               })}
                               size={68}
                               level="M"
@@ -6707,7 +6707,7 @@ export function PersuratanManagement({
                             penandatangan: templateForm.namaPenandatangan,
                             nbm: templateForm.nbmPenandatangan,
                             status: 'DOKUMEN_SAH_TERDAFTAR_SIMASMUH',
-                            verifyUrl: `http://localhost:3000/fitur/persuratan?verify=${templateForm.nomorSurat.replace(/[^a-zA-Z0-9]/g, '')}`
+                            verifyUrl: getAppFeatureUrl(`/fitur/persuratan?verify=${templateForm.nomorSurat.replace(/[^a-zA-Z0-9]/g, '')}`)
                           })}
                           size={68}
                           level="M"
@@ -6784,7 +6784,7 @@ export function PersuratanManagement({
                             penandatangan: templateForm.namaPenandatangan,
                             nbm: templateForm.nbmPenandatangan,
                             status: 'DOKUMEN_SAH_TERDAFTAR_SIMASMUH',
-                            verifyUrl: `http://localhost:3000/fitur/persuratan?verify=${templateForm.nomorSurat.replace(/[^a-zA-Z0-9]/g, '')}`
+                            verifyUrl: getAppFeatureUrl(`/fitur/persuratan?verify=${templateForm.nomorSurat.replace(/[^a-zA-Z0-9]/g, '')}`)
                           })}
                           size={68}
                           level="M"
@@ -7000,7 +7000,7 @@ export function PersuratanManagement({
             <div className="space-y-4 py-2 text-center">
               <div className="flex justify-center p-4 bg-white rounded-2xl border border-slate-200 shadow-sm inline-block mx-auto">
                 <QRCodeSVG
-                  value={selectedSuratKeluar.eSignQrData || `http://localhost:3000/fitur/persuratan?verify=${selectedSuratKeluar.eSignToken}`}
+                  value={selectedSuratKeluar.eSignQrData || getAppFeatureUrl(`/fitur/persuratan?verify=${selectedSuratKeluar.eSignToken}`)}
                   size={180}
                   level="H"
                   includeMargin={true}

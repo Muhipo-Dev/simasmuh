@@ -18,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
-import { getPublicApiUrl } from '@/lib/api-config'
+import { getPublicApiUrl, getAppFeatureUrl } from '@/lib/api-config'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { TableSearch } from '@/components/TableSearch'
 import { TableSelectionBar, TableCheckboxHeader, TableCheckboxCell } from '@/components/TableSelectionBar'
@@ -62,12 +62,9 @@ export function GuestBookManagement() {
 
   const authenticatedFetch = useAuthenticatedFetch()
 
-  // Set adaptive QR URL on client side
+  // Set centralized public QR URL from Pengaturan Sistem
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const origin = window.location.origin
-      setQrUrl(`${origin}/buku-tamu`)
-    }
+    setQrUrl(getAppFeatureUrl('/buku-tamu'))
   }, [])
 
   // Fetch Guestbook entries from backend API
@@ -164,7 +161,7 @@ export function GuestBookManagement() {
     const printWindow = window.open('', '_blank')
     if (!printWindow) return
 
-    const fullQrUrl = qrUrl || (typeof window !== 'undefined' ? `${window.location.origin}/buku-tamu` : 'http://localhost:3000/buku-tamu')
+    const fullQrUrl = qrUrl || getAppFeatureUrl('/buku-tamu')
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -708,7 +705,7 @@ export function GuestBookManagement() {
           <div className="bg-white p-4 rounded-2xl shadow-2xl flex flex-col items-center justify-center border-4 border-blue-500/30 text-slate-900 shrink-0">
             <div ref={qrRef} className="p-2 bg-white rounded-lg">
               <QRCodeSVG 
-                value={qrUrl || 'http://localhost:3000/buku-tamu'} 
+                value={qrUrl || getAppFeatureUrl('/buku-tamu')} 
                 size={140}
                 level="H"
                 includeMargin={true}

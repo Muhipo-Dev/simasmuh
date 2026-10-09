@@ -11,6 +11,14 @@ $ROOT         = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BACKEND_DIR  = Join-Path $ROOT "backend"
 $FRONTEND_DIR = Join-Path $ROOT "frontend"
 $FACE_AI_DIR  = Join-Path $ROOT "services\face-attendance"
+$LOGS_DIR     = Join-Path $ROOT "logs"
+$LOGS_ARCHIVE = Join-Path $LOGS_DIR "archive"
+
+# Pastikan folder log project terorganisir
+try {
+    if (-not (Test-Path $LOGS_DIR)) { $null = New-Item -ItemType Directory -Path $LOGS_DIR -Force -ErrorAction SilentlyContinue }
+    if (-not (Test-Path $LOGS_ARCHIVE)) { $null = New-Item -ItemType Directory -Path $LOGS_ARCHIVE -Force -ErrorAction SilentlyContinue }
+} catch {}
 
 # PID marker files
 $BACKEND_PID_FILE        = Join-Path $ROOT ".backend.pid"
@@ -689,6 +697,53 @@ function Start-Frontend {
     return $false
 }
 
+function Test-PortExcluded {
+    param([int]$Port)
+    try {
+        $ranges = netsh interface ipv4 show excludedportrange protocol=tcp 2>$null
+        foreach ($line in $ranges) {
+            if ($line -match '^\s*(\d+)\s+(\d+)') {
+                $startP = [int]$Matches[1]
+                $endP = [int]$Matches[2]
+                if ($Port -ge $startP -and $Port -le $endP) {
+                    return $true
+                }
+            }
+        }
+    } catch {}
+    return $false
+}
+
+function Repair-WindowsPortExclusion {
+    param([int]$Port)
+    Write-Err "Port $Port diblokir oleh sistem Windows (Hyper-V / WinNAT Port Exclusion Range)!"
+    Write-Info "Mencoba me-refresh driver WinNAT untuk membebaskan port..."
+    
+    # Coba restart winnat jika memiliki hak akses administrator
+    $restartOk = $false
+    try {
+        $process = Start-Process -FilePath "net.exe" -ArgumentList "stop winnat" -NoNewWindow -Wait -PassThru -ErrorAction SilentlyContinue
+        if ($process.ExitCode -eq 0) {
+            Start-Sleep -Seconds 1
+            $process2 = Start-Process -FilePath "net.exe" -ArgumentList "start winnat" -NoNewWindow -Wait -PassThru -ErrorAction SilentlyContinue
+            if ($process2.ExitCode -eq 0) {
+                $restartOk = $true
+                Write-Ok "Driver WinNAT berhasil direfresh!"
+            }
+        }
+    } catch {}
+
+    if (-not $restartOk) {
+        Write-Host ""
+        Write-Err "Gagal merestart WinNAT secara otomatis (memerlukan hak Administrator)."
+        Write-Host "  [SOLUSI CEPAT]:" -ForegroundColor Yellow
+        Write-Host "  1. Buka PowerShell atau Terminal sebagai Administrator." -ForegroundColor Yellow
+        Write-Host "  2. Jalankan: net stop winnat && net start winnat" -ForegroundColor Yellow
+        Write-Host "  3. Buka kembali file JALANKAN_SIMASMUH.bat" -ForegroundColor Yellow
+        Write-Host ""
+    }
+}
+
 function Start-SupabaseDocker {
     Write-Status "Memeriksa status Supabase (Docker Desktop)..." "Cyan"
     $dbListening = Test-PortListening 54322
@@ -697,20 +752,43 @@ function Start-SupabaseDocker {
         return $true
     }
 
+    # 1. Periksa apakah port Supabase (54321, 54322, 54323) diblokir oleh Dynamic Port Exclusion Windows
+    if (Test-PortExcluded 54322) {
+        Repair-WindowsPortExclusion 54322
+    }
+
     $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
     if (-not $dockerCmd) {
         Write-Info "Docker CLI tidak terdeteksi. Lewati startup otomatis Supabase."
         return $false
     }
 
+    # 2. Cek apakah Docker Desktop Engine aktif
+    try {
+        $null = docker info 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Err "Docker Desktop belum berjalan! Pastikan aplikasi Docker Desktop sudah dibuka."
+            return $false
+        }
+    } catch {
+        Write-Err "Tidak dapat menghubungi Docker daemon."
+        return $false
+    }
+
     Write-Status "Menjalankan Supabase di Docker Desktop (npx supabase start)..." "Yellow"
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$ROOT`" && npx supabase start 2>&1" -NoNewWindow -Wait
+    $out = cmd.exe /c "cd /d `"$ROOT`" && npx supabase start 2>&1"
     
     $dbListening = Test-PortListening 54322
     if ($dbListening) {
         Write-Ok "Supabase (Docker) berhasil dijalankan!"
         return $true
     }
+
+    # Cek jika error binding port
+    if ($out -match "ports are not available" -or $out -match "forbidden by its access permissions") {
+        Repair-WindowsPortExclusion 54322
+    }
+
     Write-Info "Supabase Docker belum aktif atau sedang proses startup. Pastikan Docker Desktop berjalan."
     return $false
 }
@@ -956,7 +1034,7 @@ STORAGE_PATH=
             $defaultFeEnv = @"
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 BACKEND_URL=http://localhost:3001
-NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_URL=https://simasmuh.razagopo.my.id
 NEXTAUTH_SECRET=simasmuh-nextauth-secret-key-2026
 NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:3001
 NEXT_PUBLIC_ENABLE_REAL_TIME_NOTIFICATIONS=true
@@ -1260,6 +1338,242 @@ function Start-EnvironmentSetup {
     Write-Info "Untuk menjalankan aplikasi, cukup pilih Menu 1 (Mode Development) atau Menu 2 (Mode Production)."
 }
 
+# ─── BACKUP & RESTORE DATABASE ─────────────────────────────────
+
+function Get-BackupStorageDir {
+    $storageRoots = @(
+        "D:\simasmuh_storage\backups",
+        "C:\simasmuh_storage\backups",
+        (Join-Path $ROOT "storage\backups"),
+        (Join-Path $ROOT "backups")
+    )
+    foreach ($sr in $storageRoots) {
+        try {
+            if (-not (Test-Path $sr)) {
+                $null = New-Item -ItemType Directory -Path $sr -Force -ErrorAction SilentlyContinue
+            }
+            return $sr
+        } catch {}
+    }
+    return $ROOT
+}
+
+function Backup-Database-Interactive {
+    Write-Banner
+    Write-Status "Memulai Pencadangan Database Supabase (PostgreSQL)..." "Cyan"
+    
+    $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
+    if (-not $dockerCmd) {
+        Write-Err "Docker CLI tidak terdeteksi. Pastikan Docker Desktop aktif."
+        return
+    }
+
+    $backupDir = Get-BackupStorageDir
+    $timestamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm-ss")
+    $backupFileName = "simasmuh_db_backup_$timestamp.sql"
+    $backupFilePath = Join-Path $backupDir $backupFileName
+
+    Write-Info "Target File: $backupFilePath"
+    Write-Info "Mengekstrak skema & seluruh isi data tabel database..."
+
+    try {
+        $dumpCmd = "docker exec supabase_db_siakad-coba pg_dump -U postgres -d postgres --clean --if-exists > `"$backupFilePath`""
+        $proc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c $dumpCmd" -NoNewWindow -Wait -PassThru
+
+        if (Test-Path $backupFilePath) {
+            $fSize = (Get-Item $backupFilePath).Length
+            if ($fSize -gt 1024) {
+                $fSizeMb = [math]::Round($fSize / 1MB, 2)
+                Write-Ok "PENCADANGAN BASIS DATA BERHASIL! ($fSizeMb MB)"
+                Write-Ok "Lokasi File: $backupFilePath"
+                return
+            }
+        }
+        Write-Err "Pencadangan gagal atau file dump kosong. Pastikan container supabase_db_siakad-coba aktif."
+    } catch {
+        Write-Err "Terjadi kesalahan saat mengeksekusi backup: $_"
+    }
+}
+
+function Restore-Database-Interactive {
+    Write-Banner
+    Write-Status "Memulai Pemulihan Database Supabase (PostgreSQL)..." "Yellow"
+
+    $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
+    if (-not $dockerCmd) {
+        Write-Err "Docker CLI tidak terdeteksi. Pastikan Docker Desktop aktif."
+        return
+    }
+
+    $backupDir = Get-BackupStorageDir
+    $sqlFiles = @()
+    if (Test-Path $backupDir) {
+        $sqlFiles += Get-ChildItem -Path $backupDir -Filter "*.sql" -ErrorAction SilentlyContinue
+    }
+    $rootSql = Get-ChildItem -Path $ROOT -Filter "*.sql" -ErrorAction SilentlyContinue
+    if ($rootSql) {
+        $sqlFiles += $rootSql
+    }
+
+    if (-not $sqlFiles -or $sqlFiles.Count -eq 0) {
+        Write-Err "Tidak ditemukan file backup (*.sql) di folder backup maupun root project."
+        return
+    }
+
+    Write-Host "  Daftar Berkas Backup Database Ditemukan:" -ForegroundColor Cyan
+    Write-Host "  --------------------------------------------------" -ForegroundColor DarkGray
+    for ($i = 0; $i -lt $sqlFiles.Count; $i++) {
+        $f = $sqlFiles[$i]
+        $sizeMb = [math]::Round($f.Length / 1MB, 2)
+        Write-Host "  [$($i+1)] $($f.Name) ($sizeMb MB) - $($f.LastWriteTime.ToString('dd-MM-yyyy HH:mm'))" -ForegroundColor White
+    }
+    Write-Host "  [0] Batal / Kembali" -ForegroundColor Red
+    Write-Host ""
+
+    $choice = Read-Host "  Pilih nomor berkas backup yang ingin di-restore"
+    if ($choice -eq "0" -or [string]::IsNullOrWhiteSpace($choice)) {
+        Write-Info "Proses restore dibatalkan."
+        return
+    }
+
+    $idx = [int]$choice - 1
+    if ($idx -lt 0 -or $idx -ge $sqlFiles.Count) {
+        Write-Err "Pilihan nomor tidak valid."
+        return
+    }
+
+    $selectedFile = $sqlFiles[$idx].FullName
+    Write-Host ""
+    Write-Host "  [PERINGATAN] Anda akan memulihkan data dari file:" -ForegroundColor Yellow
+    Write-Host "  $selectedFile" -ForegroundColor Cyan
+    
+    if (-not (Confirm-Action "Yakin ingin me-restore database? Seluruh data tabel akan disinkronkan dengan berkas ini.")) {
+        Write-Info "Proses pemulihan dibatalkan oleh pengguna."
+        return
+    }
+
+    Write-Status "Menyalin file backup ke container database..." "Cyan"
+    $cpCmd = "docker cp `"$selectedFile`" supabase_db_siakad-coba:/tmp/restore_temp.sql"
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c $cpCmd" -NoNewWindow -Wait
+
+    Write-Status "Mengeksekusi pemulihan struktur dan data database..." "Cyan"
+    $execCmd = "docker exec supabase_db_siakad-coba psql -U postgres -d postgres -f /tmp/restore_temp.sql"
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c $execCmd" -NoNewWindow -Wait
+
+    # Bersihkan file temp di container
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c docker exec supabase_db_siakad-coba rm -f /tmp/restore_temp.sql" -NoNewWindow -Wait
+
+    Write-Ok "PEMULIHAN BASIS DATA BERHASIL DISELESAIKAN!"
+}
+
+function Start-LogManager-Menu {
+    while ($true) {
+        Write-Banner
+        Write-Host "  +=========================================+" -ForegroundColor Cyan
+        Write-Host "  |       MANAJEMEN & ARSIP LOG SISTEM      |" -ForegroundColor Cyan
+        Write-Host "  +=========================================+" -ForegroundColor Cyan
+        Write-Host "  |  [1] Lihat Ringkasan Log Aktif Terbaru  |" -ForegroundColor White
+        Write-Host "  |  [2] Cadangkan & Arsipkan Log Hari Ini  |" -ForegroundColor White
+        Write-Host "  |  [3] Kompres & Bersihkan Arsip Log Lama |" -ForegroundColor Yellow
+        Write-Host "  |  [4] Buka Folder Penyimpanan Log Projek |" -ForegroundColor Cyan
+        Write-Host "  |  [0] Kembali ke Menu Utama              |" -ForegroundColor White
+        Write-Host "  +=========================================+" -ForegroundColor Cyan
+        Write-Host ""
+        $lChoice = Read-Host "  Pilih opsi"
+
+        switch ($lChoice) {
+            "1" {
+                Write-Banner
+                Write-Status "Daftar Berkas Log di Direktori Project (logs/):" "Cyan"
+                $logFiles = Get-ChildItem -Path $LOGS_DIR -Filter "*.log" -ErrorAction SilentlyContinue
+                if ($logFiles) {
+                    foreach ($lf in $logFiles) {
+                        $szKb = [math]::Round($lf.Length / 1KB, 2)
+                        Write-Host "  - $($lf.Name) ($szKb KB) | Update: $($lf.LastWriteTime.ToString('dd-MM-yyyy HH:mm:ss'))" -ForegroundColor Green
+                    }
+                } else {
+                    Write-Info "Belum ada berkas log di folder logs/."
+                }
+                Write-Host ""
+                $mainLog = Join-Path $LOGS_DIR "simasmuh-backend.log"
+                if (Test-Path $mainLog) {
+                    Write-Status "20 Baris Terakhir Log Sistem:" "Yellow"
+                    Get-Content -Path $mainLog -Tail 20 | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
+                }
+                Write-Host ""
+                Read-Host "  Tekan ENTER untuk kembali"
+            }
+            "2" {
+                Write-Status "Mencadangkan file log ke folder arsip (logs/archive)..." "Cyan"
+                $ts = (Get-Date).ToString("yyyy-MM-dd_HH-mm-ss")
+                $archived = 0
+                Get-ChildItem -Path $LOGS_DIR -Filter "*.log" -ErrorAction SilentlyContinue | ForEach-Object {
+                    $target = Join-Path $LOGS_ARCHIVE "$($_.BaseName)_backup_$ts$($_.Extension)"
+                    Copy-Item $_.FullName $target -Force
+                    $archived++
+                }
+                Write-Ok "Berhasil mencadangkan $archived berkas log ke folder archive!"
+                Write-Host ""
+                Read-Host "  Tekan ENTER untuk kembali"
+            }
+            "3" {
+                Write-Status "Membersihkan dan merapikan arsip log (>30 hari)..." "Cyan"
+                $limitDate = (Get-Date).AddDays(-30)
+                $deleted = 0
+                Get-ChildItem -Path $LOGS_ARCHIVE -Filter "*.log" -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt $limitDate } | ForEach-Object {
+                    Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+                    $deleted++
+                }
+                Write-Ok "Pembersihan selesai ($deleted file kadaluarsa dibersihkan)."
+                Write-Host ""
+                Read-Host "  Tekan ENTER untuk kembali"
+            }
+            "4" {
+                Write-Ok "Membuka folder logs: $LOGS_DIR"
+                Start-Process "explorer.exe" $LOGS_DIR
+                Start-Sleep -Seconds 1
+            }
+            "0" { break }
+            default { Write-Err "Pilihan tidak valid." }
+        }
+    }
+}
+
+function Start-BackupRestore-Menu {
+    while ($true) {
+        Write-Banner
+        Write-Host "  +=========================================+" -ForegroundColor Green
+        Write-Host "  |      MANAJEMEN BACKUP & RESTORE DB      |" -ForegroundColor Green
+        Write-Host "  +=========================================+" -ForegroundColor Green
+        Write-Host "  |  [1] Cadangkan Database Sekarang (Backup)|" -ForegroundColor White
+        Write-Host "  |  [2] Pulihkan Database (Restore Data)   |" -ForegroundColor Yellow
+        Write-Host "  |  [3] Buka Folder Penyimpanan Backup     |" -ForegroundColor Cyan
+        Write-Host "  |  [0] Kembali ke Menu Utama              |" -ForegroundColor White
+        Write-Host "  +=========================================+" -ForegroundColor Green
+        Write-Host ""
+        $bChoice = Read-Host "  Pilih opsi"
+
+        switch ($bChoice) {
+            "1" {
+                Backup-Database-Interactive
+                Read-Host "  Tekan ENTER untuk kembali"
+            }
+            "2" {
+                Restore-Database-Interactive
+                Read-Host "  Tekan ENTER untuk kembali"
+            }
+            "3" {
+                $bDir = Get-BackupStorageDir
+                Write-Ok "Membuka folder backup: $bDir"
+                Start-Process "explorer.exe" $bDir
+                Start-Sleep -Seconds 1
+            }
+            "0" { break }
+            default { Write-Err "Pilihan tidak valid." }
+        }
+    }
+}
+
 # ─── KONFIRMASI ───────────────────────────────────────────────
 
 function Confirm-Action {
@@ -1354,41 +1668,93 @@ function Start-TestingSuite {
 if ($Mode -ne "") {
     Write-Banner
     switch -Wildcard ($Mode.ToLower()) {
-        "*readiness*"    { Test-SystemReadiness; return }
-        "*check*"        { Test-SystemReadiness; return }
-        "*status*"       { Get-AppStatus }
-        "*compress*"     { 
+        "readiness" {
+            Test-SystemReadiness
+            return
+        }
+        "check" {
+            Test-SystemReadiness
+            return
+        }
+        "status" {
+            Get-AppStatus
+        }
+        "compress" { 
             Compress-All-LogFiles 
             return
         }
-        "*clean*"        { 
+        "clean" { 
             Write-Status "Membersihkan cache sistem dan file build lama..." "Cyan"
             Remove-Item -Recurse -Force (Join-Path $FRONTEND_DIR ".next\cache") -ErrorAction SilentlyContinue
             Write-Ok "Cache .next/cache berhasil dibersihkan!"
         }
-        "*debug*"        { Start-Apps -Mode "Debug" }
-        "*testing*"      { Start-Apps -Mode "Testing" }
-        "*preview*"      { Start-Apps -Mode "Preview" }
-        "*staging*"      { Start-Apps -Mode "Staging" }
-        "*fallback*"     { Start-Apps -Mode "Fallback" }
-        "*dev*"          { Start-Apps -Mode "Development" }
-        "*prod*"         { Start-Apps -Mode "Production" }
-        "*stop-backend*" { Stop-BackendOnly }
-        "*stop-frontend*"{ Stop-FrontendOnly }
-        "*restart*"      { 
+        "debug" {
+            Start-Apps -Mode "Debug"
+        }
+        "testing" {
+            Start-Apps -Mode "Testing"
+        }
+        "preview" {
+            Start-Apps -Mode "Preview"
+        }
+        "staging" {
+            Start-Apps -Mode "Staging"
+        }
+        "fallback" {
+            Start-Apps -Mode "Fallback"
+        }
+        "dev" {
+            Start-Apps -Mode "Development"
+        }
+        "prod" {
+            Start-Apps -Mode "Production"
+        }
+        "stop-backend" {
+            Stop-BackendOnly
+        }
+        "stop-frontend" {
+            Stop-FrontendOnly
+        }
+        "restart" { 
             Stop-Apps
             Start-Sleep -Seconds 1
             Start-Apps -Mode "Development"
         }
-        "*stop*"         { Stop-Apps }
-        "*off*"          { Stop-Apps }
-        "*nonaktif*"     { Stop-Apps }
-        "*test-unit*"    { Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm run test" -NoNewWindow -Wait }
-        "*test-e2e*"     { Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm run test:e2e" -NoNewWindow -Wait }
-        "*audit*"        { Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run audit" -NoNewWindow -Wait }
-        "*lighthouse*"   { Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run audit" -NoNewWindow -Wait }
-        "*unlighthouse*" { Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run audit" -NoNewWindow -Wait }
-        "*setup*"        { Start-EnvironmentSetup }
+        "stop" {
+            Stop-Apps
+        }
+        "off" {
+            Stop-Apps
+        }
+        "nonaktif" {
+            Stop-Apps
+        }
+        "test-unit" {
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm run test" -NoNewWindow -Wait
+        }
+        "test-e2e" {
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$BACKEND_DIR`" && npm run test:e2e" -NoNewWindow -Wait
+        }
+        "audit" {
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run audit" -NoNewWindow -Wait
+        }
+        "lighthouse" {
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run audit" -NoNewWindow -Wait
+        }
+        "unlighthouse" {
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$FRONTEND_DIR`" && npm run audit" -NoNewWindow -Wait
+        }
+        "setup" {
+            Start-EnvironmentSetup
+        }
+        "backup" {
+            Backup-Database-Interactive
+            return
+        }
+        "restore" {
+            Restore-Database-Interactive
+            return
+        }
         default {
             Write-Err "Mode '$Mode' tidak dikenal. Mengakses Menu Utama..."
             Start-Sleep -Seconds 2
@@ -1423,6 +1789,8 @@ while ($true) {
     Write-Host "  |  [15] Setup File .env                  |" -ForegroundColor White
     Write-Host "  |  [16] Install Dependencies (Semua)     |" -ForegroundColor White
     Write-Host "  |  [17] Setup Lingkungan Baru / Device   |" -ForegroundColor Green
+    Write-Host "  |  [18] Backup & Restore Database        |" -ForegroundColor Green
+    Write-Host "  |  [19] Manajemen & Backup Log Projek    |" -ForegroundColor Cyan
     Write-Host "  |  [0] Keluar dari Script                 |" -ForegroundColor White
     Write-Host "  +=========================================+" -ForegroundColor DarkCyan
     Write-Host ""
@@ -1550,6 +1918,12 @@ while ($true) {
         "17" {
             Start-EnvironmentSetup
             Read-Host "  Tekan ENTER untuk kembali ke menu"
+        }
+        "18" {
+            Start-BackupRestore-Menu
+        }
+        "19" {
+            Start-LogManager-Menu
         }
         "0" {
             Write-Banner

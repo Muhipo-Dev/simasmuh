@@ -259,8 +259,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
         </div>
 
-        <div className={`flex-1 w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-3 sm:pt-4 md:pt-5 pb-20 sm:pb-24 lg:pb-12 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0`}>
-          <div className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto space-y-4">
+        <div className={`flex-1 w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-14 pt-3 sm:pt-4 md:pt-5 pb-20 sm:pb-24 lg:pb-12 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0`}>
+          <div className="w-full max-w-7xl 2xl:max-w-[1480px] mx-auto space-y-3.5 sm:space-y-4">
             <div className="w-full print:hidden">
               <EmailRecommendationBanner />
             </div>
@@ -363,9 +363,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="h-safe-bottom bg-white dark:bg-slate-950" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
           </nav>
         )}
-        {/* Footer Induk Bersatu */}
+        {/* Footer Induk Bersatu (Tampil di Desktop & Pengguna Ponsel Android/iOS) */}
         <div className="print:hidden">
-          <AppFooter className="hidden lg:flex" />
+          <AppFooter className={!isDashboardPage ? "mb-16 lg:mb-0" : ""} />
         </div>
       </main>
     </div>

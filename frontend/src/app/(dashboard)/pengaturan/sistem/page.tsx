@@ -18,7 +18,10 @@ import {
   Copy,
   Check,
   ExternalLink,
-  KeyRound
+  KeyRound,
+  Wrench,
+  AlertTriangle,
+  ShieldAlert
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
@@ -27,6 +30,7 @@ import { Label } from '@/components/ui/label'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { compressImageFile } from '@/utils/imageCompressor'
 import { SystemRuntimeSupervisor } from '@/components/settings/SystemRuntimeSupervisor'
+import { setCachedSystemPublicDomain } from '@/lib/api-config'
 
 type Setting = {
   id: string
@@ -68,7 +72,7 @@ export default function SettingsPage() {
     backgroundUrl: '',
     studentCardTemplateUrl: '',
     publicDomainUrl: 'https://simasmuh.razagopo.my.id',
-    googleClientId: '935196029927-ii64fis1cd7gjgcj92jvpl5bmv9m0ql0.apps.googleusercontent.com',
+    googleClientId: '',
     googleClientSecret: '',
     helpdeskPhone: '088293733330',
     academicYear: '2026/2027',
@@ -122,6 +126,9 @@ export default function SettingsPage() {
         timezone: settings.timezone || 'Asia/Jakarta',
         serverLocation: settings.serverLocation || 'Ponorogo, Jawa Timur',
       })
+      if (settings.publicDomainUrl) {
+        setCachedSystemPublicDomain(settings.publicDomainUrl)
+      }
     }
   }, [settings])
 
@@ -298,14 +305,22 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {/* Switch Waiting Room Manual di Bar Header Grup Pengaturan Sistem */}
-        <HeaderWaitingRoomSwitch />
+        {/* Switch Status di Bar Header Grup Pengaturan Sistem */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <HeaderMaintenanceModeSwitch />
+          <HeaderWaitingRoomSwitch />
+        </div>
       </div>
 
       {/* Supervisor Runtime, Live Sync Clock, & Sesi Pengguna */}
       <SystemRuntimeSupervisor isSuperadminRole={true} />
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Kontrol Mode Pemeliharaan Sistem (Maintenance Mode) */}
+        <div className="lg:col-span-2">
+          <MaintenanceModeConfigCard />
+        </div>
+
         {/* Pengaturan Waiting Room & Kuota Login (Superadmin & Admin IT) */}
         <div className="lg:col-span-2">
           <WaitingRoomConfigCard />
@@ -608,6 +623,7 @@ export default function SettingsPage() {
           googleClientId={formData.googleClientId || ''}
           googleClientSecret={formData.googleClientSecret || ''}
           onSave={async (domainConfig) => {
+            setCachedSystemPublicDomain(domainConfig.publicDomainUrl)
             await mutation.mutateAsync({
               ...formData,
               publicDomainUrl: domainConfig.publicDomainUrl,
@@ -836,6 +852,105 @@ function PublicDomainOAuthConfigCard({
         </CardFooter>
       </form>
     </Card>
+  )
+}
+
+function HeaderMaintenanceModeSwitch() {
+  const queryClient = useQueryClient()
+  const authenticatedQuery = useAuthenticatedQuery()
+  const authenticatedFetch = useAuthenticatedFetch()
+
+  const { data: maintStatus, isLoading } = useQuery({
+    queryKey: ['maintenance-status'],
+    queryFn: () => authenticatedQuery('/api-backend/maintenance/status'),
+    refetchInterval: 3000,
+  })
+
+  const maintenanceMode = maintStatus?.maintenanceMode || false
+
+  const toggleMutation = useMutation({
+    mutationFn: async (nextMode: boolean) => {
+      const res = await authenticatedFetch('/api-backend/maintenance/admin/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          enabled: nextMode,
+          message: maintStatus?.maintenanceMessage || 'Mohon maaf, saat ini sistem SIMASMUH sedang dalam status Lockdown Maintenance (Pemeliharaan Berkala). Seluruh akses masuk dibatasi khusus Administrator & Tim IT/TU.' 
+        }),
+      })
+      if (!res.ok) throw new Error('Gagal mengubah mode maintenance')
+      return res.json()
+    },
+    onSuccess: (data, nextMode) => {
+      queryClient.setQueryData(['maintenance-status'], data)
+      queryClient.invalidateQueries({ queryKey: ['maintenance-status'] })
+      queryClient.invalidateQueries({ queryKey: ['settings'] })
+      Swal.fire({
+        title: nextMode ? 'Mode Pemeliharaan Aktif!' : 'Sistem Dibuka Penuh!',
+        text: nextMode
+          ? 'Hanya akun Superadmin, Admin, Admin IT, Admin TU, dan GOD yang dapat masuk ke SIMASMUH.'
+          : 'Seluruh pengguna (Guru, Siswa, Wali Murid) kini dapat masuk kembali secara normal.',
+        icon: nextMode ? 'warning' : 'success',
+        timer: 2500,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal!', err.message || 'Terjadi kesalahan sistem', 'error')
+    },
+  })
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-50/90 dark:bg-slate-800/80 p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs">
+      <div className="flex flex-col text-left">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-black text-slate-800 dark:text-slate-200">
+            Maintenance Mode:
+          </span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
+              maintenanceMode
+                ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 animate-pulse'
+                : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${maintenanceMode ? 'bg-amber-600' : 'bg-emerald-600'}`} />
+            {maintenanceMode ? 'PEMELIHARAAN' : 'NORMAL'}
+          </span>
+        </div>
+        <span className="text-[10px] text-slate-400">
+          {maintenanceMode ? 'Khusus Admin, IT, TU & GOD' : 'Semua role dapat login'}
+        </span>
+      </div>
+
+      {/* Switch Button */}
+      <button
+        type="button"
+        disabled={toggleMutation.isPending || isLoading}
+        onClick={() => toggleMutation.mutate(!maintenanceMode)}
+        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+          maintenanceMode
+            ? 'bg-gradient-to-r from-amber-500 to-orange-600 shadow-sm shadow-amber-300'
+            : 'bg-slate-300 dark:bg-slate-700'
+        }`}
+        title={maintenanceMode ? 'Klik untuk matikan mode pemeliharaan' : 'Klik untuk aktifkan mode pemeliharaan'}
+      >
+        <span className="sr-only">Toggle Maintenance Mode</span>
+        <span
+          className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+            maintenanceMode ? 'translate-x-5' : 'translate-x-0'
+          }`}
+        >
+          {toggleMutation.isPending ? (
+            <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
+          ) : maintenanceMode ? (
+            <Wrench className="w-3 h-3 text-amber-600" />
+          ) : (
+            <span className="w-2 h-2 rounded-full bg-slate-400" />
+          )}
+        </span>
+      </button>
+    </div>
   )
 }
 
@@ -1282,6 +1397,180 @@ function WaitingRoomConfigCard() {
               <Save className="w-4 h-4 mr-2" />
             )}
             Simpan Konfigurasi Waiting Room
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
+  )
+}
+
+function MaintenanceModeConfigCard() {
+  const queryClient = useQueryClient()
+  const authenticatedQuery = useAuthenticatedQuery()
+  const authenticatedFetch = useAuthenticatedFetch()
+
+  const { data: maintStatus, isLoading } = useQuery({
+    queryKey: ['maintenance-status'],
+    queryFn: () => authenticatedQuery('/api-backend/maintenance/status'),
+    refetchInterval: 3000,
+  })
+
+  const [enabled, setEnabled] = useState<boolean>(false)
+  const [message, setMessage] = useState<string>('')
+
+  useEffect(() => {
+    if (maintStatus) {
+      if (typeof maintStatus.maintenanceMode === 'boolean') setEnabled(maintStatus.maintenanceMode)
+      if (typeof maintStatus.maintenanceMessage === 'string') setMessage(maintStatus.maintenanceMessage)
+    }
+  }, [maintStatus])
+
+  const saveMutation = useMutation({
+    mutationFn: async (payload: { enabled: boolean; message: string }) => {
+      const res = await authenticatedFetch('/api-backend/maintenance/admin/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Gagal memperbarui status mode pemeliharaan')
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(['maintenance-status'], data)
+      queryClient.invalidateQueries({ queryKey: ['maintenance-status'] })
+      queryClient.invalidateQueries({ queryKey: ['settings'] })
+      Swal.fire({
+        title: enabled ? 'Mode Pemeliharaan Aktif!' : 'Mode Pemeliharaan Non-Aktif!',
+        text: enabled
+          ? 'Sistem SIMASMUH kini dalam status Lockdown Maintenance. Akses dibatasi untuk Superadmin, Admin, Admin IT, Admin TU, dan GOD.'
+          : 'Sistem SIMASMUH kini kembali normal dan dapat diakses oleh seluruh pengguna.',
+        icon: enabled ? 'warning' : 'success',
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal!', err.message || 'Terjadi kesalahan sistem', 'error')
+    },
+  })
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault()
+    saveMutation.mutate({
+      enabled,
+      message: message.trim() || 'Mohon maaf, saat ini sistem SIMASMUH sedang dalam status Lockdown Maintenance (Pemeliharaan Berkala). Seluruh akses masuk dibatasi khusus Administrator & Tim IT/TU.',
+    })
+  }
+
+  return (
+    <Card className="shadow-xs border-amber-200/80 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/40 via-white to-orange-50/30 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 backdrop-blur-xl rounded-2xl overflow-hidden">
+      <form onSubmit={handleSave}>
+        <CardHeader className="border-b border-amber-100 dark:border-slate-800/80 p-5 sm:p-6 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-600 text-white shadow-xs">
+                  Akses Khusus Admin & IT/TU
+                </span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
+                  enabled 
+                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 animate-pulse' 
+                    : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${enabled ? 'bg-amber-600' : 'bg-emerald-600'}`} />
+                  {enabled ? 'Maintenance Mode Aktif (Akses Terbatas)' : 'Sistem Normal (Semua Role Aktif)'}
+                </span>
+              </div>
+              <CardTitle className="text-slate-900 dark:text-white font-extrabold text-base sm:text-lg flex items-center gap-2">
+                <Wrench className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                Mode Pemeliharaan Sistem (Maintenance Mode)
+              </CardTitle>
+              <CardDescription className="text-slate-500 dark:text-slate-400 font-medium text-xs">
+                Kunci akses login umum (Guru, Siswa, Wali Murid) saat perbaikan atau update data penting. Hanya akun Admin, Superadmin, Admin IT, Admin TU, dan GOD yang dapat login.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-5 sm:p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Toggle Status Switch */}
+            <div className="p-4 rounded-2xl bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="maintenanceModeToggle" className="font-bold text-slate-900 dark:text-white text-xs">
+                  Status Mode Pemeliharaan
+                </Label>
+                <button
+                  id="maintenanceModeToggle"
+                  type="button"
+                  onClick={() => setEnabled(!enabled)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    enabled ? 'bg-amber-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      enabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className={`p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between ${
+                enabled 
+                  ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900' 
+                  : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900'
+              }`}>
+                <span>{enabled ? '🚨 Pemeliharaan: AKTIF' : '🛡️ Akses Normal: TERBUKA'}</span>
+                <span className="text-[10px] font-mono">{enabled ? 'MAINTENANCE' : 'NORMAL'}</span>
+              </div>
+
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                {enabled 
+                  ? 'Pengguna non-admin akan ditolak saat login dengan dialog informasi pemeliharaan resmi.' 
+                  : 'Semua role pengguna dapat masuk dan menggunakan seluruh fitur SIMASMUH secara normal.'}
+              </p>
+            </div>
+
+            {/* Pesan Kustom Pemeliharaan */}
+            <div className="md:col-span-2 p-4 rounded-2xl bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="maintenanceMessageInput" className="font-bold text-slate-900 dark:text-white text-xs">
+                  Pesan Notifikasi Popup Pemeliharaan
+                </Label>
+                <span className="text-[10px] font-semibold text-slate-400">
+                  Tampil pada halaman login & popup penolakan
+                </span>
+              </div>
+              <textarea
+                id="maintenanceMessageInput"
+                rows={3}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Contoh: Mohon maaf, saat ini sistem SIMASMUH sedang dalam pemeliharaan berkala. Akses saat ini dibatasi khusus Administrator & Tim IT/TU."
+                className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none leading-relaxed"
+              />
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Pesan ini akan otomatis ditampilkan pada popup peringatan saat pengguna umum mencoba melakukan login atau ketika mode pemeliharaan aktif.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+
+        <CardFooter className="bg-slate-50/80 dark:bg-slate-800/60 border-t border-amber-100 dark:border-slate-800 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            Role yang diizinkan bypass: <span className="font-bold text-slate-700 dark:text-slate-200">SUPERADMIN, ADMIN, ADMIN_IT, ADMIN_TU, GOD</span>
+          </div>
+
+          <Button
+            type="submit"
+            disabled={saveMutation.isPending}
+            className="w-full sm:w-auto bg-gradient-to-r from-amber-600 to-orange-600 hover:opacity-90 font-bold rounded-xl shadow-xs text-white"
+          >
+            {saveMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            Simpan Status Pemeliharaan
           </Button>
         </CardFooter>
       </form>

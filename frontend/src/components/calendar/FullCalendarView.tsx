@@ -32,6 +32,12 @@ import {
   type NationalHoliday,
   type HijriDayInfo
 } from '@/lib/national-holidays'
+import {
+  calculateKHGTPrayerTimes,
+  DEFAULT_PONOROGO_COORDS,
+  DailyPrayerSchedule
+} from '@/lib/prayer-times-khgt'
+import { KHGTPrayerScheduleModal } from './KHGTPrayerScheduleModal'
 
 interface AnnouncementItem {
   id: string
@@ -122,6 +128,9 @@ export function FullCalendarView({ initialAnnouncements = [], initialKegiatan = 
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedDayEvents, setSelectedDayEvents] = useState<any[]>([])
   const [selectedDayHijri, setSelectedDayHijri] = useState<HijriDayInfo | null>(null)
+
+  // KHGT Prayer Schedule Modal state
+  const [isPrayerModalOpen, setIsPrayerModalOpen] = useState(false)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth() // 0-11
@@ -585,12 +594,20 @@ export function FullCalendarView({ initialAnnouncements = [], initialKegiatan = 
     return hijriCalendar[midKey] || calculateLocalHijriDate(new Date(year, month, 15))
   }, [hijriCalendar, year, month])
 
+  // Today's KHGT Prayer Schedule for quick status
+  const todayPrayerSchedule: DailyPrayerSchedule = useMemo(() => {
+    const now = new Date()
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const hijriStr = hijriCalendar[todayKey]?.hijriDateFormatted || ''
+    return calculateKHGTPrayerTimes(now, DEFAULT_PONOROGO_COORDS, hijriStr)
+  }, [hijriCalendar])
+
   return (
     <div className="space-y-4 sm:space-y-5">
-      {/* 0. Official KHGT Muhammadiyah Verification Banner */}
-      <div className="bg-gradient-to-r from-amber-50 via-white to-sky-50 dark:from-slate-900 dark:via-slate-900 dark:to-sky-950/40 border border-amber-200/80 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xs flex items-center justify-between">
+      {/* 0. Official KHGT Muhammadiyah Verification Banner & Prayer Times */}
+      <div className="bg-gradient-to-r from-amber-50/90 via-white to-teal-50/70 dark:from-slate-900 dark:via-slate-900 dark:to-teal-950/30 border border-amber-200/80 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white rounded-xl border border-amber-200/90 shadow-2xs shrink-0 flex items-center justify-center">
+          <div className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white dark:bg-slate-800 rounded-xl border border-amber-200/90 dark:border-slate-700 shadow-2xs shrink-0 flex items-center justify-center">
             <Image
               src="/logo-khgt.png"
               alt="Logo KHGT Muhammadiyah"
@@ -613,6 +630,32 @@ export function FullCalendarView({ initialAnnouncements = [], initialKegiatan = 
               Penanggalan Islam unifikasi Majelis Tarjih PP Muhammadiyah.
             </p>
           </div>
+        </div>
+
+        {/* Quick Prayer Status & Schedule Button */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0 border-t md:border-t-0 pt-2 md:pt-0 border-slate-200/60 dark:border-slate-800 justify-between md:justify-end">
+          {todayPrayerSchedule.nextPrayer && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-teal-50/90 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800/60 text-teal-800 dark:text-teal-200 text-xs">
+              <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 animate-pulse" />
+              <span className="text-[11px] font-bold">
+                {todayPrayerSchedule.nextPrayer.name}: <span className="font-mono font-extrabold">{todayPrayerSchedule.nextPrayer.time}</span>
+              </span>
+              {todayPrayerSchedule.countdownString && (
+                <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold bg-amber-500/15 px-1.5 py-0.2 rounded-md">
+                  {todayPrayerSchedule.countdownString.replace(` menuju ${todayPrayerSchedule.nextPrayer.name}`, '')}
+                </span>
+              )}
+            </div>
+          )}
+
+          <Button
+            size="sm"
+            onClick={() => setIsPrayerModalOpen(true)}
+            className="h-8 px-3 text-xs font-bold bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white shadow-2xs gap-1.5 rounded-xl cursor-pointer"
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>Jadwal Sholat (Seminggu / Sebulan)</span>
+          </Button>
         </div>
       </div>
 
@@ -1131,6 +1174,14 @@ export function FullCalendarView({ initialAnnouncements = [], initialKegiatan = 
           </div>
         </div>
       )}
+      {/* KHGT Weekly & Monthly Prayer Schedule Modal */}
+      <KHGTPrayerScheduleModal
+        isOpen={isPrayerModalOpen}
+        onClose={() => setIsPrayerModalOpen(false)}
+        hijriCalendar={hijriCalendar}
+        currentYear={year}
+        currentMonth={month}
+      />
     </div>
   )
 }

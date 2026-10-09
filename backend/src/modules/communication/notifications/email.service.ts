@@ -8,7 +8,7 @@ export interface EmailOptions {
   to: string;
   subject: string;
   title?: string;
-  category?: 'PRESENSI' | 'KEUANGAN' | 'PENGUMUMAN' | 'KEDISIPLINAN' | 'PERIZINAN' | 'SISTEM';
+  category?: 'PRESENSI' | 'KEUANGAN' | 'PENGUMUMAN' | 'KEDISIPLINAN' | 'PERIZINAN' | 'DISPENSASI' | 'AKADEMIK' | 'PAYROLL' | 'DISPOSISI' | 'CUTI' | 'SISTEM';
   recipientName?: string;
   contentHtml?: string;
   contentText?: string;
@@ -22,6 +22,8 @@ export interface EmailOptions {
 export class EmailNotificationService implements OnModuleInit {
   private readonly logger = new Logger(EmailNotificationService.name);
   private transporter: nodemailer.Transporter | null = null;
+
+  private publicDomainUrl: string = process.env.PUBLIC_DOMAIN_URL || 'https://simasmuh.razagopo.my.id';
 
   private smtpConfig = {
     host: process.env.SMTP_HOST || 'mail.smamuhipo.sch.id',
@@ -39,19 +41,20 @@ export class EmailNotificationService implements OnModuleInit {
   }
 
   /**
-   * Load SMTP settings permanently from Setting table in database
+   * Load SMTP settings and public domain permanently from Setting table in database
    */
   async loadConfigFromDb() {
     try {
       const setting: any = await this.prisma.setting.findFirst();
       if (setting) {
+        if (setting.publicDomainUrl) this.publicDomainUrl = setting.publicDomainUrl.trim().replace(/\/+$/, '');
         if (setting.smtpHost) this.smtpConfig.host = setting.smtpHost;
         if (setting.smtpPort) this.smtpConfig.port = Number(setting.smtpPort);
         if (setting.smtpUser) this.smtpConfig.user = setting.smtpUser;
         if (setting.smtpPass) this.smtpConfig.pass = setting.smtpPass;
         if (setting.smtpFrom) this.smtpConfig.senderEmail = setting.smtpFrom;
         if (setting.smtpFromName) this.smtpConfig.senderName = setting.smtpFromName;
-        this.logger.log(`[SMTP DB LOADED] Loaded SMTP config from PostgreSQL database (User: ${this.smtpConfig.user})`);
+        this.logger.log(`[SMTP DB LOADED] Loaded SMTP config from database (Public Domain: ${this.publicDomainUrl})`);
       }
     } catch (e: any) {
       this.logger.warn(`Could not load SMTP config from database: ${e.message}`);
@@ -267,10 +270,13 @@ export class EmailNotificationService implements OnModuleInit {
     const categoryColors: Record<string, { bg: string; text: string; border: string }> = {
       PRESENSI: { bg: '#ECFDF5', text: '#065F46', border: '#10B981' },
       KEUANGAN: { bg: '#EFF6FF', text: '#1E40AF', border: '#3B82F6' },
+      PAYROLL: { bg: '#FAF5FF', text: '#6B21A8', border: '#A855F7' },
       PENGUMUMAN: { bg: '#F5F3FF', text: '#5B21B6', border: '#8B5CF6' },
       KEDISIPLINAN: { bg: '#FFFBEB', text: '#92400E', border: '#F59E0B' },
       PERIZINAN: { bg: '#F0FDF4', text: '#166534', border: '#22C55E' },
       DISPENSASI: { bg: '#FFF7ED', text: '#9A3412', border: '#F97316' },
+      CUTI: { bg: '#FEF3C7', text: '#92400E', border: '#F59E0B' },
+      DISPOSISI: { bg: '#EFF6FF', text: '#1E40AF', border: '#3B82F6' },
       AKADEMIK: { bg: '#EFF6FF', text: '#1E3A8A', border: '#2563EB' },
       SISTEM: { bg: '#F8FAFC', text: '#334155', border: '#64748B' },
     };
@@ -293,10 +299,16 @@ export class EmailNotificationService implements OnModuleInit {
     `
       : '';
 
-    const actionButton = options.actionUrl && options.actionText
+    let finalActionUrl = options.actionUrl;
+    if (finalActionUrl && finalActionUrl.startsWith('/')) {
+      const baseUrl = (this.publicDomainUrl || process.env.PUBLIC_DOMAIN_URL || process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id').replace(/\/+$/, '');
+      finalActionUrl = `${baseUrl}${finalActionUrl}`;
+    }
+
+    const actionButton = finalActionUrl && options.actionText
       ? `
       <div style="text-align: center; margin: 26px 0 16px 0;">
-        <a href="${options.actionUrl}" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; text-decoration: none; padding: 12px 28px; font-size: 14px; font-weight: 600; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">
+        <a href="${finalActionUrl}" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; text-decoration: none; padding: 12px 28px; font-size: 14px; font-weight: 600; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">
           ${options.actionText} &rarr;
         </a>
       </div>
@@ -451,7 +463,7 @@ export class EmailNotificationService implements OnModuleInit {
         { label: 'Waktu Tercatat', value: params.time },
         { label: 'Status Kehadiran', value: params.status },
       ],
-      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/presensi/harian`,
+      actionUrl: '/presensi/harian',
       actionText: 'Lihat Presensi',
     });
   }
@@ -485,7 +497,7 @@ export class EmailNotificationService implements OnModuleInit {
         { label: 'Total Nominal', value: params.amountFormatted },
         { label: 'Jatuh Tempo', value: params.dueDateFormatted || 'Tanggal 10 setiap bulan' },
       ],
-      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/keuangan/tagihan-saya`,
+      actionUrl: '/keuangan/tagihan-saya',
       actionText: 'Lihat Tagihan',
     });
   }
@@ -519,8 +531,256 @@ export class EmailNotificationService implements OnModuleInit {
         { label: 'Nominal Terverifikasi', value: params.amountFormatted },
         { label: 'Tanggal Verifikasi', value: params.paidDateFormatted },
       ],
-      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/keuangan/riwayat`,
+      actionUrl: '/keuangan/riwayat',
       actionText: 'Lihat Kwitansi',
+    });
+  }
+
+  /**
+   * Kirim Email Notifikasi Penerbitan Slip Gaji & Tunjangan Bulanan (Payroll) Pegawai
+   */
+  async sendPayrollNotification(params: {
+    toEmail: string;
+    employeeName: string;
+    periodFormatted: string;
+    netSalaryFormatted: string;
+    totalHours?: number;
+    attendanceDays?: number;
+    bankAccountInfo?: string;
+  }) {
+    const subject = `[Slip Gaji] Penggajian Periode ${params.periodFormatted} - ${params.employeeName}`;
+
+    return this.sendEmailNotification({
+      to: params.toEmail,
+      subject,
+      title: `Slip Gaji & Honorarium (${params.periodFormatted})`,
+      category: 'PAYROLL',
+      badgeLabel: 'SLIP GAJI RESMI',
+      recipientName: params.employeeName,
+      contentText: `Rincian slip gaji, honorarium mengajar, dan tunjangan kehadiran bulan <strong>${params.periodFormatted}</strong> telah diterbitkan secara resmi oleh Bagian Keuangan.`,
+      metaDetails: [
+        { label: 'Nama Pegawai', value: params.employeeName },
+        { label: 'Periode Bulan', value: params.periodFormatted },
+        { label: 'Gaji Bersih (Take Home Pay)', value: params.netSalaryFormatted },
+        ...(params.attendanceDays ? [{ label: 'Kehadiran Kerja', value: `${params.attendanceDays} Hari` }] : []),
+        ...(params.totalHours ? [{ label: 'Total Jam Mengajar', value: `${params.totalHours} Jam` }] : []),
+        ...(params.bankAccountInfo ? [{ label: 'Rekening Penyaluran', value: params.bankAccountInfo }] : []),
+      ],
+      actionUrl: '/keuangan/slip-gaji-saya',
+      actionText: 'Buka & Unduh Slip Gaji',
+    });
+  }
+
+  /**
+   * Kirim Email Notifikasi Disposisi & Surat Tugas Pegawai
+   */
+  async sendDisposisiNotification(params: {
+    toEmail: string;
+    employeeName: string;
+    mailNumber: string;
+    perihal: string;
+    senderAgency: string;
+    instructionText: string;
+  }) {
+    const subject = `[Disposisi] Surat Masuk: ${params.mailNumber} - ${params.perihal}`;
+
+    return this.sendEmailNotification({
+      to: params.toEmail,
+      subject,
+      title: `Disposisi Surat Masuk: ${params.mailNumber}`,
+      category: 'DISPOSISI',
+      badgeLabel: 'DISPOSISI DINAS',
+      recipientName: params.employeeName,
+      contentText: `Anda menerima instruksi lembar disposisi baru dari Kepala Sekolah / Pimpinan.`,
+      metaDetails: [
+        { label: 'Nomor Surat', value: params.mailNumber },
+        { label: 'Asal Surat', value: params.senderAgency },
+        { label: 'Perihal', value: params.perihal },
+        { label: 'Instruksi / Catatan', value: params.instructionText },
+      ],
+      actionUrl: '/tu/surat-masuk',
+      actionText: 'Lihat Lembar Disposisi',
+    });
+  }
+
+  /**
+   * Kirim Email Notifikasi Status Persetujuan Cuti & Izin Pegawai
+   */
+  async sendLeaveNotification(params: {
+    toEmail: string;
+    employeeName: string;
+    leaveType: string;
+    startDate: string;
+    endDate: string;
+    status: 'DISETUJUI' | 'DITOLAK' | 'MENUNGGU';
+    approverName?: string;
+    notes?: string;
+  }) {
+    const subject = `[Cuti Pegawai] Pengajuan ${params.leaveType} (${params.status})`;
+
+    return this.sendEmailNotification({
+      to: params.toEmail,
+      subject,
+      title: `Pengajuan Cuti / Izin Pegawai`,
+      category: 'CUTI',
+      badgeLabel: `CUTI: ${params.status}`,
+      recipientName: params.employeeName,
+      contentText: `Status permohonan ${params.leaveType} Anda telah diperbarui menjadi <strong>${params.status}</strong>.`,
+      metaDetails: [
+        { label: 'Nama Pegawai', value: params.employeeName },
+        { label: 'Jenis Permohonan', value: params.leaveType },
+        { label: 'Rentang Tanggal', value: `${params.startDate} s/d ${params.endDate}` },
+        { label: 'Status Verifikasi', value: params.status },
+        ...(params.approverName ? [{ label: 'Diverifikasi Oleh', value: params.approverName }] : []),
+        ...(params.notes ? [{ label: 'Catatan / Alasan', value: params.notes }] : []),
+      ],
+      actionUrl: '/kepegawaian/cuti',
+      actionText: 'Lihat Riwayat Cuti',
+    });
+  }
+
+  /**
+   * Kirim Email Notifikasi Supervisi / Verifikasi Perangkat Ajar Guru
+   */
+  async sendTeachingDeviceNotification(params: {
+    toEmail: string;
+    teacherName: string;
+    subjectName: string;
+    className: string;
+    deviceType: string;
+    status: string;
+    supervisorName: string;
+    feedback?: string;
+  }) {
+    const subject = `[Perangkat Ajar] ${params.deviceType} ${params.subjectName} - ${params.status}`;
+
+    return this.sendEmailNotification({
+      to: params.toEmail,
+      subject,
+      title: `Supervisi Perangkat Ajar (${params.subjectName})`,
+      category: 'AKADEMIK',
+      badgeLabel: 'PERANGKAT AJAR',
+      recipientName: params.teacherName,
+      contentText: `Dokumen ${params.deviceType} untuk mata pelajaran <strong>${params.subjectName}</strong> kelas <strong>${params.className}</strong> telah diverifikasi oleh tim supervisi akademik.`,
+      metaDetails: [
+        { label: 'Guru Pengampu', value: params.teacherName },
+        { label: 'Mata Pelajaran', value: params.subjectName },
+        { label: 'Kelas', value: params.className },
+        { label: 'Dokumen', value: params.deviceType },
+        { label: 'Status Supervisi', value: params.status },
+        { label: 'Supervisor / Penilai', value: params.supervisorName },
+        ...(params.feedback ? [{ label: 'Umpan Balik / Catatan', value: params.feedback }] : []),
+      ],
+      actionUrl: '/akademik/perangkat-ajar',
+      actionText: 'Buka Perangkat Ajar',
+    });
+  }
+
+  /**
+   * Kirim Email Notifikasi Poin Kedisiplinan, Prestasi, dan Bimbingan Siswa ke Siswa / Wali Murid
+   */
+  async sendDisciplineNotification(params: {
+    toEmail: string;
+    recipientName: string;
+    studentName: string;
+    className: string;
+    category: string;
+    title: string;
+    points: number;
+    description?: string;
+    actionTaken?: string;
+    evaluatorOrVerifierName?: string;
+    currentScore?: number;
+    currentGrade?: string;
+  }) {
+    const isPelanggaran = params.category === 'PELANGGARAN' || params.points < 0;
+    const isPrestasi = params.category === 'PRESTASI_PENGHARGAAN' || params.points > 0;
+    const pointLabel = `${params.points > 0 ? '+' : ''}${params.points} Poin`;
+    const subjectPrefix = isPelanggaran
+      ? '[Catatan Kedisiplinan]'
+      : isPrestasi
+      ? '[Prestasi Siswa]'
+      : '[Bimbingan Karakter]';
+    const subject = `${subjectPrefix} ${params.studentName} (${params.className}) - ${params.title}`;
+
+    return this.sendEmailNotification({
+      to: params.toEmail,
+      subject,
+      title: `${params.category.replace('_', ' ')}: ${params.title}`,
+      category: 'KEDISIPLINAN',
+      badgeLabel: `${params.category.replace('_', ' ')} (${pointLabel})`,
+      recipientName: params.recipientName,
+      contentText: params.description
+        ? `${params.description}. Poin evaluasi: <strong>${pointLabel}</strong>.`
+        : `Tercatat evaluasi ${params.title} dengan bobot <strong>${pointLabel}</strong>.`,
+      metaDetails: [
+        { label: 'Nama Siswa', value: params.studentName },
+        { label: 'Kelas', value: params.className },
+        { label: 'Kategori Evaluasi', value: params.category.replace('_', ' ') },
+        { label: 'Bobot Poin', value: pointLabel },
+        ...(params.actionTaken ? [{ label: 'Tindak Lanjut / Pembinaan', value: params.actionTaken }] : []),
+        ...(params.evaluatorOrVerifierName ? [{ label: 'Pencatat / Pembina', value: params.evaluatorOrVerifierName }] : []),
+        ...(params.currentScore !== undefined ? [{ label: 'Total Skor Kedisiplinan', value: `${params.currentScore} Poin ${params.currentGrade ? `(${params.currentGrade})` : ''}` }] : []),
+      ],
+      actionUrl: '/akademik/etika-tatib',
+      actionText: 'Buka Catatan Siswa',
+    });
+  }
+
+  /**
+   * Kirim Email Notifikasi Ringkasan Jadwal Mengajar Harian Guru
+   */
+  async sendTeacherDailyScheduleNotification(params: {
+    toEmail: string;
+    teacherName: string;
+    dayName: string;
+    dateFormatted: string;
+    totalSessions: number;
+    scheduleTableHtml: string;
+  }) {
+    const subject = `[Jadwal Mengajar] ${params.dayName}, ${params.dateFormatted} - ${params.teacherName}`;
+
+    const contentHtml = `
+      <div style="margin-bottom: 16px;">
+        <p style="margin: 0 0 10px 0; color: #334155; font-size: 14px; line-height: 1.6;">
+          Yth. <strong>${params.teacherName}</strong>, berikut adalah agenda dan jadwal mengajar Anda untuk hari <strong>${params.dayName}, ${params.dateFormatted}</strong>:
+        </p>
+        <div style="overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 12px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="background-color: #0f766e; color: #ffffff;">
+                <th style="padding: 10px 12px; font-size: 12px; font-weight: 700; text-transform: uppercase;">Waktu</th>
+                <th style="padding: 10px 12px; font-size: 12px; font-weight: 700; text-transform: uppercase;">Kelas</th>
+                <th style="padding: 10px 12px; font-size: 12px; font-weight: 700; text-transform: uppercase;">Mata Pelajaran</th>
+                <th style="padding: 10px 12px; font-size: 12px; font-weight: 700; text-transform: uppercase;">Ruang / Lokasi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${params.scheduleTableHtml}
+            </tbody>
+          </table>
+        </div>
+        <p style="margin: 14px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.5;">
+          📝 <em>Jangan lupa untuk mengisi jurnal mengajar & presensi kelas setelah sesi pembelajaran berakhir. Selamat bertugas!</em>
+        </p>
+      </div>
+    `;
+
+    return this.sendEmailNotification({
+      to: params.toEmail,
+      subject,
+      title: `Jadwal Mengajar Hari ${params.dayName}`,
+      category: 'AKADEMIK',
+      badgeLabel: 'JADWAL MENGAJAR GURU',
+      recipientName: params.teacherName,
+      contentHtml,
+      metaDetails: [
+        { label: 'Nama Guru', value: params.teacherName },
+        { label: 'Hari & Tanggal', value: `${params.dayName}, ${params.dateFormatted}` },
+        { label: 'Total Sesi Mengajar', value: `${params.totalSessions} Sesi Kelas` },
+      ],
+      actionUrl: '/akademik/jadwal-mengajar',
+      actionText: 'Buka Jadwal Mengajar',
     });
   }
 }

@@ -30,9 +30,13 @@
 9. **Standar Mutlak Penamaan Ringkas & Responsive Layout (Mobile, Tablet, Desktop)**:
    - **Judul & Deskripsi Ringkas**: Seluruh judul fitur, modul, tab, kolom tabel, dan deskripsi wajib menggunakan bahasa yang singkat, padat, lugas, profesional, serta bebas dari kata-kata panjang atau embel-embel berlebihan yang tidak perlu.
    - **Efisiensi & Responsivitas Layout**: Seluruh tata letak halaman (Desktop, Tablet, Mobile) wajib diatur secara presisi hemat ruang layar (compact & padat). Gunakan grid/flex responsif (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3/4`), batasi lebar kolom perihal/keterangan dengan `truncate` / `line-clamp`, serta sederhanakan tombol aksi pada tabel/card menggunakan icon/button ringkas agar nyaman digunakan di semua ukuran layar.
-10. **Standar Mutlak Rute Dinamis & Adaptif (Adaptive Network & Tunnel Routing)**:
-    - **Resolusi Host Domain & IP**: Seluruh pengarahan rute (NextAuth redirect, Next.js rewrite proxy, dan `getBackendUrl()`) **MUTLAK SELALU ADAPTIF** mengikuti protokol (`http/https`), IP server lokal (LAN/Wi-Fi), maupun domain tunnel eksternal yang sedang digunakan oleh pengakses.
-    - **Tanpa Hardcoded Redirect Domain**: Dilarang keras melakukan pengalihan paksa (*hardcoded redirect*) ke satu hostname/domain spesifik (seperti `simasmuh.razagopo.my.id`). Setiap perbaikan atau penambahan rute baru di masa depan wajib mengikuti standar ini tanpa terkecuali.
+10. **Standar Mutlak Rute Dinamis & Adaptif (Adaptive Network, Tunnel Routing, & Dynamic OAuth Redirect) (STRICT)**:
+    - **Resolusi Host Domain & IP Adaptif**: Seluruh pengarahan rute (NextAuth redirect callback, Next.js rewrite proxy, dan `getBackendUrl()`) **MUTLAK SELALU ADAPTIF** mengikuti protokol (`http/https`), IP server lokal (LAN/Wi-Fi), maupun domain tunnel/publik eksternal yang sedang digunakan oleh pengakses.
+    - **Alur Redirect OAuth Dinamis Multi-Host**:
+      - Jika sistem diakses melalui **Domain Publik / Tunnel** (Cloudflare Tunnel, Custom Domain, dll), maka seluruh alur dan redirect callback OAuth **MUTLAK** menggunakan hostname domain pengakses aktif (didukung domain resmi terpercaya di basis data).
+      - Jika sistem diakses melalui **Localhost / IP Lokal LAN** (misal `http://localhost:3000` atau `http://192.168.x.x:3000`), maka OAuth redirect dan alur otentikasi **MUTLAK** berjalan dan kembali ke origin lokal tersebut tanpa memaksa pengalihan ke localhost jika sedang diakses dari domain eksternal.
+      - **Prioritas Penentuan Origin**: 1) Host client aktif (`hostUrl` dari header request/window origin), 2) Domain publik terkonfigurasi sistem di basis data, 3) BaseUrl / Loopback bawaan.
+    - **Tanpa Hardcoded Redirect Domain**: Dilarang keras melakukan pengalihan paksa (*hardcoded redirect*) ke satu hostname/domain spesifik (seperti `simasmuh.razagopo.my.id` atau `localhost`). Setiap perbaikan atau penambahan rute baru di masa depan wajib mengikuti standar ini tanpa terkecuali.
 11. **Peniadaan Hero Banner Status Fitur / Placeholder (STRICT)**:
     - Setiap ada penambahan atau perubahan fitur/modul baru, **DILARANG** menampilkan banner besar pengantar/placeholder (seperti hero box status fitur "Aktif Siap Pakai", kartu rencana modul terencana, badge status rancangan, atau deskripsi redundan).
     - Halaman wajib langsung menyajikan antarmuka kerja interaktif fungsional (tabel data, filter, card kegiatan/data, form aksi, atau tombol operasional) secara bersih, ringkas, dan to the point.
@@ -95,4 +99,8 @@
     - **Pencegahan Beban Rendering DOM (Low-Resource & Anti-Lag)**: Dilarang menampilkan seluruh rekaman data sekaligus (*unpaginated render*) pada tabel data berukuran besar. Pembatasan ini wajib diterapkan baik secara client-side slice maupun server-side query guna menghemat konsumsi memori browser, menjaga fluiditas scroll 60 FPS, dan mempercepat interaksi pengguna.
     - **Nomor Urut Presisi Sesuai Halaman Aktif**: Nomor urut baris data wajib terhitung dinamis mengikuti rumus: `(currentPage - 1) * pageSize + index + 1` sehingga konsisten di setiap perpindahan halaman.
     - **Auto-Reset Halaman Saat Filter / Pencarian Berubah**: Ketika pengguna mengetik pencarian di searchbar atau mengubah filter dropdown, halaman aktif wajib otomatis kembali ke halaman 1 (`setCurrentPage(1)`).
+21. **Standar Mutlak Backup Otomatis Terjadwal & Tombol Backup-Restore Cepat (STRICT)**:
+    - **Backup Otomatis Terjadwal**: Sistem wajib menjalankan pencadangan data (*automated backup dump*) secara berkala dan otomatis (tersimpan ke folder arsip backup penyimpanan lokal/eksternal) guna mencegah kehilangan data tak terduga.
+    - **Penyediaan Tombol Backup & Restore di Launcher**: Script launcher [JALANKAN_SIMASMUH.bat](file:///d:/simasmuh/JALANKAN_SIMASMUH.bat) dan [simasmuh.ps1](file:///d:/simasmuh/simasmuh.ps1) **MUTLAK MENYEDIAKAN MENU RESMI BACKUP & RESTORE DATABASE** yang memungkinkan pengguna/admin melakukan pencadangan instan serta pemulihan data (*one-click backup & restore*) secara aman, terverifikasi, dan bebas risiko data loss.
+
 

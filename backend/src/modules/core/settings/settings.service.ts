@@ -6,12 +6,16 @@ import * as os from 'os';
 import * as net from 'net';
 import { PrismaService } from '../prisma/prisma.service';
 import { getServerTimeInfo } from '../utils/timezone.util';
+import { WaitingRoomService } from '../waiting-room/waiting-room.service';
+import { MaintenanceService } from '../maintenance/maintenance.service';
 
 @Injectable()
 export class SettingsService {
   constructor(
     private prisma: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private waitingRoomService: WaitingRoomService,
+    private maintenanceService: MaintenanceService,
   ) {}
 
   async getServerTime(): Promise<any> {
@@ -45,11 +49,9 @@ export class SettingsService {
   }
 
   async getSettings(): Promise<any> {
-    const cacheKey = 'app_settings_full';
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached;
-
     const settings = await this.prisma.setting.findFirst();
+    const maintenanceInfo = this.maintenanceService.getStatus();
+
     if (!settings) {
       const created = await this.prisma.setting.create({
         data: {
@@ -67,24 +69,20 @@ export class SettingsService {
           defaultUka: 500000,
           defaultUks: 100000,
           defaultInfaq: 300000,
-        defaultSeragam: 2000000,
-        helpdeskPhone: '088293733330',
-        publicDomainUrl: process.env.PUBLIC_DOMAIN_URL || 'https://simasmuh.razagopo.my.id',
-        googleClientId: process.env.GOOGLE_CLIENT_ID || null,
-        googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
-      } as any,
-    });
-    await this.cacheManager.set(cacheKey, created, 60000); // 60s cache
-    return created;
+          defaultSeragam: 2000000,
+          helpdeskPhone: '088293733330',
+          publicDomainUrl: process.env.PUBLIC_DOMAIN_URL || 'https://simasmuh.razagopo.my.id',
+          googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+          googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
+        } as any,
+      });
+      return { ...created, ...maintenanceInfo };
+    }
+    return { ...settings, ...maintenanceInfo };
   }
-  await this.cacheManager.set(cacheKey, settings, 60000);
-  return settings;
-}
 
   async getPublicSettings(): Promise<any> {
-    const cacheKey = 'app_settings_public';
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached;
+    const maintenanceInfo = this.maintenanceService.getStatus();
 
     const settings = await this.prisma.setting.findFirst({
       select: {
@@ -131,11 +129,9 @@ export class SettingsService {
         publicDomainUrl: process.env.PUBLIC_DOMAIN_URL || 'https://simasmuh.razagopo.my.id',
         googleClientId: process.env.GOOGLE_CLIENT_ID || null,
       };
-      await this.cacheManager.set(cacheKey, defaultPublic, 60000);
-      return defaultPublic;
+      return { ...defaultPublic, ...maintenanceInfo };
     }
-    await this.cacheManager.set(cacheKey, settings, 60000);
-    return settings;
+    return { ...settings, ...maintenanceInfo };
   }
 
   async upsertSettings(data: any) {

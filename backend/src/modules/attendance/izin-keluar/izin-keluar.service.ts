@@ -143,7 +143,7 @@ export class IzinKeluarService {
               { label: 'Waktu', value: `${data.waktuKeluar} - ${data.estimasiKembali || 'Selesai'}` },
               { label: 'Kegiatan', value: data.alasan },
             ],
-            actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/presensi/izin-keluar`,
+            actionUrl: '/presensi/izin-keluar',
             actionText: 'Lihat Status',
           })
           .catch(() => {});
@@ -369,7 +369,7 @@ export class IzinKeluarService {
               { label: 'E-Sign Token', value: eSignToken },
               { label: 'Catatan', value: catatanAdmin || '-' },
             ],
-            actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/presensi/izin-keluar`,
+            actionUrl: '/presensi/izin-keluar',
             actionText: 'Lihat Surat Izin',
           })
           .catch(() => {});
@@ -430,7 +430,7 @@ export class IzinKeluarService {
                 value: catatanAdmin || 'Silakan hubungi pihak sekolah/atasan langsung.',
               },
             ],
-            actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/presensi/izin-keluar`,
+            actionUrl: '/presensi/izin-keluar',
             actionText: 'Lihat Perizinan',
           })
           .catch(() => {});

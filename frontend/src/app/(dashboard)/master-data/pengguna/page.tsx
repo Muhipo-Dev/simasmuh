@@ -753,6 +753,7 @@ export default function UsersPage() {
                       <SelectItem value="KEPALA_SEKOLAH">KEPALA SEKOLAH</SelectItem>
                       <SelectItem value="ADMIN_IT">ADMIN IT</SelectItem>
                       <SelectItem value="SUPERADMIN">SUPERADMIN</SelectItem>
+                      <SelectItem value="GOD_USER">GOD ACCESS (Akses Penuh Semua Modul)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -950,7 +951,7 @@ export default function UsersPage() {
                   </TableRow>
                 ) : (
                   paginatedUsers.map((item, index) => {
-                    const isGodUser = item.username === 'supermuhipo'
+                    const isGodUser = item.role === 'GOD' || item.role === 'GOD_USER' || item.username === 'supermuhipo'
                     const isSelected = selectedUserIds.includes(item.id)
                     const nip = item.nipNbm || item.teacherProfile?.nip
                     const rowNumber = (currentPage - 1) * pageSize + index + 1

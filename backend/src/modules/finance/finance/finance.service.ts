@@ -566,6 +566,65 @@ export class FinanceService {
       },
     });
 
+    // Otomatis kirim Notifikasi In-App & Email Resmi Slip Gaji ke Pegawai
+    try {
+      const monthNames = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      const periodFormatted = `${monthNames[month - 1] || month} ${year}`;
+      const netSalaryFormatted = `Rp ${netSalary.toLocaleString('id-ID')}`;
+
+      // In-App Notification (disimpan di DB dan muncul realtime di dashboard pegawai)
+      await this.prisma.notification.create({
+        data: {
+          userId: user.id,
+          type: 'PAYROLL_ISSUED',
+          title: `Slip Gaji ${periodFormatted} Diterbitkan`,
+          message: `Rincian slip honorarium & gaji bulan ${periodFormatted} sebesar ${netSalaryFormatted} telah dipublikasikan secara resmi.`,
+          data: {
+            year,
+            month,
+            periodFormatted,
+            netSalary,
+            netSalaryFormatted,
+            totalHours,
+            totalAttendanceDays: attendances.length,
+          },
+          priority: 'NORMAL',
+          channel: 'IN_APP',
+        },
+      });
+
+      this.eventEmitter.emit('notification.created', {
+        userId: user.id,
+        type: 'PAYROLL_ISSUED',
+        title: `Slip Gaji ${periodFormatted} Diterbitkan`,
+      });
+
+      // Email Notification (jika preferensi notifGaji aktif dan email terisi)
+      const userPrefs = (user.notificationPreferences as any) || {};
+      const notifGajiEnabled = userPrefs.notifGaji !== false; // default true
+
+      if (user.email && user.email.includes('@') && notifGajiEnabled) {
+        const bankAccountInfo = user.bankAccountNumber
+          ? `${user.bankName || 'Bank'} - ${user.bankAccountNumber} a.n. ${user.bankAccountHolder || user.name}`
+          : undefined;
+
+        this.eventEmitter.emit('payroll.published', {
+          toEmail: user.email,
+          employeeName: user.name,
+          periodFormatted,
+          netSalaryFormatted,
+          totalHours,
+          attendanceDays: attendances.length,
+          bankAccountInfo,
+        });
+      }
+    } catch (notifErr: any) {
+      this.logger.warn(`Gagal mengirim notifikasi slip gaji untuk user ${user.id}: ${notifErr.message}`);
+    }
+
     return {
       message: `Rincian penggajian untuk ${user.name} berhasil disimpan!`,
       record,
@@ -1557,6 +1616,13 @@ export class FinanceService {
           (t.status !== 'LUNAS' && (t.amountPaid || 0) > 0),
       ).length;
 
+      const draftCount = tagihansList.filter((t: any) => t.status === 'DRAFT').length;
+      const activeDraftCount = tagihansList.filter((t: any) => t.status === 'DRAFT' && ((t.amount - (t.amountPaid || 0)) > 0)).length;
+      const releasedCount = tagihansList.filter((t: any) => t.status !== 'DRAFT').length;
+      const draftAmount = tagihansList
+        .filter((t: any) => t.status === 'DRAFT')
+        .reduce((sum: number, t: any) => sum + Math.max(0, t.amount - (t.amountPaid || 0)), 0);
+
       return {
         id: s.id,
         nisn: s.nisn,
@@ -1577,6 +1643,10 @@ export class FinanceService {
         angsuranCount,
         sisaTagihan,
         belumLunasCount,
+        draftCount,
+        activeDraftCount,
+        releasedCount,
+        draftAmount,
         sppLunasCount: sppTagihan.length,
         tagihanCount: tagihansList.length,
         beasiswaPercentage: s.beasiswaPercentage || 0,

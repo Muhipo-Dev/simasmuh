@@ -1675,28 +1675,28 @@ export default function FaceAttendanceCameraPage() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-7xl mx-auto pb-12 px-2 sm:px-4 md:px-0">
+    <div className="space-y-4 md:space-y-6 max-w-7xl mx-auto pb-12 px-3 sm:px-4 md:px-6">
       {/* Header Banner */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 p-4 sm:p-6 md:p-7 rounded-2xl text-white shadow-xl border border-indigo-900/30">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-[11px] sm:text-xs font-semibold uppercase tracking-wider border border-indigo-500/30">
-            <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-            Live Camera Stream & FaceNet Biometric Engine
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4 bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 p-4 sm:p-5 md:p-6 rounded-2xl text-white shadow-xl border border-indigo-900/30">
+        <div className="space-y-1.5 min-w-0">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] sm:text-xs font-semibold uppercase tracking-wider border border-indigo-500/30">
+            <Radio className="w-3 h-3 text-rose-400 animate-pulse shrink-0" />
+            <span className="truncate">Live Camera Stream & FaceNet Biometric Engine</span>
           </div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">Presensi Camera AI FaceNet</h1>
-          <p className="text-slate-300 text-xs md:text-sm max-w-2xl leading-relaxed">
+          <h1 className="text-lg sm:text-2xl md:text-3xl font-extrabold tracking-tight truncate">Presensi Camera AI FaceNet</h1>
+          <p className="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed line-clamp-2 sm:line-clamp-none">
             Sistem absensi biometrik wajah real-time terintegrasi dengan deteksi FaceNet (512-D), penandaan tamu otomatis, dan sinkronisasi instan ke basis data SIMASMUH.
           </p>
         </div>
         
         {/* Top Control Action Badges & Outdoor / Fullscreen Switcher */}
-        <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
-          <div className="flex items-center justify-between gap-3 px-3.5 py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
-            <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${
+        <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0 w-full sm:w-auto">
+          <div className="flex items-center justify-between gap-3 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                 serviceStatus?.isOnline && serviceStatus?.is_running ? 'bg-emerald-400 animate-ping' : serviceStatus?.isOnline ? 'bg-amber-400' : 'bg-slate-400'
               }`} />
-              <span className="font-semibold text-[11px] sm:text-xs">
+              <span className="font-semibold text-[11px] sm:text-xs truncate">
                 {serviceStatus?.isOnline ? (serviceStatus.is_running ? 'STREAM ACTIVE' : 'AI STANDBY (HEMAT DAYA)') : 'AI STANDBY (OFF)'}
               </span>
             </div>
@@ -1706,7 +1706,7 @@ export default function FaceAttendanceCameraPage() {
                 variant="ghost"
                 onClick={() => serviceStatus?.is_running ? stopServiceWorker() : startServiceWorker()}
                 disabled={isStartingWorker || isStoppingWorker}
-                className={`h-7 px-2.5 text-[11px] font-bold rounded-md touch-manipulation ${
+                className={`h-7 px-2.5 text-[11px] font-bold rounded-md touch-manipulation shrink-0 ${
                   serviceStatus?.is_running ? 'bg-rose-500/30 hover:bg-rose-500/40 text-rose-200' : 'bg-emerald-500/30 hover:bg-emerald-500/40 text-emerald-200'
                 }`}
               >
@@ -1714,13 +1714,13 @@ export default function FaceAttendanceCameraPage() {
                 {isStartingWorker ? 'Memuat...' : isStoppingWorker ? 'Mematikan...' : serviceStatus?.is_running ? 'Matikan AI' : 'Nyalakan AI'}
               </Button>
             ) : (
-              <Badge variant="outline" className="text-[10px] text-slate-300 border-white/20">
+              <Badge variant="outline" className="text-[10px] text-slate-300 border-white/20 shrink-0">
                 Superadmin Only
               </Badge>
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-2 px-3.5 py-1.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 sm:px-3.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 text-xs w-full sm:w-auto">
             {/* Toggle Mode Outdoor Anti-Glare Sinar Matahari */}
             <button
               type="button"
@@ -1730,10 +1730,10 @@ export default function FaceAttendanceCameraPage() {
                   ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300 animate-pulse'
                   : 'bg-white/10 hover:bg-white/20 text-white'
               }`}
-              title="Aktifkan kontras ekstra tinggi untuk layar tablet di gerbang luar ruangan"
+              title="Aktifkan kontras ekstra tinggi untuk layar tablet/ponsel di gerbang luar ruangan"
             >
               <Sun className={`w-3.5 h-3.5 ${isOutdoorMode ? 'text-slate-950 font-black' : 'text-amber-300'}`} />
-              <span>{isOutdoorMode ? '☀️ Outdoor: ON' : '☀️ Mode Outdoor'}</span>
+              <span>{isOutdoorMode ? '☀️ Outdoor ON' : '☀️ Mode Outdoor'}</span>
             </button>
 
             <div className="flex items-center gap-2">
@@ -1824,34 +1824,34 @@ export default function FaceAttendanceCameraPage() {
       {activeTab === 'monitor' && (
         <div className="space-y-4 sm:space-y-5">
           {/* Quick Stats Bar */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
             <div className="bg-gradient-to-br from-emerald-500 to-teal-700 rounded-2xl p-3 sm:p-4 text-white shadow-xs flex items-center justify-between">
-              <div>
-                <p className="text-[10px] sm:text-[11px] font-bold text-emerald-100 uppercase tracking-wider">Masuk</p>
-                <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.masuk}</p>
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-[11px] font-bold text-emerald-100 uppercase tracking-wider truncate">Masuk</p>
+                <p className="text-lg sm:text-2xl font-black mt-0.5">{logStats.masuk}</p>
               </div>
-              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
-                <CheckCircle2 className="w-4 h-4 text-white" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-3 sm:p-4 text-white shadow-xs flex items-center justify-between">
-              <div>
-                <p className="text-[10px] sm:text-[11px] font-bold text-blue-100 uppercase tracking-wider">Pulang</p>
-                <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.pulang}</p>
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-[11px] font-bold text-blue-100 uppercase tracking-wider truncate">Pulang</p>
+                <p className="text-lg sm:text-2xl font-black mt-0.5">{logStats.pulang}</p>
               </div>
-              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
-                <Clock className="w-4 h-4 text-white" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-2xl p-3 sm:p-4 text-white shadow-xs flex items-center justify-between border border-slate-700/60">
-              <div>
-                <p className="text-[10px] sm:text-[11px] font-bold text-slate-300 uppercase tracking-wider">Total Scan</p>
-                <p className="text-xl sm:text-2xl font-black mt-0.5">{logStats.total}</p>
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-[11px] font-bold text-slate-300 uppercase tracking-wider truncate">Total Scan</p>
+                <p className="text-lg sm:text-2xl font-black mt-0.5">{logStats.total}</p>
               </div>
-              <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-xs shrink-0">
-                <Activity className="w-4 h-4 text-indigo-400" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />
               </div>
             </div>
 
@@ -1865,24 +1865,24 @@ export default function FaceAttendanceCameraPage() {
                   </span>
                 </div>
               </div>
-              <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-xs shrink-0">
-                <Cpu className="w-4 h-4 text-purple-200" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-xs shrink-0">
+                <Cpu className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-200" />
               </div>
             </div>
           </div>
 
           {/* Quick Stream Preset Selector Bar */}
-          <div className="p-3.5 sm:p-4 bg-slate-900 border border-slate-800 rounded-2xl text-white shadow-md space-y-2.5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="p-3 sm:p-4 bg-slate-900 border border-slate-800 rounded-2xl text-white shadow-md space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2">
               <div className="flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-indigo-400" />
+                <Sliders className="w-4 h-4 text-indigo-400 shrink-0" />
                 <h3 className="text-xs sm:text-sm font-bold text-slate-200">Pilih Sumber Kamera Aktif:</h3>
               </div>
-              <span className="text-[11px] text-slate-400 font-mono truncate">
+              <span className="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate">
                 Aktif: <span className="text-emerald-400 font-semibold">{currentConfig?.streamSourceType || 'RTSP'}</span> ({currentConfig?.streamUrl})
               </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {STREAM_PRESETS.map((preset) => {
                 const IconComponent = preset.icon
                 const isSelected = formConfig?.streamSourceType === preset.id || (!formConfig?.streamSourceType && preset.id === 'RTSP')
@@ -1913,20 +1913,20 @@ export default function FaceAttendanceCameraPage() {
                         }
                       }
                     }}
-                    className={`flex items-center gap-2.5 p-2.5 rounded-xl text-left border transition-all text-xs ${
+                    className={`flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl text-left border transition-all text-xs touch-manipulation ${
                       isSelected
                         ? 'bg-indigo-600 text-white border-indigo-400 shadow-md font-bold ring-1 ring-indigo-400'
                         : 'bg-slate-800/80 text-slate-300 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600'
                     }`}
                   >
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                    <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center shrink-0 ${
                       isSelected ? 'bg-white/20 text-white' : 'bg-slate-700/60 text-slate-300'
                     }`}>
-                      <IconComponent className="w-4 h-4" />
+                      <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">{preset.title}</p>
-                      <p className="text-[10px] text-slate-400 truncate mt-0.5">{preset.badge}</p>
+                      <p className="truncate font-semibold text-xs">{preset.title}</p>
+                      <p className="text-[9px] sm:text-[10px] text-slate-400 truncate mt-0.5">{preset.badge}</p>
                     </div>
                   </button>
                 )
@@ -1940,26 +1940,26 @@ export default function FaceAttendanceCameraPage() {
             <div className="lg:col-span-7 space-y-3">
               <Card className="shadow-lg border-slate-800 bg-slate-950 text-white overflow-hidden rounded-2xl">
                 {/* Header Stream Bar */}
-                <div className="p-3 sm:p-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="flex h-3 w-3 relative shrink-0">
+                <div className="p-2.5 sm:p-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="flex h-2.5 w-2.5 relative shrink-0">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
                     </span>
                     <div className="min-w-0">
-                      <h2 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5 sm:gap-2 truncate">
+                      <h2 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5 truncate">
                         <span className="truncate">{activeCameraObj?.name || currentConfig?.cameraName || 'Camera Gerbang Utama'}</span>
-                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-slate-700 text-indigo-300 font-mono shrink-0">
+                        <Badge variant="outline" className="text-[9px] sm:text-[10px] py-0 px-1 border-slate-700 text-indigo-300 font-mono shrink-0">
                           {activeCameraObj?.streamSourceType || currentConfig?.streamSourceType || 'RTSP'}
                         </Badge>
                       </h2>
-                      <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate max-w-[200px] sm:max-w-xs md:max-w-md">
+                      <p className="text-[9px] sm:text-[11px] text-slate-400 font-mono truncate max-w-[150px] sm:max-w-xs md:max-w-md">
                         {activeCameraObj?.streamUrl || currentConfig?.streamUrl || 'rtsp://...'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                  <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                     {/* Multi-Camera Channel Switcher Tabs */}
                     {Array.isArray(currentConfig?.cameras) && currentConfig.cameras.length > 1 && (
                       <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
@@ -1971,7 +1971,7 @@ export default function FaceAttendanceCameraPage() {
                               setActiveCamId(cam.id)
                               setStreamKey(Date.now())
                             }}
-                            className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                            className={`px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded-md transition-all cursor-pointer ${
                               activeCamId === cam.id
                                 ? 'bg-indigo-600 text-white shadow-xs'
                                 : 'text-slate-400 hover:text-slate-200'
@@ -1991,7 +1991,7 @@ export default function FaceAttendanceCameraPage() {
                           setSelectedDeviceId(e.target.value)
                           startBrowserWebcam(e.target.value)
                         }}
-                        className="h-7 text-[11px] bg-slate-800 text-slate-200 border border-slate-700 rounded-md px-1.5 max-w-[130px] truncate"
+                        className="h-7 text-[10px] sm:text-[11px] bg-slate-800 text-slate-200 border border-slate-700 rounded-md px-1 max-w-[100px] sm:max-w-[130px] truncate"
                       >
                         {videoDevices.map((dev, idx) => (
                           <option key={dev.deviceId || idx} value={dev.deviceId}>
@@ -2005,7 +2005,7 @@ export default function FaceAttendanceCameraPage() {
                       size="sm"
                       onClick={handleReconnectStream}
                       title="Hubungkan Ulang Stream"
-                      className="text-slate-400 hover:text-white hover:bg-slate-800 h-7 sm:h-8 px-2"
+                      className="text-slate-400 hover:text-white hover:bg-slate-800 h-7 w-7 sm:h-8 sm:w-8 p-0"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                     </Button>
@@ -2014,7 +2014,7 @@ export default function FaceAttendanceCameraPage() {
                       size="sm"
                       onClick={toggleFullscreen}
                       title="Layar Penuh"
-                      className="text-slate-400 hover:text-white hover:bg-slate-800 h-7 sm:h-8 px-2"
+                      className="text-slate-400 hover:text-white hover:bg-slate-800 h-7 w-7 sm:h-8 sm:w-8 p-0"
                     >
                       <Maximize2 className="w-3.5 h-3.5" />
                     </Button>
@@ -2078,8 +2078,8 @@ export default function FaceAttendanceCameraPage() {
 
                       {/* Floating Result Feedback HUD Card */}
                       {captureResult && (
-                        <div className="absolute inset-x-3 bottom-3 z-30 pointer-events-auto">
-                          <div className={`p-4 sm:p-5 rounded-2xl backdrop-blur-xl border-2 shadow-2xl transition-all duration-300 ${
+                        <div className="absolute inset-x-2 sm:inset-x-3 bottom-2 sm:bottom-3 z-30 pointer-events-auto">
+                          <div className={`p-3 sm:p-5 rounded-2xl backdrop-blur-xl border-2 shadow-2xl transition-all duration-300 ${
                             captureResult.type === 'SUCCESS' 
                               ? isOutdoorMode 
                                 ? 'bg-black/98 border-emerald-400 shadow-emerald-900/60 ring-2 ring-emerald-500/40' 
@@ -2096,10 +2096,10 @@ export default function FaceAttendanceCameraPage() {
                                     ? 'bg-black/98 border-rose-400 shadow-rose-900/60 ring-2 ring-rose-500/40'
                                     : 'bg-slate-950/95 border-rose-500/70 shadow-rose-950/50'
                           }`}>
-                            <div className="flex flex-col gap-3.5">
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-3.5 min-w-0">
-                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 font-bold shadow-md ${
+                            <div className="flex flex-col gap-2.5 sm:gap-3.5">
+                              <div className="flex items-center justify-between gap-2.5 sm:gap-3">
+                                <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                                  <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 font-bold shadow-md ${
                                     captureResult.type === 'SUCCESS'
                                       ? 'bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500/60'
                                       : captureResult.type === 'TWIN_AMBIGUOUS'
@@ -2109,39 +2109,39 @@ export default function FaceAttendanceCameraPage() {
                                           : 'bg-rose-500/20 text-rose-400 border-2 border-rose-500/60'
                                   }`}>
                                     {captureResult.type === 'SUCCESS' ? (
-                                      <CheckCircle className="w-7 h-7 sm:w-8 sm:h-8" />
+                                      <CheckCircle className="w-5 h-5 sm:w-8 sm:h-8" />
                                     ) : captureResult.type === 'TWIN_AMBIGUOUS' ? (
-                                      <Users className="w-7 h-7 sm:w-8 sm:h-8" />
+                                      <Users className="w-5 h-5 sm:w-8 sm:h-8" />
                                     ) : captureResult.type === 'UNKNOWN' ? (
-                                      <AlertTriangle className="w-7 h-7 sm:w-8 sm:h-8" />
+                                      <AlertTriangle className="w-5 h-5 sm:w-8 sm:h-8" />
                                     ) : (
-                                      <AlertCircle className="w-7 h-7 sm:w-8 sm:h-8" />
+                                      <AlertCircle className="w-5 h-5 sm:w-8 sm:h-8" />
                                     )}
                                   </div>
                                   <div className="min-w-0">
                                     {captureResult.type === 'SUCCESS' ? (
                                       <>
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <h3 className="text-base sm:text-lg font-black text-white truncate tracking-tight">{captureResult.name}</h3>
-                                          <Badge className="bg-emerald-500/30 text-emerald-300 border border-emerald-400 text-xs py-0.5 px-2 font-mono font-extrabold">
+                                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                          <h3 className="text-sm sm:text-lg font-black text-white truncate tracking-tight">{captureResult.name}</h3>
+                                          <Badge className="bg-emerald-500/30 text-emerald-300 border border-emerald-400 text-[10px] sm:text-xs py-0.5 px-1.5 sm:px-2 font-mono font-extrabold">
                                             {captureResult.confidence}% Akurat
                                           </Badge>
-                                          <Badge variant="outline" className="text-xs py-0.5 px-2 border-slate-600 text-slate-200 font-semibold">
+                                          <Badge variant="outline" className="text-[10px] sm:text-xs py-0.5 px-1.5 sm:px-2 border-slate-600 text-slate-200 font-semibold truncate max-w-[140px] sm:max-w-none">
                                             {captureResult.role} {captureResult.identifier ? `• ${captureResult.identifier}` : ''}
                                           </Badge>
                                         </div>
-                                        <p className="text-xs sm:text-sm text-emerald-300 font-bold mt-1 truncate">
+                                        <p className="text-xs sm:text-sm text-emerald-300 font-bold mt-0.5 sm:mt-1 truncate">
                                           {captureResult.attendanceMsg}
                                         </p>
                                       </>
                                     ) : (
                                       <>
-                                        <h3 className={`text-base sm:text-lg font-black ${
+                                        <h3 className={`text-sm sm:text-lg font-black ${
                                           captureResult.type === 'TWIN_AMBIGUOUS' ? 'text-cyan-300' : captureResult.type === 'UNKNOWN' ? 'text-amber-300' : 'text-rose-300'
                                         }`}>
                                           {captureResult.message}
                                         </h3>
-                                        <p className="text-xs sm:text-sm text-slate-200 font-medium mt-1 line-clamp-1">
+                                        <p className="text-[11px] sm:text-sm text-slate-200 font-medium mt-0.5 sm:mt-1 line-clamp-2">
                                           {captureResult.attendanceMsg}
                                         </p>
                                       </>
@@ -2149,7 +2149,7 @@ export default function FaceAttendanceCameraPage() {
                                   </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 shrink-0">
+                                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                   {captureResult.type === 'TWIN_AMBIGUOUS' ? (
                                     <Button
                                       size="sm"
@@ -2158,9 +2158,9 @@ export default function FaceAttendanceCameraPage() {
                                         e.stopPropagation()
                                         cancelTwinSelection()
                                       }}
-                                      className="min-h-[42px] px-3.5 text-xs sm:text-sm font-bold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 rounded-xl touch-manipulation"
+                                      className="min-h-[38px] sm:min-h-[42px] px-2.5 sm:px-3.5 text-xs sm:text-sm font-bold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 rounded-xl touch-manipulation"
                                     >
-                                      Batal / Pindai Ulang
+                                      Batal
                                     </Button>
                                   ) : (
                                     <>
@@ -2176,7 +2176,7 @@ export default function FaceAttendanceCameraPage() {
                                             if (cCtx) cCtx.clearRect(0, 0, canvas.width, canvas.height)
                                           }
                                         }}
-                                        className="min-h-[42px] px-3.5 text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 touch-manipulation"
+                                        className="min-h-[38px] sm:min-h-[42px] px-2.5 sm:px-3.5 text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 touch-manipulation"
                                       >
                                         Tutup
                                       </Button>
@@ -2188,9 +2188,9 @@ export default function FaceAttendanceCameraPage() {
                                           executeFaceCapture()
                                         }}
                                         disabled={isCapturing}
-                                        className="min-h-[42px] px-4 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-black gap-1.5 shadow-md touch-manipulation"
+                                        className="min-h-[38px] sm:min-h-[42px] px-3 sm:px-4 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-black gap-1 shadow-md touch-manipulation"
                                       >
-                                        <Camera className="w-4 h-4" />
+                                        <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                         <span>Scan Lagi</span>
                                       </Button>
                                     </>
@@ -2210,7 +2210,7 @@ export default function FaceAttendanceCameraPage() {
 
                               {/* Twin Candidates Option Buttons */}
                               {captureResult.type === 'TWIN_AMBIGUOUS' && captureResult.twinCandidates && captureResult.twinCandidates.length > 0 && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2.5 border-t border-cyan-500/30">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 pt-2 sm:pt-2.5 border-t border-cyan-500/30">
                                   {captureResult.twinCandidates.map((cand) => (
                                     <button
                                       key={cand.userId}
@@ -2220,26 +2220,26 @@ export default function FaceAttendanceCameraPage() {
                                         e.stopPropagation()
                                         handleConfirmTwinAttendance(cand)
                                       }}
-                                      className="min-h-[58px] flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-cyan-950/80 border-2 border-cyan-500/40 hover:border-cyan-400 active:scale-[0.99] transition-all text-left text-xs group cursor-pointer touch-manipulation disabled:opacity-50"
+                                      className="min-h-[52px] sm:min-h-[58px] flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-slate-900 hover:bg-cyan-950/80 border-2 border-cyan-500/40 hover:border-cyan-400 active:scale-[0.99] transition-all text-left text-xs group cursor-pointer touch-manipulation disabled:opacity-50"
                                     >
-                                      <div className="flex items-center gap-3 min-w-0 pr-2">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-800 overflow-hidden shrink-0 border border-slate-700 flex items-center justify-center">
+                                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-800 overflow-hidden shrink-0 border border-slate-700 flex items-center justify-center">
                                           {cand.avatarUrl ? (
                                             <img src={cand.avatarUrl} alt={cand.name} className="w-full h-full object-cover" />
                                           ) : (
-                                            <span className="font-bold text-slate-300 text-sm">{cand.name.charAt(0)}</span>
+                                            <span className="font-bold text-slate-300 text-xs sm:text-sm">{cand.name.charAt(0)}</span>
                                           )}
                                         </div>
                                         <div className="min-w-0">
-                                          <p className="font-extrabold text-white group-hover:text-cyan-300 truncate text-sm">{cand.name}</p>
-                                          <p className="text-[11px] text-slate-300 mt-0.5 truncate font-medium">
+                                          <p className="font-extrabold text-white group-hover:text-cyan-300 truncate text-xs sm:text-sm">{cand.name}</p>
+                                          <p className="text-[10px] sm:text-[11px] text-slate-300 mt-0.5 truncate font-medium">
                                             {cand.className || cand.role} • {cand.identifier}
                                           </p>
                                         </div>
                                       </div>
-                                      <span className="shrink-0 px-3 py-1.5 rounded-lg bg-cyan-400 group-hover:bg-cyan-300 text-slate-950 font-black text-xs shadow-md inline-flex items-center gap-1">
-                                        {isConfirmingTwin ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                                        <span>Pilih Ini →</span>
+                                      <span className="shrink-0 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-cyan-400 group-hover:bg-cyan-300 text-slate-950 font-black text-[11px] sm:text-xs shadow-md inline-flex items-center gap-1">
+                                        {isConfirmingTwin ? <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-spin" /> : null}
+                                        <span>Pilih →</span>
                                       </span>
                                     </button>
                                   ))}
@@ -2363,7 +2363,7 @@ export default function FaceAttendanceCameraPage() {
                   isOutdoorMode ? 'bg-black border-slate-800' : 'bg-slate-900/95 border-slate-800'
                 }`}>
                   {/* Primary Capture Action Area */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
                     <Button
                       size="lg"
                       onClick={() => {
@@ -2374,22 +2374,22 @@ export default function FaceAttendanceCameraPage() {
                         executeFaceCapture()
                       }}
                       disabled={!isSuperAdmin || isCapturing || (isBrowserMode ? !isBrowserCamStreaming : (!serviceStatus?.is_running || streamError))}
-                      className="flex-1 min-h-[52px] sm:min-h-[56px] text-base sm:text-lg font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-xl shadow-emerald-950/60 gap-3 transition-all active:scale-[0.98] border-2 border-emerald-400/50 cursor-pointer touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 min-h-[48px] sm:min-h-[56px] text-sm sm:text-lg font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-xl shadow-emerald-950/60 gap-2 sm:gap-3 transition-all active:scale-[0.98] border-2 border-emerald-400/50 cursor-pointer touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {!isSuperAdmin ? (
                         <>
-                          <Lock className="w-5 h-5 text-amber-300" />
-                          <span>Login Superadmin Diperlukan</span>
+                          <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 shrink-0" />
+                          <span className="truncate">Login Superadmin Diperlukan</span>
                         </>
                       ) : isCapturing ? (
                         <>
-                          <Loader2 className="w-6 h-6 animate-spin" />
-                          <span>Menganalisis Biometrik FaceNet...</span>
+                          <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin shrink-0" />
+                          <span className="truncate">Menganalisis FaceNet...</span>
                         </>
                       ) : (
                         <>
-                          <Camera className="w-6 h-6 animate-pulse" />
-                          <span>Ambil Foto & Pindai Presensi</span>
+                          <Camera className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse shrink-0" />
+                          <span className="truncate">Ambil Foto & Pindai Presensi</span>
                           <span className="hidden md:inline-block ml-1 text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-black/40 border border-white/30">
                             SPASI / ENTER
                           </span>
@@ -2397,25 +2397,25 @@ export default function FaceAttendanceCameraPage() {
                       )}
                     </Button>
 
-                    <div className="flex items-center gap-2.5 self-center sm:self-auto">
+                    <div className="flex items-center justify-between sm:justify-start gap-2 self-stretch sm:self-auto">
                       {/* Mode Presensi Switcher */}
-                      <div className="inline-flex p-1 bg-slate-950 rounded-xl border border-slate-800">
+                      <div className="inline-flex p-1 bg-slate-950 rounded-xl border border-slate-800 flex-1 sm:flex-initial justify-center">
                         <button
                           type="button"
                           onClick={() => setScanMode('MANUAL')}
-                          className={`min-h-[44px] px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all touch-manipulation ${
+                          className={`flex-1 sm:flex-initial min-h-[40px] sm:min-h-[44px] px-3 sm:px-3.5 py-1 text-xs font-bold rounded-lg transition-all touch-manipulation ${
                             scanMode === 'MANUAL'
                               ? 'bg-emerald-600 text-white shadow-md'
                               : 'text-slate-400 hover:text-slate-200'
                           }`}
-                          title="Mode Manual: Scan hanya berjalan saat tombol capture ditekan (Hemat server & akurat)"
+                          title="Mode Manual: Scan hanya berjalan saat tombol capture ditekan"
                         >
                           Manual
                         </button>
                         <button
                           type="button"
                           onClick={() => setScanMode('AUTO')}
-                          className={`min-h-[44px] px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all touch-manipulation ${
+                          className={`flex-1 sm:flex-initial min-h-[40px] sm:min-h-[44px] px-3 sm:px-3.5 py-1 text-xs font-bold rounded-lg transition-all touch-manipulation ${
                             scanMode === 'AUTO'
                               ? 'bg-amber-600 text-white shadow-md'
                               : 'text-slate-400 hover:text-slate-200'
@@ -2431,28 +2431,28 @@ export default function FaceAttendanceCameraPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => setSoundEnabled(!soundEnabled)}
-                        className={`min-h-[44px] min-w-[44px] px-3 rounded-xl border-slate-800 touch-manipulation ${
+                        className={`min-h-[40px] sm:min-h-[44px] min-w-[40px] sm:min-w-[44px] px-2.5 sm:px-3 rounded-xl border-slate-800 touch-manipulation shrink-0 ${
                           soundEnabled ? 'text-emerald-400 bg-emerald-950/40 border-emerald-700/50' : 'text-slate-500 bg-slate-950'
                         }`}
                         title={soundEnabled ? 'Audio Suara Aktif (Klik untuk Senyap)' : 'Audio Senyap (Klik untuk Mengaktifkan Suara)'}
                       >
-                        {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                        {soundEnabled ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" /> : <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />}
                       </Button>
                     </div>
                   </div>
 
                   {/* Informational Sub-Bar */}
-                  <div className="flex items-center justify-between text-xs text-slate-400 pt-1.5 border-t border-slate-800/60 font-medium">
-                    <div className="flex items-center gap-2 truncate">
-                      <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div className="flex items-center justify-between text-[11px] sm:text-xs text-slate-400 pt-1.5 border-t border-slate-800/60 font-medium">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                       <span className="truncate">
                         {scanMode === 'MANUAL' 
-                          ? 'Mode Manual aktif: Bebas salah scan & sangat hemat resource server.' 
-                          : 'Mode Auto-Scan aktif: Memindai otomatis saat wajah berada di bingkai.'}
+                          ? 'Mode Manual: Bebas salah scan & hemat server.' 
+                          : 'Mode Auto-Scan: Memindai otomatis wajah di frame.'}
                       </span>
                     </div>
-                    <span className="hidden sm:inline-block font-mono text-[11px] text-slate-400 shrink-0 font-bold">
-                      FaceNet 512-D • MTCNN
+                    <span className="font-mono text-[10px] sm:text-[11px] text-slate-400 shrink-0 font-bold ml-2">
+                      FaceNet 512-D
                     </span>
                   </div>
                 </div>
@@ -2461,30 +2461,30 @@ export default function FaceAttendanceCameraPage() {
 
             {/* RIGHT BOX (5 COLS): REALTIME LIVE SCANNER LOGS */}
             <div className="lg:col-span-5 space-y-3">
-              <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 flex flex-col h-[580px] rounded-2xl overflow-hidden bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl">
-                <CardHeader className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold shadow-xs">
-                        <Activity className="w-4.5 h-4.5" />
+              <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 flex flex-col h-[480px] sm:h-[540px] lg:h-[580px] rounded-2xl overflow-hidden bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl">
+                <CardHeader className="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold shadow-xs shrink-0">
+                        <Activity className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-sm font-bold text-slate-900 dark:text-white">Scanner Log Realtime</CardTitle>
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 animate-pulse">
-                            Live Sync
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <CardTitle className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">Scanner Log Realtime</CardTitle>
+                          <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[9px] sm:text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 animate-pulse shrink-0">
+                            Live
                           </span>
                         </div>
-                        <CardDescription className="text-[11px] text-slate-500 dark:text-slate-400">Verifikasi snapshot wajah & pencatatan presensi</CardDescription>
+                        <CardDescription className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">Verifikasi snapshot wajah & presensi</CardDescription>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-1 shrink-0 ml-auto">
                       {/* Toggle Filter Hari Ini vs Semua Arsip */}
                       <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
                         <button
                           type="button"
                           onClick={() => setLogFilterMode('TODAY')}
-                          className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
+                          className={`px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-[11px] font-bold rounded-md transition-all ${
                             logFilterMode === 'TODAY'
                               ? 'bg-indigo-600 text-white shadow-xs'
                               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -2495,13 +2495,13 @@ export default function FaceAttendanceCameraPage() {
                         <button
                           type="button"
                           onClick={() => setLogFilterMode('ALL')}
-                          className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
+                          className={`px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-[11px] font-bold rounded-md transition-all ${
                             logFilterMode === 'ALL'
                               ? 'bg-indigo-600 text-white shadow-xs'
                               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                           }`}
                         >
-                          Semua Arsip
+                          Semua
                         </button>
                       </div>
 

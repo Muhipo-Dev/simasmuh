@@ -6,6 +6,7 @@ import { PublicNavbar } from '@/components/layout/PublicNavbar'
 import { AppFooter } from '@/components/layout/AppFooter'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { getAppFeatureUrl } from '@/lib/api-config'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -678,7 +679,7 @@ export default function VerifikasiTtdPage() {
                     <p className="text-xs text-slate-500 font-bold uppercase">QR Verifikasi Keaslian Dokumen</p>
                     <div className="p-2 bg-white rounded-xl border border-slate-300 inline-block shadow-xs">
                       <QRCodeSVG
-                        value={typeof window !== 'undefined' ? `${window.location.origin}/verifikasi-ttd?token=${verifiedResult.eSignToken}` : verifiedResult.eSignToken}
+                        value={getAppFeatureUrl(`/verifikasi-ttd?token=${verifiedResult.eSignToken}`)}
                         size={100}
                         level="H"
                       />

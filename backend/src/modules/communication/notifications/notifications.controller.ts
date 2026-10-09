@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
+import { ScheduleNotificationsService } from './schedule-notifications.service';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
 import { RolesGuard } from '../../core/auth/roles.guard';
 import {
@@ -22,7 +23,27 @@ import {
 @Controller('notifications')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly scheduleNotificationsService: ScheduleNotificationsService,
+  ) {}
+
+  /**
+   * Broadcast ringkasan jadwal pelajaran hari ini ke seluruh siswa (atau per kelas)
+   */
+  @Post('schedule/dispatch-today')
+  @RequirePermissions(PaymentPermission.SYSTEM_CONFIGURATION)
+  async dispatchTodayScheduleNotifications(@Body() body?: { classId?: string }) {
+    return this.scheduleNotificationsService.sendDailyScheduleSummaries(body?.classId);
+  }
+
+  /**
+   * Test pengiriman notifikasi jadwal pelajaran untuk akun siswa yang login
+   */
+  @Post('schedule/test-my-schedule')
+  async testMyScheduleNotification(@Req() req: any) {
+    return this.scheduleNotificationsService.triggerTestScheduleNotification(req.user.id);
+  }
 
   /**
    * Get user's notifications
@@ -68,9 +89,9 @@ export class NotificationsController {
   @Post('test-email')
   async sendTestEmail(
     @Req() req: any,
-    @Body() body?: { email?: string },
+    @Body() body?: { email?: string; templateType?: string },
   ) {
-    return this.notificationsService.sendTestEmail(req.user.id, body?.email);
+    return this.notificationsService.sendTestEmail(req.user.id, body?.email, body?.templateType);
   }
 
   /**

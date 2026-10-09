@@ -346,6 +346,12 @@ export class WaitingRoomService implements OnModuleInit {
     if (typeof cpuThreshold === 'number') this.cpuThreshold = cpuThreshold;
     if (typeof ramThreshold === 'number') this.ramThreshold = ramThreshold;
 
+    await this.savePersistedConfig();
+
+    return this.getMetrics();
+  }
+
+  private async savePersistedConfig() {
     if (this.prisma) {
       try {
         const payload = JSON.stringify({
@@ -366,7 +372,6 @@ export class WaitingRoomService implements OnModuleInit {
         this.logger.warn(`⚠️ [Waiting Room] Gagal menyimpan konfigurasi permanen ke database: ${err?.message}`);
       }
     }
-
     return this.getMetrics();
   }
 

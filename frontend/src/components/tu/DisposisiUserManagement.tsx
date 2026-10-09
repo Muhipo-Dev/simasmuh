@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { QRCodeSVG } from 'qrcode.react'
 import Swal from 'sweetalert2'
+import { getAppFeatureUrl } from '@/lib/api-config'
 
 export function DisposisiUserManagement() {
   const { data: session } = useSession()
@@ -242,8 +243,7 @@ export function DisposisiUserManagement() {
     const isTarget = (val: string) => (targetList.includes(val) ? '✓' : '')
 
     const tokenEsign = disp.eSignToken || 'DSP8492'
-    const verifyBaseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://simasmuh.razagopo.my.id'
-    const verifyUrl = `${verifyBaseUrl}/verifikasi-ttd?token=${tokenEsign}`
+    const verifyUrl = getAppFeatureUrl(`/verifikasi-ttd?token=${tokenEsign}`)
 
     printWindow.document.write(`
       <!DOCTYPE html>

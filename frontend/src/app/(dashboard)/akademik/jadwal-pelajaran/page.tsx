@@ -784,48 +784,100 @@ export default function JadwalPelajaranPage() {
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              <Button
-                onClick={handlePrint}
-                variant="outline"
-                className="bg-white/10 hover:bg-white/20 text-white border-white/20 font-semibold px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm shadow-sm"
-                title="Cetak Jadwal Pelajaran (A4 Landscape)"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Cetak Jadwal A4</span>
-              </Button>
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Button
+                  onClick={handlePrint}
+                  variant="outline"
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/20 font-semibold px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm shadow-sm"
+                  title="Cetak Jadwal Pelajaran (A4 Landscape)"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Cetak Jadwal A4</span>
+                </Button>
 
-              {isSuperAdmin && (
-                <>
+                {role === 'SISWA' && (
                   <Button
-                    onClick={() => setImportModalOpen(true)}
-                    className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold px-3.5 py-2 rounded-xl shadow-md hover:shadow-amber-400/20 transition-all flex items-center justify-center gap-2 border border-amber-300 text-xs"
-                  >
-                    <FileCode className="w-4 h-4 text-indigo-900" />
-                    <span>Import aSc (XML)</span>
-                  </Button>
-                  <Button
-                    onClick={handleOpenAdd}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3.5 py-2 rounded-xl shadow-md hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 text-xs"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Tambah Manual</span>
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setAuthPassword('')
-                      setAuthError('')
-                      setDeleteAllModalOpen(true)
+                    onClick={async () => {
+                      try {
+                        const res = await authenticatedFetch('/api-backend/notifications/schedule/test-my-schedule', {
+                          method: 'POST'
+                        })
+                        const data = await res.json()
+                        if (res.ok && data.success) {
+                          alert('✓ Notifikasi ringkasan jadwal pelajaran hari ini berhasil dikirimkan ke email Anda!')
+                        } else {
+                          alert(data.message || 'Gagal mengirim email jadwal pelajaran. Pastikan akun email Anda sudah tertaut.')
+                        }
+                      } catch (e: any) {
+                        alert(`Terjadi kesalahan: ${e.message}`)
+                      }
                     }}
-                    className="bg-rose-500/90 hover:bg-rose-600 text-white font-bold px-3.5 py-2 rounded-xl shadow-md hover:shadow-rose-500/20 transition-all flex items-center justify-center gap-2 border border-rose-400/40 text-xs"
+                    variant="outline"
+                    className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border-emerald-400/40 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm shadow-sm"
+                    title="Kirim Jadwal Hari Ini ke Email Saya"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Hapus Semua</span>
+                    <BookOpen className="w-4 h-4 text-emerald-300" />
+                    <span>Kirim ke Email Saya</span>
                   </Button>
-                </>
-              )}
-            </div>
+                )}
+
+                {isSuperAdmin && (
+                  <>
+                    <Button
+                      onClick={async () => {
+                        if (confirm('Kirimkan notifikasi email ringkasan jadwal pelajaran hari ini ke seluruh siswa aktif?')) {
+                          try {
+                            const res = await authenticatedFetch('/api-backend/notifications/schedule/dispatch-today', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({})
+                            })
+                            const data = await res.json()
+                            if (res.ok && data.success) {
+                              alert(`✓ ${data.message}`)
+                            } else {
+                              alert(data.message || 'Gagal mendistribusikan notifikasi email jadwal.')
+                            }
+                          } catch (e: any) {
+                            alert(`Terjadi kesalahan: ${e.message}`)
+                          }
+                        }
+                      }}
+                      className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-3.5 py-2 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 border border-blue-400/40 text-xs"
+                      title="Kirim Jadwal Hari Ini ke Email Seluruh Siswa"
+                    >
+                      <BookOpen className="w-4 h-4 text-blue-100" />
+                      <span>Kirim Email Jadwal Hari Ini</span>
+                    </Button>
+                    <Button
+                      onClick={() => setImportModalOpen(true)}
+                      className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold px-3.5 py-2 rounded-xl shadow-md hover:shadow-amber-400/20 transition-all flex items-center justify-center gap-2 border border-amber-300 text-xs"
+                    >
+                      <FileCode className="w-4 h-4 text-indigo-900" />
+                      <span>Import aSc (XML)</span>
+                    </Button>
+                    <Button
+                      onClick={handleOpenAdd}
+                      className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3.5 py-2 rounded-xl shadow-md hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 text-xs"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Tambah Manual</span>
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setAuthPassword('')
+                        setAuthError('')
+                        setDeleteAllModalOpen(true)
+                      }}
+                      className="bg-rose-500/90 hover:bg-rose-600 text-white font-bold px-3.5 py-2 rounded-xl shadow-md hover:shadow-rose-500/20 transition-all flex items-center justify-center gap-2 border border-rose-400/40 text-xs"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Hapus Semua</span>
+                    </Button>
+                  </>
+                )}
+              </div>
           </div>
         </div>
 

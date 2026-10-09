@@ -809,6 +809,15 @@ export class CharacterAssessmentsService {
       const notifTitle = `Catatan ${notifCategory}: ${dto.title || assessment.title}`;
       const notifMessage = `Siswa: ${student.name} (${student.class?.name || '-'}). ${dto.description || dto.title}. Poin: ${points > 0 ? '+' : ''}${points}. Diverifikasi & Diterapkan Bagian Ketertiban.`;
 
+      // Kalkulasi skor kedisiplinan & predikat saat ini
+      let currentScore: number | undefined = undefined;
+      let currentGrade: string | undefined = undefined;
+      try {
+        const summary = await this.getStudentSummary(student.id);
+        currentScore = summary.kedisiplinanScore;
+        currentGrade = summary.kedisiplinanGrade;
+      } catch {}
+
       // In-App ke Siswa jika memiliki akun
       if (student.userId) {
         await this.prisma.notification.create({
@@ -823,6 +832,8 @@ export class CharacterAssessmentsService {
               assessmentId: assessment.id,
               category: dto.category,
               points,
+              score: currentScore,
+              grade: currentGrade,
             },
           },
         });
@@ -843,6 +854,9 @@ export class CharacterAssessmentsService {
                 assessmentId: assessment.id,
                 studentId: student.id,
                 category: dto.category,
+                points,
+                score: currentScore,
+                grade: currentGrade,
               },
             },
           });
@@ -857,23 +871,19 @@ export class CharacterAssessmentsService {
         });
         if (studentUser?.email && studentUser.email.includes('@')) {
           this.emailNotificationService
-            .sendEmailNotification({
-              to: studentUser.email,
-              subject: `[Catatan Siswa] ${notifTitle}`,
-              title: notifTitle,
-              category: 'KEDISIPLINAN',
-              badgeLabel: notifCategory,
+            .sendDisciplineNotification({
+              toEmail: studentUser.email,
               recipientName: studentUser.name,
-              contentText: notifMessage,
-              metaDetails: [
-                { label: 'Nama Siswa', value: student.name },
-                { label: 'Kelas', value: student.class?.name || '-' },
-                { label: 'Kategori', value: notifCategory },
-                { label: 'Poin Evaluasi', value: `${points > 0 ? '+' : ''}${points}` },
-                { label: 'Tindak Lanjut', value: dto.actionTaken || assessment.actionTaken || 'Diterapkan Bagian Ketertiban' },
-              ],
-              actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/akademik/etika-tatib`,
-              actionText: 'Lihat Catatan',
+              studentName: student.name,
+              className: student.class?.name || '-',
+              category: dto.category || assessment.category || 'KEDISIPLINAN',
+              title: dto.title || assessment.title,
+              points,
+              description: dto.description || assessment.description,
+              actionTaken: dto.actionTaken || assessment.actionTaken || 'Diterapkan Bagian Ketertiban',
+              evaluatorOrVerifierName: evaluator?.name,
+              currentScore,
+              currentGrade,
             })
             .catch(() => {});
         }
@@ -887,23 +897,19 @@ export class CharacterAssessmentsService {
           });
           if (parentUser?.email && parentUser.email.includes('@')) {
             this.emailNotificationService
-              .sendEmailNotification({
-                to: parentUser.email,
-                subject: `[Catatan Ananda] ${notifTitle}`,
-                title: notifTitle,
-                category: 'KEDISIPLINAN',
-                badgeLabel: notifCategory,
+              .sendDisciplineNotification({
+                toEmail: parentUser.email,
                 recipientName: parentUser.name,
-                contentText: notifMessage,
-                metaDetails: [
-                  { label: 'Nama Siswa', value: student.name },
-                  { label: 'Kelas', value: student.class?.name || '-' },
-                  { label: 'Kategori', value: notifCategory },
-                  { label: 'Poin Evaluasi', value: `${points > 0 ? '+' : ''}${points}` },
-                  { label: 'Tindak Lanjut', value: dto.actionTaken || assessment.actionTaken || 'Diterapkan Bagian Ketertiban' },
-                ],
-                actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/akademik/etika-tatib`,
-                actionText: 'Lihat Catatan Siswa',
+                studentName: student.name,
+                className: student.class?.name || '-',
+                category: dto.category || assessment.category || 'KEDISIPLINAN',
+                title: dto.title || assessment.title,
+                points,
+                description: dto.description || assessment.description,
+                actionTaken: dto.actionTaken || assessment.actionTaken || 'Diterapkan Bagian Ketertiban',
+                evaluatorOrVerifierName: evaluator?.name,
+                currentScore,
+                currentGrade,
               })
               .catch(() => {});
           }

@@ -51,6 +51,16 @@ export enum NotificationType {
   EKSKUL_KEANGGOTAAN = 'EKSKUL_KEANGGOTAAN',
   EKSKUL_PRESENSI = 'EKSKUL_PRESENSI',
   EKSKUL_NILAI = 'EKSKUL_NILAI',
+
+  // Jadwal Pelajaran
+  JADWAL_PELAJARAN_TODAY = 'JADWAL_PELAJARAN_TODAY',
+  JADWAL_PELAJARAN_REMINDER = 'JADWAL_PELAJARAN_REMINDER',
+
+  // Kepegawaian & Penggajian (Payroll)
+  PAYROLL_ISSUED = 'PAYROLL_ISSUED',
+  LEAVE_APPROVED = 'LEAVE_APPROVED',
+  LEAVE_REJECTED = 'LEAVE_REJECTED',
+  TEACHING_SCHEDULE_UPDATE = 'TEACHING_SCHEDULE_UPDATE',
 }
 
 export enum NotificationPriority {
@@ -451,8 +461,33 @@ export class NotificationsService {
     this.logger.log(`Dispatching email notification to ${notification.user.email}`);
 
     let category: any = 'SISTEM';
+    let actionUrl = '/dashboard';
+    let actionText = 'Buka Dashboard';
+
     if (notification.type?.includes('PAYMENT') || notification.type?.includes('TAGIHAN')) {
       category = 'KEUANGAN';
+      actionUrl = '/keuangan/tagihan-saya';
+      actionText = 'Lihat Tagihan';
+    } else if (notification.type === 'PAYROLL_ISSUED') {
+      category = 'PAYROLL';
+      actionUrl = '/keuangan/slip-gaji-saya';
+      actionText = 'Lihat Slip Gaji';
+    } else if (notification.type?.includes('DISPOSISI') || notification.type?.includes('SURAT')) {
+      category = 'DISPOSISI';
+      actionUrl = '/tu/surat-masuk';
+      actionText = 'Buka Persuratan';
+    } else if (notification.type?.includes('LEAVE') || notification.type?.includes('CUTI')) {
+      category = 'CUTI';
+      actionUrl = '/kepegawaian/cuti';
+      actionText = 'Lihat Status Cuti';
+    } else if (notification.type?.includes('PERANGKAT_AJAR')) {
+      category = 'AKADEMIK';
+      actionUrl = '/akademik/perangkat-ajar';
+      actionText = 'Lihat Perangkat Ajar';
+    } else if (notification.type?.includes('JADWAL')) {
+      category = 'AKADEMIK';
+      actionUrl = '/akademik/jadwal-pelajaran';
+      actionText = 'Lihat Jadwal Mengajar';
     }
 
     await this.emailNotificationService.sendEmailNotification({
@@ -462,8 +497,8 @@ export class NotificationsService {
       category,
       recipientName: notification.user.name,
       contentText: notification.message,
-      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/dashboard`,
-      actionText: 'Buka Dashboard',
+      actionUrl,
+      actionText,
     });
 
     // Emit event for other handlers if any
@@ -514,12 +549,16 @@ export class NotificationsService {
       notifGaji: true,
       notifDisposisi: true,
       notifIzinCuti: true,
+      notifPerangkatAjar: true,
+      notifJadwalMengajar: true,
       notifPengumuman: true,
     };
 
     const defaultStudentPreferences = {
       notifPresensiMasuk: true,
       notifPresensiPulang: true,
+      notifJadwalPelajaran: true,
+      notifReminderJadwal: true,
       notifTagihan: true,
       notifTagihanLunas: true,
       notifIzinCuti: true,
@@ -594,9 +633,9 @@ export class NotificationsService {
   }
 
   /**
-   * Send test push notification email to user's Google account
+   * Send test push notification email to user's Google account with optional template sample
    */
-  async sendTestEmail(userId: string, customEmail?: string) {
+  async sendTestEmail(userId: string, customEmail?: string, templateType: string = 'PENGUMUMAN') {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, name: true, email: true, role: true },
@@ -612,27 +651,114 @@ export class NotificationsService {
     }
 
     const isStaff = this.isStaffRole(user.role);
-    const contentText = isStaff
-      ? 'Email Anda berhasil terhubung dengan SIMASMUH SMA Muhammadiyah 1 Ponorogo. Notifikasi resmi absensi pegawai, slip gaji & tunjangan, lembar disposisi persuratan, perizinan cuti, dan pengumuman dinas akan dikirimkan ke alamat email ini.'
-      : 'Email Anda berhasil terhubung dengan SIMASMUH SMA Muhammadiyah 1 Ponorogo. Notifikasi resmi absensi siswa, rincian tagihan SPP, kwitansi pembayaran lunas, perizinan, dan pengumuman sekolah akan dikirimkan ke alamat email ini.';
+    const timeStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB';
 
-    const result = await this.emailNotificationService.sendEmailNotification({
-      to: targetEmail,
-      subject: `[Uji Coba] Notifikasi Email SIMASMUH`,
-      title: 'Uji Coba Notifikasi Email Berhasil',
-      category: 'SISTEM',
-      badgeLabel: isStaff ? 'NOTIFIKASI PEGAWAI' : 'NOTIFIKASI SISWA',
-      recipientName: user.name,
-      contentText,
-      metaDetails: [
-        { label: 'Nama Pengguna', value: user.name },
-        { label: 'Peran Akun', value: user.role },
-        { label: 'Alamat Email', value: targetEmail },
-        { label: 'Waktu Pengiriman', value: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB' },
-      ],
-      actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/pengaturan/notifikasi-pengguna`,
-      actionText: 'Kelola Pengaturan Notifikasi',
-    });
+    let result: any;
+
+    if (templateType === 'PAYROLL') {
+      result = await this.emailNotificationService.sendPayrollNotification({
+        toEmail: targetEmail,
+        employeeName: user.name,
+        periodFormatted: 'Oktober 2026',
+        netSalaryFormatted: 'Rp 4.850.000',
+        totalHours: 28,
+        attendanceDays: 22,
+        bankAccountInfo: 'BSI (Bank Syariah Indonesia) - 7123456789 a.n. ' + user.name,
+      });
+    } else if (templateType === 'DISPOSISI') {
+      result = await this.emailNotificationService.sendDisposisiNotification({
+        toEmail: targetEmail,
+        employeeName: user.name,
+        mailNumber: '421.3/284/SMA.MUH/2026',
+        perihal: 'Undangan Koordinasi Asesmen & Supervisi Pendidikan Muhammadiyah',
+        senderAgency: 'Majelis Dikdasmen PDM Ponorogo',
+        instructionText: 'Mohon hadir mewakili sekolah dan persiapkan laporan perkembangan akademik semester berjalan.',
+      });
+    } else if (templateType === 'JADWAL') {
+      if (isStaff) {
+        result = await this.emailNotificationService.sendTeacherDailyScheduleNotification({
+          toEmail: targetEmail,
+          teacherName: user.name,
+          dayName: 'Senin',
+          dateFormatted: '12 Oktober 2026',
+          totalSessions: 3,
+          scheduleTableHtml: `
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding:10px 12px; font-weight:700; color:#0f766e; font-family:monospace;">07:15 - 08:45</td><td style="padding:10px 12px; font-weight:700; color:#1e3a8a;">X 1</td><td style="padding:10px 12px;">Matematika Wajib</td><td style="padding:10px 12px; color:#64748b;">R. 101</td></tr>
+            <tr style="border-bottom: 1px solid #e2e8f0; background:#f8fafc;"><td style="padding:10px 12px; font-weight:700; color:#0f766e; font-family:monospace;">09:00 - 10:30</td><td style="padding:10px 12px; font-weight:700; color:#1e3a8a;">XI 2</td><td style="padding:10px 12px;">Matematika Tingkat Lanjut</td><td style="padding:10px 12px; color:#64748b;">R. 202</td></tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding:10px 12px; font-weight:700; color:#0f766e; font-family:monospace;">10:45 - 12:15</td><td style="padding:10px 12px; font-weight:700; color:#1e3a8a;">XII 1</td><td style="padding:10px 12px;">Matematika Peminatan</td><td style="padding:10px 12px; color:#64748b;">R. 301</td></tr>
+          `,
+        });
+      } else {
+        result = await this.emailNotificationService.sendEmailNotification({
+          to: targetEmail,
+          subject: `[Jadwal Hari Ini] Senin - Kelas X 1`,
+          title: `Jadwal Pelajaran Hari Senin`,
+          category: 'AKADEMIK',
+          badgeLabel: 'JADWAL HARI INI',
+          recipientName: user.name,
+          contentText: `Berikut adalah ringkasan susunan mata pelajaran Anda hari ini: Matematika Wajib (07:15 - 08:45), Bahasa Indonesia (09:00 - 10:30), dan Fisika (10:45 - 12:15).`,
+          metaDetails: [
+            { label: 'Nama Siswa', value: user.name },
+            { label: 'Kelas', value: 'X 1' },
+            { label: 'Hari & Tanggal', value: 'Senin, 12 Oktober 2026' },
+            { label: 'Total Pembelajaran', value: '3 Sesi Mapel' },
+          ],
+          actionUrl: '/akademik/jadwal-pelajaran',
+          actionText: 'Buka Jadwal Pelajaran',
+        });
+      }
+    } else if (templateType === 'PRESENSI') {
+      result = await this.emailNotificationService.sendAttendanceNotification({
+        toEmail: targetEmail,
+        studentOrUserName: user.name,
+        status: 'HADIR (Tepat Waktu)',
+        time: '06:42 WIB',
+        dateFormatted: 'Jumat, 9 Oktober 2026',
+        type: 'MASUK',
+      });
+    } else if (templateType === 'TAGIHAN') {
+      result = await this.emailNotificationService.sendTagihanNotification({
+        toEmail: targetEmail,
+        recipientName: user.name,
+        studentName: user.name,
+        tagihanType: 'SPP Bulan Oktober 2026',
+        amountFormatted: 'Rp 300.000',
+        monthYear: 'Oktober 2026',
+        dueDateFormatted: '10 Oktober 2026',
+      });
+    } else if (templateType === 'KWITANSI') {
+      result = await this.emailNotificationService.sendPaymentReceiptNotification({
+        toEmail: targetEmail,
+        recipientName: user.name,
+        studentName: user.name,
+        tagihanType: 'SPP Bulan Oktober 2026',
+        amountFormatted: 'Rp 300.000',
+        paidDateFormatted: '9 Oktober 2026 14:20 WIB',
+        receiptNumber: 'KW-202610-0089',
+      });
+    } else {
+      const contentText = isStaff
+        ? 'Email Anda berhasil terhubung dengan SIMASMUH SMA Muhammadiyah 1 Ponorogo. Notifikasi resmi absensi pegawai, slip gaji & tunjangan, lembar disposisi persuratan, perizinan cuti, dan pengumuman dinas akan dikirimkan ke alamat email ini.'
+        : 'Email Anda berhasil terhubung dengan SIMASMUH SMA Muhammadiyah 1 Ponorogo. Notifikasi resmi absensi siswa, rincian tagihan SPP, kwitansi pembayaran lunas, perizinan, dan pengumuman sekolah akan dikirimkan ke alamat email ini.';
+
+      result = await this.emailNotificationService.sendEmailNotification({
+        to: targetEmail,
+        subject: `[Uji Coba] Notifikasi Email SIMASMUH`,
+        title: 'Uji Coba Notifikasi Email Berhasil',
+        category: 'SISTEM',
+        badgeLabel: isStaff ? 'NOTIFIKASI PEGAWAI' : 'NOTIFIKASI SISWA',
+        recipientName: user.name,
+        contentText,
+        metaDetails: [
+          { label: 'Nama Pengguna', value: user.name },
+          { label: 'Peran Akun', value: user.role },
+          { label: 'Alamat Email', value: targetEmail },
+          { label: 'Waktu Pengiriman', value: timeStr },
+        ],
+        actionUrl: '/pengaturan/notifikasi-pengguna',
+        actionText: 'Kelola Pengaturan Notifikasi',
+      });
+    }
 
     if (!result.success) {
       return {
@@ -759,7 +885,7 @@ export class NotificationsService {
           category: data.category || 'PENGUMUMAN',
           recipientName: recipient.name,
           contentText: data.message,
-          actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/informasi/pengumuman`,
+          actionUrl: '/informasi/pengumuman',
           actionText: 'Lihat Pengumuman',
         });
 

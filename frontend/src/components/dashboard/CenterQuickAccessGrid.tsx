@@ -167,19 +167,19 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
       {/* Searchbar & Tombol Filter Terpusat (Popover) */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari tombol akses cepat atau menu..."
-            className="pl-8 sm:pl-9 pr-8 h-9 text-xs sm:text-sm bg-white/90 dark:bg-slate-900/90 border-slate-200/80 dark:border-slate-800 rounded-xl shadow-2xs focus-visible:ring-blue-500"
+            placeholder="Cari menu / tombol akses cepat..."
+            className="pl-9 pr-8 h-10 text-xs sm:text-sm bg-white/95 dark:bg-slate-900/95 border-slate-200/90 dark:border-slate-800 rounded-xl shadow-2xs focus-visible:ring-blue-500"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
               title="Hapus pencarian"
             >
               <X className="w-3.5 h-3.5" />
@@ -196,7 +196,7 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
                   type="button"
                   variant="outline"
                   size="sm"
-                  className={`h-9 px-2.5 sm:px-3 text-xs font-bold rounded-xl gap-1.5 shrink-0 transition-all ${
+                  className={`h-10 px-3 text-xs font-bold rounded-xl gap-1.5 shrink-0 transition-all ${
                     selectedGroup !== 'ALL'
                       ? 'border-blue-500/60 bg-blue-50/80 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300'
                       : 'border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -205,7 +205,7 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
                   <Filter className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Kategori</span>
                   {selectedGroup !== 'ALL' && (
-                    <Badge className="h-4 px-1 text-[9.5px] font-black bg-blue-600 text-white rounded-full">
+                    <Badge className="h-4.5 px-1.5 text-[9.5px] font-black bg-blue-600 text-white rounded-full">
                       1
                     </Badge>
                   )}
@@ -312,7 +312,7 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
         </div>
       ) : sortedGroupKeys.length <= 1 ? (
         /* Jika hanya ada 1 grup */
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-1.5 sm:gap-2.5">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-2.5">
           {filteredLinks.map((link, idx) => renderCard(link, idx))}
         </div>
       ) : (
@@ -343,7 +343,7 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
                     {groupName} ({items.length})
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-2.5">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-2.5">
                   {items.map((link) => {
                     const card = renderCard(link, globalIndex)
                     globalIndex++
@@ -367,23 +367,23 @@ function renderCard(link: QuickActionItem, idx: number) {
     <Link
       key={link.href + idx}
       href={link.href}
-      className="group relative block rounded-2xl transition-all duration-150 hover:-translate-y-0.5 active:scale-[0.97]"
+      className="group relative block rounded-2xl transition-all duration-150 hover:-translate-y-0.5 active:scale-[0.96]"
     >
       <div
-        className={`h-full min-h-[72px] sm:min-h-[78px] p-2.5 sm:p-3 rounded-2xl border flex flex-col items-center justify-center text-center gap-1.5 transition-all shadow-2xs ${styleClass}`}
+        className={`h-full min-h-[78px] sm:min-h-[84px] p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-center text-center gap-1 sm:gap-1.5 transition-all shadow-2xs ${styleClass}`}
       >
         {/* Flat Contrast Icon Badge */}
-        <div className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-xl bg-white dark:bg-slate-900 border border-black/5 dark:border-white/10 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform duration-200 shrink-0">
-          <Icon className="w-4 h-4 text-slate-800 dark:text-slate-100" />
+        <div className="w-7.5 h-7.5 sm:w-8.5 sm:h-8.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-black/5 dark:border-white/10 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform duration-200 shrink-0">
+          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-800 dark:text-slate-100" />
         </div>
 
         {/* Text Details */}
         <div className="space-y-0.5 w-full min-w-0">
-          <h4 className="font-extrabold text-[11.5px] sm:text-xs leading-tight tracking-tight line-clamp-2">
+          <h4 className="font-extrabold text-[10.5px] sm:text-xs leading-tight tracking-tight line-clamp-2">
             {link.name}
           </h4>
           {link.subtitle && (
-            <p className="text-[9.5px] opacity-80 font-medium leading-tight truncate">
+            <p className="text-[8.5px] sm:text-[9.5px] opacity-80 font-medium leading-tight truncate">
               {link.subtitle}
             </p>
           )}

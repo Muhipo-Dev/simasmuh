@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { SystemLogService } from '../services/system-log.service';
 import { EmailNotificationService } from '../../communication/notifications/email.service';
+import { MaintenanceService } from '../maintenance/maintenance.service';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class AuthService {
     private jwtService: JwtService,
     private systemLogService: SystemLogService,
     private emailNotificationService: EmailNotificationService,
+    private maintenanceService: MaintenanceService,
   ) {}
 
   async login(
@@ -120,6 +122,27 @@ export class AuthService {
         userAgent,
       });
       throw new UnauthorizedException('Email, username, atau kata sandi salah');
+    }
+
+    // 🔒 Pemeriksaan Mode Pemeliharaan Sistem (Maintenance Mode)
+    if (this.maintenanceService.isMaintenanceActive()) {
+      const isAllowed = this.maintenanceService.isRoleAllowedDuringMaintenance(user);
+      if (!isAllowed) {
+        await this.systemLogService.log({
+          category: 'AUTH',
+          level: 'WARN',
+          action: 'LOGIN_MAINTENANCE_BLOCKED',
+          message: `Login ditolak: Sistem sedang pemeliharaan untuk '${user.username}' (${user.name} - ${user.role}).`,
+          userId: user.id,
+          userName: user.name,
+          userRole: user.role,
+          ipAddress,
+          userAgent,
+        });
+        throw new BadRequestException(
+          `MAINTENANCE:${this.maintenanceService.maintenanceMessage || 'Sistem SIMASMUH sedang dalam pemeliharaan berkala untuk peningkatan performa dan keamanan.'}`,
+        );
+      }
     }
 
     // Parse Device Information for Active Session
@@ -271,6 +294,27 @@ export class AuthService {
         where: { id: user.id },
         data: { avatarUrl: googlePayload.image },
       }).catch(() => {});
+    }
+
+    // 🔒 Pemeriksaan Mode Pemeliharaan Sistem (Maintenance Mode)
+    if (this.maintenanceService.isMaintenanceActive()) {
+      const isAllowed = this.maintenanceService.isRoleAllowedDuringMaintenance(user);
+      if (!isAllowed) {
+        await this.systemLogService.log({
+          category: 'AUTH',
+          level: 'WARN',
+          action: 'GOOGLE_LOGIN_MAINTENANCE_BLOCKED',
+          message: `Google Login ditolak: Sistem sedang pemeliharaan untuk '${user.username}' (${user.name} - ${user.role}).`,
+          userId: user.id,
+          userName: user.name,
+          userRole: user.role,
+          ipAddress,
+          userAgent,
+        });
+        throw new BadRequestException(
+          `MAINTENANCE:${this.maintenanceService.maintenanceMessage || 'Sistem SIMASMUH sedang dalam pemeliharaan berkala untuk peningkatan performa dan keamanan.'}`,
+        );
+      }
     }
 
     // Parse Device Information

@@ -42,6 +42,7 @@ import { SupervisiModule } from './modules/academic/supervisi/supervisi.module';
 import { PerangkatAjarModule } from './modules/academic/perangkat-ajar/perangkat-ajar.module';
 import { ExtracurricularModule } from './modules/academic/extracurricular/extracurricular.module';
 import { SystemLogModule } from './modules/core/system-log/system-log.module';
+import { MaintenanceModule } from './modules/core/maintenance/maintenance.module';
 import { WaitingRoomModule } from './modules/core/waiting-room/waiting-room.module';
 import { WaitingRoomMiddleware } from './modules/core/waiting-room/waiting-room.middleware';
 import { SqlInjectionSanitizerMiddleware } from './modules/core/middlewares/sql-injection-sanitizer.middleware';
@@ -85,6 +86,7 @@ import { AdaptiveThrottlerGuard } from './modules/core/guards/adaptive-throttler
     }),
     PrismaModule,
     SystemLogModule,
+    MaintenanceModule,
     WaitingRoomModule,
     AuthModule,
     ClassesModule,

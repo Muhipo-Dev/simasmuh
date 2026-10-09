@@ -7,11 +7,17 @@ import helmet from 'helmet';
 import { initializeSystemTimezone } from './modules/core/utils/timezone.util';
 import { PrismaClientExceptionFilter } from './modules/core/filters/prisma-exception.filter';
 
+import { FileLoggerService } from './modules/core/utils/system-logger.util';
+
 // Set zona waktu seragam UTC+7 (Asia/Jakarta / Bangkok)
 initializeSystemTimezone();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const logger = new FileLoggerService('SIMASMUH-API');
+  const app = await NestFactory.create(AppModule, { 
+    bodyParser: false,
+    logger,
+  });
 
   // Enable trust proxy for reverse proxies, Cloudflare, ngrok, localtunnel, etc.
   const expressApp = app.getHttpAdapter().getInstance();

@@ -7,7 +7,8 @@ import {
   Send, Server, ShieldCheck, Settings, Users, MessageSquare, History, 
   Search, RotateCcw, Trash2, ArrowUpRight, Check, Sparkles, PhoneCall, ExternalLink,
   Laptop, Smartphone, Globe, Lock, Key, HelpCircle, Eye, EyeOff, CheckCheck, BarChart3,
-  Layers, Megaphone, Receipt, ShieldAlert, Clock, FileCheck, Award, GraduationCap, FileText, SendHorizontal, Save
+  Layers, Megaphone, Receipt, ShieldAlert, Clock, FileCheck, Award, GraduationCap, FileText, SendHorizontal, Save,
+  Banknote, CalendarDays, BookOpen
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Swal from 'sweetalert2'
@@ -79,7 +80,7 @@ export default function KelolaNotifikasiPage() {
 
   // Sandbox Test State
   const [testTargetEmail, setTestTargetEmail] = useState('')
-  const [testTemplate, setTestTemplate] = useState<'PRESENSI' | 'TAGIHAN' | 'KWITANSI' | 'PENGUMUMAN' | 'KEDISIPLINAN'>('PENGUMUMAN')
+  const [testTemplate, setTestTemplate] = useState<'PRESENSI' | 'TAGIHAN' | 'KWITANSI' | 'PENGUMUMAN' | 'KEDISIPLINAN' | 'PAYROLL' | 'DISPOSISI'>('PENGUMUMAN')
   const [sendingTest, setSendingTest] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; simulated?: boolean } | null>(null)
 
@@ -99,6 +100,8 @@ export default function KelolaNotifikasiPage() {
     notifKarakterSiswa: true,
     notifAkademik: true,
     notifSuratMenyurat: true,
+    notifSlipGaji: true,
+    notifSupervisiAjar: true,
   })
   const [savingPrefs, setSavingPrefs] = useState(false)
 
@@ -340,13 +343,16 @@ export default function KelolaNotifikasiPage() {
       const res = await authenticatedFetch('/api-backend/notifications/test-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: testTargetEmail }),
+        body: JSON.stringify({
+          email: testTargetEmail,
+          templateType: testTemplate,
+        }),
       })
 
       const data = await res.json()
       if (res.ok && data.success) {
         setTestResult(data)
-        toast.success(`Email uji coba berhasil dikirim ke ${testTargetEmail}`)
+        toast.success(`Email uji coba (${testTemplate}) berhasil dikirim ke ${testTargetEmail}`)
       } else {
         setTestResult(data)
         toast.error(data.message || data.error || 'Gagal mengirim email uji coba')
@@ -861,7 +867,24 @@ export default function KelolaNotifikasiPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="sm:col-span-2 space-y-1.5">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Jenis Notifikasi Uji Coba</Label>
+                <Select value={testTemplate} onValueChange={(v: any) => setTestTemplate(v)}>
+                  <SelectTrigger className="h-10 text-xs">
+                    <SelectValue placeholder="Pilih Template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PENGUMUMAN">📢 Pengumuman & Siaran</SelectItem>
+                    <SelectItem value="PAYROLL">💵 Slip Gaji (Payroll Pegawai)</SelectItem>
+                    <SelectItem value="DISPOSISI">📋 Disposisi Surat Masuk</SelectItem>
+                    <SelectItem value="JADWAL">📅 Jadwal Pelajaran / Mengajar</SelectItem>
+                    <SelectItem value="PRESENSI">⏱️ Presensi Kehadiran</SelectItem>
+                    <SelectItem value="TAGIHAN">🧾 Tagihan SPP Keuangan</SelectItem>
+                    <SelectItem value="KWITANSI">✅ Kwitansi Bayar Lunas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Alamat Email Gmail Pengujian</Label>
                 <Input
                   type="email"
@@ -1170,6 +1193,46 @@ export default function KelolaNotifikasiPage() {
               <CardContent className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
                 <span>Kirim Otomatis</span>
                 <Switch checked={masterPrefs.notifSuratMenyurat} onCheckedChange={(v) => setMasterPrefs({ ...masterPrefs, notifSuratMenyurat: v })} />
+              </CardContent>
+            </Card>
+
+            {/* 10. Penggajian & Slip Gaji Pegawai */}
+            <Card className="border-slate-200 dark:border-slate-800 shadow-xs hover:border-purple-300 transition-all">
+              <CardHeader className="pb-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/50 flex items-center justify-center text-purple-600">
+                    <Banknote className="w-4 h-4" />
+                  </div>
+                  <Badge variant={masterPrefs.notifSlipGaji ? 'default' : 'secondary'} className={masterPrefs.notifSlipGaji ? 'bg-purple-600 text-[10px]' : 'text-[10px]'}>
+                    {masterPrefs.notifSlipGaji ? 'Aktif' : 'Nonaktif'}
+                  </Badge>
+                </div>
+                <CardTitle className="text-sm font-bold mt-2">Penggajian & Slip Gaji Pegawai</CardTitle>
+                <CardDescription className="text-xs">Penerbitan slip gaji bulanan, honorarium, & tunjangan kehadiran</CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
+                <span>Kirim Otomatis</span>
+                <Switch checked={masterPrefs.notifSlipGaji} onCheckedChange={(v) => setMasterPrefs({ ...masterPrefs, notifSlipGaji: v })} />
+              </CardContent>
+            </Card>
+
+            {/* 11. Supervisi & Perangkat Ajar */}
+            <Card className="border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-300 transition-all">
+              <CardHeader className="pb-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <Badge variant={masterPrefs.notifSupervisiAjar ? 'default' : 'secondary'} className={masterPrefs.notifSupervisiAjar ? 'bg-emerald-600 text-[10px]' : 'text-[10px]'}>
+                    {masterPrefs.notifSupervisiAjar ? 'Aktif' : 'Nonaktif'}
+                  </Badge>
+                </div>
+                <CardTitle className="text-sm font-bold mt-2">Supervisi Perangkat Ajar Guru</CardTitle>
+                <CardDescription className="text-xs">Umpan balik modul ajar, ATP/RPP, dan penilaian supervisi kelas</CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
+                <span>Kirim Otomatis</span>
+                <Switch checked={masterPrefs.notifSupervisiAjar} onCheckedChange={(v) => setMasterPrefs({ ...masterPrefs, notifSupervisiAjar: v })} />
               </CardContent>
             </Card>
           </div>

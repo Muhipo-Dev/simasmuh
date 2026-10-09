@@ -66,7 +66,7 @@ export class SystemAnnouncementsService {
                   { label: 'Ditujukan Untuk', value: created.target },
                   { label: 'Diterbitkan Oleh', value: created.author?.name || 'Admin Sistem' },
                 ],
-                actionUrl: `${process.env.FRONTEND_URL || 'https://simasmuh.razagopo.my.id'}/dashboard`,
+                actionUrl: '/dashboard',
                 actionText: 'Lihat Dashboard',
               })
               .catch(() => {});

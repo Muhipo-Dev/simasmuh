@@ -22,6 +22,7 @@ import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import Link from 'next/link'
 import Swal from 'sweetalert2'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { getAppFeatureUrl } from '@/lib/api-config'
 import { getRoleLinks, godLinks } from '@/lib/nav-links'
 import { UserAccountCard } from '@/components/dashboard/UserAccountCard'
 import { CenterQuickAccessGrid } from '@/components/dashboard/CenterQuickAccessGrid'
@@ -676,7 +677,7 @@ export default function DashboardPage() {
 
       Swal.fire({
         title: 'Link Reset Terkirim!',
-        html: `Tautan pemulihan sandi berhasil digenerate dan dikirim via Email ke <strong>${data.recipientName}</strong> (${data.targetEmail || 'Email Akun'}).<br/><br/><small class="text-slate-500 font-mono text-[11px] block mt-1 break-all bg-slate-100 dark:bg-slate-800 p-2 rounded">${window.location.origin}${data.resetUrl}</small>`,
+        html: `Tautan pemulihan sandi berhasil digenerate dan dikirim via Email ke <strong>${data.recipientName}</strong> (${data.targetEmail || 'Email Akun'}).<br/><br/><small class="text-slate-500 font-mono text-[11px] block mt-1 break-all bg-slate-100 dark:bg-slate-800 p-2 rounded">${getAppFeatureUrl(data.resetUrl)}</small>`,
         icon: 'success',
       })
       refetchSupervisor()
@@ -1107,35 +1108,152 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 3-AREA DASHBOARD LAYOUT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
+        {/* TAMPILAN KHUSUS PONSEL (MOBILE VIEW < LG): URUTAN SESUAI STANDAR RESMI */}
+        {/* 1. Header Selamat (di atas) -> 2. Identitas Akun -> 3. Tombol Akses Cepat & Ringkasan -> 4. Berita Artikel -> 5. Informasi Pengumuman Sistem -> 6. Kalender */}
+        <div className="block lg:hidden space-y-3.5 sm:space-y-4">
+          {/* 2. Identitas Akun */}
+          <UserAccountCard
+            role={role}
+            activeStudent={activeStudent}
+            profileAvatarUrl={(session?.user as any)?.avatarUrl}
+          />
+
+          {/* 3. Tombol Akses Cepat Wali Murid & Ringkasan Siswa */}
+          <div className="space-y-3 sm:space-y-3.5">
+            <div className="flex items-center justify-between gap-1.5 px-1">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight">
+                  Menu Akses Cepat Wali Murid
+                </h3>
+              </div>
+              <span className="text-[9.5px] text-blue-600 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 px-2 py-0.5 rounded-full">
+                {parentNavLinks.length} Modul
+              </span>
+            </div>
+            <CenterQuickAccessGrid links={parentNavLinks} role={role} />
+
+            {/* Ringkasan Karakter & Presensi Siswa */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {/* Adab & Karakter Siswa */}
+              <div className="simas-metric-panel p-3.5 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5 text-emerald-600" />
+                      Poin Karakter & Adab
+                    </span>
+                    <span className="simas-kpi-badge bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/60">
+                      Aktif
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-around text-center py-1">
+                    <div>
+                      <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Poin Tatib</span>
+                      <span className="text-xl font-bold text-emerald-600 swiss-tabular-nums">
+                        {activeStudent?.etikaTataTertib?.kedisiplinanScore ?? 100}
+                      </span>
+                    </div>
+                    <div className="border-r border-slate-100 dark:border-slate-800 h-7" />
+                    <div>
+                      <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Amalan Ibadah</span>
+                      <span className="text-xl font-bold text-teal-600">
+                        {activeStudent?.etikaTataTertib?.ibadahGrade || 'A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Link href="/akademik/etika-tatib" className="pt-2">
+                  <Button variant="outline" size="sm" className="w-full text-[11px] font-bold h-7.5 rounded-lg border-slate-200 dark:border-slate-700">
+                    Buku Saku &rarr;
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Status Kehadiran Siswa */}
+              <div className="simas-metric-panel p-3.5 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <ClipboardCheck className="w-3.5 h-3.5 text-blue-600" />
+                      Status Presensi & Izin
+                    </span>
+                    <span className="simas-kpi-badge bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/60">
+                      Harian
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-around text-center py-1">
+                    <div>
+                      <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Presensi Bulan Ini</span>
+                      <span className="text-xl font-bold text-blue-600 swiss-tabular-nums">
+                        {activeStudent?.attendances?.length || 0} Hari
+                      </span>
+                    </div>
+                    <div className="border-r border-slate-100 dark:border-slate-800 h-7" />
+                    <div>
+                      <span className="text-[9.5px] text-slate-400 font-bold block uppercase">Izin Sakit/Lain</span>
+                      <span className="text-xl font-bold text-amber-600 swiss-tabular-nums">
+                        0
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Link href="/presensi/kehadiran-siswa" className="pt-2">
+                  <Button variant="outline" size="sm" className="w-full text-[11px] font-bold h-7.5 rounded-lg border-slate-200 dark:border-slate-700">
+                    Log Presensi &rarr;
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Berita Artikel */}
+          <NewsArticleListWidget announcements={announcements} limit={4} />
+
+          {/* 5. Informasi Pengumuman Sistem */}
+          <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
+
+          {/* 6. Kalender */}
+          <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
+        </div>
+
+        {/* TAMPILAN KHUSUS DESKTOP (VIEW >= LG): 3-AREA LAYOUT DENGAN URUTAN WIDGET TERSTANDAR */}
+        {/* Kolom Kiri: 1. Identitas Pengguna -> 2. Informasi Pengumuman Sistem */}
+        {/* Kolom Tengah: Tombol Akses Cepat & Ringkasan Siswa */}
+        {/* Kolom Kanan: 3. Daftar Berita Artikel -> 4. Kalender */}
+        <div className="hidden lg:grid lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
           {/* AREA KIRI: INFO AKUN & INFORMASI SISTEM */}
-          <div className="md:col-span-1 lg:col-span-3 space-y-3.5 sm:space-y-4">
+          <div className="lg:col-span-3 space-y-3.5 sm:space-y-4">
+            {/* 1. Identitas Pengguna */}
             <UserAccountCard
               role={role}
               activeStudent={activeStudent}
               profileAvatarUrl={(session?.user as any)?.avatarUrl}
             />
+            {/* 2. Informasi Pengumuman Sistem */}
             <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
           </div>
 
           {/* AREA TENGAH: TOMBOL AKSES CEPAT & WIDGET MONITORING */}
-          <div className="md:col-span-2 lg:col-span-6 space-y-3.5 sm:space-y-4 order-first lg:order-none">
+          <div className="lg:col-span-6 space-y-3.5 sm:space-y-4">
             {/* Quick Access Tile Grid */}
             <div>
-              <div className="flex items-center justify-center mb-2 sm:mb-2.5">
+              <div className="flex items-center justify-between gap-2 mb-2 sm:mb-2.5 px-1">
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                     Menu Akses Cepat Wali Murid
                   </h3>
                 </div>
+                <span className="text-[9.5px] text-blue-600 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 px-2.5 py-0.5 rounded-full shadow-2xs">
+                  {parentNavLinks.length} Modul Aktif
+                </span>
               </div>
               <CenterQuickAccessGrid links={parentNavLinks} role={role} />
             </div>
 
             {/* Monitoring Ringkasan Etika Tatib & Jadwal Siswa */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {/* Adab & Karakter Siswa */}
               <div className="simas-metric-panel p-3.5 flex flex-col justify-between">
                 <div>
@@ -1209,8 +1327,10 @@ export default function DashboardPage() {
           </div>
 
           {/* AREA KANAN: DAFTAR BERITA / ARTIKEL & KALENDER KEGIATAN */}
-          <div className="md:col-span-1 lg:col-span-3 space-y-3.5 sm:space-y-4">
+          <div className="lg:col-span-3 space-y-3.5 sm:space-y-4">
+            {/* 3. Daftar Berita Artikel */}
             <NewsArticleListWidget announcements={announcements} limit={4} />
+            {/* 4. Kalender */}
             <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
           </div>
         </div>
@@ -1357,7 +1477,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Grid 8 Menu Utama / Akses Cepat Primer */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-2.5">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-2.5">
                 {primaryKsLinks.map((link, idx) => {
                   const Icon = link.icon
                   return (
@@ -3014,8 +3134,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-3.5 sm:space-y-4 pb-6">
-      <div className="simas-dash-header p-3.5 sm:p-4 md:p-5 text-white flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
-        <div className="space-y-1 min-w-0 flex-1">
+      <div className="simas-dash-header p-4 sm:p-5 md:p-6 text-white flex flex-col md:flex-row md:items-center justify-between gap-3.5 sm:gap-4">
+        <div className="space-y-1.5 min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`simas-kpi-badge ${
               isGod
@@ -3029,10 +3149,10 @@ export default function DashboardPage() {
               <span>{isGod ? 'Universal Bypass Aktif' : 'Sistem Terhubung'}</span>
             </div>
           </div>
-          <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white truncate" title={`${clock.greeting}, ${(session?.user as any)?.name || 'Pengguna'}`}>
-            {clock.greeting}, <span className={`font-extrabold ${isGod ? 'text-amber-300' : 'text-blue-200'}`}>{(session?.user as any)?.name || 'Pengguna'}</span>
+          <h1 className="text-base sm:text-lg md:text-xl font-extrabold tracking-tight text-white truncate" title={`${clock.greeting}, ${(session?.user as any)?.name || 'Pengguna'}`}>
+            {clock.greeting}, <span className={`font-black ${isGod ? 'text-amber-300' : 'text-blue-200'}`}>{(session?.user as any)?.name || 'Pengguna'}</span>
           </h1>
-          <p className="text-slate-400 text-xs font-medium line-clamp-1 sm:line-clamp-none">
+          <p className="text-slate-300 dark:text-slate-400 text-xs font-medium line-clamp-2 sm:line-clamp-none leading-relaxed">
             {isGod
               ? 'Akses bypass universal ke seluruh modul finansial, operasional, supervisi eksekutif, master data, dan tata kelola sistem.'
               : isSuperadminRole
@@ -3040,19 +3160,19 @@ export default function DashboardPage() {
               : 'Portal Informasi & Manajemen Pendidikan SMA Muhammadiyah 1 Ponorogo.'}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 w-full md:w-auto justify-start md:justify-end">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 w-full md:w-auto justify-start md:justify-end pt-1 md:pt-0">
           {/* Tombol Khusus GOD User & Kepala Sekolah: Tanda Tangan Digital (E-Sign) & Toggle Statistika */}
           {(isGod || isKepalaSekolah) && (
             <>
               <Button
                 size="sm"
                 onClick={() => setShowSignaturePad(true)}
-                className="h-8 sm:h-8.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-extrabold text-[11px] shadow-sm gap-1.5 border border-amber-400/40 shrink-0"
+                className="h-9 sm:h-9.5 px-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-extrabold text-xs shadow-sm gap-1.5 border border-amber-400/40 shrink-0"
               >
-                <PenTool className="w-3.5 h-3.5" />
+                <PenTool className="w-4 h-4" />
                 <span>Tanda Tangan (E-Sign)</span>
                 {((execStats?.persuratan?.pendingDispensasi || 0) + (execStats?.persuratan?.pendingSuratKeluar || 0) + (execStats?.persuratan?.pendingDisposisi || 0)) > 0 && (
-                  <Badge className="h-4.5 px-1.5 bg-white text-orange-700 font-mono font-black text-[9px] rounded-full ml-0.5">
+                  <Badge className="h-5 px-1.5 bg-white text-orange-700 font-mono font-black text-[9.5px] rounded-full ml-0.5">
                     {(execStats?.persuratan?.pendingDispensasi || 0) + (execStats?.persuratan?.pendingSuratKeluar || 0) + (execStats?.persuratan?.pendingDisposisi || 0)}
                   </Badge>
                 )}
@@ -3062,13 +3182,13 @@ export default function DashboardPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => setShowExecutiveStats(!showExecutiveStats)}
-                className={`h-8 sm:h-8.5 rounded-xl font-extrabold text-[11px] gap-1.5 backdrop-blur-md transition-all shrink-0 ${
+                className={`h-9 sm:h-9.5 px-3.5 rounded-xl font-extrabold text-xs gap-1.5 backdrop-blur-md transition-all shrink-0 ${
                   showExecutiveStats
                     ? 'bg-amber-500 text-white border-amber-400 shadow-sm'
                     : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
                 }`}
               >
-                <BarChart3 className="w-3.5 h-3.5 text-amber-300" />
+                <BarChart3 className="w-4 h-4 text-amber-300" />
                 <span>{showExecutiveStats ? 'Tutup Statistika' : 'Statistika Sekolah'}</span>
               </Button>
             </>
@@ -3080,9 +3200,9 @@ export default function DashboardPage() {
               <Link href="/facenetai" className="shrink-0">
                 <Button
                   size="sm"
-                  className="h-8 sm:h-8.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-[11px] shadow-sm gap-1.5 border border-cyan-400/40 active:scale-95 transition-all"
+                  className="h-9 sm:h-9.5 px-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-sm gap-1.5 border border-cyan-400/40 active:scale-95 transition-all"
                 >
-                  <Camera className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+                  <Camera className="w-4 h-4 text-cyan-300 animate-pulse" />
                   <span>FaceNet AI</span>
                 </Button>
               </Link>
@@ -3166,11 +3286,127 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 2-COLUMN / 3-COLUMN ADAPTIVE GENERAL DASHBOARD LAYOUT (Adaptive for Standard & High Zoom 125%-200%) */}
-      {/* Khusus Dashboard Guru / Pegawai / Karyawan / Staf: Seluruh Widget berada di Kolom Kiri, Akses Cepat di Kanan */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
-        {/* AREA KIRI: SELURUH WIDGET (AKUN, INFORMASI SISTEM, BERITA, KALENDER, LOG ABSENSI, DISPOSISI/E-SIGN) */}
+      {/* TAMPILAN KHUSUS PONSEL (MOBILE VIEW < LG): URUTAN SESUAI STANDAR RESMI */}
+      {/* 1. Header Selamat (di atas) -> 2. Identitas Akun -> 3. Tombol Akses Cepat -> 4. Berita Artikel -> 5. Informasi Pengumuman Sistem -> 6. Kalender */}
+      <div className="block lg:hidden space-y-3.5 sm:space-y-4">
+        {/* 2. Identitas Akun */}
+        <UserAccountCard
+          role={role}
+          subRole={subRole}
+          profileAvatarUrl={(session?.user as any)?.avatarUrl}
+        />
+
+        {/* Widget Antrean E-Sign & Persuratan Khusus Kepala Sekolah (Mobile) */}
+        {isKepalaSekolah && (
+          <Card className="p-3.5 rounded-2xl border border-amber-200/80 dark:border-amber-900/50 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/20 shadow-2xs space-y-2.5">
+            <div className="flex items-center justify-between border-b border-amber-100 dark:border-slate-800 pb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                  <PenTool className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 dark:text-white leading-tight">
+                    Antrean E-Sign Pimpinan
+                  </h4>
+                  <span className="text-[10px] text-slate-500">Perlu Pengesahan</span>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowSignaturePad(true)}
+                className="h-6 px-2 text-[10px] font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60 rounded-lg"
+              >
+                Canvas TTD
+              </Button>
+            </div>
+
+            <div className="space-y-1.5 text-xs">
+              <Link
+                href="/akademik/supervisi-akademik"
+                className="flex items-center justify-between p-2 rounded-xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 hover:border-blue-400 transition-colors"
+              >
+                <span className="text-[11px] font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5 text-amber-500" />
+                  Supervisi Akademik (ASA)
+                </span>
+                <Badge className="bg-blue-600 text-white text-[9.5px] px-1.5 py-0">
+                  Buka ASA &rarr;
+                </Badge>
+              </Link>
+
+              <Link
+                href="/presensi/dispensasi"
+                className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 hover:border-amber-400 transition-colors"
+              >
+                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  Dispensasi Siswa/Guru
+                </span>
+                <Badge className={`${(execStats?.persuratan?.pendingDispensasi || 0) > 0 ? 'bg-rose-500' : 'bg-emerald-600'} text-white text-[9.5px] px-1.5 py-0`}>
+                  {(execStats?.persuratan?.pendingDispensasi || 0) > 0 ? `${execStats?.persuratan?.pendingDispensasi} Menunggu` : 'Nihil'}
+                </Badge>
+              </Link>
+
+              <Link
+                href="/fitur/persuratan?tab=surat-masuk"
+                className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 hover:border-amber-400 transition-colors"
+              >
+                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  Disposisi Surat Masuk
+                </span>
+                <Badge className={`${(execStats?.persuratan?.pendingDisposisi || 0) > 0 ? 'bg-purple-600' : 'bg-emerald-600'} text-white text-[9.5px] px-1.5 py-0`}>
+                  {(execStats?.persuratan?.pendingDisposisi || 0) > 0 ? `${execStats?.persuratan?.pendingDisposisi} Disposisi` : 'Selesai'}
+                </Badge>
+              </Link>
+
+              <Link
+                href="/fitur/persuratan?tab=surat-keluar"
+                className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 hover:border-amber-400 transition-colors"
+              >
+                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  Surat Keluar / SK Kepsek
+                </span>
+                <Badge className={`${(execStats?.persuratan?.pendingSuratKeluar || 0) > 0 ? 'bg-amber-500' : 'bg-emerald-600'} text-white text-[9.5px] px-1.5 py-0`}>
+                  {(execStats?.persuratan?.pendingSuratKeluar || 0) > 0 ? `${execStats?.persuratan?.pendingSuratKeluar} TTD` : 'Lengkap'}
+                </Badge>
+              </Link>
+            </div>
+          </Card>
+        )}
+
+        {/* 3. Tombol Akses Cepat */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between gap-2 px-1">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                Pusat Akses Layanan & Modul Operasional
+              </h3>
+            </div>
+            <span className="text-[9.5px] sm:text-[10px] text-blue-600 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 px-2.5 py-0.5 rounded-full shadow-2xs">
+              {currentLinks.length} Modul Aktif
+            </span>
+          </div>
+          <CenterQuickAccessGrid links={currentLinks} role={role} />
+        </div>
+
+        {/* 4. Berita Artikel */}
+        <NewsArticleListWidget announcements={announcements} limit={4} />
+
+        {/* 5. Informasi Pengumuman Sistem */}
+        <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
+
+        {/* 6. Kalender */}
+        <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
+      </div>
+
+      {/* TAMPILAN KHUSUS DESKTOP (VIEW >= LG): 2-KOLOM DENGAN URUTAN WIDGET TERSTANDAR */}
+      {/* Kolom Kiri: 1. Identitas Pengguna -> (E-Sign jika Kepsek) -> 2. Informasi Pengumuman Sistem -> 3. Daftar Berita Artikel -> 4. Kalender */}
+      {/* Kolom Kanan: Tombol Akses Cepat */}
+      <div className="hidden lg:grid lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
+        {/* AREA KIRI: SELURUH WIDGET (AKUN, INFORMASI SISTEM, BERITA, KALENDER) */}
         <div className="lg:col-span-5 xl:col-span-4 space-y-3.5 sm:space-y-4">
+          {/* 1. Identitas Pengguna */}
           <UserAccountCard
             role={role}
             subRole={subRole}
@@ -3255,14 +3491,14 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          {/* Widget Berita & Pengumuman Sekolah */}
+          {/* 2. Informasi Pengumuman Sistem */}
+          <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
+
+          {/* 3. Daftar Berita Artikel */}
           <NewsArticleListWidget announcements={announcements} limit={4} />
 
-          {/* Widget Kalender Kegiatan */}
+          {/* 4. Kalender */}
           <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
-
-          {/* Widget Informasi Sistem */}
-          <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
         </div>
 
         {/* AREA KANAN: TOMBOL AKSES CEPAT LAYANAN UTAMA */}

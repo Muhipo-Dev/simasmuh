@@ -660,6 +660,28 @@ export default function ProfilePage() {
     }
   }
 
+  const handleRemoveAvatar = () => {
+    Swal.fire({
+      title: 'Hapus Foto Profil?',
+      text: 'Foto profil Anda akan dihapus dan dikosongkan.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Hapus',
+      cancelButtonText: 'Batal',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        if (editing) {
+          setForm(prev => ({ ...prev, avatarUrl: '' }))
+          if (fileInputRef.current) fileInputRef.current.value = ''
+        } else {
+          mutation.mutate({ ...form, avatarUrl: '' })
+        }
+      }
+    })
+  }
+
   const handleSave = () => mutation.mutate(form)
 
   const certLabel = CERTIFICATION_OPTIONS.find(o => o.value === profile?.teacherProfile?.certificationStatus)?.label
@@ -688,7 +710,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4 pb-12">
+    <div className="w-full space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-0.5">
@@ -771,16 +793,37 @@ export default function ProfilePage() {
                   )}
                 </div>
                 {editing && (
-                  <>
+                  <div className="absolute -bottom-1 -right-1 flex items-center gap-1">
                     <button
+                      type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute -bottom-1 -right-1 w-9 h-9 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow-md transition-colors text-white"
-                      title="Ganti Foto"
+                      className="w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow-md transition-colors text-white"
+                      title="Ganti Foto Profil"
                     >
                       <Camera className="w-4 h-4" />
                     </button>
+                    {form.avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveAvatar}
+                        className="w-8 h-8 bg-rose-600 hover:bg-rose-700 rounded-full flex items-center justify-center shadow-md transition-colors text-white"
+                        title="Hapus Foto Profil"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-                  </>
+                  </div>
+                )}
+                {!editing && profile?.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveAvatar}
+                    className="absolute -bottom-1 -right-1 w-8 h-8 bg-rose-600 hover:bg-rose-700 rounded-full flex items-center justify-center shadow-md transition-colors text-white"
+                    title="Hapus Foto Profil"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 )}
               </div>
 

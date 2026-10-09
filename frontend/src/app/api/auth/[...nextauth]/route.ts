@@ -27,15 +27,23 @@ async function getAuthOptions(req?: NextRequest) {
   let hostUrl = '';
 
   if (req) {
-    const proto = req.headers.get('x-forwarded-proto') || (req.nextUrl.protocol ? req.nextUrl.protocol.replace(':', '') : 'http');
-    const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || req.nextUrl.host;
+    const forwardedProto = req.headers.get('x-forwarded-proto');
+    const proto = forwardedProto || (req.nextUrl?.protocol ? req.nextUrl.protocol.replace(':', '') : 'https');
+    const forwardedHost = req.headers.get('x-forwarded-host');
+    const headerHost = req.headers.get('host');
+    const host = forwardedHost || headerHost || req.nextUrl?.host;
     if (host) {
-      hostUrl = `${proto}://${host}`;
+      hostUrl = `${proto}://${host}`.replace(/\/+$/, '');
     }
   }
 
-  // Ambil URL domain publik resmi yang diinputkan di Pengaturan Sistem
-  const systemConfiguredDomain = await fetchConfiguredPublicDomain();
+  // Ambil URL domain publik resmi dari Pengaturan Sistem sebagai Single Source of Truth
+  const systemConfiguredDomain = (await fetchConfiguredPublicDomain()) || process.env.NEXT_PUBLIC_APP_URL || 'https://simasmuh.razagopo.my.id';
+  const effectiveOrigin = systemConfiguredDomain || hostUrl || 'https://simasmuh.razagopo.my.id';
+
+  // Perbarui environment variable NEXTAUTH_URL untuk instance request ini
+  process.env.NEXTAUTH_URL = effectiveOrigin;
+  const isHttps = effectiveOrigin.startsWith('https');
 
   return {
     secret: process.env.NEXTAUTH_SECRET || "simasmuh-secret-key-2026-muhipo-dev",
@@ -43,6 +51,12 @@ async function getAuthOptions(req?: NextRequest) {
       GoogleProvider({
         clientId: process.env.GOOGLE_CLIENT_ID || "",
         clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+        checks: ["none"],
+        authorization: {
+          params: {
+            prompt: "select_account",
+          },
+        },
       }),
       CredentialsProvider({
         name: 'Credentials',
@@ -135,6 +149,10 @@ async function getAuthOptions(req?: NextRequest) {
             if (!res.ok) {
               const errData = await res.json().catch(() => ({}));
               console.error('Google OAuth backend rejection:', errData);
+              if (errData?.message && typeof errData.message === 'string' && errData.message.startsWith('MAINTENANCE:')) {
+                const msg = errData.message.replace('MAINTENANCE:', '');
+                return `/login?error=MaintenanceMode&msg=${encodeURIComponent(msg)}`;
+              }
               return `/login?error=GoogleUnregistered&email=${encodeURIComponent(user.email || '')}`;
             }
 
@@ -216,45 +234,19 @@ async function getAuthOptions(req?: NextRequest) {
         return session
       },
       async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-        // Prioritas penentuan base URL yang terpercaya:
-        // 1. Host aktif request saat ini (jika client mengakses IP / tunnel tertentu)
-        // 2. Domain publik resmi yang diinputkan di Pengaturan Sistem
-        // 3. baseUrl NextAuth bawaan
-        const effectiveBase = hostUrl || systemConfiguredDomain || baseUrl;
+        // Domain publik dari Pengaturan Sistem adalah Single Source of Truth
+        const effectiveBase = (systemConfiguredDomain || hostUrl || baseUrl || 'https://simasmuh.razagopo.my.id').replace(/\/+$/, '');
 
-        // Path relatif selalu diarahkan dengan aman ke effectiveBase
+        // Path relatif selalu diarahkan ke effectiveBase
         if (url.startsWith('/')) {
           return `${effectiveBase}${url}`;
         }
 
         try {
           const targetUrl = new URL(url);
-          // Daftar origin yang wajib dipercayai secara absolut
-          const trustedOrigins = new Set([
-            baseUrl,
-            effectiveBase,
-            hostUrl,
-            systemConfiguredDomain,
-          ].filter(Boolean));
-
-          const isLocalhost = targetUrl.hostname === 'localhost' || targetUrl.hostname === '127.0.0.1';
-
-          // Jika URL berada di origin terpercaya atau localhost yang harus dipetakan ke effectiveBase
-          if (trustedOrigins.has(targetUrl.origin) || isLocalhost) {
-            return `${effectiveBase}${targetUrl.pathname}${targetUrl.search}`;
-          }
-
-          // Jika URL eksternal namun hostnya cocok dengan domain terkonfigurasi sistem
-          if (systemConfiguredDomain) {
-            try {
-              const confUrl = new URL(systemConfiguredDomain);
-              if (confUrl.hostname === targetUrl.hostname) {
-                return `${effectiveBase}${targetUrl.pathname}${targetUrl.search}`;
-              }
-            } catch {}
-          }
-
-          return url;
+          // Selalu pertahankan origin akses client aktif (effectiveBase)
+          // dan teruskan path serta parameter pencarian tujuan
+          return `${effectiveBase}${targetUrl.pathname}${targetUrl.search}`;
         } catch {}
         
         return `${effectiveBase}/dashboard`;
@@ -270,11 +262,70 @@ async function getAuthOptions(req?: NextRequest) {
       maxAge: 365 * 24 * 60 * 60, // 365 hari (1 Tahun)
       updateAge: 24 * 60 * 60, // Perbarui token setiap 24 jam di background
     },
+    cookies: {
+      sessionToken: {
+        name: `${isHttps ? '__Secure-' : ''}next-auth.session-token`,
+        options: {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          secure: isHttps,
+        },
+      },
+      callbackUrl: {
+        name: `${isHttps ? '__Secure-' : ''}next-auth.callback-url`,
+        options: {
+          sameSite: 'lax',
+          path: '/',
+          secure: isHttps,
+        },
+      },
+      csrfToken: {
+        name: `${isHttps ? '__Host-' : ''}next-auth.csrf-token`,
+        options: {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          secure: isHttps,
+        },
+      },
+      pkceCodeVerifier: {
+        name: `${isHttps ? '__Secure-' : ''}next-auth.pkce.code_verifier`,
+        options: {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          secure: isHttps,
+          maxAge: 900,
+        },
+      },
+      state: {
+        name: `${isHttps ? '__Secure-' : ''}next-auth.state`,
+        options: {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          secure: isHttps,
+          maxAge: 900,
+        },
+      },
+    },
     trustHost: true
   };
 }
 
 const handler = async (req: NextRequest, ctx: any) => {
+  const forwardedProto = req.headers.get('x-forwarded-proto');
+  const proto = forwardedProto || (req.nextUrl?.protocol ? req.nextUrl.protocol.replace(':', '') : 'https');
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  const headerHost = req.headers.get('host');
+  const host = forwardedHost || headerHost || req.nextUrl?.host;
+  
+  if (host) {
+    const origin = `${proto}://${host}`.replace(/\/+$/, '');
+    process.env.NEXTAUTH_URL = origin;
+  }
+
   const options = await getAuthOptions(req);
   return NextAuth(req, ctx, options as any);
 };

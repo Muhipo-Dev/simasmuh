@@ -13,11 +13,13 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 
 import { NotificationsModule } from '../../communication/notifications/notifications.module';
+import { MaintenanceModule } from '../maintenance/maintenance.module';
 
 @Module({
   imports: [
     PassportModule,
     NotificationsModule,
+    MaintenanceModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'secretKey',
       signOptions: { expiresIn: '365d' },

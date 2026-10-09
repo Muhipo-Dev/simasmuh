@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { getPublicApiUrl } from '@/lib/api-config'
 
+import Swal from 'sweetalert2'
 import { useSession, signOut } from 'next-auth/react'
 import { AppNavbar, AppFooter } from '@/components/layout'
 
@@ -32,6 +33,8 @@ export default function LoginPage() {
   const [helpdeskEmail, setHelpdeskEmail] = useState('raza@muhipo.sch.id')
   const [backgroundMaster, setBackgroundMaster] = useState('/muhipo-log.jpg')
   const [logoMaster, setLogoMaster] = useState<string | null>(null)
+  const [isMaintenanceActive, setIsMaintenanceActive] = useState(false)
+  const [maintenanceMessage, setMaintenanceMessage] = useState('')
 
   // State Modal Reset Password via OTP
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false)
@@ -106,6 +109,12 @@ export default function LoginPage() {
             setPublicDomainUrl(cleanDomain)
             try { localStorage.setItem('simasmuh_public_domain', cleanDomain) } catch {}
           }
+          if (typeof data?.maintenanceMode === 'boolean') {
+            setIsMaintenanceActive(data.maintenanceMode)
+          }
+          if (data?.maintenanceMessage) {
+            setMaintenanceMessage(data.maintenanceMessage)
+          }
         }
       } catch (err) {
         console.error('Gagal memuat setting publik:', err)
@@ -119,38 +128,21 @@ export default function LoginPage() {
     if (typeof window === 'undefined') return '/dashboard'
     const params = new URLSearchParams(window.location.search)
     const rawCallback = params.get('callbackUrl')
-    if (rawCallback && rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.startsWith('/login')) {
-      return rawCallback
+    if (rawCallback) {
+      if (rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.startsWith('/login')) {
+        return rawCallback
+      }
+      try {
+        const parsed = new URL(rawCallback)
+        if (parsed.pathname && !parsed.pathname.startsWith('/login')) {
+          return `${parsed.pathname}${parsed.search}`
+        }
+      } catch {}
     }
     return '/dashboard'
   }
 
-  // Handle pengembalian login Google OAuth dari domain publik kembali ke IP Lokal asal
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href)
-      const returnOrigin = url.searchParams.get('return_origin')
-      const oauthSuccess = url.searchParams.get('oauth_success')
-
-      // Jika baru saja login di domain publik dan terdapat return_origin (IP lokal asal)
-      if (oauthSuccess === '1' && returnOrigin) {
-        try {
-          const parsedOrigin = new URL(returnOrigin)
-          const targetLocalUrl = `${parsedOrigin.origin}${url.pathname}${url.search ? url.search : ''}`
-          // Hapus return_origin & oauth_success agar tidak berulang
-          const cleanLocalUrl = new URL(targetLocalUrl)
-          cleanLocalUrl.searchParams.delete('return_origin')
-          cleanLocalUrl.searchParams.delete('oauth_success')
-          window.location.href = cleanLocalUrl.toString()
-          return
-        } catch (e) {
-          console.error('Gagal redirect balik ke IP Lokal:', e)
-        }
-      }
-    }
-  }, [])
-
-  // Cek parameter URL untuk sesi kedaluwarsa atau error sign-in
+  // Cek parameter URL untuk sesi kedaluwarsa, maintenance mode, atau error sign-in
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -166,7 +158,24 @@ export default function LoginPage() {
       } else if (url.searchParams.get('error')) {
         const errParam = url.searchParams.get('error')
         const emailParam = url.searchParams.get('email')
-        if (errParam === 'CredentialsSignin') {
+        const msgParam = url.searchParams.get('msg')
+
+        if (errParam === 'MaintenanceMode') {
+          const detailMsg = msgParam || 'Mohon maaf, saat ini sistem SIMASMUH sedang dalam status Lockdown Maintenance (Pemeliharaan Berkala). Seluruh akses masuk dibatasi khusus Administrator & Tim IT/TU.'
+          setError(detailMsg)
+          Swal.fire({
+            title: 'Sistem SIMASMUH Sedang Lockdown Maintenance',
+            text: detailMsg,
+            icon: 'warning',
+            confirmButtonText: 'Saya Mengerti',
+            confirmButtonColor: '#2563eb',
+            customClass: {
+              popup: 'rounded-2xl shadow-2xl border border-amber-200/80 dark:border-amber-900/40 dark:bg-slate-900',
+              title: 'text-slate-900 dark:text-white font-black text-lg',
+              htmlContainer: 'text-slate-600 dark:text-slate-300 text-sm font-medium leading-relaxed',
+            }
+          })
+        } else if (errParam === 'CredentialsSignin') {
           setError('Username atau kata sandi tidak sesuai. Silakan periksa kembali.')
         } else if (errParam === 'GoogleUnregistered') {
           setError(
@@ -181,66 +190,19 @@ export default function LoginPage() {
         }
         url.searchParams.delete('error')
         url.searchParams.delete('email')
+        url.searchParams.delete('msg')
         const cleanQuery = url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''
         window.history.replaceState({}, document.title, `${url.pathname}${cleanQuery}`)
       }
     }
   }, [])
 
-  // Handler Tombol Masuk dengan Google:
-  // Jika diakses via IP Lokal (192.168.x.x, 10.x.x.x, 172.x.x.x, dsb) dan terdapat domain publik terkonfigurasi,
-  // lakukan handoff redirect ke domain publik terlebih dahulu dengan menyematkan return_origin,
-  // lalu setelah autentikasi Google selesai di domain publik, sistem otomatis mengembalikan pengguna ke IP Lokal asal.
+  // Handler Tombol Masuk dengan Google secara adaptif mengikuti origin pengguna saat ini
   const handleGoogleSignIn = () => {
     setLoading('Menghubungkan ke Google...')
-    if (typeof window === 'undefined') {
-      signIn('google', { callbackUrl: getSafeCallbackUrl() })
-      return
-    }
-
-    const currentHostname = window.location.hostname
-    const isLocalNetworkIp =
-      /^(127\.|192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(currentHostname) ||
-      currentHostname === 'localhost'
-
-    // Jika sedang diakses via IP lokal dan ada domain publik resmi
-    if (isLocalNetworkIp && publicDomainUrl) {
-      try {
-        const pubUrl = new URL(publicDomainUrl)
-        if (pubUrl.hostname !== currentHostname) {
-          const currentOrigin = window.location.origin
-          const safeTarget = getSafeCallbackUrl()
-          const redirectDestination = `${publicDomainUrl}/login?return_origin=${encodeURIComponent(currentOrigin)}&callbackUrl=${encodeURIComponent(safeTarget)}&auto_google=1`
-          window.location.href = redirectDestination
-          return
-        }
-      } catch (err) {
-        console.error('Gagal memformat public domain url:', err)
-      }
-    }
-
-    // Jika sudah di domain publik atau standalone, langsung jalankan Google OAuth signIn NextAuth
     const safeCallback = getSafeCallbackUrl()
-    const returnOrigin = new URLSearchParams(window.location.search).get('return_origin')
-    let finalCallback = safeCallback
-    if (returnOrigin) {
-      finalCallback = `/login?oauth_success=1&return_origin=${encodeURIComponent(returnOrigin)}&callbackUrl=${encodeURIComponent(safeCallback)}`
-    }
-    signIn('google', { callbackUrl: finalCallback })
+    signIn('google', { callbackUrl: safeCallback })
   }
-
-  // Auto trigger Google Sign In jika diarahkan dari handoff IP lokal
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href)
-      if (url.searchParams.get('auto_google') === '1' && status !== 'authenticated') {
-        url.searchParams.delete('auto_google')
-        const cleanQuery = url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''
-        window.history.replaceState({}, document.title, `${url.pathname}${cleanQuery}`)
-        handleGoogleSignIn()
-      }
-    }
-  }, [publicDomainUrl, status])
 
   // Jika sudah dalam keadaan login aktif yang valid (bukan setelah expired), arahkan langsung ke callbackUrl atau /dashboard
   useEffect(() => {
@@ -260,6 +222,42 @@ export default function LoginPage() {
     setError('')
 
     try {
+      // Pre-check autentikasi langsung ke endpoint auth backend jika sedang maintenance
+      const checkRes = await fetch(getPublicApiUrl('/auth/login'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+        },
+        body: JSON.stringify({
+          username: email,
+          password: password,
+        })
+      })
+
+      if (!checkRes.ok) {
+        const errJson = await checkRes.json().catch(() => ({}))
+        const errorMsg = errJson?.message || ''
+        if (typeof errorMsg === 'string' && errorMsg.startsWith('MAINTENANCE:')) {
+          const detailMsg = errorMsg.replace('MAINTENANCE:', '').trim() || 'Mohon maaf, saat ini sistem SIMASMUH sedang dalam status Lockdown Maintenance (Pemeliharaan Berkala). Seluruh akses masuk dibatasi khusus Administrator & Tim IT/TU.'
+          setError(detailMsg)
+          setLoading(false)
+          Swal.fire({
+            title: 'Sistem SIMASMUH Sedang Lockdown Maintenance',
+            text: detailMsg,
+            icon: 'warning',
+            confirmButtonText: 'Saya Mengerti',
+            confirmButtonColor: '#2563eb',
+            customClass: {
+              popup: 'rounded-2xl shadow-2xl border border-amber-200/80 dark:border-amber-900/40 dark:bg-slate-900',
+              title: 'text-slate-900 dark:text-white font-black text-lg',
+              htmlContainer: 'text-slate-600 dark:text-slate-300 text-sm font-medium leading-relaxed',
+            }
+          })
+          return
+        }
+      }
+
       const targetUrl = getSafeCallbackUrl()
       const result = await signIn('credentials', {
         redirect: false,
@@ -475,12 +473,32 @@ export default function LoginPage() {
                   <div className="flex items-center justify-center gap-1.5 text-slate-600 dark:text-slate-300 text-xs font-medium">
                     <KeyRound className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                     <span>SIMASMUH SMA Muhipo</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">Online</span>
+                    {isMaintenanceActive ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        Pemeliharaan Sistem
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">Online</span>
+                    )}
                   </div>
                 </div>
 
+                {/* Maintenance Notice Box if Active */}
+                {isMaintenanceActive && (
+                  <div className="p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-200 text-xs font-medium flex items-start gap-2.5 animate-in fade-in">
+                    <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="font-bold text-amber-900 dark:text-amber-100">Mode Pemeliharaan Aktif</div>
+                      <div className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
+                        {maintenanceMessage || 'Sistem sedang dalam proses pemeliharaan. Akses sementara dibuka hanya untuk Administrator & Tim IT/TU.'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Alert Error */}
-                {error && (
+                {error && !isMaintenanceActive && (
                   <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/15 border border-red-200 dark:border-red-400/30 text-red-700 dark:text-red-200 text-xs font-semibold flex items-center gap-2.5 animate-in fade-in">
                     <div className="w-2 h-2 rounded-full bg-red-500 shrink-0 animate-pulse" />
                     <span>{error}</span>

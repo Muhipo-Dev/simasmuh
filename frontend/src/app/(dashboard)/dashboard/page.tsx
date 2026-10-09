@@ -34,6 +34,7 @@ import { StudentDashboard } from '@/components/dashboard/StudentDashboard'
 import { SignaturePadDialog } from '@/components/dashboard/SignaturePadDialog'
 import { ExecutiveStatsPanel } from '@/components/dashboard/ExecutiveStatsPanel'
 import { QuickServerStatusPanel } from '@/components/dashboard/QuickServerStatusPanel'
+import { MaintenanceModeHeaderSwitch, WaitingRoomHeaderSwitch } from '@/components/dashboard/MaintenanceWaitingRoomSwitches'
 import { DisposisiAlertBanner } from '@/components/dashboard/DisposisiAlertBanner'
 
 import { useRealtimeServerClock } from '@/lib/time-sync'
@@ -3291,8 +3292,55 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Kartu Statistika Keuangan (Khusus GOD User atau Staf Keuangan Khusus) */}
-      {(isGod || (isKeuanganAll && !isKepalaSekolah && role !== 'SUPERADMIN' && role !== 'ADMIN_IT')) && (
+      {/* Kartu Status Server & Kontrol Mode Pemeliharaan/Waiting Room (Khusus GOD User & Superadmin) */}
+      {(isGod || isSuperadminRole) ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-stretch">
+          {/* 1. Server Stat: Uptime & Host */}
+          <Card className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Server Stat (Uptime)</span>
+              <Clock className="w-3.5 h-3.5 text-blue-500" />
+            </div>
+            <div className="my-1">
+              <span className="text-lg sm:text-xl font-black text-blue-600 dark:text-blue-400 font-mono block">
+                {supervisorData?.runtime?.uptimeHuman || '0j 0m 0d'}
+              </span>
+            </div>
+            <div className="text-[10px] text-slate-400 font-mono truncate">
+              Host: {supervisorData?.runtime?.hostname || 'localhost:3000'}
+            </div>
+          </Card>
+
+          {/* 2. Server Status: Latensi & DB Health */}
+          <Card className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Server Status</span>
+              <Radio className="w-3.5 h-3.5 text-emerald-500" />
+            </div>
+            <div className="my-1 flex items-center justify-between">
+              <span className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                {supervisorData?.performance?.apiLatencyMs ?? 2} ms <span className="text-xs font-sans font-medium text-slate-400">API</span>
+              </span>
+              <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 text-[10px] font-mono py-0">
+                {supervisorData?.performance?.dbStatus || 'HEALTHY'}
+              </Badge>
+            </div>
+            <div className="text-[10px] text-slate-400 truncate">
+              RAM: {supervisorData?.performance?.heapUsedMb ?? 0}MB Heap • {supervisorData?.taskManager?.activeConnectedSessions ?? 1} Sesi
+            </div>
+          </Card>
+
+          {/* 3. Tombol Switch Maintenance Mode */}
+          <div className="flex">
+            <MaintenanceModeHeaderSwitch />
+          </div>
+
+          {/* 4. Tombol Switch Waiting Room Manual */}
+          <div className="flex">
+            <WaitingRoomHeaderSwitch />
+          </div>
+        </div>
+      ) : (isKeuanganAll && !isKepalaSekolah) ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Card className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Saldo Kas Bersih</span>
@@ -3319,7 +3367,7 @@ export default function DashboardPage() {
             </span>
           </Card>
         </div>
-      )}
+      ) : null}
 
       {/* TAMPILAN KHUSUS PONSEL (MOBILE VIEW < LG): URUTAN SESUAI STANDAR RESMI */}
       {/* 1. Header Selamat (di atas) -> 2. Identitas Akun -> 3. Tombol Akses Cepat -> 4. Berita Artikel -> 5. Informasi Pengumuman Sistem -> 6. Kalender */}

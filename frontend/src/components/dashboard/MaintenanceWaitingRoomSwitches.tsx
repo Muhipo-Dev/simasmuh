@@ -1,0 +1,203 @@
+'use client'
+
+import React from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Wrench, Loader2 } from 'lucide-react'
+import Swal from 'sweetalert2'
+import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+
+export function MaintenanceModeHeaderSwitch() {
+  const queryClient = useQueryClient()
+  const authenticatedQuery = useAuthenticatedQuery()
+  const authenticatedFetch = useAuthenticatedFetch()
+
+  const { data: maintStatus, isLoading } = useQuery({
+    queryKey: ['maintenance-status'],
+    queryFn: () => authenticatedQuery('/api-backend/maintenance/status'),
+    refetchInterval: 3000,
+  })
+
+  const maintenanceMode = maintStatus?.maintenanceMode || false
+
+  const toggleMutation = useMutation({
+    mutationFn: async (nextMode: boolean) => {
+      const res = await authenticatedFetch('/api-backend/maintenance/admin/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          enabled: nextMode,
+          message: maintStatus?.maintenanceMessage || 'Mohon maaf, saat ini sistem SIMASMUH sedang dalam status Lockdown Maintenance (Pemeliharaan Berkala). Seluruh akses masuk dibatasi khusus Administrator & Tim IT/TU.' 
+        }),
+      })
+      if (!res.ok) throw new Error('Gagal mengubah mode maintenance')
+      return res.json()
+    },
+    onSuccess: (data, nextMode) => {
+      queryClient.setQueryData(['maintenance-status'], data)
+      queryClient.invalidateQueries({ queryKey: ['maintenance-status'] })
+      queryClient.invalidateQueries({ queryKey: ['settings'] })
+      Swal.fire({
+        title: nextMode ? 'Mode Pemeliharaan Aktif!' : 'Sistem Dibuka Penuh!',
+        text: nextMode
+          ? 'Hanya akun Superadmin, Admin, Admin IT, Admin TU, dan GOD yang dapat masuk ke SIMASMUH.'
+          : 'Seluruh pengguna (Guru, Siswa, Wali Murid) kini dapat masuk kembali secara normal.',
+        icon: nextMode ? 'warning' : 'success',
+        timer: 2500,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal!', err.message || 'Terjadi kesalahan sistem', 'error')
+    },
+  })
+
+  return (
+    <div className="flex items-center gap-2.5 bg-white dark:bg-slate-900 p-2.5 sm:px-3.5 sm:py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs shrink-0 flex-1 min-w-[240px]">
+      <div className="flex flex-col text-left min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-black text-slate-800 dark:text-slate-200 whitespace-nowrap">
+            Maintenance Mode:
+          </span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 ${
+              maintenanceMode
+                ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 animate-pulse'
+                : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${maintenanceMode ? 'bg-amber-600' : 'bg-emerald-600'}`} />
+            {maintenanceMode ? 'PEMELIHARAAN' : 'NORMAL'}
+          </span>
+        </div>
+        <span className="text-[10px] text-slate-400 truncate max-w-[190px]">
+          {maintenanceMode ? 'Khusus Admin, IT, TU & GOD' : 'Semua role dapat login'}
+        </span>
+      </div>
+
+      {/* Switch Button */}
+      <button
+        type="button"
+        disabled={toggleMutation.isPending || isLoading}
+        onClick={() => toggleMutation.mutate(!maintenanceMode)}
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+          maintenanceMode
+            ? 'bg-amber-600'
+            : 'bg-slate-300 dark:bg-slate-700'
+        }`}
+        title={maintenanceMode ? 'Klik untuk matikan mode pemeliharaan' : 'Klik untuk aktifkan mode pemeliharaan'}
+      >
+        <span className="sr-only">Toggle Maintenance Mode</span>
+        <span
+          className={`pointer-events-none inline-flex h-5 w-5 transform items-center justify-center rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+            maintenanceMode ? 'translate-x-5' : 'translate-x-0'
+          }`}
+        >
+          {toggleMutation.isPending ? (
+            <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
+          ) : maintenanceMode ? (
+            <Wrench className="w-2.5 h-2.5 text-amber-600" />
+          ) : (
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+          )}
+        </span>
+      </button>
+    </div>
+  )
+}
+
+export function WaitingRoomHeaderSwitch() {
+  const queryClient = useQueryClient()
+  const authenticatedQuery = useAuthenticatedQuery()
+  const authenticatedFetch = useAuthenticatedFetch()
+
+  const { data: metrics, isLoading } = useQuery({
+    queryKey: ['waiting-room-metrics'],
+    queryFn: () => authenticatedQuery('/api-backend/waiting-room/metrics'),
+    refetchInterval: 3000,
+  })
+
+  const forceEnabled = metrics?.forceEnabled || false
+  const activeUsers = metrics?.activeUsers || 0
+  const maxCapacity = metrics?.maxCapacity || 1000
+
+  const toggleMutation = useMutation({
+    mutationFn: async (nextForce: boolean) => {
+      const res = await authenticatedFetch('/api-backend/waiting-room/admin/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forceEnabled: nextForce }),
+      })
+      if (!res.ok) throw new Error('Gagal mengubah mode waiting room')
+      return res.json()
+    },
+    onSuccess: (data, nextForce) => {
+      queryClient.setQueryData(['waiting-room-metrics'], data)
+      queryClient.invalidateQueries({ queryKey: ['waiting-room-metrics'] })
+      Swal.fire({
+        title: nextForce ? 'Waiting Room Manual Diaktifkan!' : 'Mode Otomatis Aktif!',
+        text: nextForce
+          ? 'Seluruh trafik login baru kini dialihkan ke ruang tunggu antrean.'
+          : 'Waiting room kini otomatis berjalan saat beban server ≥ 80% atau kuota penuh.',
+        icon: nextForce ? 'warning' : 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal!', err.message || 'Terjadi kesalahan sistem', 'error')
+    },
+  })
+
+  return (
+    <div className="flex items-center gap-2.5 bg-white dark:bg-slate-900 p-2.5 sm:px-3.5 sm:py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs shrink-0 flex-1 min-w-[240px]">
+      <div className="flex flex-col text-left min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-black text-slate-800 dark:text-slate-200 whitespace-nowrap">
+            Waiting Room Manual:
+          </span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 ${
+              forceEnabled
+                ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 animate-pulse'
+                : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${forceEnabled ? 'bg-rose-600' : 'bg-emerald-600'}`} />
+            {forceEnabled ? 'MANUAL AKTIF' : 'OTOMATIS'}
+          </span>
+        </div>
+        <span className="text-[10px] text-slate-400 truncate max-w-[190px]">
+          {activeUsers}/{maxCapacity} login aktif • {metrics?.queuedUsers || 0} antre
+        </span>
+      </div>
+
+      {/* Switch Button */}
+      <button
+        type="button"
+        disabled={toggleMutation.isPending || isLoading}
+        onClick={() => toggleMutation.mutate(!forceEnabled)}
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+          forceEnabled
+            ? 'bg-rose-600'
+            : 'bg-slate-300 dark:bg-slate-700'
+        }`}
+        title={forceEnabled ? 'Klik untuk matikan mode manual' : 'Klik untuk aktifkan mode manual'}
+      >
+        <span className="sr-only">Toggle Waiting Room Manual</span>
+        <span
+          className={`pointer-events-none inline-flex h-5 w-5 transform items-center justify-center rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+            forceEnabled ? 'translate-x-5' : 'translate-x-0'
+          }`}
+        >
+          {toggleMutation.isPending ? (
+            <Loader2 className="w-3 h-3 animate-spin text-rose-600" />
+          ) : forceEnabled ? (
+            <span className="w-2 h-2 rounded-full bg-rose-600" />
+          ) : (
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+          )}
+        </span>
+      </button>
+    </div>
+  )
+}

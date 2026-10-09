@@ -140,7 +140,7 @@ export class AuthService {
           userAgent,
         });
         throw new BadRequestException(
-          `MAINTENANCE:${this.maintenanceService.maintenanceMessage || 'Sistem SIMASMUH sedang dalam pemeliharaan berkala untuk peningkatan performa dan keamanan.'}`,
+          `MAINTENANCE:${this.maintenanceService.maintenanceMessage || 'Layanan SIMASMUH sedang dalam pemeliharaan berkala untuk optimalisasi sistem. Akses sementara dibatasi untuk Administrator.'}`,
         );
       }
     }
@@ -312,7 +312,7 @@ export class AuthService {
           userAgent,
         });
         throw new BadRequestException(
-          `MAINTENANCE:${this.maintenanceService.maintenanceMessage || 'Sistem SIMASMUH sedang dalam pemeliharaan berkala untuk peningkatan performa dan keamanan.'}`,
+          `MAINTENANCE:${this.maintenanceService.maintenanceMessage || 'Layanan SIMASMUH sedang dalam pemeliharaan berkala untuk optimalisasi sistem. Akses sementara dibatasi untuk Administrator.'}`,
         );
       }
     }

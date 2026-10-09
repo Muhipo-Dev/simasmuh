@@ -239,14 +239,14 @@ export default function LoginPage() {
         const errJson = await checkRes.json().catch(() => ({}))
         const errorMsg = errJson?.message || ''
         if (typeof errorMsg === 'string' && errorMsg.startsWith('MAINTENANCE:')) {
-          const detailMsg = errorMsg.replace('MAINTENANCE:', '').trim() || 'Mohon maaf, saat ini sistem SIMASMUH sedang dalam status Lockdown Maintenance (Pemeliharaan Berkala). Seluruh akses masuk dibatasi khusus Administrator & Tim IT/TU.'
+          const detailMsg = errorMsg.replace('MAINTENANCE:', '').trim() || 'Layanan SIMASMUH sedang dalam pemeliharaan berkala untuk optimalisasi sistem. Akses sementara dibatasi untuk Administrator.'
           setError(detailMsg)
           setLoading(false)
           Swal.fire({
-            title: 'Sistem SIMASMUH Sedang Lockdown Maintenance',
+            title: 'Pemeliharaan Sistem',
             text: detailMsg,
             icon: 'warning',
-            confirmButtonText: 'Saya Mengerti',
+            confirmButtonText: 'Tutup',
             confirmButtonColor: '#2563eb',
             customClass: {
               popup: 'rounded-2xl shadow-2xl border border-amber-200/80 dark:border-amber-900/40 dark:bg-slate-900',
@@ -489,9 +489,9 @@ export default function LoginPage() {
                   <div className="p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-200 text-xs font-medium flex items-start gap-2.5 animate-in fade-in">
                     <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                     <div className="space-y-0.5">
-                      <div className="font-bold text-amber-900 dark:text-amber-100">Mode Pemeliharaan Aktif</div>
+                      <div className="font-bold text-amber-900 dark:text-amber-100">Pemeliharaan Sistem Aktif</div>
                       <div className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
-                        {maintenanceMessage || 'Sistem sedang dalam proses pemeliharaan. Akses sementara dibuka hanya untuk Administrator & Tim IT/TU.'}
+                        {maintenanceMessage || 'Layanan SIMASMUH sedang dalam pemeliharaan berkala untuk optimalisasi sistem. Akses sementara dibatasi untuk Administrator.'}
                       </div>
                     </div>
                   </div>

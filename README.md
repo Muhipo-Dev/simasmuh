@@ -10,9 +10,9 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 * **Frontend Web Application:**
   * **Framework & Runtime:** Next.js (App Router, Turbopack, React 19) & TypeScript.
-  * **UI & Styling System:** TailwindCSS, Radix UI Primitives, Lucide Icons, Framer Motion (Smooth Staggered Animations & 3D Cards).
+  * **UI & Styling System:** Ionic Mobile Touch Engine (`ionic-mobile.css`), Tablet Touch Matrix (`tablet-touch.css`), Desktop Ergonomics (`desktop.css`), TailwindCSS, Radix UI Primitives, Lucide Icons, Framer Motion (Smooth Staggered Animations & 3D Cards).
   * **State Management & Data Synchronization:** TanStack React Query v5 & NextAuth.js (Session Caching, Adaptive Network Resolver, Multi-Provider Google OAuth & Credentials).
-  * **Theme & Ergonomics:** Dark/Light adaptive theme system (`next-themes`), Glassmorphism UI tokens, dan Mobile-First Responsive Ergonomics (Zero-Collision Layout).
+  * **Theme & Ergonomics:** Dark/Light adaptive theme system (`next-themes`), Optical Depth Glassmorphism Tokens (`backdrop-filter: blur(20px)`), Universal Wallpaper Integration, dan Mobile-First Responsive Ergonomics (Zero-Collision & Anti-Offset Layout).
   * **Public Modules:** Buku Tamu Digital Publik (`/buku-tamu`), Verifikasi E-Sign QR Publik (`/verifikasi-ttd`), dan Display Presensi QR (`/presensi/manajemen-qr`).
 
 * **Backend API & Enterprise Core:**
@@ -25,7 +25,7 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
     * `finance`: Master Pos Tarif (SPP, DPP, Seragam, Ujian), Tagihan Massal Otomatis, Verifikasi Pembayaran & Bukti Transfer, Penggajian Pegawai Terintegrasi, Rekapitulasi Kas & LPJ Keuangan.
     * `tu`: Persuratan Masuk & Keluar, Penomoran Surat Otomatis, Disposisi Digital, Tanda Tangan Elektronik (E-Sign QR Hash Kriptografi), Inventaris/Sarpras, Kepegawaian TU, dan Manajemen Buku Tamu.
     * `communication`: Pengumuman Sekolah, Banner Interaktif, Log Notifikasi Dashboard Pengguna, dan Layanan Email SMTP Transaksional Resmi.
-    * `core`: Autentikasi RBAC & Google OAuth, Waiting Room Virtual Queue, Manajemen Domain Publik & Kredensial Terpusat, Telemetri Performa Server Real-time, Manajemen Sesi Multi-Perangkat, Timezone UTC+7 Server-Centric Synchronization.
+    * `core`: Autentikasi RBAC & Google OAuth, Lockdown Maintenance Mode, Waiting Room Virtual Queue, Manajemen Domain Publik & Kredensial Terpusat, Telemetri Performa Server Real-time, Manajemen Sesi Multi-Perangkat, Timezone UTC+7 Server-Centric Synchronization.
   * **ORM & Database Modeling:** Prisma ORM.
 
 * **Database & Cloud Storage:**
@@ -42,6 +42,21 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 ---
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
+
+* **2026-10-10 (v1.9.7 - Arsitektur Multi-Viewport CSS, Ionic Mobile Engine, Optical Glassmorphism Wallpaper, Universal Searchbar & Filter Popover, Redesain Header Sapaan Ergonomis):**
+  * **Arsitektur Multi-Viewport CSS Terisolasi (`ionic-mobile.css`, `tablet-touch.css`, `desktop.css`):**
+    * Pemisahan komprehensif aturan styling antarmuka berdasarkan viewport spesifik guna mencegah regresi layout antar platform (Mobile `< 768px`, Tablet `768px - 1024px`, Desktop `> 1024px`).
+    * Pengaktifan desktop mouse pointer scrollbar permission (`overflow-y: auto !important`) dan zero-offset anti-collision containment pada seluruh kontainer kartu dan layout global (`globals.css`).
+  * **Ionic Mobile Touch Engine & Optical Depth Glassmorphism:**
+    * Penerapan background wallpaper dinamis institusi terintegrasi (`systemSettings.backgroundUrl` / fallback `/muhipo-log.jpg`) pada tampilan mobile dengan efek kedalaman optik modern (`backdrop-filter: blur(20px) saturate(180%)`).
+    * Area sentuh ergonomis dan jarak aman tepi layar (*safe margins*) yang lapang (`max(1.25rem, calc(var(--ion-safe-area-left/right) + 1.25rem))`) untuk kenyamanan penggunaan satu tangan pada layar sentuh ponsel.
+  * **Universal Searchbar & Filter Popover Single-Row Alignment:**
+    * Penyeragaman tata letak Searchbar dan tombol Filter terpusat berdampingan dalam satu baris horizontal di seluruh modul dan fitur tabel SIMASMUH (Siswa, Pegawai, Keuangan, Persuratan, Presensi, Rombel, dll).
+    * Eliminasi pembengkakan atau penumpukan tombol filter vertikal di perangkat mobile.
+  * **Redesain Banner Sapaan & Dashboard Ergonomis (`/dashboard`):**
+    * Penyederhanaan header sapaan menjadi format ringkas profesional: `Selamat (Pagi/Siang/Sore/Malam), [Nama Pengguna]` dengan subketerangan resmi `Sistem Informasi Manajemen SMA Muhipo` tanpa ornamen redundan.
+    * Pengoptimalan viewport mobile dengan menyembunyikan kartu identitas akun berlebih agar pengguna langsung mengakses menu cepat (*Quick Access Grid*).
+    * Penataan kontrol switch ganda (Mode Pemeliharaan & Ruang Tunggu) yang bersih dan simetris pada panel superadmin.
 
 * **2026-10-09 (v1.9.6 - Fitur Terpisah Lockdown Maintenance Mode, Jadwal Sholat Bulanan Muhammadiyah KHGT, Standar Notifikasi Penggajian Email SMTP, Hapus Foto Profil, Backup-Restore Otomatis Launcher, dan Optimasi Face Recognition AI):**
   * **Pemisahan Modul Lockdown Maintenance Mode & Waiting Room (`maintenance.service.ts` & `waiting-room.service.ts`):**

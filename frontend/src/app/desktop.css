@@ -1,0 +1,76 @@
+/* ==========================================================================
+   DESKTOP FRAMEWORK CSS (Windows, macOS, Linux, ChromeOS)
+   Focused on precise pointer/mouse input, compact data-density, keyboard shortcuts,
+   fine scrollbars, hover interactions, and widescreen productivity grids.
+   ========================================================================== */
+
+:root {
+  --desktop-nav-width: 280px;
+  --desktop-nav-collapsed-width: 72px;
+  --desktop-header-height: 64px;
+  --desktop-btn-min-height: 36px;
+  --desktop-input-min-height: 38px;
+  --desktop-data-row-height: 48px;
+  --desktop-scrollbar-width: 8px;
+}
+
+/* Specific to Mouse/Pointer Driven Screens (Desktop Widescreen >= 1024px) */
+@media screen and (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  /* Precision Desktop Scrollbar */
+  ::-webkit-scrollbar {
+    width: var(--desktop-scrollbar-width);
+    height: var(--desktop-scrollbar-width);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.7);
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.25);
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+  }
+
+  /* Desktop Micro Hover Elevation */
+  .desktop-hover-lift {
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease;
+  }
+  .desktop-hover-lift:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  }
+
+  /* Desktop High-Density Data Grid */
+  .desktop-data-table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .desktop-data-table th {
+    height: 40px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .desktop-data-table td {
+    height: var(--desktop-data-row-height);
+    font-size: 0.875rem;
+  }
+
+  /* Desktop Quick Action Buttons */
+  .desktop-action-btn {
+    min-height: var(--desktop-btn-min-height);
+    padding: 0 0.75rem;
+    font-size: 0.8125rem;
+    cursor: pointer;
+  }
+}

@@ -159,7 +159,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
         )}
       </div>
-      <div className="fixed inset-0 bg-slate-100/75 dark:bg-slate-950/80 backdrop-blur-[1px] -z-20 pointer-events-none print:hidden" />
+      <div className="fixed inset-0 bg-slate-100/60 dark:bg-slate-950/70 backdrop-blur-md sm:backdrop-blur-sm -z-20 pointer-events-none print:hidden" />
 
       {/* Kerangka Sidebar Induk Terpadu */}
       {!hideSidebar && (
@@ -259,7 +259,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
         </div>
 
-        <div className={`flex-1 w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-14 pt-3 sm:pt-4 md:pt-5 pb-20 sm:pb-24 lg:pb-12 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0`}>
+        <div className={`flex-1 w-full px-6 sm:px-7 md:px-8 lg:px-10 xl:px-12 2xl:px-14 pt-4 sm:pt-4 md:pt-5 pb-20 sm:pb-24 lg:pb-12 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0`}>
           <div className="w-full max-w-7xl 2xl:max-w-[1480px] mx-auto space-y-3.5 sm:space-y-4">
             <div className="w-full print:hidden">
               <EmailRecommendationBanner />

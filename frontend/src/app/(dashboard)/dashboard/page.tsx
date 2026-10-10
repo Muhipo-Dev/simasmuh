@@ -3137,30 +3137,13 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-3.5 sm:space-y-4 pb-6">
-      <div className="simas-dash-header p-4 sm:p-5 md:p-6 text-white flex flex-col md:flex-row md:items-center justify-between gap-3.5 sm:gap-4">
-        <div className="space-y-1.5 min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`simas-kpi-badge ${
-              isGod
-                ? 'bg-amber-500/25 text-amber-300 border-amber-400/50 font-black'
-                : 'bg-blue-500/20 text-blue-300 border-blue-400/40'
-            }`}>
-              {isGod ? 'GOD ACCESS • BYPASS MASTER' : isSuperadminRole ? 'Superadmin' : 'SIMASMUH'}
-            </span>
-            <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-bold shrink-0">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{isGod ? 'Universal Bypass Aktif' : 'Sistem Terhubung'}</span>
-            </div>
-          </div>
-          <h1 className="text-base sm:text-lg md:text-xl font-extrabold tracking-tight text-white truncate" title={`${clock.greeting}, ${(session?.user as any)?.name || 'Pengguna'}`}>
-            {clock.greeting}, <span className={`font-black ${isGod ? 'text-amber-300' : 'text-blue-200'}`}>{(session?.user as any)?.name || 'Pengguna'}</span>
+      <div className="simas-dash-header p-3.5 sm:p-4 md:p-5 text-white flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">
+        <div className="space-y-0.5 min-w-0 flex-1">
+          <h1 className="text-base sm:text-lg md:text-xl font-black tracking-tight text-white truncate" title={`${clock.greeting}, ${(session?.user as any)?.name || 'Pengguna'}`}>
+            {clock.greeting}, <span className={`${isGod ? 'text-amber-300' : 'text-blue-200'}`}>{(session?.user as any)?.name || 'Pengguna'}</span>
           </h1>
-          <p className="text-slate-300 dark:text-slate-400 text-xs font-medium line-clamp-2 sm:line-clamp-none leading-relaxed">
-            {isGod
-              ? 'Akses bypass universal ke seluruh modul finansial, operasional, supervisi eksekutif, master data, dan tata kelola sistem.'
-              : isSuperadminRole
-              ? 'Monitoring sistem, port operasional, dan sesi aktif secara realtime.'
-              : 'Portal Informasi & Manajemen Pendidikan SMA Muhammadiyah 1 Ponorogo.'}
+          <p className="text-slate-300 dark:text-slate-400 text-xs font-medium truncate">
+            Sistem Informasi Manajemen SMA Muhipo
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0 w-full md:w-auto justify-start md:justify-end pt-1 md:pt-0">
@@ -3170,12 +3153,12 @@ export default function DashboardPage() {
               <Button
                 size="sm"
                 onClick={() => setShowSignaturePad(true)}
-                className="h-9 sm:h-9.5 px-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-extrabold text-xs shadow-sm gap-1.5 border border-amber-400/40 shrink-0"
+                className="h-8.5 sm:h-9 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-extrabold text-[11px] sm:text-xs shadow-xs gap-1.5 border border-amber-400/40 shrink-0 active:scale-95"
               >
-                <PenTool className="w-4 h-4" />
-                <span>Tanda Tangan (E-Sign)</span>
+                <PenTool className="w-3.5 h-3.5" />
+                <span>E-Sign</span>
                 {((execStats?.persuratan?.pendingDispensasi || 0) + (execStats?.persuratan?.pendingSuratKeluar || 0) + (execStats?.persuratan?.pendingDisposisi || 0)) > 0 && (
-                  <Badge className="h-5 px-1.5 bg-white text-orange-700 font-mono font-black text-[9.5px] rounded-full ml-0.5">
+                  <Badge className="h-4.5 px-1 bg-white text-orange-700 font-mono font-black text-[9px] rounded-full ml-0.5">
                     {(execStats?.persuratan?.pendingDispensasi || 0) + (execStats?.persuratan?.pendingSuratKeluar || 0) + (execStats?.persuratan?.pendingDisposisi || 0)}
                   </Badge>
                 )}
@@ -3185,61 +3168,60 @@ export default function DashboardPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => setShowExecutiveStats(!showExecutiveStats)}
-                className={`h-9 sm:h-9.5 px-3.5 rounded-xl font-extrabold text-xs gap-1.5 backdrop-blur-md transition-all shrink-0 ${
+                className={`h-8.5 sm:h-9 px-3 rounded-xl font-extrabold text-[11px] sm:text-xs gap-1.5 backdrop-blur-md transition-all shrink-0 active:scale-95 ${
                   showExecutiveStats
-                    ? 'bg-amber-500 text-white border-amber-400 shadow-sm'
+                    ? 'bg-amber-500 text-white border-amber-400 shadow-xs'
                     : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
                 }`}
               >
-                <BarChart3 className="w-4 h-4 text-amber-300" />
-                <span>{showExecutiveStats ? 'Tutup Statistika' : 'Statistika Sekolah'}</span>
+                <BarChart3 className="w-3.5 h-3.5 text-amber-300" />
+                <span>{showExecutiveStats ? 'Tutup Statistik' : 'Statistik'}</span>
               </Button>
             </>
           )}
 
-          {/* Tombol Khusus GOD User & Superadmin: Akses Langsung FaceNet AI & Pengguna */}
+          {/* Tombol Khusus GOD User & Superadmin: Akses Langsung Status Server, FaceNet AI & Pengguna */}
           {(isGod || isSuperadminRole) && (
             <>
-              {/* Tombol Infografis & Akses Cepat Status Server */}
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setShowServerStatus(!showServerStatus)}
-                className={`h-9 sm:h-9.5 px-3.5 rounded-xl font-extrabold text-xs gap-1.5 backdrop-blur-md transition-all shrink-0 ${
+                className={`h-8.5 sm:h-9 px-3 rounded-xl font-extrabold text-[11px] sm:text-xs gap-1.5 backdrop-blur-md transition-all shrink-0 active:scale-95 ${
                   showServerStatus
-                    ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
+                    ? 'bg-blue-600 text-white border-blue-400 shadow-xs'
                     : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
                 }`}
                 title="Lihat status server, latensi, port layanan, dan RAM"
               >
-                <Server className="w-4 h-4 text-cyan-300" />
+                <Server className="w-3.5 h-3.5 text-cyan-300" />
                 <span>{showServerStatus ? 'Tutup Server' : 'Status Server'}</span>
                 {supervisorData?.taskManager?.activeConnectedSessions !== undefined && (
-                  <Badge className="h-5 px-1.5 bg-white/20 text-white font-mono font-black text-[9.5px] rounded-full ml-0.5">
+                  <Badge className="h-4.5 px-1.5 bg-white/20 text-white font-mono font-black text-[9px] rounded-full ml-0.5">
                     {supervisorData.taskManager.activeConnectedSessions} Sesi
                   </Badge>
                 )}
               </Button>
 
-              <Link href="/facenetai" className="shrink-0">
+              <Link href="/facenetai" className="flex-1 sm:flex-initial">
                 <Button
                   size="sm"
-                  className="h-9 sm:h-9.5 px-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-sm gap-1.5 border border-cyan-400/40 active:scale-95 transition-all"
+                  className="w-full h-8.5 sm:h-9 px-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-[11px] sm:text-xs shadow-xs gap-1.5 border border-cyan-400/40 active:scale-95 transition-all"
                 >
-                  <Camera className="w-4 h-4 text-cyan-300 animate-pulse" />
+                  <Camera className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
                   <span>FaceNet AI</span>
                 </Button>
               </Link>
 
               {isGod && (
-                <Link href="/master-data/pengguna" className="shrink-0">
+                <Link href="/master-data/pengguna" className="flex-1 sm:flex-initial">
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 sm:h-8.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border-white/20 font-extrabold text-[11px] gap-1.5 backdrop-blur-md active:scale-95 transition-all"
+                    className="w-full h-8.5 sm:h-9 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border-white/20 font-extrabold text-[11px] gap-1.5 backdrop-blur-md active:scale-95 transition-all"
                   >
                     <UserCog className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Akun Pengguna</span>
+                    <span>Pengguna</span>
                   </Button>
                 </Link>
               )}
@@ -3292,50 +3274,15 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Kartu Status Server & Kontrol Mode Pemeliharaan/Waiting Room (Khusus GOD User & Superadmin) */}
+      {/* Kontrol Mode Pemeliharaan & Waiting Room Manual (Khusus GOD User & Superadmin) */}
       {(isGod || isSuperadminRole) ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-stretch">
-          {/* 1. Server Stat: Uptime & Host */}
-          <Card className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Server Stat (Uptime)</span>
-              <Clock className="w-3.5 h-3.5 text-blue-500" />
-            </div>
-            <div className="my-1">
-              <span className="text-lg sm:text-xl font-black text-blue-600 dark:text-blue-400 font-mono block">
-                {supervisorData?.runtime?.uptimeHuman || '0j 0m 0d'}
-              </span>
-            </div>
-            <div className="text-[10px] text-slate-400 font-mono truncate">
-              Host: {supervisorData?.runtime?.hostname || 'localhost:3000'}
-            </div>
-          </Card>
-
-          {/* 2. Server Status: Latensi & DB Health */}
-          <Card className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Server Status</span>
-              <Radio className="w-3.5 h-3.5 text-emerald-500" />
-            </div>
-            <div className="my-1 flex items-center justify-between">
-              <span className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                {supervisorData?.performance?.apiLatencyMs ?? 2} ms <span className="text-xs font-sans font-medium text-slate-400">API</span>
-              </span>
-              <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 text-[10px] font-mono py-0">
-                {supervisorData?.performance?.dbStatus || 'HEALTHY'}
-              </Badge>
-            </div>
-            <div className="text-[10px] text-slate-400 truncate">
-              RAM: {supervisorData?.performance?.heapUsedMb ?? 0}MB Heap • {supervisorData?.taskManager?.activeConnectedSessions ?? 1} Sesi
-            </div>
-          </Card>
-
-          {/* 3. Tombol Switch Maintenance Mode */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
+          {/* 1. Tombol Switch Maintenance Mode */}
           <div className="flex">
             <MaintenanceModeHeaderSwitch />
           </div>
 
-          {/* 4. Tombol Switch Waiting Room Manual */}
+          {/* 2. Tombol Switch Waiting Room Manual */}
           <div className="flex">
             <WaitingRoomHeaderSwitch />
           </div>
@@ -3370,15 +3317,8 @@ export default function DashboardPage() {
       ) : null}
 
       {/* TAMPILAN KHUSUS PONSEL (MOBILE VIEW < LG): URUTAN SESUAI STANDAR RESMI */}
-      {/* 1. Header Selamat (di atas) -> 2. Identitas Akun -> 3. Tombol Akses Cepat -> 4. Berita Artikel -> 5. Informasi Pengumuman Sistem -> 6. Kalender */}
+      {/* 1. Header Selamat (di atas) -> 2. Tombol Akses Cepat -> 3. Berita Artikel -> 4. Informasi Pengumuman Sistem -> 5. Kalender */}
       <div className="block lg:hidden space-y-3.5 sm:space-y-4">
-        {/* 2. Identitas Akun */}
-        <UserAccountCard
-          role={role}
-          subRole={subRole}
-          profileAvatarUrl={(session?.user as any)?.avatarUrl}
-        />
-
         {/* Widget Antrean E-Sign & Persuratan Khusus Kepala Sekolah (Mobile) */}
         {isKepalaSekolah && (
           <Card className="p-3.5 rounded-2xl border border-amber-200/80 dark:border-amber-900/50 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/20 shadow-2xs space-y-2.5">

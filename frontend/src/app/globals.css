@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./desktop.css";
+@import "./ionic-mobile.css";
+@import "./tablet-touch.css";
+@import "./tablet-hybrid.css";
 
 @font-face {
   font-family: 'Inter';
@@ -62,6 +66,13 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --spacing-safe-top: var(--mobile-safe-top);
+  --spacing-safe-bottom: var(--mobile-safe-bottom);
+  --spacing-safe-left: var(--mobile-safe-left);
+  --spacing-safe-right: var(--mobile-safe-right);
+  --spacing-touch-target: var(--mobile-touch-target);
+  --spacing-tablet-touch: var(--tablet-touch-target);
+  --spacing-desktop-btn: var(--desktop-btn-min-height);
 }
 
 :root {
@@ -139,19 +150,23 @@
     -webkit-tap-highlight-color: transparent;
   }
   html {
-    font-size: 100%; /* Menghormati dan mengikuti ukuran font default perangkat pengguna */
+    font-size: 100%;
     scroll-behavior: smooth;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground antialiased;
-    overscroll-behavior-y: none;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     text-rendering: optimizeSpeed;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 100vh;
   }
 
   /* Low-spec hardware acceleration & compositing layer optimization */
@@ -844,6 +859,41 @@
 
   .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
+  }
+
+  /* ==========================================================================
+     UNIVERSAL ANTI-OFFSET & STRICT CONTAINER CONTAINMENT
+     Mencegah elemen, tombol, teks, dan tabel melar/overflow keluar area kartu
+     di seluruh resolusi perangkat (Desktop Widescreen, Tablet, dan Ponsel).
+     ========================================================================== */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* Anti-Overflow Text Hierarchy */
+  h1, h2, h3, h4, h5, h6, p {
+    overflow-wrap: break-word;
+  }
+
+  /* Strict Container Bounds */
+  [data-slot="card"],
+  .simas-metric-panel,
+  .simas-soft-card,
+  .simas-tactile-card,
+  .swiss-panel,
+  .rounded-xl.border,
+  .rounded-2xl.border {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Prevent Image & Media Blowouts */
+  img, svg, video, canvas, audio, iframe, embed, object {
+    max-width: 100%;
+    height: auto;
+    display: block;
   }
 }
 

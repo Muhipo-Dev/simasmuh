@@ -1,0 +1,59 @@
+/* ==========================================================================
+   TABLET TOUCH FRAMEWORK CSS (iPadOS / Android Tablets)
+   Focused on touch-first multi-column ergonomics, gesture support,
+   orientation adaptivity (Portrait vs Landscape), and balanced touch targets.
+   ========================================================================== */
+
+:root {
+  --tablet-touch-target: 44px;
+  --tablet-sidebar-width: 240px;
+  --tablet-header-height: 58px;
+  --tablet-safe-top: env(safe-area-inset-top, 0px);
+  --tablet-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Tablet Screen Matrix (768px - 1024px Touch Devices) */
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+  /* Tablet Touch Ergonomics */
+  button, 
+  [role="button"], 
+  .tablet-touchable {
+    min-height: var(--tablet-touch-target);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Tablet 2-Column Responsive Layout */
+  .tablet-grid-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  /* Tablet Modal & Sheet Dialog Centering */
+  .tablet-dialog-frame {
+    max-width: 90vw;
+    margin: 0 auto;
+    border-radius: 1.25rem;
+  }
+
+  /* Smooth momentum scrolling for tablet touch cards */
+  .tablet-scroll-view {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}
+
+/* Specific to iPadOS / Android Tablet in Landscape */
+@media screen and (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+  .tablet-landscape-nav {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+  .tablet-landscape-split {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 1.25rem;
+  }
+}

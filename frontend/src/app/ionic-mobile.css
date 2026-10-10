@@ -1,0 +1,499 @@
+/* ==========================================================================
+   IONIC CSS FRAMEWORK ENGINE (Android Material & iOS Cupertino Standards)
+   Dedicated mobile application CSS framework for SIMASMUH Mobile Viewport (< 768px).
+   High visual harmony, precise spacing hierarchy, eye-comfort aesthetics, and fluid adaptivity.
+   ========================================================================== */
+
+:root {
+  /* Ionic Pure Palette Tokens (Optical Glass Theme) */
+  --ion-background-color: transparent;
+  --ion-text-color: #0f172a;
+  --ion-color-primary: #2563eb;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-secondary: #475569;
+  --ion-color-tertiary: #6366f1;
+  --ion-color-success: #10b981;
+  --ion-color-warning: #f59e0b;
+  --ion-color-danger: #ef4444;
+  --ion-color-light: rgba(241, 245, 249, 0.7);
+  --ion-color-medium: #64748b;
+  --ion-color-dark: #0f172a;
+
+  /* Card Surfaces & Borders with Optical Glassmorphism */
+  --ion-card-bg: rgba(255, 255, 255, 0.88);
+  --ion-card-border: rgba(226, 232, 240, 0.85);
+
+  /* Ionic Safe Area Insets */
+  --ion-safe-area-top: env(safe-area-inset-top, 0px);
+  --ion-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --ion-safe-area-left: env(safe-area-inset-left, 0px);
+  --ion-safe-area-right: env(safe-area-inset-right, 0px);
+
+  /* Touch Targets & Shapes */
+  --ion-touch-target: 44px;
+  --ion-item-min-height: 48px;
+  --ion-border-color: #e2e8f0;
+  --ion-card-border-radius: 16px;
+  --ion-toolbar-height: 54px;
+}
+
+.dark {
+  --ion-background-color: transparent;
+  --ion-text-color: #f8fafc;
+  --ion-card-bg: rgba(15, 23, 42, 0.85);
+  --ion-card-border: rgba(30, 41, 59, 0.85);
+  --ion-border-color: rgba(30, 41, 59, 0.85);
+  --ion-color-light: rgba(30, 41, 59, 0.7);
+  --ion-color-medium: #94a3b8;
+  --ion-color-dark: #f8fafc;
+}
+
+/* ==========================================================================
+   IONIC VIEWPORT ACTIVATION (Smartphones & Mobile Handhelds < 768px)
+   ========================================================================== */
+@media screen and (max-width: 767.98px) {
+  /* 1. ROOT & BODY ENGINE WITH DESKTOP CURSOR SCROLL PERMISSION */
+  html, body {
+    background-color: transparent !important;
+    color: var(--ion-text-color) !important;
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(148, 163, 184, 0.4) transparent !important;
+  }
+
+  /* Universal Custom Pointer Scrollbar for Desktop Testing on Mobile Viewport */
+  ::-webkit-scrollbar {
+    width: 6px !important;
+    height: 6px !important;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4) !important;
+    border-radius: 9999px !important;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.7) !important;
+  }
+
+  /* 2. TOP APPBAR & TOOLBAR (Ionic Header) */
+  header,
+  .ion-header,
+  .mobile-appbar {
+    padding-top: max(0.5rem, var(--ion-safe-area-top)) !important;
+    padding-left: max(1.25rem, calc(var(--ion-safe-area-left) + 1.25rem)) !important;
+    padding-right: max(1.25rem, calc(var(--ion-safe-area-right) + 1.25rem)) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 45 !important;
+  }
+
+  header > div > div,
+  .ion-toolbar {
+    min-height: 52px !important;
+    padding: 0.4rem 0.875rem !important;
+    border-radius: 16px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid var(--ion-card-border) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+  }
+  .dark header > div > div,
+  .dark .ion-toolbar {
+    background: rgba(15, 23, 42, 0.95) !important;
+  }
+
+  /* 3. MAIN CONTENT CONTAINER (Lapang, Ergonomis, & Anti-Mepet Tepi Layar) */
+  main,
+  .simas-main-content,
+  [data-slot="main-container"],
+  body > div > div > div > div {
+    padding-left: max(1.25rem, calc(var(--ion-safe-area-left) + 1.25rem)) !important;
+    padding-right: max(1.25rem, calc(var(--ion-safe-area-right) + 1.25rem)) !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 4. UNIVERSAL MODULE PAGE HEADERS (Harmonis, Estetik, & Berjarak Lapang) */
+  .simas-dash-header {
+    padding: 1.25rem 1.125rem !important;
+    border-radius: var(--ion-card-border-radius) !important;
+    gap: 0.875rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #0f172a !important;
+    border: 1px solid #1e293b !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    overflow: hidden !important;
+  }
+  .dark .simas-dash-header {
+    background: #020617 !important;
+    border-color: #1e293b !important;
+  }
+
+  .simas-dash-header h1 {
+    font-size: clamp(1rem, 4.2vw, 1.25rem) !important;
+    line-height: 1.35 !important;
+    font-weight: 850 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .simas-dash-header p {
+    font-size: clamp(0.75rem, 3.4vw, 0.875rem) !important;
+    line-height: 1.45 !important;
+    color: #94a3b8 !important;
+  }
+
+  /* Flex Container Tombol Header Banner (Adaptif, Berjarak Rapi, & Anti-Offset) */
+  .simas-dash-header .flex.flex-wrap {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+    padding-top: 0.25rem !important;
+  }
+
+  .simas-dash-header .flex.flex-wrap > * {
+    flex: 1 1 calc(50% - 0.5rem) !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    justify-content: center !important;
+    min-height: 38px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+  }
+
+  .simas-dash-header .flex.flex-wrap > a {
+    display: flex !important;
+    flex: 1 1 calc(50% - 0.5rem) !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .simas-dash-header .flex.flex-wrap > a > button {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    box-sizing: border-box !important;
+    justify-content: center !important;
+    border-radius: 10px !important;
+  }
+
+  .simas-dash-header .flex.flex-wrap > span:last-child {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    min-height: 28px !important;
+    height: auto !important;
+    font-size: 0.6875rem !important;
+    padding: 0.35rem 0.625rem !important;
+    border-radius: 8px !important;
+  }
+
+  /* 5. ION-CARD & INSET LIST CONTAINERS (Semua Modul & Fitur - Optical Glassmorphism) */
+  [data-slot="card"],
+  .simas-metric-panel,
+  .simas-soft-card,
+  .simas-tactile-card,
+  .swiss-panel,
+  .ion-card {
+    border-radius: var(--ion-card-border-radius) !important;
+    border: 1px solid var(--ion-card-border) !important;
+    background: var(--ion-card-bg) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    margin-bottom: 0.75rem !important;
+    padding: 1.125rem 1rem !important;
+    transition: all 0.15s ease !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Universal Element Containment (Pencegah Total Offset Keluar Kartu) */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box !important;
+  }
+
+  /* Anti-Overflow Text Hierarchy */
+  h1, h2, h3, h4, h5, h6, p {
+    overflow-wrap: break-word !important;
+  }
+
+  /* 6. DATA TABLES & ACTION CONTROLS IN ALL MODULES (Ionic Data Table) */
+  table {
+    font-size: 0.8125rem !important;
+    width: 100% !important;
+  }
+
+  th,
+  [data-slot="table-head"] {
+    padding: 0.625rem 0.75rem !important;
+    font-size: 0.6875rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    color: var(--ion-color-medium) !important;
+    background-color: var(--ion-color-light) !important;
+    border-bottom: 1px solid var(--ion-card-border) !important;
+    white-space: nowrap !important;
+  }
+
+  td,
+  [data-slot="table-cell"] {
+    padding: 0.75rem !important;
+    font-size: 0.8125rem !important;
+    border-bottom: 1px solid var(--ion-card-border) !important;
+    vertical-align: middle !important;
+  }
+
+  /* Scrollable Table Containers */
+  .overflow-x-auto,
+  [data-slot="table-container"],
+  .ion-scroll-view,
+  .mobile-scroll-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-x: contain !important;
+    border-radius: 14px !important;
+    border: 1px solid var(--ion-card-border) !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(148, 163, 184, 0.4) transparent !important;
+    margin-bottom: 0.625rem !important;
+  }
+
+  /* Table Action Buttons */
+  td button,
+  td .button {
+    min-height: 30px !important;
+    height: 30px !important;
+    padding: 0 0.5rem !important;
+    border-radius: 8px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+  }
+
+  /* 6. SEGMENTED TABS (Ionic Segment Controls) */
+  .flex.items-center.gap-1\.5.p-1.bg-slate-100,
+  .flex.items-center.gap-1.p-1.bg-slate-100 {
+    width: 100% !important;
+    display: flex !important;
+    overflow-x: auto !important;
+    padding: 0.375rem !important;
+    border-radius: 14px !important;
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.5rem !important;
+    scrollbar-width: none !important;
+  }
+
+  .flex.items-center.gap-1\.5.p-1.bg-slate-100 > button,
+  .flex.items-center.gap-1.p-1.bg-slate-100 > button {
+    flex: 1 1 auto !important;
+    justify-content: center !important;
+    min-height: 36px !important;
+    padding: 0.4rem 0.875rem !important;
+    white-space: nowrap !important;
+    font-size: 0.75rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* 7. UNIVERSAL SEARCHBARS & FILTER CONTROLS (Seluruh Modul & Fitur) */
+  .flex.items-center.gap-2:has(input),
+  .flex.items-center.gap-2\.5:has(input),
+  .flex.items-center.gap-3:has(input),
+  .flex.flex-wrap.items-center.gap-2:has(input),
+  .flex.flex-col.sm\:flex-row.gap-2:has(input),
+  .flex.flex-col.sm\:flex-row.gap-3:has(input),
+  [data-slot="table-search-bar"] {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Search Input Field Container */
+  .flex.items-center.gap-2:has(input) > div:first-child,
+  .flex.items-center.gap-2\.5:has(input) > div:first-child,
+  .flex.items-center.gap-3:has(input) > div:first-child,
+  .flex.flex-wrap.items-center.gap-2:has(input) > div:first-child,
+  .flex.flex-col.sm\:flex-row.gap-2:has(input) > div:first-child,
+  .flex.flex-col.sm\:flex-row.gap-3:has(input) > div:first-child {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    position: relative !important;
+  }
+
+  /* Filter & Action Buttons next to Searchbar */
+  .flex.items-center.gap-2:has(input) button,
+  .flex.items-center.gap-2\.5:has(input) button,
+  .flex.items-center.gap-3:has(input) button,
+  .flex.flex-wrap.items-center.gap-2:has(input) button,
+  .flex.flex-col.sm\:flex-row.gap-2:has(input) button,
+  .flex.flex-col.sm\:flex-row.gap-3:has(input) button {
+    flex-shrink: 0 !important;
+    min-height: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Form Inputs Universal (Anti iOS Safari Auto-Zoom) */
+  input, 
+  select, 
+  textarea {
+    font-size: 16px !important;
+    min-height: 42px !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--ion-card-border) !important;
+    padding: 0.5rem 0.75rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 8. BUTTON GROUPS & ACTION BARS (Jarak Pas, Rapi, & Simetris) */
+  .flex.items-center.gap-1\.5,
+  .flex.items-center.gap-2,
+  .flex.items-center.gap-2\.5,
+  .flex.items-center.gap-3,
+  .flex.flex-wrap.items-center.gap-2,
+  .flex.flex-wrap.items-center.gap-2\.5 {
+    gap: 0.625rem !important;
+  }
+
+  /* Universal Action Buttons in Headers & Bars */
+  .flex.flex-wrap.items-center.gap-2\.5 > button,
+  .flex.flex-wrap.items-center.gap-2\.5 > a > button,
+  .flex.flex-wrap.items-center.gap-2 > button,
+  .flex.flex-wrap.items-center.gap-2 > a > button,
+  .flex.items-center.gap-2 > button,
+  .flex.items-center.gap-2 > a > button {
+    min-height: 38px !important;
+    padding: 0.45rem 0.875rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Identity & Status Badges in Bars */
+  .px-3.py-1\.5.rounded-lg.border,
+  .px-2\.5.py-1.rounded-md.border {
+    min-height: 38px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 0.45rem 0.75rem !important;
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 9. MODALS & SHEETS */
+  [role="dialog"] {
+    max-width: 95vw !important;
+    width: 95vw !important;
+    border-radius: 20px !important;
+    padding: 1.25rem 1rem !important;
+    margin: 0 auto !important;
+    border: 1px solid var(--ion-card-border) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 10. GRID UNIFORMITY (Auto-Fit Fluid Grid) */
+  .grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-4,
+  .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-3,
+  .grid-cols-1.md\:grid-cols-3.lg\:grid-cols-4,
+  .grid-cols-2.sm\:grid-cols-3.lg\:grid-cols-6 {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+
+  /* 11. BOTTOM NAVIGATION TAB BAR (Ionic Tabbar) */
+  nav.fixed.bottom-0 {
+    padding-bottom: max(0.45rem, var(--ion-safe-area-bottom)) !important;
+    border-top-left-radius: 18px !important;
+    border-top-right-radius: 18px !important;
+    box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.08) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid var(--ion-card-border) !important;
+  }
+  .dark nav.fixed.bottom-0 {
+    background: rgba(2, 6, 23, 0.96) !important;
+    border-top-color: var(--ion-card-border) !important;
+  }
+
+  /* 12. IONIC SWITCH TOGGLES (Pixel-Perfect on 1080p Mobile) */
+  button[role="switch"],
+  button[title*="mode"],
+  button[title*="Mode"],
+  button[title*="Toggle"] {
+    min-height: 28px !important;
+    max-height: 28px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* 13. SPACING HIERARCHY & ANTI-COLLISION ENGINE (Bebas Tumpukan & Tertata Rapi) */
+  .space-y-3 > * + *,
+  .space-y-3\.5 > * + *,
+  .space-y-4 > * + *,
+  .space-y-5 > * + *,
+  .space-y-6 > * + * {
+    margin-top: 0.875rem !important;
+  }
+
+  /* Universal Section Margin Gap */
+  section,
+  article,
+  [data-slot="section"] {
+    margin-bottom: 0.875rem !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Form & Input Groups Margin */
+  .space-y-2 > * + * {
+    margin-top: 0.5rem !important;
+  }
+
+  /* 14. TOUCH-FIRST INTERACTION */
+  .ion-button,
+  button,
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.1s ease;
+  }
+  .ion-button:active,
+  button:active {
+    transform: scale(0.97);
+  }
+}

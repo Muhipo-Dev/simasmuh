@@ -1,0 +1,44 @@
+/* ==========================================================================
+   HYBRID 2-IN-1 TABLET FRAMEWORK CSS (Windows Surface, ChromeOS Detachables)
+   Supports dual mode: Fine Precision Pointer (Mouse/Trackpad) + Touchscreen Mode.
+   Adapts dynamically based on @media (pointer: coarse) vs (pointer: fine).
+   ========================================================================== */
+
+:root {
+  --hybrid-touch-target: 42px;
+  --hybrid-compact-target: 36px;
+}
+
+/* When Hybrid Windows Tablet is in Touch / Tablet Mode (coarse pointer) */
+@media screen and (min-width: 768px) and (max-width: 1280px) and (pointer: coarse) {
+  button, 
+  [role="button"], 
+  .hybrid-touchable {
+    min-height: var(--hybrid-touch-target);
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+  }
+
+  /* Spacing expansion for touch fingers on Windows Surface */
+  .hybrid-table-row {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+}
+
+/* When Hybrid Windows Tablet is in Laptop / Mouse / Pen Mode (fine pointer) */
+@media screen and (min-width: 768px) and (max-width: 1280px) and (pointer: fine) {
+  button, 
+  [role="button"], 
+  .hybrid-touchable {
+    min-height: var(--hybrid-compact-target);
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  /* High precision layout */
+  .hybrid-table-row {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}

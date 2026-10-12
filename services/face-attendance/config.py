@@ -3,8 +3,8 @@ import requests
 from pydantic import BaseModel
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:3001")
-API_KEY = os.getenv("API_KEY", "siakad_secret_api_key_2026")
-API_SECRET = os.getenv("API_SECRET", "simasmuh_face_token_secret_2026")
+API_KEY = os.getenv("API_KEY", "nailar-muhipo55")
+API_SECRET = os.getenv("API_SECRET", "nailar-muhipo55")
 SERVICE_PORT = int(os.getenv("PORT", "8089"))
 
 from typing import List, Dict, Optional

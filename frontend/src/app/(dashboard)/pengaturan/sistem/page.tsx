@@ -30,6 +30,7 @@ import { Label } from '@/components/ui/label'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { compressImageFile } from '@/utils/imageCompressor'
 import { SystemRuntimeSupervisor } from '@/components/settings/SystemRuntimeSupervisor'
+import { SystemLiveConsoleViewer } from '@/components/settings/SystemLiveConsoleViewer'
 import { setCachedSystemPublicDomain } from '@/lib/api-config'
 
 type Setting = {
@@ -314,6 +315,9 @@ export default function SettingsPage() {
 
       {/* Supervisor Runtime, Live Sync Clock, & Sesi Pengguna */}
       <SystemRuntimeSupervisor isSuperadminRole={true} />
+
+      {/* Live Terminal Backend Console Log Viewer (Khusus Admin / Superadmin) */}
+      <SystemLiveConsoleViewer />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Kontrol Mode Pemeliharaan Sistem (Maintenance Mode) */}

@@ -1560,21 +1560,24 @@ export class FinanceService {
     });
 
     return students.map((s) => {
-      const tagihansList = s.tagihans || [];
-      const totalTagihan = tagihansList.reduce(
+      const allTagihans = s.tagihans || [];
+      // Hanya tagihan yang sudah RESMI DIRILIS (bukan DRAFT) yang masuk ke kalkulasi keuangan riil
+      const releasedTagihans = allTagihans.filter((t: any) => t.status !== 'DRAFT');
+
+      const totalTagihan = releasedTagihans.reduce(
         (sum: number, t: any) => sum + t.amount,
         0,
       );
-      const totalLunas = tagihansList.reduce(
+      const totalLunas = releasedTagihans.reduce(
         (sum: number, t: any) =>
           sum + (t.amountPaid || (t.status === 'LUNAS' ? t.amount : 0)),
         0,
       );
       const sisaTagihan = Math.max(0, totalTagihan - totalLunas);
-      const belumLunasCount = tagihansList.filter(
+      const belumLunasCount = releasedTagihans.filter(
         (t: any) => t.status !== 'LUNAS',
       ).length;
-      const sppTagihan = tagihansList.filter(
+      const sppTagihan = releasedTagihans.filter(
         (t: any) => t.type === 'SPP' && t.status === 'LUNAS',
       );
 
@@ -1607,19 +1610,19 @@ export class FinanceService {
         }
       }
 
-      const totalAngsuran = tagihansList
+      const totalAngsuran = releasedTagihans
         .filter((t: any) => t.status !== 'LUNAS' && (t.amountPaid || 0) > 0)
         .reduce((sum: number, t: any) => sum + (t.amountPaid || 0), 0);
-      const angsuranCount = tagihansList.filter(
+      const angsuranCount = releasedTagihans.filter(
         (t: any) =>
           t.status === 'SEBAGIAN' ||
           (t.status !== 'LUNAS' && (t.amountPaid || 0) > 0),
       ).length;
 
-      const draftCount = tagihansList.filter((t: any) => t.status === 'DRAFT').length;
-      const activeDraftCount = tagihansList.filter((t: any) => t.status === 'DRAFT' && ((t.amount - (t.amountPaid || 0)) > 0)).length;
-      const releasedCount = tagihansList.filter((t: any) => t.status !== 'DRAFT').length;
-      const draftAmount = tagihansList
+      const draftCount = allTagihans.filter((t: any) => t.status === 'DRAFT').length;
+      const activeDraftCount = allTagihans.filter((t: any) => t.status === 'DRAFT' && ((t.amount - (t.amountPaid || 0)) > 0)).length;
+      const releasedCount = releasedTagihans.length;
+      const draftAmount = allTagihans
         .filter((t: any) => t.status === 'DRAFT')
         .reduce((sum: number, t: any) => sum + Math.max(0, t.amount - (t.amountPaid || 0)), 0);
 
@@ -1632,7 +1635,6 @@ export class FinanceService {
         isActive: s.isActive ?? true,
         studentStatus,
         statusDetail,
-        bioData: s.bioData,
         program: s.program || null,
         gelombang: s.gelombang || 'Gelombang 1',
         jalurPendaftaran: s.jalurPendaftaran || 'Mandiri',
@@ -1648,7 +1650,7 @@ export class FinanceService {
         releasedCount,
         draftAmount,
         sppLunasCount: sppTagihan.length,
-        tagihanCount: tagihansList.length,
+        tagihanCount: releasedTagihans.length,
         beasiswaPercentage: s.beasiswaPercentage || 0,
         beasiswaReason:
           s.beasiswaReason ||
@@ -1730,6 +1732,7 @@ export class FinanceService {
         };
         const updatedNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}BEASISWA_INFO: ${JSON.stringify(beasiswaInfo)}`;
 
+        const isAlreadyDraft = t.status === 'DRAFT';
         await this.prisma.tagihan.update({
           where: { id: t.id },
           data: {
@@ -1737,26 +1740,33 @@ export class FinanceService {
             notes: updatedNotes,
             status:
               finalAmount === 0
-                ? 'LUNAS'
+                ? (isAlreadyDraft ? 'DRAFT' : 'LUNAS')
                 : t.amountPaid >= finalAmount
                   ? 'LUNAS'
-                  : 'BELUM_LUNAS',
+                  : isAlreadyDraft
+                    ? 'DRAFT'
+                    : 'BELUM_LUNAS',
             paidDate:
               finalAmount === 0
-                ? t.paidDate || new Date()
+                ? (isAlreadyDraft ? null : t.paidDate || new Date())
                 : t.amountPaid >= finalAmount
                   ? t.paidDate
                   : null,
           },
         });
       } else {
+        const isAlreadyDraft = t.status === 'DRAFT';
         await this.prisma.tagihan.update({
           where: { id: t.id },
           data: {
             amount: originalAmount,
             notes: cleanNotes || null,
-            status: t.amountPaid >= originalAmount ? 'LUNAS' : 'BELUM_LUNAS',
-            paidDate: t.amountPaid >= originalAmount ? t.paidDate : null,
+            status: isAlreadyDraft
+              ? 'DRAFT'
+              : t.amountPaid >= originalAmount
+                ? 'LUNAS'
+                : 'BELUM_LUNAS',
+            paidDate: isAlreadyDraft ? null : t.amountPaid >= originalAmount ? t.paidDate : null,
           },
         });
       }
@@ -2552,7 +2562,7 @@ export class FinanceService {
       studentIds?: string[];
       gradeLevel?: number;
       yearStart?: number;
-      releaseDuration?: 'TAHUN' | 'SEMESTER';
+      releaseDuration?: 'TAHUN' | 'SEMESTER' | 'BULAN';
       targetSemester?: 1 | 2; // 1 = Ganjil (Juli-Desember), 2 = Genap (Januari-Juni)
       sppStartMonth?: number;
       sppStartYear?: number;
@@ -2653,6 +2663,7 @@ export class FinanceService {
     const yearStart = dto.yearStart || new Date().getFullYear();
     const academicYearStr = dto.academicYear || `${yearStart}/${yearStart + 1}`;
     const isSemesterMode = dto.releaseDuration === 'SEMESTER';
+    const isMonthMode = dto.releaseDuration === 'BULAN';
     const targetSemester = dto.targetSemester || (dto.sppStartMonth && dto.sppStartMonth <= 6 ? 2 : 1);
 
     const settings = await this.prisma.setting.findFirst();
@@ -2681,8 +2692,8 @@ export class FinanceService {
 
     const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-    let defaultStartMonth = 7;
-    let defaultStartYear = yearStart;
+    let defaultStartMonth = isMonthMode ? (new Date().getMonth() + 1) : 7;
+    let defaultStartYear = isMonthMode ? new Date().getFullYear() : yearStart;
     if (isSemesterMode) {
       if (targetSemester === 1) {
         defaultStartMonth = 7;
@@ -2696,7 +2707,7 @@ export class FinanceService {
     const startSppM = dto.sppStartMonth ? Number(dto.sppStartMonth) : defaultStartMonth;
     const startSppY = dto.sppStartYear ? Number(dto.sppStartYear) : defaultStartYear;
 
-    const sppMonthsCount = isSemesterMode ? 6 : 12;
+    const sppMonthsCount = isMonthMode ? 1 : isSemesterMode ? 6 : 12;
     const sppMonthsToRelease: { month: number; year: number; name: string }[] = [];
     let curMonth = startSppM;
     let curYear = startSppY;
@@ -2714,6 +2725,59 @@ export class FinanceService {
       }
     }
 
+    // --- OPTIMASI ULTRA: Pre-calculate due dates once to avoid repetitive queries ---
+    const dueDateCache: Record<string, Date> = {};
+    for (const am of sppMonthsToRelease) {
+      dueDateCache[`SPP_${am.month}_${am.year}`] = await this.calculateSmartDueDate(
+        'SPP',
+        am.month,
+        am.year,
+        new Date(am.year, am.month - 1, 1),
+      );
+    }
+    const defaultNonSppDueDate = await this.calculateSmartDueDate('DPP', null, yearStart, new Date());
+    dueDateCache[`DPP_${yearStart}`] = defaultNonSppDueDate;
+    dueDateCache[`UIS_${yearStart}`] = defaultNonSppDueDate;
+    dueDateCache[`UKA_${yearStart}`] = defaultNonSppDueDate;
+    dueDateCache[`UKS_${yearStart}`] = defaultNonSppDueDate;
+    dueDateCache[`SERAGAM_${yearStart}`] = defaultNonSppDueDate;
+    dueDateCache[`LKS_${yearStart}`] = defaultNonSppDueDate;
+    if (items.lks && dto.lksType === 'SEMESTER') {
+      dueDateCache[`LKS_8_${yearStart}`] = await this.calculateSmartDueDate('LKS', 8, yearStart, new Date());
+      dueDateCache[`LKS_2_${yearStart + 1}`] = await this.calculateSmartDueDate('LKS', 2, yearStart + 1, new Date());
+    }
+
+    // --- OPTIMASI ULTRA: Prefetch all existing tagihans for target students in ONE batch query ---
+    const studentIds = students.map((s) => s.id);
+    const existingTagihansRaw = await this.prisma.tagihan.findMany({
+      where: {
+        studentId: { in: studentIds },
+        year: { in: [yearStart, yearStart + 1] },
+      },
+      select: {
+        id: true,
+        studentId: true,
+        type: true,
+        month: true,
+        year: true,
+        amount: true,
+        status: true,
+      },
+    });
+
+    // Map by key: studentId:type:year:month
+    const existingMap = new Map<string, typeof existingTagihansRaw[0]>();
+    for (const t of existingTagihansRaw) {
+      const key = `${t.studentId}:${t.type}:${t.year}:${t.month ?? 'null'}`;
+      existingMap.set(key, t);
+      if (t.type === 'INFAQ') {
+        existingMap.set(`${t.studentId}:UIS:${t.year}:${t.month ?? 'null'}`, t);
+      }
+    }
+
+    const allTagihanRecordsToCreate: any[] = [];
+    const updatesToExecute: { id: string; data: any }[] = [];
+
     for (const s of students) {
       let createdForThisStudent = 0;
       let updatedForThisStudent = 0;
@@ -2728,7 +2792,7 @@ export class FinanceService {
         (p) =>
           p.code.toLowerCase() === progCode ||
           p.name.toLowerCase() === progCode ||
-          (progCode && (p.code.toLowerCase().includes(progCode) || progCode.includes(p.code.toLowerCase())))
+          (progCode && (p.code.toLowerCase().includes(progCode) || progCode.includes(p.code.toLowerCase()))),
       );
 
       // SPP Bulanan: adaptif dari ProgramConfig siswa atau custom override form jika disediakan
@@ -2763,16 +2827,13 @@ export class FinanceService {
       const seragamPct = s.beasiswaSeragamPct || 0;
       const beasiswaReason = s.beasiswaReason || 'Beasiswa Siswa';
 
-      const tagihanRecordsToCreate: any[] = [];
-
       if (items.spp) {
         for (const am of sppMonthsToRelease) {
-          const existing = await this.prisma.tagihan.findFirst({
-            where: { studentId: s.id, type: 'SPP', month: am.month, year: am.year },
-          });
+          const sppKey = `${s.id}:SPP:${am.year}:${am.month}`;
+          const existing = existingMap.get(sppKey);
 
           let finalAmount = baseSppMonthly;
-          let notes = `SPP ${am.name} ${am.year} (TA ${academicYearStr}) - Program: ${s.program || 'Reguler'}`;
+          let notes = `SPP ${am.name} ${am.year} (TP ${academicYearStr}) - Program: ${s.program || 'Reguler'}`;
           let status = isDraftMode ? 'DRAFT' : 'BELUM_LUNAS';
           let paidDate: Date | null = null;
 
@@ -2784,21 +2845,32 @@ export class FinanceService {
           }
 
           if (!existing) {
-            tagihanRecordsToCreate.push({ studentId: s.id, type: 'SPP', amount: finalAmount, month: am.month, year: am.year, dueDate: await this.calculateSmartDueDate('SPP', am.month, am.year, new Date(am.year, am.month - 1, 1)), status, paidDate, notes });
+            const dueDate = dueDateCache[`SPP_${am.month}_${am.year}`] || new Date(am.year, am.month - 1, 10);
+            allTagihanRecordsToCreate.push({ studentId: s.id, type: 'SPP', amount: finalAmount, month: am.month, year: am.year, dueDate, status, paidDate, notes });
+            createdForThisStudent++;
+            totalCreatedCount++;
           } else {
             duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'SPP', label: `SPP ${am.name} ${am.year}`, status: existing.status, existingAmount: existing.amount });
             if (dto.allowOverrideDuplicates && existing.status !== 'LUNAS') {
-              await this.prisma.tagihan.update({ where: { id: existing.id }, data: { amount: finalAmount, notes, status: isDraftMode ? 'DRAFT' : existing.status === 'DRAFT' ? 'BELUM_LUNAS' : existing.status } });
-              updatedForThisStudent++; totalUpdatedCount++;
-            } else { skippedForThisStudent++; totalSkippedCount++; }
+              updatesToExecute.push({
+                id: existing.id,
+                data: { amount: finalAmount, notes, status: isDraftMode ? 'DRAFT' : existing.status === 'DRAFT' ? 'BELUM_LUNAS' : existing.status },
+              });
+              updatedForThisStudent++;
+              totalUpdatedCount++;
+            } else {
+              skippedForThisStudent++;
+              totalSkippedCount++;
+            }
           }
         }
       }
 
       if (items.dpp && baseDpp > 0) {
-        const existingDpp = await this.prisma.tagihan.findFirst({ where: { studentId: s.id, type: 'DPP', year: yearStart } });
+        const dppKey = `${s.id}:DPP:${yearStart}:null`;
+        const existingDpp = existingMap.get(dppKey);
         let finalDpp = baseDpp;
-        let notes = `DPP Tahun Ajaran ${academicYearStr}`;
+        let notes = `DPP Tahun Pelajaran ${academicYearStr}`;
         let status = isDraftMode ? 'DRAFT' : 'BELUM_LUNAS';
         let paidDate: Date | null = null;
         if (dppPct > 0) {
@@ -2808,62 +2880,106 @@ export class FinanceService {
           if (finalDpp === 0 && !isDraftMode) { status = 'LUNAS'; paidDate = new Date(); }
         }
         if (!existingDpp) {
-          tagihanRecordsToCreate.push({ studentId: s.id, type: 'DPP', amount: finalDpp, month: null, year: yearStart, dueDate: await this.calculateSmartDueDate('DPP', null, yearStart, new Date()), status, paidDate, notes });
+          const dueDate = dueDateCache[`DPP_${yearStart}`] || defaultNonSppDueDate;
+          allTagihanRecordsToCreate.push({ studentId: s.id, type: 'DPP', amount: finalDpp, month: null, year: yearStart, dueDate, status, paidDate, notes });
+          createdForThisStudent++;
+          totalCreatedCount++;
         } else {
-          duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'DPP', label: `DPP TA ${academicYearStr}`, status: existingDpp.status, existingAmount: existingDpp.amount });
+          duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'DPP', label: `DPP TP ${academicYearStr}`, status: existingDpp.status, existingAmount: existingDpp.amount });
           if (dto.allowOverrideDuplicates && existingDpp.status !== 'LUNAS') {
-            await this.prisma.tagihan.update({ where: { id: existingDpp.id }, data: { amount: finalDpp, notes, status: isDraftMode ? 'DRAFT' : existingDpp.status === 'DRAFT' ? 'BELUM_LUNAS' : existingDpp.status } });
-            updatedForThisStudent++; totalUpdatedCount++;
-          } else { skippedForThisStudent++; totalSkippedCount++; }
+            updatesToExecute.push({
+              id: existingDpp.id,
+              data: { amount: finalDpp, notes, status: isDraftMode ? 'DRAFT' : existingDpp.status === 'DRAFT' ? 'BELUM_LUNAS' : existingDpp.status },
+            });
+            updatedForThisStudent++;
+            totalUpdatedCount++;
+          } else {
+            skippedForThisStudent++;
+            totalSkippedCount++;
+          }
         }
       }
 
       if (items.uis && baseUis > 0) {
-        const existingUis = await this.prisma.tagihan.findFirst({ where: { studentId: s.id, type: { in: ['UIS', 'INFAQ'] }, year: yearStart } });
+        const uisKey = `${s.id}:UIS:${yearStart}:null`;
+        const existingUis = existingMap.get(uisKey);
         const uisStatus = isDraftMode ? 'DRAFT' : (baseUis === 0 ? 'LUNAS' : 'BELUM_LUNAS');
         if (!existingUis) {
-          tagihanRecordsToCreate.push({ studentId: s.id, type: 'UIS', amount: baseUis, month: null, year: yearStart, dueDate: await this.calculateSmartDueDate('UIS', null, yearStart, new Date()), status: uisStatus, paidDate: (!isDraftMode && baseUis === 0) ? new Date() : null, notes: `Uang Infaq Sekolah (UIS) TA ${academicYearStr}` });
+          const dueDate = dueDateCache[`UIS_${yearStart}`] || defaultNonSppDueDate;
+          allTagihanRecordsToCreate.push({ studentId: s.id, type: 'UIS', amount: baseUis, month: null, year: yearStart, dueDate, status: uisStatus, paidDate: (!isDraftMode && baseUis === 0) ? new Date() : null, notes: `Uang Infaq Sekolah (UIS) TP ${academicYearStr}` });
+          createdForThisStudent++;
+          totalCreatedCount++;
         } else {
-          duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'UIS', label: `UIS TA ${academicYearStr}`, status: existingUis.status, existingAmount: existingUis.amount });
+          duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'UIS', label: `UIS TP ${academicYearStr}`, status: existingUis.status, existingAmount: existingUis.amount });
           if (dto.allowOverrideDuplicates && existingUis.status !== 'LUNAS') {
-            await this.prisma.tagihan.update({ where: { id: existingUis.id }, data: { amount: baseUis, notes: `Uang Infaq Sekolah (UIS) TA ${academicYearStr}`, status: isDraftMode ? 'DRAFT' : existingUis.status === 'DRAFT' ? 'BELUM_LUNAS' : existingUis.status } });
-            updatedForThisStudent++; totalUpdatedCount++;
-          } else { skippedForThisStudent++; totalSkippedCount++; }
+            updatesToExecute.push({
+              id: existingUis.id,
+              data: { amount: baseUis, notes: `Uang Infaq Sekolah (UIS) TP ${academicYearStr}`, status: isDraftMode ? 'DRAFT' : existingUis.status === 'DRAFT' ? 'BELUM_LUNAS' : existingUis.status },
+            });
+            updatedForThisStudent++;
+            totalUpdatedCount++;
+          } else {
+            skippedForThisStudent++;
+            totalSkippedCount++;
+          }
         }
       }
 
       if (items.uka && baseUka > 0) {
-        const existingUka = await this.prisma.tagihan.findFirst({ where: { studentId: s.id, type: 'UKA', year: yearStart } });
+        const ukaKey = `${s.id}:UKA:${yearStart}:null`;
+        const existingUka = existingMap.get(ukaKey);
         const ukaStatus = isDraftMode ? 'DRAFT' : 'BELUM_LUNAS';
         if (!existingUka) {
-          tagihanRecordsToCreate.push({ studentId: s.id, type: 'UKA', amount: baseUka, month: null, year: yearStart, dueDate: await this.calculateSmartDueDate('UKA', null, yearStart, new Date()), status: ukaStatus, paidDate: null, notes: `Uang Kegiatan Akademik (UKA) TA ${academicYearStr}` });
+          const dueDate = dueDateCache[`UKA_${yearStart}`] || defaultNonSppDueDate;
+          allTagihanRecordsToCreate.push({ studentId: s.id, type: 'UKA', amount: baseUka, month: null, year: yearStart, dueDate, status: ukaStatus, paidDate: null, notes: `Uang Kegiatan Akademik (UKA) TP ${academicYearStr}` });
+          createdForThisStudent++;
+          totalCreatedCount++;
         } else {
-          duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'UKA', label: `UKA TA ${academicYearStr}`, status: existingUka.status, existingAmount: existingUka.amount });
+          duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'UKA', label: `UKA TP ${academicYearStr}`, status: existingUka.status, existingAmount: existingUka.amount });
           if (dto.allowOverrideDuplicates && existingUka.status !== 'LUNAS') {
-            await this.prisma.tagihan.update({ where: { id: existingUka.id }, data: { amount: baseUka, notes: `Uang Kegiatan Akademik (UKA) TA ${academicYearStr}`, status: isDraftMode ? 'DRAFT' : existingUka.status === 'DRAFT' ? 'BELUM_LUNAS' : existingUka.status } });
-            updatedForThisStudent++; totalUpdatedCount++;
-          } else { skippedForThisStudent++; totalSkippedCount++; }
+            updatesToExecute.push({
+              id: existingUka.id,
+              data: { amount: baseUka, notes: `Uang Kegiatan Akademik (UKA) TP ${academicYearStr}`, status: isDraftMode ? 'DRAFT' : existingUka.status === 'DRAFT' ? 'BELUM_LUNAS' : existingUka.status },
+            });
+            updatedForThisStudent++;
+            totalUpdatedCount++;
+          } else {
+            skippedForThisStudent++;
+            totalSkippedCount++;
+          }
         }
       }
 
       if (items.uks && baseUks > 0) {
-        const existingUks = await this.prisma.tagihan.findFirst({ where: { studentId: s.id, type: 'UKS', year: yearStart } });
+        const uksKey = `${s.id}:UKS:${yearStart}:null`;
+        const existingUks = existingMap.get(uksKey);
         const uksStatus = isDraftMode ? 'DRAFT' : 'BELUM_LUNAS';
         if (!existingUks) {
-          tagihanRecordsToCreate.push({ studentId: s.id, type: 'UKS', amount: baseUks, month: null, year: yearStart, dueDate: await this.calculateSmartDueDate('UKS', null, yearStart, new Date()), status: uksStatus, paidDate: null, notes: `Uang Kegiatan Sekolah (UKS) TA ${academicYearStr}` });
+          const dueDate = dueDateCache[`UKS_${yearStart}`] || defaultNonSppDueDate;
+          allTagihanRecordsToCreate.push({ studentId: s.id, type: 'UKS', amount: baseUks, month: null, year: yearStart, dueDate, status: uksStatus, paidDate: null, notes: `Uang Kegiatan Sekolah (UKS) TP ${academicYearStr}` });
+          createdForThisStudent++;
+          totalCreatedCount++;
         } else {
-          duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'UKS', label: `UKS TA ${academicYearStr}`, status: existingUks.status, existingAmount: existingUks.amount });
+          duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'UKS', label: `UKS TP ${academicYearStr}`, status: existingUks.status, existingAmount: existingUks.amount });
           if (dto.allowOverrideDuplicates && existingUks.status !== 'LUNAS') {
-            await this.prisma.tagihan.update({ where: { id: existingUks.id }, data: { amount: baseUks, notes: `Uang Kegiatan Sekolah (UKS) TA ${academicYearStr}`, status: isDraftMode ? 'DRAFT' : existingUks.status === 'DRAFT' ? 'BELUM_LUNAS' : existingUks.status } });
-            updatedForThisStudent++; totalUpdatedCount++;
-          } else { skippedForThisStudent++; totalSkippedCount++; }
+            updatesToExecute.push({
+              id: existingUks.id,
+              data: { amount: baseUks, notes: `Uang Kegiatan Sekolah (UKS) TP ${academicYearStr}`, status: isDraftMode ? 'DRAFT' : existingUks.status === 'DRAFT' ? 'BELUM_LUNAS' : existingUks.status },
+            });
+            updatedForThisStudent++;
+            totalUpdatedCount++;
+          } else {
+            skippedForThisStudent++;
+            totalSkippedCount++;
+          }
         }
       }
 
       if (items.seragam && grade === 10 && baseSeragam > 0) {
-        const existingSeragam = await this.prisma.tagihan.findFirst({ where: { studentId: s.id, type: 'SERAGAM', year: yearStart } });
+        const seragamKey = `${s.id}:SERAGAM:${yearStart}:null`;
+        const existingSeragam = existingMap.get(seragamKey);
         let finalSeragam = baseSeragam;
-        let notes = `Paket Seragam TA ${academicYearStr} (${gender})`;
+        let notes = `Paket Seragam TP ${academicYearStr} (${gender})`;
         let status = isDraftMode ? 'DRAFT' : 'BELUM_LUNAS';
         let paidDate: Date | null = null;
         if (seragamPct > 0) {
@@ -2873,13 +2989,23 @@ export class FinanceService {
           if (finalSeragam === 0 && !isDraftMode) { status = 'LUNAS'; paidDate = new Date(); }
         }
         if (!existingSeragam) {
-          tagihanRecordsToCreate.push({ studentId: s.id, type: 'SERAGAM', amount: finalSeragam, month: null, year: yearStart, dueDate: await this.calculateSmartDueDate('SERAGAM', null, yearStart, new Date()), status, paidDate, notes });
+          const dueDate = dueDateCache[`SERAGAM_${yearStart}`] || defaultNonSppDueDate;
+          allTagihanRecordsToCreate.push({ studentId: s.id, type: 'SERAGAM', amount: finalSeragam, month: null, year: yearStart, dueDate, status, paidDate, notes });
+          createdForThisStudent++;
+          totalCreatedCount++;
         } else {
-          duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'SERAGAM', label: `Seragam TA ${academicYearStr}`, status: existingSeragam.status, existingAmount: existingSeragam.amount });
+          duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'SERAGAM', label: `Seragam TP ${academicYearStr}`, status: existingSeragam.status, existingAmount: existingSeragam.amount });
           if (dto.allowOverrideDuplicates && existingSeragam.status !== 'LUNAS') {
-            await this.prisma.tagihan.update({ where: { id: existingSeragam.id }, data: { amount: finalSeragam, notes, status: isDraftMode ? 'DRAFT' : existingSeragam.status === 'DRAFT' ? 'BELUM_LUNAS' : existingSeragam.status } });
-            updatedForThisStudent++; totalUpdatedCount++;
-          } else { skippedForThisStudent++; totalSkippedCount++; }
+            updatesToExecute.push({
+              id: existingSeragam.id,
+              data: { amount: finalSeragam, notes, status: isDraftMode ? 'DRAFT' : existingSeragam.status === 'DRAFT' ? 'BELUM_LUNAS' : existingSeragam.status },
+            });
+            updatedForThisStudent++;
+            totalUpdatedCount++;
+          } else {
+            skippedForThisStudent++;
+            totalSkippedCount++;
+          }
         }
       }
 
@@ -2888,40 +3014,75 @@ export class FinanceService {
           for (let sem = 1; sem <= 2; sem++) {
             const semMonth = sem === 1 ? 8 : 2;
             const semYear = sem === 1 ? yearStart : yearStart + 1;
-            const existingLks = await this.prisma.tagihan.findFirst({ where: { studentId: s.id, type: 'LKS', month: semMonth, year: semYear } });
+            const lksKey = `${s.id}:LKS:${semYear}:${semMonth}`;
+            const existingLks = existingMap.get(lksKey);
             const lksStatus = isDraftMode ? 'DRAFT' : 'BELUM_LUNAS';
             if (!existingLks) {
-              tagihanRecordsToCreate.push({ studentId: s.id, type: 'LKS', amount: Math.round(baseLks / 2), month: semMonth, year: semYear, dueDate: await this.calculateSmartDueDate('LKS', semMonth, semYear, new Date()), status: lksStatus, paidDate: null, notes: `LKS Semester ${sem === 1 ? 'Ganjil' : 'Genap'} TA ${academicYearStr}` });
+              const dueDate = dueDateCache[`LKS_${semMonth}_${semYear}`] || defaultNonSppDueDate;
+              allTagihanRecordsToCreate.push({ studentId: s.id, type: 'LKS', amount: Math.round(baseLks / 2), month: semMonth, year: semYear, dueDate, status: lksStatus, paidDate: null, notes: `LKS Semester ${sem === 1 ? 'Ganjil' : 'Genap'} TP ${academicYearStr}` });
+              createdForThisStudent++;
+              totalCreatedCount++;
             } else {
-              duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'LKS', label: `LKS Sem ${sem} TA ${academicYearStr}`, status: existingLks.status, existingAmount: existingLks.amount });
+              duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'LKS', label: `LKS Sem ${sem} TP ${academicYearStr}`, status: existingLks.status, existingAmount: existingLks.amount });
               if (dto.allowOverrideDuplicates && existingLks.status !== 'LUNAS') {
-                await this.prisma.tagihan.update({ where: { id: existingLks.id }, data: { amount: Math.round(baseLks / 2), notes: `LKS Semester ${sem === 1 ? 'Ganjil' : 'Genap'} TA ${academicYearStr}`, status: isDraftMode ? 'DRAFT' : existingLks.status === 'DRAFT' ? 'BELUM_LUNAS' : existingLks.status } });
-                updatedForThisStudent++; totalUpdatedCount++;
-              } else { skippedForThisStudent++; totalSkippedCount++; }
+                updatesToExecute.push({
+                  id: existingLks.id,
+                  data: { amount: Math.round(baseLks / 2), notes: `LKS Semester ${sem === 1 ? 'Ganjil' : 'Genap'} TP ${academicYearStr}`, status: isDraftMode ? 'DRAFT' : existingLks.status === 'DRAFT' ? 'BELUM_LUNAS' : existingLks.status },
+                });
+                updatedForThisStudent++;
+                totalUpdatedCount++;
+              } else {
+                skippedForThisStudent++;
+                totalSkippedCount++;
+              }
             }
           }
         } else {
-          const existingLks = await this.prisma.tagihan.findFirst({ where: { studentId: s.id, type: 'LKS', year: yearStart } });
+          const lksKey = `${s.id}:LKS:${yearStart}:null`;
+          const existingLks = existingMap.get(lksKey);
           const lksStatus = isDraftMode ? 'DRAFT' : 'BELUM_LUNAS';
           if (!existingLks) {
-            tagihanRecordsToCreate.push({ studentId: s.id, type: 'LKS', amount: baseLks, month: null, year: yearStart, dueDate: await this.calculateSmartDueDate('LKS', null, yearStart, new Date()), status: lksStatus, paidDate: null, notes: `LKS & Paket Pembelajaran TA ${academicYearStr}` });
+            const dueDate = dueDateCache[`LKS_${yearStart}`] || defaultNonSppDueDate;
+            allTagihanRecordsToCreate.push({ studentId: s.id, type: 'LKS', amount: baseLks, month: null, year: yearStart, dueDate, status: lksStatus, paidDate: null, notes: `LKS & Paket Pembelajaran TP ${academicYearStr}` });
+            createdForThisStudent++;
+            totalCreatedCount++;
           } else {
-            duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'LKS', label: `LKS TA ${academicYearStr}`, status: existingLks.status, existingAmount: existingLks.amount });
+            duplicateDetectedList.push({ studentId: s.id, studentName: s.name, type: 'LKS', label: `LKS TP ${academicYearStr}`, status: existingLks.status, existingAmount: existingLks.amount });
             if (dto.allowOverrideDuplicates && existingLks.status !== 'LUNAS') {
-              await this.prisma.tagihan.update({ where: { id: existingLks.id }, data: { amount: baseLks, notes: `LKS & Paket Pembelajaran TA ${academicYearStr}`, status: isDraftMode ? 'DRAFT' : existingLks.status === 'DRAFT' ? 'BELUM_LUNAS' : existingLks.status } });
-              updatedForThisStudent++; totalUpdatedCount++;
-            } else { skippedForThisStudent++; totalSkippedCount++; }
+              updatesToExecute.push({
+                id: existingLks.id,
+                data: { amount: baseLks, notes: `LKS & Paket Pembelajaran TP ${academicYearStr}`, status: isDraftMode ? 'DRAFT' : existingLks.status === 'DRAFT' ? 'BELUM_LUNAS' : existingLks.status },
+              });
+              updatedForThisStudent++;
+              totalUpdatedCount++;
+            } else {
+              skippedForThisStudent++;
+              totalSkippedCount++;
+            }
           }
         }
       }
 
-      if (tagihanRecordsToCreate.length > 0) {
-        await this.prisma.tagihan.createMany({ data: tagihanRecordsToCreate });
-        createdForThisStudent = tagihanRecordsToCreate.length;
-        totalCreatedCount += createdForThisStudent;
-      }
-
       summaryPerStudent.push({ studentId: s.id, name: s.name, className: s.class?.name || '-', createdBills: createdForThisStudent, updatedBills: updatedForThisStudent, skippedBills: skippedForThisStudent });
+    }
+
+    // Eksekusi createMany secara batch dalam satu kali query
+    if (allTagihanRecordsToCreate.length > 0) {
+      await this.prisma.tagihan.createMany({ data: allTagihanRecordsToCreate });
+    }
+
+    // Eksekusi update secara chunked transaction jika ada
+    if (updatesToExecute.length > 0) {
+      const updateChunks: typeof updatesToExecute[] = [];
+      const chunkSize = 50;
+      for (let i = 0; i < updatesToExecute.length; i += chunkSize) {
+        updateChunks.push(updatesToExecute.slice(i, i + chunkSize));
+      }
+      for (const chunk of updateChunks) {
+        await this.prisma.$transaction(
+          chunk.map((item) => this.prisma.tagihan.update({ where: { id: item.id }, data: item.data })),
+        );
+      }
     }
 
     if (totalCreatedCount > 0 && !isDraftMode) {
@@ -3003,14 +3164,31 @@ export class FinanceService {
       draftWhere.year = { in: [dto.startYear, dto.startYear + 1] };
     }
 
-    const updateRes = await this.prisma.tagihan.updateMany({
-      where: draftWhere,
+    const now = new Date();
+    const updateUnpaidRes = await this.prisma.tagihan.updateMany({
+      where: {
+        ...draftWhere,
+        amount: { gt: 0 },
+      },
       data: {
         status: 'BELUM_LUNAS',
       },
     });
 
-    if (updateRes.count > 0) {
+    const updateFreeRes = await this.prisma.tagihan.updateMany({
+      where: {
+        ...draftWhere,
+        amount: { lte: 0 },
+      },
+      data: {
+        status: 'LUNAS',
+        paidDate: now,
+      },
+    });
+
+    const totalPublished = updateUnpaidRes.count + updateFreeRes.count;
+
+    if (totalPublished > 0) {
       this.eventEmitter.emit('tagihan.created', {
         tagihanId: null,
         studentId: null,
@@ -3019,17 +3197,17 @@ export class FinanceService {
           classId: dto.classId || 'ALL',
           tagihanType: 'PUBLISH_DRAF',
           amount: 0,
-          count: updateRes.count,
+          count: totalPublished,
         },
       });
     }
 
-    this.logger.log(`Published ${updateRes.count} draft tagihans to active BELUM_LUNAS by user ${userId}`);
+    this.logger.log(`Published ${totalPublished} draft tagihans (${updateUnpaidRes.count} active, ${updateFreeRes.count} free/100% discount) by user ${userId}`);
 
     return {
       success: true,
-      publishedCount: updateRes.count,
-      message: `Berhasil mempublikasikan ${updateRes.count} tagihan draf menjadi tagihan aktif yang kini dapat diakses siswa & wali murid.`,
+      publishedCount: totalPublished,
+      message: `Berhasil mempublikasikan ${totalPublished} tagihan draf (termasuk tagihan beasiswa/diskon) serentak ke akun siswa & wali murid.`,
     };
   }
 
@@ -3045,13 +3223,15 @@ export class FinanceService {
       studentIds?: string[];
       gradeLevel?: number;
       startYear?: number;
-      releaseDuration?: 'TAHUN' | 'SEMESTER';
+      releaseDuration?: 'TAHUN' | 'SEMESTER' | 'BULAN';
       targetSemester?: 1 | 2;
+      targetMonth?: number;
       onlyUnpaid?: boolean;
     },
   ) {
     const yearStart = dto.startYear || new Date().getFullYear();
     const isSemesterMode = dto.releaseDuration === 'SEMESTER';
+    const isMonthMode = dto.releaseDuration === 'BULAN';
     const sem1Months = [
       { month: 7, year: yearStart },
       { month: 8, year: yearStart },
@@ -3069,7 +3249,9 @@ export class FinanceService {
       { month: 6, year: yearStart + 1 },
     ];
 
-    const targetMonths = isSemesterMode
+    const targetMonths = isMonthMode
+      ? [{ month: dto.targetMonth || (new Date().getMonth() + 1), year: yearStart }]
+      : isSemesterMode
       ? (dto.targetSemester === 2 ? sem2Months : sem1Months)
       : [...sem1Months, ...sem2Months];
 
@@ -3139,7 +3321,7 @@ export class FinanceService {
         success: true,
         retractedCount,
         studentCount: students.length,
-        message: `Berhasil memindahkan ${retractedCount} tagihan ${isSemesterMode ? `Semester ${dto.targetSemester === 2 ? 'Genap' : 'Ganjil'}` : 'Tahun Ajaran'} ${yearStart}/${yearStart + 1} ke status Draf (belum dipublikasikan).`,
+        message: `Berhasil memindahkan ${retractedCount} tagihan ${isSemesterMode ? `Semester ${dto.targetSemester === 2 ? 'Genap' : 'Ganjil'}` : 'Tahun Pelajaran'} ${yearStart}/${yearStart + 1} ke status Draf (belum dipublikasikan).`,
       };
     });
   }
@@ -3156,8 +3338,9 @@ export class FinanceService {
       studentId?: string;
       gradeLevel?: number;
       startYear?: number;
-      releaseDuration?: 'TAHUN' | 'SEMESTER';
+      releaseDuration?: 'TAHUN' | 'SEMESTER' | 'BULAN';
       targetSemester?: 1 | 2;
+      targetMonth?: number;
       onlyUnpaid?: boolean;
     },
   ) {
@@ -3204,6 +3387,7 @@ export class FinanceService {
 
     const yearStart = dto.startYear || new Date().getFullYear();
     const isSemesterMode = dto.releaseDuration === 'SEMESTER';
+    const isMonthMode = dto.releaseDuration === 'BULAN';
     const sem1Months = [
       { month: 7, year: yearStart },
       { month: 8, year: yearStart },
@@ -3221,7 +3405,9 @@ export class FinanceService {
       { month: 6, year: yearStart + 1 },
     ];
 
-    const targetMonths = isSemesterMode
+    const targetMonths = isMonthMode
+      ? [{ month: dto.targetMonth || (new Date().getMonth() + 1), year: yearStart }]
+      : isSemesterMode
       ? (dto.targetSemester === 2 ? sem2Months : sem1Months)
       : [...sem1Months, ...sem2Months];
 
@@ -3287,7 +3473,7 @@ export class FinanceService {
           success: true,
           deletedBillsCount: deleteRes.count,
           studentCount: students.length,
-          message: `Berhasil mereset ${deleteRes.count} tagihan ${isSemesterMode ? `Semester ${dto.targetSemester === 2 ? 'Genap' : 'Ganjil'}` : 'Tahun Ajaran'} ${yearStart}/${yearStart + 1} dari ${students.length} siswa.`,
+          message: `Berhasil mereset ${deleteRes.count} tagihan ${isSemesterMode ? `Semester ${dto.targetSemester === 2 ? 'Genap' : 'Ganjil'}` : 'Tahun Pelajaran'} ${yearStart}/${yearStart + 1} dari ${students.length} siswa.`,
         };
       }
 
@@ -3295,7 +3481,7 @@ export class FinanceService {
         success: true,
         deletedBillsCount: 0,
         studentCount: students.length,
-        message: `Tidak ditemukan tagihan ${isSemesterMode ? `Semester ${dto.targetSemester === 2 ? 'Genap' : 'Ganjil'}` : 'Tahun Ajaran'} ${yearStart}/${yearStart + 1} untuk di-reset pada siswa terpilih.`,
+        message: `Tidak ditemukan tagihan ${isSemesterMode ? `Semester ${dto.targetSemester === 2 ? 'Genap' : 'Ganjil'}` : 'Tahun Pelajaran'} ${yearStart}/${yearStart + 1} untuk di-reset pada siswa terpilih.`,
       };
     });
   }
@@ -4863,7 +5049,7 @@ export class FinanceService {
 
     ws1.mergeCells('A2:P2');
     const subCell = ws1.getCell('A2');
-    subCell.value = `Periode: ${monthName} ${targetYear} | Tahun Ajaran: ${cls.academicYear || '2026/2027'} | Tanggal Ekspor: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    subCell.value = `Periode: ${monthName} ${targetYear} | Tahun Pelajaran: ${cls.academicYear || '2026/2027'} | Tanggal Ekspor: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
     subCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: '4B5563' } };
     subCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -5089,7 +5275,7 @@ export class FinanceService {
 
     ws2.mergeCells('A2:L2');
     const subCell2 = ws2.getCell('A2');
-    subCell2.value = `Periode: ${monthName} ${targetYear} | Kelas: ${cls.name} | Wali Kelas: ${waliKelasName} | Tahun Ajaran: ${cls.academicYear || '2026/2027'}`;
+    subCell2.value = `Periode: ${monthName} ${targetYear} | Kelas: ${cls.name} | Wali Kelas: ${waliKelasName} | Tahun Pelajaran: ${cls.academicYear || '2026/2027'}`;
     subCell2.font = { name: 'Arial', size: 9.5, italic: true, color: { argb: '4B5563' } };
     subCell2.alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -5261,7 +5447,7 @@ export class FinanceService {
 
     ws3.mergeCells('A2:H2');
     const subCell3 = ws3.getCell('A2');
-    subCell3.value = `Periode: ${monthName} ${targetYear} | Kelas: ${cls.name} | Wali Kelas: ${waliKelasName} | Tahun Ajaran: ${cls.academicYear || '2026/2027'}`;
+    subCell3.value = `Periode: ${monthName} ${targetYear} | Kelas: ${cls.name} | Wali Kelas: ${waliKelasName} | Tahun Pelajaran: ${cls.academicYear || '2026/2027'}`;
     subCell3.font = { name: 'Arial', size: 9.5, italic: true, color: { argb: '4B5563' } };
     subCell3.alignment = { horizontal: 'center', vertical: 'middle' };
 

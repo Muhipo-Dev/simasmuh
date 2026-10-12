@@ -2,6 +2,16 @@ import { ConsoleLogger, LogLevel } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export interface SystemLogEntry {
+  id: string;
+  timestamp: string;
+  level: 'LOG' | 'INFO' | 'ERROR' | 'WARN' | 'DEBUG' | 'VERBOSE' | 'FATAL';
+  context: string;
+  message: string;
+  trace?: string;
+  raw: string;
+}
+
 /**
  * FileLoggerService: Logger kustom tingkat sistem SIMASMUH
  * - Output tetap tampil real-time dan berwarna di Terminal Console.
@@ -9,9 +19,14 @@ import * as path from 'path';
  *   - `/logs/simasmuh-backend.log` (Log aktif terkini)
  *   - `/logs/backend-errors.log` (Khusus log error dan fatal)
  *   - `/logs/archive/simasmuh-backend-YYYY-MM-DD.log` (Rotasi harian)
+ * - In-Memory Ring Buffer (1.000 log terbaru) untuk live streaming ke Dashboard Pengaturan Sistem Admin.
  * - Berjalan secara asynchronous (non-blocking) agar tidak mengganggu kecepatan atau performa runtime sistem.
  */
 export class FileLoggerService extends ConsoleLogger {
+  private static instance: FileLoggerService | null = null;
+  private static memoryLogs: SystemLogEntry[] = [];
+  private static readonly MAX_MEMORY_LOGS = 1000;
+
   private logDirectory: string;
   private archiveDirectory: string;
   private mainLogFile: string;
@@ -22,7 +37,34 @@ export class FileLoggerService extends ConsoleLogger {
 
   constructor(context?: string) {
     super(context || 'SIMASMUH');
+    FileLoggerService.instance = this;
     this.initLogDirectories();
+  }
+
+  public static getInstance(): FileLoggerService | null {
+    return FileLoggerService.instance;
+  }
+
+  public static getRecentLogs(limit = 200, level?: string, search?: string): SystemLogEntry[] {
+    let logs = [...FileLoggerService.memoryLogs];
+    if (level && level !== 'ALL') {
+      const targetLevel = level.toUpperCase();
+      logs = logs.filter((l) => l.level === targetLevel || (targetLevel === 'LOG' && l.level === 'INFO'));
+    }
+    if (search && search.trim() !== '') {
+      const q = search.toLowerCase();
+      logs = logs.filter(
+        (l) =>
+          l.message.toLowerCase().includes(q) ||
+          l.context.toLowerCase().includes(q) ||
+          l.raw.toLowerCase().includes(q),
+      );
+    }
+    return logs.slice(-limit);
+  }
+
+  public static clearMemoryLogs() {
+    FileLoggerService.memoryLogs = [];
   }
 
   private initLogDirectories() {
@@ -124,6 +166,21 @@ export class FileLoggerService extends ConsoleLogger {
       let line = `[${timestamp}] [${level.toUpperCase()}] [${ctx}] ${cleanMsg}\n`;
       if (trace) {
         line += `  Trace: ${this.stripAnsi(trace)}\n`;
+      }
+
+      // Simpan ke in-memory ring buffer untuk live web stream admin
+      const entry: SystemLogEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        timestamp,
+        level: level.toUpperCase() as any,
+        context: ctx,
+        message: cleanMsg,
+        trace: trace ? this.stripAnsi(trace) : undefined,
+        raw: line.trim(),
+      };
+      FileLoggerService.memoryLogs.push(entry);
+      if (FileLoggerService.memoryLogs.length > FileLoggerService.MAX_MEMORY_LOGS) {
+        FileLoggerService.memoryLogs.shift();
       }
 
       if (this.writeStream && !this.writeStream.destroyed) {

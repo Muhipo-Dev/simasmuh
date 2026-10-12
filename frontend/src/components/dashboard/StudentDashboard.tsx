@@ -592,7 +592,7 @@ export function StudentDashboard({
 
           <div class="doc-header">
             <span class="doc-title">JADWAL PELAJARAN KELAS ${studentClass?.name || ''}</span>
-            <span style="font-weight: bold; font-size: 11px;">Tahun Ajaran: ${studentClass?.academicYear || '2026/2027'} • Terakhir Diperbarui: ${studentScheduleLastUpdated ? formatScheduleUpdateTime(studentScheduleLastUpdated) : '-'}</span>
+            <span style="font-weight: bold; font-size: 11px;">Tahun Pelajaran: ${studentClass?.academicYear || '2026/2027'} • Terakhir Diperbarui: ${studentScheduleLastUpdated ? formatScheduleUpdateTime(studentScheduleLastUpdated) : '-'}</span>
           </div>
 
           <table>
@@ -711,78 +711,40 @@ export function StudentDashboard({
                   </Badge>
                 </div>
 
-              {/* Subtitle Details: NISN, Class, Program, Homeroom Teacher */}
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px] md:text-xs text-blue-100/90 font-medium">
-                <span>NISN/NIS: <b className="text-white font-mono">{activeStudent?.nisn || activeStudent?.nis || (session?.user as any)?.username || '-'}</b></span>
-                <span>•</span>
-                <span>Kelas: <b className="text-white">{studentClass?.name || activeStudent?.class?.name || '-'}</b> ({activeStudent?.program || 'Reguler'})</span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <User className="w-3 h-3 text-blue-300" />
-                  Wali Kelas: <b className="text-white">{homeroomTeacherName}</b>
-                </span>
-              </div>
-
-              {/* 3 Bottom Badged Pills */}
-              <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 pt-0.5 sm:pt-1">
-                <div className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/15 backdrop-blur-md text-[9.5px] sm:text-[10.5px] font-semibold text-blue-100 flex items-center gap-1 border border-white/10 transition-colors">
-                  <CalendarDays className="w-3 h-3 text-blue-300" />
-                  <span>{clock.dateString || 'Jumat, 11 September 2026'}</span>
-                </div>
-                <div className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/15 backdrop-blur-md text-[9.5px] sm:text-[10.5px] font-semibold text-blue-100 flex items-center gap-1 border border-white/10 transition-colors">
-                  <BookOpen className="w-3 h-3 text-indigo-300" />
-                  <span>Semester {currentSemester} ({currentSemester % 2 === 0 ? 'Genap' : 'Ganjil'})</span>
-                </div>
-                <div className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/15 backdrop-blur-md text-[9.5px] sm:text-[10.5px] font-semibold text-blue-100 flex items-center gap-1 border border-white/10 transition-colors">
-                  <GraduationCap className="w-3 h-3 text-emerald-300" />
-                  <span>Kelas {studentClass?.name || activeStudent?.class?.name || '-'}</span>
+                {/* Subtitle Details: NISN/NIS, Kelas, Wali Kelas (Hanya tampil di Desktop/Tablet md:flex, disembunyikan di Mobile) */}
+                <div className="hidden md:flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-blue-100/90 font-medium">
+                  <span>NISN/NIS: <b className="text-white font-mono">{activeStudent?.nisn || activeStudent?.nis || (session?.user as any)?.username || '-'}</b></span>
+                  <span>•</span>
+                  <span>Kelas: <b className="text-white">{studentClass?.name || activeStudent?.class?.name || '-'}</b></span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <User className="w-3.5 h-3.5 text-blue-300" />
+                    Wali Kelas: <b className="text-white">{homeroomTeacherName}</b>
+                  </span>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Right: Prominent Actions (BUKU INDUK, KARTU PELAJAR & Secondary Buttons) */}
-          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-1.5 sm:gap-2 shrink-0">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+            {/* Right: Quick Action Buttons (Buku Induk & Kartu Pelajar hanya tampil di Desktop/Tablet md:flex, disembunyikan di Mobile) */}
+            <div className="hidden md:flex items-center gap-2 shrink-0">
               <Link
                 href="/siswa/buku-induk"
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 h-8 sm:h-9 md:h-10 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-teal-600/20 border border-teal-400/40 transition-all transform hover:-translate-y-0.5"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 h-9 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs shadow-md shadow-teal-600/20 border border-teal-400/40 transition-all transform hover:-translate-y-0.5"
               >
-                <BookMarked className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <BookMarked className="w-3.5 h-3.5" />
                 <span>Buku Induk</span>
               </Link>
 
               <Link
                 href="/pengaturan/profil#kartu-pelajar"
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 h-8 sm:h-9 md:h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 border border-blue-400/40 transition-all transform hover:-translate-y-0.5"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 border border-blue-400/40 transition-all transform hover:-translate-y-0.5"
               >
-                <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <CreditCard className="w-3.5 h-3.5" />
                 <span>Kartu Pelajar</span>
               </Link>
             </div>
-
-            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 w-full sm:w-auto justify-start sm:justify-end">
-              <Link
-                href="/agenda"
-                className="inline-flex items-center bg-white/10 hover:bg-white/20 text-white border border-white/20 text-[10px] sm:text-[11px] h-7 px-2 sm:px-2.5 rounded-lg font-semibold backdrop-blur-sm transition-colors"
-                title="Buka Halaman Khusus Kalender Akademik"
-              >
-                <CalendarDays className="w-3 h-3 mr-1 text-blue-300" />
-                Kalender Akademik
-              </Link>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowClassmatesModal(true)}
-                className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-[10px] sm:text-[11px] h-7 px-2 sm:px-2.5 rounded-lg font-semibold backdrop-blur-sm"
-              >
-                <Users className="w-3 h-3 mr-1 text-emerald-300" />
-                Teman Sekelas ({classmates.length || 32})
-              </Button>
-            </div>
           </div>
         </div>
-      </div>
 
       {/* BANNER KHUSUS ALUMNI / SISWA PURNA BELAJAR / PINDAH SEKOLAH */}
       {studentStatusInfo.isAlumni && (
@@ -881,112 +843,7 @@ export function StudentDashboard({
         </div>
       )}
 
-      {/* 3. TOP 4 METRIC SUMMARY CARDS (COMPACT RESPONSIVE) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-        {/* Card 1: Mapel & Jam Hari Ini */}
-        <Card className="border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-all rounded-xl p-3 flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-tight block">
-                Mapel Hari Ini
-              </span>
-              <h3 className="text-xl font-black text-slate-900 dark:text-white mt-0.5">
-                {todaySchedules.length} <span className="text-[10px] font-bold text-slate-500">Mapel</span>
-              </h3>
-            </div>
-            <div className="w-7.5 h-7.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 flex items-center justify-center shrink-0">
-              <BookOpen className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-              {todaySchedules.length > 0 ? `${todaySchedules.length * 2} Jam KBM Aktif` : 'Tidak Ada Jam'}
-            </span>
-          </div>
-        </Card>
-
-        {/* Card 2: Kehadiran Siswa */}
-        <Card className="border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-all rounded-xl p-3 flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-tight block">
-                Kehadiran
-              </span>
-              <h3 className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-                {attendanceStats.rate}%
-              </h3>
-            </div>
-            <div className="w-7.5 h-7.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center shrink-0">
-              <ClipboardCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-              {attendanceStats.hadirCount} Hadir ({attendanceStats.totalDays} Hari)
-            </span>
-          </div>
-        </Card>
-
-        {/* Card 3: Status Presensi Hari Ini */}
-        <Card className="border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-all rounded-xl p-3 flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-tight block">
-                Presensi Hari Ini
-              </span>
-              <h3 className={`text-xl font-black mt-0.5 ${todayAttendance?.status === 'HADIR' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                {todayAttendance?.status === 'HADIR' ? 'Hadir' : (todayAttendance?.status || 'Belum')}
-              </h3>
-            </div>
-            <div className={`w-7.5 h-7.5 rounded-lg flex items-center justify-center shrink-0 ${todayAttendance?.status === 'HADIR' ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600' : 'bg-amber-50 dark:bg-amber-950/50 text-amber-600'}`}>
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate block">
-              {todayAttendance?.checkInTime || todayAttendance?.time ? `Masuk: ${todayAttendance.checkInTime || todayAttendance.time} WIB` : 'Biometrik Face AI / QR'}
-            </span>
-          </div>
-        </Card>
-
-        {/* Card 4: Status Tagihan & SPP (DITONJOLKAN DENGAN BORDER & ACCENT) */}
-        <Card
-          onClick={() => setShowPaymentPopup(true)}
-          className={`border-2 transition-all rounded-xl p-3 flex flex-col justify-between cursor-pointer group hover:shadow-md ${
-            allUnpaid.length > 0
-              ? 'border-rose-400/80 dark:border-rose-500/60 bg-gradient-to-br from-rose-50/60 via-white to-amber-50/40 dark:from-slate-900 dark:to-rose-950/30'
-              : 'border-emerald-300/80 dark:border-emerald-700/60 bg-white dark:bg-slate-900 shadow-2xs'
-          }`}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-[10px] font-extrabold text-slate-600 dark:text-slate-300 uppercase tracking-tight block">
-                Tagihan SPP &amp; Keuangan
-              </span>
-              <h3 className={`text-xl font-black mt-0.5 ${allUnpaid.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600'}`}>
-                {allUnpaid.length > 0 ? `${allUnpaid.length} Tagihan` : 'Lunas'}
-              </h3>
-            </div>
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${
-              allUnpaid.length > 0
-                ? 'bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-300'
-                : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600'
-            }`}>
-              <Receipt className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-            <span className={`text-[10px] font-black truncate ${allUnpaid.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600'}`}>
-              {allUnpaid.length > 0 ? formatCurrency(totalUnpaidAmount) : 'Bebas Tunggakan'}
-            </span>
-            <span className="text-[9.5px] text-blue-600 dark:text-blue-400 font-bold group-hover:underline">
-              Detail &rarr;
-            </span>
-          </div>
-        </Card>
-      </div>
-
-      {/* 4. PINTASAN LAYANAN AKADEMIK SISWA (7 SERVICE SHORTCUT CARDS) */}
+      {/* 3. PINTASAN LAYANAN AKADEMIK SISWA (7 SERVICE SHORTCUT CARDS) */}
       {(() => {
         const studentShortcuts = [
           {
@@ -1108,20 +965,20 @@ export function StudentDashboard({
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-2.5">
+              <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2.5">
                 {filteredShortcuts.map((sc, idx) => {
                   const Icon = sc.icon
                   const content = (
                     <div
-                      className={`group p-2 sm:p-2.5 rounded-xl border ${sc.colorClass} hover:bg-white dark:hover:bg-slate-800 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[78px] h-full cursor-pointer`}
+                      className={`group p-1.5 sm:p-2.5 rounded-xl border ${sc.colorClass} hover:bg-white dark:hover:bg-slate-800 hover:shadow-xs transition-all text-center flex flex-col items-center justify-center min-h-[58px] sm:min-h-[78px] h-full cursor-pointer`}
                     >
-                      <div className={`w-7.5 h-7.5 rounded-lg ${sc.iconBg} flex items-center justify-center mb-1 group-hover:scale-105 transition-transform`}>
-                        <Icon className="w-3.5 h-3.5" />
+                      <div className={`w-6 h-6 sm:w-7.5 sm:h-7.5 rounded-lg ${sc.iconBg} flex items-center justify-center mb-0.5 sm:mb-1 group-hover:scale-105 transition-transform`}>
+                        <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                       </div>
-                      <h4 className={`text-[11px] font-black text-slate-900 dark:text-white ${sc.textHover} transition-colors leading-tight truncate w-full`}>
+                      <h4 className={`text-[9.5px] sm:text-[11px] font-black text-slate-900 dark:text-white ${sc.textHover} transition-colors leading-tight truncate w-full`}>
                         {sc.name}
                       </h4>
-                      <span className={`text-[9px] ${sc.subColor} font-medium mt-0.5 truncate max-w-full block`}>
+                      <span className={`text-[8px] sm:text-[9px] ${sc.subColor} font-medium mt-0.5 truncate max-w-full hidden sm:block`}>
                         {sc.desc}
                       </span>
                     </div>
@@ -1146,25 +1003,6 @@ export function StudentDashboard({
           </Card>
         )
       })()}
-
-      {/* 4.5. MOBILE ONLY: BERITA, PENGUMUMAN, KALENDER (URUTAN MOBILE RESMI) */}
-      <div className="block lg:hidden space-y-3.5 sm:space-y-4">
-        {/* Berita & Artikel Terkini */}
-        <NewsArticleListWidget limit={3} />
-
-        {/* Informasi & Pengumuman Sistem */}
-        <SystemInfoWidget
-          announcements={systemAnnouncements}
-          title="Informasi & Pengumuman Sistem"
-          limit={3}
-        />
-
-        {/* Kalender Akademik & Libur */}
-        <ActivityCalendarWidget
-          announcements={announcements}
-          title="Kalender Akademik & Libur"
-        />
-      </div>
 
       {/* 5. MAIN BOTTOM SPLIT LAYOUT (8 COLS LEFT + 4 COLS RIGHT) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-stretch">
@@ -1525,9 +1363,9 @@ export function StudentDashboard({
           </Card>
         </div>
 
-        {/* RIGHT COLUMN (4 COLS): DONUT CHART, CLASSMATES & ACADEMIC INFO */}
+        {/* RIGHT COLUMN (4 COLS): SIDE WIDGETS SISWA */}
         <div className="lg:col-span-4 flex flex-col gap-3.5 sm:gap-4">
-          {/* Card: Poin Ketertiban & Evaluasi Karakter Siswa */}
+          {/* 1. Card: Poin Ketertiban & Evaluasi Karakter Siswa */}
           <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3.5 sm:p-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-1.5">
@@ -1598,26 +1436,7 @@ export function StudentDashboard({
             </div>
           </Card>
 
-          {/* DESKTOP ONLY WIDGETS (SISTEM, BERITA, KALENDER) */}
-          <div className="hidden lg:flex flex-col gap-3.5 sm:gap-4">
-            {/* 1. Informasi & Pengumuman Sistem */}
-            <SystemInfoWidget
-              announcements={systemAnnouncements}
-              title="Informasi & Pengumuman Sistem"
-              limit={3}
-            />
-
-            {/* 2. Berita & Artikel Terkini */}
-            <NewsArticleListWidget limit={3} />
-
-            {/* 3. Kalender Akademik & Hari Libur Nasional */}
-            <ActivityCalendarWidget
-              announcements={announcements}
-              title="Kalender Akademik & Libur"
-            />
-          </div>
-
-          {/* 4. Ekstrakurikuler Siswa Widget */}
+          {/* 2. Ekstrakurikuler Siswa Widget */}
           <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3.5 sm:p-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-1.5">
@@ -1686,6 +1505,26 @@ export function StudentDashboard({
               )}
             </div>
           </Card>
+
+          {/* 3. Kalender Akademik & Hari Libur Nasional (Tampil di Desktop & paling bawah di Mobile) */}
+          <ActivityCalendarWidget
+            announcements={announcements}
+            title="Kalender Akademik & Libur"
+          />
+
+          {/* 4. Berita & Artikel Terkini (Hanya Desktop, Disembunyikan di Mobile Ionic) */}
+          <div className="hidden lg:block">
+            <NewsArticleListWidget limit={3} />
+          </div>
+
+          {/* 5. Informasi & Pengumuman Sistem (Hanya Desktop, Disembunyikan di Mobile Ionic) */}
+          <div className="hidden lg:block">
+            <SystemInfoWidget
+              announcements={systemAnnouncements}
+              title="Informasi & Pengumuman Sistem"
+              limit={3}
+            />
+          </div>
         </div>
       </div>
 

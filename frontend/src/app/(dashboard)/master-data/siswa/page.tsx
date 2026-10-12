@@ -3975,7 +3975,7 @@ export default function StudentsPage() {
                   <div className="font-semibold text-purple-900 dark:text-purple-300 text-xs">Informasi Kelulusan & Alumni</div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-[11px] font-semibold">Tahun Ajaran Lulus</Label>
+                      <Label className="text-[11px] font-semibold">Tahun Pelajaran Lulus</Label>
                       <Input
                         value={statusForm.tamatBelajar}
                         onChange={(e) => setStatusForm(prev => ({ ...prev, tamatBelajar: e.target.value }))}

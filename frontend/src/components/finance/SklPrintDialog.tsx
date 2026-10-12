@@ -403,7 +403,7 @@ export function SklPrintDialog({
                       </div>
 
                       <p className="pt-2">
-                        Berdasarkan hasil verifikasi sistem informasi keuangan (SIKU) dan kriteria kelulusan peserta didik Tahun Ajaran {academicYear}, yang bersangkutan dinyatakan telah memenuhi persyaratan administrasi sekolah.
+                        Berdasarkan hasil verifikasi sistem informasi keuangan (SIKU) dan kriteria kelulusan peserta didik Tahun Pelajaran {academicYear}, yang bersangkutan dinyatakan telah memenuhi persyaratan administrasi sekolah.
                       </p>
 
                       <p>
@@ -527,7 +527,7 @@ export function SklPrintDialog({
                       </div>
 
                       <p style={{ margin: '0 0 10px 0', textIndent: '30px' }}>
-                        Berdasarkan hasil verifikasi sistem informasi keuangan (SIKU) dan kriteria kelulusan peserta didik Tahun Ajaran {academicYear}, yang bersangkutan dinyatakan telah memenuhi persyaratan administrasi sekolah.
+                        Berdasarkan hasil verifikasi sistem informasi keuangan (SIKU) dan kriteria kelulusan peserta didik Tahun Pelajaran {academicYear}, yang bersangkutan dinyatakan telah memenuhi persyaratan administrasi sekolah.
                       </p>
 
                       <p style={{ margin: '0 0 10px 0', textIndent: '30px' }}>

@@ -397,6 +397,67 @@ export class StudentsService {
     };
   }
 
+  /**
+   * Reset pengaturan beasiswa siswa menjadi 0% dan mengembalikan tagihan siswa ke nominal awal
+   */
+  async resetBeasiswa(studentId: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+    });
+    if (!student) {
+      throw new NotFoundException('Data siswa tidak ditemukan.');
+    }
+
+    const updated = await (this.prisma.student as any).update({
+      where: { id: studentId },
+      data: {
+        beasiswaSeragamPct: 0,
+        beasiswaSppPct: 0,
+        beasiswaDppPct: 0,
+        beasiswaPercentage: 0,
+        beasiswaReason: null,
+      },
+    });
+
+    await this.syncStudentBeasiswaToBills(studentId, 0, null);
+
+    return {
+      success: true,
+      message: `Beasiswa siswa ${student.name} berhasil direset ke 0%.`,
+      student: updated,
+    };
+  }
+
+  /**
+   * Reset beasiswa massal untuk beberapa siswa terpilih
+   */
+  async bulkResetBeasiswa(studentIds: string[]) {
+    if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+      throw new BadRequestException('Daftar siswa wajib dipilih.');
+    }
+
+    const updated = await (this.prisma.student as any).updateMany({
+      where: { id: { in: studentIds } },
+      data: {
+        beasiswaSeragamPct: 0,
+        beasiswaSppPct: 0,
+        beasiswaDppPct: 0,
+        beasiswaPercentage: 0,
+        beasiswaReason: null,
+      },
+    });
+
+    for (const studentId of studentIds) {
+      await this.syncStudentBeasiswaToBills(studentId, 0, null);
+    }
+
+    return {
+      success: true,
+      count: updated.count,
+      message: `Berhasil mereset beasiswa untuk ${updated.count} siswa terpilih. Seluruh tagihan dikembalikan ke nominal awal.`,
+    };
+  }
+
   async remove(id: string) {
     const student = await this.prisma.student.findUnique({
       where: { id },
@@ -609,6 +670,7 @@ export class StudentsService {
         };
         const updatedNotes = `${cleanNotes ? cleanNotes + ' | ' : ''}BEASISWA_INFO: ${JSON.stringify(beasiswaInfo)}`;
 
+        const isAlreadyDraft = t.status === 'DRAFT';
         await this.prisma.tagihan.update({
           where: { id: t.id },
           data: {
@@ -616,13 +678,15 @@ export class StudentsService {
             notes: updatedNotes,
             status:
               finalAmount === 0
-                ? 'LUNAS'
+                ? (isAlreadyDraft ? 'DRAFT' : 'LUNAS')
                 : t.amountPaid >= finalAmount
                   ? 'LUNAS'
-                  : 'BELUM_LUNAS',
+                  : isAlreadyDraft
+                    ? 'DRAFT'
+                    : 'BELUM_LUNAS',
             paidDate:
               finalAmount === 0
-                ? t.paidDate || new Date()
+                ? (isAlreadyDraft ? null : t.paidDate || new Date())
                 : t.amountPaid >= finalAmount
                   ? t.paidDate
                   : null,
@@ -630,13 +694,18 @@ export class StudentsService {
         });
       } else {
         // Potongan 0%: kembalikan jumlah tagihan asli dan hapus catatan diskon
+        const isAlreadyDraft = t.status === 'DRAFT';
         await this.prisma.tagihan.update({
           where: { id: t.id },
           data: {
             amount: originalAmount,
             notes: cleanNotes || null,
-            status: t.amountPaid >= originalAmount ? 'LUNAS' : 'BELUM_LUNAS',
-            paidDate: t.amountPaid >= originalAmount ? t.paidDate : null,
+            status: isAlreadyDraft
+              ? 'DRAFT'
+              : t.amountPaid >= originalAmount
+                ? 'LUNAS'
+                : 'BELUM_LUNAS',
+            paidDate: isAlreadyDraft ? null : t.amountPaid >= originalAmount ? t.paidDate : null,
           },
         });
       }
@@ -823,6 +892,218 @@ export class StudentsService {
     instructionsHeader.alignment = { vertical: 'middle', horizontal: 'center' };
 
     // Generate buffer
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  /**
+   * Import pengaturan beasiswa siswa dari data file Excel (berdasarkan NIS dan Nama)
+   */
+  async importBeasiswa(
+    items: Array<{
+      nis?: string;
+      nisn?: string;
+      name?: string;
+      beasiswaSeragamPct?: number;
+      beasiswaSppPct?: number;
+      beasiswaDppPct?: number;
+      beasiswaReason?: string;
+    }>,
+  ) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      throw new BadRequestException('Data import beasiswa tidak boleh kosong.');
+    }
+
+    const allStudents = await this.prisma.student.findMany({
+      select: { id: true, nis: true, nisn: true, name: true },
+    });
+
+    // Lookup index
+    const byNis = new Map<string, string>();
+    const byNisn = new Map<string, string>();
+    const byName = new Map<string, string>();
+
+    for (const s of allStudents) {
+      if (s.nis) byNis.set(s.nis.trim().toLowerCase(), s.id);
+      if (s.nisn) byNisn.set(s.nisn.trim().toLowerCase(), s.id);
+      if (s.name) byName.set(s.name.trim().toLowerCase(), s.id);
+    }
+
+    let successCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const row = items[i];
+      const rowNum = i + 2; // Asumsi baris 1 header di excel
+
+      const cleanNis = (row.nis !== undefined && row.nis !== null ? String(row.nis) : '').trim().toLowerCase();
+      const cleanNisn = (row.nisn !== undefined && row.nisn !== null ? String(row.nisn) : '').trim().toLowerCase();
+      const cleanName = (row.name !== undefined && row.name !== null ? String(row.name) : '').trim().toLowerCase();
+
+      let targetStudentId: string | undefined;
+
+      if (cleanNis && byNis.has(cleanNis)) {
+        targetStudentId = byNis.get(cleanNis);
+      } else if (cleanNisn && byNisn.has(cleanNisn)) {
+        targetStudentId = byNisn.get(cleanNisn);
+      } else if (cleanName && byName.has(cleanName)) {
+        targetStudentId = byName.get(cleanName);
+      }
+
+      if (!targetStudentId) {
+        errors.push(`Baris ${rowNum}: Siswa tidak ditemukan (NIS: ${row.nis || '-'}, Nama: ${row.name || '-'})`);
+        continue;
+      }
+
+      const seragamPct = Math.min(100, Math.max(0, Number(row.beasiswaSeragamPct || 0)));
+      const sppPct = Math.min(100, Math.max(0, Number(row.beasiswaSppPct || 0)));
+      const dppPct = Math.min(100, Math.max(0, Number(row.beasiswaDppPct || 0)));
+      const reason = row.beasiswaReason ? String(row.beasiswaReason).trim() : 'Beasiswa Excel';
+
+      try {
+        await (this.prisma.student as any).update({
+          where: { id: targetStudentId },
+          data: {
+            beasiswaSeragamPct: seragamPct,
+            beasiswaSppPct: sppPct,
+            beasiswaDppPct: dppPct,
+            beasiswaPercentage: sppPct,
+            beasiswaReason: reason,
+          },
+        });
+
+        // Sinkronkan ke seluruh tagihan siswa
+        await this.syncStudentBeasiswaToBills(targetStudentId, sppPct, reason);
+        successCount++;
+      } catch (err: any) {
+        errors.push(`Baris ${rowNum} (${row.name || row.nis}): Gagal update - ${err.message}`);
+      }
+    }
+
+    return {
+      success: true,
+      count: successCount,
+      total: items.length,
+      errors,
+      message: `Berhasil mengimpor beasiswa untuk ${successCount} siswa.${errors.length > 0 ? ` (${errors.length} dilewati)` : ''}`,
+    };
+  }
+
+  /**
+   * Generate Excel template beasiswa yang sudah sinkron dengan data master siswa SIMASMUH
+   */
+  async generateBeasiswaTemplate(): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'SIMASMUH';
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet('Set Beasiswa Siswa', {
+      pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true },
+    });
+
+    worksheet.columns = [
+      { header: 'No', key: 'no', width: 6 },
+      { header: 'NIS *', key: 'nis', width: 14 },
+      { header: 'Nama Siswa *', key: 'name', width: 34 },
+      { header: 'Kelas', key: 'className', width: 14 },
+      { header: 'NISN', key: 'nisn', width: 16 },
+      { header: 'Jalur', key: 'jalur', width: 14 },
+      { header: 'Beasiswa Seragam (%)', key: 'seragamPct', width: 22 },
+      { header: 'Beasiswa SPP (%)', key: 'sppPct', width: 20 },
+      { header: 'Beasiswa DPP (%)', key: 'dppPct', width: 20 },
+      { header: 'Alasan / Catatan Beasiswa', key: 'reason', width: 34 },
+    ];
+
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1E40AF' }, // Navy Blue Resmi SIMASMUH
+    };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.height = 26;
+
+    // Ambil data siswa aktif master SIMASMUH
+    const activeStudents = await this.prisma.student.findMany({
+      where: { isActive: true },
+      include: { class: true },
+      orderBy: [
+        { class: { name: 'asc' } },
+        { name: 'asc' },
+      ],
+    });
+
+    activeStudents.forEach((student, index) => {
+      const row = worksheet.addRow({
+        no: index + 1,
+        nis: student.nis || '',
+        name: student.name || '',
+        className: student.class?.name || '',
+        nisn: student.nisn || '',
+        jalur: student.jalurPendaftaran || 'Reguler',
+        seragamPct: student.beasiswaSeragamPct || 0,
+        sppPct: student.beasiswaSppPct || student.beasiswaPercentage || 0,
+        dppPct: student.beasiswaDppPct || 0,
+        reason: student.beasiswaReason || '',
+      });
+
+      row.alignment = { vertical: 'middle' };
+      row.getCell('no').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('nis').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('className').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('nisn').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('jalur').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('seragamPct').alignment = { vertical: 'middle', horizontal: 'right' };
+      row.getCell('sppPct').alignment = { vertical: 'middle', horizontal: 'right' };
+      row.getCell('dppPct').alignment = { vertical: 'middle', horizontal: 'right' };
+    });
+
+    // Lembar Petunjuk Pengisian
+    const guideSheet = workbook.addWorksheet('Petunjuk');
+    guideSheet.columns = [
+      { header: 'Parameter', key: 'param', width: 25 },
+      { header: 'Keterangan Penting', key: 'desc', width: 65 },
+    ];
+
+    const guideHeader = guideSheet.getRow(1);
+    guideHeader.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+    guideHeader.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD97706' }, // Amber
+    };
+    guideHeader.height = 24;
+
+    const guides = [
+      {
+        param: 'Sinkronisasi Data Siswa',
+        desc: 'Sheet "Set Beasiswa Siswa" sudah terisi otomatis seluruh data siswa aktif dari master SIMASMUH berdasarkan Nama dan NIS.',
+      },
+      {
+        param: 'Kolom NIS & Nama Siswa',
+        desc: 'Jangan mengubah NIS atau Nama Siswa agar sistem dapat mencocokkan siswa dengan akurat.',
+      },
+      {
+        param: 'Beasiswa Seragam (%)',
+        desc: 'Diisi angka persentase 0 - 100. Berlaku untuk jalur non-Mandiri. Isi 0 jika tidak ada beasiswa.',
+      },
+      {
+        param: 'Beasiswa SPP (%)',
+        desc: 'Diisi angka persentase 0 - 100. Diskon akan otomatis disinkronkan ke tagihan bulanan SPP yang belum lunas.',
+      },
+      {
+        param: 'Beasiswa DPP (%)',
+        desc: 'Diisi angka persentase 0 - 100. Diskon akan otomatis disinkronkan ke tagihan DPP siswa.',
+      },
+      {
+        param: 'Alasan / Catatan Beasiswa',
+        desc: 'Contoh: Beasiswa Prestasi, Beasiswa Kader Muhammadiyah, Program Tahfidz, Bantuan Lazismu, dll.',
+      },
+    ];
+
+    guides.forEach((g) => guideSheet.addRow(g));
+
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
   }

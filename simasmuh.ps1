@@ -1010,11 +1010,11 @@ function Start-SetupEnv {
             $defaultBeEnv = @"
 DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 DIRECT_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
-JWT_SECRET="simasmuh-super-secret-jwt-key-2026"
+JWT_SECRET="nailar-muhipo55"
 PORT=3001
 SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
-SUPABASE_SECRET_KEY=your-supabase-secret-key
+SUPABASE_PUBLISHABLE_KEY=nailar-muhipo55
+SUPABASE_SECRET_KEY=nailar-muhipo55
 SUPABASE_JWKS_URL=http://127.0.0.1:54321/auth/v1/.well-known/jwks.json
 STORAGE_PATH=
 "@
@@ -1034,8 +1034,9 @@ STORAGE_PATH=
             $defaultFeEnv = @"
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 BACKEND_URL=http://localhost:3001
+NEXT_PUBLIC_API_KEY=nailar-muhipo55
 NEXTAUTH_URL=https://simasmuh.razagopo.my.id
-NEXTAUTH_SECRET=simasmuh-nextauth-secret-key-2026
+NEXTAUTH_SECRET=nailar-muhipo55
 NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:3001
 NEXT_PUBLIC_ENABLE_REAL_TIME_NOTIFICATIONS=true
 NEXT_PUBLIC_ENABLE_NOTIFICATION_SOUNDS=true
@@ -1052,8 +1053,8 @@ NEXT_PUBLIC_DEBUG_NOTIFICATIONS=false
     if (-not (Test-Path $aiEnv)) {
         $defaultAiEnv = @"
 BACKEND_URL=http://localhost:3001
-API_KEY=siakad_secret_api_key_2026
-API_SECRET=simasmuh_face_token_secret_2026
+API_KEY=nailar-muhipo55
+API_SECRET=nailar-muhipo55
 PORT=8089
 "@
         $defaultAiEnv | Set-Content -Path $aiEnv -Encoding utf8

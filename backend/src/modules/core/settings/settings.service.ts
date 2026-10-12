@@ -4,10 +4,13 @@ import type { Cache } from 'cache-manager';
 import { randomBytes } from 'crypto';
 import * as os from 'os';
 import * as net from 'net';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { getServerTimeInfo } from '../utils/timezone.util';
 import { WaitingRoomService } from '../waiting-room/waiting-room.service';
 import { MaintenanceService } from '../maintenance/maintenance.service';
+import { FileLoggerService } from '../utils/system-logger.util';
 
 @Injectable()
 export class SettingsService {
@@ -1033,6 +1036,86 @@ export class SettingsService {
           : null,
         recentActivityLogs: lastSystemLogs,
       },
+    };
+  }
+
+  async getLiveSystemLogs(limit = 250, level?: string, search?: string): Promise<any> {
+    // 1. Ambil dari In-Memory Logger
+    let memoryLogs = FileLoggerService.getRecentLogs(limit, level, search);
+
+    // 2. Jika memori belum memiliki banyak log (misal baru restart server), ambil baris terakhir dari file log
+    if (memoryLogs.length < 50) {
+      try {
+        const logFilePath = path.resolve(process.cwd(), 'logs', 'simasmuh-backend.log');
+        if (fs.existsSync(logFilePath)) {
+          const fileContent = fs.readFileSync(logFilePath, 'utf8');
+          const lines = fileContent.split('\n').filter((l) => l.trim().length > 0);
+          const fileEntries = lines.slice(-limit).map((line, idx) => {
+            // Regex parse format: [YYYY-MM-DD HH:mm:ss] [LEVEL] [Context] Message
+            const match = line.match(/^\[(.*?)\]\s+\[(.*?)\]\s+\[(.*?)\]\s+(.*)$/);
+            if (match) {
+              return {
+                id: `file-${idx}`,
+                timestamp: match[1],
+                level: match[2] as any,
+                context: match[3],
+                message: match[4],
+                raw: line,
+              };
+            }
+            return {
+              id: `file-${idx}`,
+              timestamp: new Date().toISOString(),
+              level: 'INFO' as any,
+              context: 'SIMASMUH',
+              message: line,
+              raw: line,
+            };
+          });
+
+          // Filter level & search jika ada
+          let filtered = fileEntries;
+          if (level && level !== 'ALL') {
+            const targetLevel = level.toUpperCase();
+            filtered = filtered.filter(
+              (l) => l.level === targetLevel || (targetLevel === 'LOG' && l.level === 'INFO'),
+            );
+          }
+          if (search && search.trim() !== '') {
+            const q = search.toLowerCase();
+            filtered = filtered.filter(
+              (l) =>
+                l.message.toLowerCase().includes(q) ||
+                l.context.toLowerCase().includes(q) ||
+                l.raw.toLowerCase().includes(q),
+            );
+          }
+
+          // Gabungkan dengan prioritas data terbaru
+          if (memoryLogs.length === 0) {
+            memoryLogs = filtered;
+          }
+        }
+      } catch (err) {
+        // Abaikan error file
+      }
+    }
+
+    return {
+      status: 'SUCCESS',
+      total: memoryLogs.length,
+      limit,
+      serverTime: new Date().toISOString(),
+      logs: memoryLogs,
+    };
+  }
+
+  async clearLiveSystemLogs(): Promise<any> {
+    FileLoggerService.clearMemoryLogs();
+    return {
+      status: 'SUCCESS',
+      message: 'Buffer log sistem berhasil dibersihkan',
+      clearedAt: new Date().toISOString(),
     };
   }
 }

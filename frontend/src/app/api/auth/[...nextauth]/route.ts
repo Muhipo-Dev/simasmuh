@@ -9,7 +9,7 @@ async function fetchConfiguredPublicDomain(): Promise<string | null> {
     const backendUrl = getBackendUrl();
     const res = await fetch(`${backendUrl}/settings/public`, {
       headers: {
-        'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+        'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55',
       },
       next: { revalidate: 60 },
     });
@@ -46,7 +46,19 @@ async function getAuthOptions(req?: NextRequest) {
   const isHttps = effectiveOrigin.startsWith('https');
 
   return {
-    secret: process.env.NEXTAUTH_SECRET || "simasmuh-secret-key-2026-muhipo-dev",
+    secret: process.env.NEXTAUTH_SECRET || "nailar-muhipo55",
+    jwt: {
+      decode: async (params: any) => {
+        try {
+          const { decode } = await import("next-auth/jwt");
+          return await decode(params);
+        } catch {
+          // Ketika secret key diperbarui dan cookie browser pengguna masih menyimpan session lama yang terenkripsi key sebelumnya,
+          // tangani secara graceful tanpa memicu fatal log exception agar otomatis meminta sign in ulang
+          return null;
+        }
+      },
+    },
     providers: [
       GoogleProvider({
         clientId: process.env.GOOGLE_CLIENT_ID || "",
@@ -94,7 +106,7 @@ async function getAuthOptions(req?: NextRequest) {
               body: JSON.stringify(bodyPayload),
               headers: { 
                 "Content-Type": "application/json",
-                "x-api-key": process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+                "x-api-key": process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55',
                 ...(clientIp ? { "x-forwarded-for": clientIp, "x-real-ip": clientIp } : {}),
                 ...(userAgent ? { "user-agent": userAgent } : {})
               }
@@ -136,7 +148,7 @@ async function getAuthOptions(req?: NextRequest) {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+                'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55',
               },
               body: JSON.stringify({
                 email: user.email,
@@ -218,7 +230,7 @@ async function getAuthOptions(req?: NextRequest) {
                 method: 'GET',
                 headers: {
                   'Authorization': `Bearer ${(token as any).accessToken}`,
-                  'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026'
+                  'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55'
                 },
                 cache: 'no-store'
               });

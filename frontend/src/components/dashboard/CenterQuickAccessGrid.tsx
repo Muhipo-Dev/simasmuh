@@ -312,7 +312,7 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
         </div>
       ) : sortedGroupKeys.length <= 1 ? (
         /* Jika hanya ada 1 grup */
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-2.5">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-2 sm:gap-2.5">
           {filteredLinks.map((link, idx) => renderCard(link, idx))}
         </div>
       ) : (
@@ -343,7 +343,7 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
                     {groupName} ({items.length})
                   </span>
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-2.5">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-2 sm:gap-2.5">
                   {items.map((link) => {
                     const card = renderCard(link, globalIndex)
                     globalIndex++

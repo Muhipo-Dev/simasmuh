@@ -117,7 +117,8 @@ const nextConfig: NextConfig = {
     ...dynamicServerData.originsWithPorts,
   ],
   async rewrites() {
-    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:3001';
+    const rawBackendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:3001';
+    const backendUrl = rawBackendUrl.replace('localhost', '127.0.0.1');
     return [
       {
         source: '/api-backend/:path*',

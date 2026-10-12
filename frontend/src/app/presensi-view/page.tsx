@@ -171,7 +171,7 @@ export default function PresensiPegawaiPage() {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api-backend'
 
-        const apiKey = process.env.NEXT_PUBLIC_API_KEY || ''
+        const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55'
         const res = await authenticatedFetch(`${apiUrl}/daily-attendances/staff/summary?date=${selectedDate}`, {
           headers: {
             'x-api-key': apiKey

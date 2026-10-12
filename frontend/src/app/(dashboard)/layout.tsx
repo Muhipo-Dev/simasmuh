@@ -184,10 +184,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <NavbarPrayerWidget />
                 </div>
 
-                {/* Tahun Ajaran Badge (Otomatis menyesuaikan saat zoom tinggi / viewport sempit) */}
+                {/* Tahun Pelajaran Badge (Otomatis menyesuaikan saat zoom tinggi / viewport sempit) */}
                 <div className="hidden lg:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-bold text-[10px] sm:text-xs shadow-2xs shrink-0 backdrop-blur-md">
                   <CalendarDays className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                  <span>TA: {systemSettings?.academicYear || '2026/2027'}</span>
+                  <span>TP: {systemSettings?.academicYear || '2026/2027'}</span>
                   {systemSettings?.semester && (
                     <span className="hidden 2xl:inline text-[11px] opacity-90 font-medium">({systemSettings.semester})</span>
                   )}
@@ -259,7 +259,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
         </div>
 
-        <div className={`flex-1 w-full px-6 sm:px-7 md:px-8 lg:px-10 xl:px-12 2xl:px-14 pt-4 sm:pt-4 md:pt-5 pb-20 sm:pb-24 lg:pb-12 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0`}>
+        <div className={`flex-1 w-full px-3.5 sm:px-5 md:px-6 lg:px-8 xl:px-10 2xl:px-12 pt-3 sm:pt-4 md:pt-5 pb-20 sm:pb-24 lg:pb-12 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0`}>
           <div className="w-full max-w-7xl 2xl:max-w-[1480px] mx-auto space-y-3.5 sm:space-y-4">
             <div className="w-full print:hidden">
               <EmailRecommendationBanner />

@@ -397,7 +397,7 @@ export class SchedulesService {
       return [];
     }
 
-    // 1. Ambil Pengaturan Tahun Ajaran Aktif
+    // 1. Ambil Pengaturan Tahun Pelajaran Aktif
     const setting = await this.prisma.setting.findFirst({
       select: { academicYear: true },
     });

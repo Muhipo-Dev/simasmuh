@@ -402,7 +402,7 @@ export function ExamCardPrintDialog({
                                 KARTU PESERTA {activeExamTitle}
                               </p>
                               <p className="text-[8px] font-semibold text-slate-500">
-                                Tahun Ajaran {academicYear} (Semester {semester})
+                                Tahun Pelajaran {academicYear} (Semester {semester})
                               </p>
                             </div>
                           </div>
@@ -533,7 +533,7 @@ export function ExamCardPrintDialog({
                               KARTU PESERTA {activeExamTitle}
                             </p>
                             <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#64748b', margin: '1px 0 0 0' }}>
-                              Tahun Ajaran {academicYear} (Semester {semester})
+                              Tahun Pelajaran {academicYear} (Semester {semester})
                             </p>
                           </div>
                         </div>

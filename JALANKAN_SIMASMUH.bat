@@ -413,11 +413,11 @@ if not exist "%BACKEND_DIR%\.env" (
         (
             echo DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
             echo DIRECT_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
-            echo JWT_SECRET="simasmuh-super-secret-jwt-key-2026"
+            echo JWT_SECRET="nailar-muhipo55"
             echo PORT=3001
             echo SUPABASE_URL=http://127.0.0.1:54321
-            echo SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
-            echo SUPABASE_SECRET_KEY=your-supabase-secret-key
+            echo SUPABASE_PUBLISHABLE_KEY=nailar-muhipo55
+            echo SUPABASE_SECRET_KEY=nailar-muhipo55
             echo SUPABASE_JWKS_URL=http://127.0.0.1:54321/auth/v1/.well-known/jwks.json
             echo STORAGE_PATH=
         ) > "%BACKEND_DIR%\.env"
@@ -436,8 +436,9 @@ if not exist "%FRONTEND_DIR%\.env" (
         (
             echo NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
             echo BACKEND_URL=http://localhost:3001
+            echo NEXT_PUBLIC_API_KEY=nailar-muhipo55
             echo NEXTAUTH_URL=https://simasmuh.razagopo.my.id
-            echo NEXTAUTH_SECRET=simasmuh-nextauth-secret-key-2026
+            echo NEXTAUTH_SECRET=nailar-muhipo55
             echo NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:3001
             echo NEXT_PUBLIC_ENABLE_REAL_TIME_NOTIFICATIONS=true
             echo NEXT_PUBLIC_ENABLE_NOTIFICATION_SOUNDS=true
@@ -457,8 +458,8 @@ if not exist "%FACE_AI_DIR%\.env" (
     ) else (
         (
             echo BACKEND_URL=http://localhost:3001
-            echo API_KEY=siakad_secret_api_key_2026
-            echo API_SECRET=simasmuh_face_token_secret_2026
+            echo API_KEY=nailar-muhipo55
+            echo API_SECRET=nailar-muhipo55
             echo PORT=8089
         ) > "%FACE_AI_DIR%\.env"
         echo  [OK] Dibuat: services\face-attendance\.env (default otomatis)

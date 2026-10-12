@@ -43,6 +43,21 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-10-12 (v1.9.8 - Sinkronisasi Dinamis Template Excel Beasiswa Master Data & Buku Induk, Fitur Reset Beasiswa, Live Console Viewer, dan Optimasi Keuangan Terpadu):**
+  * **Sinkronisasi Dinamis Template Excel Beasiswa dengan Master Data & Buku Induk (`students.service.ts` & `students.controller.ts`):**
+    * Pembaruan generator template Excel beasiswa (`GET /api-backend/students/template-beasiswa`) yang secara dinamis dan real-time mengambil data seluruh siswa aktif langsung dari database master SIMASMUH (`prisma.student.findMany({ where: { isActive: true } })`).
+    * Template Excel secara otomatis terisi kolom *No, NIS, Nama Siswa, Kelas (Format: Romawi spasi Angka), NISN, dan Jalur Pendaftaran*, sehingga pengguna dan bendahara sekolah hanya perlu mengisi kolom persentase beasiswa (*Seragam, SPP, DPP*) serta catatan alasan.
+    * Integrasi dua arah dengan modul **Buku Induk Registrasi Siswa** (`/master-data/buku-induk`): Setiap perubahan identitas siswa (Nama, NIS, atau Kelas) di Buku Induk secara instan tersinkronisasi ke modul Keuangan (`finance-students`) dan tercermin langsung pada template unduhan Excel baru.
+  * **Fitur Reset Beasiswa (Individual & Massal) Terintegrasi Tagihan:**
+    * Penambahan endpoint `POST /api-backend/students/:id/reset-beasiswa` untuk mereset seluruh persentase beasiswa siswa kembali ke `0%`, menghapus catatan alasan, dan mengembalikan seluruh tagihan yang belum lunas ke nominal asli (*original amount*) melalui `syncStudentBeasiswaToBills(studentId, 0, null)`.
+    * Penambahan endpoint `POST /api-backend/students/bulk-reset-beasiswa` untuk reset beasiswa serentak bagi daftar siswa terpilih.
+    * Penambahan tombol interaktif **"Reset Beasiswa (0%)"** pada modal dialog beasiswa siswa individual dan tombol **"Reset Beasiswa"** pada *Floating Action Bar* seleksi baris tabel Keuangan Pemasukan (`/keuangan/pemasukan`).
+  * **Live Console Viewer & Telemetri Server Real-time (`SystemLiveConsoleViewer.tsx`):**
+    * Penambahan komponen live streaming console viewer pada dashboard administrator untuk memantau log aktivitas sistem, audit transaksi, dan performa server secara langsung (*real-time*).
+  * **Penyempurnaan Proteksi & Ergonomi Modul Keuangan:**
+    * Proteksi ketat tagihan yang telah memiliki pembayaran nyata (`amountPaid > 0 && status === 'LUNAS'`) agar tidak terganggu saat pembaruan beasiswa massal berlangsung.
+    * Pencatatan audit trail metadata lengkap `BEASISWA_INFO` pada catatan tagihan siswa untuk transparansi administrasi keuangan sekolah.
+
 * **2026-10-10 (v1.9.7 - Arsitektur Multi-Viewport CSS, Ionic Mobile Engine, Optical Glassmorphism Wallpaper, Universal Searchbar & Filter Popover, Redesain Header Sapaan Ergonomis):**
   * **Arsitektur Multi-Viewport CSS Terisolasi (`ionic-mobile.css`, `tablet-touch.css`, `desktop.css`):**
     * Pemisahan komprehensif aturan styling antarmuka berdasarkan viewport spesifik guna mencegah regresi layout antar platform (Mobile `< 768px`, Tablet `768px - 1024px`, Desktop `> 1024px`).

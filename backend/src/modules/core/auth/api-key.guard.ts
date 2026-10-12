@@ -16,29 +16,18 @@ export class ApiKeyGuard implements CanActivate {
     const authHeader = request.headers['authorization'];
 
     const validApiKeys = [
-      process.env.API_KEY || 'siakad_secret_api_key_2026',
-      'siakad_secret_api_key_2026',
+      process.env.API_KEY || 'nailar-muhipo55',
+      'nailar-muhipo55',
     ];
 
-    if (
-      (apiKey && validApiKeys.includes(apiKey)) ||
-      (authHeader &&
-        typeof authHeader === 'string' &&
-        authHeader.startsWith('Bearer ')) ||
-      request.url.startsWith('/announcements/public') ||
-      request.url.startsWith('/kegiatan-sekolah/public') ||
-      request.url.startsWith('/settings/public') ||
-      request.url.startsWith('/settings/server-time') ||
-      request.url.startsWith('/settings/time-sync') ||
-      request.url.startsWith('/uploads/') ||
-      request.url.startsWith('/waiting-room') ||
-      request.url.startsWith('/guest-book/public') ||
-      request.url.startsWith('/auth/') ||
-      request.url === '/'
-    ) {
+    const isValidKey = (apiKey && validApiKeys.includes(apiKey));
+    const hasBearer = (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer '));
+
+    // Wajib memiliki API Key rahasia sistem ('nailar-muhipo55') atau Token Bearer resmi
+    if (isValidKey || hasBearer) {
       return true;
     }
 
-    throw new UnauthorizedException('Invalid or missing API Key');
+    throw new UnauthorizedException('Akses ditolak: API Key atau otentikasi internal SIMASMUH tidak valid.');
   }
 }

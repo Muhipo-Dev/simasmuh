@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55',
         },
         body: JSON.stringify({ emailOrUsername: account.trim() }),
       })
@@ -109,7 +109,7 @@ export default function ResetPasswordPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55',
         },
         body: JSON.stringify({
           emailOrUsername: account.trim(),
@@ -142,7 +142,7 @@ export default function ResetPasswordPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026',
+          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55',
         },
         body: JSON.stringify({ emailOrUsername: account.trim() }),
       })

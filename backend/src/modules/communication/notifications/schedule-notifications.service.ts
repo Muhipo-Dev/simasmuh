@@ -15,7 +15,6 @@ export class ScheduleNotificationsService {
 
   // Set cache in memory untuk mencegah duplicate sending di hari yang sama
   private sentDailySummaries = new Set<string>(); // key: `${YYYY-MM-DD}_student_${studentId}`
-  private sentUpcomingReminders = new Set<string>(); // key: `${YYYY-MM-DD}_schedule_${scheduleId}_student_${studentId}`
 
   constructor(
     private prisma: PrismaService,
@@ -108,21 +107,11 @@ export class ScheduleNotificationsService {
   }
 
   /**
-   * CRON: Pengingat 10 Menit Sebelum Mata Pelajaran Dimulai
-   * Berjalan otomatis setiap 5 menit pada jam aktif sekolah (06:45 - 16:00 WIB) Senin s.d. Jumat
-   */
-  @Cron('*/5 7-16 * * 1-5')
-  async handleUpcomingLessonReminderCron() {
-    await this.checkAndSendUpcomingLessonReminders();
-  }
-
-  /**
    * Membersihkan memori cache key harian setiap pergantian hari pukul 00:05 WIB
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   handleCleanupCache() {
     this.sentDailySummaries.clear();
-    this.sentUpcomingReminders.clear();
     this.logger.log('[CACHE] Cache notifikasi jadwal harian telah dibersihkan untuk hari baru.');
   }
 
@@ -319,145 +308,7 @@ export class ScheduleNotificationsService {
     };
   }
 
-  /**
-   * Fungsi Eksekusi: Cek & Kirim Reminder Jadwal Pelajaran Terdekat (10 Menit Sebelumnya)
-   */
-  async checkAndSendUpcomingLessonReminders() {
-    const { dayOfWeek, currentMinutes, todayKey, dateFormatted } = this.getWibDate();
 
-    // Hanya berjalan hari kerja (Senin..Jumat)
-    if (dayOfWeek < 1 || dayOfWeek > 5) return;
-
-    // Cari jadwal hari ini
-    const todaySchedules = await this.prisma.schedule.findMany({
-      where: { dayOfWeek },
-      include: {
-        class: true,
-        subject: true,
-        teacher: {
-          include: {
-            user: true,
-          },
-        },
-      },
-    });
-
-    if (todaySchedules.length === 0) return;
-
-    for (const sch of todaySchedules) {
-      const startMinutes = this.parseTimeToMinutes(sch.startTime);
-      if (startMinutes === null) continue;
-
-      // Selisih waktu antara jam mulai mapel dan waktu sekarang (dalam menit)
-      const diffMinutes = startMinutes - currentMinutes;
-
-      // Cek apakah persis 10 menit sebelum mulai (toleransi 9..11 menit)
-      if (diffMinutes >= 9 && diffMinutes <= 11) {
-        await this.dispatchUpcomingScheduleReminder(sch, diffMinutes, todayKey, dateFormatted);
-      }
-    }
-  }
-
-  /**
-   * Helper Dispatch Pengingat 10 Menit Sebelum Mapel Dimulai
-   */
-  private async dispatchUpcomingScheduleReminder(
-    sch: any,
-    diffMinutes: number,
-    todayKey: string,
-    dateFormatted: string,
-  ) {
-    const students = await this.prisma.student.findMany({
-      where: {
-        classId: sch.classId,
-        isActive: true,
-        user: {
-          email: { contains: '@' },
-        },
-      },
-      include: {
-        user: true,
-        class: true,
-      },
-    });
-
-    const teacherName = sch.teacher?.user?.name || sch.teacher?.nip || 'Guru Pengampu';
-    const mapelName = sch.subject?.name || 'Mata Pelajaran';
-
-    for (const student of students) {
-      if (!student.user?.email || !student.user.email.includes('@')) continue;
-
-      // Cek preferensi notifikasi siswa
-      const prefs = (student.user.notificationPreferences as any) || {};
-      if (prefs.notifReminderJadwal === false) {
-        continue;
-      }
-
-      const reminderKey = `${todayKey}_reminder_${sch.id}_student_${student.id}`;
-      if (this.sentUpcomingReminders.has(reminderKey)) {
-        continue;
-      }
-
-      const contentHtml = `
-        <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 18px; margin-bottom: 16px;">
-          <div style="display: flex; align-items: center; margin-bottom: 8px;">
-            <span style="background-color: #2563eb; color: #ffffff; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase;">
-              MULAI DALAM 10 MENIT
-            </span>
-          </div>
-          <h3 style="margin: 6px 0 10px 0; color: #1e3a8a; font-size: 18px; font-weight: 800;">
-            ${mapelName}
-          </h3>
-          <p style="margin: 0; color: #334155; font-size: 14px; line-height: 1.6;">
-            Pelajaran <strong>${mapelName}</strong> untuk kelas <strong>${student.class.name}</strong> akan segera dimulai pada pukul <strong>${sch.startTime} - ${sch.endTime} WIB</strong>.
-          </p>
-        </div>
-        <p style="margin: 0; font-size: 13px; color: #64748b; line-height: 1.5;">
-          📍 Mohon segera bersiap dan berada di ruang kelas dengan tertib sebelum guru pengampu memasuki kelas.
-        </p>
-      `;
-
-      // 1. Email Reminder 10 Menit Sebelumnya
-      await this.emailNotificationService.sendEmailNotification({
-        to: student.user.email,
-        subject: `[Pengingat 10 Menit] ${mapelName} (${sch.startTime}) - ${teacherName}`,
-        title: `Pengingat Pelajaran: ${mapelName}`,
-        category: 'AKADEMIK',
-        badgeLabel: 'PENGINGAT 10 MENIT',
-        recipientName: student.name,
-        contentHtml,
-        metaDetails: [
-          { label: 'Mata Pelajaran', value: mapelName },
-          { label: 'Jam Pelajaran', value: `${sch.startTime} - ${sch.endTime} WIB (Mulai 10 Menit Lagi)` },
-          { label: 'Guru Pengampu', value: teacherName },
-          { label: 'Kelas', value: student.class.name },
-        ],
-        actionUrl: '/akademik/jadwal-pelajaran',
-        actionText: 'Buka Jadwal Pelajaran',
-      });
-
-      // 2. In-App Dashboard Notification
-      await this.notificationsService.createNotification({
-        userId: student.user.id,
-        type: NotificationType.JADWAL_PELAJARAN_REMINDER,
-        title: `Pengingat: ${mapelName} Mulai 10 Menit Lagi`,
-        message: `Mata pelajaran ${mapelName} bersama ${teacherName} akan dimulai pukul ${sch.startTime} WIB. Segera bersiap di kelas!`,
-        priority: NotificationPriority.HIGH,
-        channel: [NotificationChannel.IN_APP],
-        data: {
-          scheduleId: sch.id,
-          subjectName: mapelName,
-          teacherName,
-          startTime: sch.startTime,
-          endTime: sch.endTime,
-          className: student.class.name,
-        },
-      });
-
-      this.sentUpcomingReminders.add(reminderKey);
-      this.logger.log(`[REMINDER 10 MENIT] Terkirim ke siswa ${student.name} (${student.user.email}) untuk mapel ${mapelName} jam ${sch.startTime}`);
-    }
-  }
 
   /**
    * Fungsi Eksekusi: Kirim Ringkasan Jadwal Mengajar Hari Ini ke Seluruh Guru Pengampu

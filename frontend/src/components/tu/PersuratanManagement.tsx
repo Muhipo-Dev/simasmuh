@@ -5843,7 +5843,7 @@ export function PersuratanManagement({
                           hariTanggalKegiatan: 'Jumat, 15 Agustus 2026',
                           waktuKegiatan: '13.00 - 15.30 WIB',
                           tempatKegiatan: 'Ruang Pertemuan / Aula KH Ahmad Dahlan SMA MUHIPO',
-                          keperluanKegiatan: 'Rapat Koordinasi Dinas Awal Tahun Ajaran 2026/2027.',
+                          keperluanKegiatan: 'Rapat Koordinasi Dinas Awal Tahun Pelajaran 2026/2027.',
                           catatanKegiatan: 'Mengingat pentingnya agenda rapat dinas ini, dimohon hadir tepat waktu.',
                           paragrafPenutup: 'Demikian undangan ini kami sampaikan, atas kehadirannya diucapkan terima kasih.'
                         }))
@@ -5875,7 +5875,7 @@ export function PersuratanManagement({
                           lampiran: '-',
                           perihal: 'Surat Keterangan Siswa Aktif Belajar',
                           paragrafPembuka: 'Yang bertanda tangan di bawah ini Kepala SMA Muhammadiyah 1 Ponorogo menerangkan dengan sebenarnya bahwa :',
-                          isiSurat: 'Adalah benar-benar peserta didik yang terdaftar aktif belajar di SMA Muhammadiyah 1 Ponorogo pada Tahun Ajaran 2026/2027.',
+                          isiSurat: 'Adalah benar-benar peserta didik yang terdaftar aktif belajar di SMA Muhammadiyah 1 Ponorogo pada Tahun Pelajaran 2026/2027.',
                           namaSiswaPegawai: 'Ahmad Faiz Al-Ghifari',
                           nomorIdentitas: 'NISN: 0071829384 / NIS: 18920',
                           kelasJabatan: 'Kelas XII MIPA 1 (Reguler)',

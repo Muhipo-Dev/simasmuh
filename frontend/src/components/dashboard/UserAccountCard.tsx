@@ -37,8 +37,8 @@ export function UserAccountCard({
     queryKey: ['profile', userId],
     queryFn: () => userId ? authenticatedQuery(`/api-backend/users/${userId}/profile`) : Promise.resolve(null),
     enabled: !!userId,
-    staleTime: 1000 * 5,
-    refetchOnWindowFocus: true,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   const userName = liveProfile?.name || user?.name || 'Pengguna SIMASMUH'
@@ -122,7 +122,7 @@ export function UserAccountCard({
           target="_blank"
           rel="noreferrer"
           title="CBT Ujian Online (Port 3010)"
-          className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 hover:text-blue-700 dark:text-slate-300 dark:hover:text-blue-300 transition-all group text-center shadow-2xs active:scale-95 min-h-[36px]"
+          className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 hover:text-blue-700 dark:text-slate-300 dark:hover:text-blue-300 transition-all group text-center shadow-2xs active:scale-[0.97] min-h-[38px] sm:min-h-[40px]"
         >
           <Laptop className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform shrink-0" />
           <span className="text-[11.5px] font-bold truncate">CBT Ujian</span>
@@ -131,7 +131,7 @@ export function UserAccountCard({
         <Link
           href={role === 'SISWA' || role === 'WALI_MURID' ? '/presensi/kehadiran-siswa' : '/presensi/kehadiran-pegawai'}
           title="Presensi & Absensi"
-          className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 hover:text-emerald-700 dark:text-slate-300 dark:hover:text-emerald-300 transition-all group text-center shadow-2xs active:scale-95 min-h-[36px]"
+          className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 hover:text-emerald-700 dark:text-slate-300 dark:hover:text-emerald-300 transition-all group text-center shadow-2xs active:scale-[0.97] min-h-[38px] sm:min-h-[40px]"
         >
           <CalendarCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
           <span className="text-[11.5px] font-bold truncate">Presensi</span>
@@ -144,7 +144,7 @@ export function UserAccountCard({
           <Button
             variant="outline"
             size="sm"
-            className="w-full font-bold text-xs h-9 rounded-xl border-slate-200 dark:border-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-slate-800 dark:hover:text-white transition-all gap-1.5 shadow-2xs active:scale-95"
+            className="w-full font-bold text-xs h-9.5 sm:h-10 rounded-xl border-slate-200 dark:border-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-slate-800 dark:hover:text-white transition-all gap-1.5 shadow-2xs active:scale-[0.97]"
           >
             <UserCog className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             Pengaturan Akun & Profil

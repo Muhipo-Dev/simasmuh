@@ -20,7 +20,7 @@ export default function QrGeneratorPage() {
     queryFn: async () => {
       const res = await authenticatedFetch(`/api-backend/settings/qr-token/validate?token=${tokenUrl}`, {
         headers: {
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026'
+          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55'
         }
       })
       if (!res.ok) throw new Error('Gagal memvalidasi token')
@@ -36,7 +36,7 @@ export default function QrGeneratorPage() {
     queryFn: async () => {
       const res = await authenticatedFetch('/api-backend/daily-attendances/qr', {
         headers: {
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026'
+          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55'
         }
       })
       if (!res.ok) throw new Error('Gagal mengambil token QR')

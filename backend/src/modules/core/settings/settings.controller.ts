@@ -277,4 +277,23 @@ export class SettingsController {
       status: 'SUCCESS',
     };
   }
+
+  @Get('system-logs')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
+  getSystemLogs(
+    @Query('limit') limit?: string,
+    @Query('level') level?: string,
+    @Query('search') search?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 250;
+    return this.settingsService.getLiveSystemLogs(parsedLimit, level, search);
+  }
+
+  @Delete('system-logs/clear')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT)
+  clearSystemLogs() {
+    return this.settingsService.clearLiveSystemLogs();
+  }
 }

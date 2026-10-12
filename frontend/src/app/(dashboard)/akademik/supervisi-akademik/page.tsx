@@ -1763,7 +1763,7 @@ export default function SupervisiAkademikPage() {
                     Program Kerja Supervisi Akademik SMA Muhammadiyah 1 Ponorogo
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Kerangka acuan, sasaran strategis, tahapan observasi, dan target mutu pembelajaran tahun ajaran berjalan.
+                    Kerangka acuan, sasaran strategis, tahapan observasi, dan target mutu pembelajaran tahun pelajaran berjalan.
                   </CardDescription>
                 </div>
                 <Badge className="bg-blue-600 text-white text-xs font-bold px-3 py-1">

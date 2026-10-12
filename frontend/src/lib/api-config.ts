@@ -53,10 +53,8 @@ export function getSystemPublicDomain(): string {
 export function getBackendUrl(req?: any): string {
   // Komunikasi server-side (RSC / Route Handlers / NextAuth / Server Actions)
   // Selalu gunakan loopback lokal internal 127.0.0.1:3001
-  return (
-    process.env.BACKEND_URL ||
-    'http://127.0.0.1:3001'
-  );
+  const raw = process.env.BACKEND_URL || 'http://127.0.0.1:3001';
+  return raw.replace('localhost', '127.0.0.1');
 }
 
 /**

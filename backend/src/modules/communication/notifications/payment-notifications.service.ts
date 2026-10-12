@@ -349,7 +349,7 @@ export class PaymentNotificationsService {
         : '';
 
       const tagihanMessage = tagihanType === 'PAKET_TAHUNAN'
-        ? `Paket Tagihan Administrasi Sekolah Tahun Ajaran baru telah diterbitkan untuk ${classNameLabel}.`
+        ? `Paket Tagihan Administrasi Sekolah Tahun Pelajaran baru telah diterbitkan untuk ${classNameLabel}.`
         : `Tagihan ${tagihanType} ${formattedAmount ? `sebesar ${formattedAmount}` : ''} telah dibuat untuk ${classNameLabel}.`;
 
       // Send notification to each student

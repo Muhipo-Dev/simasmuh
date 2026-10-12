@@ -635,7 +635,7 @@ export default function JadwalPelajaranPage() {
               JADWAL PELAJARAN KELAS {currentSelectedClass?.name || ''}
             </span>
             <div className="flex items-center gap-3 font-bold text-[10.5px]">
-              <span>Tahun Ajaran: {currentSelectedClass?.academicYear || '2026/2027'}</span>
+              <span>Tahun Pelajaran: {currentSelectedClass?.academicYear || '2026/2027'}</span>
               <span>•</span>
               <span>Terakhir Diperbarui: {classLastUpdated ? formatScheduleUpdateTime(classLastUpdated) : overallLastUpdated ? formatScheduleUpdateTime(overallLastUpdated) : '-'}</span>
             </div>
@@ -1006,7 +1006,7 @@ export default function JadwalPelajaranPage() {
                 Jadwal Kelas {currentSelectedClass.name}
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                Tahun Ajaran {currentSelectedClass.academicYear || '2026/2027'}
+                Tahun Pelajaran {currentSelectedClass.academicYear || '2026/2027'}
               </span>
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
                 <Clock className="w-3 h-3 text-blue-500" />

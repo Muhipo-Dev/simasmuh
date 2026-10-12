@@ -359,14 +359,14 @@ export default function ClassesPage() {
       open={importDialogOpen}
       state={importProgress}
       templateFileName="template_import_kelas.xlsx"
-      templateExample={{ 'Nama Kelas *': 'XI 2', 'Tingkat Kelas (10/11/12) *': 11, 'Tahun Ajaran *': activeAcademicYear }}
+      templateExample={{ 'Nama Kelas *': 'XI 2', 'Tingkat Kelas (10/11/12) *': 11, 'Tahun Pelajaran *': activeAcademicYear }}
       destination="Tabel Kelas (classes)"
       customParser={(rawData) =>
         rawData
           .map((row: any) => ({
             name: String(row['Nama Kelas *'] || row['Nama Kelas'] || '').trim(),
             gradeLevel: parseInt(String(row['Tingkat Kelas (10/11/12) *'] || row['Tingkat Kelas'] || '10')) || 10,
-            academicYear: String(row['Tahun Ajaran *'] || row['Tahun Ajaran'] || activeAcademicYear).trim(),
+            academicYear: String(row['Tahun Pelajaran *'] || row['Tahun Pelajaran'] || row['Tahun Ajaran *'] || row['Tahun Ajaran'] || activeAcademicYear).trim(),
           }))
           .filter((r: any) => r.name)
       }

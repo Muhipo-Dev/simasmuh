@@ -25,7 +25,7 @@ export default function HeroCarousel({ schoolName }: HeroCarouselProps) {
     const fetchBanners = async () => {
       try {
         const res = await fetch(getPublicApiUrl('/upload/carousel'), {
-          headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026' }
+          headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55' }
         })
         if (res.ok) {
           const data = await res.json()

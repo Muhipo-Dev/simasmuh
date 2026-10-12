@@ -255,6 +255,7 @@ export default function BukuIndukPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['buku-induk-students'] })
       queryClient.invalidateQueries({ queryKey: ['students'] })
+      queryClient.invalidateQueries({ queryKey: ['finance-students'] })
       setIsEditDialogOpen(false)
       Swal.fire({
         icon: 'success',

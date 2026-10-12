@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, createContext, useContext } from 'react'
+import { useState, useMemo, useEffect, createContext, useContext, useDeferredValue } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -18,7 +18,7 @@ import {
   AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, Sparkles,
   ShieldAlert, ShieldCheck, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check, Info,
   CreditCard, FileCheck, Printer, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter,
-  Save, Bookmark, FolderArchive, Timer, CalendarClock, Play, FileText
+  Save, Bookmark, FolderArchive, Timer, CalendarClock, Play, FileText, Upload
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
@@ -1474,7 +1474,7 @@ interface FinanceDraftData {
   title?: string
   savedAt: string
   scope: 'CLASS' | 'MULTI_CLASS' | 'GRADE' | 'ALL' | 'STUDENTS'
-  releaseDuration: 'TAHUN' | 'SEMESTER'
+  releaseDuration: 'TAHUN' | 'SEMESTER' | 'BULAN'
   targetSemester: 1 | 2
   classId: string
   selectedClassIds: string[]
@@ -1542,9 +1542,11 @@ function saveStoredFinanceDraft(draft: FinanceDraftData): boolean {
     const itemWithId: FinanceDraftData = {
       ...draft,
       id: draftId,
-      title: draft.title || (draft.releaseDuration === 'SEMESTER' 
-        ? `Draf Semester ${draft.targetSemester === 1 ? 'Ganjil' : 'Genap'} (${draft.customAcademicYear || `${draft.startYear}/${draft.startYear + 1}`})`
-        : `Draf 1 Tahun (${draft.customAcademicYear || `${draft.startYear}/${draft.startYear + 1}`})`),
+      title: draft.title || (draft.releaseDuration === 'BULAN'
+        ? `Draf Bulanan (${draft.customAcademicYear || `${draft.startYear}/${draft.startYear + 1}`})`
+        : draft.releaseDuration === 'SEMESTER' 
+        ? `Draf Semesteran ${draft.targetSemester === 1 ? 'Ganjil' : 'Genap'} (${draft.customAcademicYear || `${draft.startYear}/${draft.startYear + 1}`})`
+        : `Draf Tahunan (${draft.customAcademicYear || `${draft.startYear}/${draft.startYear + 1}`})`),
     }
 
     const idx = currentList.findIndex((d) => d.id === itemWithId.id)
@@ -1592,6 +1594,24 @@ function removeStoredFinanceDraft(id?: string): void {
     window.dispatchEvent(new CustomEvent('simasmuh-finance-draft-updated'))
   } catch (err) {
     console.error('Failed to clear finance draft:', err)
+  }
+}
+
+function renameStoredFinanceDraft(id: string, newTitle: string): boolean {
+  if (typeof window === 'undefined' || !id || !newTitle.trim()) return false
+  try {
+    const currentList = getStoredFinanceDrafts()
+    const idx = currentList.findIndex((d) => d.id === id)
+    if (idx >= 0) {
+      currentList[idx].title = newTitle.trim()
+      localStorage.setItem(FINANCE_DRAFT_KEY, JSON.stringify(currentList))
+      window.dispatchEvent(new CustomEvent('simasmuh-finance-draft-updated'))
+      return true
+    }
+    return false
+  } catch (err) {
+    console.error('Failed to rename finance draft:', err)
+    return false
   }
 }
 
@@ -1652,10 +1672,22 @@ function DraftDrawerModal({
       return
     }
 
+    const targetTime = new Date(draft.scheduledReleaseAt).getTime()
+    if (isNaN(targetTime)) {
+      setCountdownText(null)
+      return
+    }
+
+    // Jika waktu scheduler sudah lewat saat dibuka, jangan langsung auto-eksekusi tanpa konfirmasi pengguna
+    const now = Date.now()
+    if (targetTime <= now) {
+      setCountdownText('Waktu Terjadwal Telah Tiba (Siap Dirilis)')
+      return
+    }
+
     const interval = setInterval(() => {
-      const now = new Date().getTime()
-      const target = new Date(draft.scheduledReleaseAt!).getTime()
-      const diff = target - now
+      const current = Date.now()
+      const diff = targetTime - current
 
       if (diff <= 0) {
         setCountdownText('Waktu Rilis Tercapai! Memproses...')
@@ -1677,19 +1709,20 @@ function DraftDrawerModal({
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [draft?.scheduledReleaseAt])
+  }, [draft?.scheduledReleaseAt, draft?.id])
 
   const executeRelease = async (fromTimer = false) => {
-    const currentDraft = getStoredFinanceDraft()
-    if (!currentDraft) {
-      Swal.fire('Draf Tidak Ditemukan', 'Tidak ada data draf tagihan yang tersimpan.', 'warning')
+    // Gunakan draf aktif yang sedang dipilih oleh pengguna di modal drawer
+    const activeDraft = draft || (selectedDraftId ? draftsList.find(d => d.id === selectedDraftId) : null) || getStoredFinanceDraft()
+    if (!activeDraft) {
+      Swal.fire('Draf Tidak Ditemukan', 'Tidak ada data draf tagihan yang tersimpan atau dipilih.', 'warning')
       return
     }
 
     if (!fromTimer) {
       const confirm = await Swal.fire({
         title: 'Rilis Tagihan Sekarang?',
-        text: `Menerbitkan seluruh paket tagihan (${currentDraft.releaseDuration === 'SEMESTER' ? `Semester ${currentDraft.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun Ajaran'}) langsung ke database siswa.`,
+        text: `Menerbitkan paket "${activeDraft.title || 'Draf Tagihan'}" (${activeDraft.releaseDuration === 'BULAN' ? 'Bulanan' : activeDraft.releaseDuration === 'SEMESTER' ? `Semesteran ${activeDraft.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Tahunan'}) langsung ke database siswa.`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Ya, Rilis Sekarang',
@@ -1706,44 +1739,44 @@ function DraftDrawerModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          scope: currentDraft.scope,
-          classId: currentDraft.classId,
-          classIds: currentDraft.selectedClassIds,
-          gradeLevel: currentDraft.gradeLevel,
-          startYear: Number(currentDraft.startYear),
-          releaseDuration: currentDraft.releaseDuration,
-          targetSemester: currentDraft.targetSemester,
+          scope: activeDraft.scope,
+          classId: activeDraft.classId,
+          classIds: activeDraft.selectedClassIds,
+          gradeLevel: activeDraft.gradeLevel,
+          startYear: Number(activeDraft.startYear),
+          releaseDuration: activeDraft.releaseDuration,
+          targetSemester: activeDraft.targetSemester,
         }),
       }).catch(() => null)
 
       // 2. Rilis draf terpilih dengan proteksi sinkronisasi bukti pembayaran (tagihan lunas & terverifikasi dilewati)
       const payload = {
-        academicYear: currentDraft.customAcademicYear || `${currentDraft.startYear}/${currentDraft.startYear + 1}`,
-        targetScope: currentDraft.scope,
-        classId: currentDraft.scope === 'CLASS' ? currentDraft.classId : undefined,
-        classIds: currentDraft.scope === 'MULTI_CLASS' ? currentDraft.selectedClassIds : undefined,
-        gradeLevel: currentDraft.scope === 'GRADE' ? currentDraft.gradeLevel : undefined,
-        yearStart: Number(currentDraft.startYear),
-        releaseDuration: currentDraft.releaseDuration,
-        targetSemester: currentDraft.releaseDuration === 'SEMESTER' ? currentDraft.targetSemester : undefined,
-        sppStartMonth: Number(currentDraft.sppStartMonth),
-        sppStartYear: Number(currentDraft.sppStartYear),
-        customSppMonthly: currentDraft.includeSpp ? currentDraft.sppMonthly : 0,
-        customDpp: currentDraft.includeDpp ? currentDraft.dppAmount : 0,
-        customUis: currentDraft.includeUis ? currentDraft.uisAmount : 0,
-        customUka: currentDraft.includeUka ? currentDraft.ukaAmount : 0,
-        customUks: currentDraft.includeUks ? currentDraft.uksAmount : 0,
-        customSeragam: currentDraft.includeSeragam ? (currentDraft.seragamGender === 'PUTRI' ? currentDraft.seragamPutriAmount : currentDraft.seragamPutraAmount) : 0,
-        customLks: currentDraft.includeLks ? currentDraft.lksAmount : 0,
-        lksType: currentDraft.lksPeriod === 'TAHUNAN' ? 'SETAHUN' : 'SEMESTER',
+        academicYear: activeDraft.customAcademicYear || `${activeDraft.startYear}/${activeDraft.startYear + 1}`,
+        targetScope: activeDraft.scope,
+        classId: activeDraft.scope === 'CLASS' ? activeDraft.classId : undefined,
+        classIds: activeDraft.scope === 'MULTI_CLASS' ? activeDraft.selectedClassIds : undefined,
+        gradeLevel: activeDraft.scope === 'GRADE' ? activeDraft.gradeLevel : undefined,
+        yearStart: Number(activeDraft.startYear),
+        releaseDuration: activeDraft.releaseDuration,
+        targetSemester: activeDraft.releaseDuration === 'SEMESTER' ? activeDraft.targetSemester : undefined,
+        sppStartMonth: Number(activeDraft.sppStartMonth),
+        sppStartYear: Number(activeDraft.sppStartYear),
+        customSppMonthly: activeDraft.includeSpp ? activeDraft.sppMonthly : 0,
+        customDpp: activeDraft.includeDpp ? activeDraft.dppAmount : 0,
+        customUis: activeDraft.includeUis ? activeDraft.uisAmount : 0,
+        customUka: activeDraft.includeUka ? activeDraft.ukaAmount : 0,
+        customUks: activeDraft.includeUks ? activeDraft.uksAmount : 0,
+        customSeragam: activeDraft.includeSeragam ? (activeDraft.seragamGender === 'PUTRI' ? activeDraft.seragamPutriAmount : activeDraft.seragamPutraAmount) : 0,
+        customLks: activeDraft.includeLks ? activeDraft.lksAmount : 0,
+        lksType: activeDraft.lksPeriod === 'TAHUNAN' ? 'SETAHUN' : 'SEMESTER',
         itemsSelection: {
-          spp: currentDraft.includeSpp,
-          dpp: currentDraft.includeDpp,
-          uis: currentDraft.includeUis,
-          uka: currentDraft.includeUka,
-          uks: currentDraft.includeUks,
-          seragam: currentDraft.includeSeragam,
-          lks: currentDraft.includeLks,
+          spp: activeDraft.includeSpp,
+          dpp: activeDraft.includeDpp,
+          uis: activeDraft.includeUis,
+          uka: activeDraft.includeUka,
+          uks: activeDraft.includeUks,
+          seragam: activeDraft.includeSeragam,
+          lks: activeDraft.includeLks,
         },
         allowOverrideDuplicates: false,
       }
@@ -1759,11 +1792,11 @@ function DraftDrawerModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          scope: currentDraft.scope,
-          classId: currentDraft.scope === 'CLASS' ? currentDraft.classId : undefined,
-          classIds: currentDraft.scope === 'MULTI_CLASS' ? currentDraft.selectedClassIds : undefined,
-          gradeLevel: currentDraft.scope === 'GRADE' ? currentDraft.gradeLevel : undefined,
-          startYear: Number(currentDraft.startYear),
+          scope: activeDraft.scope,
+          classId: activeDraft.scope === 'CLASS' ? activeDraft.classId : undefined,
+          classIds: activeDraft.scope === 'MULTI_CLASS' ? activeDraft.selectedClassIds : undefined,
+          gradeLevel: activeDraft.scope === 'GRADE' ? activeDraft.gradeLevel : undefined,
+          startYear: Number(activeDraft.startYear),
         }),
       }).catch(() => null)
 
@@ -1776,8 +1809,9 @@ function DraftDrawerModal({
       qc.invalidateQueries({ queryKey: ['finance-students'] })
       qc.invalidateQueries({ queryKey: ['finance-rekap'] })
 
-      if (currentDraft.id) {
-        removeStoredFinanceDraft(currentDraft.id)
+      // Hanya hapus draf yang berhasil dirilis, pertahankan draf tersimpan lainnya
+      if (activeDraft.id) {
+        removeStoredFinanceDraft(activeDraft.id)
       } else {
         removeStoredFinanceDraft()
       }
@@ -1786,7 +1820,7 @@ function DraftDrawerModal({
 
       Swal.fire({
         title: fromTimer ? 'Rilis Timer Otomatis Berhasil!' : 'Rilis Draf Berhasil!',
-        text: data.message || 'Tagihan sebelumnya ditarik dan paket draf terpilih berhasil diterbitkan ke akun siswa.',
+        text: data.message || `Paket "${activeDraft.title || 'Draf Tagihan'}" berhasil diterbitkan resmi ke akun siswa.`,
         icon: 'success',
         confirmButtonColor: '#2563eb',
       })
@@ -1846,6 +1880,54 @@ function DraftDrawerModal({
     })
   }
 
+  // Update parameter draf langsung di tempat (auto-save ke storage)
+  const updateDraftField = (fields: Partial<FinanceDraftData>) => {
+    if (!draft) return
+    const updated = {
+      ...draft,
+      ...fields,
+      savedAt: new Date().toISOString(),
+    }
+    saveStoredFinanceDraft(updated)
+    setDraft(updated)
+    // Update juga di list draf
+    setDraftsList((prev) =>
+      prev.map((d) => (d.id === updated.id ? updated : d))
+    )
+  }
+
+  const handleRenameDraft = async (targetDraft?: FinanceDraftData) => {
+    const item = targetDraft || draft
+    if (!item || !item.id) return
+    const { value: newTitle } = await Swal.fire({
+      title: 'Ubah Nama Draf',
+      input: 'text',
+      inputValue: item.title || '',
+      inputPlaceholder: 'Masukkan nama/label baru draf...',
+      showCancelButton: true,
+      confirmButtonText: 'Simpan Nama',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+      inputValidator: (val) => {
+        if (!val || !val.trim()) {
+          return 'Nama draf tidak boleh kosong'
+        }
+      },
+    })
+
+    if (newTitle && newTitle.trim()) {
+      renameStoredFinanceDraft(item.id, newTitle.trim())
+      reloadDraft()
+      Swal.fire({
+        title: 'Nama Draf Diperbarui',
+        text: `Nama draf berhasil diubah menjadi "${newTitle.trim()}".`,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    }
+  }
+
   const handleClearDraft = () => {
     Swal.fire({
       title: 'Hapus Draf Tagihan?',
@@ -1884,15 +1966,15 @@ function DraftDrawerModal({
 
     setIsReleasing(true)
     try {
-      const currentDraft = getStoredFinanceDraft()
+      const activeDraft = draft || (selectedDraftId ? draftsList.find(d => d.id === selectedDraftId) : null) || getStoredFinanceDraft()
       const payload = {
-        scope: currentDraft?.scope || 'ALL',
-        classId: currentDraft?.classId,
-        classIds: currentDraft?.selectedClassIds,
-        gradeLevel: currentDraft?.gradeLevel,
-        startYear: currentDraft ? Number(currentDraft.startYear) : Number(currentYear),
-        releaseDuration: currentDraft?.releaseDuration || 'TAHUN',
-        targetSemester: currentDraft?.targetSemester,
+        scope: activeDraft?.scope || 'ALL',
+        classId: activeDraft?.classId,
+        classIds: activeDraft?.selectedClassIds,
+        gradeLevel: activeDraft?.gradeLevel,
+        startYear: activeDraft ? Number(activeDraft.startYear) : Number(currentYear),
+        releaseDuration: activeDraft?.releaseDuration || 'TAHUN',
+        targetSemester: activeDraft?.targetSemester,
       }
 
       const res = await authenticatedFetch('/api-backend/finance/tagihan/retract-to-draft', {
@@ -1911,7 +1993,7 @@ function DraftDrawerModal({
       qc.invalidateQueries({ queryKey: ['finance-rekap'] })
 
       // Jika belum ada draf di localStorage, simpan konfigurasi standar sebagai draf tersimpan
-      if (!currentDraft) {
+      if (!activeDraft) {
         const defaultDraft: FinanceDraftData = {
           savedAt: new Date().toISOString(),
           scope: 'ALL',
@@ -1978,23 +2060,23 @@ function DraftDrawerModal({
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
       <DialogContent className="max-w-2xl lg:max-w-3xl w-[94vw] sm:w-full max-h-[88vh] flex flex-col p-0 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden bg-white dark:bg-slate-900 will-change-transform transform-gpu">
         {/* HEADER MODAL */}
-        <div className="shrink-0 px-4 py-3.5 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
+        <div className="shrink-0 px-4 py-3 sm:px-5 sm:py-3.5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
           <DialogHeader className="space-y-0.5">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-sky-50 dark:bg-sky-950/60 rounded-lg border border-sky-100 dark:border-sky-900/50 text-sky-600 dark:text-sky-400 shrink-0">
-                <Bookmark className="w-4 h-4" />
+              <div className="p-1.5 bg-blue-50 dark:bg-blue-950/60 rounded-lg border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400 shrink-0">
+                <Layers className="w-4 h-4" />
               </div>
               <DialogTitle className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">
-                Draf Penetapan Tagihan
+                Draf & Rilis Tagihan
               </DialogTitle>
               {draftsList.length > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                  {draftsList.length}/10 Draf
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  {draftsList.length} Draf Tersedia
                 </span>
               )}
             </div>
-            <DialogDescription className="text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs">
-              Kelola daftar draf penetapan tarif siswa, publikasikan resmi ke akun siswa, atau jadwalkan rilis otomatis.
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs">
+              Pilih draf tagihan untuk ditinjau, diedit, atau langsung dirilis ke akun siswa.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -2002,14 +2084,14 @@ function DraftDrawerModal({
         {/* ISI KONTEN UTAMA */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar text-slate-800 dark:text-slate-100">
           {!draft ? (
-            <div className="text-center py-10 space-y-3 bg-slate-50/70 dark:bg-slate-950/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
-              <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-900/60 text-sky-500 mx-auto flex items-center justify-center">
-                <FolderArchive className="w-6 h-6" />
+            <div className="text-center py-8 space-y-2.5 bg-slate-50/70 dark:bg-slate-950/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
+              <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-900/60 text-sky-500 mx-auto flex items-center justify-center">
+                <FolderArchive className="w-5 h-5" />
               </div>
-              <div className="space-y-1">
-                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">Belum Ada Draf Tagihan Tersimpan</p>
-                <p className="text-[11px] text-slate-500 max-w-md mx-auto leading-relaxed">
-                  Konfigurasi penetapan tagihan dapat disusun melalui formulir rilis tagihan lalu disimpan sebagai <strong>Draf</strong> (maksimal 10 draf) sebelum dipublikasikan ke siswa.
+              <div className="space-y-0.5">
+                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">Belum Ada Draf</p>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Buat draf tarif tagihan terlebih dahulu sebelum merilis ke siswa.
                 </p>
               </div>
               <Button
@@ -2021,16 +2103,16 @@ function DraftDrawerModal({
                 className="h-8 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-2xs gap-1.5"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                Susun Draf Penetapan Baru
+                Buat Draf Baru
               </Button>
             </div>
           ) : (
             <div className="space-y-3.5">
-              {/* SELECTOR DAFTAR DRAF (Hingga 10 Draf) */}
+              {/* SELECTOR DAFTAR DRAF */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Pilih Draf Tagihan ({draftsList.length} dari maks 10 draf):
+                    Pilih Draf ({draftsList.length}):
                   </Label>
                   <Button
                     type="button"
@@ -2040,24 +2122,23 @@ function DraftDrawerModal({
                       onClose()
                       onOpenReleaseForm()
                     }}
-                    className="h-6.5 px-2 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-md gap-1"
+                    className="h-6 px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-md gap-1"
                   >
                     <PlusCircle className="w-3 h-3" />
-                    Tambah Draf Baru
+                    Tambah Draf
                   </Button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {draftsList.map((d, idx) => {
                     const isCur = (d.id === selectedDraftId) || (!selectedDraftId && idx === 0)
                     return (
-                      <button
+                      <div
                         key={d.id || idx}
-                        type="button"
                         onClick={() => {
                           setSelectedDraftId(d.id || null)
                           setDraft(d)
                         }}
-                        className={`p-2.5 rounded-lg text-left border transition-all relative flex flex-col justify-between gap-1 ${
+                        className={`p-2.5 rounded-lg text-left border transition-all relative flex flex-col justify-between gap-1 cursor-pointer select-none ${
                           isCur
                             ? 'bg-sky-50 dark:bg-sky-950/50 border-sky-400 dark:border-sky-600 text-sky-950 dark:text-sky-100 ring-1 ring-sky-400/30 font-semibold'
                             : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-sky-300'
@@ -2065,18 +2146,31 @@ function DraftDrawerModal({
                       >
                         <div className="w-full">
                           <div className="flex items-center justify-between gap-1">
-                            <span className="font-bold text-xs truncate max-w-[150px] block text-slate-900 dark:text-slate-100">
+                            <span className="font-bold text-xs truncate max-w-[130px] block text-slate-900 dark:text-slate-100">
                               {d.title || `Draf #${idx + 1}`}
                             </span>
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 shrink-0">
-                              {d.releaseDuration === 'SEMESTER' ? `Sem ${d.targetSemester}` : '1 Th'}
-                            </span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleRenameDraft(d)
+                                }}
+                                className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors"
+                                title="Ubah Nama Draf"
+                              >
+                                <Pencil className="w-2.5 h-2.5" />
+                              </button>
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
+                                {d.releaseDuration === 'BULAN' ? 'Bulanan' : d.releaseDuration === 'SEMESTER' ? `Sem ${d.targetSemester}` : 'Tahunan'}
+                              </span>
+                            </div>
                           </div>
                           <span className="text-[10px] text-slate-400 block mt-0.5">
                             {d.customAcademicYear || `${d.startYear}/${d.startYear + 1}`} • {d.savedAt ? new Date(d.savedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 'Lokal'}
                           </span>
                         </div>
-                      </button>
+                      </div>
                     )
                   })}
                 </div>
@@ -2084,18 +2178,18 @@ function DraftDrawerModal({
 
               {/* STATUS SCHEDULER BANNER */}
               {draft.scheduledReleaseAt && (
-                <div className="p-3 bg-amber-500/10 border border-amber-300 dark:border-amber-800/80 rounded-lg space-y-1.5">
+                <div className="p-3 bg-amber-500/10 border border-amber-300 dark:border-amber-800/80 rounded-lg space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
                       <Timer className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                      Timer Scheduler Rilis Aktif
+                      Jadwal Rilis Aktif
                     </span>
-                    <span className="text-[10px] font-mono font-black bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-md">
+                    <span className="text-[10px] font-mono font-bold bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-md">
                       {countdownText || 'Menghitung...'}
                     </span>
                   </div>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Tagihan ini akan otomatis dirilis pada:{' '}
+                    Otomatis rilis:{' '}
                     <strong className="text-slate-900 dark:text-white">
                       {new Date(draft.scheduledReleaseAt).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}
                     </strong>
@@ -2108,7 +2202,7 @@ function DraftDrawerModal({
                       onClick={handleCancelTimerScheduler}
                       className="h-6.5 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-md"
                     >
-                      Batalkan Timer
+                      Batalkan Jadwal
                     </Button>
                   </div>
                 </div>
@@ -2117,10 +2211,21 @@ function DraftDrawerModal({
               {/* CARD RINCIAN DETAIL DRAF */}
               <div className="p-4 bg-slate-50/70 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-200/80 dark:border-slate-800 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white">{draft.title || 'Draf Rilis Tagihan'}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">{draft.title || 'Draf Tagihan'}</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRenameDraft(draft)}
+                      className="h-6 px-1.5 text-[11px] text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-md gap-1"
+                      title="Ubah nama draf ini"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      <span className="text-[10px] font-semibold">Ubah Nama</span>
+                    </Button>
                     <span className="text-[10px] font-semibold bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full border border-sky-200 dark:border-sky-800">
-                      {draft.releaseDuration === 'SEMESTER' ? `Semester ${draft.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun Penuh'}
+                      {draft.releaseDuration === 'BULAN' ? 'Bulanan (1 Bln)' : draft.releaseDuration === 'SEMESTER' ? `Semesteran ${draft.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Tahunan (1 Thn)'}
                     </span>
                   </div>
                   <span className="text-[10px] text-slate-400 font-medium">
@@ -2128,76 +2233,272 @@ function DraftDrawerModal({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800">
-                    <span className="text-[10px] text-slate-400 block font-medium">Sasaran Tagihan</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
-                      {getScopeLabel()}
-                    </span>
+                {/* FORM PENGATURAN PARAMETER DRAF LANGSUNG DI LAYAR */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs">
+                  {/* Durasi Periode */}
+                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 block font-medium">Periode Tagihan</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => updateDraftField({ releaseDuration: 'TAHUN' })}
+                        className={`flex-1 py-1 rounded text-xs font-semibold transition-all ${
+                          draft.releaseDuration === 'TAHUN'
+                            ? 'bg-blue-600 text-white shadow-2xs'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        Tahunan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateDraftField({ releaseDuration: 'SEMESTER' })}
+                        className={`flex-1 py-1 rounded text-xs font-semibold transition-all ${
+                          draft.releaseDuration === 'SEMESTER'
+                            ? 'bg-blue-600 text-white shadow-2xs'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        Semesteran
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateDraftField({ releaseDuration: 'BULAN' })}
+                        className={`flex-1 py-1 rounded text-xs font-semibold transition-all ${
+                          draft.releaseDuration === 'BULAN'
+                            ? 'bg-blue-600 text-white shadow-2xs'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        Bulanan
+                      </button>
+                    </div>
                   </div>
-                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800">
-                    <span className="text-[10px] text-slate-400 block font-medium">Tahun Ajaran</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
-                      {draft.customAcademicYear || `${draft.startYear}/${draft.startYear + 1}`}
-                    </span>
-                  </div>
-                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 col-span-2 sm:col-span-1">
-                    <span className="text-[10px] text-slate-400 block font-medium">Awal Bulan SPP</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
-                      Bulan {draft.sppStartMonth} ({draft.sppStartYear})
-                    </span>
+
+                  {/* Target Semester (jika semesteran) atau Pilihan Bulan SPP */}
+                  {draft.releaseDuration === 'SEMESTER' ? (
+                    <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-400 block font-medium">Semester</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => updateDraftField({ targetSemester: 1, sppStartMonth: 7 })}
+                          className={`flex-1 py-1 rounded text-xs font-semibold transition-all ${
+                            draft.targetSemester === 1
+                              ? 'bg-blue-600 text-white shadow-2xs'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                          }`}
+                        >
+                          Ganjil (Juli)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateDraftField({ targetSemester: 2, sppStartMonth: 1 })}
+                          className={`flex-1 py-1 rounded text-xs font-semibold transition-all ${
+                            draft.targetSemester === 2
+                              ? 'bg-blue-600 text-white shadow-2xs'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                          }`}
+                        >
+                          Genap (Jan)
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {draft.releaseDuration === 'BULAN' ? 'Bulan Tagihan' : 'Mulai SPP'}
+                      </span>
+                      <Select
+                        value={String(draft.sppStartMonth || 7)}
+                        onValueChange={(v) => updateDraftField({ sppStartMonth: Number(v) })}
+                      >
+                        <SelectTrigger className="h-7 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 font-semibold">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[
+                            { m: 7, l: 'Juli' }, { m: 8, l: 'Agustus' }, { m: 9, l: 'September' },
+                            { m: 10, l: 'Oktober' }, { m: 11, l: 'November' }, { m: 12, l: 'Desember' },
+                            { m: 1, l: 'Januari' }, { m: 2, l: 'Februari' }, { m: 3, l: 'Maret' },
+                            { m: 4, l: 'April' }, { m: 5, l: 'Mei' }, { m: 6, l: 'Juni' },
+                          ].map((x) => (
+                            <SelectItem key={x.m} value={String(x.m)}>{x.l}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Tahun Pelajaran */}
+                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 block font-medium">Tahun Pelajaran</span>
+                    <Input
+                      type="text"
+                      value={draft.customAcademicYear || `${draft.startYear}/${draft.startYear + 1}`}
+                      onChange={(e) => updateDraftField({ customAcademicYear: e.target.value })}
+                      className="h-7 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 font-semibold"
+                    />
                   </div>
                 </div>
 
-                {/* Komponen Biaya Ringkas */}
+                {/* Komponen Biaya Langsung Diubah di Layar */}
                 <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 space-y-2">
                   <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
-                    Komponen Biaya yang Disertakan:
+                    Tarif Komponen Biaya (Langsung Diedit):
                   </span>
-                  <div className="flex flex-wrap gap-1.5 text-[11px]">
-                    {draft.includeSpp && (
-                      <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-medium border border-blue-100 dark:border-blue-900">
-                        SPP (Rp {draft.sppMonthly.toLocaleString('id-ID')}/bln)
-                      </span>
-                    )}
-                    {draft.includeDpp && (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-medium border border-emerald-100 dark:border-emerald-900">
-                        DPP (Rp {draft.dppAmount.toLocaleString('id-ID')})
-                      </span>
-                    )}
-                    {draft.includeUis && (
-                      <span className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium border border-indigo-100 dark:border-indigo-900">
-                        UIS (Rp {draft.uisAmount.toLocaleString('id-ID')})
-                      </span>
-                    )}
-                    {draft.includeUka && (
-                      <span className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-medium border border-purple-100 dark:border-purple-900">
-                        UKA (Rp {draft.ukaAmount.toLocaleString('id-ID')})
-                      </span>
-                    )}
-                    {draft.includeUks && (
-                      <span className="px-2 py-0.5 rounded-md bg-pink-50 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 font-medium border border-pink-100 dark:border-pink-900">
-                        UKS (Rp {draft.uksAmount.toLocaleString('id-ID')})
-                      </span>
-                    )}
-                    {draft.includeSeragam && (
-                      <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-medium border border-amber-100 dark:border-amber-900">
-                        Seragam
-                      </span>
-                    )}
-                    {draft.includeLks && (
-                      <span className="px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 font-medium border border-teal-100 dark:border-teal-900">
-                        LKS (Rp {draft.lksAmount.toLocaleString('id-ID')})
-                      </span>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs">
+                    {/* SPP Bulanan */}
+                    <div className="p-2 bg-slate-50/70 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                      <label className="flex items-center gap-1.5 font-bold text-[11px] text-slate-800 dark:text-slate-200 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draft.includeSpp}
+                          onChange={(e) => updateDraftField({ includeSpp: e.target.checked })}
+                          className="rounded text-blue-600"
+                        />
+                        <span>SPP Bulanan</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium">Rp</span>
+                        <Input
+                          type="number"
+                          disabled={!draft.includeSpp}
+                          value={draft.sppMonthly || ''}
+                          onChange={(e) => updateDraftField({ sppMonthly: Number(e.target.value) })}
+                          className="h-7 pl-7 text-xs font-semibold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    {/* DPP */}
+                    <div className="p-2 bg-slate-50/70 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                      <label className="flex items-center gap-1.5 font-bold text-[11px] text-slate-800 dark:text-slate-200 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draft.includeDpp}
+                          onChange={(e) => updateDraftField({ includeDpp: e.target.checked })}
+                          className="rounded text-blue-600"
+                        />
+                        <span>DPP</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium">Rp</span>
+                        <Input
+                          type="number"
+                          disabled={!draft.includeDpp}
+                          value={draft.dppAmount || ''}
+                          onChange={(e) => updateDraftField({ dppAmount: Number(e.target.value) })}
+                          className="h-7 pl-7 text-xs font-semibold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    {/* UIS */}
+                    <div className="p-2 bg-slate-50/70 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                      <label className="flex items-center gap-1.5 font-bold text-[11px] text-slate-800 dark:text-slate-200 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draft.includeUis}
+                          onChange={(e) => updateDraftField({ includeUis: e.target.checked })}
+                          className="rounded text-blue-600"
+                        />
+                        <span>UIS</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium">Rp</span>
+                        <Input
+                          type="number"
+                          disabled={!draft.includeUis}
+                          value={draft.uisAmount || ''}
+                          onChange={(e) => updateDraftField({ uisAmount: Number(e.target.value) })}
+                          className="h-7 pl-7 text-xs font-semibold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    {/* UKA */}
+                    <div className="p-2 bg-slate-50/70 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                      <label className="flex items-center gap-1.5 font-bold text-[11px] text-slate-800 dark:text-slate-200 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draft.includeUka}
+                          onChange={(e) => updateDraftField({ includeUka: e.target.checked })}
+                          className="rounded text-blue-600"
+                        />
+                        <span>UKA</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium">Rp</span>
+                        <Input
+                          type="number"
+                          disabled={!draft.includeUka}
+                          value={draft.ukaAmount || ''}
+                          onChange={(e) => updateDraftField({ ukaAmount: Number(e.target.value) })}
+                          className="h-7 pl-7 text-xs font-semibold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    {/* UKS */}
+                    <div className="p-2 bg-slate-50/70 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                      <label className="flex items-center gap-1.5 font-bold text-[11px] text-slate-800 dark:text-slate-200 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draft.includeUks}
+                          onChange={(e) => updateDraftField({ includeUks: e.target.checked })}
+                          className="rounded text-blue-600"
+                        />
+                        <span>UKS</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium">Rp</span>
+                        <Input
+                          type="number"
+                          disabled={!draft.includeUks}
+                          value={draft.uksAmount || ''}
+                          onChange={(e) => updateDraftField({ uksAmount: Number(e.target.value) })}
+                          className="h-7 pl-7 text-xs font-semibold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    {/* LKS */}
+                    <div className="p-2 bg-slate-50/70 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                      <label className="flex items-center gap-1.5 font-bold text-[11px] text-slate-800 dark:text-slate-200 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draft.includeLks}
+                          onChange={(e) => updateDraftField({ includeLks: e.target.checked })}
+                          className="rounded text-blue-600"
+                        />
+                        <span>LKS</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium">Rp</span>
+                        <Input
+                          type="number"
+                          disabled={!draft.includeLks}
+                          value={draft.lksAmount || ''}
+                          onChange={(e) => updateDraftField({ lksAmount: Number(e.target.value) })}
+                          className="h-7 pl-7 text-xs font-semibold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {draft.notes && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400 italic">
-                    Catatan: "{draft.notes}"
-                  </p>
-                )}
+                {/* Catatan Draf Langsung Diubah */}
+                <div className="space-y-1">
+                  <span className="text-[10px] text-slate-400 block font-medium">Catatan:</span>
+                  <Input
+                    type="text"
+                    placeholder="Tulis catatan (opsional)..."
+                    value={draft.notes || ''}
+                    onChange={(e) => updateDraftField({ notes: e.target.value })}
+                    className="h-7 text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                  />
+                </div>
               </div>
 
               {/* SCHEDULER POPUP BOX */}
@@ -2276,15 +2577,15 @@ function DraftDrawerModal({
           )}
         </div>
 
-        {/* FOOTER AKSI DENGAN TATA LETAK RESPONSIF TANPA COLLISION */}
-        <div className="shrink-0 p-4 sm:px-6 sm:py-4 bg-slate-50/80 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-2.5">
+        {/* FOOTER AKSI */}
+        <div className="shrink-0 p-3 sm:px-5 sm:py-3.5 bg-slate-50/80 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-2">
           <div className="flex flex-wrap items-center gap-2">
             {draft && (
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleClearDraft}
-                className="h-9 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-xl gap-1.5"
+                className="h-8.5 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-lg gap-1.5"
                 title="Hapus draf aktif ini"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -2296,11 +2597,11 @@ function DraftDrawerModal({
               variant="outline"
               onClick={handleRetractActiveBills}
               disabled={isReleasing}
-              className="h-9 px-3 text-xs font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 border-amber-300 dark:border-amber-800 rounded-xl gap-1.5 shadow-2xs"
-              title="Tarik tagihan aktif yang belum lunas kembali ke draf"
+              className="h-8.5 px-3 text-xs font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 border-amber-300 dark:border-amber-800 rounded-lg gap-1.5 shadow-2xs"
+              title="Tarik tagihan siswa yang belum lunas kembali ke draf"
             >
               <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-              <span>Tarik Tagihan ke Draf</span>
+              <span>Tarik ke Draf</span>
             </Button>
           </div>
 
@@ -2308,7 +2609,7 @@ function DraftDrawerModal({
             <Button
               variant="outline"
               onClick={onClose}
-              className="h-9 text-xs rounded-xl font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+              className="h-8.5 text-xs rounded-lg font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
             >
               Tutup
             </Button>
@@ -2317,33 +2618,20 @@ function DraftDrawerModal({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    onClose()
-                    onOpenReleaseForm()
-                  }}
-                  className="h-9 text-xs font-semibold border-sky-200 dark:border-sky-800/60 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-xl gap-1.5"
-                  title="Sesuaikan parameter penetapan"
-                >
-                  <Pencil className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Ubah Parameter</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
                   onClick={() => setSchedulerOpen(!schedulerOpen)}
-                  className="h-9 text-xs font-bold border-amber-300 dark:border-amber-800/80 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-xl gap-1.5"
+                  className="h-8.5 text-xs font-bold border-amber-300 dark:border-amber-800/80 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg gap-1.5"
                 >
                   <Timer className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Jadwal Rilis</span>
+                  <span>Jadwalkan</span>
                 </Button>
                 <Button
                   type="button"
                   onClick={() => executeRelease(false)}
                   disabled={isReleasing}
-                  className="h-9 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs gap-1.5 px-3.5"
+                  className="h-8.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs gap-1.5 px-3.5"
                 >
                   {isReleasing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                  <span>Rilis Draf Ini</span>
+                  <span>Rilis Sekarang</span>
                 </Button>
               </>
             )}
@@ -2355,11 +2643,11 @@ function DraftDrawerModal({
 }
 
 // ============================================================
-// MODAL RILIS TAGIHAN 1 TAHUN KEDEPAN (MASSAL / PER KELAS / PER SISWA)
+// MODAL PENYUSUN DRAF TAGIHAN (MASSAL / PER KELAS / PER SISWA)
 // ============================================================
 function ReleaseYearlyModal({
-  open, onClose, classes, studentIds }: {
-  open: boolean; onClose: () => void; classes: ClassItem[]; studentIds?: string[]
+  open, onClose, classes, studentIds, onOpenDrafts }: {
+  open: boolean; onClose: () => void; classes: ClassItem[]; studentIds?: string[]; onOpenDrafts?: () => void
 }) {
   const authenticatedFetch = useAuthenticatedFetch();
   const qc = useQueryClient()
@@ -2367,8 +2655,8 @@ function ReleaseYearlyModal({
   
   const [scope, setScope] = useState<'CLASS' | 'MULTI_CLASS' | 'GRADE' | 'ALL' | 'STUDENTS'>('CLASS')
 
-  // Durasi Rilis: 1 Tahun Penuh atau 1 Semester Saja
-  const [releaseDuration, setReleaseDuration] = useState<'TAHUN' | 'SEMESTER'>('TAHUN')
+  // Durasi Rilis: Tahunan, Semesteran, atau Bulanan
+  const [releaseDuration, setReleaseDuration] = useState<'TAHUN' | 'SEMESTER' | 'BULAN'>('TAHUN')
   const [targetSemester, setTargetSemester] = useState<1 | 2>(1) // 1 = Ganjil, 2 = Genap
 
   // Mode Set Tagihan dari multi-select siswa
@@ -2416,11 +2704,19 @@ function ReleaseYearlyModal({
   const [overridePassword, setOverridePassword] = useState('')
   const [overrideError, setOverrideError] = useState('')
 
-  // State untuk Reset Rilis Tagihan Tahunan / Semesteran dengan verifikasi password
+  // State untuk Reset Rilis Tagihan Tahunan / Semesteran / Bulanan dengan verifikasi password
   const [resetModalOpen, setResetModalOpen] = useState(false)
   const [resetPassword, setResetPassword] = useState('')
   const [resetOnlyUnpaid, setResetOnlyUnpaid] = useState(false)
   const [resetError, setResetError] = useState('')
+
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDirectReleasing, setIsDirectReleasing] = useState(false)
+
+  // State untuk nama kustom draf & ID draf yang sedang aktif diedit
+  const [draftTitle, setDraftTitle] = useState('')
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
+  const [isCustomTitle, setIsCustomTitle] = useState(false)
 
   // State & Handler Manajemen List Draf Rilis Tagihan
   const [savedDrafts, setSavedDrafts] = useState<FinanceDraftData[]>([])
@@ -2448,17 +2744,37 @@ function ReleaseYearlyModal({
     return () => window.removeEventListener('simasmuh-finance-draft-updated', handleUpdate)
   }, [])
 
-  // Simpan konfigurasi form saat ini ke draf & otomatis masuk ke data tagihan (status DRAFT / belum dipublikasikan)
+  // Auto hitung nama default draf berdasarkan periode, semester, dan tahun ajaran
+  const computedDefaultTitle = useMemo(() => {
+    const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+    if (releaseDuration === 'BULAN') {
+      return `Draf Bulanan ${monthNames[sppStartMonth] || sppStartMonth} ${startYear}`
+    }
+    if (releaseDuration === 'SEMESTER') {
+      return `Draf Semesteran ${targetSemester === 1 ? 'Ganjil' : 'Genap'} ${customAcademicYear || `${startYear}/${startYear + 1}`}`
+    }
+    return `Draf Tahunan ${customAcademicYear || `${startYear}/${startYear + 1}`}`
+  }, [releaseDuration, targetSemester, sppStartMonth, customAcademicYear, startYear])
+
+  // Reset form ke mode pembuatan draf baru
+  const handleResetFormToNewDraft = () => {
+    setEditingDraftId(null)
+    setSelectedDraftId(null)
+    setDraftTitle('')
+    setIsCustomTitle(false)
+  }
+
+  // Simpan konfigurasi form saat ini ke draf (buat baru atau perbarui draf yang sedang diedit)
   const handleSaveDraft = async () => {
+    setIsSaving(true)
     try {
-      const draftId = `draft-${Date.now()}`
-      const draftTitle = releaseDuration === 'SEMESTER'
-        ? `Draf Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'} ${customAcademicYear || `${startYear}/${startYear + 1}`}`
-        : `Draf 1 Tahun Ajaran ${customAcademicYear || `${startYear}/${startYear + 1}`}`
+      const isUpdating = !!editingDraftId
+      const draftId = editingDraftId || `draft-${Date.now()}`
+      const finalTitle = (draftTitle && draftTitle.trim()) ? draftTitle.trim() : computedDefaultTitle
 
       const draftData: FinanceDraftData = {
         id: draftId,
-        title: draftTitle,
+        title: finalTitle,
         savedAt: new Date().toISOString(),
         scope,
         releaseDuration,
@@ -2490,11 +2806,63 @@ function ReleaseYearlyModal({
         lksAmount,
         lksPeriod,
       }
+      // Simpan konfigurasi draf secara instan ke local storage
       saveStoredFinanceDraft(draftData)
       reloadSavedDrafts()
       setSelectedDraftId(draftId)
+      setEditingDraftId(draftId)
 
-      // Otomatis buat/sinkronkan data tagihan di database dengan status DRAFT (belum dipublikasikan)
+      await Swal.fire({
+        title: isUpdating ? 'Draf Berhasil Diperbarui!' : 'Draf Tagihan Berhasil Disimpan!',
+        text: isUpdating
+          ? `Perubahan pada draf "${finalTitle}" telah disimpan aman.`
+          : `Paket draf "${finalTitle}" berhasil disimpan. Anda dapat meninjau di Pusat Draf atau merilisnya kapan saja.`,
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+        confirmButtonText: 'Buka Pusat Draf',
+      })
+      onClose()
+      if (onOpenDrafts) {
+        onOpenDrafts()
+      }
+    } catch {
+      Swal.fire('Gagal Menyimpan Draf', 'Terjadi kesalahan saat menyimpan draf rilis tagihan.', 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Kirim dan terbitkan rilis tagihan langsung secara resmi ke portal siswa & wali murid
+  const handleSaveAndReleaseDirect = async () => {
+    const confirm = await Swal.fire({
+      title: 'Kirim & Rilis Tagihan Resmi?',
+      text: `Menerbitkan langsung paket tagihan ${releaseDuration === 'BULAN' ? 'Bulanan' : releaseDuration === 'SEMESTER' ? `Semesteran ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Tahunan'} ke portal akun siswa dan wali murid.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Kirim Rilis Sekarang',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+    })
+    if (!confirm.isConfirmed) return
+
+    setIsDirectReleasing(true)
+    try {
+      // 1. Tarik tagihan aktif lama yang belum lunas ke draf agar sinkron dan anti duplikasi
+      await authenticatedFetch('/api-backend/finance/tagihan/retract-to-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope,
+          classId: scope === 'CLASS' ? classId : undefined,
+          classIds: scope === 'MULTI_CLASS' ? selectedClassIds : undefined,
+          gradeLevel: scope === 'GRADE' ? gradeLevel : undefined,
+          startYear: Number(startYear),
+          releaseDuration,
+          targetSemester,
+        }),
+      }).catch(() => null)
+
+      // 2. Rilis tagihan resmi langsung
       const payload = {
         academicYear: customAcademicYear || `${startYear}/${startYear + 1}`,
         targetScope: scope === 'STUDENTS' ? 'STUDENTS' : scope === 'CLASS' ? 'CLASS' : scope === 'MULTI_CLASS' ? 'MULTI_CLASS' : scope === 'GRADE' ? 'GRADE' : 'ALL',
@@ -2525,27 +2893,47 @@ function ReleaseYearlyModal({
           lks: includeLks,
         },
         allowOverrideDuplicates: false,
-        isDraft: true,
       }
 
-      await authenticatedFetch('/api-backend/finance/tagihan/release-yearly', {
+      const res = await authenticatedFetch('/api-backend/finance/tagihan/release-yearly', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+      })
+
+      // 3. Terbitkan draf yang relevan
+      await authenticatedFetch('/api-backend/finance/tagihan/publish-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope,
+          classId: scope === 'CLASS' ? classId : undefined,
+          classIds: scope === 'MULTI_CLASS' ? selectedClassIds : undefined,
+          gradeLevel: scope === 'GRADE' ? gradeLevel : undefined,
+          startYear: Number(startYear),
+        }),
       }).catch(() => null)
 
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal merilis tagihan')
+      }
+
+      const data = await res.json()
       qc.invalidateQueries({ queryKey: ['finance-students'] })
       qc.invalidateQueries({ queryKey: ['finance-rekap'] })
 
       Swal.fire({
-        title: 'Draf Tagihan Disimpan!',
-        text: 'Draf berhasil ditambahkan ke daftar list draf tersimpan dan tercatat di data tagihan staf.',
+        title: 'Tagihan Resmi Berhasil Dirilis!',
+        text: data.message || 'Paket tagihan telah diterbitkan ke portal akun siswa & wali murid.',
         icon: 'success',
-        timer: 2000,
-        showConfirmButton: false,
+        confirmButtonColor: '#2563eb',
       })
-    } catch {
-      Swal.fire('Gagal Menyimpan Draf', 'Terjadi kesalahan saat menyimpan draf rilis tagihan.', 'error')
+      onClose()
+    } catch (err: any) {
+      Swal.fire('Gagal Merilis Tagihan', err.message || 'Terjadi kesalahan sistem saat merilis tagihan.', 'error')
+    } finally {
+      setIsDirectReleasing(false)
     }
   }
 
@@ -2583,10 +2971,18 @@ function ReleaseYearlyModal({
       if (targetDraft.lksPeriod) setLksPeriod(targetDraft.lksPeriod)
 
       setSelectedDraftId(targetDraft.id || null)
+      setEditingDraftId(targetDraft.id || null)
+      if (targetDraft.title) {
+        setDraftTitle(targetDraft.title)
+        setIsCustomTitle(true)
+      } else {
+        setDraftTitle('')
+        setIsCustomTitle(false)
+      }
 
       Swal.fire({
-        title: 'Parameter Draf Dimuat!',
-        text: `Konfigurasi form disesuaikan dengan "${targetDraft.title || 'Draf Terpilih'}".`,
+        title: 'Draf Dimuat untuk Diedit!',
+        text: `Formulir siap diedit sesuai parameter "${targetDraft.title || 'Draf Terpilih'}".`,
         icon: 'success',
         timer: 1500,
         showConfirmButton: false,
@@ -2600,7 +2996,7 @@ function ReleaseYearlyModal({
   const handleReleaseDirectlyFromDraft = async (targetDraft: FinanceDraftData) => {
     const confirm = await Swal.fire({
       title: `Rilis "${targetDraft.title || 'Draf Tagihan'}"?`,
-      text: `Menerbitkan tagihan ${targetDraft.releaseDuration === 'SEMESTER' ? `Semester ${targetDraft.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun Penuh'} langsung ke akun siswa.`,
+      text: `Menerbitkan tagihan ${targetDraft.releaseDuration === 'BULAN' ? 'Bulanan' : targetDraft.releaseDuration === 'SEMESTER' ? `Semesteran ${targetDraft.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Tahunan'} langsung ke akun siswa.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Ya, Rilis Sekarang',
@@ -2720,6 +3116,38 @@ function ReleaseYearlyModal({
     }
   }
 
+  // Ubah nama draf tersimpan tertentu
+  const handleRenameDraftItem = async (targetDraft: FinanceDraftData) => {
+    if (!targetDraft || !targetDraft.id) return
+    const { value: newTitle } = await Swal.fire({
+      title: 'Ubah Nama Draf',
+      input: 'text',
+      inputValue: targetDraft.title || '',
+      inputPlaceholder: 'Masukkan nama/label baru draf...',
+      showCancelButton: true,
+      confirmButtonText: 'Simpan Nama',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+      inputValidator: (val) => {
+        if (!val || !val.trim()) {
+          return 'Nama draf tidak boleh kosong'
+        }
+      },
+    })
+
+    if (newTitle && newTitle.trim()) {
+      renameStoredFinanceDraft(targetDraft.id, newTitle.trim())
+      reloadSavedDrafts()
+      Swal.fire({
+        title: 'Nama Draf Diperbarui',
+        text: `Nama draf berhasil diubah menjadi "${newTitle.trim()}".`,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    }
+  }
+
   useEffect(() => {
     if (classes && classes.length > 0 && !classId) {
       setClassId(classes[0].id)
@@ -2835,12 +3263,11 @@ function ReleaseYearlyModal({
       setOverrideModalOpen(false)
       setOverridePassword('')
       setOverrideError('')
-      removeStoredFinanceDraft()
       
       const isDuplicatedDetected = data.duplicatesDetected > 0
       Swal.fire({
-        title: isDuplicatedDetected ? 'Rilis Selesai (Proteksi Aktif)' : `Berhasil Rilis Tagihan ${releaseDuration === 'SEMESTER' ? `Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun'}!`,
-        text: data.message || `Berhasil memproses tagihan tahun ajaran siswa.`,
+        title: isDuplicatedDetected ? 'Rilis Selesai (Proteksi Aktif)' : `Berhasil Rilis Tagihan ${releaseDuration === 'BULAN' ? 'Bulanan' : releaseDuration === 'SEMESTER' ? `Semesteran ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Tahunan'}!`,
+        text: data.message || `Berhasil memproses tagihan tahun pelajaran siswa.`,
         icon: 'success',
         confirmButtonColor: '#2563eb',
       })
@@ -2901,7 +3328,7 @@ function ReleaseYearlyModal({
     },
   })
 
-  const sppMonthsCount = releaseDuration === 'SEMESTER' ? 6 : 12
+  const sppMonthsCount = releaseDuration === 'BULAN' ? 1 : releaseDuration === 'SEMESTER' ? 6 : 12
 
   // Total estimasi per siswa
   const totalPerTahun = useMemo(() => {
@@ -2916,67 +3343,85 @@ function ReleaseYearlyModal({
     return tot
   }, [includeSpp, sppMonthly, sppMonthsCount, includeDpp, dppAmount, includeUis, uisAmount, includeUka, ukaAmount, includeUks, uksAmount, includeSeragam, seragamPutraAmount, includeLks, lksAmount])
 
-  // Label rentang SPP (6 Bulan untuk semester, 12 Bulan untuk 1 tahun) yang akan dirilis
+  // Label rentang SPP (1 Bulan untuk Bulanan, 6 Bulan untuk Semesteran, 12 Bulan untuk Tahunan) yang akan dirilis
   const sppRangePreview = useMemo(() => {
     const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+    if (releaseDuration === 'BULAN') {
+      return `${monthNames[sppStartMonth] || sppStartMonth} ${sppStartYear}`
+    }
     const offset = sppMonthsCount - 1
     let endM = (sppStartMonth + offset) % 12
     if (endM === 0) endM = 12
     const endY = sppStartYear + Math.floor((sppStartMonth + offset - 1) / 12)
     return `${monthNames[sppStartMonth]} ${sppStartYear} - ${monthNames[endM]} ${endY}`
-  }, [sppStartMonth, sppStartYear, sppMonthsCount])
+  }, [sppStartMonth, sppStartYear, sppMonthsCount, releaseDuration])
 
   return (
     <>
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
       <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-4xl w-[94vw] sm:w-full max-h-[88vh] flex flex-col p-0 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden bg-white dark:bg-slate-900 will-change-transform transform-gpu">
-        <div className="shrink-0 px-4 py-3.5 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div className="shrink-0 px-4 py-3 sm:px-5 sm:py-3.5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
           <DialogHeader className="space-y-0.5">
             <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-slate-100 text-sm sm:text-base font-bold">
               <div className="p-1.5 bg-blue-50 dark:bg-blue-950/60 rounded-lg border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400">
-                <Layers className="w-4 h-4" />
+                <Bookmark className="w-4 h-4" />
               </div>
-              Rilis Tagihan {releaseDuration === 'SEMESTER' ? `Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun'} ({sppRangePreview})
+              Atur Tarif {releaseDuration === 'BULAN' ? 'Bulanan' : releaseDuration === 'SEMESTER' ? `Semesteran ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Tahunan'} ({sppRangePreview})
             </DialogTitle>
-            <DialogDescription className="text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs">
-              Rilis tagihan {sppMonthsCount} bulan SPP ({sppRangePreview}), DPP, UIS, UKA, UKS, Seragam, & LKS ({customAcademicYear ? `TA ${customAcademicYear}` : `Tahun ${startYear}`}).
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs">
+              Tentukan rincian biaya siswa, lalu simpan ke draf atau rilis langsung.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar text-slate-800 dark:text-slate-100">
-          {/* DAFTAR DRAF TERSIMPAN & AKSI RILIS LANGSUNG */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 custom-scrollbar text-slate-800 dark:text-slate-100">
+          {/* DAFTAR DRAF TERSIMPAN */}
           {savedDrafts.length > 0 && (
-            <div className="p-3.5 bg-sky-50/70 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/80 rounded-xl space-y-2.5 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-md">
+            <div className="p-3 bg-sky-50/70 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/80 rounded-xl space-y-2 shadow-2xs">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-1 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-md shrink-0">
                     <Bookmark className="w-3.5 h-3.5" />
                   </div>
-                  <div>
-                    <span className="text-xs font-bold text-sky-950 dark:text-sky-200">
-                      Daftar Draf Tagihan Tersimpan ({savedDrafts.length}/10)
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-sky-950 dark:text-sky-200 block truncate">
+                      Draf Tersimpan ({savedDrafts.length})
                     </span>
-                    <p className="text-[10px] text-sky-800/80 dark:text-sky-300/80">
-                      Pilih draf untuk dirilis langsung atau terapkan parameternya ke formulir.
+                    <p className="text-[10px] text-sky-800/80 dark:text-sky-300/80 truncate">
+                      Klik draf untuk memuat parameternya ke formulir.
                     </p>
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDraftList(!showDraftList)}
-                  className="h-7 px-2 text-xs text-sky-700 dark:text-sky-300 hover:bg-sky-100/60 rounded-lg"
-                >
-                  {showDraftList ? 'Sembunyikan' : 'Tampilkan'}
-                </Button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {editingDraftId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResetFormToNewDraft}
+                      className="h-6.5 px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg gap-1"
+                    >
+                      <PlusCircle className="w-3 h-3 text-blue-600" />
+                      <span>Draf Baru</span>
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDraftList(!showDraftList)}
+                    className="h-7 px-2 text-xs text-sky-700 dark:text-sky-300 hover:bg-sky-100/60 rounded-lg"
+                  >
+                    {showDraftList ? 'Sembunyikan' : 'Tampilkan'}
+                  </Button>
+                </div>
               </div>
 
               {showDraftList && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
                   {savedDrafts.map((d, idx) => {
                     const isSelected = selectedDraftId === d.id || (!selectedDraftId && idx === 0)
+                    const isBeingEdited = editingDraftId === d.id
                     const dScope = d.scope === 'ALL' ? 'Semua Siswa' : d.scope === 'GRADE' ? `Tingkat ${d.gradeLevel}` : d.scope === 'MULTI_CLASS' ? `${d.selectedClassIds?.length || 0} Kelas` : d.scope === 'CLASS' ? (classes.find(c => c.id === d.classId)?.name ? `Kelas ${classes.find(c => c.id === d.classId)?.name}` : 'Satu Kelas') : 'Siswa Terpilih'
                     const dDuration = d.releaseDuration === 'SEMESTER' ? `Semester ${d.targetSemester === 1 ? 'Ganjil' : 'Genap'}` : '1 Tahun'
                     const dSpp = d.includeSpp ? `SPP ${d.sppMonthly.toLocaleString('id-ID')}` : null
@@ -2984,18 +3429,29 @@ function ReleaseYearlyModal({
                     return (
                       <div
                         key={d.id || idx}
-                        className={`p-3 rounded-xl border transition-all flex flex-col justify-between gap-2.5 ${
-                          isSelected
+                        onClick={() => handleApplyDraftToForm(d)}
+                        className={`p-3 rounded-xl border transition-all flex flex-col justify-between gap-2.5 cursor-pointer select-none group relative ${
+                          isBeingEdited
+                            ? 'bg-blue-50/90 dark:bg-blue-950/70 border-blue-400 dark:border-blue-600 shadow-xs ring-2 ring-blue-500/30'
+                            : isSelected
                             ? 'bg-white dark:bg-slate-900 border-sky-400 dark:border-sky-600 shadow-xs ring-1 ring-sky-400/30'
-                            : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 hover:border-sky-300'
+                            : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 hover:border-sky-400 hover:bg-sky-50/30 dark:hover:bg-slate-800/60'
                         }`}
+                        title="Klik draf ini untuk melihat detail dan langsung mengedit parameternya"
                       >
                         <div className="space-y-1.5">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate" title={d.title}>
-                                {d.title || `Draf #${idx + 1}`}
-                              </h4>
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate" title={d.title}>
+                                  {d.title || `Draf #${idx + 1}`}
+                                </h4>
+                                {isBeingEdited && (
+                                  <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-600 text-white shrink-0">
+                                    Sedang Diedit
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                                 {d.savedAt ? new Date(d.savedAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Lokal'}
                               </p>
@@ -3022,24 +3478,34 @@ function ReleaseYearlyModal({
 
                         <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800/80">
                           <div className="flex items-center gap-1">
+                            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 px-1">
+                              <Pencil className="w-3 h-3" />
+                              <span>{isBeingEdited ? 'Aktif' : 'Edit'}</span>
+                            </span>
                             <Button
                               type="button"
                               size="sm"
-                              variant="outline"
-                              onClick={() => handleApplyDraftToForm(d)}
-                              className="h-7 px-2 text-[11px] font-semibold bg-sky-50/50 hover:bg-sky-100 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 rounded-lg gap-1"
-                              title="Terapkan draf ini ke formulir"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRenameDraftItem(d)
+                              }}
+                              className="h-6.5 px-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-md gap-1"
+                              title="Ubah nama"
                             >
-                              <Pencil className="w-3 h-3 text-sky-600" />
-                              <span>Gunakan</span>
+                              <Pencil className="w-3 h-3" />
+                              <span className="text-[10px] hidden sm:inline">Ubah Nama</span>
                             </Button>
                             <Button
                               type="button"
                               size="sm"
                               variant="ghost"
-                              onClick={() => handleDeleteDraftItem(d.id)}
-                              className="h-7 px-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg"
-                              title="Hapus draf ini"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteDraftItem(d.id)
+                              }}
+                              className="h-6.5 px-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md"
+                              title="Hapus draf"
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
@@ -3048,12 +3514,14 @@ function ReleaseYearlyModal({
                           <Button
                             type="button"
                             size="sm"
-                            onClick={() => handleReleaseDirectlyFromDraft(d)}
-                            className="h-7 px-2.5 text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-2xs gap-1"
-                            title="Rilis langsung draf ini sekarang"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleReleaseDirectlyFromDraft(d)
+                            }}
+                            className="h-6.5 px-2.5 text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-2xs gap-1"
                           >
                             <Send className="w-3 h-3" />
-                            <span>Rilis Draf Ini</span>
+                            <span>Rilis</span>
                           </Button>
                         </div>
                       </div>
@@ -3068,7 +3536,7 @@ function ReleaseYearlyModal({
           <div className="bg-slate-50/70 dark:bg-slate-950/50 p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                1. Sasaran & Durasi Rilis Tagihan
+                1. Sasaran & Periode
               </Label>
               <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 self-start sm:self-auto">
                 <button
@@ -3080,7 +3548,7 @@ function ReleaseYearlyModal({
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  1 Tahun Penuh (12 Bln)
+                  Tahunan
                 </button>
                 <button
                   type="button"
@@ -3091,8 +3559,58 @@ function ReleaseYearlyModal({
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  1 Semester (6 Bln)
+                  Semesteran
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setReleaseDuration('BULAN')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    releaseDuration === 'BULAN'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Bulanan
+                </button>
+              </div>
+            </div>
+
+            {/* Input Nama/Label Draf */}
+            <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Bookmark className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Nama Draf</span>
+                  {editingDraftId && (
+                    <span className="text-[10px] font-semibold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                      Edit
+                    </span>
+                  )}
+                </Label>
+                {isCustomTitle && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraftTitle('')
+                      setIsCustomTitle(false)
+                    }}
+                    className="text-[10px] font-semibold text-blue-600 hover:underline"
+                  >
+                    Gunakan Nama Otomatis
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder={computedDefaultTitle}
+                  value={draftTitle}
+                  onChange={(e) => {
+                    setDraftTitle(e.target.value)
+                    setIsCustomTitle(true)
+                  }}
+                  className="bg-slate-50/50 dark:bg-slate-950 text-xs h-9 rounded-lg border-slate-200 dark:border-slate-800 font-semibold"
+                />
               </div>
             </div>
 
@@ -3184,14 +3702,16 @@ function ReleaseYearlyModal({
               {/* Bulan & Tahun Awal Mulai Tagihan */}
               <div className="flex flex-col justify-between">
                 <div className="h-5 flex items-center mb-1.5">
-                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Bulan Awal Mulai</Label>
+                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    {releaseDuration === 'BULAN' ? 'Bulan Tagihan' : 'Bulan Awal Mulai'}
+                  </Label>
                 </div>
                 <Select value={sppStartMonth.toString()} onValueChange={(v) => setSppStartMonth(Number(v))}>
                   <SelectTrigger className="bg-white dark:bg-slate-950 font-medium text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800">
                     <SelectValue>
                       {[
                         '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-                        'Juli (Awal TA)', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+                        'Juli (Awal TP)', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
                       ][sppStartMonth] || `Bulan ${sppStartMonth}`}
                     </SelectValue>
                   </SelectTrigger>
@@ -3202,7 +3722,7 @@ function ReleaseYearlyModal({
                     <SelectItem value="4">April</SelectItem>
                     <SelectItem value="5">Mei</SelectItem>
                     <SelectItem value="6">Juni</SelectItem>
-                    <SelectItem value="7">Juli (Awal TA)</SelectItem>
+                    <SelectItem value="7">Juli (Awal TP)</SelectItem>
                     <SelectItem value="8">Agustus</SelectItem>
                     <SelectItem value="9">September</SelectItem>
                     <SelectItem value="10">Oktober</SelectItem>
@@ -3212,10 +3732,10 @@ function ReleaseYearlyModal({
                 </Select>
               </div>
 
-              {/* Tahun Ajaran / Periode */}
+              {/* Tahun Pelajaran / Periode */}
               <div className="flex flex-col justify-between">
                 <div className="h-5 flex items-center justify-between mb-1.5">
-                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Tahun Ajaran / Awal</Label>
+                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Tahun Pelajaran / Awal</Label>
                   <button
                     type="button"
                     onClick={() => setIsManualAcademicYear(!isManualAcademicYear)}
@@ -3325,7 +3845,7 @@ function ReleaseYearlyModal({
                 Rentang Tagihan: <strong className="font-bold text-blue-700 dark:text-blue-300">{sppRangePreview}</strong>
               </span>
               <span className="font-medium text-slate-500 dark:text-slate-400 text-xs">
-                Tahun Ajaran: <strong className="text-blue-600 dark:text-blue-400 font-bold">{customAcademicYear || `${startYear}/${startYear + 1}`}</strong>
+                Tahun Pelajaran: <strong className="text-blue-600 dark:text-blue-400 font-bold">{customAcademicYear || `${startYear}/${startYear + 1}`}</strong>
               </span>
             </div>
           </div>
@@ -3400,7 +3920,7 @@ function ReleaseYearlyModal({
                     className="pl-8 h-9 text-xs font-semibold bg-white dark:bg-slate-950 rounded-lg border-slate-200 dark:border-slate-800"
                   />
                 </div>
-                <p className="text-[11px] text-slate-500">Wajib tuntas dalam 1 tahun ajaran.</p>
+                <p className="text-[11px] text-slate-500">Wajib tuntas dalam 1 tahun pelajaran.</p>
               </div>
 
               {/* UIS (Infaq Sekolah) */}
@@ -3580,51 +4100,55 @@ function ReleaseYearlyModal({
           </div>
         </div>
 
-        <div className="shrink-0 p-4 sm:p-5 bg-slate-50/60 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5">
+        <div className="shrink-0 p-3.5 sm:px-5 sm:py-3.5 bg-slate-50/60 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2">
           <div className="flex items-center gap-2">
             {scope !== 'STUDENTS' ? (
             <Button
               type="button"
               variant="outline"
               onClick={() => { setResetModalOpen(true); setResetPassword(''); setResetError(''); }}
-              className="h-10 border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl font-semibold gap-1.5 text-xs"
+              className="h-8.5 border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg font-semibold gap-1.5 text-xs"
             >
               <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
-              {releaseDuration === 'SEMESTER' ? `Reset Rilis Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Reset Rilis Tagihan Tahunan'}
+              Reset Rilis
             </Button>
-            ) : <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Target: <strong className="text-blue-600 dark:text-blue-400">{studentIds?.length || 0} siswa</strong> terpilih</span>}
+            ) : <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Target: <strong className="text-blue-600 dark:text-blue-400">{studentIds?.length || 0} siswa</strong></span>}
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row gap-2">
-            <Button variant="outline" onClick={onClose} className="h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSaving || isDirectReleasing}
+              className="h-8.5 rounded-lg font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs"
+            >
               Batal
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={handleSaveDraft}
-              className="h-10 border-sky-200 dark:border-sky-800/60 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-xl font-semibold gap-1.5 text-xs"
-              title="Simpan konfigurasi rilis ini sebagai draf tanpa menerbitkan tagihan ke publik"
+              disabled={isSaving || isDirectReleasing}
+              className="h-8.5 border-blue-200 dark:border-blue-800/80 bg-blue-50/70 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold rounded-lg shadow-2xs gap-1.5 text-xs px-3.5"
             >
-              <Save className="w-3.5 h-3.5 text-sky-600" />
-              Simpan Draf
+              {isSaving ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+              ) : editingDraftId ? (
+                <Save className="w-3.5 h-3.5 text-blue-600" />
+              ) : (
+                <PlusCircle className="w-3.5 h-3.5 text-blue-600" />
+              )}
+              <span>{editingDraftId ? 'Simpan Draf' : 'Tambah Draf'}</span>
             </Button>
             <Button
               type="button"
-              variant="outline"
-              onClick={() => { setOverrideModalOpen(true); setOverridePassword(''); setOverrideError(''); }}
-              className="h-10 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl font-semibold gap-1.5 text-xs"
+              onClick={handleSaveAndReleaseDirect}
+              disabled={isSaving || isDirectReleasing}
+              className="h-8.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-xs gap-1.5 text-xs px-4"
             >
-              <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              Otorisasi Perbarui Duplikat
-            </Button>
-            <Button
-              className="h-10 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-xs gap-2 text-xs sm:text-sm px-4"
-              disabled={releaseMut.isPending}
-              onClick={() => releaseMut.mutate({ override: false })}
-            >
-              {releaseMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              {releaseDuration === 'SEMESTER' ? `Rilis Tagihan Semester ${targetSemester === 1 ? 'Ganjil' : 'Genap'}` : 'Rilis Tagihan 1 Tahun'}
+              {isDirectReleasing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              <span>Rilis Tagihan</span>
             </Button>
           </div>
         </div>
@@ -3709,7 +4233,7 @@ function ReleaseYearlyModal({
               Otorisasi Reset Rilis Tagihan
             </DialogTitle>
             <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
-              Hapus seluruh tagihan 1 tahun ajaran ({startYear}/{startYear + 1}) sesuai sasaran yang dipilih.
+              Hapus seluruh tagihan tahun pelajaran ({startYear}/{startYear + 1}) sesuai sasaran yang dipilih.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -3722,7 +4246,7 @@ function ReleaseYearlyModal({
                 Sasaran Reset Tagihan
               </p>
               <p className="leading-relaxed">
-                Tindakan ini akan menghapus tagihan tahun ajaran <strong>{startYear}/{startYear + 1}</strong> untuk:{' '}
+                Tindakan ini akan menghapus tagihan tahun pelajaran <strong>{startYear}/{startYear + 1}</strong> untuk:{' '}
                 <strong>
                   {scope === 'CLASS'
                     ? `Kelas ${classes.find(c => c.id === classId)?.name || classId}`
@@ -4708,6 +5232,108 @@ function TabTagihan() {
   const [bulkReason, setBulkReason] = useState<string>('')
   const [bulkTagihanOpen, setBulkTagihanOpen] = useState(false)
 
+  // Import Excel Beasiswa States
+  const [importBeasiswaOpen, setImportBeasiswaOpen] = useState(false)
+  const [isImportingBeasiswa, setIsImportingBeasiswa] = useState(false)
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false)
+
+  const downloadBeasiswaTemplate = async () => {
+    try {
+      setIsDownloadingTemplate(true)
+      const res = await authenticatedFetch('/api-backend/students/template-beasiswa')
+      if (!res.ok) throw new Error('Gagal mengunduh template beasiswa')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `template_beasiswa_siswa_simasmuh_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      Swal.fire('Gagal Mengunduh', err.message || 'Terjadi kesalahan sistem saat unduh template.', 'error')
+    } finally {
+      setIsDownloadingTemplate(false)
+    }
+  }
+
+  const handleImportBeasiswaFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = '' // Reset input
+
+    try {
+      setIsImportingBeasiswa(true)
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data, { type: 'array' })
+      const firstSheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[firstSheetName]
+      const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet)
+
+      if (!jsonData || jsonData.length === 0) {
+        Swal.fire('File Kosong', 'Tidak ada data siswa atau beasiswa yang ditemukan dalam file Excel.', 'warning')
+        setIsImportingBeasiswa(false)
+        return
+      }
+
+      // Format payload items
+      const items = jsonData.map((row) => {
+        // Toleransi nama kolom
+        const nis = row['NIS *'] ?? row['NIS'] ?? row['nis'] ?? ''
+        const nisn = row['NISN'] ?? row['nisn'] ?? ''
+        const name = row['Nama Siswa *'] ?? row['Nama Siswa'] ?? row['Nama'] ?? row['name'] ?? ''
+        const seragamPct = row['Beasiswa Seragam (%)'] ?? row['Seragam (%)'] ?? row['seragamPct'] ?? row['beasiswaSeragamPct'] ?? 0
+        const sppPct = row['Beasiswa SPP (%)'] ?? row['SPP (%)'] ?? row['sppPct'] ?? row['beasiswaSppPct'] ?? row['beasiswaPercentage'] ?? 0
+        const dppPct = row['Beasiswa DPP (%)'] ?? row['DPP (%)'] ?? row['dppPct'] ?? row['beasiswaDppPct'] ?? 0
+        const reason = row['Alasan / Catatan Beasiswa'] ?? row['Alasan'] ?? row['Catatan'] ?? row['reason'] ?? row['beasiswaReason'] ?? ''
+
+        return {
+          nis: String(nis).trim(),
+          nisn: String(nisn).trim(),
+          name: String(name).trim(),
+          beasiswaSeragamPct: Number(seragamPct) || 0,
+          beasiswaSppPct: Number(sppPct) || 0,
+          beasiswaDppPct: Number(dppPct) || 0,
+          beasiswaReason: String(reason).trim(),
+        }
+      }).filter((item) => item.nis || item.nisn || item.name)
+
+      if (items.length === 0) {
+        Swal.fire('Data Tidak Valid', 'Pastikan kolom NIS atau Nama Siswa terisi dengan benar di file Excel.', 'warning')
+        setIsImportingBeasiswa(false)
+        return
+      }
+
+      const res = await authenticatedFetch('/api-backend/students/import-beasiswa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
+      })
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal mengimpor data beasiswa')
+      }
+
+      const resData = await res.json()
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['student-tagihan'] })
+      setImportBeasiswaOpen(false)
+
+      Swal.fire({
+        title: 'Import Beasiswa Berhasil!',
+        text: resData.message || `Berhasil mengatur beasiswa untuk ${resData.count} siswa.`,
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+    } catch (err: any) {
+      Swal.fire('Gagal Import Beasiswa', err.message || 'Terjadi kesalahan format saat membaca file Excel.', 'error')
+    } finally {
+      setIsImportingBeasiswa(false)
+    }
+  }
+
   const openBulkBeasiswa = () => {
     setBulkSeragamPct(0); setBulkSppPct(0); setBulkDppPct(0); setBulkReason('')
     setBulkBeasiswaOpen(true)
@@ -4798,6 +5424,90 @@ function TabTagihan() {
     }
   })
 
+  const resetBeasiswaMutation = useMutation({
+    mutationFn: async (studentId: string) => {
+      const res = await authenticatedFetch(`/api-backend/students/${studentId}/reset-beasiswa`, {
+        method: 'POST',
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal mereset beasiswa siswa')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      if (selectedStudent) {
+        qc.invalidateQueries({ queryKey: ['student-tagihan', selectedStudent.id] })
+      }
+      setIsBeasiswaDialogOpen(false)
+      Swal.fire({
+        title: 'Beasiswa Direset!',
+        text: data.message || 'Beasiswa berhasil direset ke 0% dan tagihan dikembalikan.',
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        title: 'Gagal Mereset',
+        text: err.message || 'Terjadi kesalahan sistem saat mereset beasiswa.',
+        icon: 'error',
+      })
+    },
+  })
+
+  const bulkResetBeasiswaMutation = useMutation({
+    mutationFn: async (studentIds: string[]) => {
+      const res = await authenticatedFetch('/api-backend/students/bulk-reset-beasiswa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentIds }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal mereset beasiswa massal')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['student-tagihan'] })
+      setSelectedStudentIds([])
+      Swal.fire({
+        title: 'Beasiswa Direset Massal!',
+        text: data.message || 'Beasiswa seluruh siswa terpilih berhasil dikembalikan ke 0%.',
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        title: 'Gagal Mereset Beasiswa',
+        text: err.message || 'Terjadi kesalahan sistem saat mereset beasiswa terpilih.',
+        icon: 'error',
+      })
+    },
+  })
+
+  const handlePromptResetBeasiswaSelected = () => {
+    if (selectedStudentIds.length === 0) return
+    Swal.fire({
+      title: 'Reset Beasiswa Siswa Terpilih?',
+      text: `Seluruh beasiswa (Seragam, SPP, DPP) untuk ${selectedStudentIds.length} siswa terpilih akan direset ke 0% dan seluruh tagihan yang belum lunas dikembalikan ke nominal awal. Lanjutkan?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d97706',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Reset Beasiswa',
+      cancelButtonText: 'Batal',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        bulkResetBeasiswaMutation.mutate(selectedStudentIds)
+      }
+    })
+  }
+
   const [filterActive, setFilterActive] = useState<'AKTIF' | 'ARSIP' | 'ALL'>('AKTIF')
 
   // Pagination state for ultra-smooth rendering with large datasets (Optimized for 2GB RAM devices)
@@ -4824,26 +5534,31 @@ function TabTagihan() {
     staleTime: 10000,
   })
 
+  const deferredSearch = useDeferredValue(search)
+
   const activeCount = useMemo(() => students.filter(s => s.isActive !== false).length, [students])
   const archiveCount = useMemo(() => students.filter(s => s.isActive === false).length, [students])
 
-  const filtered = useMemo(() =>
-    students.filter(s =>
-      (!filterKelas || s.className === filterKelas) &&
-      (filterActive === 'ALL'
-        ? true
-        : filterActive === 'AKTIF'
-        ? s.isActive !== false
-        : s.isActive === false) &&
-      (s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.nisn.includes(search) || s.nis.includes(search) ||
-        s.className.toLowerCase().includes(search.toLowerCase()))
-    ), [students, search, filterKelas, filterActive])
+  const filtered = useMemo(() => {
+    const q = deferredSearch.trim().toLowerCase()
+    return students.filter(s => {
+      if (filterKelas && s.className !== filterKelas) return false
+      if (filterActive === 'AKTIF' && s.isActive === false) return false
+      if (filterActive === 'ARSIP' && s.isActive !== false) return false
+      if (!q) return true
+      return (
+        s.name.toLowerCase().includes(q) ||
+        (s.nisn && s.nisn.includes(q)) ||
+        (s.nis && s.nis.includes(q)) ||
+        (s.className && s.className.toLowerCase().includes(q))
+      )
+    })
+  }, [students, deferredSearch, filterKelas, filterActive])
 
   // Reset current page to 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, filterKelas, filterActive, pageSize])
+  }, [deferredSearch, filterKelas, filterActive, pageSize])
 
   // Paginated students slice
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
@@ -5082,13 +5797,23 @@ function TabTagihan() {
     }
   }
 
-  // Perhitungan Ringkasan Cepat
+  // Perhitungan Ringkasan Cepat (Single-pass loop untuk performa optimal di perangkat low-end)
   const stats = useMemo(() => {
-    const totalSiswa = filtered.length
-    const totalTunggakan = filtered.reduce((sum, s) => sum + ((s.sisaTagihan && s.sisaTagihan > 0) ? s.sisaTagihan : Math.max(0, s.totalTagihan - s.totalLunas)), 0)
-    const siswaLunas = filtered.filter(s => s.belumLunasCount === 0).length
-    const siswaMenunggak = filtered.filter(s => s.belumLunasCount > 0).length
-    return { totalSiswa, totalTunggakan, siswaLunas, siswaMenunggak }
+    let totalTunggakan = 0
+    let siswaLunas = 0
+    let siswaMenunggak = 0
+    for (let i = 0; i < filtered.length; i++) {
+      const s = filtered[i]
+      totalTunggakan += (s.sisaTagihan && s.sisaTagihan > 0)
+        ? s.sisaTagihan
+        : Math.max(0, s.totalTagihan - s.totalLunas)
+      if (s.belumLunasCount === 0) {
+        siswaLunas++
+      } else {
+        siswaMenunggak++
+      }
+    }
+    return { totalSiswa: filtered.length, totalTunggakan, siswaLunas, siswaMenunggak }
   }, [filtered])
 
   return (
@@ -5228,24 +5953,15 @@ function TabTagihan() {
           {!isKepalaSekolah && (
             <>
               <Button
-                variant="outline"
                 onClick={() => setDraftDrawerOpen(true)}
-                className={`h-8 px-2.5 sm:px-3 text-xs font-bold rounded-lg shadow-2xs touch-manipulation gap-1.5 relative transition-all border ${
-                  hasDraftBadge
-                    ? 'border-amber-300 dark:border-amber-700/80 bg-amber-50/90 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 ring-1 ring-amber-500/30'
-                    : 'border-slate-300 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-                title="Buka Tempat Khusus Draf Rilis Tagihan & Timer Scheduler"
+                className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 h-8 px-2.5 sm:px-3 text-xs font-bold rounded-lg shadow-xs touch-manipulation relative transition-all"
+                title="Pusat Rilis Tagihan Siswa (Semua tagihan diterbitkan resmi melalui draf)"
               >
-                <Bookmark className={`w-3.5 h-3.5 ${hasDraftBadge ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400'}`} />
-                <span>Draf Tagihan</span>
+                <Layers className="w-3.5 h-3.5" />
+                <span>Rilis Tagihan</span>
                 {hasDraftBadge && (
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse inline-block shrink-0" />
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse inline-block shrink-0" />
                 )}
-              </Button>
-              <Button onClick={() => setMassalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 h-8 px-2.5 sm:px-3 text-xs font-bold rounded-lg shadow-xs touch-manipulation">
-                <Layers className="w-3.5 h-3.5" /> <span>Rilis</span>
               </Button>
               <Button
                 variant="outline"
@@ -5271,6 +5987,17 @@ function TabTagihan() {
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Ekspor Kelas</span>
           </Button>
+          {!isKepalaSekolah && (
+            <Button
+              variant="outline"
+              onClick={() => setImportBeasiswaOpen(true)}
+              className="border-amber-300 dark:border-amber-800/70 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/50 h-8 px-2.5 text-xs font-bold rounded-lg shadow-2xs touch-manipulation gap-1.5"
+              title="Import file Excel beasiswa siswa berdasarkan nama dan NIS yang sinkron dengan master SIMASMUH"
+            >
+              <Upload className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>Import Beasiswa</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -5298,6 +6025,27 @@ function TabTagihan() {
             >
               <Percent className="w-3.5 h-3.5" />
               Set Beasiswa
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handlePromptResetBeasiswaSelected}
+              disabled={bulkResetBeasiswaMutation.isPending}
+              className="bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
+              title="Reset seluruh beasiswa siswa terpilih ke 0%"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+              Reset Beasiswa
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setImportBeasiswaOpen(true)}
+              className="bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
+              title="Import file Excel Beasiswa Siswa"
+            >
+              <Upload className="w-3.5 h-3.5 text-amber-600" />
+              Import Beasiswa
             </Button>
             <Button
               size="sm"
@@ -5728,29 +6476,60 @@ function TabTagihan() {
             </div>
           )}
 
-          <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950 flex flex-col-reverse sm:flex-row justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setIsBeasiswaDialogOpen(false)} className="h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700">
-              Batal
-            </Button>
-            <Button
-              type="button"
-              className="h-10 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-xs gap-1.5 text-xs sm:text-sm"
-              onClick={() => {
-                if (!beasiswaTargetStudent) return
-                updateBeasiswaMutation.mutate({
-                  id: beasiswaTargetStudent.id,
-                  beasiswaSeragamPct: beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? beasiswaSeragamVal : 0,
-                  beasiswaSppPct: beasiswaSppVal,
-                  beasiswaDppPct: beasiswaDppVal,
-                  beasiswaPercentage: beasiswaSppVal,
-                  beasiswaReason: beasiswaReason,
-                })
-              }}
-              disabled={updateBeasiswaMutation.isPending}
-            >
-              {updateBeasiswaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Percent className="w-4 h-4" />}
-              Simpan Beasiswa
-            </Button>
+          <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950 flex flex-col-reverse sm:flex-row justify-between items-center gap-2">
+            <div>
+              {beasiswaTargetStudent && (beasiswaTargetStudent.beasiswaSppPct || beasiswaTargetStudent.beasiswaDppPct || beasiswaTargetStudent.beasiswaSeragamPct || beasiswaTargetStudent.beasiswaPercentage) ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    Swal.fire({
+                      title: 'Reset Beasiswa Siswa?',
+                      text: `Beasiswa untuk ${beasiswaTargetStudent.name} akan dikembalikan ke 0% dan seluruh tagihan yang belum lunas disesuaikan ke nominal awal. Lanjutkan?`,
+                      icon: 'warning',
+                      showCancelButton: true,
+                      confirmButtonColor: '#d97706',
+                      cancelButtonColor: '#64748b',
+                      confirmButtonText: 'Ya, Reset Beasiswa',
+                      cancelButtonText: 'Batal',
+                    }).then((result) => {
+                      if (result.isConfirmed) {
+                        resetBeasiswaMutation.mutate(beasiswaTargetStudent.id)
+                      }
+                    })
+                  }}
+                  disabled={resetBeasiswaMutation.isPending || updateBeasiswaMutation.isPending}
+                  className="h-10 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded-xl font-semibold gap-1.5 text-xs w-full sm:w-auto"
+                >
+                  {resetBeasiswaMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                  Reset Beasiswa (0%)
+                </Button>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <Button type="button" variant="outline" onClick={() => setIsBeasiswaDialogOpen(false)} className="h-10 rounded-xl font-medium border-slate-200 dark:border-slate-700">
+                Batal
+              </Button>
+              <Button
+                type="button"
+                className="h-10 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-xs gap-1.5 text-xs sm:text-sm"
+                onClick={() => {
+                  if (!beasiswaTargetStudent) return
+                  updateBeasiswaMutation.mutate({
+                    id: beasiswaTargetStudent.id,
+                    beasiswaSeragamPct: beasiswaTargetStudent.jalurPendaftaran !== 'Mandiri' ? beasiswaSeragamVal : 0,
+                    beasiswaSppPct: beasiswaSppVal,
+                    beasiswaDppPct: beasiswaDppVal,
+                    beasiswaPercentage: beasiswaSppVal,
+                    beasiswaReason: beasiswaReason,
+                  })
+                }}
+                disabled={updateBeasiswaMutation.isPending || resetBeasiswaMutation.isPending}
+              >
+                {updateBeasiswaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Percent className="w-4 h-4" />}
+                Simpan Beasiswa
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -5758,12 +6537,18 @@ function TabTagihan() {
       <TagihanModal student={detailData ?? null} open={modalOpen}
         onClose={() => { setModalOpen(false); setSelectedStudent(null) }}
         onResetStudent={(id) => openResetModal([id])} />
-      <ReleaseYearlyModal open={massalOpen} onClose={() => setMassalOpen(false)} classes={classes} />
+      <ReleaseYearlyModal
+        open={massalOpen}
+        onClose={() => setMassalOpen(false)}
+        classes={classes}
+        onOpenDrafts={() => setDraftDrawerOpen(true)}
+      />
       <ReleaseYearlyModal
         open={bulkTagihanOpen}
         onClose={() => setBulkTagihanOpen(false)}
         classes={classes}
         studentIds={bulkTagihanOpen ? selectedStudentIds : undefined}
+        onOpenDrafts={() => setDraftDrawerOpen(true)}
       />
       <DraftDrawerModal
         open={draftDrawerOpen}
@@ -5841,6 +6626,98 @@ function TabTagihan() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* IMPORT EXCEL BEASISWA DIALOG */}
+      <Dialog open={importBeasiswaOpen} onOpenChange={setImportBeasiswaOpen}>
+        <DialogContent className="max-w-lg w-[95vw] sm:w-full p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl border border-emerald-100 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                Import Beasiswa Siswa (.xlsx)
+              </DialogTitle>
+              <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+                Perbarui persentase beasiswa massal berdasarkan NIS dan Nama yang tersinkronisasi data master SIMASMUH.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-5 sm:p-6 space-y-4">
+            <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-3.5 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
+                  <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Template Resmi Sinkron SIMASMUH</span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={downloadBeasiswaTemplate}
+                  disabled={isDownloadingTemplate}
+                  className="h-8 px-2.5 text-xs font-bold rounded-lg border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/50 gap-1.5 shadow-2xs"
+                >
+                  {isDownloadingTemplate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-amber-600" />}
+                  <span>Unduh Template</span>
+                </Button>
+              </div>
+              <p className="text-[11px] text-amber-700/90 dark:text-amber-400 leading-relaxed">
+                Template sudah otomatis memuat seluruh nama dan NIS siswa aktif SIMASMUH. Anda cukup melengkapi kolom persentase beasiswa (Seragam, SPP, DPP) lalu mengunggahnya kembali.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Pilih Berkas Excel (.xlsx / .xls)
+              </Label>
+              <div className="relative border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 rounded-2xl p-6 text-center transition-colors bg-slate-50/50 dark:bg-slate-950/40">
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleImportBeasiswaFile}
+                  disabled={isImportingBeasiswa}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                />
+                <div className="flex flex-col items-center justify-center gap-2 pointer-events-none">
+                  {isImportingBeasiswa ? (
+                    <>
+                      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Memproses & Menerapkan Beasiswa...</p>
+                      <p className="text-[11px] text-slate-400">Sinkronisasi ke seluruh tagihan siswa...</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-full shadow-xs border border-slate-100 dark:border-slate-800">
+                        <Upload className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Klik atau seret file Excel ke sini
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        Mendukung format .xlsx dan .xls (Maks 10MB)
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setImportBeasiswaOpen(false)}
+              disabled={isImportingBeasiswa}
+              className="h-9 rounded-xl text-xs font-medium border-slate-200 dark:border-slate-700"
+            >
+              Tutup
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
       <ManualCashPaymentModal open={cashModalOpen} onClose={() => setCashModalOpen(false)} students={students} />

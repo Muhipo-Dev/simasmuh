@@ -19,7 +19,7 @@ async function getSettings() {
   try {
     const res = await fetch(getPublicApiUrl('/settings/public'), {
       cache: 'no-store',
-      headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026' }
+      headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55' }
     })
     if (!res.ok) return null
     return res.json()
@@ -44,7 +44,7 @@ async function getAnnouncements(): Promise<Announcement[]> {
   try {
     const res = await fetch(getPublicApiUrl('/announcements/public'), {
       cache: 'no-store',
-      headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026' }
+      headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55' }
     })
     if (!res.ok) return []
     return res.json()
@@ -57,7 +57,7 @@ async function getStats() {
   try {
     const res = await fetch(getPublicApiUrl('/settings/public/stats'), {
       cache: 'no-store',
-      headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'siakad_secret_api_key_2026' }
+      headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'nailar-muhipo55' }
     })
     if (!res.ok) return null
     return res.json()

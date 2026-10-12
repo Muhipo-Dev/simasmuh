@@ -37,7 +37,7 @@ import { QuickServerStatusPanel } from '@/components/dashboard/QuickServerStatus
 import { MaintenanceModeHeaderSwitch, WaitingRoomHeaderSwitch } from '@/components/dashboard/MaintenanceWaitingRoomSwitches'
 import { DisposisiAlertBanner } from '@/components/dashboard/DisposisiAlertBanner'
 
-import { useRealtimeServerClock } from '@/lib/time-sync'
+import { getGreetingByTime } from '@/lib/time-sync'
 
 const formatProgramName = (code?: string | null) => {
   if (!code) return 'Reguler'
@@ -62,7 +62,14 @@ const parseTimeToMinutes = (t: string | undefined | null): number => {
 
 export default function DashboardPage() {
   const { data: session } = useSession()
-  const clock = useRealtimeServerClock(30000)
+  const clock = useMemo(() => {
+    const now = new Date()
+    return {
+      greeting: getGreetingByTime(now),
+      dateString: now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+      timeString: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+    }
+  }, [])
   const [showPaymentPopup, setShowPaymentPopup] = useState(false)
   const role = (session?.user as any)?.role || 'GURU'
   const subRole = (session?.user as any)?.subRole
@@ -199,7 +206,7 @@ export default function DashboardPage() {
     queryKey: ['system-supervisor-metrics'],
     queryFn: () => authenticatedQuery('/api-backend/settings/supervisor-metrics'),
     enabled: isSuperadminRole,
-    refetchInterval: 5000 // Auto refresh realtime setiap 5 detik
+    refetchInterval: showServerStatus ? 5000 : false
   })
 
   // Query Disposisi Aktif Khusus Pengguna (Guru / Pegawai / Staff / Waka / Kepala Sekolah)
@@ -212,7 +219,7 @@ export default function DashboardPage() {
       return json.data || []
     },
     enabled: !!userId && role !== 'SISWA' && role !== 'WALI_MURID',
-    refetchInterval: 15000,
+    refetchInterval: 60000,
   })
 
   const pendingUserDisposisi = useMemo(() => {
@@ -3423,12 +3430,13 @@ export default function DashboardPage() {
         <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
       </div>
 
-      {/* TAMPILAN KHUSUS DESKTOP (VIEW >= LG): 2-KOLOM DENGAN URUTAN WIDGET TERSTANDAR */}
-      {/* Kolom Kiri: 1. Identitas Pengguna -> (E-Sign jika Kepsek) -> 2. Informasi Pengumuman Sistem -> 3. Daftar Berita Artikel -> 4. Kalender */}
-      {/* Kolom Kanan: Tombol Akses Cepat */}
-      <div className="hidden lg:grid lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
-        {/* AREA KIRI: SELURUH WIDGET (AKUN, INFORMASI SISTEM, BERITA, KALENDER) */}
-        <div className="lg:col-span-5 xl:col-span-4 space-y-3.5 sm:space-y-4">
+      {/* TAMPILAN KHUSUS DESKTOP (VIEW >= LG): 3-KOLOM DENGAN STRUKTUR SIDE WIDGET KIRI-KANAN & TENGAH AKSES CEPAT */}
+      {/* Kolom Kiri (3 cols): Identitas Pengguna -> (E-Sign jika Kepsek) -> Informasi Pengumuman Sistem */}
+      {/* Kolom Tengah (6 cols): Pusat Akses Layanan & Modul Operasional */}
+      {/* Kolom Kanan (3 cols): Kalender Kegiatan Terpadu -> Daftar Berita & Artikel */}
+      <div className="hidden lg:grid lg:grid-cols-12 gap-3.5 sm:gap-4 xl:gap-5 items-start">
+        {/* AREA KIRI: IDENTITAS PENGGUNA & INFORMASI SISTEM */}
+        <div className="lg:col-span-3 xl:col-span-3 2xl:col-span-3 space-y-3.5 sm:space-y-4">
           {/* 1. Identitas Pengguna */}
           <UserAccountCard
             role={role}
@@ -3515,17 +3523,11 @@ export default function DashboardPage() {
           )}
 
           {/* 2. Informasi Pengumuman Sistem */}
-          <SystemInfoWidget announcements={systemAnnouncements} limit={3} />
-
-          {/* 3. Daftar Berita Artikel */}
-          <NewsArticleListWidget announcements={announcements} limit={4} />
-
-          {/* 4. Kalender */}
-          <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
+          <SystemInfoWidget announcements={systemAnnouncements} limit={4} />
         </div>
 
-        {/* AREA KANAN: TOMBOL AKSES CEPAT LAYANAN UTAMA */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-3.5 sm:space-y-4">
+        {/* AREA TENGAH: PUSAT AKSES LAYANAN & MODUL OPERASIONAL */}
+        <div className="lg:col-span-6 xl:col-span-6 2xl:col-span-6 space-y-3.5 sm:space-y-4">
           <div>
             <div className="flex items-center justify-between gap-2 mb-2.5 px-1">
               <div className="flex items-center gap-1.5">
@@ -3540,6 +3542,15 @@ export default function DashboardPage() {
             </div>
             <CenterQuickAccessGrid links={currentLinks} role={role} />
           </div>
+        </div>
+
+        {/* AREA KANAN: KALENDER KEGIATAN & DAFTAR BERITA ARTIKEL */}
+        <div className="lg:col-span-3 xl:col-span-3 2xl:col-span-3 space-y-3.5 sm:space-y-4">
+          {/* 1. Kalender Kegiatan */}
+          <ActivityCalendarWidget announcements={announcements} title="Kalender Kegiatan" />
+
+          {/* 2. Daftar Berita Artikel */}
+          <NewsArticleListWidget announcements={announcements} limit={4} />
         </div>
       </div>
 

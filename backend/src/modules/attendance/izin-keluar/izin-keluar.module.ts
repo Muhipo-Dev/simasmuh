@@ -10,7 +10,7 @@ import { NotificationsModule } from '../../communication/notifications/notificat
     PrismaModule,
     NotificationsModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'secretKey',
+      secret: process.env.JWT_SECRET || 'nailar-muhipo55',
       signOptions: { expiresIn: '1d' },
     }),
   ],

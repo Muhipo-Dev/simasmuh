@@ -26,7 +26,7 @@ export class IzinKeluarController {
       if (!authorization || !authorization.startsWith('Bearer ')) return null;
       const token = authorization.replace('Bearer ', '');
       const payload: any = this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET || 'secretKey',
+        secret: process.env.JWT_SECRET || 'nailar-muhipo55',
       });
       return { userId: payload.sub, role: payload.role };
     } catch {

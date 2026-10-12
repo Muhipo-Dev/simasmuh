@@ -26,6 +26,40 @@ export class StudentsController {
     return this.studentsService.findAll();
   }
 
+  @Get('template-beasiswa')
+  @UseGuards(JwtAuthGuard)
+  async generateBeasiswaTemplate(@Res() res: Response) {
+    const buffer = await this.studentsService.generateBeasiswaTemplate();
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=template_beasiswa_siswa_simasmuh.xlsx',
+    );
+    res.end(buffer);
+  }
+
+  @Post('import-beasiswa')
+  @UseGuards(JwtAuthGuard)
+  importBeasiswa(
+    @Body()
+    body: {
+      items: Array<{
+        nis?: string;
+        nisn?: string;
+        name?: string;
+        beasiswaSeragamPct?: number;
+        beasiswaSppPct?: number;
+        beasiswaDppPct?: number;
+        beasiswaReason?: string;
+      }>;
+    },
+  ) {
+    return this.studentsService.importBeasiswa(body.items || []);
+  }
+
   @Get('by-user/:userId')
   findByUser(@Param('userId') userId: string) {
     return this.studentsService.findByUserId(userId);
@@ -117,6 +151,18 @@ export class StudentsController {
     },
   ) {
     return this.studentsService.bulkUpdateBeasiswa(body);
+  }
+
+  @Post(':id/reset-beasiswa')
+  @UseGuards(JwtAuthGuard)
+  resetBeasiswa(@Param('id') id: string) {
+    return this.studentsService.resetBeasiswa(id);
+  }
+
+  @Post('bulk-reset-beasiswa')
+  @UseGuards(JwtAuthGuard)
+  bulkResetBeasiswa(@Body('studentIds') studentIds: string[]) {
+    return this.studentsService.bulkResetBeasiswa(studentIds || []);
   }
 
   @Patch(':id/toggle-active')

@@ -123,7 +123,7 @@ async function main() {
       data: {
         whatsappSenderNumber: DEFAULT_PHONE,
         whatsappApiUrl: 'http://localhost:3002/api/send',
-        whatsappApiKey: 'simasmuh_wa_secret_2026',
+        whatsappApiKey: 'nailar-muhipo55',
       },
     });
     console.log(

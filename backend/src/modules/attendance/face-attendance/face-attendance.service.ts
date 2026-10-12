@@ -284,7 +284,7 @@ export class FaceAttendanceService implements OnModuleInit {
           welcomeVoice: true,
           showPublicStream: true,
           showPublicLogs: true,
-          apiKeySecret: 'simasmuh_face_token_secret_2026',
+          apiKeySecret: 'nailar-muhipo55',
           updatedAt: new Date().toISOString(),
         };
         this.saveConfigFile(defaultConfig);
@@ -378,7 +378,7 @@ export class FaceAttendanceService implements OnModuleInit {
       welcomeVoice: true,
       showPublicStream: true,
       showPublicLogs: true,
-      apiKeySecret: 'simasmuh_face_token_secret_2026',
+      apiKeySecret: 'nailar-muhipo55',
       updatedAt: new Date().toISOString(),
     };
   }

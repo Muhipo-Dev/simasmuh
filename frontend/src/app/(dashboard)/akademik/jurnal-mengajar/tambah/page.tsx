@@ -2,11 +2,13 @@
 
 import React, { useRef, useState, useCallback, useEffect, Suspense } from 'react'
 import Swal from 'sweetalert2'
-import { useRouter, useSearchParams } from 'next/navigation'
+import {
+  useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Webcam from 'react-webcam'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { Camera, RefreshCcw, Save, Loader2, Calendar, Clock, BookOpen, Sparkles, Copy, UploadCloud, Check } from 'lucide-react'
+import { Camera, RefreshCcw, Save, Loader2, Calendar, Clock, BookOpen, Copy, UploadCloud, Check, LayoutGrid
+} from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -398,7 +400,7 @@ function TambahJurnalContent() {
             {sameClassLastJournal && (
               <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs">
                 <div className="flex items-start gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <LayoutGrid className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-semibold text-amber-900 dark:text-amber-200 block">
                       Ditemukan Jurnal Sebelumnya untuk Kelas & Mapel Ini

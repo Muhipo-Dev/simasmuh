@@ -11,8 +11,13 @@ import * as ExcelJS from 'exceljs';
 export class StudentsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(filter?: { classId?: string }) {
+    const where: any = {};
+    if (filter?.classId && filter.classId !== 'ALL') {
+      where.classId = filter.classId;
+    }
     return this.prisma.student.findMany({
+      where,
       include: {
         class: true,
         user: true,
@@ -91,9 +96,10 @@ export class StudentsService {
   }
 
   async create(data: any) {
-    // Create User and Student together
+    // Create User and Student together: NIS is mandatory school ID and default username/password
     const username = data.nis;
-    const nisn = data.nisn || data.nis;
+    // NISN bersifat murni opsional; jangan copy paste dari NIS
+    const nisn = data.nisn && data.nisn.trim() !== '' && data.nisn.trim() !== data.nis?.trim() ? data.nisn.trim() : null;
     const plainPassword = data.password || username; // default to username (NIS)
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
@@ -133,8 +139,9 @@ export class StudentsService {
     const hashedDataArray = await Promise.all(
       dataArray.map(async (data) => {
         const username = data.nis || data.username || String(Math.random());
-        const nisn = data.nisn || data.nis || username;
-        const plainPassword = data.password || username; // Default password is username
+        // NISN murni opsional dan tidak di-copy dari NIS
+        const nisn = data.nisn && data.nisn.trim() !== '' && data.nisn.trim() !== data.nis?.trim() ? data.nisn.trim() : null;
+        const plainPassword = data.password || username; // Default password is username (NIS)
         const hashedPassword = await bcrypt.hash(plainPassword, 10);
         return { ...data, username, nisn, password: hashedPassword };
       }),
@@ -228,10 +235,20 @@ export class StudentsService {
       finalPassword = await bcrypt.hash(finalPassword, 10);
     }
 
+    // NISN bersifat opsional dan tidak di-copy dari NIS
+    let newNisn: string | null | undefined = student.nisn;
+    if (data.nisn !== undefined) {
+      if (data.nisn && data.nisn.trim() !== '' && data.nisn.trim() !== (data.nis || student.nis)?.trim()) {
+        newNisn = data.nisn.trim();
+      } else {
+        newNisn = null;
+      }
+    }
+
     const updated = await (this.prisma.student as any).update({
       where: { id },
       data: {
-        nisn: data.nisn || data.nis || student.nisn,
+        nisn: newNisn,
         nis: data.nis,
         name: data.name,
         gender: data.gender,
@@ -1006,7 +1023,6 @@ export class StudentsService {
       { header: 'NIS *', key: 'nis', width: 14 },
       { header: 'Nama Siswa *', key: 'name', width: 34 },
       { header: 'Kelas', key: 'className', width: 14 },
-      { header: 'NISN', key: 'nisn', width: 16 },
       { header: 'Jalur', key: 'jalur', width: 14 },
       { header: 'Beasiswa Seragam (%)', key: 'seragamPct', width: 22 },
       { header: 'Beasiswa SPP (%)', key: 'sppPct', width: 20 },
@@ -1040,7 +1056,6 @@ export class StudentsService {
         nis: student.nis || '',
         name: student.name || '',
         className: student.class?.name || '',
-        nisn: student.nisn || '',
         jalur: student.jalurPendaftaran || 'Reguler',
         seragamPct: student.beasiswaSeragamPct || 0,
         sppPct: student.beasiswaSppPct || student.beasiswaPercentage || 0,
@@ -1052,7 +1067,6 @@ export class StudentsService {
       row.getCell('no').alignment = { vertical: 'middle', horizontal: 'center' };
       row.getCell('nis').alignment = { vertical: 'middle', horizontal: 'center' };
       row.getCell('className').alignment = { vertical: 'middle', horizontal: 'center' };
-      row.getCell('nisn').alignment = { vertical: 'middle', horizontal: 'center' };
       row.getCell('jalur').alignment = { vertical: 'middle', horizontal: 'center' };
       row.getCell('seragamPct').alignment = { vertical: 'middle', horizontal: 'right' };
       row.getCell('sppPct').alignment = { vertical: 'middle', horizontal: 'right' };

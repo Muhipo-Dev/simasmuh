@@ -183,7 +183,7 @@ export default function ErrorPageContainer({
         <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
           <div className="p-1 sm:p-1.5 rounded-xl border shadow-2xs transition-transform group-hover:scale-105 shrink-0 bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700">
             <NextImage
-              src="/pic_logo.png"
+              src="/logos/pic_logo.png"
               alt="Logo SIMASMUH"
               width={38}
               height={38}

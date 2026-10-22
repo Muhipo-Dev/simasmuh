@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import {
+  useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
-  Plus, Loader2, Pencil, Trash2, Search, Users, UserCheck, 
-  Phone, Key, RefreshCw, Sparkles, AlertCircle, 
-  GraduationCap, CheckCircle2, Power, PowerOff, ShieldCheck
+  Plus, Loader2, Pencil, Trash2, Search, Users, UserCheck, Phone, Key, RefreshCw, AlertCircle, GraduationCap, CheckCircle2, Power, PowerOff, ShieldCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -526,7 +525,7 @@ export default function WaliMuridPage() {
             onClick={() => setSyncDialogOpen(true)}
             className="border-indigo-200 text-indigo-700 dark:text-indigo-300 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 gap-2 font-bold text-xs h-9 rounded-xl"
           >
-            <Sparkles className="w-4 h-4 text-indigo-500" />
+            <UserCheck className="w-4 h-4 text-indigo-500" />
             Sinkronkan dari Siswa
           </Button>
           <Button onClick={handleOpenAddDialog} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 font-bold text-xs h-9 rounded-xl">
@@ -1016,7 +1015,7 @@ export default function WaliMuridPage() {
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-indigo-600">
-              <Sparkles className="w-5 h-5" />
+              <UserCheck className="w-5 h-5" />
               Sinkronisasi Akun dari Data Siswa
             </DialogTitle>
             <DialogDescription>

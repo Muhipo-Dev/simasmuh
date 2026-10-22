@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import {
+  useState, useRef, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -11,11 +12,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Link from 'next/link'
+import { FaceRegistrationModal } from '@/components/face/FaceRegistrationModal'
 import { 
-  Camera, Loader2, CheckCircle2, User, MapPin, Mail, Shield, Pencil, X, 
-  GraduationCap, Award, Key, Lock, AlertCircle, Laptop, Clock, Globe, ShieldCheck, RefreshCw,
-  Smartphone, Monitor, Calendar, LogOut, ShieldAlert, Sparkles, LogOut as DisconnectIcon, Trash2, Server, Activity,
-  Printer, CreditCard, Download, QrCode, BookMarked, ArrowRight
+  Camera, Loader2, CheckCircle2, User, MapPin, Mail, Shield, Pencil, X, GraduationCap, Award, Key, Lock, AlertCircle, Laptop, Clock, Globe, ShieldCheck, RefreshCw, Smartphone, Monitor, Calendar, LogOut, ShieldAlert, LogOut as DisconnectIcon, Trash2, Server, Activity, Printer, CreditCard, Download, QrCode, BookMarked, ArrowRight, UserCheck
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 
@@ -110,6 +109,9 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const authenticatedFetch = useAuthenticatedFetch()
 
+  const userObj = session?.user as any
+  const isSpectator = userObj?.isReadOnly === true || userObj?.overrideMode === 'spectator'
+
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({
     name: '', address: '', avatarUrl: '', email: '',
@@ -119,9 +121,7 @@ export default function ProfilePage() {
 
   const [pwdForm, setPwdForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
   const [pwdMsg, setPwdMsg] = useState({ type: '', text: '' })
-  const [showWaitingRoomDemo, setShowWaitingRoomDemo] = useState(false)
-  const [demoPosition, setDemoPosition] = useState(14)
-  const [demoWait, setDemoWait] = useState(25)
+  const [isFaceRegModalOpen, setIsFaceRegModalOpen] = useState(false)
   const [sessionTab, setSessionTab] = useState<'active' | 'logs'>('active')
   const [cardPreviewSide, setCardPreviewSide] = useState<'both' | 'front' | 'back'>('both')
 
@@ -309,7 +309,8 @@ export default function ProfilePage() {
           : '<div>-</div>'
     const alamatStr = form.address || profile.address || '-'
     const genderStr = profile.student?.gender === 'L' ? 'Laki-laki' : profile.student?.gender === 'P' ? 'Perempuan' : profile.student?.gender || '-'
-    const avatarUrl = form.avatarUrl || profile.avatarUrl || ''
+    const rawAvatarUrl = form.avatarUrl || profile.avatarUrl || ''
+    const avatarUrl = rawAvatarUrl.startsWith('/uploads') ? `/api-backend${rawAvatarUrl}` : rawAvatarUrl
     const frontBgUrl = schoolSettings?.studentCardTemplateUrl
       ? (schoolSettings.studentCardTemplateUrl.startsWith('/uploads') ? `/api-backend${schoolSettings.studentCardTemplateUrl}` : schoolSettings.studentCardTemplateUrl)
       : '/images/kartu-pelajar-depan.png'
@@ -759,23 +760,30 @@ export default function ProfilePage() {
                 Foto profil, biodata lengkap, dan kredensial akun SIMASMUH
               </CardDescription>
             </div>
-            {!editing ? (
-              <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-1.5 text-xs font-semibold">
-                <Pencil className="w-3.5 h-3.5" /> Edit Profil
-              </Button>
-            ) : (
-              <Button variant="ghost" size="sm" onClick={() => {
-                setEditing(false)
-                if (profile) setForm({
-                  name: profile.name, email: profile.email || '', address: profile.address || '',
-                  avatarUrl: profile.avatarUrl || '',
-                  lastEducation: normalizeEducation(profile.teacherProfile?.lastEducation),
-                  certificationStatus: profile.teacherProfile?.certificationStatus || '',
-                  certificationYear: profile.teacherProfile?.certificationYear?.toString() || '',
-                })
-              }} className="gap-1.5 text-xs">
-                <X className="w-3.5 h-3.5" /> Batal
-              </Button>
+            {!isSpectator && (
+              !editing ? (
+                <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-1.5 text-xs font-semibold">
+                  <Pencil className="w-3.5 h-3.5" /> Edit Profil
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setEditing(false)
+                  if (profile) setForm({
+                    name: profile.name, email: profile.email || '', address: profile.address || '',
+                    avatarUrl: profile.avatarUrl || '',
+                    lastEducation: normalizeEducation(profile.teacherProfile?.lastEducation),
+                    certificationStatus: profile.teacherProfile?.certificationStatus || '',
+                    certificationYear: profile.teacherProfile?.certificationYear?.toString() || '',
+                  })
+                }} className="gap-1.5 text-xs">
+                  <X className="w-3.5 h-3.5" /> Batal
+                </Button>
+              )
+            )}
+            {isSpectator && (
+              <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-1 rounded-md border border-amber-300 dark:border-amber-800">
+                Mode Spectator (Hanya Lihat)
+              </span>
             )}
           </div>
         </CardHeader>
@@ -785,9 +793,19 @@ export default function ProfilePage() {
             <div className="md:col-span-4 flex flex-col items-center text-center p-5 bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
               <div className="relative mb-3">
                 <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-4 border-white dark:border-slate-700 shadow-md bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                  {form.avatarUrl ? (
+                  {(form.avatarUrl || profile?.avatarUrl) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.avatarUrl} alt="Foto Profil" className="w-full h-full object-cover" />
+                    <img 
+                      src={form.avatarUrl || profile?.avatarUrl} 
+                      alt="Foto Profil" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.currentTarget
+                        if (target.src.startsWith('/uploads/')) {
+                          target.src = `/api-backend${target.src}`
+                        }
+                      }}
+                    />
                   ) : (
                     <User className="w-14 h-14 text-blue-400" />
                   )}
@@ -815,7 +833,7 @@ export default function ProfilePage() {
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                   </div>
                 )}
-                {!editing && profile?.avatarUrl && (
+                {!editing && !isSpectator && profile?.avatarUrl && (
                   <button
                     type="button"
                     onClick={handleRemoveAvatar}
@@ -845,6 +863,21 @@ export default function ProfilePage() {
                 )}
               </div>
 
+              {/* Tombol Perekaman Wajah Face ID */}
+              <div className="mt-3 w-full space-y-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsFaceRegModalOpen(true)}
+                  className="w-full text-xs font-semibold text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl gap-2 h-9"
+                >
+                  <Camera className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span>Perekaman Face ID (7 Tahap)</span>
+                </Button>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center leading-tight">
+                  Opsional • Membantu presensi kamera mendeteksi wajah lebih cepat.
+                </p>
+              </div>
               {/* Banner Shortcut Buku Induk khusus Siswa */}
               {role === 'SISWA' && (
                 <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 w-full text-left">
@@ -1545,11 +1578,22 @@ export default function ProfilePage() {
                       <div className="relative z-10 w-full h-full pointer-events-none">
                         {/* Foto Siswa (Menempati persis bingkai kotak foto template) */}
                         <div className="absolute left-[15.20%] top-[17.32%] w-[35.58%] h-[33.07%] rounded-[5px] overflow-hidden flex items-center justify-center bg-white shadow-2xs">
-                          {form.avatarUrl ? (
+                          {(form.avatarUrl || profile?.avatarUrl) ? (
                             <img 
-                              src={form.avatarUrl} 
+                              src={(() => {
+                                const url = form.avatarUrl || profile?.avatarUrl || ''
+                                if (url.startsWith('/uploads')) return `/api-backend${url}`
+                                return url
+                              })()} 
                               alt={profile?.name || 'Foto Siswa'} 
                               className="w-full h-full object-cover" 
+                              onError={(e) => {
+                                const target = e.currentTarget
+                                const original = form.avatarUrl || profile?.avatarUrl || ''
+                                if (original.startsWith('/uploads') && !target.src.includes('/api-backend')) {
+                                  target.src = `/api-backend${original}`
+                                }
+                              }}
                             />
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
@@ -1678,69 +1722,84 @@ export default function ProfilePage() {
           </div>
         </CardHeader>
         <CardContent className="pt-6 space-y-5">
-          {pwdMsg.text && (
-            <div className={`flex items-center gap-2.5 p-3.5 rounded-xl text-sm font-medium border ${
-              pwdMsg.type === 'success'
-                ? 'bg-green-50 border-green-200 text-green-700'
-                : 'bg-red-50 border-red-200 text-red-700'
-            }`}>
-              {pwdMsg.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0 text-green-600" /> : <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />}
-              <span>{pwdMsg.text}</span>
+          {isSpectator ? (
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs">
+              <Lock className="w-5 h-5 text-amber-600 shrink-0" />
+              <div>
+                <p className="font-bold">Mode Spectator Aktif</p>
+                <p className="text-[11px] opacity-80 mt-0.5">
+                  Anda sedang meninjau akun ini dalam mode hanya lihat (Read Only). Anda tidak dapat mengubah kata sandi akun pengguna ini. Seluruh kata sandi pengguna dilindungi enkripsi hash satu arah yang tidak dapat dilihat oleh siapapun termasuk admin.
+                </p>
+              </div>
             </div>
+          ) : (
+            <>
+              {pwdMsg.text && (
+                <div className={`flex items-center gap-2.5 p-3.5 rounded-xl text-sm font-medium border ${
+                  pwdMsg.type === 'success'
+                    ? 'bg-green-50 border-green-200 text-green-700'
+                    : 'bg-red-50 border-red-200 text-red-700'
+                }`}>
+                  {pwdMsg.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0 text-green-600" /> : <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />}
+                  <span>{pwdMsg.text}</span>
+                </div>
+              )}
+
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="oldPassword" className="text-slate-700 font-medium flex items-center gap-2">
+                    <Key className="w-4 h-4 text-slate-400" /> Kata Sandi Saat Ini (Lama)
+                  </Label>
+                  <PasswordInput
+                    id="oldPassword"
+                    placeholder="Masukkan kata sandi lama untuk otorisasi..."
+                    value={pwdForm.oldPassword}
+                    onChange={e => setPwdForm(p => ({ ...p, oldPassword: e.target.value }))}
+                    className="border-slate-200 focus:border-blue-500 h-10 rounded-lg max-w-md"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword" className="text-slate-700 font-medium flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-slate-400" /> Kata Sandi Baru
+                    </Label>
+                    <PasswordInput
+                      id="newPassword"
+                      placeholder="Minimal 5 karakter..."
+                      value={pwdForm.newPassword}
+                      onChange={e => setPwdForm(p => ({ ...p, newPassword: e.target.value }))}
+                      className="border-slate-200 focus:border-blue-500 h-10 rounded-lg"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword" className="text-slate-700 font-medium flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-slate-400" /> Konfirmasi Kata Sandi Baru
+                    </Label>
+                    <PasswordInput
+                      id="confirmPassword"
+                      placeholder="Ketik ulang kata sandi baru..."
+                      value={pwdForm.confirmPassword}
+                      onChange={e => setPwdForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                      className="border-slate-200 focus:border-blue-500 h-10 rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <Button 
+                    type="submit" 
+                    disabled={pwdMutation.isPending}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg shadow-sm transition-all flex items-center gap-2"
+                  >
+                    {pwdMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</> : 'Simpan Kata Sandi Baru'}
+                  </Button>
+                </div>
+              </form>
+            </>
           )}
 
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="oldPassword" className="text-slate-700 font-medium flex items-center gap-2">
-                <Key className="w-4 h-4 text-slate-400" /> Kata Sandi Saat Ini (Lama)
-              </Label>
-              <PasswordInput
-                id="oldPassword"
-                placeholder="Masukkan kata sandi lama untuk otorisasi..."
-                value={pwdForm.oldPassword}
-                onChange={e => setPwdForm(p => ({ ...p, oldPassword: e.target.value }))}
-                className="border-slate-200 focus:border-blue-500 h-10 rounded-lg max-w-md"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="newPassword" className="text-slate-700 font-medium flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-slate-400" /> Kata Sandi Baru
-                </Label>
-                <PasswordInput
-                  id="newPassword"
-                  placeholder="Minimal 5 karakter..."
-                  value={pwdForm.newPassword}
-                  onChange={e => setPwdForm(p => ({ ...p, newPassword: e.target.value }))}
-                  className="border-slate-200 focus:border-blue-500 h-10 rounded-lg"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-slate-700 font-medium flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-slate-400" /> Konfirmasi Kata Sandi Baru
-                </Label>
-                <PasswordInput
-                  id="confirmPassword"
-                  placeholder="Ketik ulang kata sandi baru..."
-                  value={pwdForm.confirmPassword}
-                  onChange={e => setPwdForm(p => ({ ...p, confirmPassword: e.target.value }))}
-                  className="border-slate-200 focus:border-blue-500 h-10 rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div className="pt-2 flex justify-end">
-              <Button 
-                type="submit" 
-                disabled={pwdMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg shadow-sm transition-all flex items-center gap-2"
-              >
-                {pwdMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</> : 'Simpan Kata Sandi Baru'}
-              </Button>
-            </div>
-          </form>
         </CardContent>
       </Card>
 
@@ -1760,16 +1819,6 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowWaitingRoomDemo(true)}
-                className="h-8 px-2.5 text-xs flex items-center gap-1.5 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-xl"
-                title="Uji Coba Tampilan Waiting Room"
-              >
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span>Simulasi Waiting Room</span>
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -2093,130 +2142,22 @@ export default function ProfilePage() {
           )}
         </CardContent>
       </Card>
-
-      {/* MODAL SIMULASI WAITING ROOM */}
-      {showWaitingRoomDemo && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/90 backdrop-blur-2xl p-3 sm:p-4 md:p-6 text-white overflow-y-auto">
-          {/* Animated Background Ambience */}
-          <div className="fixed inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] sm:w-[500px] h-[320px] sm:h-[500px] bg-emerald-500/15 rounded-full blur-[100px] animate-pulse" />
-            <div className="absolute bottom-1/4 right-1/4 w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-teal-500/10 rounded-full blur-[90px] animate-pulse delay-700" />
-            <div className="absolute top-1/3 left-1/4 w-[200px] sm:w-[350px] h-[200px] sm:h-[350px] bg-indigo-500/10 rounded-full blur-[80px] animate-pulse delay-1000" />
-          </div>
-
-          <div className="relative w-full max-w-lg overflow-hidden rounded-2xl sm:rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-950/95 p-5 sm:p-7 md:p-8 shadow-2xl shadow-emerald-950/60 backdrop-blur-xl transition-all duration-300">
-            {/* Close Button for Demo */}
-            <button
-              onClick={() => setShowWaitingRoomDemo(false)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition cursor-pointer z-10"
-              title="Tutup Simulasi"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            {/* Header Badge */}
-            <div className="flex items-center justify-between gap-2 mb-4 pr-8">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-sm shadow-emerald-950">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                Simulasi Waiting Room
-              </span>
-              <span className="flex items-center gap-1 text-[11px] text-slate-400 font-mono">
-                <Server className="w-3 h-3 text-emerald-400" />
-                Preview Mode
-              </span>
-            </div>
-
-            {/* Icon & Title */}
-            <div className="text-center mb-5 sm:mb-6">
-              <div className="relative mx-auto mb-3 sm:mb-4 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-400/30 text-emerald-400 shadow-xl shadow-emerald-900/30">
-                <ShieldAlert className="h-8 w-8 sm:h-10 sm:w-10 animate-bounce text-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,0.6)]" />
-              </div>
-
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-1.5 bg-gradient-to-r from-white via-emerald-100 to-teal-200 bg-clip-text text-transparent">
-                Ruang Tunggu Antrean
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-sm mx-auto leading-relaxed">
-                Lalu lintas pengguna saat ini sedang sangat padat. Demi menjaga kestabilan data & keamanan sistem, Anda ditempatkan di antrean virtual.
-              </p>
-            </div>
-
-            {/* Cards: Position & Wait Time */}
-            <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 mb-5 sm:mb-6">
-              <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-800/40 border border-slate-700/60 p-3 sm:p-4 text-center transition hover:border-emerald-500/50">
-                <div className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-medium text-slate-400 mb-1">
-                  <User className="w-3.5 h-3.5 text-emerald-400" /> Nomor Antrean
-                </div>
-                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-emerald-400 tracking-tight drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]">
-                  #{demoPosition}
-                </div>
-                <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">
-                  dari 15 antrean simulasi
-                </div>
-              </div>
-
-              <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-800/40 border border-slate-700/60 p-3 sm:p-4 text-center transition hover:border-amber-500/50">
-                <div className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-medium text-slate-400 mb-1">
-                  <Clock className="w-3.5 h-3.5 text-amber-400" /> Estimasi Waktu
-                </div>
-                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-amber-300 tracking-tight drop-shadow-[0_0_8px_rgba(252,211,77,0.4)]">
-                  ~{demoWait}s
-                </div>
-                <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">
-                  otomatis masuk giliran
-                </div>
-              </div>
-            </div>
-
-            {/* Progress Animation */}
-            <div className="space-y-2 mb-5">
-              <div className="flex justify-between items-center text-[11px] sm:text-xs text-slate-400">
-                <span className="flex items-center gap-1 font-medium text-emerald-400">
-                  <Activity className="w-3.5 h-3.5 animate-spin" /> Sedang Mengantre
-                </span>
-                <span className="font-mono text-emerald-300 font-semibold">{Math.max(15, 100 - demoPosition * 6)}%</span>
-              </div>
-
-              <div className="h-2.5 sm:h-3 w-full bg-slate-800/80 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
-                <div 
-                  className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(52,211,153,0.7)]"
-                  style={{ width: `${Math.max(15, 100 - demoPosition * 6)}%` }}
-                />
-              </div>
-
-              <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-                Memperbarui posisi antrean secara otomatis...
-              </div>
-            </div>
-
-            {/* Tombol Interaktif Majukan Antrean */}
-            <div className="flex gap-2 justify-center mb-4">
-              <button
-                onClick={() => {
-                  setDemoPosition((prev) => (prev > 1 ? prev - 1 : 14))
-                  setDemoWait((prev) => (prev > 4 ? prev - 3 : 25))
-                }}
-                className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-lg shadow-emerald-950/40 active:scale-95"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Majukan Antrean
-              </button>
-              <button
-                onClick={() => setShowWaitingRoomDemo(false)}
-                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition cursor-pointer"
-              >
-                Selesai / Tutup
-              </button>
-            </div>
-
-            <div className="text-[10px] sm:text-[11px] text-slate-400 text-center border-t border-slate-800/80 pt-3">
-              🔒 Halaman ini akan otomatis beralih begitu giliran Anda tiba. Mohon tidak menutup tab.
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal Perekaman Wajah Face ID 5 Arah Mandiri */}
+      <FaceRegistrationModal
+        isOpen={isFaceRegModalOpen}
+        onClose={() => setIsFaceRegModalOpen(false)}
+        user={profile ? {
+          userId: profile.id,
+          name: profile.name,
+          role: profile.role,
+          identifier: role === 'SISWA' ? (profile.student?.nis || profile.username) : (profile.nipNbm || profile.teacherProfile?.nip || profile.username),
+          avatarUrl: profile.avatarUrl,
+          className: profile.student?.class?.name,
+        } : null}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['profile', userId] })
+        }}
+      />
     </div>
   )
 }

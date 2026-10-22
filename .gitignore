@@ -34,6 +34,8 @@ pnpm-debug.log*
 *.pid
 .*.pid
 storage/compressed-logs/
+storage/backups/
+storage/temp/
 backend/temp-uploads/
 backend/quarantine/
 services/whatsapp-gateway/auth_session/
@@ -61,3 +63,8 @@ supabase/.temp/
 
 # Large raw uncompressed SQL dumps (>100MB rejected by GitHub)
 simasmuh_siakad_coba_full_backup.sql
+
+# Local Project Native PostgreSQL Data & Logs
+database/data/
+database/*.log
+database/*.pid

@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,27 +11,7 @@ import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
 import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
 import { 
-  Plus, 
-  Loader2, 
-  Pencil, 
-  Trash2, 
-  Calendar, 
-  BookOpen, 
-  Clock, 
-  CheckCircle2, 
-  UserCheck,
-  ChevronRight,
-  Eye,
-  BookCheck,
-  Filter,
-  CheckSquare,
-  Square,
-  Camera,
-  UploadCloud,
-  RefreshCcw,
-  Sparkles,
-  Copy,
-  Check
+  Plus, Loader2, Pencil, Trash2, Calendar, BookOpen, Clock, CheckCircle2, UserCheck, ChevronRight, Eye, BookCheck, Filter, CheckSquare, Square, Camera, UploadCloud, RefreshCcw, Copy, Check, LayoutGrid
 } from 'lucide-react'
 import Webcam from 'react-webcam'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -1101,7 +1082,7 @@ export default function JurnalMengajarPage() {
               {editSameClassLastJournal && (
                 <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg flex items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <LayoutGrid className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
                     <span className="text-amber-900 dark:text-amber-200 truncate text-[11px]">
                       Materi sebelumnya: &ldquo;{editSameClassLastJournal.material}&rdquo;
                     </span>

@@ -43,6 +43,26 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-10-22 (v1.9.9 - Modul Override & Spectator Sesi Pengguna, Banner Notifikasi Multi-Sesi Interaktif, Manajemen Arsip E-Rapor & Kurikulum Terpadu, Tata Kelola Wajah Depan Web & Otomasi Vektor Biometrik AI):**
+  * **Modul Override & Spectator Sesi Pengguna Terproteksi (`users.service.ts` & `/master-data/override-pengguna`):**
+    * Implementasi fitur kendali sesi resmi *Override* (Kendali Penuh) dan *Spectator* (Lihat/Read-Only) yang diperuntukkan bagi Superadmin, Admin IT, dan Admin TU/BAU untuk membantu investigasi kendala teknis pengguna secara langsung tanpa meminta password akun.
+    * Penerapan proteksi hierarkis ketat: Akun master GOD (`supermuhipo`) hanya dapat di-override oleh GOD sendiri; akun krusial (Kepala Sekolah, Keuangan, dan Superadmin) hanya dapat di-override oleh Superadmin/GOD.
+    * Pembuatan token sesi JWT dinamis dengan flag `isOverrideSession`, `overrideMode`, `overrideByAdminId`, dan pencatatan audit log `USER_OVERRIDE_START` / `USER_SPECTATOR_START` secara menyeluruh.
+  * **Banner Notifikasi Sesi Aktif & Multi-Perangkat Interaktif (`OverrideSessionBanner.tsx`):**
+    * Penambahan banner notifikasi melayang profesional dan responsif di bagian atas dashboard saat sesi override atau login multi-perangkat berlangsung.
+    * Menyajikan identitas admin pengawas, status mode kerja, tombol akhiri sesi kendali, serta dialog konfirmasi interaktif untuk menjaga transparansi dan kenyamanan kerja pengguna.
+  * **Manajemen Arsip E-Rapor & Histori Penilaian Siswa (`grades.service.ts`, `/akademik/arsip-e-rapor`, `/akademik/e-rapor-program`):**
+    * Integrasi endpoint rekapitulasi arsip nilai siswa lintas tahun pelajaran dan semester (`getArchivePeriods` & `findArchiveAssessments`).
+    * Penyajian capaian nilai akademik, predikat kedisiplinan & adab/tatib, amalan ibadah, catatan perwalian, dan riwayat ekstrakurikuler dalam antarmuka terpadu.
+    * Penambahan modul kurikulum merdeka & K13 komprehensif (`kurikulum.module.ts`, `docx-generator.service.ts`, `kurikulum-merdeka.service.ts`).
+  * **Tata Kelola Wajah Depan Portal & Informasi Publik (`/informasi/*`):**
+    * Penambahan modul pengelolaan konten beranda untuk Admin Web & Humas: Tata Letak Beranda (`/informasi/tata-letak`), Keunggulan & Kemitraan (`/informasi/keunggulan`), Program Unggulan (`/informasi/program`), dan Media Sosial / Video Profil (`/informasi/media-sosial`).
+    * Integrasi proxy Instagram Feed resmi (`/api/instagram-proxy`) untuk streaming konten media sosial tanpa kendala CORS.
+  * **Penyempurnaan Face Attendance AI & Migrasi Vektor Biometrik (`services/face-attendance/`):**
+    * Optimasi mesin biometrik wajah (`face_engine.py`) dengan penyesuaian threshold sensitivitas deteksi, penanganan vektor embedding 512-D, dan skrip migrasi vektor langsung ke basis data PostgreSQL.
+  * **Penyempurnaan Tampilan, Ergonomi Tabel, & Navigasi Multi-Role:**
+    * Perluasan daftar navigasi peran (`nav-links.ts`) untuk Wali Kelas, Kurikulum, Admin Web, dan Guru Honorer sesuai standar Rule 9 & Rule 18 `AGENTS.md`.
+
 * **2026-10-12 (v1.9.8 - Sinkronisasi Dinamis Template Excel Beasiswa Master Data & Buku Induk, Fitur Reset Beasiswa, Live Console Viewer, dan Optimasi Keuangan Terpadu):**
   * **Sinkronisasi Dinamis Template Excel Beasiswa dengan Master Data & Buku Induk (`students.service.ts` & `students.controller.ts`):**
     * Pembaruan generator template Excel beasiswa (`GET /api-backend/students/template-beasiswa`) yang secara dinamis dan real-time mengambil data seluruh siswa aktif langsung dari database master SIMASMUH (`prisma.student.findMany({ where: { isActive: true } })`).

@@ -8,6 +8,7 @@ import {
   Patch,
   Delete,
   UseGuards,
+  Query,
   Res,
 } from '@nestjs/common';
 import { StudentsService } from './students.service';
@@ -22,8 +23,8 @@ export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
 
   @Get()
-  findAll() {
-    return this.studentsService.findAll();
+  findAll(@Query('classId') classId?: string) {
+    return this.studentsService.findAll({ classId });
   }
 
   @Get('template-beasiswa')

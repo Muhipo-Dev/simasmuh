@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import {
+  useState, useEffect, useMemo, useRef } from 'react'
 import { 
-  Contact, QrCode, Copy, Download, Printer, PlusCircle, Search, 
-  Filter, RefreshCw, CheckCircle2, Clock, Trash2, Pencil, Users, 
-  Building2, Award, FileSpreadsheet, ExternalLink, Sparkles, Phone, Calendar
+  Contact, QrCode, Copy, Download, Printer, PlusCircle, Search, Filter, RefreshCw, CheckCircle2, Clock, Trash2, Pencil, Users, Building2, Award, FileSpreadsheet, ExternalLink, Phone, Calendar, LayoutGrid
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
@@ -458,13 +457,13 @@ export function GuestBookManagement() {
               <!-- Header Banner Kop -->
               <div class="header-banner">
                 <div class="kop-wrapper">
-                  <img class="logo-img" src="/muhammadiyah-logo-40493.png" alt="Logo Majelis Dikdasmen" onerror="this.style.display='none'" />
+                  <img class="logo-img" src="/logos/muhammadiyah-logo-40493.png" alt="Logo Majelis Dikdasmen" onerror="this.style.display='none'" />
                   <div class="kop-text">
                     <div class="kop-instansi">Majelis Dikdasmen PWM Jawa Timur</div>
                     <div class="kop-sekolah">SMA Muhammadiyah 1 Ponorogo</div>
                     <div class="kop-tagline">Jl. Batoro Katong No. 6B Ponorogo | Telp. (0352) 481521</div>
                   </div>
-                  <img class="logo-img" src="/pic_logo.png" alt="Logo Sekolah" onerror="this.style.display='none'" />
+                  <img class="logo-img" src="/logos/pic_logo.png" alt="Logo Sekolah" onerror="this.style.display='none'" />
                 </div>
               </div>
 
@@ -659,7 +658,7 @@ export function GuestBookManagement() {
         <CardContent className="p-6 relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center md:text-left flex-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-medium">
-              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+              <LayoutGrid className="w-3.5 h-3.5 text-blue-400" />
               <span>Sistem Buku Tamu Otomatis QR</span>
             </div>
             <h2 className="text-2xl font-bold tracking-tight text-white flex items-center justify-center md:justify-start gap-2">

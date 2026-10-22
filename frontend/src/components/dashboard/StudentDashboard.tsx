@@ -1,14 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import {
+  useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import {
-  CalendarDays, ClipboardCheck, BookOpen, Receipt, CreditCard,
-  GraduationCap, Award, Sparkles, TrendingUp, CheckCircle2,
-  Laptop, Clock, Users, QrCode, HeartHandshake, X, Search, User, Info,
-  ShieldCheck, AlertTriangle, FileText, ShieldAlert, BookMarked,
-  Table as TableIcon, LayoutGrid, Printer, ChevronRight
+  CalendarDays, ClipboardCheck, BookOpen, Receipt, CreditCard, GraduationCap, Award, TrendingUp, CheckCircle2, Laptop, Clock, Users, QrCode, HeartHandshake, X, Search, User, Info, ShieldCheck, AlertTriangle, FileText, ShieldAlert, BookMarked, Table as TableIcon, LayoutGrid, Printer, ChevronRight
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -138,6 +135,23 @@ export function StudentDashboard({
       if (!res.ok) return { myMemberships: [], availableCatalog: [] }
       return res.json()
     },
+    staleTime: 30000,
+  })
+
+  // 6. LIVE STUDENT E-RAPOR INTERNAL & GRADES ACCUMULATION FETCHING
+  const { data: myGradesData, isLoading: isLoadingGrades } = useQuery<any>({
+    queryKey: ['student-my-grades-dashboard', session?.user?.id, activeStudent?.id],
+    queryFn: async () => {
+      if (!session?.user?.id && !activeStudent?.id) return null
+      try {
+        const studentQuery = activeStudent?.id ? `&studentId=${activeStudent.id}` : ''
+        const userQuery = session?.user?.id ? `userId=${session.user.id}` : ''
+        const res = await authenticatedFetch(`/api-backend/grades/my-grades?${userQuery}${studentQuery}`)
+        if (res.ok) return res.json()
+      } catch {}
+      return null
+    },
+    enabled: !!(session?.user?.id || activeStudent?.id),
     staleTime: 30000,
   })
 
@@ -899,12 +913,22 @@ export function StudentDashboard({
           {
             name: 'Ujian CBT',
             desc: 'Asesmen Online',
-            href: '/demo-waiting-room',
+            href: typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:3010` : 'http://localhost:3010',
             icon: Laptop,
             colorClass: 'border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-rose-300 dark:hover:border-rose-700',
             iconBg: 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400',
             textHover: 'group-hover:text-rose-600',
             subColor: 'text-slate-400'
+          },
+          {
+            name: 'Laporan Capaian',
+            desc: 'Capaian Siswa',
+            href: '/akademik/penilaian',
+            icon: GraduationCap,
+            colorClass: 'border-blue-200/80 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 hover:border-blue-400 dark:hover:border-blue-600',
+            iconBg: 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300',
+            textHover: 'group-hover:text-blue-600',
+            subColor: 'text-blue-600 dark:text-blue-400'
           },
           {
             name: 'Tagihan SPP',
@@ -929,7 +953,7 @@ export function StudentDashboard({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-1.5">
                 <div className="w-5 h-5 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <LayoutGrid className="w-3.5 h-3.5 text-amber-500" />
                 </div>
                 <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
                   Pintasan Layanan Siswa
@@ -965,7 +989,7 @@ export function StudentDashboard({
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2.5">
+              <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 sm:gap-2.5">
                 {filteredShortcuts.map((sc, idx) => {
                   const Icon = sc.icon
                   const content = (
@@ -1365,83 +1389,189 @@ export function StudentDashboard({
 
         {/* RIGHT COLUMN (4 COLS): SIDE WIDGETS SISWA */}
         <div className="lg:col-span-4 flex flex-col gap-3.5 sm:gap-4">
-          {/* 1. Card: Poin Ketertiban & Evaluasi Karakter Siswa */}
-          <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3.5 sm:p-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                </div>
-                <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                  Poin Ketertiban &amp; Adab
-                </h3>
-              </div>
-              <Link href="/akademik/etika-tatib">
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-0.5">
-                  Buku Saku <ChevronRight className="w-3 h-3" />
-                </span>
-              </Link>
-            </div>
-
-            <div className="py-2.5 space-y-2.5">
-              {/* Main Score Box */}
-              <div className="p-3 rounded-xl bg-gradient-to-tr from-emerald-50 via-teal-50/50 to-white dark:from-slate-800 dark:to-slate-850 border border-emerald-200/70 dark:border-emerald-900/50 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">
-                    Skor Kedisiplinan
-                  </span>
-                  <div className="flex items-baseline gap-2 mt-0.5">
-                    <span className="text-2xl font-black text-slate-900 dark:text-white">
-                      {characterSummary?.kedisiplinanScore ?? 100}
+          {/* 1. Baris Atas: E-Rapor Internal (Kiri) & Poin Ketertiban & Adab (Kanan) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 items-stretch">
+            {/* Widget Kiri: E-Rapor & Capaian Akademik (Nilai Akumulasi & Peringkat Angkatan/Kelas) */}
+            <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3.5 sm:p-4 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                      <GraduationCap className="w-3.5 h-3.5" />
+                    </div>
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">
+                      Capaian Akademik
+                    </h3>
+                  </div>
+                  <Link href="/akademik/penilaian">
+                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-0.5">
+                      Lihat Rapor <ChevronRight className="w-3 h-3" />
                     </span>
-                    <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 text-[10px] font-bold px-1.5 py-0">
-                      Grade {characterSummary?.kedisiplinanGrade || ((characterSummary?.kedisiplinanScore ?? 100) >= 90 ? 'A' : (characterSummary?.kedisiplinanScore ?? 100) >= 70 ? 'B' : 'C')}
-                    </Badge>
-                  </div>
+                  </Link>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center font-black text-sm shrink-0">
-                  <Award className="w-5 h-5" />
+
+                <div className="py-2.5 space-y-2">
+                  {/* Akumulasi & Peringkat Box */}
+                  <div className="p-3 rounded-xl border border-blue-200/60 dark:border-blue-900/40 bg-blue-50/40 dark:bg-blue-950/20 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 block">
+                          Total Nilai
+                        </span>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                          <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">
+                            {myGradesData?.stats?.totalAkumulasi ?? 0}
+                          </span>
+                          <span className="text-[10.5px] font-medium text-slate-500">
+                            (Rata-rata: {myGradesData?.stats?.rataRata ?? 0})
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10.5px] font-semibold text-slate-600 dark:text-slate-300 block">
+                          {myGradesData?.stats?.totalMataPelajaran || 0} Mapel
+                        </span>
+                        {(myGradesData?.stats?.totalPrestasi ?? 0) > 0 ? (
+                          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[9.5px] font-bold px-1.5 py-0 mt-0.5">
+                            {myGradesData?.stats?.totalPrestasi} Prestasi
+                          </Badge>
+                        ) : (
+                          <span className="text-[9.5px] text-slate-400 block mt-0.5">
+                            Terdata
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Dual Ranking Badges: Peringkat Angkatan & Peringkat Kelas */}
+                    <div className="pt-2 border-t border-blue-100/80 dark:border-blue-900/40 grid grid-cols-2 gap-2 text-center">
+                      <div className="p-2 rounded-lg bg-white/90 dark:bg-slate-900/70 border border-blue-100 dark:border-blue-900/40 flex flex-col items-center justify-center">
+                        <span className="text-[9px] font-bold uppercase tracking-tight text-slate-500 dark:text-slate-400">
+                          Peringkat Angkatan
+                        </span>
+                        <div className="mt-1 flex items-baseline justify-center gap-1">
+                          <span className="text-sm font-black text-blue-600 dark:text-blue-400">
+                            #{myGradesData?.stats?.rankAngkatan ?? 1}
+                          </span>
+                          <span className="text-[10px] font-medium text-slate-400">
+                            / {myGradesData?.stats?.totalStudentsInAngkatan || 1}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-2 rounded-lg bg-white/90 dark:bg-slate-900/70 border border-indigo-100 dark:border-indigo-900/40 flex flex-col items-center justify-center">
+                        <span className="text-[9px] font-bold uppercase tracking-tight text-slate-500 dark:text-slate-400">
+                          Peringkat Kelas
+                        </span>
+                        <div className="mt-1 flex items-baseline justify-center gap-1">
+                          <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
+                            #{myGradesData?.stats?.rank ?? 1}
+                          </span>
+                          <span className="text-[10px] font-medium text-slate-400">
+                            / {myGradesData?.stats?.totalStudentsInClass || 1}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Mini Indicators */}
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300 font-bold">
-                    <HeartHandshake className="w-3 h-3" />
-                    <span>Ibadah: {characterSummary?.ibadahGrade || 'A'}</span>
-                  </div>
-                  <span className="text-[9.5px] text-slate-400 block mt-0.5 truncate">
-                    {characterSummary?.ibadahStatus || 'Tertib Sholat'}
-                  </span>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-1 text-cyan-700 dark:text-cyan-300 font-bold">
-                    <Users className="w-3 h-3" />
-                    <span>Adab: {characterSummary?.perilakuGrade || 'A'}</span>
-                  </div>
-                  <span className="text-[9.5px] text-slate-400 block mt-0.5 truncate">
-                    {characterSummary?.perilakuStatus || 'Santun & Tertib'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-1 text-[10.5px] text-slate-500 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                  {rawAssessments.length === 0 ? 'Bebas Pelanggaran' : `${rawAssessments.length} Catatan Pembinaan`}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+                <span className="text-slate-500 truncate max-w-[170px]">
+                  {(myGradesData?.stats?.totalPrestasi ?? 0) > 0
+                    ? `${myGradesData?.stats?.totalPrestasi} Prestasi • ${myGradesData?.stats?.totalEkskul || 0} Ekskul`
+                    : myGradesData?.stats?.rankDescription || 'Status Terdata'}
                 </span>
-                <span className="font-semibold text-slate-400">Tim Tatib &amp; BK</span>
+                <Link
+                  href="/akademik/penilaian"
+                  className="font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 shrink-0"
+                >
+                  Detail &rarr;
+                </Link>
               </div>
-            </div>
-          </Card>
+            </Card>
 
-          {/* 2. Ekstrakurikuler Siswa Widget */}
+            {/* Widget Kanan: Poin Ketertiban & Evaluasi Karakter Siswa */}
+            <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3.5 sm:p-4 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">
+                      Ketertiban &amp; Adab
+                    </h3>
+                  </div>
+                  <Link href="/akademik/etika-tatib">
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-0.5">
+                      Buku Saku <ChevronRight className="w-3 h-3" />
+                    </span>
+                  </Link>
+                </div>
+
+                <div className="py-2.5 space-y-2.5">
+                  {/* Main Score Box */}
+                  <div className="p-3 rounded-xl bg-gradient-to-tr from-emerald-50 via-teal-50/50 to-white dark:from-slate-800 dark:to-slate-850 border border-emerald-200/70 dark:border-emerald-900/50 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 block">
+                        Skor Disiplin
+                      </span>
+                      <div className="flex items-baseline gap-2 mt-0.5">
+                        <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">
+                          {characterSummary?.kedisiplinanScore ?? 100}
+                        </span>
+                        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 text-[10px] font-bold px-1.5 py-0">
+                          Grade {characterSummary?.kedisiplinanGrade || ((characterSummary?.kedisiplinanScore ?? 100) >= 90 ? 'A' : (characterSummary?.kedisiplinanScore ?? 100) >= 70 ? 'B' : 'C')}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="w-9 h-9 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0">
+                      <Award className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  {/* Mini Indicators */}
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-1 text-teal-700 dark:text-teal-300 font-bold">
+                        <HeartHandshake className="w-3.5 h-3.5" />
+                        <span>Ibadah: {characterSummary?.ibadahGrade || 'A'}</span>
+                      </div>
+                      <span className="text-[9.5px] text-slate-500 block mt-0.5 truncate">
+                        {characterSummary?.ibadahStatus || 'Tertib'}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-1 text-cyan-700 dark:text-cyan-300 font-bold">
+                        <Users className="w-3.5 h-3.5" />
+                        <span>Adab: {characterSummary?.perilakuGrade || 'A'}</span>
+                      </div>
+                      <span className="text-[9.5px] text-slate-500 block mt-0.5 truncate">
+                        {characterSummary?.perilakuStatus || 'Santun'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 text-[11px] text-slate-500 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  {rawAssessments.length === 0 ? 'Bebas Pelanggaran' : `${rawAssessments.length} Catatan`}
+                </span>
+                <span className="font-medium text-slate-400">Tim Tatib &amp; BK</span>
+              </div>
+            </Card>
+          </div>
+
+          {/* 2. Ekstrakurikuler Siswa Widget (Lebar Penuh) */}
           <Card className="border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 shadow-2xs rounded-xl p-3.5 sm:p-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-1.5">
                 <div className="w-5 h-5 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <LayoutGrid className="w-3.5 h-3.5" />
                 </div>
                 <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
                   Ekstrakurikuler Saya
@@ -1468,7 +1598,7 @@ export function StudentDashboard({
                       className="p-2.5 rounded-xl border border-amber-200/60 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 space-y-1"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate max-w-[180px]">
+                        <span className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate max-w-[200px]">
                           {m.extracurricular?.name}
                         </span>
                         <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[9px] font-bold">
@@ -1504,6 +1634,18 @@ export function StudentDashboard({
                 </div>
               )}
             </div>
+
+            {studentMemberships.length > 0 && (
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[10.5px]">
+                <span className="text-slate-400">Total {studentMemberships.length} Kegiatan Aktif</span>
+                <Link
+                  href="/siswa/ekstrakurikuler"
+                  className="font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5"
+                >
+                  Buka Ekskul &rarr;
+                </Link>
+              </div>
+            )}
           </Card>
 
           {/* 3. Kalender Akademik & Hari Libur Nasional (Tampil di Desktop & paling bawah di Mobile) */}

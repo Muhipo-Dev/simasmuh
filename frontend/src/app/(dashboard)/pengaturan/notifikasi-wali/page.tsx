@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { 
-  BellRing, Mail, CheckCircle2, ShieldCheck, 
-  Send, Save, Loader2, Sparkles, AlertCircle, Globe, RefreshCw,
-  Clock, Check
+import {
+  BellRing, Mail, CheckCircle2, ShieldCheck, Send, Save, Loader2, AlertCircle, Globe, RefreshCw, Clock, Check
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

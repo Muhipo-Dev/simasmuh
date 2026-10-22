@@ -141,7 +141,17 @@ export function PublicNavbar({
                 >
                   <div className="w-6 h-6 rounded-full bg-white/20 relative overflow-hidden flex items-center justify-center text-[10px] font-black shrink-0 border border-white/30">
                     {avatarUrl ? (
-                      <NextImage src={avatarUrl} alt="Avatar" fill className="object-cover" />
+                      <img 
+                        src={avatarUrl.startsWith('/uploads') ? `/api-backend${avatarUrl}` : avatarUrl} 
+                        alt="Avatar" 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => {
+                          const target = e.currentTarget
+                          if (avatarUrl.startsWith('/uploads') && !target.src.includes('/api-backend')) {
+                            target.src = `/api-backend${avatarUrl}`
+                          }
+                        }}
+                      />
                     ) : (
                       <span>{displayName.charAt(0).toUpperCase()}</span>
                     )}
@@ -180,7 +190,17 @@ export function PublicNavbar({
                 >
                   <div className="w-6 h-6 rounded-lg bg-white/20 relative overflow-hidden flex items-center justify-center text-[10px] font-black shrink-0">
                     {avatarUrl ? (
-                      <NextImage src={avatarUrl} alt="Avatar" fill className="object-cover" />
+                      <img 
+                        src={avatarUrl.startsWith('/uploads') ? `/api-backend${avatarUrl}` : avatarUrl} 
+                        alt="Avatar" 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => {
+                          const target = e.currentTarget
+                          if (avatarUrl.startsWith('/uploads') && !target.src.includes('/api-backend')) {
+                            target.src = `/api-backend${avatarUrl}`
+                          }
+                        }}
+                      />
                     ) : (
                       <span>{displayName.charAt(0).toUpperCase()}</span>
                     )}

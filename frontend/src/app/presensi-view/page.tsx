@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import {
+  useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import NextImage from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -9,28 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { PublicNavbar, AppFooter } from '@/components/layout'
 import {
-  ClipboardCheck,
-  Search,
-  CalendarDays,
-  Users,
-  UserCheck,
-  UserX,
-  Clock,
-  ArrowLeft,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  Download,
-  Video,
-  Radio,
-  Activity,
-  RefreshCw,
-  Sparkles,
-  Camera,
-  Zap,
-  PowerOff,
-  ShieldAlert,
-  QrCode
+  ClipboardCheck, Search, CalendarDays, Users, UserCheck, UserX, Clock, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Download, Video, Radio, Activity, RefreshCw, Camera, Zap, PowerOff, ShieldAlert, QrCode
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -722,7 +702,7 @@ export default function PresensiPegawaiPage() {
                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1">
                              <div className="flex items-center justify-between text-xs">
                                <span className="text-slate-500 dark:text-slate-400 text-[10.5px] font-medium flex items-center gap-1">
-                                 <Sparkles className="w-3 h-3 text-indigo-500" />
+                                 <ClipboardCheck className="w-3 h-3 text-indigo-500" />
                                  Akurasi Kemiripan AI:
                                </span>
                                <span className="font-extrabold text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">

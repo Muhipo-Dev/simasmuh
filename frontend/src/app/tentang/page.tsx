@@ -1,6 +1,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, Code, Sparkles, Terminal, Cpu } from 'lucide-react'
+import {
+  ArrowLeft, Code, Terminal, Cpu, LayoutGrid
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PublicNavbar, AppFooter } from '@/components/layout'
 
@@ -38,7 +40,7 @@ export default function TentangPage() {
           </div>
 
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/80 text-blue-600 dark:text-blue-400 text-xs font-semibold mb-4">
-            <Sparkles className="w-3.5 h-3.5" />
+            <LayoutGrid className="w-3.5 h-3.5" />
             <span>Muhipo Tech Ecosystem</span>
           </div>
 

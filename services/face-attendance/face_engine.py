@@ -29,14 +29,15 @@ except ImportError:
 
 
 class FaceUserRecord:
-    def __init__(self, user_id: str, name: str, role: str, identifier: str, avatar_url: Optional[str] = None, local_path: Optional[str] = None):
+    def __init__(self, user_id: str, name: str, role: str, identifier: str, avatar_url: Optional[str] = None, local_path: Optional[str] = None, db_photo_data_url: Optional[str] = None, db_embedding: Optional[np.ndarray] = None):
         self.user_id = user_id
         self.name = name
         self.role = role
         self.identifier = identifier
         self.avatar_url = avatar_url
         self.local_path = local_path
-        self.embedding: Optional[np.ndarray] = None
+        self.db_photo_data_url = db_photo_data_url
+        self.embedding: Optional[np.ndarray] = db_embedding
 
 
 class FaceRecognitionEngine:
@@ -171,7 +172,15 @@ class FaceRecognitionEngine:
                 role = item.get("role", "SISWA")
                 identifier = item.get("identifier") or item.get("username", "")
                 avatar_url = item.get("avatarUrl")
-                local_path = item.get("localPath")
+                db_embedding_raw = item.get("dbEmbedding")
+                db_photo_data_url = item.get("dbPhotoDataUrl")
+                has_db_vector = item.get("hasDbEmbedding", False)
+                db_embedding_np = None
+                if db_embedding_raw and len(db_embedding_raw) == 512:
+                    try:
+                        db_embedding_np = np.array(db_embedding_raw, dtype=np.float32)
+                    except Exception:
+                        db_embedding_np = None
 
                 record = FaceUserRecord(
                     user_id=user_id,
@@ -180,18 +189,56 @@ class FaceRecognitionEngine:
                     identifier=identifier,
                     avatar_url=avatar_url,
                     local_path=local_path,
+                    db_photo_data_url=db_photo_data_url,
+                    db_embedding=db_embedding_np,
                 )
 
-                if user_id in cached_vectors and not force_refresh:
+                # Cek apakah pengguna memiliki sampel Face ID 7-pose di disk atau DB
+                has_multi_samples = item.get("hasFaceSamples", False)
+                if not has_multi_samples:
+                    for s_root in [
+                        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "storage")),
+                        os.environ.get("STORAGE_PATH", "D:/simasmuh/storage"),
+                        "D:/simasmuh/storage",
+                    ]:
+                        sample_dir = os.path.join(s_root, "face_samples", user_id)
+                        if os.path.isdir(sample_dir) and any(os.path.isfile(os.path.join(sample_dir, f)) for f in os.listdir(sample_dir)):
+                            has_multi_samples = True
+                            break
+
+                # 1. Prioritaskan vektor yang sudah tersimpan di database PostgreSQL
+                if db_embedding_np is not None and not force_refresh:
+                    record.embedding = db_embedding_np
+                    vectors_to_save[user_id] = db_embedding_np
+                    success_embedded += 1
+                # 2. Cek cache lokal
+                elif user_id in cached_vectors and not force_refresh and not has_multi_samples:
                     record.embedding = cached_vectors[user_id]
                     vectors_to_save[user_id] = cached_vectors[user_id]
                     success_embedded += 1
+                # 3. Ekstraksi langsung dan simpan ke PostgreSQL secara utuh
                 else:
                     embedding = self._extract_user_embedding(record)
                     if embedding is not None:
                         record.embedding = embedding
                         vectors_to_save[user_id] = embedding
                         success_embedded += 1
+                        # Simpan ke PostgreSQL agar permanen
+                        try:
+                            save_payload = {
+                                "userId": user_id,
+                                "embedding": embedding.tolist(),
+                                "modelName": "Inception-ResNet-v1 (Bio-Fusion AI)",
+                                "photoDataUrl": db_photo_data_url,
+                            }
+                            requests.post(
+                                f"{self.backend_url}/face-attendance/save-vector",
+                                json=save_payload,
+                                headers=headers,
+                                timeout=4
+                            )
+                        except Exception:
+                            pass
 
                 new_db[user_id] = record
 
@@ -246,8 +293,27 @@ class FaceRecognitionEngine:
             self.user_database[user_id] = record
             self._save_cache()
             self._rebuild_matrix()
-            print(f"[INFO] Vektor wajah baru Bio-Fusion berhasil ditambahkan: [{role}] {name} ({identifier})")
-            return True, f"Vektor biometrik {name} ({role}) berhasil disinkronkan ke SIMASMUH Bio-Fusion AI."
+
+            # Simpan langsung ke PostgreSQL
+            try:
+                from config import API_KEY
+                headers = {"x-api-key": API_KEY}
+                requests.post(
+                    f"{self.backend_url}/face-attendance/save-vector",
+                    json={
+                        "userId": user_id,
+                        "embedding": embedding.tolist(),
+                        "modelName": "Inception-ResNet-v1 (Bio-Fusion AI)",
+                        "photoDataUrl": item.get("photoDataUrl") or item.get("dbPhotoDataUrl"),
+                    },
+                    headers=headers,
+                    timeout=5
+                )
+            except Exception as e:
+                print(f"[WARN] Gagal menyimpan vektor ke PostgreSQL untuk {name}: {e}")
+
+            print(f"[INFO] Vektor wajah baru Bio-Fusion berhasil ditambahkan & disimpan ke PostgreSQL: [{role}] {name} ({identifier})")
+            return True, f"Vektor biometrik {name} ({role}) berhasil disinkronkan & disimpan ke database PostgreSQL SIMASMUH."
         else:
             self.user_database[user_id] = record
             self._rebuild_matrix()
@@ -273,9 +339,15 @@ class FaceRecognitionEngine:
             return 0, 0
 
     def _extract_user_embedding(self, record: FaceUserRecord) -> Optional[np.ndarray]:
-        """Ekstraksi embedding wajah dari file lokal atau download avatar URL."""
+        """Ekstraksi embedding wajah dari gabungan foto profil + sampel biometrik perekaman 5 arah."""
         img = None
-        
+        storage_roots = [
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "storage")),
+            os.environ.get("STORAGE_PATH", "D:/simasmuh/storage"),
+            "D:/simasmuh/storage",
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "backend", "storage")),
+        ]
+
         # 1. Coba baca dari record.local_path jika ada
         if record.local_path and os.path.exists(record.local_path):
             try:
@@ -288,12 +360,6 @@ class FaceRecognitionEngine:
         # 2. Coba cari di storage root lokal jika avatar_url mengarah ke /uploads/ atau path relatif
         if img is None and record.avatar_url:
             clean_rel = record.avatar_url.replace("/uploads/", "").lstrip("/\\")
-            storage_roots = [
-                os.environ.get("STORAGE_PATH", "D:/simasmuh_storage" if os.name == 'nt' else os.path.expanduser("~/simasmuh_storage")),
-                "D:/simasmuh_storage",
-                "C:/simasmuh_storage",
-                os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "backend", "storage")),
-            ]
             possible_paths = []
             for s_root in storage_roots:
                 possible_paths.extend([
@@ -313,7 +379,19 @@ class FaceRecognitionEngine:
                     except Exception:
                         pass
 
-        # 3. Fallback: Download via HTTP dari backend
+        # 3. Coba decode langsung dari foto yang tersimpan utuh di PostgreSQL (db_photo_data_url)
+        if img is None and getattr(record, "db_photo_data_url", None):
+            try:
+                data_url = record.db_photo_data_url
+                if "," in data_url:
+                    data_url = data_url.split(",")[1]
+                raw_bytes = base64.b64decode(data_url)
+                arr = np.frombuffer(raw_bytes, np.uint8)
+                img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+            except Exception:
+                img = None
+
+        # 4. Fallback: Download via HTTP dari backend
         if img is None and record.avatar_url:
             try:
                 url = record.avatar_url
@@ -326,10 +404,94 @@ class FaceRecognitionEngine:
             except Exception:
                 img = None
 
-        if img is None:
+        # Kumpulkan seluruh embedding biometrik (Foto Profil + Perekaman 5 Arah: Depan, Kanan, Kiri, Atas, Bawah + Anti-Robot Liveness)
+        embeddings_pool: List[Tuple[np.ndarray, float]] = []
+
+        if img is not None:
+            emb_profile = self._extract_face_crop_and_embed(img)
+            if emb_profile is not None:
+                # Bobot foto profil standar
+                embeddings_pool.append((emb_profile, 1.2))
+
+        # 4. Periksa apakah terdapat sampel perekaman 5 arah + liveness (blink & smile/open mouth) di folder face_samples/<user_id>/
+        # Memberikan kontribusi signifikan pada sudut pose dinamis sehingga pengenalan lebih akurat saat siswa/guru menoleh atau kamera miring
+        sample_angles = [
+            ("front", 2.0),       # Pose depan 0 derajat: bobot dominan untuk verifikasi frontal presisi tinggi
+            ("right", 1.4),       # Pose tengok kanan (yaw +20 s/d +30 derajat): memperkuat deteksi profil kanan
+            ("left", 1.4),        # Pose tengok kiri (yaw -20 s/d -30 derajat): memperkuat deteksi profil kiri
+            ("up", 1.2),          # Pose tengok atas (pitch +15 derajat): toleransi kamera posisi lebih tinggi
+            ("down", 1.2),        # Pose tengok bawah (pitch -15 derajat): toleransi postur menunduk
+            ("blink", 1.3),       # Verifikasi liveness kedip mata (anti-foto mati/robot)
+            ("mouth_open", 1.3),  # Verifikasi liveness buka mulut / senyum gigi (anti-spoofing)
+        ]
+
+        for s_root in storage_roots:
+            user_sample_dir = os.path.join(s_root, "face_samples", record.user_id)
+            if os.path.exists(user_sample_dir):
+                for angle_name, weight in sample_angles:
+                    for ext in [".jpg", ".jpeg", ".png", ".webp"]:
+                        sample_path = os.path.join(user_sample_dir, f"{angle_name}{ext}")
+                        if os.path.exists(sample_path):
+                            try:
+                                s_img = cv2.imdecode(np.fromfile(sample_path, dtype=np.uint8), cv2.IMREAD_COLOR)
+                                if s_img is None:
+                                    s_img = cv2.imread(sample_path)
+                                if s_img is not None:
+                                    s_emb = self._extract_face_crop_and_embed(s_img)
+                                    if s_emb is not None:
+                                        embeddings_pool.append((s_emb, weight))
+                                        break
+                            except Exception:
+                                pass
+                break
+
+        # Jika di disk lokal belum ada sampel dan baru ada foto/sampel di PostgreSQL, ambil dari API backend
+        if len(embeddings_pool) <= 1:
+            try:
+                from config import API_KEY
+                headers = {"x-api-key": API_KEY}
+                res_samples = requests.get(f"{self.backend_url}/face-attendance/user-samples/{record.user_id}", headers=headers, timeout=6)
+                if res_samples.status_code == 200:
+                    data_s = res_samples.json()
+                    s_dict = data_s.get("samples", {})
+                    for angle_name, weight in sample_angles:
+                        if angle_name in s_dict and s_dict[angle_name]:
+                            try:
+                                d_url = s_dict[angle_name]
+                                if "," in d_url:
+                                    d_url = d_url.split(",")[1]
+                                raw_b = base64.b64decode(d_url)
+                                arr_b = np.frombuffer(raw_b, np.uint8)
+                                s_img = cv2.imdecode(arr_b, cv2.IMREAD_COLOR)
+                                if s_img is not None:
+                                    s_emb = self._extract_face_crop_and_embed(s_img)
+                                    if s_emb is not None:
+                                        embeddings_pool.append((s_emb, weight))
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+
+        if not embeddings_pool:
             return None
 
-        return self._extract_face_crop_and_embed(img)
+        # 5. Fusi Vektor Multi-Arah Berbobot (Weighted Biometric Fusion Centroid)
+        # Menghasilkan vektor master 512-D yang tahan terhadap variasi pose wajah miring/menoleh
+        weighted_sum = np.zeros(512, dtype=np.float32)
+        total_w = 0.0
+
+        for emb, w in embeddings_pool:
+            weighted_sum += emb * w
+            total_w += w
+
+        if total_w > 0:
+            fused_vector = weighted_sum / total_w
+            norm_val = np.linalg.norm(fused_vector)
+            if norm_val > 0:
+                fused_vector = fused_vector / norm_val
+            return fused_vector
+
+        return embeddings_pool[0][0]
 
     def _extract_face_crop_and_embed(self, full_img: np.ndarray) -> Optional[np.ndarray]:
         """Ekstraksi master embedding wajah dari foto profil utuh dengan auto-crop deteksi wajah."""

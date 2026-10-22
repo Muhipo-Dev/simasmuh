@@ -1,11 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import {
+  useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Sparkles, Award, Calendar, Clock, MapPin, Users,
-  CheckCircle2, ShieldCheck, BookOpen, AlertCircle, Info,
-  Filter, Search, UserCheck, Star, ChevronRight, UserPlus, Loader2
+  Award, Calendar, Clock, MapPin, Users, CheckCircle2, ShieldCheck, BookOpen, AlertCircle, Info, Filter, Search, UserCheck, Star, ChevronRight, UserPlus, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -134,7 +133,7 @@ export default function SiswaEkstrakurikulerPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
-            <Sparkles className="h-6 w-6" />
+            <Award className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -452,7 +451,7 @@ export default function SiswaEkstrakurikulerPage() {
             </div>
           ) : (
             <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
-              <Sparkles className="w-12 h-12 text-amber-500 mx-auto" />
+              <Award className="w-12 h-12 text-amber-500 mx-auto" />
               <h3 className="text-base font-bold text-slate-800 dark:text-white">
                 Belum Terdaftar di Ekstrakurikuler
               </h3>

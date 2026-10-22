@@ -82,6 +82,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
 
-    return user;
+    return {
+      ...user,
+      isOverrideSession: payload.isOverrideSession === true,
+      overrideMode: payload.overrideMode || null,
+      isReadOnly: payload.isReadOnly === true || payload.overrideMode === 'spectator',
+      overrideByAdminId: payload.overrideByAdminId || null,
+      overrideByAdminName: payload.overrideByAdminName || null,
+      overrideByAdminRole: payload.overrideByAdminRole || null,
+    };
   }
 }

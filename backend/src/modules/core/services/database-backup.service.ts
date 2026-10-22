@@ -23,10 +23,9 @@ export class DatabaseBackupService {
    */
   getBackupDir(): string {
     const storageCandidates = [
-      'D:\\simasmuh_storage\\backups',
-      'C:\\simasmuh_storage\\backups',
-      path.resolve(process.cwd(), 'storage', 'backups'),
       path.resolve(process.cwd(), '..', 'storage', 'backups'),
+      path.resolve(process.cwd(), 'storage', 'backups'),
+      'D:\\simasmuh\\storage\\backups',
     ];
 
     for (const dir of storageCandidates) {

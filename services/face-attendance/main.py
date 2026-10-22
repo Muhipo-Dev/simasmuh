@@ -1,4 +1,5 @@
 import os
+import io
 import signal
 import socket
 import sys
@@ -7,6 +8,8 @@ import base64
 import cv2
 import numpy as np
 import requests
+import datetime
+from collections import deque
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,17 +17,76 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 import uvicorn
 
-from typing import Optional
+from typing import Optional, List, Dict
 from config import BACKEND_URL, SERVICE_PORT, fetch_backend_config
 from face_engine import FaceRecognitionEngine
 from worker import AttendanceWorker
+
+# In-Memory Ring Buffer untuk Log Sistem FaceNet AI (maks 500 log terkini)
+FACENET_LOG_BUFFER = deque(maxlen=500)
+
+def log_facenet_event(level: str, message: str, context: str = "FaceNet-AI"):
+    now_utc7 = (datetime.datetime.utcnow() + datetime.timedelta(hours=7)).strftime("%Y-%m-%d %H:%M:%S")
+    entry = {
+        "id": f"facenet-{int(time.time() * 1000)}-{len(FACENET_LOG_BUFFER)}",
+        "timestamp": now_utc7,
+        "level": level.upper(),
+        "context": context,
+        "message": message,
+        "raw": f"[{now_utc7}] [{level.upper()}] [{context}] {message}"
+    }
+    FACENET_LOG_BUFFER.append(entry)
+
+# Tangkap stdout / print bawaan agar otomatis tercatat ke FACENET_LOG_BUFFER
+class LogCaptureStream:
+    def __init__(self, original_stream):
+        self.original_stream = original_stream
+
+    def write(self, text):
+        if self.original_stream:
+            self.original_stream.write(text)
+        cleaned = text.strip()
+        if cleaned:
+            level = "INFO"
+            if "[ERROR]" in cleaned or "ERROR:" in cleaned:
+                level = "ERROR"
+            elif "[WARN]" in cleaned or "WARNING:" in cleaned:
+                level = "WARN"
+            elif "[DEBUG]" in cleaned:
+                level = "DEBUG"
+            log_facenet_event(level, cleaned)
+
+    def flush(self):
+        if self.original_stream:
+            self.original_stream.flush()
+
+    def isatty(self):
+        if self.original_stream and hasattr(self.original_stream, "isatty"):
+            try:
+                return self.original_stream.isatty()
+            except Exception:
+                return False
+        return False
+
+    def fileno(self):
+        if self.original_stream and hasattr(self.original_stream, "fileno"):
+            return self.original_stream.fileno()
+        raise io.UnsupportedOperation("fileno")
+
+    def __getattr__(self, name):
+        if self.original_stream:
+            return getattr(self.original_stream, name)
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+sys.stdout = LogCaptureStream(sys.stdout)
+sys.stderr = LogCaptureStream(sys.stderr)
 
 engine = FaceRecognitionEngine(backend_url=BACKEND_URL)
 worker = AttendanceWorker(engine=engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("[INFO] SIMASMUH Face Attendance Service (Bio-Fusion AI Engine) Starting...")
+    log_facenet_event("INFO", "SIMASMUH Face Attendance Service (Bio-Fusion AI Engine) Starting...")
     import threading
     sync_thread = threading.Thread(target=engine.sync_database_from_backend, daemon=True)
     sync_thread.start()
@@ -33,16 +95,16 @@ async def lifespan(app: FastAPI):
     try:
         cfg = fetch_backend_config()
         if cfg and cfg.is_active:
-            print("[INFO] Konfigurasi server isActive=True: Menjalankan worker AI Stream di latar belakang...")
+            log_facenet_event("INFO", "Konfigurasi server isActive=True: Menjalankan worker AI Stream di latar belakang...")
             worker.start()
         else:
-            print("[INFO] Konfigurasi server isActive=False: Worker AI Standby.")
+            log_facenet_event("INFO", "Konfigurasi server isActive=False: Worker AI Standby.")
     except Exception as e:
-        print(f"[WARN] Inisialisasi awal stream worker: {e}")
+        log_facenet_event("WARN", f"Inisialisasi awal stream worker: {e}")
 
     yield
     worker.stop()
-    print("[INFO] SIMASMUH Face Attendance Service Stopped.")
+    log_facenet_event("INFO", "SIMASMUH Face Attendance Service Stopped.")
 
 app = FastAPI(
     title="SIMASMUH Face Attendance Service (Bio-Fusion AI)",
@@ -101,6 +163,24 @@ def get_status():
         "cooldown_minutes": cfg.cooldown_minutes if cfg else 15,
         "users_cached": len(engine.user_database),
         "total_scans_today": worker.total_scans_today,
+    }
+
+@app.get("/system-logs")
+def get_system_logs(limit: int = 250, level: Optional[str] = None, search: Optional[str] = None):
+    """Menyediakan daftar riwayat log FaceNet AI untuk diintegrasikan ke live log console SIMASMUH."""
+    logs = list(FACENET_LOG_BUFFER)
+    if level and level.upper() != "ALL":
+        target = level.upper()
+        logs = [l for l in logs if l.get("level") == target]
+    if search and search.strip():
+        q = search.lower()
+        logs = [l for l in logs if q in l.get("message", "").lower() or q in l.get("context", "").lower() or q in l.get("raw", "").lower()]
+    return {
+        "status": "SUCCESS",
+        "total": len(logs),
+        "limit": limit,
+        "serverTime": datetime.datetime.utcnow().isoformat() + "Z",
+        "logs": logs[-limit:]
     }
 
 @app.get("/video_feed")

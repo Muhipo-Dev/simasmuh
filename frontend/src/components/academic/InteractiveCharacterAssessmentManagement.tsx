@@ -1,15 +1,10 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import {
+  useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
-  ShieldAlert, ShieldCheck, HeartHandshake, PlusCircle, Search, 
-  Trash2, FileText, CheckCircle2, AlertTriangle, BookOpen, 
-  Sparkles, Award, User, Clock, ArrowRight, Download, Filter,
-  Phone, Users, Settings2, RotateCcw, Edit, Edit3, Eye, Sliders, Check,
-  X, AlertCircle, RefreshCw, MessageSquare, Printer, Send, Home, PhoneCall,
-  ClipboardList, Stethoscope, HeartPulse, UserCheck2, AlertOctagon, GraduationCap,
-  Flame, ThumbsUp, CalendarCheck, Activity, ClipboardCheck, FileCheck, Mail
+  ShieldAlert, ShieldCheck, HeartHandshake, PlusCircle, Search, Trash2, FileText, CheckCircle2, AlertTriangle, BookOpen, Award, User, Clock, ArrowRight, Download, Filter, Phone, Users, Settings2, RotateCcw, Edit, Edit3, Eye, Sliders, Check, X, AlertCircle, RefreshCw, MessageSquare, Printer, Send, Home, PhoneCall, ClipboardList, Stethoscope, HeartPulse, UserCheck2, AlertOctagon, GraduationCap, Flame, ThumbsUp, CalendarCheck, Activity, ClipboardCheck, FileCheck, Mail, LayoutGrid
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -1000,7 +995,7 @@ const BK_LETTER_PRESETS = [
         <body>
           <div class="header-kop">
             <div class="logo-box">
-              <img src="/muhammadiyah-logo-40493.png" alt="Logo Dikdasmen" />
+              <img src="/logos/muhammadiyah-logo-40493.png" alt="Logo Dikdasmen" />
             </div>
             <div class="kop-text">
               <p class="org">MAJELIS PENDIDIKAN DASAR DAN MENENGAH<br/>PIMPINAN WILAYAH MUHAMMADIYAH JAWA TIMUR</p>
@@ -1010,7 +1005,7 @@ const BK_LETTER_PRESETS = [
               <p class="email-web">E-mail : smamuh1po@gmail.com | Website: www.smamuhipo.sch.id</p>
             </div>
             <div class="logo-box">
-              <img src="/pic_logo.png" alt="Logo Sekolah" />
+              <img src="/logos/pic_logo.png" alt="Logo Sekolah" />
             </div>
           </div>
 
@@ -4474,7 +4469,7 @@ const BK_LETTER_PRESETS = [
                   {/* Preset Template Selector */}
                   <div className="p-3.5 bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/60 rounded-2xl space-y-2">
                     <Label className="text-xs font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-indigo-600" />
+                      <LayoutGrid className="w-4 h-4 text-indigo-600" />
                       Pilih Preset Template Surat BK
                     </Label>
                     <Select
@@ -4704,7 +4699,7 @@ const BK_LETTER_PRESETS = [
                     {/* Kop Surat Resmi SIMASMUH (Standar TU Admin) */}
                     <div className="header-kop flex items-center justify-between border-b-[2.5pt] border-double border-black pb-2 mb-4 text-center">
                       <div className="logo-box w-[70px] shrink-0 text-center">
-                        <img src="/muhammadiyah-logo-40493.png" alt="Logo Dikdasmen" className="w-[65px] h-auto mx-auto block" />
+                        <img src="/logos/muhammadiyah-logo-40493.png" alt="Logo Dikdasmen" className="w-[65px] h-auto mx-auto block" />
                       </div>
                       <div className="kop-text flex-1 px-2 text-center">
                         <p className="org text-[9.5pt] font-bold uppercase leading-tight text-black m-0">
@@ -4724,7 +4719,7 @@ const BK_LETTER_PRESETS = [
                         </p>
                       </div>
                       <div className="logo-box w-[70px] shrink-0 text-center">
-                        <img src="/pic_logo.png" alt="Logo Sekolah" className="w-[65px] h-auto mx-auto block" />
+                        <img src="/logos/pic_logo.png" alt="Logo Sekolah" className="w-[65px] h-auto mx-auto block" />
                       </div>
                     </div>
 

@@ -1,17 +1,11 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import {
+  useState, useMemo, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { 
-  Folder, FolderPlus, Upload, RefreshCw, Search, Grid, List, 
-  Eye, Download, Trash2, Edit3, ArrowLeft, ArrowRight, ArrowUp, ChevronRight, 
-  FileText, Image as ImageIcon, FileSpreadsheet, File, ShieldCheck, 
-  Camera, CheckCircle2, AlertCircle, HardDrive, UserCheck, Layers, 
-  Sparkles, Link2, ExternalLink, X, Plus, Clock, FileCheck, Users,
-  BookOpen, Inbox, Send, Archive, Receipt, Wallet, Banknote, Database, Lock,
-  LayoutGrid, Table2, Info, Monitor, Star, Pin, CornerUpLeft,
-  ChevronDown, Copy, Check, Filter, SlidersHorizontal, Sparkle
+  Folder, FolderPlus, Upload, RefreshCw, Search, Grid, List, Eye, Download, Trash2, Edit3, ArrowLeft, ArrowRight, ArrowUp, ChevronRight, FileText, Image as ImageIcon, FileSpreadsheet, File, ShieldCheck, Camera, CheckCircle2, AlertCircle, HardDrive, UserCheck, Layers, Link2, ExternalLink, X, Plus, Clock, FileCheck, Users, BookOpen, Inbox, Send, Archive, Receipt, Wallet, Banknote, Database, Lock, LayoutGrid, Table2, Info, Monitor, Star, Pin, CornerUpLeft, ChevronDown, Copy, Check, Filter, SlidersHorizontal, Package
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -793,7 +787,7 @@ export function FileExplorerManagement({ initialPath = '', forcedTitle }: FileEx
             className="h-8 px-2.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-md gap-1.5"
             title="Sinkronisasi Vektor AI Wajah FaceNet Realtime"
           >
-            <Sparkles className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
+            <Package className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
             <span className="hidden lg:inline">FaceNet AI</span>
           </Button>
 

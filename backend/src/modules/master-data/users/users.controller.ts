@@ -125,6 +125,43 @@ export class UsersController {
     return this.usersService.updateProfile(id, data);
   }
 
+  @Get('override-users')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.ADMIN_TU, 'BAU', 'TATA_USAHA')
+  getOverrideUsers(@Request() req: any) {
+    return this.usersService.getOverrideUsersList(req?.user);
+  }
+
+  @Post(':id/override-token')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', UserRole.ADMIN_IT, UserRole.ADMIN_TU, 'BAU', 'TATA_USAHA')
+  generateOverrideToken(
+    @Param('id') targetUserId: string,
+    @Body('mode') mode: 'override' | 'spectator',
+    @Request() req: any,
+  ) {
+    const rawForwarded =
+      req.headers['x-forwarded-for'] ||
+      req.headers['x-real-ip'] ||
+      req.connection?.remoteAddress ||
+      '';
+    const clientIp = String(rawForwarded).split(',')[0].trim();
+    const userAgent = req.headers['user-agent'] || '';
+    return this.usersService.generateOverrideToken(
+      targetUserId,
+      mode || 'override',
+      req.user,
+      clientIp,
+      userAgent,
+    );
+  }
+
+  @Post(':id/override-exit')
+  @UseGuards(JwtAuthGuard)
+  exitOverrideSession(@Param('id') targetUserId: string, @Request() req: any) {
+    return this.usersService.deactivateOverrideSession(targetUserId, req?.user?.id);
+  }
+
   @Get()
   findAll(@Request() req: any) {
     return this.usersService.findAll(req?.user);

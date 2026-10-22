@@ -1,13 +1,10 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import {
+  useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  FileCheck, Search, Filter, Eye, CheckCircle2, XCircle, Clock,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Download, RefreshCw, CheckSquare, Square, AlertCircle, FileText,
-  User, Calendar, CreditCard, Layers, ExternalLink, ArrowUpDown,
-  Sparkles, Check, X, ShieldAlert, MessageSquare, Image as ImageIcon
+  FileCheck, Search, Filter, Eye, CheckCircle2, XCircle, Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, RefreshCw, CheckSquare, Square, AlertCircle, FileText, User, Calendar, CreditCard, Layers, ExternalLink, ArrowUpDown, Check, X, ShieldAlert, MessageSquare, Image as ImageIcon, Wallet
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'

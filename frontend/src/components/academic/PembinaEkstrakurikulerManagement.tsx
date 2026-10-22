@@ -1,12 +1,10 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import {
+  useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Sparkles, Users, Calendar, PlusCircle, CheckCircle2, Clock, MapPin,
-  Search, Trash2, Edit3, Save, FileSpreadsheet, Download, RefreshCw,
-  Award, ShieldCheck, UserPlus, Check, X, AlertCircle, Info, ChevronRight,
-  BookOpen, Star, Filter, Settings, FileText
+  LayoutGrid, Users, Calendar, PlusCircle, CheckCircle2, Clock, MapPin, Search, Trash2, Edit3, Save, FileSpreadsheet, Download, RefreshCw, Award, ShieldCheck, UserPlus, Check, X, AlertCircle, Info, ChevronRight, BookOpen, Star, Filter, Settings, FileText
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -485,7 +483,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
   if (myEkskuls.length === 0 && !isLoadingEkskuls) {
     return (
       <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
-        <Sparkles className="w-12 h-12 text-amber-500 mx-auto" />
+        <LayoutGrid className="w-12 h-12 text-amber-500 mx-auto" />
         <h3 className="text-base font-bold text-slate-800 dark:text-white">
           Belum Ada Ekstrakurikuler Binaan
         </h3>
@@ -502,7 +500,7 @@ export function PembinaEkstrakurikulerManagement({ session }: PembinaEkstrakurik
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
-            <Sparkles className="h-5 w-5" />
+            <LayoutGrid className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">

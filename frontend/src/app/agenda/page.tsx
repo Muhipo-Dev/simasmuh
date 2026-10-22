@@ -135,7 +135,7 @@ export default async function AgendaPage() {
       <footer className="bg-slate-900 text-slate-300 pt-12 pb-28 sm:pb-32 px-6 lg:px-20 border-t-4 border-[#F58F2A]">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           <div>
-            <Image src="/pic_logo.png" alt="Logo" width={150} height={50} className="object-contain bg-white p-2 rounded-lg mb-6" />
+            <Image src="/logos/pic_logo.png" alt="Logo" width={150} height={50} className="object-contain bg-white p-2 rounded-lg mb-6" />
             <p className="text-sm leading-relaxed mb-6">
               Mewujudkan generasi Islami yang cerdas, berkarakter, dan siap menghadapi tantangan global melalui pendidikan yang berkemajuan.
             </p>

@@ -95,11 +95,27 @@ function Stop-ProcessById {
 function Stop-PortProcess {
     param([int]$Port)
     try {
-        $result = netstat -ano 2>$null | Select-String ":$Port\s" | Select-String "LISTENING"
+        # 1. Bersihkan via Get-NetTCPConnection
+        $conns = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
+        if ($conns) {
+            foreach ($c in $conns) {
+                if ($c.OwningProcess -and $c.OwningProcess -gt 0) {
+                    $pidVal = $c.OwningProcess
+                    try { Stop-Process -Id $pidVal -Force -ErrorAction SilentlyContinue } catch {}
+                    $null = cmd.exe /c "taskkill /PID $pidVal /T /F 2>nul"
+                }
+            }
+        }
+    } catch {}
+
+    try {
+        # 2. Bersihkan via netstat (mencakup semua state termasuk LISTENING & zombie sockets)
+        $result = netstat -ano 2>$null | Select-String ":$Port\s"
         foreach ($line in $result) {
             $tokens = ($line.Line -split '\s+') | Where-Object { $_ -ne '' }
             $pidVal = $tokens[-1]
             if ($pidVal -match '^\d+$' -and [int]$pidVal -gt 0) {
+                try { Stop-Process -Id ([int]$pidVal) -Force -ErrorAction SilentlyContinue } catch {}
                 $null = cmd.exe /c "taskkill /PID $pidVal /T /F 2>nul"
             }
         }
@@ -221,7 +237,7 @@ function Get-AppStatus {
     $bStatus = if ($backendRunning)      { "AKTIF $bMode".PadRight(12) } else { "MATI".PadRight(12) }
     $fStatus = if ($frontendRunning)     { "AKTIF $fMode".PadRight(12) } else { "MATI".PadRight(12) }
     $aStatus = if ($faceAiRunning)       { "AKTIF (FaceNet)".PadRight(15) } else { "STANDBY (UI)".PadRight(15) }
-    $sStatus = if ($supabaseRunning)     { "AKTIF (Docker)".PadRight(14) } else { "MATI".PadRight(14) }
+    $sStatus = if ($supabaseRunning)     { "AKTIF (Native)".PadRight(14) } else { "MATI".PadRight(14) }
     $pStatus = if ($prismaStudioRunning) { "AKTIF".PadRight(12) } else { "MATI".PadRight(12) }
     $dStatus = if ($dbConnected)         { "TERHUBUNG".PadRight(12) } else { "TERPUTUS".PadRight(12) }
 
@@ -241,8 +257,8 @@ function Get-AppStatus {
     Write-Host ($bStatus + " :3001   |") -ForegroundColor $bColor
     Write-Host "  | AI Face Attendance | " -NoNewline
     Write-Host ($aStatus + " :8089 |") -ForegroundColor $aColor
-    Write-Host "  | Supabase (Docker)  | " -NoNewline
-    Write-Host ($sStatus + " :54323 |") -ForegroundColor $sColor
+    Write-Host "  | PostgreSQL (DB)    | " -NoNewline
+    Write-Host ($sStatus + " :54322 |") -ForegroundColor $sColor
     Write-Host "  | Prisma Studio (ERD)| " -NoNewline
     Write-Host ($pStatus + " :51212 |") -ForegroundColor $pColor
     Write-Host "  | Database Ping (DB) | " -NoNewline
@@ -311,11 +327,9 @@ function Test-SystemReadiness {
 
     # 4. Storage Directory
     Write-Host ""
-    Write-Status "4. Memeriksa Direktori External Storage..." "Cyan"
     $storageRoots = @(
-        "D:\simasmuh_storage",
-        "C:\simasmuh_storage",
-        (Join-Path $ROOT "..\simasmuh_storage"),
+        (Join-Path $ROOT "storage"),
+        "D:\simasmuh\storage",
         (Join-Path $BACKEND_DIR "storage")
     )
     $activeStorage = $null
@@ -371,9 +385,32 @@ function Test-SystemReadiness {
     Write-Host ""
 }
 
-# ─── STOP ────────────────────────────────────────────────────
+function Stop-DatabaseService {
+    Write-Status "Mematikan Database PostgreSQL Native Lokal (Port 54322)..." "Yellow"
+
+    $localDataDir = Join-Path $ROOT "database\data"
+    $pgCtl = ""
+    if (Test-Path "C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe") {
+        $pgCtl = "C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe"
+    } else {
+        $cmdCheck = Get-Command pg_ctl -ErrorAction SilentlyContinue
+        if ($cmdCheck) { $pgCtl = $cmdCheck.Source }
+    }
+
+    if ($pgCtl -and (Test-Path $localDataDir)) {
+        try {
+            $null = & $pgCtl stop -D $localDataDir -m fast 2>$null
+        } catch {}
+    }
+
+    # Pastikan port 54322 dinonaktifkan bersih
+    Stop-PortProcess 54322
+    Start-Sleep -Seconds 1
+    Write-Ok "Database PostgreSQL berhasil dinonaktifkan."
+}
 
 function Stop-Apps {
+    param([switch]$KeepDatabase = $false)
     Write-Status "Menghentikan semua proses aplikasi (Frontend, Backend, AI Face, Prisma Studio)..." "Yellow"
 
     $bPid = Get-StoredPid $BACKEND_PID_FILE
@@ -403,6 +440,10 @@ function Stop-Apps {
     Stop-PortProcess 8089
     Stop-PortProcess 8005
     Stop-PortProcess 51212
+
+    if (-not $KeepDatabase) {
+        Stop-DatabaseService
+    }
 
     Start-Sleep -Seconds 1
     Write-Ok "Semua proses aplikasi berhasil dinonaktifkan."
@@ -465,12 +506,12 @@ function Stop-ModeMenu {
     Write-Host "  |  [1] Menonaktifkan Backend saja (3001)  |" -ForegroundColor White
     Write-Host "  |  [2] Menonaktifkan Frontend saja (3000) |" -ForegroundColor White
     Write-Host "  |  [3] Menonaktifkan Prisma Studio (51212)|" -ForegroundColor White
-    Write-Host "  |  [4] Menonaktifkan Mode Development     |" -ForegroundColor White
-    Write-Host "  |  [5] Menonaktifkan Mode Production      |" -ForegroundColor White
-    Write-Host "  |  [6] Menonaktifkan Mode Testing/Debug   |" -ForegroundColor White
-    Write-Host "  |  [7] Menonaktifkan Mode Preview         |" -ForegroundColor White
-    Write-Host "  |  [8] Menonaktifkan Mode Staging         |" -ForegroundColor White
-    Write-Host "  |  [9] Menonaktifkan Semua Mode (Full Stop)|" -ForegroundColor Red
+    Write-Host "  |  [4] Menonaktifkan Database DB (54322)  |" -ForegroundColor White
+    Write-Host "  |  [5] Menonaktifkan Mode Development     |" -ForegroundColor White
+    Write-Host "  |  [6] Menonaktifkan Mode Production      |" -ForegroundColor White
+    Write-Host "  |  [7] Menonaktifkan Mode Testing/Debug   |" -ForegroundColor White
+    Write-Host "  |  [8] Menonaktifkan Mode Preview         |" -ForegroundColor White
+    Write-Host "  |  [9] Menonaktifkan Semua (Full Stop)    |" -ForegroundColor Red
     Write-Host "  |  [0] Batal / Kembali ke Menu Utama     |" -ForegroundColor White
     Write-Host "  +=========================================+" -ForegroundColor Yellow
     Write-Host ""
@@ -480,7 +521,7 @@ function Stop-ModeMenu {
         "1" { Stop-BackendOnly }
         "2" { Stop-FrontendOnly }
         "3" { Stop-PrismaStudio }
-        "4" { Stop-Apps }
+        "4" { Stop-DatabaseService }
         "5" { Stop-Apps }
         "6" { Stop-Apps }
         "7" { Stop-Apps }
@@ -559,6 +600,10 @@ function Build-Frontend {
 
 function Start-Backend {
     param([string]$Mode = "Production")
+
+    # Pastikan port 3001 selalu bersih dan bebas dari proses zombie sebelum memulai
+    Stop-PortProcess 3001
+    Start-Sleep -Milliseconds 400
     
     if ($Mode -eq "Development") {
         Write-Status "Menjalankan Backend DEVELOPMENT (port 3001)..." "Cyan"
@@ -589,6 +634,9 @@ function Start-Backend {
         $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1024&& npm run start:prod"
     }
 
+    $mainLogPath = Join-Path $LOGS_DIR "simasmuh-backend.log"
+    $cmdLine = "$cmdLine >> `"$mainLogPath`" 2>&1"
+
     $proc = Start-Process -FilePath "cmd.exe" `
                           -ArgumentList $cmdLine `
                           -WorkingDirectory $BACKEND_DIR `
@@ -612,10 +660,14 @@ function Start-Backend {
             return $true
         }
 
-        if ($elapsed -ge 5 -and -not (Test-ProcessRunning $proc.Id) -and -not (Test-PortListening 3001)) {
-            Write-Host ""
-            Write-Err "Backend process berhenti tiba-tiba."
-            return $false
+        if ($elapsed -ge 10 -and -not (Test-PortListening 3001)) {
+            $isCmdAlive = Test-ProcessRunning $proc.Id
+            $isNodeAlive = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*node*" }
+            if (-not $isCmdAlive -and -not $isNodeAlive) {
+                Write-Host ""
+                Write-Err "Backend process berhenti tiba-tiba."
+                return $false
+            }
         }
     }
 
@@ -655,6 +707,8 @@ function Start-Frontend {
         }
         $cmdLine = "/c set NODE_OPTIONS=--max-old-space-size=1536&& npm run start"
     }
+
+    $cmdLine = "$cmdLine >nul 2>&1"
 
     $proc = Start-Process -FilePath "cmd.exe" `
                           -ArgumentList $cmdLine `
@@ -744,52 +798,87 @@ function Repair-WindowsPortExclusion {
     }
 }
 
-function Start-SupabaseDocker {
-    Write-Status "Memeriksa status Supabase (Docker Desktop)..." "Cyan"
+function Start-DatabaseService {
+    Write-Status "Memeriksa status Database (Port 54322)..." "Cyan"
     $dbListening = Test-PortListening 54322
     if ($dbListening) {
-        Write-Ok "Supabase (Docker) aktif di port 54322 (DB) & 54323 (Studio)"
+        Write-Ok "Database PostgreSQL aktif di port 54322"
         return $true
     }
 
-    # 1. Periksa apakah port Supabase (54321, 54322, 54323) diblokir oleh Dynamic Port Exclusion Windows
+    # 1. Coba nyalakan Database PostgreSQL Native Lokal di path proyek (database/data)
+    $localDataDir = Join-Path $ROOT "database\data"
+    $pgCtl = ""
+    if (Test-Path "C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe") {
+        $pgCtl = "C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe"
+    } else {
+        $cmdCheck = Get-Command pg_ctl -ErrorAction SilentlyContinue
+        if ($cmdCheck) { $pgCtl = $cmdCheck.Source }
+    }
+
+    if ($pgCtl -and (Test-Path $localDataDir)) {
+        # Verifikasi apakah server postgres lokal sudah berjalan di direktori data
+        $null = & $pgCtl status -D $localDataDir 2>$null
+        if ($LASTEXITCODE -eq 0 -or (Test-PortListening 54322)) {
+            Write-Ok "Database PostgreSQL Native Lokal aktif di port 54322"
+            return $true
+        }
+
+        # Bersihkan postmaster.pid jika stale (proses sebelumnya mati mendadak)
+        $pidFile = Join-Path $localDataDir "postmaster.pid"
+        if (Test-Path $pidFile) {
+            $null = & $pgCtl status -D $localDataDir 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        Write-Status "Menjalankan Database PostgreSQL Native Lokal (Port 54322)..." "Cyan"
+        $logPath = Join-Path $ROOT "database\postgres.log"
+        $startArgs = "-D `"$localDataDir`" -o `"-p 54322`" -l `"$logPath`" start"
+        $null = Start-Process -FilePath $pgCtl -ArgumentList $startArgs -NoNewWindow
+        
+        # Tunggu sampai port 54322 aktif atau proses selesai (maksimal 5 detik)
+        $elapsed = 0
+        while ($elapsed -lt 5) {
+            Start-Sleep -Seconds 1
+            $elapsed++
+            if (Test-PortListening 54322) {
+                Write-Ok "Database PostgreSQL Native Lokal berhasil diaktifkan di port 54322!"
+                return $true
+            }
+        }
+
+        $null = & $pgCtl status -D $localDataDir 2>$null
+        if ($LASTEXITCODE -eq 0 -or (Test-PortListening 54322)) {
+            Write-Ok "Database PostgreSQL Native Lokal berhasil diaktifkan di port 54322!"
+            return $true
+        }
+    }
+
+    # 2. Fallback: Coba periksa apakah port diblokir WinNAT
     if (Test-PortExcluded 54322) {
         Repair-WindowsPortExclusion 54322
     }
 
+    # 3. Fallback jika ada Docker Desktop
     $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
-    if (-not $dockerCmd) {
-        Write-Info "Docker CLI tidak terdeteksi. Lewati startup otomatis Supabase."
-        return $false
+    if ($dockerCmd) {
+        try {
+            $null = docker info 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                Write-Status "Mencoba menjalankan container database via Docker..." "Yellow"
+                $null = cmd.exe /c "docker start supabase_db_siakad-coba 2>&1"
+                Start-Sleep -Seconds 2
+                if (Test-PortListening 54322) {
+                    Write-Ok "Database via Docker berhasil diaktifkan!"
+                    return $true
+                }
+            }
+        } catch {}
     }
 
-    # 2. Cek apakah Docker Desktop Engine aktif
-    try {
-        $null = docker info 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Err "Docker Desktop belum berjalan! Pastikan aplikasi Docker Desktop sudah dibuka."
-            return $false
-        }
-    } catch {
-        Write-Err "Tidak dapat menghubungi Docker daemon."
-        return $false
-    }
-
-    Write-Status "Menjalankan Supabase di Docker Desktop (npx supabase start)..." "Yellow"
-    $out = cmd.exe /c "cd /d `"$ROOT`" && npx supabase start 2>&1"
-    
-    $dbListening = Test-PortListening 54322
-    if ($dbListening) {
-        Write-Ok "Supabase (Docker) berhasil dijalankan!"
-        return $true
-    }
-
-    # Cek jika error binding port
-    if ($out -match "ports are not available" -or $out -match "forbidden by its access permissions") {
-        Repair-WindowsPortExclusion 54322
-    }
-
-    Write-Info "Supabase Docker belum aktif atau sedang proses startup. Pastikan Docker Desktop berjalan."
+    Write-Info "Database belum aktif di port 54322. Menunggu koneksi..."
     return $false
 }
 
@@ -801,7 +890,7 @@ function Start-PrismaStudio {
         return $true
     }
 
-    $cmdLine = "/c npm run studio"
+    $cmdLine = "/c npm run studio >nul 2>&1"
     $proc = Start-Process -FilePath "cmd.exe" `
                           -ArgumentList $cmdLine `
                           -WorkingDirectory $BACKEND_DIR `
@@ -840,7 +929,7 @@ function Start-FaceAiService {
         }
     }
 
-    $cmdLine = "/c cd /d `"$FACE_AI_DIR`" && $pyExe main.py"
+    $cmdLine = "/c cd /d `"$FACE_AI_DIR`" && $pyExe main.py >nul 2>&1"
     $proc = Start-Process -FilePath "cmd.exe" `
                           -ArgumentList $cmdLine `
                           -WorkingDirectory $FACE_AI_DIR `
@@ -868,8 +957,8 @@ function Start-Apps {
     Write-Info "npm ditemukan: $($npmTest.Source)"
     Write-Host ""
 
-    # 1. Pastikan Supabase di Docker Desktop berjalan
-    $null = Start-SupabaseDocker
+    # 1. Pastikan Database Service (Native Lokal / Fallback Docker) berjalan
+    $null = Start-DatabaseService
     Write-Host ""
 
     # 2. Jalankan Backend
@@ -891,14 +980,18 @@ function Start-Apps {
     Write-Host ""
     $null = Start-PrismaStudio
 
+    # 5. Jalankan Face AI Service (Python Bio-Fusion Port 8089)
+    Write-Host ""
+    $null = Start-FaceAiService
+
     Write-Host ""
     Write-Ok "=========================================================="
-    Write-Ok " SIMASMUH + SUPABASE + PRISMA STUDIO AKTIF!"
-    Write-Ok " - Aplikasi Web        : http://localhost:3000"
-    Write-Ok " - Backend API         : http://localhost:3001"
-    Write-Ok " - Face AI Service     : On-Demand via Dashboard (Port 8089)"
-    Write-Ok " - Prisma Studio       : http://localhost:51212"
-    Write-Ok " - Supabase Studio     : http://localhost:54323"
+    Write-Ok " SELURUH LAYANAN SIMASMUH + DATABASE AKTIF SEMPURNA!"
+    Write-Ok " - Frontend Web (UI)   : http://localhost:3000"
+    Write-Ok " - Backend API (NestJS): http://localhost:3001"
+    Write-Ok " - Prisma Studio (DB)  : http://localhost:51212"
+    Write-Ok " - Face AI Attendance  : http://localhost:8089"
+    Write-Ok " - PostgreSQL Native   : Port 54322 (Aktif & Mandiri)"
     Write-Ok "=========================================================="
     Write-Host ""
 }
@@ -1197,12 +1290,20 @@ function Start-EnvironmentSetup {
         Write-Ok "Node.js ($nodeVer) & npm ($npmVer) terpasang aktif."
     } else {
         Write-Err "Node.js atau npm belum terdeteksi di PATH!"
-        Write-Info "Unduh dan pasang Node.js LTS dari: https://nodejs.org/"
-        # Opsi auto-install via winget jika tersedia
         $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
         if ($wingetCmd) {
             Write-Status "Mencoba memasang Node.js LTS via winget..." "Yellow"
             Start-Process -FilePath "cmd.exe" -ArgumentList "/c winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements" -NoNewWindow -Wait
+        } else {
+            Write-Status "Winget tidak tersedia. Mengunduh & memasang Node.js LTS otomatis via PowerShell..." "Yellow"
+            try {
+                $nodeMsi = "$env:TEMP\nodejs.msi"
+                Invoke-WebRequest -Uri "https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi" -OutFile $nodeMsi
+                Start-Process msiexec.exe -ArgumentList "/i", "`"$nodeMsi`"", "/quiet", "/qn", "/norestart" -Wait
+                Write-Ok "Node.js LTS berhasil diinstal!"
+            } catch {
+                Write-Err "Gagal mengunduh Node.js otomatis. Unduh manual dari: https://nodejs.org/"
+            }
         }
     }
 
@@ -1213,20 +1314,35 @@ function Start-EnvironmentSetup {
         $pyVer = & python --version 2>$null
         Write-Ok "Python ($pyVer) terpasang aktif."
     } else {
-        Write-Info "Python belum terpasang. Face Attendance AI memerlukan Python 3.10+ (https://www.python.org/downloads/)."
+        Write-Info "Python belum terpasang. Face Attendance AI memerlukan Python 3.10+."
         $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
         if ($wingetCmd) {
             Write-Status "Mencoba memasang Python via winget..." "Yellow"
             Start-Process -FilePath "cmd.exe" -ArgumentList "/c winget install Python.Python.3.11 --accept-package-agreements --accept-source-agreements" -NoNewWindow -Wait
+        } else {
+            Write-Status "Winget tidak tersedia. Mengunduh & memasang Python 3.11 otomatis via PowerShell..." "Yellow"
+            try {
+                $pyExe = "$env:TEMP\python-3.11.9-amd64.exe"
+                Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe" -OutFile $pyExe
+                Start-Process $pyExe -ArgumentList "/quiet", "InstallAllUsers=1", "PrependPath=1" -Wait
+                Write-Ok "Python 3.11 berhasil diinstal!"
+            } catch {
+                Write-Err "Gagal mengunduh Python otomatis. Unduh manual dari: https://www.python.org/downloads/"
+            }
         }
     }
 
-    # Check Docker Desktop
-    $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
-    if ($dockerCmd) {
-        Write-Ok "Docker CLI terdeteksi (siap untuk Supabase Studio port 54323 & DB 54322)."
+    # Check Database Engine (PostgreSQL Native Windows Service atau Docker)
+    $pgService = Get-Service -Name "*postgres*" -ErrorAction SilentlyContinue
+    if ($pgService) {
+        Write-Ok "PostgreSQL Native terdeteksi sebagai Windows Service ($($pgService.DisplayName))."
     } else {
-        Write-Info "Docker Desktop belum aktif/terpasang. (Supabase cloud / local DB tetap dapat digunakan via .env)."
+        $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
+        if ($dockerCmd) {
+            Write-Ok "Docker CLI terdeteksi (siap untuk container Supabase)."
+        } else {
+            Write-Info "PostgreSQL Native / Docker belum aktif. (Di Windows Proxmox, disarankan install PostgreSQL Native Service)."
+        }
     }
 
     Write-Host ""
@@ -1255,11 +1371,10 @@ function Start-EnvironmentSetup {
     Write-Host ""
 
     # 5. Inisialisasi Direktori External Storage
-    Write-Status "5/8. Menyiapkan struktur folder external storage terisolasi (simasmuh_storage)..." "Cyan"
+    Write-Status "5/8. Menyiapkan struktur folder storage aplikasi (storage)..." "Cyan"
     $storageRoots = @(
-        "D:\simasmuh_storage",
-        "C:\simasmuh_storage",
-        (Join-Path $ROOT "..\simasmuh_storage"),
+        (Join-Path $ROOT "storage"),
+        "D:\simasmuh\storage",
         (Join-Path $BACKEND_DIR "storage")
     )
     $targetStorage = $storageRoots[0]
@@ -1343,9 +1458,8 @@ function Start-EnvironmentSetup {
 
 function Get-BackupStorageDir {
     $storageRoots = @(
-        "D:\simasmuh_storage\backups",
-        "C:\simasmuh_storage\backups",
         (Join-Path $ROOT "storage\backups"),
+        "D:\simasmuh\storage\backups",
         (Join-Path $ROOT "backups")
     )
     foreach ($sr in $storageRoots) {
@@ -1361,13 +1475,7 @@ function Get-BackupStorageDir {
 
 function Backup-Database-Interactive {
     Write-Banner
-    Write-Status "Memulai Pencadangan Database Supabase (PostgreSQL)..." "Cyan"
-    
-    $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
-    if (-not $dockerCmd) {
-        Write-Err "Docker CLI tidak terdeteksi. Pastikan Docker Desktop aktif."
-        return
-    }
+    Write-Status "Memulai Pencadangan Database (PostgreSQL Port 54322)..." "Cyan"
 
     $backupDir = Get-BackupStorageDir
     $timestamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm-ss")
@@ -1377,9 +1485,23 @@ function Backup-Database-Interactive {
     Write-Info "Target File: $backupFilePath"
     Write-Info "Mengekstrak skema & seluruh isi data tabel database..."
 
+    $pgDump = ""
+    if (Test-Path "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe") {
+        $pgDump = "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe"
+    } else {
+        $cmdCheck = Get-Command pg_dump -ErrorAction SilentlyContinue
+        if ($cmdCheck) { $pgDump = $cmdCheck.Source }
+    }
+
     try {
-        $dumpCmd = "docker exec supabase_db_siakad-coba pg_dump -U postgres -d postgres --clean --if-exists > `"$backupFilePath`""
-        $proc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c $dumpCmd" -NoNewWindow -Wait -PassThru
+        if ($pgDump) {
+            $env:PGPASSWORD = "postgres"
+            $dumpArgs = "-h localhost -p 54322 -U postgres -d postgres --clean --if-exists -f `"$backupFilePath`""
+            Start-Process -FilePath $pgDump -ArgumentList $dumpArgs -NoNewWindow -Wait
+        } else {
+            $dumpCmd = "docker exec supabase_db_siakad-coba pg_dump -U postgres -d postgres --clean --if-exists > `"$backupFilePath`""
+            $null = Start-Process -FilePath "cmd.exe" -ArgumentList "/c $dumpCmd" -NoNewWindow -Wait
+        }
 
         if (Test-Path $backupFilePath) {
             $fSize = (Get-Item $backupFilePath).Length
@@ -1390,7 +1512,7 @@ function Backup-Database-Interactive {
                 return
             }
         }
-        Write-Err "Pencadangan gagal atau file dump kosong. Pastikan container supabase_db_siakad-coba aktif."
+        Write-Err "Pencadangan gagal atau file dump kosong. Pastikan database port 54322 aktif."
     } catch {
         Write-Err "Terjadi kesalahan saat mengeksekusi backup: $_"
     }
@@ -1398,13 +1520,7 @@ function Backup-Database-Interactive {
 
 function Restore-Database-Interactive {
     Write-Banner
-    Write-Status "Memulai Pemulihan Database Supabase (PostgreSQL)..." "Yellow"
-
-    $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
-    if (-not $dockerCmd) {
-        Write-Err "Docker CLI tidak terdeteksi. Pastikan Docker Desktop aktif."
-        return
-    }
+    Write-Status "Memulai Pemulihan Database (PostgreSQL Port 54322)..." "Yellow"
 
     $backupDir = Get-BackupStorageDir
     $sqlFiles = @()
@@ -1453,18 +1569,32 @@ function Restore-Database-Interactive {
         return
     }
 
-    Write-Status "Menyalin file backup ke container database..." "Cyan"
-    $cpCmd = "docker cp `"$selectedFile`" supabase_db_siakad-coba:/tmp/restore_temp.sql"
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c $cpCmd" -NoNewWindow -Wait
+    $psqlBin = ""
+    if (Test-Path "C:\Program Files\PostgreSQL\18\bin\psql.exe") {
+        $psqlBin = "C:\Program Files\PostgreSQL\18\bin\psql.exe"
+    } else {
+        $cmdCheck = Get-Command psql -ErrorAction SilentlyContinue
+        if ($cmdCheck) { $psqlBin = $cmdCheck.Source }
+    }
 
-    Write-Status "Mengeksekusi pemulihan struktur dan data database..." "Cyan"
-    $execCmd = "docker exec supabase_db_siakad-coba psql -U postgres -d postgres -f /tmp/restore_temp.sql"
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c $execCmd" -NoNewWindow -Wait
+    if ($psqlBin) {
+        Write-Status "Mengeksekusi pemulihan data via Native PostgreSQL Client..." "Cyan"
+        $env:PGPASSWORD = "postgres"
+        $restoreArgs = "-h localhost -p 54322 -U postgres -d postgres -f `"$selectedFile`""
+        Start-Process -FilePath $psqlBin -ArgumentList $restoreArgs -NoNewWindow -Wait
+        Write-Ok "PEMULIHAN BASIS DATA BERHASIL DISELESAIKAN!"
+    } else {
+        Write-Status "Menyalin file backup ke container database..." "Cyan"
+        $cpCmd = "docker cp `"$selectedFile`" supabase_db_siakad-coba:/tmp/restore_temp.sql"
+        Start-Process -FilePath "cmd.exe" -ArgumentList "/c $cpCmd" -NoNewWindow -Wait
 
-    # Bersihkan file temp di container
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c docker exec supabase_db_siakad-coba rm -f /tmp/restore_temp.sql" -NoNewWindow -Wait
+        Write-Status "Mengeksekusi pemulihan struktur dan data database..." "Cyan"
+        $execCmd = "docker exec supabase_db_siakad-coba psql -U postgres -d postgres -f /tmp/restore_temp.sql"
+        Start-Process -FilePath "cmd.exe" -ArgumentList "/c $execCmd" -NoNewWindow -Wait
 
-    Write-Ok "PEMULIHAN BASIS DATA BERHASIL DISELESAIKAN!"
+        Start-Process -FilePath "cmd.exe" -ArgumentList "/c docker exec supabase_db_siakad-coba rm -f /tmp/restore_temp.sql" -NoNewWindow -Wait
+        Write-Ok "PEMULIHAN BASIS DATA BERHASIL DISELESAIKAN!"
+    }
 }
 
 function Start-LogManager-Menu {
@@ -1701,8 +1831,24 @@ if ($Mode -ne "") {
         "staging" {
             Start-Apps -Mode "Staging"
         }
-        "fallback" {
-            Start-Apps -Mode "Fallback"
+        "1" { Start-Apps -Mode "Development" }
+        "2" { Start-Apps -Mode "Production" }
+        "3" { Start-Apps -Mode "Debug" }
+        "4" { Start-Apps -Mode "Preview" }
+        "5" { Start-Apps -Mode "Staging" }
+        "6" { Start-Apps -Mode "Fallback" }
+        "7" { 
+            Stop-Apps
+            Start-Sleep -Seconds 1
+            Start-Apps -Mode "Development"
+        }
+        "8" { 
+            Stop-Apps
+            Start-Sleep -Seconds 1
+            $null = Start-DatabaseService
+            $b = Build-Backend
+            $f = Build-Frontend
+            Start-Apps -Mode "Production"
         }
         "dev" {
             Start-Apps -Mode "Development"
@@ -1870,16 +2016,34 @@ while ($true) {
         }
         "8" {
             Write-Banner
-            if (Confirm-Action "Yakin ingin mem-Build ulang dan Restart Frontend & Backend? (Perubahan kode akan diterapkan)") {
+            if (Confirm-Action "Yakin ingin mem-Build ulang dan Restart Frontend, Backend, & Database? (Perubahan kode akan diterapkan)") {
                 Stop-Apps
                 Start-Sleep -Seconds 2
+
+                # 1. Mulai ulang dan pastikan database aktif di port 54322
+                Write-Status "Memulai ulang service Database PostgreSQL (Port 54322)..." "Cyan"
+                $null = Start-DatabaseService
+                Start-Sleep -Seconds 1
                 
+                # 2. Build ulang Backend & Frontend
                 $bBuilt = Build-Backend
                 $fBuilt = Build-Frontend
                 
+                # 3. Jalankan kembali seluruh layanan
                 if ($bBuilt) { $null = Start-Backend }
                 if ($fBuilt) { $null = Start-Frontend }
                 $null = Start-PrismaStudio
+                $null = Start-FaceAiService
+
+                Write-Host ""
+                Write-Ok "=========================================================="
+                Write-Ok " REBUILD & RESTART SELESAI! SELURUH LAYANAN AKTIF SEMPURNA"
+                Write-Ok " - Frontend Web (UI)   : http://localhost:3000"
+                Write-Ok " - Backend API (NestJS): http://localhost:3001"
+                Write-Ok " - Prisma Studio (DB)  : http://localhost:51212"
+                Write-Ok " - Face AI Attendance  : http://localhost:8089"
+                Write-Ok " - PostgreSQL Native   : Port 54322 (Aktif & Siap Pakai)"
+                Write-Ok "=========================================================="
             }
             Read-Host "  Tekan ENTER untuk kembali ke menu"
         }

@@ -15,7 +15,7 @@
       "isActive": true
     }
   ],
-  "threshold": 0.9,
+  "threshold": 0.7,
   "cooldownMinutes": 15,
   "isActive": true,
   "welcomeVoice": true,

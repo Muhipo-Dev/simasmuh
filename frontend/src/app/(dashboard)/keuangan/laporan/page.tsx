@@ -1,13 +1,11 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import {
+  useSession } from 'next-auth/react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
-  Wallet, CheckCircle2, Clock, Loader2, TrendingUp, GraduationCap, BookOpen,
-  Building2, Users2, Calendar, AlertCircle, Receipt, Upload, Percent, Sparkles,
-  Copy, CreditCard, ArrowUpRight, ArrowDownRight, DollarSign, Printer, Download,
-  Layers, FileSpreadsheet, ShieldCheck, Users, Banknote, HelpCircle, Eye
+  Wallet, CheckCircle2, Clock, Loader2, TrendingUp, GraduationCap, BookOpen, Building2, Users2, Calendar, AlertCircle, Receipt, Upload, Percent, Copy, CreditCard, ArrowUpRight, ArrowDownRight, DollarSign, Printer, Download, Layers, FileSpreadsheet, ShieldCheck, Users, Banknote, HelpCircle, Eye
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
@@ -280,7 +278,7 @@ function StudentFinanceView({ student }: { student: StudentDetail }) {
             </span>
             {student.beasiswaPercentage && student.beasiswaPercentage > 0 ? (
               <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs px-2.5 py-0.5 rounded-full font-black flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <Wallet className="w-3.5 h-3.5 text-emerald-600" />
                 Beasiswa {student.beasiswaPercentage}%
               </span>
             ) : null}
@@ -331,7 +329,7 @@ function StudentFinanceView({ student }: { student: StudentDetail }) {
                 {student.beasiswaPercentage && student.beasiswaPercentage > 0 ? (
                   <>
                     <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-emerald-600" />
+                      <Wallet className="w-3 h-3 text-emerald-600" />
                       Beasiswa {student.beasiswaPercentage}%
                     </span>
                     <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
@@ -503,7 +501,7 @@ function StudentFinanceView({ student }: { student: StudentDetail }) {
                             )}
                             {hasDiscount && (
                               <span className="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-md font-extrabold flex items-center gap-1">
-                                <Sparkles className="w-3 h-3 text-emerald-600" />
+                                <Wallet className="w-3 h-3 text-emerald-600" />
                                 Beasiswa {discPct}% {discInfo?.beasiswaAmount ? `(-${currency(discInfo.beasiswaAmount)})` : ''}
                               </span>
                             )}

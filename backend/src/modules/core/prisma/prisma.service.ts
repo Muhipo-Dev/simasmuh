@@ -18,13 +18,18 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     const connectionString = process.env.DATABASE_URL;
 
     // Detect if database is remote (Supabase / Neon / Cloud Postgres)
+    const isLocalhost =
+      connectionString?.includes('localhost') ||
+      connectionString?.includes('127.0.0.1');
+
     const isRemoteDb =
-      connectionString?.includes('supabase.com') ||
-      connectionString?.includes('pooler.supabase.com') ||
-      connectionString?.includes('supabase.co') ||
-      connectionString?.includes('sslmode=require') ||
-      connectionString?.includes('neon.tech') ||
-      process.env.NODE_ENV === 'production';
+      !isLocalhost &&
+      (connectionString?.includes('supabase.com') ||
+        connectionString?.includes('pooler.supabase.com') ||
+        connectionString?.includes('supabase.co') ||
+        connectionString?.includes('sslmode=require') ||
+        connectionString?.includes('neon.tech') ||
+        process.env.NODE_ENV === 'production');
 
     const poolConfig: any = {
       connectionString,
@@ -54,13 +59,24 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   }
 
   async onModuleInit() {
-    try {
-      await this.$connect();
-      this.logger.log(
-        '✅ Database connected successfully (PostgreSQL / Supabase)',
-      );
-    } catch (error) {
-      this.logger.error('❌ Failed to connect to Database:', error);
+    const maxRetries = 10;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.$connect();
+        this.logger.log(
+          '✅ Database connected successfully (PostgreSQL / Supabase)',
+        );
+        return;
+      } catch (error: any) {
+        if (attempt < maxRetries) {
+          this.logger.warn(
+            `Menunggu koneksi Database PostgreSQL (Percobaan ${attempt}/${maxRetries})...`,
+          );
+          await new Promise((res) => setTimeout(res, 1200));
+        } else {
+          this.logger.error('❌ Failed to connect to Database:', error);
+        }
+      }
     }
   }
 }

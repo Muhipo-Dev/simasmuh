@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,11 +15,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { 
-  Sparkles, Users, UserCheck, Plus, Pencil, Trash2, Eye, 
-  Search, Filter, Calendar, MapPin, Clock, Trophy, Award,
-  ShieldCheck, CheckCircle2, UserPlus, X, Phone, UserSquare2,
-  ChevronRight, Building, ClipboardList, Activity, LayoutDashboard
+import {
+  Award, Users, UserCheck, Plus, Pencil, Trash2, Eye, Search, Filter, Calendar, MapPin, Clock, Trophy, ShieldCheck, CheckCircle2, UserPlus, X, Phone, UserSquare2, ChevronRight, Building, ClipboardList, Activity, LayoutDashboard
 } from 'lucide-react'
 import Link from 'next/link'
 import Swal from 'sweetalert2'
@@ -244,7 +242,7 @@ export default function EkstrakurikulerPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-indigo-900 p-6 rounded-2xl text-white shadow-lg">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-            <Sparkles className="w-8 h-8 text-amber-300" />
+            <Award className="w-8 h-8 text-amber-300" />
             Manajemen Ekstrakurikuler SIMASMUH
           </h1>
           <p className="text-blue-100 mt-1.5 text-xs sm:text-sm">
@@ -335,7 +333,7 @@ export default function EkstrakurikulerPage() {
                   <span className="text-[10px] text-slate-500">Klub &amp; Organisasi</span>
                 </div>
                 <div className="p-3 bg-blue-50 dark:bg-blue-950/50 rounded-2xl text-blue-600">
-                  <Sparkles className="w-6 h-6" />
+                  <Award className="w-6 h-6" />
                 </div>
               </CardContent>
             </Card>
@@ -442,7 +440,7 @@ export default function EkstrakurikulerPage() {
                   {filteredEkskul.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-12 text-slate-500">
-                        <Sparkles className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                        <Award className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                         <p className="font-semibold text-xs">Belum ada data ekstrakurikuler tercatat.</p>
                         <p className="text-[11px] text-slate-400 mt-0.5">Silakan klik tombol &quot;Tambah Ekskul Baru&quot; untuk menambahkan data.</p>
                       </TableCell>
@@ -590,7 +588,7 @@ export default function EkstrakurikulerPage() {
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-blue-600" />
+              <Award className="w-5 h-5 text-blue-600" />
               {editingItem ? 'Ubah Master Ekstrakurikuler & Pembina' : 'Tambah Ekstrakurikuler Baru'}
             </DialogTitle>
             <DialogDescription className="text-xs">
@@ -771,7 +769,7 @@ export default function EkstrakurikulerPage() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-500" />
+              <Award className="w-5 h-5 text-amber-500" />
               Monitoring Ekstrakurikuler: {selectedDetail?.name}
             </DialogTitle>
             <DialogDescription className="text-xs">

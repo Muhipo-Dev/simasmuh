@@ -49,6 +49,7 @@ model User {
   sessions          UserSession[]
   presensiKegiatans PresensiKegiatan[]
   passwordResetOtps PasswordResetOtp[]
+  faceBiometric     UserFaceBiometric?
 }
 
 model PasswordResetOtp {
@@ -108,6 +109,8 @@ model TeacherProfile {
   supervisiRecords    SupervisiAkademik[]
   supervisiJadwals    JadwalSupervisi[]
   perangkatAjars      PerangkatAjar[]
+  studentAssessments  StudentAssessment[]
+  perangkatKurikulums PerangkatKurikulum[]
 }
 
 model ParentProfile {
@@ -145,13 +148,15 @@ model Class {
   homeroomTeacher   TeacherProfile? @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
   schedules         Schedule[]
   students          Student[]
+  studentAssessments StudentAssessment[]
+  perangkatKurikulums PerangkatKurikulum[]
 
   @@unique([name, gradeLevel, academicYear])
 }
 
 model Student {
   id                 String         @id @default(uuid())
-  nisn               String         @unique
+  nisn               String?        @unique
   nis                String         @unique
   name               String
   gender             String
@@ -182,6 +187,8 @@ model Student {
   characterAssessments CharacterAssessment[]
   achievements       StudentAchievement[]
   extracurricularMembers ExtracurricularMember[]
+  studentAssessments StudentAssessment[]
+  nilaiSiswaTps      NilaiSiswaTP[]
 
   @@index([classId])
   @@index([virtualAccount])
@@ -191,9 +198,13 @@ model Subject {
   id              String           @id @default(uuid())
   name            String
   code            String           @unique
+  category        String?          @default("WAJIB") // WAJIB | PILIHAN_PROGRAM | MUATAN_LOKAL
+  program         String?          // e.g. "ai", "seni budaya", "tahfidz", dll (kode ProgramConfig)
   grades          Grade[]
   schedules       Schedule[]
   teacherSubjects TeacherSubject[]
+  studentAssessments StudentAssessment[]
+  perangkatKurikulums PerangkatKurikulum[]
 }
 
 model TeacherSubject {
@@ -279,6 +290,8 @@ model TeachingJournal {
   scheduleId String
   teacherId  String
   photoUrl   String?
+  tpId       String?
+  tujuanPembelajaran TujuanPembelajaran? @relation(fields: [tpId], references: [id], onDelete: SetNull)
   schedule   Schedule       @relation(fields: [scheduleId], references: [id])
   teacher    TeacherProfile @relation(fields: [teacherId], references: [id])
 
@@ -333,6 +346,26 @@ model Setting {
   publicDomainUrl        String? @default("https://simasmuh.razagopo.my.id")
   googleClientId         String?
   googleClientSecret     String?
+  partnerLogos           String? // JSON stringified array of { id, title, imageUrl, linkUrl }
+  youtubeChannelUrl      String? @default("https://www.youtube.com/@SmaMuhipo")
+  youtubeVideoEmbedUrl   String?
+  instagramUrl           String? @default("https://www.instagram.com/smamuhipo.official/")
+  instagramFeedUrl       String?
+  instagramPostsJson     String? // JSON array of { id, url, caption, imageUrl, date }
+  whySchoolTitle         String? @default("Kenapa Harus Bersekolah di SMA Muhipo?")
+  whySchoolSubtitle      String? @default("SMA Muhammadiyah 1 Ponorogo berkomitmen memberikan lingkungan belajar holistik yang memadukan keunggulan akademik, adab Islam, teknologi masa depan, dan prestasi global.")
+  whySchoolFeaturesJson  String? // JSON array of { id, number, title, description, tag, icon, color }
+  heroBadgeText          String? @default("Terakreditasi A • Sekolah Unggul Muhammadiyah")
+  heroBadgeLocation      String? @default("Ponorogo, Jawa Timur")
+  heroSubheading         String? @default("SMA MUHAMMADIYAH 1 PONOROGO (MUHIPO)")
+  heroTitlePrefix        String? @default("EXCELLENT ISLAMIC")
+  heroTitleGradient      String? @default("WITH CHARACTER")
+  heroDescription        String? @default("Membentuk generasi unggul yang berakhlak mulia, berwawasan global, mandiri, serta berdaya saing internasional berlandaskan nilai-nilai luhur kepesantrenan dan pendidikan berkemajuan.")
+  heroCtaText            String? @default("Kenapa SMA Muhipo?")
+  heroCtaLink            String? @default("#keunggulan")
+  heroVideoText          String? @default("Tonton Video Profil")
+  heroVideoLink          String? @default("https://www.youtube.com/@SmaMuhipo")
+  homeSectionOrderJson   String? // JSON stringified array of section keys: ['partner_logos', 'stats', 'news_agenda', 'why_school', 'programs', 'media_social']
 }
 
 model Announcement {
@@ -536,6 +569,16 @@ model ProgramConfig {
   defaultSpp      Float    @default(0)
   defaultBeasiswa Float    @default(0) @map("defaultDiscount")
   description     String?
+  subtitle        String?
+  fullContent     String?
+  features        String?  // JSON stringified array of general features/keunggulan
+  fasilitasList   String?  // JSON stringified array of fasilitas program
+  keunggulanList  String?  // JSON stringified array of keunggulan utama
+  iconName        String?  @default("BookOpen")
+  logoUrl         String?  // Uploaded custom logo/image program URL or Base64
+  badgeColor      String?
+  order           Int      @default(0)
+  isVisible       Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -1183,4 +1226,253 @@ model ExtracurricularGrade {
   @@index([memberId])
   @@index([studentId])
 }
+
+
+model StudentAssessment {
+  id           String          @id @default(uuid())
+  studentId    String
+  classId      String
+  subjectId    String
+  teacherId    String?         // Guru pengampu yang mengisi/mengimport
+  academicYear String          @default("2025/2026")
+  semester     Int             @default(1) // 1 = Ganjil, 2 = Genap
+
+  // Nilai Formatif Lingkup Materi 1-5 (masing-masing memiliki TP1-TP4)
+  lm1_tp1      Float?
+  lm1_tp2      Float?
+  lm1_tp3      Float?
+  lm1_tp4      Float?
+
+  lm2_tp1      Float?
+  lm2_tp2      Float?
+  lm2_tp3      Float?
+  lm2_tp4      Float?
+
+  lm3_tp1      Float?
+  lm3_tp2      Float?
+  lm3_tp3      Float?
+  lm3_tp4      Float?
+
+  lm4_tp1      Float?
+  lm4_tp2      Float?
+  lm4_tp3      Float?
+  lm4_tp4      Float?
+
+  lm5_tp1      Float?
+  lm5_tp2      Float?
+  lm5_tp3      Float?
+  lm5_tp4      Float?
+
+  // Sumatif Lingkup Materi (LM1 - LM5)
+  sum_lm1      Float?
+  sum_lm2      Float?
+  sum_lm3      Float?
+  sum_lm4      Float?
+  sum_lm5      Float?
+
+  // Asesmen Sumatif Semester
+  sts          Float?          // Sumatif Tengah Semester
+  sas          Float?          // Sumatif Akhir Semester
+
+  // Nilai Rata-rata & Akhir Terkalkulasi
+  formatifAvg  Float?
+  sumatifLmAvg Float?
+  finalScore   Float?
+
+  notes        String?         // Catatan guru pengampu mapel
+  raporCapaianKompetensi String? // Deskripsi capaian kompetensi e-raport (Wali Kelas)
+  raporCatatanWali       String? // Catatan / masukan wali kelas untuk e-raport
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  student      Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class        Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject      Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher      TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, subjectId, academicYear, semester])
+  @@index([studentId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([teacherId])
+  @@index([academicYear, semester])
+}
+
+model UserFaceBiometric {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Vektor 512-dimensi hasil FaceNet Inception-ResNet-v1 (disimpan utuh dalam array float & base64/JSON)
+  embedding       Float[]
+  vectorDimension Int      @default(512)
+  modelName       String   @default("Inception-ResNet-v1 (Bio-Fusion AI)")
+  
+  // Foto Profil asli yang disimpan utuh di database (Base64 JPEG/PNG)
+  photoDataUrl    String?  @db.Text
+  
+  // Foto multi-sudut (5 arah + liveness: front, right, left, up, down, blink, mouth_open)
+  // Disimpan dalam format JSON Record<angle, base64DataUrl>
+  samplePhotos    Json?
+  sampleCount     Int      @default(0)
+  
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CapaianPembelajaran {
+  id           String   @id @default(uuid())
+  fase         String   // FASE_E (Kelas X), FASE_F (Kelas XI - XII)
+  gradeLevel   Int      // 10, 11, 12
+  subjectCode  String?
+  subjectName  String   // e.g. "Matematika", "Informatika"
+  elemen       String   // e.g. "Bilangan", "Aljabar dan Fungsi", "Algoritma dan Pemrograman"
+  deskripsiCp  String   @db.Text
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tujuanPembelajarans TujuanPembelajaran[]
+
+  @@index([fase, subjectName])
+  @@index([gradeLevel])
+}
+
+model PerangkatKurikulum {
+  id                 String   @id @default(uuid())
+  teacherId          String
+  classId            String
+  subjectId          String
+  academicYear       String   @default("2025/2026")
+  semester           String   @default("GANJIL") // GANJIL, GENAP
+  fase               String   @default("FASE_E") // FASE_E, FASE_F
+  jenisKurikulum     String   @default("KURIKULUM_MERDEKA") // KURIKULUM_MERDEKA, KURIKULUM_2013, KURIKULUM_NASIONAL_PLUS, DLL
+
+  totalJpSemester    Int      @default(36) // Total alokasi JP dalam 1 semester
+  jpPerMinggu        Int      @default(2)  // Alokasi JP tatap muka per minggu
+  mingguEfektifCount Int      @default(18) // Jumlah minggu efektif (default 18)
+
+  statusSupervisi    String   @default("DRAFT") // DRAFT, SIAP, DIAJUKAN, TERVERIFIKASI
+  catatanKurikulum   String?  @db.Text
+
+  teacher            TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class              Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject            Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  tujuanPembelajarans TujuanPembelajaran[]
+  promesAllocations   PromesAllocation[]
+  dokumenItems        PerangkatAjarItem[]
+  nilaiSiswaTps       NilaiSiswaTP[]
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([teacherId, classId, subjectId, academicYear, semester])
+  @@index([teacherId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([academicYear, semester])
+}
+
+model TujuanPembelajaran {
+  id                   String              @id @default(uuid())
+  perangkatKurikulumId String
+  cpId                 String?
+
+  kodeTp               String              // e.g. "TP 1", "TP 2", "10.1", "10.2"
+  orderIndex           Int                 @default(1)
+  lingkupMateri        String              // Lingkup Materi / Bab / Elemen
+  materiPokok          String              // Rincian topik inti
+  deskripsiTp          String              @db.Text // Rumusan Tujuan Pembelajaran (ABCD)
+  alokasiJp            Int                 @default(4) // Jam Pelajaran
+  dimensiProfilPancasila String?           // JSON array string
+
+  perangkatKurikulum   PerangkatKurikulum  @relation(fields: [perangkatKurikulumId], references: [id], onDelete: Cascade)
+  capaianPembelajaran  CapaianPembelajaran? @relation(fields: [cpId], references: [id], onDelete: SetNull)
+  promesAllocations    PromesAllocation[]
+  dokumenItems         PerangkatAjarItem[]
+  nilaiSiswaTps        NilaiSiswaTP[]
+  teachingJournals     TeachingJournal[]
+
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([perangkatKurikulumId])
+  @@index([orderIndex])
+}
+
+model PromesAllocation {
+  id                   String             @id @default(uuid())
+  perangkatKurikulumId String
+  tpId                 String
+
+  bulanIndex           Int                // 1 s.d. 6 (Juli - Desember / Januari - Juni)
+  namaBulan            String             // "Juli", "Agustus", dst.
+  mingguKe             Int                // 1, 2, 3, 4, 5
+  mingguAbsolut        Int                // Minggu 1 s.d. 18 efektif
+  alokasiJp            Int                @default(2) // JP yang dialokasikan di blok ini
+  keterangan           String?            // "KBM", "STS", "SAS", "Libur", dll.
+
+  perangkatKurikulum   PerangkatKurikulum @relation(fields: [perangkatKurikulumId], references: [id], onDelete: Cascade)
+  tujuanPembelajaran   TujuanPembelajaran @relation(fields: [tpId], references: [id], onDelete: Cascade)
+
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@unique([perangkatKurikulumId, tpId, mingguAbsolut])
+  @@index([perangkatKurikulumId])
+  @@index([tpId])
+}
+
+model PerangkatAjarItem {
+  id                   String             @id @default(uuid())
+  perangkatKurikulumId String
+  tpId                 String?
+
+  kategori             String             // MODUL_AJAR, LKPD, SOAL_HARIAN, ASESMEN_SUMATIF, KISI_KISI, SOAL_STS, SOAL_SAS, SILABUS, PROTA, PROMES
+  judul                String
+  kontenJson           Json?              // Struktur kaya: tujuan, apersepsi, kegiatan inti, penutup, rubrik, soal, kunci
+  fileDocxUrl          String?
+  filePdfUrl           String?
+  statusDraft          String             @default("SIAP") // DRAFT, SIAP
+
+  perangkatKurikulum   PerangkatKurikulum @relation(fields: [perangkatKurikulumId], references: [id], onDelete: Cascade)
+  tujuanPembelajaran   TujuanPembelajaran? @relation(fields: [tpId], references: [id], onDelete: SetNull)
+
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([perangkatKurikulumId])
+  @@index([tpId])
+  @@index([kategori])
+}
+
+model NilaiSiswaTP {
+  id                   String             @id @default(uuid())
+  perangkatKurikulumId String
+  studentId            String
+  tpId                 String
+
+  nilaiFormatif        Float?             // 0 - 100
+  nilaiSumatif         Float?             // Nilai tes sumatif lingkup materi TP
+  catatanProgres       String?            // e.g. "Sangat menguasai konsep..."
+
+  perangkatKurikulum   PerangkatKurikulum @relation(fields: [perangkatKurikulumId], references: [id], onDelete: Cascade)
+  student              Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tujuanPembelajaran   TujuanPembelajaran @relation(fields: [tpId], references: [id], onDelete: Cascade)
+
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@unique([perangkatKurikulumId, studentId, tpId])
+  @@index([perangkatKurikulumId])
+  @@index([studentId])
+  @@index([tpId])
+}
+
+
 

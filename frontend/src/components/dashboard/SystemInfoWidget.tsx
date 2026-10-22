@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import {
+  useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { Bell, Info, ShieldCheck, ChevronRight, Sparkles, Clock, User, X, ImageIcon, Server } from 'lucide-react'
+import { Bell, Info, ShieldCheck, ChevronRight, Clock, User, X, ImageIcon, Server, LayoutGrid
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {

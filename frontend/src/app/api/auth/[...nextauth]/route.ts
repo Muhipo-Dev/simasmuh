@@ -1,6 +1,7 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
+import { decode as nextAuthDecode } from "next-auth/jwt"
 import { NextRequest } from "next/server"
 import { getBackendUrl } from "@/lib/api-config"
 
@@ -28,7 +29,7 @@ async function getAuthOptions(req?: NextRequest) {
 
   if (req) {
     const forwardedProto = req.headers.get('x-forwarded-proto');
-    const proto = forwardedProto || (req.nextUrl?.protocol ? req.nextUrl.protocol.replace(':', '') : 'https');
+    const proto = forwardedProto || (req.nextUrl?.protocol ? req.nextUrl.protocol.replace(':', '') : 'http');
     const forwardedHost = req.headers.get('x-forwarded-host');
     const headerHost = req.headers.get('host');
     const host = forwardedHost || headerHost || req.nextUrl?.host;
@@ -37,26 +38,61 @@ async function getAuthOptions(req?: NextRequest) {
     }
   }
 
-  // Ambil URL domain publik resmi dari Pengaturan Sistem sebagai Single Source of Truth
-  const systemConfiguredDomain = (await fetchConfiguredPublicDomain()) || process.env.NEXT_PUBLIC_APP_URL || 'https://simasmuh.razagopo.my.id';
-  const effectiveOrigin = systemConfiguredDomain || hostUrl || 'https://simasmuh.razagopo.my.id';
+  // Sesuai Standar AGENTS.md Aturan 10:
+  // Prioritas Penentuan Origin:
+  // 1) Host client aktif (hostUrl dari header request/window origin)
+  // 2) Domain publik terkonfigurasi sistem di basis data
+  // 3) BaseUrl / Loopback bawaan (http://localhost:3000)
+  const systemConfiguredDomain = (await fetchConfiguredPublicDomain()) || process.env.NEXT_PUBLIC_APP_URL || '';
+  const effectiveOrigin = (hostUrl || systemConfiguredDomain || 'http://localhost:3000').replace(/\/+$/, '');
 
   // Perbarui environment variable NEXTAUTH_URL untuk instance request ini
   process.env.NEXTAUTH_URL = effectiveOrigin;
-  const isHttps = effectiveOrigin.startsWith('https');
+  const isHttps = effectiveOrigin.startsWith('https://');
 
   return {
     secret: process.env.NEXTAUTH_SECRET || "nailar-muhipo55",
+    useSecureCookies: isHttps,
     jwt: {
       decode: async (params: any) => {
         try {
-          const { decode } = await import("next-auth/jwt");
-          return await decode(params);
+          const secrets = [
+            params?.secret,
+            process.env.NEXTAUTH_SECRET,
+            process.env.AUTH_SECRET,
+            "nailar-muhipo55",
+          ].filter(Boolean) as string[];
+
+          for (const sec of Array.from(new Set(secrets))) {
+            try {
+              const res = await nextAuthDecode({ ...params, secret: sec });
+              if (res) return res;
+            } catch {}
+          }
+          return null;
         } catch {
-          // Ketika secret key diperbarui dan cookie browser pengguna masih menyimpan session lama yang terenkripsi key sebelumnya,
-          // tangani secara graceful tanpa memicu fatal log exception agar otomatis meminta sign in ulang
           return null;
         }
+      },
+    },
+    logger: {
+      error(code: string, metadata: any) {
+        if (code === 'JWT_SESSION_ERROR') {
+          // Tangani secara graceful: cookie sesi lama/tidak valid dibersihkan otomatis oleh NextAuth (sessionStore.clean)
+          // tanpa mencemari terminal dengan exception stack trace.
+          return;
+        }
+        if (code === 'CLIENT_FETCH_ERROR') {
+          // Tangani secara graceful: log transient kegagalan fetch dari browser saat server sedang restart/jeda koneksi
+          return;
+        }
+        console.error(`[next-auth][error][${code}]`, metadata);
+      },
+      warn(code: any) {
+        console.warn(`[next-auth][warn][${code}]`);
+      },
+      debug(code: string, metadata: any) {
+        // Abaikan debug log rutin
       },
     },
     providers: [
@@ -75,9 +111,78 @@ async function getAuthOptions(req?: NextRequest) {
         credentials: {
           email: { label: "Username / Email", type: "text" },
           password: { label: "Password", type: "password" },
-          action: { label: "Action", type: "text" }
+          action: { label: "Action", type: "text" },
+          overrideData: { label: "Override Data", type: "text" }
         },
         async authorize(credentials, authReq) {
+          // Dukungan pemulihan sesi admin asli (Keluar dari Mode Override / Spectator)
+          if (credentials?.action === 'restore_admin_login' && credentials?.overrideData) {
+            try {
+              const parsed = JSON.parse(credentials.overrideData);
+              const u = parsed.user || parsed;
+              const token = parsed.access_token || parsed.token || u.token;
+              if (u && u.id && token) {
+                return {
+                  id: u.id,
+                  name: u.name,
+                  email: u.email,
+                  username: u.username,
+                  nipNbm: u.nipNbm,
+                  role: u.role,
+                  isActive: u.isActive !== false,
+                  subRole: u.subRole,
+                  subRole2: u.subRole2,
+                  subRole3: u.subRole3,
+                  subRole4: u.subRole4,
+                  subRole5: u.subRole5,
+                  token: token,
+                  isOverrideSession: false,
+                  overrideMode: null,
+                  isReadOnly: false,
+                  overrideByAdminId: null,
+                  overrideByAdminName: null,
+                  overrideByAdminRole: null,
+                };
+              }
+            } catch (err) {
+              console.error("Restore admin session parse error:", err);
+              return null;
+            }
+          }
+
+          // Dukungan login instant melalui Override / Spectator session
+          if (credentials?.action === 'override_login' && credentials?.overrideData) {
+            try {
+              const parsed = JSON.parse(credentials.overrideData);
+              if (parsed && parsed.user && parsed.access_token) {
+                return {
+                  id: parsed.user.id,
+                  name: parsed.user.name,
+                  email: parsed.user.email,
+                  username: parsed.user.username,
+                  nipNbm: parsed.user.nipNbm,
+                  role: parsed.user.role,
+                  isActive: parsed.user.isActive !== false,
+                  subRole: parsed.user.subRole,
+                  subRole2: parsed.user.subRole2,
+                  subRole3: parsed.user.subRole3,
+                  subRole4: parsed.user.subRole4,
+                  subRole5: parsed.user.subRole5,
+                  token: parsed.access_token,
+                  isOverrideSession: true,
+                  overrideMode: parsed.mode || parsed.user.overrideMode || 'override',
+                  isReadOnly: parsed.isReadOnly === true || parsed.mode === 'spectator',
+                  overrideByAdminId: parsed.user.overrideByAdminId,
+                  overrideByAdminName: parsed.user.overrideByAdminName,
+                  overrideByAdminRole: parsed.user.overrideByAdminRole,
+                };
+              }
+            } catch (err) {
+              console.error("Override session parse error:", err);
+              return null;
+            }
+          }
+
           if (!credentials?.email || !credentials?.password) return null;
 
           try {
@@ -205,6 +310,15 @@ async function getAuthOptions(req?: NextRequest) {
           token.subRole4 = (user as any).subRole4;
           token.subRole5 = (user as any).subRole5;
           token.accessToken = (user as any).token;
+
+          // Override metadata (Pastikan reset total jika isOverrideSession false atau tidak ada)
+          const isOverride = (user as any).isOverrideSession === true;
+          token.isOverrideSession = isOverride;
+          token.overrideMode = isOverride ? ((user as any).overrideMode || 'override') : null;
+          token.isReadOnly = isOverride ? Boolean((user as any).isReadOnly) : false;
+          token.overrideByAdminId = isOverride ? ((user as any).overrideByAdminId || null) : null;
+          token.overrideByAdminName = isOverride ? ((user as any).overrideByAdminName || null) : null;
+          token.overrideByAdminRole = isOverride ? ((user as any).overrideByAdminRole || null) : null;
         }
         return token;
       },
@@ -222,6 +336,15 @@ async function getAuthOptions(req?: NextRequest) {
           ;(session.user as any).subRole4 = (token as any).subRole4
           ;(session.user as any).subRole5 = (token as any).subRole5
           ;(session as any).accessToken = (token as any).accessToken
+
+          // Override & Spectator metadata on session (Hanya aktif jika benar-benar sesi override)
+          const isOverride = (token as any).isOverrideSession === true && (token as any).overrideByAdminId && (token as any).id !== (token as any).overrideByAdminId;
+          ;(session.user as any).isOverrideSession = isOverride
+          ;(session.user as any).overrideMode = isOverride ? ((token as any).overrideMode || null) : null
+          ;(session.user as any).isReadOnly = isOverride ? Boolean((token as any).isReadOnly) : false
+          ;(session.user as any).overrideByAdminId = isOverride ? ((token as any).overrideByAdminId || null) : null
+          ;(session.user as any).overrideByAdminName = isOverride ? ((token as any).overrideByAdminName || null) : null
+          ;(session.user as any).overrideByAdminRole = isOverride ? ((token as any).overrideByAdminRole || null) : null
 
           if ((token as any).accessToken) {
             try {
@@ -246,8 +369,9 @@ async function getAuthOptions(req?: NextRequest) {
         return session
       },
       async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-        // Domain publik dari Pengaturan Sistem adalah Single Source of Truth
-        const effectiveBase = (systemConfiguredDomain || hostUrl || baseUrl || 'https://simasmuh.razagopo.my.id').replace(/\/+$/, '');
+        // Sesuai Standar AGENTS.md Aturan 10:
+        // Prioritas Penentuan Origin: 1) hostUrl aktif, 2) systemConfiguredDomain, 3) baseUrl, 4) http://localhost:3000
+        const effectiveBase = (hostUrl || systemConfiguredDomain || baseUrl || 'http://localhost:3000').replace(/\/+$/, '');
 
         // Path relatif selalu diarahkan ke effectiveBase
         if (url.startsWith('/')) {
@@ -328,7 +452,7 @@ async function getAuthOptions(req?: NextRequest) {
 
 const handler = async (req: NextRequest, ctx: any) => {
   const forwardedProto = req.headers.get('x-forwarded-proto');
-  const proto = forwardedProto || (req.nextUrl?.protocol ? req.nextUrl.protocol.replace(':', '') : 'https');
+  const proto = forwardedProto || (req.nextUrl?.protocol ? req.nextUrl.protocol.replace(':', '') : 'http');
   const forwardedHost = req.headers.get('x-forwarded-host');
   const headerHost = req.headers.get('host');
   const host = forwardedHost || headerHost || req.nextUrl?.host;

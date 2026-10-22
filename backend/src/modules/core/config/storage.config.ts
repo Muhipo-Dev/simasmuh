@@ -12,18 +12,26 @@ function resolveStorageRoot(): string {
     return path.resolve(process.env.STORAGE_PATH.trim());
   }
 
-  // Windows Environment
+  // Windows Environment: Di dalam root repositori aplikasi D:\simasmuh\storage
   if (process.platform === 'win32') {
     try {
-      const driveRoot = path.parse(process.cwd()).root; // e.g. "D:\" atau "C:\"
-      return path.join(driveRoot, 'simasmuh_storage');
+      // Prioritaskan folder storage di dalam root aplikasi (D:\simasmuh\storage)
+      const projectAppStorage = path.resolve(process.cwd(), '..', 'storage');
+      if (fs.existsSync(projectAppStorage)) {
+        return projectAppStorage;
+      }
+      const directAppStorage = path.resolve(process.cwd(), 'storage');
+      if (fs.existsSync(directAppStorage)) {
+        return directAppStorage;
+      }
+      return projectAppStorage;
     } catch {
-      return path.resolve(process.cwd(), '..', '..', 'simasmuh_storage');
+      return path.resolve(process.cwd(), 'storage');
     }
   }
 
   // Linux (Debian / Ubuntu / Docker / Cloud)
-  return path.join(os.homedir(), 'simasmuh_storage');
+  return path.resolve(process.cwd(), '..', 'storage');
 }
 
 export const STORAGE_ROOT = resolveStorageRoot();
@@ -46,6 +54,8 @@ export const STORAGE_DIRS = {
   backups: path.join(STORAGE_ROOT, 'backups'),
   temp: path.join(STORAGE_ROOT, 'temp'),
   quarantine: path.join(STORAGE_ROOT, 'quarantine'),
+  faceSamples: path.join(STORAGE_ROOT, 'face_samples'),
+  logos: path.join(STORAGE_ROOT, 'logos'),
 };
 
 /**

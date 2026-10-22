@@ -712,4 +712,32 @@ export class FinanceController {
     );
     res.send(buffer);
   }
+
+  // ============================================================
+  // IMPORT TAGIHAN EXCEL ENDPOINTS (SINKRON BUKU INDUK)
+  // ============================================================
+  @Get('template-tagihan')
+  @RequirePermissions(PaymentPermission.VIEW_ALL_BILLS)
+  async generateTagihanTemplate(
+    @Res() res: Response,
+    @Query('classId') classId?: string,
+  ) {
+    const buffer = await this.financeService.generateTagihanTemplate(classId);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=template_import_tagihan_simasmuh.xlsx',
+    );
+    res.end(buffer);
+  }
+
+  @Post('import-tagihan')
+  @RequirePermissions(PaymentPermission.CREATE_BILLS)
+  importTagihan(@Req() req: any, @Body() body: any) {
+    return this.financeService.importTagihan(req.user?.id, body);
+  }
 }
+

@@ -194,6 +194,11 @@
     will-change: transform;
   }
 
+  /* Low-spec rendering: percepat pemuatan tabel & kartu dengan contain layout */
+  table, [data-slot="card"] {
+    contain: layout style;
+  }
+
   /* Focus ring for high visibility & accessibility */
   :focus-visible {
     outline: 2px solid oklch(0.55 0.18 250);
@@ -895,6 +900,26 @@
     height: auto;
     display: block;
   }
+}
+
+/* Animasi Geser ke Kiri (Marquee) untuk Logo Kemitraan */
+@keyframes marquee-scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-left {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll-left 25s linear infinite;
+}
+
+.animate-marquee-left:hover {
+  animation-play-state: paused;
 }
 
 @media print {

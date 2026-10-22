@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import {
+  useState, useMemo, useEffect, useRef } from 'react'
 import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Swal from 'sweetalert2'
@@ -13,47 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Camera, 
-  Video, 
-  Cpu, 
-  RefreshCw, 
-  Save, 
-  CheckCircle2, 
-  Users, 
-  Activity, 
-  Sliders, 
-  ShieldCheck,
-  Zap,
-  Trash2,
-  HelpCircle,
-  Sparkles,
-  Server,
-  Search,
-  GraduationCap,
-  Briefcase,
-  UserCheck,
-  Maximize2,
-  Minimize2,
-  Sun,
-  SunMedium,
-  Clock,
-  Radio,
-  Power,
-  Globe,
-  QrCode,
-  Lock,
-  Unlock,
-  LogIn,
-  Eye,
-  EyeOff,
-  Volume2,
-  VolumeX,
-  Scan,
-  Aperture,
-  Loader2,
-  AlertTriangle,
-  AlertCircle,
-  CheckCircle
+  Camera, Video, Cpu, RefreshCw, Save, CheckCircle2, Users, Activity, Sliders, ShieldCheck, Zap, Trash2, HelpCircle, Server, Search, GraduationCap, Briefcase, UserCheck, Maximize2, Minimize2, Sun, SunMedium, Clock, Radio, Power, Globe, QrCode, Lock, Unlock, LogIn, Eye, EyeOff, Volume2, VolumeX, Scan, Aperture, Loader2, AlertTriangle, AlertCircle, CheckCircle, LayoutGrid
 } from 'lucide-react'
 import Link from 'next/link'
 import NextImage from 'next/image'
@@ -108,10 +69,12 @@ interface FaceDetectionLog {
 interface UsersDatasetResponse {
   totalUsers: number
   usersWithPhoto: number
+  usersWithFaceId?: number
+  usersFullyCalibrated?: number
   breakdown?: {
-    students: { total: number; withPhoto: number }
-    teachers: { total: number; withPhoto: number }
-    staff: { total: number; withPhoto: number }
+    students: { total: number; withPhoto: number; withFaceId?: number }
+    teachers: { total: number; withPhoto: number; withFaceId?: number }
+    staff: { total: number; withPhoto: number; withFaceId?: number }
   }
   dataset: Array<{
     userId: string
@@ -123,6 +86,9 @@ interface UsersDatasetResponse {
     identifier: string
     className?: string | null
     hasPhoto: boolean
+    faceSamplesCount?: number
+    hasFaceSamples?: boolean
+    registeredPoses?: string[]
   }>
 }
 
@@ -1788,10 +1754,13 @@ export default function FaceNetAiStandalonePage() {
     const updated = await refetchDataset()
     const usersCount = updated.data?.totalUsers || datasetData?.totalUsers || 0
     const photosCount = updated.data?.usersWithPhoto || datasetData?.usersWithPhoto || 0
+    const faceIdCount = updated.data?.usersWithFaceId || datasetData?.usersWithFaceId || 0
+    const calibratedCount = updated.data?.usersFullyCalibrated || datasetData?.usersFullyCalibrated || 0
     setSyncSuccessMsg(
-      `Sinkronisasi FaceNet Sukses! ${photosCount} dari ${usersCount} profil pengguna siap dicocokkan untuk absensi wajah AI.`
+      `Sinkronisasi Berhasil: ${photosCount} Foto Profil & ${faceIdCount} Face ID (${calibratedCount} terkalibrasi penuh) siap dicocokkan model FaceNet AI.`
     )
-    setTimeout(() => setSyncSuccessMsg(null), 6000)
+    toast.success('Dataset biometrik FaceNet AI berhasil disinkronkan!')
+    setTimeout(() => setSyncSuccessMsg(null), 8000)
   }
 
   const pageContainerRef = useRef<HTMLDivElement>(null)
@@ -1948,7 +1917,7 @@ export default function FaceNetAiStandalonePage() {
             className="w-10 h-10 rounded-xl bg-white/10 p-1 flex items-center justify-center shrink-0 transition-all hover:bg-white/20 border border-white/10 shadow-xs cursor-pointer touch-manipulation"
           >
             <NextImage 
-              src="/pic_logo.png" 
+              src="/logos/pic_logo.png" 
               alt="Logo SMA Muhammadiyah 1 Ponorogo" 
               width={34} 
               height={34} 
@@ -2586,7 +2555,7 @@ export default function FaceNetAiStandalonePage() {
                     }`}
                     title="Mode Auto: Scan dan presensi otomatis"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <LayoutGrid className="w-3.5 h-3.5" />
                     <span>Auto</span>
                   </button>
                 </div>
@@ -3334,7 +3303,7 @@ export default function FaceNetAiStandalonePage() {
                   <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/60">
                     <div>
                       <Label className="text-xs font-medium text-slate-200 flex items-center gap-1">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        <LayoutGrid className="w-3.5 h-3.5 text-amber-400" />
                         Presensi Otomatis (Auto Scan Tanpa Klik)
                       </Label>
                       <p className="text-[10px] text-slate-400">Presensi langsung tercatat saat wajah dikenali tanpa perlu klik tombol</p>

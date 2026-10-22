@@ -1,12 +1,11 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { 
-  Printer, BookMarked, Lock, User, Sparkles, RefreshCw, Eye,
-  Upload, Loader2, Save, ShieldAlert, Activity, MapPin,
-  GraduationCap, Users, Image as ImageIcon, AlertCircle
+  Printer, BookMarked, Lock, User, RefreshCw, Eye, Upload, Loader2, Save, ShieldAlert, Activity, MapPin, GraduationCap, Users, Image as ImageIcon, AlertCircle, FileCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -601,7 +600,7 @@ export default function SiswaBukuIndukPage() {
                   : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <FileCheck className="w-3.5 h-3.5" />
               <span>H, I, J. Perkembangan</span>
             </button>
 

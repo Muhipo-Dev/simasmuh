@@ -7,6 +7,20 @@ interface AuthenticatedFetchOptions extends RequestInit {
 
 let isHandling401 = false
 
+let cachedSession: any = null
+let sessionFetchTime = 0
+const SESSION_CACHE_TTL = 15000 // 15 detik TTL
+
+async function getCachedSession() {
+  const now = Date.now()
+  if (cachedSession && now - sessionFetchTime < SESSION_CACHE_TTL) {
+    return cachedSession
+  }
+  cachedSession = await getSession()
+  sessionFetchTime = now
+  return cachedSession
+}
+
 export function useAuthenticatedFetch() {
   const authenticatedFetch = useCallback(
     async (url: string, options: AuthenticatedFetchOptions = {}) => {
@@ -16,9 +30,40 @@ export function useAuthenticatedFetch() {
       
       // Add authorization header if we have a session and not skipping auth
       if (!skipAuth) {
-        const session = await getSession()
+        const session = await getCachedSession()
         if (session && (session as any).accessToken) {
           mergedHeaders.set('Authorization', `Bearer ${(session as any).accessToken}`)
+        }
+
+        // 🛡️ Proteksi Spectator Mode (Read Only): Cegah modifikasi data jika sedang dalam mode Spectator
+        const isReadOnlySession = (session?.user as any)?.isReadOnly === true || (session?.user as any)?.overrideMode === 'spectator'
+        const method = (restOptions.method || 'GET').toUpperCase()
+        if (isReadOnlySession && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+          // Kecualikan auth logout / override switch
+          const isAllowedSpectatorPath = url.includes('/auth/logout') || url.includes('/override-token')
+          if (!isAllowedSpectatorPath) {
+            if (typeof window !== 'undefined') {
+              try {
+                const Swal = (await import('sweetalert2')).default
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'Mode Spectator (Read Only)',
+                  text: 'Anda sedang berada dalam mode Spectator (Hanya Lihat). Operasi penambahan, perubahan, atau penghapusan data tidak diizinkan demi keamanan.',
+                  confirmButtonColor: '#f59e0b',
+                })
+              } catch {}
+            }
+            return new Response(
+              JSON.stringify({
+                statusCode: 403,
+                message: 'Operasi dilarang saat berada dalam Mode Spectator (Read Only).',
+              }),
+              {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' },
+              }
+            )
+          }
         }
       }
 
@@ -42,6 +87,7 @@ export function useAuthenticatedFetch() {
 
       // Jika sesi telah di-unlink atau token tidak lagi valid (401 Unauthorized), logout otomatis terarah
       if (res.status === 401 && !skipAuth) {
+        cachedSession = null
         if (!isHandling401 && typeof window !== 'undefined') {
           isHandling401 = true
           try {

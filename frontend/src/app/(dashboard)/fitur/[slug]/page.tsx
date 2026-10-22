@@ -1,15 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import {
+  useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { 
-  Award, ShieldAlert, Sparkles, ShieldCheck, UserCheck, 
-  HeartHandshake, Library, BookMarked, Mail, Clock, 
-  ArrowLeft, CheckCircle2, Construction, Sparkle, Layers, ChevronRight,
-  Contact, Package, Boxes, Search, PlusCircle, Download, FileText, Pencil, Trash2,
-  Building2, Users, Loader2, Phone, Calendar, GraduationCap,
-  Inbox, Send, Archive, HeartPulse, Stethoscope
+  Award, ShieldAlert, ShieldCheck, UserCheck, HeartHandshake, Library, BookMarked, Mail, Clock, ArrowLeft, CheckCircle2, Construction, Layers, ChevronRight, Contact, Package, Boxes, Search, PlusCircle, Download, FileText, Pencil, Trash2, Building2, Users, Loader2, Phone, Calendar, GraduationCap, Inbox, Send, Archive, HeartPulse, Stethoscope, LayoutGrid
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -144,7 +140,7 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
     title: 'Manajemen Kebersihan',
     roleName: 'Kebersihan',
     category: 'Sarana Prasarana',
-    icon: Sparkles,
+    icon: LayoutGrid,
     gradient: 'from-emerald-500 via-teal-600 to-cyan-600',
     badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
     description: 'Modul pengawasan kebersihan area sekolah, inspeksi kelas, dan fasilitas umum.',
@@ -328,7 +324,7 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
     title: 'Kegiatan Sekolah',
     roleName: 'Humas & SDM / Admin TU',
     category: 'Administrasi & Humas',
-    icon: Sparkles,
+    icon: LayoutGrid,
     gradient: 'from-emerald-600 via-teal-600 to-slate-800',
     badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
     description: 'Pusat agenda kegiatan sekolah (Kajian Selasa Pagi, Workshop, Upacara) dan presensi mandiri via QR Code.',
@@ -342,7 +338,7 @@ const FEATURE_MAP: Record<string, FeatureConfig> = {
     title: 'Kegiatan Sekolah',
     roleName: 'Humas & SDM / Admin TU',
     category: 'Administrasi & Humas',
-    icon: Sparkles,
+    icon: LayoutGrid,
     gradient: 'from-emerald-600 via-teal-600 to-slate-800',
     badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400',
     description: 'Pusat agenda kegiatan sekolah (Kajian Selasa Pagi, Workshop, Upacara) dan presensi mandiri via QR Code.',

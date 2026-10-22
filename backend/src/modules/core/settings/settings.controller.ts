@@ -42,11 +42,19 @@ export class SettingsController {
     return this.settingsService.getTimeSync(timestamp);
   }
 
+  @Get('public/programs')
+  getPublicPrograms() {
+    return this.programConfigService.getPublicPrograms();
+  }
+
   @Get('program-configs')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(
     'SUPERADMIN',
     UserRole.ADMIN_IT,
+    UserRole.ADMIN_WEB,
+    UserRole.ADMIN_TU,
+    SubRole.ADMIN_TU,
     UserRole.KEUANGAN,
     SubRole.KEUANGAN,
     'KEUANGAN_ALL',
@@ -57,11 +65,30 @@ export class SettingsController {
     return this.programConfigService.getAllPrograms();
   }
 
+  @Put('program-configs/reorder')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+    'SUPERADMIN',
+    UserRole.ADMIN_IT,
+    UserRole.ADMIN_WEB,
+    UserRole.ADMIN_TU,
+    SubRole.ADMIN_TU,
+    UserRole.KEUANGAN,
+    SubRole.KEUANGAN,
+    'KEUANGAN_ALL',
+  )
+  reorderProgramConfigs(@Body() body: { items: { id: string; order: number }[] }) {
+    return this.programConfigService.reorderPrograms(body.items || []);
+  }
+
   @Post('program-configs')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(
     'SUPERADMIN',
     UserRole.ADMIN_IT,
+    UserRole.ADMIN_WEB,
+    UserRole.ADMIN_TU,
+    SubRole.ADMIN_TU,
     UserRole.KEUANGAN,
     SubRole.KEUANGAN,
     'KEUANGAN_ALL',
@@ -77,6 +104,9 @@ export class SettingsController {
   @Roles(
     'SUPERADMIN',
     UserRole.ADMIN_IT,
+    UserRole.ADMIN_WEB,
+    UserRole.ADMIN_TU,
+    SubRole.ADMIN_TU,
     UserRole.KEUANGAN,
     SubRole.KEUANGAN,
     'KEUANGAN_ALL',
@@ -92,6 +122,9 @@ export class SettingsController {
   @Roles(
     'SUPERADMIN',
     UserRole.ADMIN_IT,
+    UserRole.ADMIN_WEB,
+    UserRole.ADMIN_TU,
+    SubRole.ADMIN_TU,
     UserRole.KEUANGAN,
     SubRole.KEUANGAN,
     'KEUANGAN_ALL',
@@ -146,6 +179,7 @@ export class SettingsController {
     'KURIKULUM',
     'KESISWAAN',
     'ADMIN',
+    UserRole.ADMIN_WEB,
   )
   getSettings() {
     return this.settingsService.getSettings();
@@ -156,6 +190,7 @@ export class SettingsController {
   @Roles(
     'SUPERADMIN',
     UserRole.ADMIN_IT,
+    UserRole.ADMIN_WEB,
     UserRole.KEUANGAN,
     SubRole.KEUANGAN,
     'KEUANGAN_ALL',

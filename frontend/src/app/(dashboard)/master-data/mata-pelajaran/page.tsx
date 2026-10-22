@@ -3,13 +3,15 @@ import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2, Trash2, FileSpreadsheet, Pencil, CheckSquare, Edit3, UserCheck, Users, Search, X } from 'lucide-react'
+import { Plus, Loader2, Trash2, FileSpreadsheet, Pencil, CheckSquare, Edit3, UserCheck, Users, Search, X, Filter, SlidersHorizontal, BookOpen, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
 import { TablePagination } from '@/components/TablePagination'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -34,6 +36,8 @@ type Subject = {
   id: string
   name: string
   code: string
+  category?: string
+  program?: string
   teacherSubjects?: Array<{
     id: string
     teacherId: string
@@ -61,11 +65,16 @@ export default function SubjectsPage() {
   const [formData, setFormData] = useState<{
     name: string
     code: string
+    category: string
+    program: string
     teacherIds: string[]
-  }>({ name: '', code: '', teacherIds: [] })
+  }>({ name: '', code: '', category: 'WAJIB', program: '', teacherIds: [] })
 
-  // Search filter inside teacher selection
   const [teacherSearch, setTeacherSearch] = useState('')
+
+  // Filter Kategori & Program State
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ALL')
+  const [selectedProgramFilter, setSelectedProgramFilter] = useState<string>('ALL')
 
   // Bulk Selection & Edit States
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -108,6 +117,15 @@ export default function SubjectsPage() {
     },
   })
 
+  const { data: programConfigs = [] } = useQuery<any[]>({
+    queryKey: ['program-configs'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/programs')
+      if (!res.ok) return []
+      return res.json()
+    },
+  })
+
   const { data: teachers } = useQuery<Teacher[]>({
     queryKey: ['teachers'],
     queryFn: async () => {
@@ -142,7 +160,7 @@ export default function SubjectsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjects'] })
       setOpen(false)
-      setFormData({ name: '', code: '', teacherIds: [] })
+      setFormData({ name: '', code: '', category: 'WAJIB', program: '', teacherIds: [] })
       setTeacherSearch('')
       Swal.fire({
         title: 'Berhasil!',
@@ -167,7 +185,7 @@ export default function SubjectsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjects'] })
       setOpen(false)
-      setFormData({ name: '', code: '', teacherIds: [] })
+      setFormData({ name: '', code: '', category: 'WAJIB', program: '', teacherIds: [] })
       setTeacherSearch('')
       Swal.fire({
         title: 'Berhasil!',
@@ -395,18 +413,30 @@ export default function SubjectsPage() {
   }
 
   const filteredSubjects = useMemo(() => {
-    return filterDataBySearch(subjects, searchQuery, [
+    let list = subjects || []
+
+    if (selectedCategoryFilter !== 'ALL') {
+      list = list.filter((s) => (s.category || 'WAJIB') === selectedCategoryFilter)
+    }
+
+    if (selectedProgramFilter !== 'ALL') {
+      list = list.filter((s) => (s.program || '') === selectedProgramFilter)
+    }
+
+    return filterDataBySearch(list, searchQuery, [
       'code',
       'name',
+      'category',
+      'program',
       'teacherSubjects.teacher.user.name',
       'teacherSubjects.teacher.nip',
       'teacherSubjects.teacher.user.nipNbm'
     ]) || []
-  }, [subjects, searchQuery])
+  }, [subjects, searchQuery, selectedCategoryFilter, selectedProgramFilter])
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery])
+  }, [searchQuery, selectedCategoryFilter, selectedProgramFilter])
 
   const paginatedSubjects = useMemo(() => {
     const start = (currentPage - 1) * pageSize
@@ -476,7 +506,7 @@ export default function SubjectsPage() {
                     className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs"
                     onClick={() => {
                       setIsEdit(false)
-                      setFormData({ name: '', code: '', teacherIds: [] })
+                      setFormData({ name: '', code: '', category: 'WAJIB', program: '', teacherIds: [] })
                       setTeacherSearch('')
                     }}
                   >
@@ -522,6 +552,76 @@ export default function SubjectsPage() {
                         }
                         required
                       />
+                    </div>
+
+                    {/* Kategori Mapel & Program Pilihan Siswa */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="category" className="text-xs font-semibold">
+                          Kelompok Kurikulum *
+                        </Label>
+                        <Select
+                          value={formData.category}
+                          onValueChange={(val) =>
+                            setFormData({
+                              ...formData,
+                              category: val || 'WAJIB',
+                              program: (val || 'WAJIB') === 'PILIHAN_PROGRAM' ? formData.program : '',
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-9 text-xs rounded-lg">
+                            <SelectValue placeholder="Pilih Kelompok" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="WAJIB" className="text-xs">
+                              Mapel Wajib Nasional
+                            </SelectItem>
+                            <SelectItem value="PILIHAN_PROGRAM" className="text-xs">
+                              Mapel Pilihan Program Siswa
+                            </SelectItem>
+                            <SelectItem value="MUATAN_LOKAL" className="text-xs">
+                              Muatan Lokal / Tambahan
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {formData.category === 'PILIHAN_PROGRAM' ? (
+                        <div className="space-y-1.5">
+                          <Label htmlFor="program" className="text-xs font-semibold text-purple-700 dark:text-purple-300">
+                            Program Masuk Siswa *
+                          </Label>
+                          <Select
+                            value={formData.program}
+                            onValueChange={(val) => setFormData({ ...formData, program: val || '' })}
+                          >
+                            <SelectTrigger className="h-9 text-xs rounded-lg border-purple-300 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/30">
+                              <SelectValue placeholder="Pilih Program Siswa" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {programConfigs.map((p: any) => (
+                                <SelectItem key={p.code} value={p.code} className="text-xs">
+                                  {p.name} ({p.code})
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="ai" className="text-xs">
+                                Artificial Intelligence (ai)
+                              </SelectItem>
+                              <SelectItem value="seni budaya" className="text-xs">
+                                Seni Budaya & Tari (seni budaya)
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 opacity-60">
+                          <Label className="text-xs font-semibold">Program Siswa</Label>
+                          <div className="h-9 flex items-center px-3 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-400 bg-slate-50 dark:bg-slate-900/50">
+                            Berlaku untuk semua siswa
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Teacher / Pengampu Multi-Select Box */}
@@ -813,18 +913,96 @@ export default function SubjectsPage() {
         )}
 
         <Card className="shadow-sm border-slate-200">
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 sm:p-5">
             <div>
-              <CardTitle>Daftar Mata Pelajaran</CardTitle>
-              <CardDescription>
-                Menampilkan seluruh mata pelajaran beserta guru pengampu terdaftar.
+              <CardTitle className="text-base sm:text-lg font-bold">Daftar Mata Pelajaran</CardTitle>
+              <CardDescription className="text-xs">
+                Struktur kurikulum mapel wajib nasional & mapel pilihan program masuk siswa.
               </CardDescription>
             </div>
-            <TableSearch
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Cari mapel (kode/nama/pengampu)..."
-            />
+            
+            {/* Searchbar & Tombol Filter Terpusat Bersebelahan Sesuai Aturan Sistem */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex-1 sm:w-64">
+                <TableSearch
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  placeholder="Cari mapel (kode/nama/pengampu)..."
+                />
+              </div>
+
+              {/* Popover Filter Terpusat */}
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-1.5 text-xs font-semibold rounded-xl shrink-0 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    >
+                      <Filter className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Filter</span>
+                      {(selectedCategoryFilter !== 'ALL' || selectedProgramFilter !== 'ALL') && (
+                        <Badge className="ml-1 px-1.5 py-0 h-4 text-[10px] bg-blue-600 text-white rounded-full">
+                          {(selectedCategoryFilter !== 'ALL' ? 1 : 0) + (selectedProgramFilter !== 'ALL' ? 1 : 0)}
+                        </Badge>
+                      )}
+                    </Button>
+                  }
+                />
+                <PopoverContent align="end" className="w-80 p-4 rounded-2xl shadow-xl space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Filter Kurikulum & Program</span>
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Kelompok Kurikulum</Label>
+                    <Select value={selectedCategoryFilter} onValueChange={(val) => setSelectedCategoryFilter(val || 'ALL')}>
+                      <SelectTrigger className="h-8 text-xs rounded-lg">
+                        <SelectValue placeholder="Semua Kelompok" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL" className="text-xs">Semua Kelompok</SelectItem>
+                        <SelectItem value="WAJIB" className="text-xs">Mapel Wajib Nasional</SelectItem>
+                        <SelectItem value="PILIHAN_PROGRAM" className="text-xs">Mapel Pilihan Program Siswa</SelectItem>
+                        <SelectItem value="MUATAN_LOKAL" className="text-xs">Muatan Lokal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Program Masuk Siswa</Label>
+                    <Select value={selectedProgramFilter} onValueChange={(val) => setSelectedProgramFilter(val || 'ALL')}>
+                      <SelectTrigger className="h-8 text-xs rounded-lg">
+                        <SelectValue placeholder="Semua Program" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL" className="text-xs">Semua Program</SelectItem>
+                        <SelectItem value="ai" className="text-xs">Artificial Intelligence (AI)</SelectItem>
+                        <SelectItem value="seni budaya" className="text-xs">Seni Budaya & Tari</SelectItem>
+                        <SelectItem value="tahfidz" className="text-xs">Tahfidz</SelectItem>
+                        <SelectItem value="saintek" className="text-xs">SAINSOS / Saintek</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {(selectedCategoryFilter !== 'ALL' || selectedProgramFilter !== 'ALL') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-8 font-semibold"
+                      onClick={() => {
+                        setSelectedCategoryFilter('ALL')
+                        setSelectedProgramFilter('ALL')
+                      }}
+                    >
+                      Reset Filter
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto max-w-full">
             <Table>
@@ -839,8 +1017,9 @@ export default function SubjectsPage() {
                       title="Pilih Semua"
                     />
                   </TableHead>
-                  <TableHead className="w-32">Kode</TableHead>
+                  <TableHead className="w-28">Kode</TableHead>
                   <TableHead>Nama Mata Pelajaran</TableHead>
+                  <TableHead className="w-48">Kelompok / Program</TableHead>
                   <TableHead>Guru Pengampu</TableHead>
                   <TableHead className="text-right w-24">Aksi</TableHead>
                 </TableRow>
@@ -848,14 +1027,14 @@ export default function SubjectsPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                       Memuat data...
                     </TableCell>
                   </TableRow>
                 ) : filteredSubjects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                       {searchQuery
                         ? 'Tidak ada data yang sesuai dengan pencarian.'
                         : 'Belum ada data mata pelajaran.'}
@@ -865,6 +1044,7 @@ export default function SubjectsPage() {
                   paginatedSubjects.map((item) => {
                     const isSelected = selectedIds.includes(item.id)
                     const assignedTeachers = item.teacherSubjects || []
+                    const isPilihan = item.category === 'PILIHAN_PROGRAM'
 
                     return (
                       <TableRow
@@ -883,7 +1063,29 @@ export default function SubjectsPage() {
                           {item.code}
                         </TableCell>
                         <TableCell className="font-semibold text-slate-900 dark:text-white">
-                          {item.name}
+                          <div>{item.name}</div>
+                        </TableCell>
+                        <TableCell>
+                          {isPilihan ? (
+                            <div className="flex flex-col gap-1 items-start">
+                              <Badge className="bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-[10px] font-bold">
+                                Mapel Pilihan Program
+                              </Badge>
+                              {item.program && (
+                                <Badge variant="outline" className="text-[10px] font-semibold border-purple-300 text-purple-900 dark:text-purple-200">
+                                  {item.program === 'ai' ? '🤖 Program AI' : item.program === 'seni budaya' ? '🎭 Program Seni Tari' : `Program ${item.program.toUpperCase()}`}
+                                </Badge>
+                              )}
+                            </div>
+                          ) : item.category === 'MUATAN_LOKAL' ? (
+                            <Badge variant="outline" className="text-[10px] font-semibold border-amber-300 text-amber-800 dark:text-amber-300">
+                              Muatan Lokal
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-semibold border border-slate-200 dark:border-slate-700">
+                              Wajib Nasional
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           {assignedTeachers.length === 0 ? (
@@ -916,6 +1118,8 @@ export default function SubjectsPage() {
                                 setFormData({
                                   code: item.code,
                                   name: item.name,
+                                  category: item.category || 'WAJIB',
+                                  program: item.program || '',
                                   teacherIds:
                                     item.teacherSubjects?.map((ts) => ts.teacherId) || [],
                                 })

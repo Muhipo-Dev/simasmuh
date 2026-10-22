@@ -36,8 +36,8 @@ export class WaitingRoomService implements OnModuleInit {
   private lastCpuCheck = Date.now();
   private currentCpuPercent = 0;
   private currentRamPercent = 0;
-  public cpuThreshold = 90; // Ambang batas beban CPU kritis 90%
-  public ramThreshold = 92; // Ambang batas RAM kritis 92%
+  public cpuThreshold = 80; // Ambang batas beban CPU kritis 80% (diatas 80% waiting room aktif)
+  public ramThreshold = 80; // Ambang batas RAM kritis 80% (diatas 80% waiting room aktif)
 
   private timer: NodeJS.Timeout;
 
@@ -103,7 +103,7 @@ export class WaitingRoomService implements OnModuleInit {
     // Kalkulasi CPU usage persentase (Sistem Host & Proses Node.js)
     const cpuElapsedMs = now - this.lastCpuCheck;
     if (cpuElapsedMs >= 1000) {
-      // 1. Process CPU
+      // 1. Process CPU (Normalized terhadap total cores)
       const cpuUsageDiff = process.cpuUsage(this.lastCpuUsage);
       const totalCpuTimeMs = (cpuUsageDiff.user + cpuUsageDiff.system) / 1000;
       const numCores = os.cpus().length || 1;
@@ -135,12 +135,10 @@ export class WaitingRoomService implements OnModuleInit {
       const systemCpuPercent =
         totalTick > 0
           ? Math.round(((totalTick - totalIdle) / totalTick) * 100)
-          : 0;
+          : processCpuPercent;
 
-      this.currentCpuPercent = Math.min(
-        100,
-        Math.max(systemCpuPercent, processCpuPercent),
-      );
+      // Beban CPU riil sistem host (systemCpuPercent)
+      this.currentCpuPercent = Math.min(100, Math.max(0, systemCpuPercent));
       this.lastCpuCheck = now;
     }
 
@@ -170,16 +168,16 @@ export class WaitingRoomService implements OnModuleInit {
 
     // Admit pengguna antrean terdepan jika kuota slot aktif masih tersedia dan beban tidak kritis
     const availableSlots = this.maxConcurrentActive - this.activeTokens.size;
-    if (
-      availableSlots > 0 &&
-      this.waitingQueue.length > 0 &&
-      !this.isTrafficCritical()
-    ) {
-      const toAdmitCount = Math.min(
-        availableSlots,
-        Math.ceil(this.maxConcurrentActive * 0.2),
-        this.waitingQueue.length,
-      );
+    if (availableSlots > 0 && this.waitingQueue.length > 0) {
+      // Jika traffic TIDAK kritis, segera admit semua antrean tanpa menahan pengguna
+      const toAdmitCount = !this.isTrafficCritical()
+        ? Math.min(availableSlots, this.waitingQueue.length)
+        : Math.min(
+            availableSlots,
+            Math.max(5, Math.ceil(this.maxConcurrentActive * 0.1)),
+            this.waitingQueue.length,
+          );
+
       for (let i = 0; i < toAdmitCount; i++) {
         const nextUser = this.waitingQueue.shift();
         if (nextUser) {
@@ -207,10 +205,10 @@ export class WaitingRoomService implements OnModuleInit {
     // 2. Cek Kapasitas Pengguna Aktif Serentak (> 1000 concurrent user)
     if (this.activeTokens.size >= this.maxConcurrentActive) return true;
 
-    // 3. Cek Beban Ekstrem CPU & RAM saat ada traffic berjalan (RPS > 30 atau active users > 200)
+    // 3. Cek Beban Ekstrem CPU & RAM (Waiting room hanya aktif jika penggunaan server secara nyata di atas ambang batas 80%)
     const isCpuExtreme = this.currentCpuPercent >= this.cpuThreshold;
     const isRamExtreme = this.currentRamPercent >= this.ramThreshold;
-    if ((isCpuExtreme || isRamExtreme) && (this.currentRps > 30 || this.activeTokens.size > 200)) {
+    if (isCpuExtreme || isRamExtreme) {
       return true;
     }
 
@@ -258,8 +256,9 @@ export class WaitingRoomService implements OnModuleInit {
       };
     }
 
-    // 2. Jika sistem TIDAK sedang lonjakan beban & kuota aman, langsung admit tanpa antre
-    if (!this.isTrafficCritical() && this.waitingQueue.length === 0) {
+    // 2. Jika sistem TIDAK sedang lonjakan beban & kuota aktif masih tersedia, langsung admit tanpa antre
+    const availableSlots = this.maxConcurrentActive - this.activeTokens.size;
+    if (!this.isTrafficCritical() && availableSlots > 0) {
       const newToken = token || randomUUID();
       this.activeTokens.set(newToken, {
         token: newToken,
@@ -268,11 +267,17 @@ export class WaitingRoomService implements OnModuleInit {
         lastActive: now,
         admittedAt: now,
       });
+
+      // Jika sebelumnya token ini ada di waiting queue, hapus dari antrean
+      if (token) {
+        this.waitingQueue = this.waitingQueue.filter((s) => s.token !== token);
+      }
+
       return {
         token: newToken,
         status: 'ADMITTED',
         position: 0,
-        totalWaiting: 0,
+        totalWaiting: this.waitingQueue.length,
         estimatedWaitSeconds: 0,
       };
     }

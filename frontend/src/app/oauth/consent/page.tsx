@@ -82,7 +82,7 @@ function OAuthConsentContent() {
 
       <nav className="fixed top-0 left-0 right-0 h-14 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between shadow-xs">
         <Link href="/" className="flex items-center gap-2 group">
-          <NextImage src="/pic_logo.png" alt="Logo SIMASMUH" width={90} height={36} className="h-7 sm:h-8 w-auto object-contain transition-transform group-hover:scale-105" />
+          <NextImage src="/logos/pic_logo.png" alt="Logo SIMASMUH" width={90} height={36} className="h-7 sm:h-8 w-auto object-contain transition-transform group-hover:scale-105" />
           <span className="font-extrabold text-sm sm:text-base tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 hidden xs:block">
             SIMASMUH
           </span>

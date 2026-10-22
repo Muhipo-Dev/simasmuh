@@ -63,6 +63,45 @@ export class FaceAttendanceController {
     return this.faceAttendanceService.syncSingleUser(body);
   }
 
+  @Post('save-vector')
+  saveFaceVector(
+    @Body()
+    body: {
+      userId: string;
+      embedding: number[];
+      modelName?: string;
+      photoDataUrl?: string;
+    },
+  ) {
+    return this.faceAttendanceService.saveFaceVectorToDatabase(body);
+  }
+
+  @Get('user-samples/:userId')
+  @UseGuards(JwtAuthGuard)
+  getUserSamples(@Param('userId') userId: string) {
+    return this.faceAttendanceService.getUserFaceSamples(userId);
+  }
+
+  @Post('register-faces')
+  @UseGuards(JwtAuthGuard)
+  registerFaces(
+    @Body()
+    body: {
+      userId: string;
+      samples: {
+        front?: string;
+        right?: string;
+        left?: string;
+        up?: string;
+        down?: string;
+        blink?: string;
+        mouth_open?: string;
+      };
+    },
+  ) {
+    return this.faceAttendanceService.registerMultiAngleFaces(body);
+  }
+
   @Post('record')
   recordAttendance(
     @Body()

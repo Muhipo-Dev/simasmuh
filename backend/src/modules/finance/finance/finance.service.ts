@@ -1915,6 +1915,8 @@ export class FinanceService {
       notes?: string;
       beasiswaPercentage?: number;
       beasiswaReason?: string;
+      isDraft?: boolean;
+      status?: 'DRAFT' | 'BELUM_LUNAS' | 'ANGSURAN' | 'LUNAS';
     },
   ) {
     const student = await this.prisma.student.findUnique({
@@ -1960,6 +1962,7 @@ export class FinanceService {
       ? this.parseDueDate(dto.dueDate)
       : await this.calculateSmartDueDate(dto.type, dto.month, dto.year, new Date());
 
+    const isDraft = Boolean(dto.isDraft);
     const tagihan = await this.prisma.tagihan.create({
       data: {
         studentId,
@@ -1968,18 +1971,20 @@ export class FinanceService {
         month: dto.month ?? null,
         year: dto.year ?? null,
         dueDate: calculatedDueDate,
-        status: finalAmount === 0 ? 'LUNAS' : 'BELUM_LUNAS',
-        paidDate: finalAmount === 0 ? new Date() : null,
+        status: isDraft ? 'DRAFT' : (finalAmount === 0 ? 'LUNAS' : 'BELUM_LUNAS'),
+        paidDate: !isDraft && finalAmount === 0 ? new Date() : null,
         notes,
       },
     });
 
-    // Emit event for notification
-    this.eventEmitter.emit('tagihan.created', {
-      tagihanId: tagihan.id,
-      studentId: tagihan.studentId,
-      isBulk: false,
-    });
+    // Emit event for notification only if not draft
+    if (!isDraft) {
+      this.eventEmitter.emit('tagihan.created', {
+        tagihanId: tagihan.id,
+        studentId: tagihan.studentId,
+        isBulk: false,
+      });
+    }
 
     return tagihan;
   }
@@ -1996,6 +2001,8 @@ export class FinanceService {
       notes?: string;
       beasiswaPercentage?: number;
       beasiswaReason?: string;
+      status?: 'DRAFT' | 'BELUM_LUNAS' | 'ANGSURAN' | 'LUNAS';
+      isDraft?: boolean;
     },
   ) {
     const existing = await this.prisma.tagihan.findUnique({
@@ -2057,6 +2064,12 @@ export class FinanceService {
       } catch { }
     }
 
+    const nextStatus = dto.status !== undefined
+      ? dto.status
+      : dto.isDraft !== undefined
+      ? (dto.isDraft ? 'DRAFT' : (finalAmount === 0 ? 'LUNAS' : 'BELUM_LUNAS'))
+      : (existing.status === 'DRAFT' ? 'DRAFT' : (finalAmount === 0 ? 'LUNAS' : existing.status));
+
     return this.prisma.tagihan.update({
       where: { id: tagihanId },
       data: {
@@ -2068,7 +2081,8 @@ export class FinanceService {
           dueDate: this.parseDueDate(dto.dueDate),
         }),
         ...(dto.notes !== undefined && { notes: cleanNotes || null }),
-        ...(finalAmount === 0 ? { status: 'LUNAS', paidDate: new Date() } : {}),
+        status: nextStatus,
+        ...(nextStatus === 'LUNAS' && !existing.paidDate ? { paidDate: new Date() } : {}),
       },
     });
   }
@@ -2590,12 +2604,14 @@ export class FinanceService {
   ) {
     let studentQueryWhere: any = {};
 
-    if (dto.targetScope === 'STUDENTS' && Array.isArray(dto.studentIds) && dto.studentIds.length > 0) {
+    if (dto.targetScope === 'STUDENT' && dto.studentId) {
+      studentQueryWhere = { id: dto.studentId };
+    } else if (dto.studentId) {
+      studentQueryWhere = { id: dto.studentId };
+    } else if (dto.targetScope === 'STUDENTS' && Array.isArray(dto.studentIds) && dto.studentIds.length > 0) {
       studentQueryWhere = { id: { in: dto.studentIds } };
     } else if (dto.targetScope === 'STUDENTS') {
       throw new BadRequestException('Pilih minimal 1 siswa untuk set tagihan');
-    } else if (dto.targetScope === 'STUDENT' && dto.studentId) {
-      studentQueryWhere = { id: dto.studentId };
     } else if (dto.classIds && Array.isArray(dto.classIds) && dto.classIds.length > 0) {
       studentQueryWhere = { classId: { in: dto.classIds } };
     } else if (dto.targetScope === 'CLASS' && dto.classId) {
@@ -3161,7 +3177,10 @@ export class FinanceService {
       draftWhere.studentId = { in: studentIds };
     }
     if (dto.startYear) {
-      draftWhere.year = { in: [dto.startYear, dto.startYear + 1] };
+      draftWhere.OR = [
+        { year: { in: [dto.startYear, dto.startYear + 1] } },
+        { year: null },
+      ];
     }
 
     const now = new Date();
@@ -3256,7 +3275,7 @@ export class FinanceService {
       : [...sem1Months, ...sem2Months];
 
     const studentQueryWhere: any = {};
-    if (dto.scope === 'STUDENTS' && Array.isArray(dto.studentIds) && dto.studentIds.length > 0) {
+    if (dto.studentIds && Array.isArray(dto.studentIds) && dto.studentIds.length > 0) {
       studentQueryWhere.id = { in: dto.studentIds };
     } else if (dto.classIds && Array.isArray(dto.classIds) && dto.classIds.length > 0) {
       studentQueryWhere.classId = { in: dto.classIds };
@@ -5964,6 +5983,9 @@ export class FinanceService {
           },
         },
         tagihans: {
+          where: {
+            status: { not: 'DRAFT' },
+          },
           select: {
             amount: true,
             amountPaid: true,
@@ -5982,7 +6004,8 @@ export class FinanceService {
     let totalUnpaidNominal = 0;
 
     const students = studentsData.map((s: any) => {
-      const tagihans = s.tagihans || [];
+      // Hanya tagihan yang sudah RESMI DIRILIS / DIPUBLIKASIKAN (bukan DRAFT)
+      const tagihans = (s.tagihans || []).filter((t: any) => t.status !== 'DRAFT');
       const totalTagihan = tagihans.reduce(
         (sum: number, t: any) => sum + (t.amount || 0),
         0,
@@ -6242,4 +6265,538 @@ export class FinanceService {
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
   }
+
+  /**
+   * Generate Excel template tagihan yang sinkron dengan data master siswa SIMASMUH (Buku Induk)
+   */
+  async generateTagihanTemplate(classId?: string): Promise<Buffer> {
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'SIMASMUH';
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet('Input Tagihan Siswa', {
+      pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true },
+    });
+
+    worksheet.columns = [
+      { header: 'No', key: 'no', width: 6 },
+      { header: 'NIS *', key: 'nis', width: 14 },
+      { header: 'Nama Siswa *', key: 'name', width: 34 },
+      { header: 'Kelas', key: 'className', width: 14 },
+      { header: 'Tahun Pelajaran *', key: 'academicYear', width: 18 },
+      { header: 'Bulan SPP (1-12 / 1 TAHUN)', key: 'month', width: 26 },
+      { header: 'Tahun', key: 'year', width: 12 },
+      { header: 'Jatuh Tempo (YYYY-MM-DD)', key: 'dueDate', width: 26 },
+      { header: 'SPP (Rp)', key: 'spp', width: 16 },
+      { header: 'DPP (Rp)', key: 'dpp', width: 16 },
+      { header: 'Seragam (Rp)', key: 'seragam', width: 16 },
+      { header: 'Daftar Ulang (Rp)', key: 'daftarUlang', width: 18 },
+      { header: 'Ujian (Rp)', key: 'ujian', width: 16 },
+      { header: 'LKS / Buku (Rp)', key: 'lks', width: 16 },
+      { header: 'UIS / Infaq (Rp)', key: 'uis', width: 18 },
+      { header: 'UKA / Akad. (Rp)', key: 'uka', width: 18 },
+      { header: 'UKS / Sekol. (Rp)', key: 'uks', width: 18 },
+      { header: 'Lainnya (Rp)', key: 'lainnya', width: 16 },
+      { header: 'Keterangan / Catatan', key: 'notes', width: 34 },
+    ];
+
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1E40AF' }, // Navy Blue Resmi SIMASMUH
+    };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.height = 28;
+
+    // Filter siswa aktif master SIMASMUH
+    const whereClause: any = { isActive: true };
+    if (classId && classId !== 'all') {
+      whereClause.classId = classId;
+    }
+
+    const activeStudents = await this.prisma.student.findMany({
+      where: whereClause,
+      include: { class: true },
+      orderBy: [
+        { class: { name: 'asc' } },
+        { name: 'asc' },
+      ],
+    });
+
+    const setting = await this.prisma.setting.findFirst({
+      select: { academicYear: true },
+    });
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentAcademicYear = setting?.academicYear || `${currentYear}/${currentYear + 1}`;
+    const defaultDueDateStr = new Date(currentYear, 6, 10).toISOString().split('T')[0]; // Default 10 Juli
+
+    activeStudents.forEach((student, index) => {
+      const row = worksheet.addRow({
+        no: index + 1,
+        nis: student.nis || '',
+        name: student.name || '',
+        className: student.class?.name || '',
+        academicYear: student.class?.academicYear || currentAcademicYear,
+        month: '1 TAHUN',
+        year: currentYear,
+        dueDate: defaultDueDateStr,
+        spp: '',
+        dpp: '',
+        seragam: '',
+        daftarUlang: '',
+        ujian: '',
+        lks: '',
+        uis: '',
+        uka: '',
+        uks: '',
+        lainnya: '',
+        notes: '',
+      });
+
+      row.alignment = { vertical: 'middle' };
+      row.getCell('no').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('nis').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('className').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('academicYear').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('month').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('year').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('dueDate').alignment = { vertical: 'middle', horizontal: 'center' };
+      row.getCell('spp').alignment = { vertical: 'middle', horizontal: 'right' };
+      row.getCell('dpp').alignment = { vertical: 'middle', horizontal: 'right' };
+      row.getCell('seragam').alignment = { vertical: 'middle', horizontal: 'right' };
+      row.getCell('daftarUlang').alignment = { vertical: 'middle', horizontal: 'right' };
+      row.getCell('ujian').alignment = { vertical: 'middle', horizontal: 'right' };
+      row.getCell('lks').alignment = { vertical: 'middle', horizontal: 'right' };
+      row.getCell('uis').alignment = { vertical: 'middle', horizontal: 'right' };
+      row.getCell('uka').alignment = { vertical: 'middle', horizontal: 'right' };
+      row.getCell('uks').alignment = { vertical: 'middle', horizontal: 'right' };
+      row.getCell('lainnya').alignment = { vertical: 'middle', horizontal: 'right' };
+    });
+
+    // Sheet 2: Petunjuk & Referensi
+    const guideSheet = workbook.addWorksheet('Petunjuk Pengisian');
+    guideSheet.columns = [
+      { header: 'Kolom / Parameter', key: 'param', width: 26 },
+      { header: 'Keterangan & Aturan Pengisian', key: 'desc', width: 75 },
+    ];
+
+    const guideHeader = guideSheet.getRow(1);
+    guideHeader.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+    guideHeader.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF059669' }, // Emerald Khas Keuangan SIMASMUH
+    };
+    guideHeader.height = 26;
+
+    const guides = [
+      {
+        param: 'Sinkronisasi Data Siswa',
+        desc: 'Sheet "Input Tagihan Siswa" otomatis memuat identitas (No, NIS, Nama Siswa, Kelas) dari Master Buku Induk SIMASMUH.',
+      },
+      {
+        param: 'NIS & Nama Siswa *',
+        desc: 'Kunci identitas utama siswa. Dilarang mengubah nomor NIS agar sistem dapat mencocokkan siswa di database secara akurat.',
+      },
+      {
+        param: 'Tahun Pelajaran *',
+        desc: 'Diisi format tahun pelajaran sekolah (contoh: 2026/2027). Menjadi acuan rilis tagihan 1 tahun berjalan (Juli s/d Juni) dan pengelompokan tagihan di portal siswa/wali murid. Default terisi tahun pelajaran aktif sekolah.',
+      },
+      {
+        param: 'Bulan SPP (1-12 / 1 TAHUN)',
+        desc: 'Isi "1 TAHUN" (atau "SETAHUN" / kosongkan) untuk merilis tagihan SPP 1 tahun penuh (12 bulan: Juli s/d Juni) untuk Tahun Pelajaran tersebut. Atau isi angka 1 sampai 12 jika hanya ingin merilis SPP bulan tertentu saja.',
+      },
+      {
+        param: 'Kolom Tagihan (SPP, DPP, Seragam, dll)',
+        desc: 'Isi nominal rupiah murni (contoh: 300000) pada kolom biaya yang ingin ditagihkan ke siswa. JIKA KOLOM DIKOSONGKAN ATAU DIISI 0 / STRIP (-), SISTEM OTOMATIS MEMBACA TAGIHAN TERSEBUT DI-DISABLE (DINONAKTIFKAN / TIDAK DITERBITKAN). Contoh: Jika kolom DPP dikosongkan, maka tagihan DPP untuk siswa tersebut otomatis di-disable.',
+      },
+      {
+        param: 'Tahun',
+        desc: 'Diisi 4 digit angka tahun kalender tagihan (contoh: 2026). Default terisi tahun berjalan.',
+      },
+      {
+        param: 'Jatuh Tempo (YYYY-MM-DD)',
+        desc: 'Format tanggal YYYY-MM-DD (contoh: 2026-10-10). Jika dikosongkan, sistem akan otomatis menentukan batas waktu tanggal 10 di bulan tagihan.',
+      },
+      {
+        param: 'Keterangan / Catatan',
+        desc: 'Catatan spesifik untuk tagihan (opsional, contoh: "Tahap 1", "Gelombang 1").',
+      },
+    ];
+
+    guides.forEach((g) => guideSheet.addRow(g));
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  /**
+   * Import data tagihan dari file Excel (berdasarkan NIS, NISN, atau Nama Siswa yang sinkron dengan Master Buku Induk)
+   */
+  async importTagihan(
+    userId: string,
+    payload: {
+      items: Array<{
+        nis?: string;
+        nisn?: string;
+        name?: string;
+        academicYear?: string;
+        type?: string;
+        amount?: number | string;
+        month?: number | string | null;
+        year?: number | string | null;
+        dueDate?: string | null;
+        status?: string | null;
+        notes?: string | null;
+        [key: string]: any;
+      }>;
+      defaultType?: string;
+      defaultYear?: number;
+      defaultStatus?: string;
+    },
+  ) {
+    const rawItems = payload.items;
+    if (!rawItems || !Array.isArray(rawItems) || rawItems.length === 0) {
+      throw new BadRequestException('Data import tagihan tidak boleh kosong.');
+    }
+
+    const currentYear = new Date().getFullYear();
+
+    // Normalisasi items jika baris berisi format multi-kolom
+    const FEE_COLUMN_KEYS: Array<{ type: string; keys: string[]; isMonthly?: boolean }> = [
+      { type: 'SPP', keys: ['spp', 'spp (rp)', 'tagihan spp'], isMonthly: true },
+      { type: 'DPP', keys: ['dpp', 'dpp (rp)', 'tagihan dpp', 'dana pengembangan pendidikan'] },
+      { type: 'SERAGAM', keys: ['seragam', 'seragam (rp)'] },
+      { type: 'DAFTAR_ULANG', keys: ['daftarulang', 'daftar ulang (rp)', 'daftar_ulang', 'daftar_ulang (rp)', 'daftar ulang'] },
+      { type: 'UJIAN', keys: ['ujian', 'ujian (rp)'] },
+      { type: 'LKS', keys: ['lks', 'lks (rp)', 'lks / buku (rp)', 'buku', 'buku (rp)'] },
+      { type: 'UIS', keys: ['uis', 'uis (rp)', 'uis / infaq (rp)', 'infak', 'infak (rp)', 'infaq', 'infaq (rp)'] },
+      { type: 'UKA', keys: ['uka', 'uka (rp)', 'uka / akad. (rp)'] },
+      { type: 'UKS', keys: ['uks', 'uks (rp)', 'uks / sekol. (rp)'] },
+      { type: 'LAINNYA', keys: ['lainnya', 'lainnya (rp)'] },
+    ];
+
+    const items: Array<any> = [];
+    for (const rawRow of rawItems) {
+      if (rawRow.type && rawRow.amount !== undefined && rawRow.amount !== null && rawRow.amount !== '') {
+        items.push(rawRow);
+        continue;
+      }
+
+      let hasMulti = false;
+      for (const feeDef of FEE_COLUMN_KEYS) {
+        let val: any = undefined;
+        for (const k of feeDef.keys) {
+          if (rawRow[k] !== undefined && rawRow[k] !== null && rawRow[k] !== '') {
+            val = rawRow[k];
+            break;
+          }
+        }
+        if (val !== undefined) {
+          hasMulti = true;
+          const num = typeof val === 'string' ? parseFloat(val.replace(/[^0-9.-]/g, '')) : Number(val);
+          // Ekstrak Tahun Pelajaran & acuan rilis 1 tahun
+          const acadYearRaw = rawRow.academicYear || rawRow['Tahun Pelajaran *'] || rawRow['Tahun Pelajaran'] || rawRow['Tahun Ajaran *'] || rawRow['Tahun Ajaran'];
+          const acadYearStr = acadYearRaw ? String(acadYearRaw).trim() : `${currentYear}/${currentYear + 1}`;
+          let parsedYearStart = currentYear;
+          const matchYear = acadYearStr.match(/\b(20\d\d)\b/);
+          if (matchYear) parsedYearStart = parseInt(matchYear[1], 10);
+
+          const monthRaw = rawRow.month || rawRow['Bulan SPP (1-12 / 1 TAHUN)'] || rawRow['Bulan SPP (1-12)'] || rawRow['Bulan (1-12)'];
+          const monthStr = monthRaw !== undefined && monthRaw !== null ? String(monthRaw).trim().toUpperCase() : '1 TAHUN';
+          const isFullYearSpp = ['1 TAHUN', 'SETAHUN', '1-12', 'TAHUNAN', '12 BULAN', 'FULL', 'ALL', 'Y', 'YES', 'YA'].includes(monthStr) || monthStr === '';
+
+          if (feeDef.type === 'SPP' && isFullYearSpp) {
+            const sppYearMonths = [
+              { m: 7, y: parsedYearStart, name: 'Juli' },
+              { m: 8, y: parsedYearStart, name: 'Agustus' },
+              { m: 9, y: parsedYearStart, name: 'September' },
+              { m: 10, y: parsedYearStart, name: 'Oktober' },
+              { m: 11, y: parsedYearStart, name: 'November' },
+              { m: 12, y: parsedYearStart, name: 'Desember' },
+              { m: 1, y: parsedYearStart + 1, name: 'Januari' },
+              { m: 2, y: parsedYearStart + 1, name: 'Februari' },
+              { m: 3, y: parsedYearStart + 1, name: 'Maret' },
+              { m: 4, y: parsedYearStart + 1, name: 'April' },
+              { m: 5, y: parsedYearStart + 1, name: 'Mei' },
+              { m: 6, y: parsedYearStart + 1, name: 'Juni' },
+            ];
+
+            for (const sym of sppYearMonths) {
+              const defaultDueDate = new Date(sym.y, sym.m - 1, 10).toISOString().split('T')[0];
+              items.push({
+                nis: rawRow.nis || rawRow['NIS *'] || rawRow['NIS'],
+                nisn: rawRow.nisn || rawRow['NISN'],
+                name: rawRow.name || rawRow['Nama Siswa *'] || rawRow['Nama Siswa'],
+                type: 'SPP',
+                amount: num,
+                month: sym.m,
+                year: sym.y,
+                dueDate: rawRow.dueDate || defaultDueDate,
+                status: rawRow.status || rawRow['Status Tagihan'] || rawRow['Status'],
+                notes: rawRow.notes || `SPP ${sym.name} ${sym.y} (TP ${acadYearStr})`,
+              });
+            }
+          } else {
+            const singleM = feeDef.isMonthly ? (parseInt(monthStr, 10) || null) : null;
+            const singleY = singleM ? (singleM >= 7 ? parsedYearStart : parsedYearStart + 1) : (rawRow.year || parsedYearStart);
+            items.push({
+              nis: rawRow.nis || rawRow['NIS *'] || rawRow['NIS'],
+              nisn: rawRow.nisn || rawRow['NISN'],
+              name: rawRow.name || rawRow['Nama Siswa *'] || rawRow['Nama Siswa'],
+              type: feeDef.type,
+              amount: num,
+              month: singleM,
+              year: singleY,
+              dueDate: rawRow.dueDate || rawRow['Jatuh Tempo (YYYY-MM-DD)'] || rawRow['Jatuh Tempo'],
+              status: rawRow.status || rawRow['Status Tagihan'] || rawRow['Status'],
+              notes: rawRow.notes || `${feeDef.type} TP ${acadYearStr}`,
+            });
+          }
+        }
+      }
+
+      if (!hasMulti) {
+        items.push(rawRow);
+      }
+    }
+
+    const { defaultType = 'SPP', defaultYear, defaultStatus = 'DRAFT' } = payload;
+
+    // Ambil master siswa untuk lookup
+    const allStudents = await this.prisma.student.findMany({
+      select: {
+        id: true,
+        nis: true,
+        nisn: true,
+        name: true,
+        classId: true,
+      },
+    });
+
+    const byNis = new Map<string, typeof allStudents[0]>();
+    const byNisn = new Map<string, typeof allStudents[0]>();
+    const byName = new Map<string, typeof allStudents[0]>();
+
+    for (const s of allStudents) {
+      if (s.nis) byNis.set(s.nis.trim().toLowerCase(), s);
+      if (s.nisn) byNisn.set(s.nisn.trim().toLowerCase(), s);
+      if (s.name) byName.set(s.name.trim().toLowerCase(), s);
+    }
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+
+    // Helper tanggal
+    const parseExcelDate = (val: any): Date | null => {
+      if (!val) return null;
+      if (val instanceof Date && !isNaN(val.getTime())) return val;
+      if (typeof val === 'number') {
+        const d = new Date((val - 25569) * 86400 * 1000);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        const iso = new Date(trimmed);
+        if (!isNaN(iso.getTime())) return iso;
+        const parts = trimmed.split(/[/.-]/);
+        if (parts.length === 3) {
+          if (parts[0].length === 4) {
+            const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            if (!isNaN(d.getTime())) return d;
+          } else if (parts[2].length === 4) {
+            const d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+            if (!isNaN(d.getTime())) return d;
+          }
+        }
+      }
+      return null;
+    };
+
+    // Ambil semua target studentId yang valid
+    const targetStudentIdsSet = new Set<string>();
+    for (const row of items) {
+      const cleanNis = (row.nis !== undefined && row.nis !== null ? String(row.nis) : '').trim().toLowerCase();
+      const cleanNisn = (row.nisn !== undefined && row.nisn !== null ? String(row.nisn) : '').trim().toLowerCase();
+      const cleanName = (row.name !== undefined && row.name !== null ? String(row.name) : '').trim().toLowerCase();
+      const student = (cleanNis && byNis.get(cleanNis)) || (cleanNisn && byNisn.get(cleanNisn)) || (cleanName && byName.get(cleanName));
+      if (student) {
+        targetStudentIdsSet.add(student.id);
+      }
+    }
+
+    // Prefetch existing tagihan untuk optimasi query batch
+    const existingTagihans = await this.prisma.tagihan.findMany({
+      where: {
+        studentId: { in: Array.from(targetStudentIdsSet) },
+      },
+      select: {
+        id: true,
+        studentId: true,
+        type: true,
+        month: true,
+        year: true,
+        amount: true,
+        amountPaid: true,
+        status: true,
+      },
+    });
+
+    const existingMap = new Map<string, typeof existingTagihans[0]>();
+    for (const t of existingTagihans) {
+      const key = `${t.studentId}:${t.type.toUpperCase()}:${t.year ?? 'null'}:${t.month ?? 'null'}`;
+      existingMap.set(key, t);
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const row = items[i];
+      const rowNum = i + 2;
+
+      const cleanNis = (row.nis !== undefined && row.nis !== null ? String(row.nis) : '').trim().toLowerCase();
+      const cleanNisn = (row.nisn !== undefined && row.nisn !== null ? String(row.nisn) : '').trim().toLowerCase();
+      const cleanName = (row.name !== undefined && row.name !== null ? String(row.name) : '').trim().toLowerCase();
+
+      const student = (cleanNis && byNis.get(cleanNis)) || (cleanNisn && byNisn.get(cleanNisn)) || (cleanName && byName.get(cleanName));
+
+      if (!student) {
+        errors.push(`Baris ${rowNum}: Siswa tidak ditemukan di Master Buku Induk (NIS: ${row.nis || '-'}, Nama: ${row.name || '-'})`);
+        continue;
+      }
+
+      // Validasi nominal: jika input kosong atau 0 maka di-disable secara sistem
+      if (row.amount === '' || row.amount === null || row.amount === undefined) {
+        skippedCount++;
+        continue;
+      }
+
+      const rawAmount = typeof row.amount === 'string' ? parseFloat(row.amount.replace(/[^0-9.-]/g, '')) : Number(row.amount);
+      if (isNaN(rawAmount) || rawAmount <= 0) {
+        skippedCount++;
+        continue;
+      }
+
+      const type = (row.type || defaultType || 'SPP').trim().toUpperCase();
+
+      let month: number | null = null;
+      if (row.month !== undefined && row.month !== null && String(row.month).trim() !== '') {
+        const m = parseInt(String(row.month).trim(), 10);
+        if (!isNaN(m) && m >= 1 && m <= 12) {
+          month = m;
+        }
+      }
+
+      let year: number | null = null;
+      if (row.year !== undefined && row.year !== null && String(row.year).trim() !== '') {
+        const y = parseInt(String(row.year).trim(), 10);
+        if (!isNaN(y) && y >= 2000 && y <= 2100) {
+          year = y;
+        }
+      }
+      if (!year) {
+        year = defaultYear || currentYear;
+      }
+
+      // Jatuh tempo
+      let dueDate = parseExcelDate(row.dueDate);
+      if (!dueDate) {
+        dueDate = await this.calculateSmartDueDate(type, month, year, new Date());
+      }
+
+      // Status
+      let status = (row.status || defaultStatus || 'DRAFT').trim().toUpperCase();
+      if (!['DRAFT', 'BELUM_LUNAS', 'LUNAS'].includes(status)) {
+        status = 'DRAFT';
+      }
+
+      const notes = row.notes ? String(row.notes).trim() : null;
+
+      // Check existing
+      const key = `${student.id}:${type}:${year ?? 'null'}:${month ?? 'null'}`;
+      const existing = existingMap.get(key);
+
+      try {
+        if (existing) {
+          if (existing.status === 'LUNAS' && existing.amountPaid > 0) {
+            errors.push(`Baris ${rowNum} (${student.name}): Tagihan ${type} ${month ? `Bulan ${month} ` : ''}${year} sudah LUNAS terbayar (dilewati untuk menjaga riwayat pembayaran)`);
+            continue;
+          }
+
+          await this.prisma.tagihan.update({
+            where: { id: existing.id },
+            data: {
+              amount: rawAmount,
+              status,
+              dueDate,
+              notes: notes || undefined,
+              updatedAt: new Date(),
+            },
+          });
+          updatedCount++;
+        } else {
+          const newTagihan = await this.prisma.tagihan.create({
+            data: {
+              studentId: student.id,
+              type,
+              amount: rawAmount,
+              amountPaid: 0,
+              month,
+              year,
+              dueDate,
+              status,
+              paidDate: null,
+              notes,
+            },
+          });
+          existingMap.set(key, newTagihan);
+          createdCount++;
+        }
+      } catch (err: any) {
+        errors.push(`Baris ${rowNum} (${student.name}): Gagal menyimpan - ${err.message}`);
+      }
+    }
+
+    if (createdCount > 0 || updatedCount > 0) {
+      this.eventEmitter.emit('tagihan.created', {
+        tagihanId: null,
+        studentId: null,
+        isBulk: true,
+        bulkData: {
+          tagihanType: 'IMPORT_EXCEL',
+          count: createdCount + updatedCount,
+        },
+      });
+
+      this.systemLogService?.log({
+        category: 'KEUANGAN',
+        action: 'IMPORT_TAGIHAN_EXCEL',
+        message: `Import Excel tagihan selesai: ${createdCount} baru, ${updatedCount} update, ${skippedCount} lewati`,
+        userId,
+        details: {
+          createdCount,
+          updatedCount,
+          skippedCount,
+          errorsCount: errors.length,
+        },
+      }).catch(() => {});
+    }
+
+    return {
+      success: true,
+      createdCount,
+      updatedCount,
+      skippedCount,
+      totalProcessed: createdCount + updatedCount,
+      totalRows: items.length,
+      studentIds: Array.from(targetStudentIdsSet),
+      errors,
+      message: `Berhasil memproses import tagihan: ${createdCount} tagihan baru dibuat, ${updatedCount} tagihan diperbarui.${skippedCount > 0 ? ` (${skippedCount} baris kosong dilewati)` : ''}${errors.length > 0 ? ` [${errors.length} catatan/dilewati]` : ''}`,
+    };
+  }
 }
+

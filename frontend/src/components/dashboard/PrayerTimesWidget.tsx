@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import {
+  useState, useEffect, useMemo } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Clock, MapPin, Moon, Sun, Sunrise, Sunset, Compass, Sparkles, ChevronRight, Volume2, Calendar } from 'lucide-react'
+import { Clock, MapPin, Moon, Sun, Sunrise, Sunset, Compass, ChevronRight, Volume2, Calendar, LayoutGrid
+} from 'lucide-react'
 import { calculateKHGTPrayerTimes, DEFAULT_PONOROGO_COORDS, DailyPrayerSchedule, PrayerTimeItem } from '@/lib/prayer-times-khgt'
 import { fetchHijriMonthCalendar, calculateLocalHijriDate } from '@/lib/national-holidays'
 import Link from 'next/link'

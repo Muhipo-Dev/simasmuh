@@ -299,7 +299,7 @@ export class ScheduleNotificationsService {
       dispatchedCount++;
     }
 
-    this.logger.log(`[JADWAL SUMMARY] Berhasil mengirim ringkasan jadwal hari ini ke ${dispatchedCount} siswa.`);
+    this.logger.log(`Notifikasi jadwal mapel hari ini telah terdistribusi ke ${dispatchedCount} siswa.`);
 
     return {
       success: true,
@@ -430,7 +430,7 @@ export class ScheduleNotificationsService {
       dispatchedCount++;
     }
 
-    this.logger.log(`[JADWAL MENGAJAR GURU] Berhasil mendistribusikan jadwal harian ke ${dispatchedCount} guru.`);
+    this.logger.log(`Notifikasi jadwal mengajar hari ini telah terdistribusi ke ${dispatchedCount} guru.`);
     return {
       success: true,
       message: `Berhasil mendistribusikan ringkasan jadwal mengajar ke ${dispatchedCount} guru.`,

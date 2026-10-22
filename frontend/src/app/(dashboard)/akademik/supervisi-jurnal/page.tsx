@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import {
+  useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,17 +11,7 @@ import { TableSearch, filterDataBySearch } from '@/components/TableSearch'
 import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
 import { 
-  Loader2, 
-  Calendar, 
-  BookOpen, 
-  Clock, 
-  CheckCircle2, 
-  Sparkles, 
-  UserCheck, 
-  Eye, 
-  User, 
-  BookCheck,
-  Award
+  Loader2, Calendar, BookOpen, Clock, CheckCircle2, UserCheck, Eye, User, BookCheck, Award, LayoutGrid
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -280,7 +271,7 @@ export default function SupervisiJurnalPage() {
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-              <Sparkles className="w-4 h-4 text-blue-600" />
+              <LayoutGrid className="w-4 h-4 text-blue-600" />
               <span>Filter Supervisi KBM:</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -482,7 +473,7 @@ export default function SupervisiJurnalPage() {
                           </div>
                         ) : (
                           <div className="mt-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                            <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
                             Belum diisi oleh guru pengampu.
                           </div>
                         )}

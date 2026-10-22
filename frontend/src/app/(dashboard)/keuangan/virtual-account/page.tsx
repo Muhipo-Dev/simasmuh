@@ -637,7 +637,7 @@ export default function VirtualAccountPage() {
                       ) : student.statusTagihan === 'LUNAS' ? (
                         <span className="text-slate-400 text-[11px] font-sans">Lunas</span>
                       ) : (
-                        <span className="text-slate-400 text-[11px] font-sans">Rp 0</span>
+                        <span className="text-slate-400 text-[11px] font-sans">-</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-center">

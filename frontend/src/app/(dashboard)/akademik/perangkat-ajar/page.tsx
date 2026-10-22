@@ -18,12 +18,15 @@ import {
   FileText, Upload, CheckCircle2, Clock, AlertCircle, 
   Trash2, Eye, ExternalLink, Plus, BookOpen, 
   ShieldCheck, RefreshCw, FileCheck, Award, 
-  XCircle, Filter, Search, Check, ChevronRight, UserCheck
+  XCircle, Filter, Search, Check, ChevronRight, UserCheck, Sparkles
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
 import Swal from 'sweetalert2'
 import { useSorting, SortableTableHead } from '@/components/SortableTableHead'
+import { KurikulumMerdekaWorkspace } from '@/components/academic/kurikulum/merdeka/KurikulumMerdekaWorkspace'
+import { KurikulumSelector, AVAILABLE_CURRICULA } from '@/components/academic/kurikulum/common/KurikulumSelector'
+import { KurikulumPlaceholderWorkspace } from '@/components/academic/kurikulum/common/KurikulumPlaceholderWorkspace'
 
 // Jenis Perangkat Pembelajaran Kurikulum Merdeka & Nasional
 const JENIS_PERANGKAT_OPTIONS = [
@@ -59,6 +62,10 @@ export default function PerangkatAjarPage() {
     user?.subRole5,
   ].filter(Boolean)
 
+  const isGuru = userRoles.some((r: string) =>
+    ['GURU', 'HONORER', 'GURU_HONORER', 'GURU_PIKET', 'WALI_KELAS'].includes(r)
+  )
+
   const isKurikulumOrPimpinan = userRoles.some((r: string) =>
     [
       'SUPERADMIN',
@@ -79,7 +86,12 @@ export default function PerangkatAjarPage() {
     ].includes(r) || r?.startsWith('WAKA_') || r?.includes('WAKA')
   )
 
-  const [activeTab, setActiveTab] = useState<'saya' | 'verifikasi' | 'rekap'>('saya')
+  // Modul administrasi & perangkat ajar hanya boleh diakses oleh Guru dan Pihak Berwenang (Pimpinan/Kurikulum/Superadmin)
+  // Pegawai / Karyawan biasa TIDAK BOLEH mengakses modul ini
+  const isAuthorized = isGuru || isKurikulumOrPimpinan
+
+  const [activeTab, setActiveTab] = useState<'merdeka' | 'saya' | 'verifikasi' | 'rekap'>('merdeka')
+  const [selectedCurriculum, setSelectedCurriculum] = useState<string>('KURIKULUM_MERDEKA')
   const [searchQuery, setSearchQuery] = useState('')
   const [filterJenis, setFilterJenis] = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
@@ -437,6 +449,29 @@ export default function PerangkatAjarPage() {
     }
   }
 
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center text-center p-6">
+        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-4 shadow-xs">
+          <ShieldCheck className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+          Akses Terbatas: Khusus Guru & Pihak Berwenang
+        </h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">
+          Modul Perangkat Pembelajaran dan Administrasi Guru hanya diperuntukkan bagi Bapak/Ibu Guru serta Pimpinan/Tim Kurikulum yang berwenang. Pegawai / karyawan biasa tidak diizinkan mengakses modul ini.
+        </p>
+        <Button
+          onClick={() => window.history.back()}
+          variant="outline"
+          className="text-xs font-semibold px-4 py-2"
+        >
+          Kembali ke Dashboard
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header Utama Modul Perangkat Pembelajaran */}
@@ -477,6 +512,21 @@ export default function PerangkatAjarPage() {
       {/* Navigasi Tab */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-1 overflow-x-auto pb-1 no-scrollbar">
         <button
+          onClick={() => setActiveTab('merdeka')}
+          className={`pb-3 px-4 font-bold text-xs flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
+            activeTab === 'merdeka'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 rounded-t-xl'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-amber-500" />
+          <span>Perangkat Ajar Terpadu</span>
+          <span className="px-2 py-0.5 text-[10px] rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold">
+            Kurikulum Merdeka
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('saya')}
           className={`pb-3 px-4 font-bold text-xs flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
             activeTab === 'saya'
@@ -485,7 +535,7 @@ export default function PerangkatAjarPage() {
           }`}
         >
           <FileText className="w-4 h-4" />
-          <span>Perangkat Ajar Saya</span>
+          <span>Arsip Berkas Manual</span>
           <span className="px-2 py-0.5 text-[10px] rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-bold">
             {perangkatList.length}
           </span>
@@ -525,9 +575,43 @@ export default function PerangkatAjarPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: PERANGKAT SAYA / DAFTAR DOKUMEN */}
+      {/* TAB 0: MODUL PERANGKAT AJAR TERPADU MULTI-KURIKULUM */}
+      {/* ========================================================================= */}
+      {activeTab === 'merdeka' && (
+        <div className="space-y-4">
+          {/* Pilihan Kurikulum Indonesia Dinamis (Merdeka, K13, Kurikulum Baru) */}
+          <KurikulumSelector
+            selectedCurriculumId={selectedCurriculum}
+            onSelect={setSelectedCurriculum}
+          />
+
+          {selectedCurriculum === 'KURIKULUM_MERDEKA' && (
+            <KurikulumMerdekaWorkspace />
+          )}
+
+          {selectedCurriculum === 'KURIKULUM_2013' && (
+            <KurikulumPlaceholderWorkspace
+              name="Kurikulum 2013 (K-13)"
+              code="K13"
+              description="Format silabus, RPP 1 lembar, pemetaan KD (Kompetensi Dasar 3 & 4), dan kriteria ketuntasan minimal (KKM)."
+            />
+          )}
+
+          {selectedCurriculum === 'KURIKULUM_NASIONAL_BARU' && (
+            <KurikulumPlaceholderWorkspace
+              name="Kurikulum Nasional Terpadu"
+              code="KURNAS"
+              description="Slot arsitektur modular terstandar untuk integrasi kebijakan kurikulum baru kementerian pendidikan di masa depan."
+            />
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 1: PERANGKAT SAYA / DAFTAR DOKUMEN ARSIP */}
       {/* ========================================================================= */}
       {(activeTab === 'saya' || activeTab === 'verifikasi') && (
+
         <div className="space-y-6">
           {/* Tabel Dokumen */}
           <Card className="border-slate-200 dark:border-slate-800 shadow-xs">

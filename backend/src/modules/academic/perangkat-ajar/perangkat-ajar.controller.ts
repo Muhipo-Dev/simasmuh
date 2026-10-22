@@ -17,9 +17,25 @@ import {
   VerifyPerangkatAjarDto,
 } from './dto/perangkat-ajar.dto';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
+import { RolesGuard } from '../../core/auth/roles.guard';
+import { Roles, UserRole, SubRole } from '../../core/auth/roles.decorator';
 
 @Controller('perangkat-ajar')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(
+  UserRole.GURU,
+  UserRole.HONORER,
+  UserRole.SUPERADMIN,
+  UserRole.ADMIN_IT,
+  UserRole.KEPALA_SEKOLAH,
+  SubRole.KURIKULUM,
+  SubRole.WAKA_KURIKULUM,
+  SubRole.WAKA_KESISWAAN,
+  SubRole.WAKA_HUMAS_SDM,
+  SubRole.WAKA_SARPRAS,
+  SubRole.WAKA_ISMUBA,
+  SubRole.WALI_KELAS,
+)
 export class PerangkatAjarController {
   constructor(private readonly perangkatAjarService: PerangkatAjarService) {}
 

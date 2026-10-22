@@ -92,15 +92,34 @@ export class FileLoggerService extends ConsoleLogger {
 
   private getFormattedDate(): string {
     const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(d); // YYYY-MM-DD (UTC+7)
   }
 
   private getFormattedTimestamp(): string {
     const d = new Date();
-    return d.toISOString().replace('T', ' ').substring(0, 19);
+    const datePart = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(d);
+
+    const timePart = new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    })
+      .format(d)
+      .replace(/\./g, ':');
+
+    return `${datePart} ${timePart}`;
   }
 
   private initStreams() {

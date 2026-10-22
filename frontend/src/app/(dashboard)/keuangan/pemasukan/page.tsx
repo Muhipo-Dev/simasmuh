@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect, createContext, useContext, useDeferredValue } from 'react'
+import {
+  useState, useMemo, useEffect, createContext, useContext, useDeferredValue } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -13,12 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
-  Wallet, Users, BarChart3, Building2, Search, Pencil, Trash2,
-  Loader2, PlusCircle, CheckCircle2, TrendingUp, X, Download,
-  AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, Sparkles,
-  ShieldAlert, ShieldCheck, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check, Info,
-  CreditCard, FileCheck, Printer, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter,
-  Save, Bookmark, FolderArchive, Timer, CalendarClock, Play, FileText, Upload
+  Wallet, Users, BarChart3, Building2, Search, Pencil, Trash2, Loader2, PlusCircle, CheckCircle2, TrendingUp, X, Download, AlertTriangle, RotateCcw, Receipt, Clock, ChevronDown, ChevronUp, Layers, Percent, ShieldAlert, ShieldCheck, Lock, CheckSquare, Square, HeartHandshake, RefreshCw, Send, FileSpreadsheet, Check, Info, CreditCard, FileCheck, Printer, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter, Save, Bookmark, FolderArchive, Timer, CalendarClock, Play, FileText, Upload, UserCheck, ExternalLink
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
@@ -224,7 +220,9 @@ function TagihanModal({
   const authenticatedQuery = useAuthenticatedQuery();
   const qc = useQueryClient()
   const [form, setForm] = useState<FormState>(defaultForm())
+  const [isDraftForm, setIsDraftForm] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
+  const [editStatus, setEditStatus] = useState<'DRAFT' | 'BELUM_LUNAS' | 'ANGSURAN' | 'LUNAS'>('BELUM_LUNAS')
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [modalTab, setModalTab] = useState<'tagihan' | 'riwayat'>('tagihan')
@@ -353,9 +351,16 @@ function TagihanModal({
     setPayNotesInput('')
   }
 
-  const resetForm = () => { setForm(defaultForm()); setEditId(null); setShowForm(false); setShowCustomDiscount(false) }
+  const resetForm = () => {
+    setForm(defaultForm())
+    setIsDraftForm(false)
+    setEditId(null)
+    setEditStatus('BELUM_LUNAS')
+    setShowForm(false)
+    setShowCustomDiscount(false)
+  }
 
-  const buildPayload = () => {
+  const buildPayload = (forceDraft?: boolean) => {
     const finalAmount = form.amount && parseFloat(form.amount) > 0 
       ? parseFloat(form.amount) 
       : getDefaultAmountForType(form.type)
@@ -363,6 +368,8 @@ function TagihanModal({
     const finalDiscountPct = showCustomDiscount 
       ? form.discountPercentage 
       : (effectiveDefaultDiscount > 0 ? effectiveDefaultDiscount : form.discountPercentage)
+
+    const isDraft = forceDraft !== undefined ? forceDraft : isDraftForm
 
     return {
       type: form.type,
@@ -373,19 +380,42 @@ function TagihanModal({
       notes: form.notes || null,
       beasiswaPercentage: finalDiscountPct,
       beasiswaReason: form.discountReason || null,
+      isDraft,
+      status: editId ? editStatus : (isDraft ? 'DRAFT' : 'BELUM_LUNAS'),
     }
   }
 
   const addMut = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (asDraft?: boolean) => {
+      const payload = buildPayload(asDraft)
       const res = await authenticatedFetch(`/api-backend/finance/students/${student!.id}/tagihan`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPayload()),
+        body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error('Gagal menyimpan')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal menyimpan tagihan')
+      }
       return res.json()
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] }); qc.invalidateQueries({ queryKey: ['finance-students'] }); resetForm() },
+    onSuccess: (data, variables) => {
+      qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] })
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      Swal.fire({
+        title: variables ? 'Draf Berhasil Disimpan!' : 'Tagihan Berhasil Dibuat!',
+        text: variables 
+          ? 'Tagihan disimpan sebagai Draf pribadi siswa dan belum terbit di portal siswa & wali murid.' 
+          : 'Tagihan resmi berhasil diterbitkan ke portal siswa & wali murid.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+      resetForm()
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal Menyimpan', err.message || 'Terjadi kesalahan sistem', 'error')
+    }
   })
 
   const editMut = useMutation({
@@ -394,10 +424,116 @@ function TagihanModal({
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload()),
       })
-      if (!res.ok) throw new Error('Gagal mengupdate')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal mengupdate tagihan')
+      }
       return res.json()
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] }); qc.invalidateQueries({ queryKey: ['finance-students'] }); resetForm() },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] })
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      resetForm()
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal Update', err.message || 'Terjadi kesalahan sistem', 'error')
+    }
+  })
+
+  // Mutasi rilis satu per satu tagihan draf siswa
+  const publishSingleDraftMut = useMutation({
+    mutationFn: async (tagihanId: string) => {
+      const res = await authenticatedFetch(`/api-backend/finance/tagihan/${tagihanId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'BELUM_LUNAS', isDraft: false }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal merilis tagihan')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] })
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      Swal.fire({
+        title: 'Tagihan Resmi Dirilis!',
+        text: 'Tagihan telah diterbitkan secara resmi dan dapat dilihat oleh siswa serta wali murid.',
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal Merilis', err.message || 'Terjadi kesalahan saat merilis draf', 'error')
+    }
+  })
+
+  // Mutasi rilis seluruh draf tagihan milik siswa ini sekaligus
+  const publishAllDraftStudentMut = useMutation({
+    mutationFn: async () => {
+      const res = await authenticatedFetch('/api-backend/finance/tagihan/publish-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope: 'STUDENTS',
+          studentIds: [student!.id],
+        }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal merilis seluruh draf siswa')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] })
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      Swal.fire({
+        title: 'Seluruh Draf Siswa Berhasil Dirilis!',
+        text: data.message || `Tagihan resmi ${student?.name} berhasil diterbitkan ke akun siswa & wali murid.`,
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal Merilis', err.message || 'Terjadi kesalahan sistem', 'error')
+    }
+  })
+
+  // Mutasi tarik kembali tagihan ke draf per item tagihan
+  const retractSingleToDraftMut = useMutation({
+    mutationFn: async (tagihanId: string) => {
+      const res = await authenticatedFetch(`/api-backend/finance/tagihan/${tagihanId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'DRAFT', isDraft: true }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal menarik tagihan ke draf')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student-tagihan', student?.id] })
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      Swal.fire({
+        title: 'Dikembalikan ke Draf!',
+        text: 'Tagihan disembunyikan kembali dari siswa dan wali murid.',
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal Menarik ke Draf', err.message || 'Terjadi kesalahan sistem', 'error')
+    }
   })
 
   const deleteMut = useMutation({
@@ -539,18 +675,24 @@ function TagihanModal({
       discountPercentage: dInfo?.beasiswaPercentage || 0,
       discountReason: dInfo?.reason || '',
     })
-    setEditId(t.id); setShowForm(true)
+    setEditId(t.id)
+    setEditStatus(t.status)
+    setIsDraftForm(t.status === 'DRAFT')
+    setShowForm(true)
   }
 
   const tagihans = student?.tagihans ?? []
   const studentStatusInfo = student ? getFinanceStudentStatus(student) : null
   const isStudentNonaktif = studentStatusInfo ? studentStatusInfo.status !== 'AKTIF' : false
+  const draftTagihans = tagihans.filter(t => t.status === 'DRAFT')
   const lunasTagihans = tagihans.filter(t => t.status === 'LUNAS' || ((t.amountPaid || 0) >= t.amount && t.amount > 0))
   const angsuranTagihans = tagihans.filter(t => !lunasTagihans.includes(t) && (t.status === 'ANGSURAN' || (t.amountPaid || 0) > 0))
-  const belumLunasTagihans = tagihans.filter(t => !lunasTagihans.includes(t) && !angsuranTagihans.includes(t))
+  const belumLunasTagihans = tagihans.filter(t => !lunasTagihans.includes(t) && !angsuranTagihans.includes(t) && t.status !== 'DRAFT')
 
   const filtered = filterStatus === 'ALL' 
     ? tagihans 
+    : filterStatus === 'DRAFT'
+    ? draftTagihans
     : filterStatus === 'LUNAS' 
     ? lunasTagihans 
     : filterStatus === 'ANGSURAN' 
@@ -561,7 +703,8 @@ function TagihanModal({
   const totalAngsuranPaid = angsuranTagihans.reduce((s, t) => s + (t.amountPaid || 0), 0)
   const totalAngsuranSisa = angsuranTagihans.reduce((s, t) => s + Math.max(0, t.amount - (t.amountPaid || 0)), 0)
   const totalLunas = lunasTagihans.reduce((s, t) => s + t.amount, 0)
-  const isLoading = addMut.isPending || editMut.isPending
+  const totalDraft = draftTagihans.reduce((s, t) => s + t.amount, 0)
+  const isLoading = addMut.isPending || editMut.isPending || publishSingleDraftMut.isPending || publishAllDraftStudentMut.isPending || retractSingleToDraftMut.isPending
 
   return (
     <>
@@ -598,10 +741,28 @@ function TagihanModal({
                         <ShieldCheck className="w-3 h-3" /> Siswa Aktif
                       </span>
                     )}
+                    {draftTagihans.length > 0 && (
+                      <span className="font-bold text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-300 dark:border-amber-800 inline-flex items-center gap-1">
+                        <Bookmark className="w-3 h-3 text-amber-600" />
+                        {draftTagihans.length} Draf Belum Rilis ({currency(totalDraft)})
+                      </span>
+                    )}
                   </DialogDescription>
                 </div>
                 {!isStudentNonaktif && (
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {draftTagihans.length > 0 && (
+                      <Button
+                        size="sm"
+                        onClick={() => publishAllDraftStudentMut.mutate()}
+                        disabled={publishAllDraftStudentMut.isPending}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 h-9 rounded-xl shadow-xs transition-all"
+                        title="Rilis seluruh tagihan draf siswa ini ke portal resmi siswa & wali murid"
+                      >
+                        {publishAllDraftStudentMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                        Rilis Semua Draf ({draftTagihans.length})
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -891,7 +1052,7 @@ function TagihanModal({
             <Card className="border border-blue-200/80 dark:border-slate-800 bg-blue-50/30 dark:bg-slate-900/90 rounded-2xl shadow-sm overflow-hidden my-2">
               <CardHeader className="bg-white dark:bg-slate-800/80 border-b border-blue-100 dark:border-slate-800 py-3.5 px-5 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-base font-extrabold text-blue-900 dark:text-blue-300 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <Wallet className="w-4 h-4 text-blue-600" />
                   {editId ? 'Edit Tagihan' : 'Tagihan Baru'}
                 </CardTitle>
                 <button onClick={resetForm} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
@@ -1066,15 +1227,37 @@ function TagihanModal({
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
-                  <Button className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md"
-                    disabled={isLoading}
-                    onClick={() => editId ? editMut.mutate() : addMut.mutate()}>
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    {editId ? 'Simpan Perubahan' : 'Buat Tagihan'}
-                  </Button>
-                  <Button variant="outline" onClick={resetForm} disabled={isLoading} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
-                    Batal
-                  </Button>
+                  {editId ? (
+                    <>
+                      <Button className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md gap-2"
+                        disabled={isLoading}
+                        onClick={() => editMut.mutate()}>
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        Simpan Perubahan
+                      </Button>
+                      <Button variant="outline" onClick={resetForm} disabled={isLoading} className="h-11 rounded-xl font-semibold border-slate-300 dark:border-slate-700">
+                        Batal
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md gap-2"
+                        disabled={isLoading}
+                        onClick={() => addMut.mutate(false)}>
+                        {addMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        Rilis Resmi Langsung
+                      </Button>
+                      <Button variant="outline" className="flex-1 h-11 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800 font-bold rounded-xl shadow-xs gap-2"
+                        disabled={isLoading}
+                        onClick={() => addMut.mutate(true)}>
+                        {addMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bookmark className="w-4 h-4 text-amber-600" />}
+                        Simpan ke Draf (Belum Rilis)
+                      </Button>
+                      <Button variant="ghost" onClick={resetForm} disabled={isLoading} className="h-11 rounded-xl font-semibold text-slate-500 hover:text-slate-700">
+                        Batal
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1203,8 +1386,45 @@ function TagihanModal({
                         </button>
                       )}
 
-                      {/* Lunasi / Angsur / Batal */}
-                      {t.status !== 'LUNAS' ? (
+                      {/* Tombol Rilis Draf Per Item atau Tarik Kembali ke Draf */}
+                      {t.status === 'DRAFT' ? (
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(t)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 border border-blue-200 dark:border-blue-800 transition-colors shadow-2xs"
+                            title="Edit draf tagihan mandiri ini (ubah jenis, nominal, atau catatan)"
+                          >
+                            <Pencil className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                            Edit Draf
+                          </button>
+                          <button
+                            onClick={() => publishSingleDraftMut.mutate(t.id)}
+                            disabled={publishSingleDraftMut.isPending}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-xs"
+                            title="Rilis tagihan draf ini secara resmi ke portal siswa & wali murid"
+                          >
+                            {publishSingleDraftMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                            Rilis Tagihan
+                          </button>
+                        </div>
+                      ) : t.status === 'BELUM_LUNAS' && (!t.amountPaid || t.amountPaid === 0) ? (
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          <button
+                            onClick={() => retractSingleToDraftMut.mutate(t.id)}
+                            disabled={retractSingleToDraftMut.isPending}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-950/60 hover:bg-amber-200 border border-amber-300 dark:border-amber-800 transition-colors shadow-2xs"
+                            title="Tarik kembali tagihan ini ke status draf pribadi (disembunyikan dari siswa & wali murid)"
+                          >
+                            {retractSingleToDraftMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bookmark className="w-3 h-3" />}
+                            Tarik ke Draf
+                          </button>
+                          <button onClick={() => openPayDialog(t)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 hover:bg-emerald-200 border border-emerald-300 dark:border-emerald-800 transition-colors shadow-xs">
+                            <Receipt className="w-3.5 h-3.5 text-emerald-600" /> Bayar Kasir
+                          </button>
+                        </div>
+                      ) : t.status !== 'LUNAS' ? (
                         <button onClick={() => openPayDialog(t)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 hover:bg-emerald-200 border border-emerald-300 dark:border-emerald-800 transition-colors shadow-xs">
                           <Receipt className="w-3.5 h-3.5 text-emerald-600" /> {t.status === 'ANGSURAN' ? 'Angsur / Lunasi' : 'Bayar Kasir'}
@@ -1503,6 +1723,9 @@ interface FinanceDraftData {
   lksAmount: number
   lksPeriod: 'SEMESTER_1' | 'SEMESTER_2' | 'TAHUNAN'
   scheduledReleaseAt?: string | null
+  isImport?: boolean
+  importStudentIds?: string[]
+  importCount?: number
 }
 
 function getStoredFinanceDrafts(): FinanceDraftData[] {
@@ -1620,11 +1843,17 @@ function DraftDrawerModal({
   onClose,
   classes,
   onOpenReleaseForm,
+  onOpenImportTagihan,
+  students = [],
+  onOpenStudentModal,
 }: {
   open: boolean
   onClose: () => void
   classes: ClassItem[]
   onOpenReleaseForm: () => void
+  onOpenImportTagihan?: () => void
+  students?: StudentSummary[]
+  onOpenStudentModal?: (s: StudentSummary) => void
 }) {
   const authenticatedFetch = useAuthenticatedFetch()
   const qc = useQueryClient()
@@ -1716,6 +1945,64 @@ function DraftDrawerModal({
     const activeDraft = draft || (selectedDraftId ? draftsList.find(d => d.id === selectedDraftId) : null) || getStoredFinanceDraft()
     if (!activeDraft) {
       Swal.fire('Draf Tidak Ditemukan', 'Tidak ada data draf tagihan yang tersimpan atau dipilih.', 'warning')
+      return
+    }
+
+    if (activeDraft.isImport) {
+      if (!fromTimer) {
+        const confirm = await Swal.fire({
+          title: 'Rilis Tagihan Sekarang?',
+          text: `Menerbitkan tagihan hasil "${activeDraft.title || 'Draf Import'}" (${activeDraft.importCount ? `${activeDraft.importCount} tagihan` : 'tersinkronisasi'}) langsung ke akun siswa & wali murid.`,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Ya, Rilis Sekarang',
+          cancelButtonText: 'Batal',
+          confirmButtonColor: '#2563eb',
+        })
+        if (!confirm.isConfirmed) return
+      }
+
+      setIsReleasing(true)
+      try {
+        const res = await authenticatedFetch('/api-backend/finance/tagihan/publish-draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scope: activeDraft.scope || 'ALL',
+            studentIds: activeDraft.importStudentIds && activeDraft.importStudentIds.length > 0 ? activeDraft.importStudentIds : undefined,
+            startYear: activeDraft.startYear ? Number(activeDraft.startYear) : undefined,
+          }),
+        })
+
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}))
+          throw new Error(errJson.message || 'Gagal merilis tagihan dari draf import')
+        }
+
+        const data = await res.json()
+        qc.invalidateQueries({ queryKey: ['finance-students'] })
+        qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+        qc.invalidateQueries({ queryKey: ['student-tagihan'] })
+
+        if (activeDraft.id) {
+          removeStoredFinanceDraft(activeDraft.id)
+        } else {
+          removeStoredFinanceDraft()
+        }
+        reloadDraft()
+        onClose()
+
+        Swal.fire({
+          title: fromTimer ? 'Rilis Timer Otomatis Berhasil!' : 'Rilis Draf Berhasil!',
+          text: data.message || `Tagihan hasil "${activeDraft.title || 'Draf Import'}" berhasil diterbitkan resmi ke akun siswa.`,
+          icon: 'success',
+          confirmButtonColor: '#2563eb',
+        })
+      } catch (err: any) {
+        Swal.fire('Gagal Merilis Draf', err.message || 'Terjadi kesalahan sistem', 'error')
+      } finally {
+        setIsReleasing(false)
+      }
       return
     }
 
@@ -2043,6 +2330,199 @@ function DraftDrawerModal({
     }
   }
 
+  const [activeTab, setActiveTab] = useState<'MASAL' | 'MANDIRI'>('MASAL')
+  const [searchMandiri, setSearchMandiri] = useState('')
+  const [selectedMandiriIds, setSelectedMandiriIds] = useState<string[]>([])
+  const [isReleasingMandiri, setIsReleasingMandiri] = useState(false)
+
+  // Siswa yang memiliki tagihan draf individu/mandiri
+  const studentsWithDrafts = useMemo(() => {
+    return students.filter(s => (s.draftCount && s.draftCount > 0))
+  }, [students])
+
+  // Filter pencarian draf mandiri
+  const filteredMandiriStudents = useMemo(() => {
+    const q = searchMandiri.trim().toLowerCase()
+    if (!q) return studentsWithDrafts
+    return studentsWithDrafts.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      (s.nis && s.nis.includes(q)) ||
+      (s.nisn && s.nisn.includes(q)) ||
+      (s.className && s.className.toLowerCase().includes(q))
+    )
+  }, [studentsWithDrafts, searchMandiri])
+
+  // Toggle seleksi mandiri
+  const toggleSelectMandiri = (studentId: string) => {
+    setSelectedMandiriIds(prev =>
+      prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
+    )
+  }
+
+  const toggleSelectAllMandiri = () => {
+    if (selectedMandiriIds.length === filteredMandiriStudents.length) {
+      setSelectedMandiriIds([])
+    } else {
+      setSelectedMandiriIds(filteredMandiriStudents.map(s => s.id))
+    }
+  }
+
+  // Rilis mandiri siswa tunggal atau terpilih
+  const handlePublishMandiri = async (targetStudentIds: string[], studentName?: string) => {
+    if (targetStudentIds.length === 0) return
+
+    const isMultiple = targetStudentIds.length > 1
+    const confirm = await Swal.fire({
+      title: isMultiple ? 'Rilis Draf Siswa Terpilih?' : 'Rilis Draf Mandiri Siswa?',
+      text: isMultiple
+        ? `Menerbitkan resmi seluruh tagihan draf untuk ${targetStudentIds.length} siswa terpilih ke portal siswa dan wali murid.`
+        : `Menerbitkan resmi seluruh tagihan draf siswa ${studentName || ''} ke portal siswa dan wali murid.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Rilis Sekarang',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#10b981',
+    })
+    if (!confirm.isConfirmed) return
+
+    setIsReleasingMandiri(true)
+    try {
+      const res = await authenticatedFetch('/api-backend/finance/tagihan/publish-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope: 'STUDENTS',
+          studentIds: targetStudentIds,
+        }),
+      })
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal merilis draf tagihan mandiri')
+      }
+
+      const data = await res.json()
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      qc.invalidateQueries({ queryKey: ['student-tagihan'] })
+      setSelectedMandiriIds(prev => prev.filter(id => !targetStudentIds.includes(id)))
+
+      Swal.fire({
+        title: 'Rilis Draf Mandiri Berhasil!',
+        text: data.message || 'Tagihan draf mandiri berhasil diterbitkan ke portal siswa & wali murid.',
+        icon: 'success',
+        confirmButtonColor: '#10b981',
+      })
+    } catch (err: any) {
+      Swal.fire('Gagal Merilis Draf', err.message || 'Terjadi kesalahan sistem', 'error')
+    } finally {
+      setIsReleasingMandiri(false)
+    }
+  }
+
+  // Handler Reset Draf Rilis (Menghapus seluruh tagihan draf yang belum dirilis atau ditarik ke draf dengan konfirmasi & otorisasi)
+  const handleResetDraftRilis = async () => {
+    const isMandiriMode = activeTab === 'MANDIRI'
+    const targetCount = isMandiriMode ? studentsWithDrafts.length : draftsList.length
+
+    const confirm = await Swal.fire({
+      title: 'Reset Draf Rilis?',
+      text: isMandiriMode
+        ? `Reset draf akan menghapus seluruh draf tagihan mandiri (${targetCount} siswa) yang belum dirilis ke akun publik.`
+        : `Reset draf akan menghapus seluruh konfigurasi draf rilis massal (${targetCount} draf) dari penyimpanan draf sistem.`,
+      icon: 'warning',
+      input: 'password',
+      inputPlaceholder: 'Masukkan password otorisasi keuangan...',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Reset Draf Rilis',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#e11d48',
+      inputValidator: (value) => {
+        if (!value || !value.trim()) {
+          return 'Password otorisasi akun keuangan wajib diisi'
+        }
+      },
+    })
+
+    if (!confirm.isConfirmed || !confirm.value) return
+
+    setIsReleasing(true)
+    try {
+      if (isMandiriMode) {
+        // Reset draf tagihan siswa di database (tagihan dengan status DRAFT)
+        const studentIdsWithDraft = studentsWithDrafts.map(s => s.id)
+        if (studentIdsWithDraft.length === 0) {
+          Swal.fire('Info', 'Tidak ada draf tagihan siswa mandiri yang perlu direset.', 'info')
+          return
+        }
+
+        const res = await authenticatedFetch('/api-backend/finance/tagihan/reset-yearly', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scope: 'STUDENTS',
+            classIds: undefined,
+            startYear: Number(currentYear),
+            releaseDuration: 'TAHUN',
+            password: confirm.value,
+            onlyUnpaid: true,
+          }),
+        })
+
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}))
+          throw new Error(errJson.message || 'Password otorisasi salah atau gagal mereset draf')
+        }
+
+        qc.invalidateQueries({ queryKey: ['finance-students'] })
+        qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+        qc.invalidateQueries({ queryKey: ['student-tagihan'] })
+        setSelectedMandiriIds([])
+
+        Swal.fire({
+          title: 'Draf Mandiri Berhasil Direset!',
+          text: 'Seluruh draf tagihan mandiri siswa berhasil dibersihkan.',
+          icon: 'success',
+          confirmButtonColor: '#2563eb',
+        })
+      } else {
+        // Reset draf massal di database & local storage
+        removeStoredFinanceDraft()
+        setDraft(null)
+        setDraftsList([])
+        setSelectedDraftId(null)
+
+        // Hapus draf tagihan di database yang belum dirilis
+        await authenticatedFetch('/api-backend/finance/tagihan/reset-yearly', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scope: 'ALL',
+            startYear: draft ? Number(draft.startYear) : Number(currentYear),
+            releaseDuration: draft?.releaseDuration || 'TAHUN',
+            targetSemester: draft?.targetSemester,
+            password: confirm.value,
+            onlyUnpaid: true,
+          }),
+        }).catch(() => null)
+
+        qc.invalidateQueries({ queryKey: ['finance-students'] })
+        qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+
+        Swal.fire({
+          title: 'Draf Rilis Berhasil Direset!',
+          text: 'Seluruh draf rilis massal dan template tagihan berhasil dibersihkan.',
+          icon: 'success',
+          confirmButtonColor: '#2563eb',
+        })
+      }
+    } catch (err: any) {
+      Swal.fire('Gagal Reset Draf Rilis', err.message || 'Terjadi kesalahan saat mereset draf rilis', 'error')
+    } finally {
+      setIsReleasing(false)
+    }
+  }
+
   const getScopeLabel = () => {
     if (!draft) return '-'
     if (draft.scope === 'ALL') return 'Seluruh Siswa Sekolah'
@@ -2067,23 +2547,258 @@ function DraftDrawerModal({
                 <Layers className="w-4 h-4" />
               </div>
               <DialogTitle className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">
-                Draf & Rilis Tagihan
+                Pusat Draf & Rilis Tagihan
               </DialogTitle>
-              {draftsList.length > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                  {draftsList.length} Draf Tersedia
-                </span>
-              )}
             </div>
             <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs">
-              Pilih draf tagihan untuk ditinjau, diedit, atau langsung dirilis ke akun siswa.
+              Pilih menu draf masal atau draf mandiri per siswa untuk ditinjau dan dirilis ke akun siswa.
             </DialogDescription>
           </DialogHeader>
         </div>
 
+        {/* SUB-TAB SWITCHER TERPISAH (DRAF MASAL VS DRAF MANDIRI) */}
+        <div className="shrink-0 px-4 sm:px-5 pt-2.5 pb-2 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-300/60 dark:border-slate-700/60">
+            <button
+              type="button"
+              onClick={() => setActiveTab('MASAL')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                activeTab === 'MASAL'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs ring-1 ring-blue-500/20'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Draf Masal & Template</span>
+              {draftsList.length > 0 && (
+                <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                  activeTab === 'MASAL'
+                    ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                    : 'bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                }`}>
+                  {draftsList.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('MANDIRI')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                activeTab === 'MANDIRI'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs ring-1 ring-emerald-500/20'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Draf Mandiri / Per Siswa</span>
+              {studentsWithDrafts.length > 0 && (
+                <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                  activeTab === 'MANDIRI'
+                    ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                }`}>
+                  {studentsWithDrafts.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {activeTab === 'MASAL' && (
+            <div className="flex items-center gap-1.5">
+              {onOpenImportTagihan && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    onClose()
+                    onOpenImportTagihan()
+                  }}
+                  className="h-7 px-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-md gap-1"
+                  title="Import Excel Tagihan Siswa"
+                >
+                  <FileSpreadsheet className="w-3 h-3" />
+                  <span className="hidden sm:inline">Import Excel</span>
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onClose()
+                  onOpenReleaseForm()
+                }}
+                className="h-7 px-2.5 text-xs font-bold text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-md gap-1"
+              >
+                <PlusCircle className="w-3 h-3" />
+                <span>Buat Draf Masal</span>
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* ISI KONTEN UTAMA */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar text-slate-800 dark:text-slate-100">
-          {!draft ? (
+          {activeTab === 'MANDIRI' ? (
+            /* ============================================================ */
+            /* TAB MENU 2: DRAF MANDIRI / PER SISWA                        */
+            /* ============================================================ */
+            <div className="space-y-3">
+              {/* Toolbar Pencarian & Filter Draf Mandiri */}
+              <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 dark:bg-slate-950/50 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Cari nama siswa, NIS, atau kelas..."
+                    value={searchMandiri}
+                    onChange={(e) => setSearchMandiri(e.target.value)}
+                    className="pl-8 h-8 text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-lg"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {filteredMandiriStudents.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleSelectAllMandiri}
+                      className="h-8 text-xs font-semibold border-slate-200 dark:border-slate-800 rounded-lg"
+                    >
+                      {selectedMandiriIds.length === filteredMandiriStudents.length ? 'Batal Semua' : 'Pilih Semua'}
+                    </Button>
+                  )}
+                  {selectedMandiriIds.length > 0 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handlePublishMandiri(selectedMandiriIds)}
+                      disabled={isReleasingMandiri}
+                      className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-2xs gap-1.5"
+                    >
+                      {isReleasingMandiri ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      <span>Rilis Terpilih ({selectedMandiriIds.length})</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Daftar Siswa Draf Mandiri */}
+              {studentsWithDrafts.length === 0 ? (
+                <div className="text-center py-10 space-y-2.5 bg-slate-50/70 dark:bg-slate-950/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-100 dark:border-emerald-900/60 text-emerald-500 mx-auto flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                      Tidak Ada Draf Tagihan Mandiri
+                    </p>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                      Seluruh tagihan siswa saat ini telah dirilis resmi ke portal siswa dan wali murid, atau belum ada tagihan individu yang disimpan ke draf.
+                    </p>
+                  </div>
+                </div>
+              ) : filteredMandiriStudents.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-500 bg-slate-50 dark:bg-slate-950/30 rounded-lg border border-slate-200 dark:border-slate-800">
+                  Tidak ada siswa draf mandiri yang cocok dengan pencarian "{searchMandiri}".
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-slate-500 px-1 font-medium">
+                    <span>Menampilkan {filteredMandiriStudents.length} siswa dengan tagihan draf individu</span>
+                    <span>{selectedMandiriIds.length} dipilih</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {filteredMandiriStudents.map((s) => {
+                      const isSelected = selectedMandiriIds.includes(s.id)
+                      return (
+                        <div
+                          key={s.id}
+                          className={`p-3 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                            isSelected
+                              ? 'bg-emerald-50/60 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800/80 ring-1 ring-emerald-400/30'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectMandiri(s.id)}
+                              className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                            />
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100">
+                                  {s.name}
+                                </span>
+                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                  {s.className}
+                                </span>
+                                {s.nis && (
+                                  <span className="text-[10px] text-slate-400">
+                                    NIS: {s.nis}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/60">
+                                  {s.draftCount} Tagihan Draf
+                                </span>
+                                {s.draftAmount && s.draftAmount > 0 && (
+                                  <span className="text-[11px] font-semibold text-slate-500">
+                                    Total: {currency(s.draftAmount)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+                            {onOpenStudentModal && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  onClose()
+                                  onOpenStudentModal(s)
+                                }}
+                                className="h-7.5 px-2.5 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-lg gap-1 border-blue-200 dark:border-blue-800 shadow-2xs"
+                                title="Edit draf tagihan mandiri dan sesuaikan tarif sebelum dirilis"
+                              >
+                                <Pencil className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                                <span>Edit Draf</span>
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => handlePublishMandiri([s.id], s.name)}
+                              disabled={isReleasingMandiri}
+                              className="h-7.5 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-2xs gap-1"
+                              title="Rilis resmi seluruh draf tagihan siswa ini"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>Rilis Mandiri</span>
+                            </Button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : !draft ? (
+            /* ============================================================ */
+            /* TAB MENU 1: DRAF MASAL & TEMPLATE (EMPTY STATE)             */
+            /* ============================================================ */
             <div className="text-center py-8 space-y-2.5 bg-slate-50/70 dark:bg-slate-950/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
               <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-900/60 text-sky-500 mx-auto flex items-center justify-center">
                 <FolderArchive className="w-5 h-5" />
@@ -2091,20 +2806,36 @@ function DraftDrawerModal({
               <div className="space-y-0.5">
                 <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">Belum Ada Draf</p>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Buat draf tarif tagihan terlebih dahulu sebelum merilis ke siswa.
+                  Buat draf tarif tagihan terlebih dahulu sebelum merilis ke siswa, atau gunakan opsi input melalui import Excel.
                 </p>
               </div>
-              <Button
-                type="button"
-                onClick={() => {
-                  onClose()
-                  onOpenReleaseForm()
-                }}
-                className="h-8 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-2xs gap-1.5"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                Buat Draf Baru
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    onClose()
+                    onOpenReleaseForm()
+                  }}
+                  className="h-8 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-2xs gap-1.5"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  Buat Draf Baru
+                </Button>
+                {onOpenImportTagihan && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      onClose()
+                      onOpenImportTagihan()
+                    }}
+                    className="h-8 text-xs font-bold border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg shadow-2xs gap-1.5"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    Import Excel Tagihan
+                  </Button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="space-y-3.5">
@@ -2114,20 +2845,39 @@ function DraftDrawerModal({
                   <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Pilih Draf ({draftsList.length}):
                   </Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      onClose()
-                      onOpenReleaseForm()
-                    }}
-                    className="h-6 px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-md gap-1"
-                  >
-                    <PlusCircle className="w-3 h-3" />
-                    Tambah Draf
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    {onOpenImportTagihan && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          onClose()
+                          onOpenImportTagihan()
+                        }}
+                        className="h-6 px-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-md gap-1"
+                        title="Opsi Lain: Input Tagihan melalui Import Excel"
+                      >
+                        <FileSpreadsheet className="w-3 h-3" />
+                        Import Excel
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        onClose()
+                        onOpenReleaseForm()
+                      }}
+                      className="h-6 px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-md gap-1"
+                    >
+                      <PlusCircle className="w-3 h-3" />
+                      Tambah Draf
+                    </Button>
+                  </div>
                 </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {draftsList.map((d, idx) => {
                     const isCur = (d.id === selectedDraftId) || (!selectedDraftId && idx === 0)
@@ -2162,7 +2912,7 @@ function DraftDrawerModal({
                                 <Pencil className="w-2.5 h-2.5" />
                               </button>
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
-                                {d.releaseDuration === 'BULAN' ? 'Bulanan' : d.releaseDuration === 'SEMESTER' ? `Sem ${d.targetSemester}` : 'Tahunan'}
+                                {d.isImport ? 'Import' : d.releaseDuration === 'BULAN' ? 'Bulanan' : d.releaseDuration === 'SEMESTER' ? `Sem ${d.targetSemester}` : 'Tahunan'}
                               </span>
                             </div>
                           </div>
@@ -2209,10 +2959,83 @@ function DraftDrawerModal({
               )}
 
               {/* CARD RINCIAN DETAIL DRAF */}
-              <div className="p-4 bg-slate-50/70 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-200/80 dark:border-slate-800 pb-2.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white">{draft.title || 'Draf Tagihan'}</span>
+              {draft.isImport ? (
+                <div className="p-4 bg-slate-50/70 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-200/80 dark:border-slate-800 pb-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">{draft.title || 'Draf Import'}</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleRenameDraft(draft)}
+                        className="h-6 px-1.5 text-[11px] text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-md gap-1"
+                        title="Ubah nama draf ini"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        <span className="text-[10px] font-semibold">Ubah Nama</span>
+                      </Button>
+                      <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                        <FileSpreadsheet className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                        Hasil Import Excel
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      Diimpor: {new Date(draft.savedAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  {/* Informasi Draf Import */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                    <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-400 block font-medium">Tahun Pelajaran</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                        {draft.customAcademicYear || `${draft.startYear}/${draft.startYear + 1}`}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-400 block font-medium">Jumlah Tagihan Tersimpan</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                        {draft.importCount ? `${draft.importCount} Tagihan Siswa` : 'Tersinkronisasi'}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-400 block font-medium">Status Database</span>
+                      <span className="font-bold text-sky-700 dark:text-sky-300 block flex items-center gap-1">
+                        <Bookmark className="w-3 h-3 text-sky-600" />
+                        Draf (Siap Dirilis)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Keterangan Sinkronisasi */}
+                  <div className="p-3 bg-sky-50/60 dark:bg-sky-950/30 rounded-lg border border-sky-100 dark:border-sky-900/40 text-xs text-sky-900 dark:text-sky-200 space-y-1">
+                    <div className="font-semibold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                      Tagihan Tersinkronisasi ke Basis Data
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Seluruh rincian tarif tagihan siswa per baris telah disinkronkan ke basis data dengan status Draf. Klik <strong>Rilis Sekarang</strong> untuk mengaktifkan tagihan ke akun siswa & wali murid atau atur <strong>Jadwalkan</strong> untuk rilis otomatis.
+                    </p>
+                  </div>
+
+                  {/* Catatan */}
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 block font-medium">Catatan / Keterangan:</span>
+                    <Input
+                      type="text"
+                      placeholder="Tulis catatan (opsional)..."
+                      value={draft.notes || ''}
+                      onChange={(e) => updateDraftField({ notes: e.target.value })}
+                      className="h-7 text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-slate-50/70 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-200/80 dark:border-slate-800 pb-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">{draft.title || 'Draf Tagihan'}</span>
                     <Button
                       type="button"
                       size="sm"
@@ -2500,6 +3323,7 @@ function DraftDrawerModal({
                   />
                 </div>
               </div>
+              )}
 
               {/* SCHEDULER POPUP BOX */}
               {schedulerOpen && (
@@ -2579,63 +3403,122 @@ function DraftDrawerModal({
 
         {/* FOOTER AKSI */}
         <div className="shrink-0 p-3 sm:px-5 sm:py-3.5 bg-slate-50/80 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            {draft && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClearDraft}
-                className="h-8.5 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-lg gap-1.5"
-                title="Hapus draf aktif ini"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Hapus Draf</span>
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleRetractActiveBills}
-              disabled={isReleasing}
-              className="h-8.5 px-3 text-xs font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 border-amber-300 dark:border-amber-800 rounded-lg gap-1.5 shadow-2xs"
-              title="Tarik tagihan siswa yang belum lunas kembali ke draf"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-              <span>Tarik ke Draf</span>
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="h-8.5 text-xs rounded-lg font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
-            >
-              Tutup
-            </Button>
-            {draft && (
-              <>
+          {activeTab === 'MANDIRI' ? (
+            <div className="flex flex-wrap items-center justify-between w-full gap-2">
+              <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setSchedulerOpen(!schedulerOpen)}
-                  className="h-8.5 text-xs font-bold border-amber-300 dark:border-amber-800/80 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg gap-1.5"
+                  onClick={handleResetDraftRilis}
+                  disabled={isReleasing || isReleasingMandiri || studentsWithDrafts.length === 0}
+                  className="h-8.5 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-lg gap-1.5 shadow-2xs"
+                  title="Reset seluruh draf tagihan mandiri siswa"
                 >
-                  <Timer className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Jadwalkan</span>
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Reset Draf Rilis</span>
                 </Button>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 ml-1">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    Total Draf Mandiri:
+                  </span>
+                  <span className="font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/60">
+                    {studentsWithDrafts.length} Siswa
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="h-8.5 text-xs rounded-lg font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+                >
+                  Tutup
+                </Button>
+                {selectedMandiriIds.length > 0 && (
+                  <Button
+                    type="button"
+                    onClick={() => handlePublishMandiri(selectedMandiriIds)}
+                    disabled={isReleasingMandiri}
+                    className="h-8.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 px-3.5"
+                  >
+                    {isReleasingMandiri ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    <span>Rilis Draf Mandiri ({selectedMandiriIds.length})</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
-                  onClick={() => executeRelease(false)}
+                  variant="outline"
+                  onClick={handleResetDraftRilis}
                   disabled={isReleasing}
-                  className="h-8.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs gap-1.5 px-3.5"
+                  className="h-8.5 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 rounded-lg gap-1.5 shadow-2xs"
+                  title="Reset seluruh draf rilis massal dan tagihan yang belum dirilis"
                 >
-                  {isReleasing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                  <span>Rilis Sekarang</span>
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Reset Draf Rilis</span>
                 </Button>
-              </>
-            )}
-          </div>
+                {draft && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleClearDraft}
+                    className="h-8.5 px-3 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg gap-1.5"
+                    title="Hapus draf aktif ini"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Hapus Draf</span>
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleRetractActiveBills}
+                  disabled={isReleasing}
+                  className="h-8.5 px-3 text-xs font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 border-amber-300 dark:border-amber-800 rounded-lg gap-1.5 shadow-2xs"
+                  title="Tarik tagihan siswa yang belum lunas kembali ke draf"
+                >
+                  <Bookmark className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Tarik ke Draf</span>
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="h-8.5 text-xs rounded-lg font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+                >
+                  Tutup
+                </Button>
+                {draft && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setSchedulerOpen(!schedulerOpen)}
+                      className="h-8.5 text-xs font-bold border-amber-300 dark:border-amber-800/80 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg gap-1.5"
+                    >
+                      <Timer className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Jadwalkan</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => executeRelease(false)}
+                      disabled={isReleasing}
+                      className="h-8.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs gap-1.5 px-3.5"
+                    >
+                      {isReleasing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                      <span>Rilis Sekarang</span>
+                    </Button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -4397,7 +5280,8 @@ function ManualCashPaymentModal({
     return res
   }, [students, studentSearch, filterKelas, filterProgram, filterStatusTunggakan])
 
-  const activeTagihans = (studentDetail?.tagihans || []).filter(t => t.status !== 'LUNAS')
+  // Tagihan aktif yang siap dibayar (hanya tagihan resmi rilis/publish, kecualikan LUNAS dan DRAFT)
+  const activeTagihans = (studentDetail?.tagihans || []).filter(t => t.status !== 'LUNAS' && t.status !== 'DRAFT')
 
   // Helper untuk mendapatkan sisa tagihan asli & setelah diskon
   const getTagihanCalculations = (t: any) => {
@@ -4946,7 +5830,7 @@ function ManualCashPaymentModal({
             <div className="space-y-4 bg-gradient-to-br from-slate-50 to-emerald-50/30 dark:from-slate-950 dark:to-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 rounded-2xl">
               <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
                 <Label className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider block flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <Wallet className="w-3.5 h-3.5 text-emerald-600" />
                   3. Pengaturan Pembayaran per Tagihan ({selectedTagihanIds.length} Tagihan)
                 </Label>
                 <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
@@ -5334,7 +6218,318 @@ function TabTagihan() {
     }
   }
 
+  // Import Excel Tagihan States (Sinkron Master Buku Induk)
+  const [importTagihanOpen, setImportTagihanOpen] = useState(false)
+  const [isImportingTagihan, setIsImportingTagihan] = useState(false)
+  const [isDownloadingTagihanTemplate, setIsDownloadingTagihanTemplate] = useState(false)
+  const [templateFilterClass, setTemplateFilterClass] = useState<string>('all')
+
+  const downloadTagihanTemplate = async (classId?: string) => {
+    try {
+      setIsDownloadingTagihanTemplate(true)
+      const targetClass = classId || templateFilterClass
+      const query = targetClass && targetClass !== 'all' ? `?classId=${encodeURIComponent(targetClass)}` : ''
+      const res = await authenticatedFetch(`/api-backend/finance/template-tagihan${query}`)
+      if (!res.ok) throw new Error('Gagal mengunduh template tagihan')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `template_tagihan_siswa_simasmuh_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      Swal.fire('Gagal Mengunduh', err.message || 'Terjadi kesalahan sistem saat unduh template.', 'error')
+    } finally {
+      setIsDownloadingTagihanTemplate(false)
+    }
+  }
+
+  const handleImportTagihanFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = '' // Reset input
+
+    try {
+      setIsImportingTagihan(true)
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data, { type: 'array', cellDates: true })
+      const sheetName = workbook.SheetNames.includes('Input Tagihan Siswa')
+        ? 'Input Tagihan Siswa'
+        : workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet)
+
+      if (!jsonData || jsonData.length === 0) {
+        Swal.fire('File Kosong', 'Tidak ada data tagihan atau siswa yang ditemukan dalam file Excel.', 'warning')
+        setIsImportingTagihan(false)
+        return
+      }
+
+      // Daftar definisi kolom tagihan untuk format multi-kolom
+      const FEE_DEFINITIONS: Array<{
+        type: string
+        aliases: string[]
+        isMonthly?: boolean
+      }> = [
+        { type: 'SPP', aliases: ['SPP (Rp)', 'SPP', 'spp', 'Tagihan SPP'], isMonthly: true },
+        { type: 'DPP', aliases: ['DPP (Rp)', 'DPP', 'dpp', 'Tagihan DPP', 'Dana Pengembangan Pendidikan'] },
+        { type: 'SERAGAM', aliases: ['Seragam (Rp)', 'SERAGAM (Rp)', 'Seragam', 'SERAGAM', 'seragam'] },
+        { type: 'DAFTAR_ULANG', aliases: ['Daftar Ulang (Rp)', 'DAFTAR ULANG (Rp)', 'DAFTAR_ULANG (Rp)', 'Daftar Ulang', 'DAFTAR ULANG', 'DAFTAR_ULANG'] },
+        { type: 'UJIAN', aliases: ['Ujian (Rp)', 'UJIAN (Rp)', 'Ujian', 'UJIAN', 'ujian'] },
+        { type: 'LKS', aliases: ['LKS / Buku (Rp)', 'LKS (Rp)', 'LKS', 'Buku (Rp)', 'Buku', 'BUKU (Rp)', 'BUKU'] },
+        { type: 'UIS', aliases: ['UIS / Infaq (Rp)', 'UIS (Rp)', 'UIS', 'uis', 'INFAK (Rp)', 'INFAQ (Rp)', 'Infak', 'Infaq'] },
+        { type: 'UKA', aliases: ['UKA / Akad. (Rp)', 'UKA (Rp)', 'UKA', 'uka'] },
+        { type: 'UKS', aliases: ['UKS / Sekol. (Rp)', 'UKS (Rp)', 'UKS', 'uks'] },
+        { type: 'LAINNYA', aliases: ['Lainnya (Rp)', 'LAINNYA (Rp)', 'Lainnya', 'LAINNYA', 'lainnya'] },
+      ]
+
+      const currentYear = new Date().getFullYear()
+      const currentMonth = new Date().getMonth() + 1
+      const items: Array<{
+        nis: string
+        nisn: string
+        name: string
+        type: string
+        amount: number
+        month: number | null
+        year: number
+        dueDate: string | null
+        status: string
+        notes: string
+      }> = []
+
+      for (const row of jsonData) {
+        const nis = String(row['NIS *'] ?? row['NIS'] ?? row['nis'] ?? '').trim()
+        const nisn = String(row['NISN'] ?? row['nisn'] ?? '').trim()
+        const name = String(row['Nama Siswa *'] ?? row['Nama Siswa'] ?? row['Nama'] ?? row['name'] ?? '').trim()
+
+        if (!nis && !nisn && !name) continue // Abaikan baris kosong
+
+        // Parameter acuan dari baris Excel
+        const academicYearRaw = row['Tahun Pelajaran *'] ?? row['Tahun Pelajaran'] ?? row['Tahun Ajaran *'] ?? row['Tahun Ajaran'] ?? row['academicYear'] ?? ''
+        const monthRaw = row['Bulan SPP (1-12 / 1 TAHUN)'] ?? row['Bulan SPP (1-12)'] ?? row['Bulan (1-12)'] ?? row['Bulan'] ?? row['month'] ?? '1 TAHUN'
+        const yearRaw = row['Tahun'] ?? row['Tahun Tagihan'] ?? row['year'] ?? null
+        const dueDateRaw = row['Jatuh Tempo (YYYY-MM-DD)'] ?? row['Jatuh Tempo'] ?? row['dueDate'] ?? null
+        const statusRaw = row['Status Tagihan'] ?? row['Status'] ?? row['status'] ?? 'BELUM_LUNAS'
+        const notesRaw = row['Keterangan / Catatan'] ?? row['Keterangan'] ?? row['Catatan'] ?? row['notes'] ?? ''
+
+        // Resolusi Tahun Pelajaran & tahun awal kalender
+        let academicYearStr = String(academicYearRaw).trim()
+        if (!academicYearStr) {
+          academicYearStr = `${currentYear}/${currentYear + 1}`
+        }
+        let parsedYearStart = currentYear
+        const matchYear = academicYearStr.match(/\b(20\d\d)\b/)
+        if (matchYear) {
+          parsedYearStart = parseInt(matchYear[1], 10)
+        } else if (yearRaw && !isNaN(Number(yearRaw))) {
+          parsedYearStart = Number(yearRaw)
+        }
+
+        // Pengecekan rilis 1 tahun SPP (12 bulan)
+        const monthStr = String(monthRaw).trim().toUpperCase()
+        const isFullYearSpp = ['1 TAHUN', 'SETAHUN', '1-12', 'TAHUNAN', '12 BULAN', 'FULL', 'ALL', 'Y', 'YES', 'YA'].includes(monthStr) || monthStr === ''
+
+        let dueDateStr: string | null = null
+        if (dueDateRaw instanceof Date && !isNaN(dueDateRaw.getTime())) {
+          dueDateStr = dueDateRaw.toISOString().split('T')[0]
+        } else if (typeof dueDateRaw === 'string' && dueDateRaw.trim()) {
+          dueDateStr = dueDateRaw.trim()
+        }
+
+        const cleanStatus = ['DRAFT', 'BELUM_LUNAS', 'LUNAS'].includes(String(statusRaw).trim().toUpperCase())
+          ? String(statusRaw).trim().toUpperCase()
+          : 'BELUM_LUNAS'
+
+        const MONTH_NAMES = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+
+        // 1. Cek format multi-kolom biaya (SPP, DPP, Seragam, dll)
+        let foundMultiCol = false
+        for (const feeDef of FEE_DEFINITIONS) {
+          let cellVal: any = undefined
+          for (const alias of feeDef.aliases) {
+            if (row[alias] !== undefined && row[alias] !== null && row[alias] !== '') {
+              cellVal = row[alias]
+              break
+            }
+          }
+
+          if (cellVal !== undefined) {
+            foundMultiCol = true
+            let numAmount = 0
+            if (typeof cellVal === 'string') {
+              const cleaned = cellVal.replace(/[^0-9.-]/g, '').trim()
+              if (cleaned !== '') numAmount = parseFloat(cleaned)
+            } else if (typeof cellVal === 'number') {
+              numAmount = cellVal
+            }
+
+            // Aturan sistem: jika input kosong atau 0 maka di-disable (dilewati secara aman)
+            if (!isNaN(numAmount) && numAmount > 0) {
+              if (feeDef.type === 'SPP' && isFullYearSpp) {
+                // Rilis 1 Tahun Penuh (12 bulan: Juli s/d Juni)
+                const sppYearMonths = [
+                  { m: 7, y: parsedYearStart },
+                  { m: 8, y: parsedYearStart },
+                  { m: 9, y: parsedYearStart },
+                  { m: 10, y: parsedYearStart },
+                  { m: 11, y: parsedYearStart },
+                  { m: 12, y: parsedYearStart },
+                  { m: 1, y: parsedYearStart + 1 },
+                  { m: 2, y: parsedYearStart + 1 },
+                  { m: 3, y: parsedYearStart + 1 },
+                  { m: 4, y: parsedYearStart + 1 },
+                  { m: 5, y: parsedYearStart + 1 },
+                  { m: 6, y: parsedYearStart + 1 },
+                ]
+
+                for (const sym of sppYearMonths) {
+                  const mDueDateStr = new Date(sym.y, sym.m - 1, 10).toISOString().split('T')[0]
+                  items.push({
+                    nis,
+                    nisn,
+                    name,
+                    type: 'SPP',
+                    amount: numAmount,
+                    month: sym.m,
+                    year: sym.y,
+                    dueDate: dueDateStr || mDueDateStr,
+                    status: cleanStatus,
+                    notes: String(notesRaw).trim() || `SPP ${MONTH_NAMES[sym.m]} ${sym.y} (TP ${academicYearStr})`,
+                  })
+                }
+              } else {
+                const singleM = feeDef.isMonthly ? (parseInt(monthStr, 10) || currentMonth) : null
+                const singleY = singleM ? (singleM >= 7 ? parsedYearStart : parsedYearStart + 1) : parsedYearStart
+                items.push({
+                  nis,
+                  nisn,
+                  name,
+                  type: feeDef.type,
+                  amount: numAmount,
+                  month: singleM,
+                  year: singleY,
+                  dueDate: dueDateStr,
+                  status: cleanStatus,
+                  notes: String(notesRaw).trim() || `${feeDef.type} TP ${academicYearStr}`,
+                })
+              }
+            }
+          }
+        }
+
+        // 2. Format alternatif: Kolom tunggal 'Jenis Tagihan' & 'Nominal (Rp)' jika tidak pakai multi-kolom
+        if (!foundMultiCol) {
+          const singleType = String(row['Jenis Tagihan *'] ?? row['Jenis Tagihan'] ?? row['Jenis'] ?? row['type'] ?? 'SPP').trim().toUpperCase()
+          const singleAmountRaw = row['Nominal (Rp) *'] ?? row['Nominal (Rp)'] ?? row['Nominal'] ?? row['amount'] ?? ''
+
+          let numAmount = 0
+          if (typeof singleAmountRaw === 'string') {
+            const cleaned = singleAmountRaw.replace(/[^0-9.-]/g, '').trim()
+            if (cleaned !== '') numAmount = parseFloat(cleaned)
+          } else if (typeof singleAmountRaw === 'number') {
+            numAmount = singleAmountRaw
+          }
+
+          // Jika nominal kosong atau <= 0 maka di-disable
+          if (!isNaN(numAmount) && numAmount > 0) {
+            if (singleType === 'SPP' && isFullYearSpp) {
+              const sppYearMonths = [
+                { m: 7, y: parsedYearStart },
+                { m: 8, y: parsedYearStart },
+                { m: 9, y: parsedYearStart },
+                { m: 10, y: parsedYearStart },
+                { m: 11, y: parsedYearStart },
+                { m: 12, y: parsedYearStart },
+                { m: 1, y: parsedYearStart + 1 },
+                { m: 2, y: parsedYearStart + 1 },
+                { m: 3, y: parsedYearStart + 1 },
+                { m: 4, y: parsedYearStart + 1 },
+                { m: 5, y: parsedYearStart + 1 },
+                { m: 6, y: parsedYearStart + 1 },
+              ]
+
+              for (const sym of sppYearMonths) {
+                const mDueDateStr = new Date(sym.y, sym.m - 1, 10).toISOString().split('T')[0]
+                items.push({
+                  nis,
+                  nisn,
+                  name,
+                  type: 'SPP',
+                  amount: numAmount,
+                  month: sym.m,
+                  year: sym.y,
+                  dueDate: dueDateStr || mDueDateStr,
+                  status: cleanStatus,
+                  notes: String(notesRaw).trim() || `SPP ${MONTH_NAMES[sym.m]} ${sym.y} (TP ${academicYearStr})`,
+                })
+              }
+            } else {
+              const singleM = singleType === 'SPP' ? (parseInt(monthStr, 10) || currentMonth) : null
+              const singleY = singleM ? (singleM >= 7 ? parsedYearStart : parsedYearStart + 1) : parsedYearStart
+              items.push({
+                nis,
+                nisn,
+                name,
+                type: singleType,
+                amount: numAmount,
+                month: singleM,
+                year: singleY,
+                dueDate: dueDateStr,
+                status: cleanStatus,
+                notes: String(notesRaw).trim() || `${singleType} TP ${academicYearStr}`,
+              })
+            }
+          }
+        }
+      }
+
+      if (items.length === 0) {
+        Swal.fire({
+          title: 'Tidak Ada Tagihan Aktif',
+          text: 'Seluruh nominal tagihan kosong atau bernilai 0 (semua di-disable). Silakan isi nominal tagihan (contoh: SPP atau DPP) pada siswa yang hendak ditagihkan.',
+          icon: 'warning',
+          confirmButtonColor: '#2563eb',
+        })
+        setIsImportingTagihan(false)
+        return
+      }
+
+      const res = await authenticatedFetch('/api-backend/finance/import-tagihan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
+      })
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal mengimpor data tagihan siswa')
+      }
+
+      const resData = await res.json()
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      qc.invalidateQueries({ queryKey: ['student-tagihan'] })
+      setImportTagihanOpen(false)
+
+      Swal.fire({
+        title: 'Import Tagihan Berhasil!',
+        text: resData.message || `Berhasil memproses ${resData.totalProcessed || items.length} tagihan siswa. Tagihan dengan nominal kosong/0 berhasil di-disable secara aman.`,
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+    } catch (err: any) {
+      Swal.fire('Gagal Import Tagihan', err.message || 'Terjadi kesalahan format saat membaca file Excel.', 'error')
+    } finally {
+      setIsImportingTagihan(false)
+    }
+  }
+
   const openBulkBeasiswa = () => {
+
     setBulkSeragamPct(0); setBulkSppPct(0); setBulkDppPct(0); setBulkReason('')
     setBulkBeasiswaOpen(true)
   }
@@ -5671,6 +6866,58 @@ function TabTagihan() {
     },
   })
 
+  // Mutasi rilis resmi seluruh draf tagihan untuk siswa terpilih (massal atau per siswa)
+  const publishSelectedDraftMut = useMutation({
+    mutationFn: async (targetIds?: string[]) => {
+      const ids = targetIds || selectedStudentIds
+      const payload = {
+        scope: 'STUDENTS',
+        studentIds: ids,
+      }
+      const res = await authenticatedFetch('/api-backend/finance/tagihan/publish-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Gagal merilis tagihan dari draf')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['finance-students'] })
+      qc.invalidateQueries({ queryKey: ['finance-rekap'] })
+      setSelectedStudentIds([])
+      Swal.fire({
+        title: 'Tagihan Resmi Berhasil Dirilis!',
+        text: data.message || 'Seluruh tagihan draf siswa terpilih telah resmi dipublikasikan ke portal siswa & wali murid.',
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire('Gagal Merilis Draf', err.message || 'Terjadi kesalahan sistem', 'error')
+    },
+  })
+
+  const handlePromptPublishSelected = async (targetIds?: string[]) => {
+    const ids = targetIds || selectedStudentIds
+    if (ids.length === 0) return
+    const confirm = await Swal.fire({
+      title: 'Rilis Draf Siswa Terpilih?',
+      text: `Menerbitkan seluruh tagihan draf untuk ${ids.length} siswa secara resmi ke akun siswa dan wali murid.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Rilis Sekarang',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#10b981',
+    })
+    if (confirm.isConfirmed) {
+      publishSelectedDraftMut.mutate(ids)
+    }
+  }
+
   const handlePromptRetractSelected = async () => {
     if (selectedStudentIds.length === 0) return
     const confirm = await Swal.fire({
@@ -5954,13 +7201,13 @@ function TabTagihan() {
             <>
               <Button
                 onClick={() => setDraftDrawerOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 h-8 px-2.5 sm:px-3 text-xs font-bold rounded-lg shadow-xs touch-manipulation relative transition-all"
+                className="bg-blue-600 hover:bg-blue-700 text-white h-8 w-8 p-0 rounded-lg shadow-xs touch-manipulation relative transition-all shrink-0"
                 title="Pusat Rilis Tagihan Siswa (Semua tagihan diterbitkan resmi melalui draf)"
+                aria-label="Pusat Rilis Tagihan Siswa"
               >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Rilis Tagihan</span>
+                <Layers className="w-4 h-4" />
                 {hasDraftBadge && (
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse inline-block shrink-0" />
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse absolute top-1 right-1 shrink-0" />
                 )}
               </Button>
               <Button
@@ -5973,30 +7220,41 @@ function TabTagihan() {
                   openResetModal(filtered.map(s => s.id));
                 }}
                 disabled={filtered.length === 0}
-                className="border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 h-8 px-2 sm:px-2.5 text-xs font-bold rounded-lg shadow-xs gap-1 touch-manipulation"
+                className="border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 h-8 w-8 p-0 rounded-lg shadow-xs touch-manipulation shrink-0"
                 title={filterKelas ? `Reset Tagihan untuk Kelas ${filterKelas} (${filtered.length} Siswa)` : `Reset Tagihan Seluruh Siswa Terfilter (${filtered.length} Siswa)`}
+                aria-label="Reset Tagihan Terfilter"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
-                <span>{filterKelas ? `Reset ${filterKelas}` : search ? `Reset (${filtered.length})` : 'Reset'}</span>
+                <RotateCcw className="w-4 h-4 text-rose-600" />
               </Button>
             </>
           )}
           <Button variant="outline" onClick={handleExportRekapKelas}
-            className="border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 h-8 px-2.5 text-xs font-bold rounded-lg shadow-2xs touch-manipulation gap-1.5"
-            title="Eksport Excel Rekap Keuangan Per Kelas">
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Ekspor Kelas</span>
+            className="border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 h-8 w-8 p-0 rounded-lg shadow-2xs touch-manipulation shrink-0"
+            title="Ekspor Excel Rekap Keuangan Per Kelas"
+            aria-label="Ekspor Excel Rekap Keuangan Per Kelas">
+            <Upload className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </Button>
           {!isKepalaSekolah && (
-            <Button
-              variant="outline"
-              onClick={() => setImportBeasiswaOpen(true)}
-              className="border-amber-300 dark:border-amber-800/70 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/50 h-8 px-2.5 text-xs font-bold rounded-lg shadow-2xs touch-manipulation gap-1.5"
-              title="Import file Excel beasiswa siswa berdasarkan nama dan NIS yang sinkron dengan master SIMASMUH"
-            >
-              <Upload className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span>Import Beasiswa</span>
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setImportTagihanOpen(true)}
+                className="border-blue-300 dark:border-blue-800/70 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/50 h-8 w-8 p-0 rounded-lg shadow-2xs touch-manipulation shrink-0"
+                title="Input tagihan siswa melalui import file Excel sinkron dengan Master Data Buku Induk"
+                aria-label="Import Tagihan"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setImportBeasiswaOpen(true)}
+                className="border-amber-300 dark:border-amber-800/70 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/50 h-8 w-8 p-0 rounded-lg shadow-2xs touch-manipulation shrink-0"
+                title="Import file Excel beasiswa siswa berdasarkan nama dan NIS yang sinkron dengan master SIMASMUH"
+                aria-label="Import Beasiswa"
+              >
+                <Download className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -6020,67 +7278,90 @@ function TabTagihan() {
             <Button
               size="sm"
               onClick={openBulkBeasiswa}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold h-7.5 w-7.5 p-0 rounded-lg shadow-xs touch-manipulation shrink-0"
               title="Set Beasiswa untuk siswa terpilih"
+              aria-label="Set Beasiswa"
             >
               <Percent className="w-3.5 h-3.5" />
-              Set Beasiswa
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={handlePromptResetBeasiswaSelected}
               disabled={bulkResetBeasiswaMutation.isPending}
-              className="bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
+              className="bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold h-7.5 w-7.5 p-0 rounded-lg shadow-xs touch-manipulation shrink-0"
               title="Reset seluruh beasiswa siswa terpilih ke 0%"
+              aria-label="Reset Beasiswa"
             >
               <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-              Reset Beasiswa
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setImportTagihanOpen(true)}
+              className="bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-300 font-bold h-7.5 w-7.5 p-0 rounded-lg shadow-xs touch-manipulation shrink-0"
+              title="Import file Excel Tagihan Siswa"
+              aria-label="Import Tagihan"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => setImportBeasiswaOpen(true)}
-              className="bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
+              className="bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold h-7.5 w-7.5 p-0 rounded-lg shadow-xs touch-manipulation shrink-0"
               title="Import file Excel Beasiswa Siswa"
+              aria-label="Import Beasiswa"
             >
-              <Upload className="w-3.5 h-3.5 text-amber-600" />
-              Import Beasiswa
+              <Download className="w-3.5 h-3.5 text-amber-600" />
             </Button>
             <Button
               size="sm"
               onClick={() => setBulkTagihanOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-7.5 w-7.5 p-0 rounded-lg shadow-xs touch-manipulation shrink-0"
               title="Set Tagihan 1 tahun untuk siswa terpilih"
+              aria-label="Set Tagihan"
             >
               <Layers className="w-3.5 h-3.5" />
-              Set Tagihan
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handlePromptPublishSelected()}
+              disabled={publishSelectedDraftMut.isPending}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-7.5 w-7.5 p-0 rounded-lg shadow-xs touch-manipulation shrink-0"
+              title="Rilis resmi seluruh tagihan draf untuk siswa terpilih ke portal siswa & wali murid"
+              aria-label="Rilis Draf Terpilih"
+            >
+              {publishSelectedDraftMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </Button>
             <Button
               size="sm"
               onClick={handlePromptRetractSelected}
               disabled={retractSelectedToDraftMut.isPending}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold h-7.5 w-7.5 p-0 rounded-lg shadow-xs touch-manipulation shrink-0"
               title="Tarik tagihan siswa terpilih kembali ke draf dan sembunyikan dari portal siswa & wali murid"
+              aria-label="Tarik ke Draf"
             >
               <Bookmark className="w-3.5 h-3.5" />
-              Tarik ke Draf
             </Button>
             <Button
               size="sm"
               onClick={() => openResetModal(selectedStudentIds)}
-              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs gap-1 h-7.5 px-2.5 rounded-lg shadow-xs"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold h-7.5 w-7.5 p-0 rounded-lg shadow-xs touch-manipulation shrink-0"
+              title={`Reset Tagihan ${selectedStudentIds.length} Siswa Terpilih`}
+              aria-label="Reset Tagihan Terpilih"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Reset ({selectedStudentIds.length})
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => setSelectedStudentIds([])}
-              className="text-xs h-7.5 px-2 rounded-lg border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-100/50"
+              className="h-7.5 w-7.5 p-0 rounded-lg border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-100/50 touch-manipulation shrink-0 flex items-center justify-center"
+              title="Batalkan pilihan siswa"
+              aria-label="Batal"
             >
-              Batal
+              <X className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>
@@ -6109,7 +7390,7 @@ function TabTagihan() {
                   <TableHead className="py-2.5 px-3 min-w-[220px] max-w-[320px]">NAMA SISWA</TableHead>
                   <TableHead className="w-36 sm:w-44 text-center py-2.5 px-3 whitespace-nowrap">STATUS TAGIHAN</TableHead>
                   <TableHead className="w-44 sm:w-52 text-right py-2.5 px-4 whitespace-nowrap">SISA TAGIHAN</TableHead>
-                  <TableHead className="w-32 sm:w-36 text-center py-2.5 px-3 whitespace-nowrap sticky right-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">AKSI</TableHead>
+                  <TableHead className="w-20 sm:w-24 text-center py-2.5 px-2 whitespace-nowrap sticky right-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">AKSI</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -6237,14 +7518,27 @@ function TabTagihan() {
                       </TableCell>
                       <TableCell className="text-center py-2 px-3 whitespace-nowrap sticky right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs shadow-[-6px_0_10px_-3px_rgba(0,0,0,0.06)] z-20">
                         <div className="flex justify-center items-center gap-1.5">
+                          {hasDraft && !isKepalaSekolah && !isNonaktif && (
+                            <Button
+                              size="sm"
+                              title={`Rilis ${s.draftCount} Tagihan Draf Siswa Ini`}
+                              aria-label="Rilis Draf Siswa"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white h-7.5 w-7.5 p-0 rounded-lg font-bold shadow-2xs touch-manipulation shrink-0"
+                              onClick={() => handlePromptPublishSelected([s.id])}
+                              disabled={publishSelectedDraftMut.isPending}
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-blue-200 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-[11px] gap-1 h-7.5 px-2.5 rounded-lg font-bold shadow-2xs touch-manipulation"
+                            title={isKepalaSekolah ? 'Detail Tagihan Siswa' : isNonaktif ? 'Histori Tagihan Siswa' : 'Kelola Tagihan Siswa'}
+                            aria-label={isKepalaSekolah ? 'Detail' : isNonaktif ? 'Histori' : 'Kelola'}
+                            className="border-blue-200 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/60 h-7.5 w-7.5 p-0 rounded-lg font-bold shadow-2xs touch-manipulation shrink-0"
                             onClick={() => openModal(s)}
                           >
                             <Receipt className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                            <span>{isKepalaSekolah ? 'Detail' : isNonaktif ? 'Histori' : 'Kelola'}</span>
                           </Button>
                           {!isKepalaSekolah && !isNonaktif && (
                             <Button
@@ -6555,6 +7849,12 @@ function TabTagihan() {
         onClose={() => setDraftDrawerOpen(false)}
         classes={classes}
         onOpenReleaseForm={() => setMassalOpen(true)}
+        onOpenImportTagihan={() => {
+          setDraftDrawerOpen(false)
+          setImportTagihanOpen(true)
+        }}
+        students={students}
+        onOpenStudentModal={openModal}
       />
 
       {/* BULK SET BEASISWA DIALOG */}
@@ -6713,6 +8013,113 @@ function TabTagihan() {
               variant="outline"
               onClick={() => setImportBeasiswaOpen(false)}
               disabled={isImportingBeasiswa}
+              className="h-9 rounded-xl text-xs font-medium border-slate-200 dark:border-slate-700"
+            >
+              Tutup
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* IMPORT EXCEL TAGIHAN DIALOG (SINKRON MASTER BUKU INDUK) */}
+      <Dialog open={importTagihanOpen} onOpenChange={setImportTagihanOpen}>
+        <DialogContent className="max-w-xl w-[95vw] sm:w-full p-0 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden bg-white dark:bg-slate-900">
+          <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold">
+                <div className="p-2 bg-blue-50 dark:bg-blue-950/60 rounded-xl border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                Import Tagihan Siswa (.xlsx)
+              </DialogTitle>
+              <DialogDescription className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+                Input tagihan siswa massal melalui format template Excel resmi yang otomatis tersinkronisasi dengan Master Data Buku Induk.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+            {/* Box Unduh Template Sinkron */}
+            <div className="bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900/50 rounded-xl p-3.5 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-sky-900 dark:text-sky-300">
+                  <Info className="w-4 h-4 text-sky-600 shrink-0" />
+                  <span>Template Resmi Sinkron Buku Induk</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select value={templateFilterClass} onValueChange={(v) => { if (v) setTemplateFilterClass(v) }}>
+                    <SelectTrigger className="h-8 text-xs font-semibold w-[130px] bg-white dark:bg-slate-900 border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200">
+                      <SelectValue placeholder="Semua Kelas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Kelas</SelectItem>
+                      {classes.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => downloadTagihanTemplate()}
+                    disabled={isDownloadingTagihanTemplate}
+                    className="h-8 px-2.5 text-xs font-bold rounded-lg border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200 hover:bg-sky-100 dark:hover:bg-sky-900/50 gap-1.5 shadow-2xs"
+                  >
+                    {isDownloadingTagihanTemplate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-sky-600" />}
+                    <span>Unduh Template</span>
+                  </Button>
+                </div>
+              </div>
+              <p className="text-[11px] text-sky-800/90 dark:text-sky-400 leading-relaxed">
+                Template otomatis memuat identitas siswa dari Master Buku Induk beserta kolom <strong>Tahun Pelajaran</strong> dan rincian tagihan (SPP 1 Tahun, DPP, Seragam, dll). Kolom nominal yang dikosongkan (atau diisi 0 / strip) otomatis dibaca nonaktif (disabled) oleh sistem.
+              </p>
+            </div>
+
+            {/* Input Berkas Excel */}
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Pilih Berkas Excel (.xlsx / .xls)
+              </Label>
+              <div className="relative border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 rounded-2xl p-6 text-center transition-colors bg-slate-50/50 dark:bg-slate-950/40">
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleImportTagihanFile}
+                  disabled={isImportingTagihan}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                />
+                <div className="flex flex-col items-center justify-center gap-2 pointer-events-none">
+                  {isImportingTagihan ? (
+                    <>
+                      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Memproses & Mengimpor Tagihan Siswa...</p>
+                      <p className="text-[11px] text-slate-400">Menyinkronkan tagihan ke database SIMASMUH...</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-3 bg-white dark:bg-slate-900 rounded-full shadow-xs border border-slate-100 dark:border-slate-800">
+                        <Upload className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Klik atau seret file Excel tagihan ke sini
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        Mendukung format .xlsx dan .xls (Maks 10MB)
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setImportTagihanOpen(false)}
+              disabled={isImportingTagihan}
               className="h-9 rounded-xl text-xs font-medium border-slate-200 dark:border-slate-700"
             >
               Tutup

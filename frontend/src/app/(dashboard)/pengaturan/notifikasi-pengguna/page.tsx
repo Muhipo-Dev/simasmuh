@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { 
-  Mail, CheckCircle2, Send, Save, Loader2, Sparkles, AlertCircle, Globe,
-  Clock, Check, FileCheck, Banknote, CalendarDays, Megaphone,
-  Wallet, ShieldAlert, UserCheck, ShieldCheck, BookOpen, BellRing
+  Mail, CheckCircle2, Send, Save, Loader2, AlertCircle, Globe, Clock, Check, FileCheck, Banknote, CalendarDays, Megaphone, Wallet, ShieldAlert, UserCheck, ShieldCheck, BookOpen, BellRing
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -152,7 +151,7 @@ export default function NotifikasiPenggunaPage() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge className="bg-primary/15 text-primary border-primary/25 font-semibold text-xs">
-                <Sparkles className="mr-1 h-3.5 w-3.5" /> Notifikasi Resmi SIMASMUH
+                <BellRing className="mr-1 h-3.5 w-3.5" /> Notifikasi Resmi SIMASMUH
               </Badge>
               <Badge variant="outline" className="text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-xs">
                 <Check className="mr-1 h-3.5 w-3.5" />

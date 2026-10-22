@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import {
+  useState } from 'react'
 import { 
-  Building2, User, Phone, FileText, Send, 
-  Sparkles, Contact, Clock, RefreshCw, ShieldCheck, Check
+  Building2, User, Phone, FileText, Send, Contact, Clock, RefreshCw, ShieldCheck, Check, LayoutGrid
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -240,7 +240,7 @@ export default function PublicGuestBookPage() {
 
                   <div className="space-y-1">
                     <Label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                      <LayoutGrid className="w-3.5 h-3.5 text-purple-400" />
                       <span>Kategori Kunjungan</span>
                     </Label>
                     <Select 

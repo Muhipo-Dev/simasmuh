@@ -1,15 +1,40 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  useState, useEffect } from 'react'
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react'
 import { getPublicApiUrl } from '@/lib/api-config'
 
 interface HeroCarouselProps {
   schoolName: string
+  videoProfileUrl?: string
+  heroBadgeText?: string
+  heroBadgeLocation?: string
+  heroSubheading?: string
+  heroTitlePrefix?: string
+  heroTitleGradient?: string
+  heroDescription?: string
+  heroCtaText?: string
+  heroCtaLink?: string
+  heroVideoText?: string
+  heroVideoLink?: string
 }
 
-export default function HeroCarousel({ schoolName }: HeroCarouselProps) {
+export default function HeroCarousel({
+  schoolName,
+  videoProfileUrl,
+  heroBadgeText,
+  heroBadgeLocation,
+  heroSubheading,
+  heroTitlePrefix,
+  heroTitleGradient,
+  heroDescription,
+  heroCtaText,
+  heroCtaLink,
+  heroVideoText,
+  heroVideoLink,
+}: HeroCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
 
   // Default fallback images if no custom banners are uploaded
@@ -57,7 +82,7 @@ export default function HeroCarousel({ schoolName }: HeroCarouselProps) {
   }
 
   return (
-    <div className="relative w-full min-h-[520px] sm:min-h-[580px] md:h-[640px] flex flex-col justify-center pt-24 sm:pt-28 md:pt-32 pb-16 sm:py-24 overflow-hidden bg-slate-950">
+    <div className="relative w-full min-h-[580px] sm:min-h-[640px] md:h-[720px] flex flex-col justify-center pt-32 sm:pt-40 md:pt-44 pb-24 sm:pb-32 overflow-hidden bg-slate-950">
       {/* Background Images */}
       {images.map((src, index) => {
         // Handle external src, upload path from proxy, or local file
@@ -85,20 +110,49 @@ export default function HeroCarousel({ schoolName }: HeroCarouselProps) {
       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/20 to-transparent pointer-events-none z-[1]" />
 
       {/* Hero Content */}
-      <div className="relative z-10 px-5 sm:px-10 lg:px-20 max-w-4xl space-y-3 sm:space-y-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-white text-xs font-semibold shadow-xs">
-          <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-          <span>Sekolah Unggulan Muhammadiyah</span>
+      <div className="relative z-10 px-5 sm:px-10 lg:px-20 max-w-5xl space-y-4 sm:space-y-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-white text-xs font-bold shadow-xs">
+            <GraduationCap className="w-4 h-4 text-amber-300 shrink-0" />
+            <span>{heroBadgeText || 'Terakreditasi A • Sekolah Unggul Muhammadiyah'}</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600/60 backdrop-blur-md border border-blue-400/30 text-blue-100 text-xs font-semibold">
+            <span>{heroBadgeLocation || 'Ponorogo, Jawa Timur'}</span>
+          </div>
         </div>
-        <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight sm:leading-tight tracking-tight drop-shadow-md">
-          Selamat Datang di <br className="hidden sm:block" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-blue-200">
-            {schoolName}
-          </span>
-        </h1>
-        <p className="text-xs sm:text-base md:text-lg text-blue-100/90 font-semibold max-w-xl drop-shadow-xs leading-relaxed tracking-wide">
-          &quot;Cerdas, Mandiri, Berprestasi, Mendunia&quot;
+
+        <div className="space-y-2 sm:space-y-3">
+          <p className="text-sm sm:text-base md:text-lg font-extrabold uppercase tracking-widest text-blue-200 drop-shadow-sm">
+            {heroSubheading || schoolName || 'SMA MUHAMMADIYAH 1 PONOROGO (MUHIPO)'}
+          </p>
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.08] tracking-tight drop-shadow-xl">
+            {heroTitlePrefix || 'EXCELLENT ISLAMIC'} <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400">
+              {heroTitleGradient || 'WITH CHARACTER'}
+            </span>
+          </h1>
+        </div>
+
+        <p className="text-xs sm:text-base md:text-lg text-slate-200 font-medium max-w-2xl drop-shadow-md leading-relaxed">
+          {heroDescription || 'Membentuk generasi unggul yang berakhlak mulia, berwawasan global, mandiri, serta berdaya saing internasional berlandaskan nilai-nilai luhur kepesantrenan dan pendidikan berkemajuan.'}
         </p>
+
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          <a
+            href={heroCtaLink || '#keunggulan'}
+            className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs sm:text-sm tracking-wide shadow-lg shadow-amber-500/25 transition-all transform hover:-translate-y-0.5"
+          >
+            {heroCtaText || 'Kenapa SMA Muhipo?'}
+          </a>
+          <a
+            href={heroVideoLink || videoProfileUrl || "https://www.youtube.com/@SmaMuhipo"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all"
+          >
+            <span>{heroVideoText || 'Tonton Video Profil'}</span>
+          </a>
+        </div>
       </div>
 
       {/* Carousel Navigation Arrows (Desktop) */}

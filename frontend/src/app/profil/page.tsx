@@ -1,6 +1,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, Clock, Sparkles } from 'lucide-react'
+import {
+  ArrowLeft, Clock, UserCheck
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PublicNavbar, AppFooter } from '@/components/layout'
 
@@ -33,7 +35,7 @@ export default function ProfilPage() {
       <main className="flex-1 flex items-center justify-center px-4 py-16 sm:py-24">
         <div className="max-w-xl w-full text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-100 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-bold shadow-xs">
-            <Sparkles className="w-4 h-4 text-amber-500" />
+            <UserCheck className="w-4 h-4 text-amber-500" />
             Profil Sekolah SMA MUHIPO
           </div>
 

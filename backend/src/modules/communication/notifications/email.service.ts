@@ -420,11 +420,11 @@ export class EmailNotificationService implements OnModuleInit {
           html: htmlBody,
         });
 
-        this.logger.log(`[EMAIL DISPATCHED] To: ${options.to} | Subject: ${options.subject} | ID: ${info.messageId}`);
+        this.logger.debug(`[EMAIL DISPATCHED] To: ${options.to} | Subject: ${options.subject} | ID: ${info.messageId}`);
         return { success: true, messageId: info.messageId, simulated: false };
       } else {
-        // Mode Simulasi dengan output terstruktur aman
-        this.logger.log(`[SIMULATED EMAIL PUSH] To: ${options.to} | Subject: ${options.subject} | Category: ${options.category || 'SISTEM'}`);
+        // Mode Simulasi dengan output terstruktur aman (level debug agar tidak membanjiri terminal & web viewer)
+        this.logger.debug(`[SIMULATED EMAIL PUSH] To: ${options.to} | Subject: ${options.subject} | Category: ${options.category || 'SISTEM'}`);
         return { success: true, messageId: `sim-${Date.now()}`, simulated: true };
       }
     } catch (error: any) {

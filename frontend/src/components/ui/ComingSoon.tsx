@@ -1,7 +1,9 @@
 'use client'
 
 import React from 'react'
-import { Clock, Sparkles } from 'lucide-react'
+import {
+  Clock, LayoutGrid
+} from 'lucide-react'
 
 interface ComingSoonProps {
   title?: string
@@ -19,7 +21,7 @@ export function ComingSoon({
           <Clock className="w-8 h-8" />
         </div>
         <div className="absolute -top-1 -right-1 p-1 bg-amber-400 text-slate-950 rounded-full shadow-md">
-          <Sparkles className="w-4 h-4" />
+          <LayoutGrid className="w-4 h-4" />
         </div>
       </div>
       

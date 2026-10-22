@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -10,10 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { 
-  ClipboardCheck, Lock, User, ArrowRight, Home, Info, 
-  ChevronDown, ChevronUp, ShieldCheck, GraduationCap, Phone,
-  HelpCircle, MessageSquare, Sparkles, KeyRound, Globe, Layers,
-  Mail, CheckCircle2, AlertCircle, Eye, EyeOff, RefreshCw, X, ArrowLeft
+  ClipboardCheck, Lock, User, ArrowRight, Home, Info, ChevronDown, ChevronUp, ShieldCheck, GraduationCap, Phone, HelpCircle, MessageSquare, KeyRound, Globe, Layers, Mail, CheckCircle2, AlertCircle, Eye, EyeOff, RefreshCw, X, ArrowLeft, LayoutGrid
 } from 'lucide-react'
 import { getPublicApiUrl } from '@/lib/api-config'
 
@@ -722,7 +720,7 @@ export default function LoginPage() {
           <div className="hidden lg:flex lg:col-span-6 flex-col justify-between p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-slate-900/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white shadow-xl space-y-4">
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 text-xs font-bold">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <LayoutGrid className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <span>Panduan Akses SIMASMUH</span>
               </div>
 

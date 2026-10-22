@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { BellRing, ShieldAlert, AlertTriangle, X, ArrowRight, ExternalLink, Sparkles } from 'lucide-react'
+import { BellRing, ShieldAlert, AlertTriangle, X, ArrowRight, ExternalLink, LayoutGrid
+} from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

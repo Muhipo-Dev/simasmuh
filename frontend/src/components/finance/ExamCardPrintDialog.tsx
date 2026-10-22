@@ -2,9 +2,7 @@
 
 import React, { useState, useRef, useMemo } from 'react'
 import {
-  Printer, X, CreditCard, ShieldCheck, CheckCircle2, AlertCircle,
-  FileSpreadsheet, Filter, Search, Download, GraduationCap, Building2,
-  Calendar, Award, User, RefreshCw, Sparkles, Clock
+  Printer, X, CreditCard, ShieldCheck, CheckCircle2, AlertCircle, FileSpreadsheet, Filter, Search, Download, GraduationCap, Building2, Calendar, Award, User, RefreshCw, Clock, LayoutGrid
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'

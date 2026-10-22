@@ -2,10 +2,12 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { SystemLogService } from '../../core/services/system-log.service';
 import { EmailNotificationService } from '../../communication/notifications/email.service';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 
@@ -15,6 +17,7 @@ export class UsersService {
     private prisma: PrismaService,
     private systemLogService: SystemLogService,
     private emailNotificationService: EmailNotificationService,
+    private jwtService: JwtService,
   ) {}
 
   async findAll(requestingUser?: any) {
@@ -713,7 +716,7 @@ export class UsersService {
   }
 
   async getProfile(id: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
         id: true,
@@ -784,6 +787,43 @@ export class UsersService {
         },
       },
     });
+
+    if (!user) return null;
+
+    // Periksa apakah akun ini sedang diakses oleh admin dalam mode override atau spectator
+    // Ambang batas keaktifan real-time: 2 menit (jika admin keluar / idle > 2 menit, notifikasi langsung hilang)
+    const TWO_MINUTES_AGO = new Date(Date.now() - 2 * 60 * 1000);
+    const activeOverrideSession = await this.prisma.userSession.findFirst({
+      where: {
+        userId: id,
+        isActive: true,
+        lastActiveAt: { gte: TWO_MINUTES_AGO },
+        device: { contains: 'by ' },
+      },
+      orderBy: { lastActiveAt: 'desc' },
+      select: {
+        id: true,
+        device: true,
+        lastActiveAt: true,
+      },
+    });
+
+    let overrideAdminInfo: { adminName: string; mode: string } | null = null;
+    const deviceStr = activeOverrideSession?.device || '';
+    if (deviceStr) {
+      const match = deviceStr.match(/\[(OVERRIDE|SPECTATOR)\] by (.+)$/i);
+      if (match && match[1] && match[2]) {
+        overrideAdminInfo = {
+          mode: match[1].toLowerCase(),
+          adminName: match[2].trim(),
+        };
+      }
+    }
+
+    return {
+      ...user,
+      activeOverrideByAdmin: overrideAdminInfo,
+    };
   }
 
   async getLoginHistory(id: string) {
@@ -1414,4 +1454,448 @@ export class UsersService {
       }
     }, 100);
   }
+
+  /**
+   * Mengambil daftar seluruh pengguna untuk modul Override Pengguna
+   * Terdiri dari grup Pendidik/Tendik/Pegawai dan Siswa (termasuk wali murid terkait)
+   */
+  async getOverrideUsersList(requestingUser?: any) {
+    const isSuperadminOrGod =
+      requestingUser?.role === 'SUPERADMIN' ||
+      requestingUser?.role === 'GOD' ||
+      requestingUser?.role === 'GOD_USER' ||
+      requestingUser?.username === 'supermuhipo';
+
+    const whereClause: any = {};
+    if (requestingUser && !isSuperadminOrGod) {
+      // Admin IT dan Admin TU/BAU: Hanya dapat mengakses pegawai, guru, siswa, dan wali murid biasa
+      // Dilarang keras mengakses atau melihat akun krusial: SUPERADMIN, GOD, KEPALA_SEKOLAH, dan akun KEUANGAN
+      whereClause.role = {
+        notIn: [
+          'GOD',
+          'GOD_USER',
+          'SUPERADMIN',
+          'KEPALA_SEKOLAH',
+          'KEUANGAN',
+          'KEUANGAN_ALL',
+          'SUPERVISOR_KEUANGAN',
+          'KEUANGAN_MASUK',
+          'KEUANGAN_KELUAR',
+        ],
+      };
+      whereClause.username = { not: 'supermuhipo' };
+      // Pastikan subRole juga tidak mengandung peran krusial
+      whereClause.subRole = {
+        notIn: [
+          'SUPERADMIN',
+          'KEPALA_SEKOLAH',
+          'KEUANGAN',
+          'KEUANGAN_ALL',
+          'SUPERVISOR_KEUANGAN',
+          'KEUANGAN_MASUK',
+          'KEUANGAN_KELUAR',
+        ],
+      };
+    }
+
+    // Ambil data users lengkap
+    const users = await this.prisma.user.findMany({
+      where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        username: true,
+        phone: true,
+        nipNbm: true,
+        role: true,
+        employmentStatus: true,
+        isActive: true,
+        subRole: true,
+        subRole2: true,
+        subRole3: true,
+        subRole4: true,
+        subRole5: true,
+        avatarUrl: true,
+        createdAt: true,
+        teacherProfile: {
+          select: {
+            nip: true,
+            phone: true,
+            lastEducation: true,
+            certificationStatus: true,
+          },
+        },
+        student: {
+          select: {
+            id: true,
+            nis: true,
+            nisn: true,
+            gender: true,
+            isActive: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                gradeLevel: true,
+              },
+            },
+            parentRelations: {
+              select: {
+                relation: true,
+                parent: {
+                  select: {
+                    id: true,
+                    userId: true,
+                    phone: true,
+                    occupation: true,
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                        username: true,
+                        email: true,
+                        phone: true,
+                        role: true,
+                        isActive: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        parentProfile: {
+          select: {
+            id: true,
+            phone: true,
+            occupation: true,
+            students: {
+              select: {
+                relation: true,
+                student: {
+                  select: {
+                    id: true,
+                    name: true,
+                    nis: true,
+                    nisn: true,
+                    class: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    // Ambil juga seluruh siswa dari tabel Student yang mungkin belum dibuatkan user akunnya atau sudah dibuatkan
+    const allStudents = await this.prisma.student.findMany({
+      include: {
+        class: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            username: true,
+            role: true,
+            isActive: true,
+            avatarUrl: true,
+          },
+        },
+        parentRelations: {
+          include: {
+            parent: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                    email: true,
+                    phone: true,
+                    role: true,
+                    isActive: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return {
+      users,
+      students: allStudents,
+    };
+  }
+
+  /**
+   * Menghasilkan token Override atau Spectator bagi Superadmin, Admin IT, dan Admin TU
+   * Mode 'override': Full Access sebagai user target
+   * Mode 'spectator': Read Only (isReadOnly: true)
+   */
+  async generateOverrideToken(
+    targetUserId: string,
+    mode: 'override' | 'spectator',
+    adminUser: any,
+    clientIp?: string,
+    userAgent?: string,
+  ) {
+    if (!adminUser) {
+      throw new ForbiddenException('Autentikasi admin diperlukan.');
+    }
+
+    // Jika pemanggil saat ini sedang dalam sesi override (misal ingin switch dari Spectator ke Override atau sebaliknya),
+    // ambil identitas dan role admin asli yang melakukan override
+    const effectiveAdminId = adminUser.isOverrideSession
+      ? adminUser.overrideByAdminId || adminUser.id
+      : adminUser.id;
+
+    // Ambil data admin asli dari basis data untuk memastikan hak akses terkini
+    const dbAdmin = await this.prisma.user.findUnique({
+      where: { id: effectiveAdminId },
+    });
+
+    if (!dbAdmin) {
+      throw new ForbiddenException('Data akun admin tidak ditemukan.');
+    }
+
+    const adminRoles = [
+      dbAdmin.role,
+      dbAdmin.subRole,
+      dbAdmin.subRole2,
+      dbAdmin.subRole3,
+      dbAdmin.subRole4,
+      dbAdmin.subRole5,
+    ].filter(Boolean);
+
+    const isGod =
+      dbAdmin.username === 'supermuhipo' ||
+      dbAdmin.role === 'GOD' ||
+      dbAdmin.role === 'GOD_USER';
+    const isSuperadmin = adminRoles.includes('SUPERADMIN') || isGod;
+    const isAdminIT = adminRoles.includes('ADMIN_IT');
+    const isAdminTU =
+      adminRoles.includes('ADMIN_TU') ||
+      adminRoles.includes('BAU') ||
+      adminRoles.includes('TATA_USAHA');
+
+    if (!isSuperadmin && !isAdminIT && !isAdminTU) {
+      throw new ForbiddenException(
+        'Akses ditolak. Fitur Override dan Spectator hanya diperuntukkan bagi Superadmin, Admin IT, dan Admin TU.',
+      );
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      include: {
+        student: true,
+        teacherProfile: true,
+        parentProfile: {
+          include: {
+            students: {
+              include: {
+                student: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException('Pengguna target tidak ditemukan.');
+    }
+
+    // Dilarang meng-override akun sendiri
+    if (targetUser.id === dbAdmin.id) {
+      throw new ForbiddenException(
+        'Anda tidak dapat meng-override atau menjadi spectator pada akun Anda sendiri.',
+      );
+    }
+
+    // Proteksi akun GOD (supermuhipo): Hanya GOD sendiri yang dapat override
+    if (
+      (targetUser.username === 'supermuhipo' ||
+        targetUser.role === 'GOD' ||
+        targetUser.role === 'GOD_USER') &&
+      !isGod
+    ) {
+      throw new ForbiddenException(
+        'Akun master GOD dilindungi dan tidak dapat di-override oleh siapapun kecuali pemilik akun GOD.',
+      );
+    }
+
+    // Proteksi Pengguna Krusial (Superadmin, Kepala Sekolah, & Bagian Keuangan)
+    // Aturan: Hanya Superadmin dan GOD yang berhak meng-override pengguna krusial ini.
+    // Admin IT dan Admin TU/BAU hanya diizinkan untuk guru, karyawan/pegawai, dan siswa/wali murid biasa.
+    const targetRoles = [
+      targetUser.role,
+      targetUser.subRole,
+      targetUser.subRole2,
+      targetUser.subRole3,
+      targetUser.subRole4,
+      targetUser.subRole5,
+    ].filter(Boolean);
+
+    const isTargetCrucial =
+      targetRoles.includes('SUPERADMIN') ||
+      targetRoles.includes('KEPALA_SEKOLAH') ||
+      targetRoles.includes('KEUANGAN') ||
+      targetRoles.includes('KEUANGAN_ALL') ||
+      targetRoles.includes('SUPERVISOR_KEUANGAN') ||
+      targetRoles.includes('KEUANGAN_MASUK') ||
+      targetRoles.includes('KEUANGAN_KELUAR');
+
+    if (isTargetCrucial && !isSuperadmin) {
+      throw new ForbiddenException(
+        'Akses ditolak. Akun pengguna krusial (Kepala Sekolah, Keuangan, dan Superadmin) hanya dapat di-override oleh Superadmin dan GOD User.',
+      );
+    }
+
+    const isReadOnly = mode === 'spectator';
+
+    // Buat sesi aktif override baru
+    let devType = 'Desktop / Laptop';
+    let devOs = 'Windows';
+    let devBrowser = 'Browser';
+
+    if (userAgent) {
+      if (
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          userAgent,
+        )
+      ) {
+        devType = 'Ponsel / Tablet';
+      }
+      if (/Windows/i.test(userAgent)) devOs = 'Windows';
+      else if (/Android/i.test(userAgent)) devOs = 'Android';
+      else if (/iPhone|iPad|iPod/i.test(userAgent)) devOs = 'iOS';
+      else if (/Macintosh|Mac OS/i.test(userAgent)) devOs = 'macOS';
+      else if (/Linux/i.test(userAgent)) devOs = 'Linux';
+
+      if (/Edg/i.test(userAgent)) devBrowser = 'Microsoft Edge';
+      else if (/Chrome/i.test(userAgent)) devBrowser = 'Google Chrome';
+      else if (/Safari/i.test(userAgent) && !/Chrome/i.test(userAgent))
+        devBrowser = 'Safari';
+      else if (/Firefox/i.test(userAgent)) devBrowser = 'Mozilla Firefox';
+    }
+
+    // Nonaktifkan sesi override sebelumnya untuk user ini jika ada (agar tidak tertumpuk)
+    await this.prisma.userSession.updateMany({
+      where: {
+        userId: targetUser.id,
+        device: { contains: 'by ' },
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+
+    const sessionRecord = await this.prisma.userSession.create({
+      data: {
+        userId: targetUser.id,
+        ipAddress: clientIp || '127.0.0.1',
+        userAgent: userAgent || 'Admin Override Session',
+        device: `${devType} (${devOs}) - [${mode.toUpperCase()}] by ${dbAdmin.name || dbAdmin.username}`,
+        os: devOs,
+        browser: devBrowser,
+        isActive: true,
+        lastActiveAt: new Date(),
+      },
+    });
+
+    // Sign JWT token untuk target user dengan flag override metadata
+    const payload = {
+      sub: targetUser.id,
+      sessionId: sessionRecord.id,
+      email: targetUser.email,
+      username: targetUser.username,
+      nipNbm: targetUser.nipNbm || targetUser.teacherProfile?.nip || null,
+      name: targetUser.name,
+      role: targetUser.role,
+      isActive: targetUser.isActive !== false,
+      subRole: targetUser.subRole,
+      subRole2: targetUser.subRole2,
+      subRole3: targetUser.subRole3,
+      subRole4: targetUser.subRole4,
+      subRole5: targetUser.subRole5,
+      // Metadata Override & Spectator
+      isOverrideSession: true,
+      overrideMode: mode,
+      isReadOnly: isReadOnly,
+      overrideByAdminId: dbAdmin.id,
+      overrideByAdminName: dbAdmin.name || dbAdmin.username,
+      overrideByAdminRole: dbAdmin.role,
+    };
+
+    const token = this.jwtService.sign(payload);
+
+    await this.systemLogService.log({
+      category: 'AUTH',
+      level: 'INFO',
+      action: mode === 'override' ? 'USER_OVERRIDE_START' : 'USER_SPECTATOR_START',
+      message: `Admin '${dbAdmin.username}' (${dbAdmin.name} - ${dbAdmin.role}) mengaktifkan mode ${mode.toUpperCase()} pada akun '${targetUser.username}' (${targetUser.name} - ${targetUser.role}).`,
+      userId: dbAdmin.id,
+      userName: dbAdmin.name,
+      userRole: dbAdmin.role,
+      ipAddress: clientIp,
+      userAgent,
+    });
+
+    return {
+      access_token: token,
+      sessionId: sessionRecord.id,
+      mode,
+      isReadOnly,
+      user: {
+        id: targetUser.id,
+        email: targetUser.email,
+        username: targetUser.username,
+        nipNbm: targetUser.nipNbm || targetUser.teacherProfile?.nip || null,
+        name: targetUser.name,
+        role: targetUser.role,
+        isActive: targetUser.isActive !== false,
+        subRole: targetUser.subRole,
+        subRole2: targetUser.subRole2,
+        subRole3: targetUser.subRole3,
+        subRole4: targetUser.subRole4,
+        subRole5: targetUser.subRole5,
+        isOverrideSession: true,
+        overrideMode: mode,
+        isReadOnly: isReadOnly,
+        overrideByAdminId: dbAdmin.id,
+        overrideByAdminName: dbAdmin.name || dbAdmin.username,
+        overrideByAdminRole: dbAdmin.role,
+      },
+    };
+  }
+
+  async deactivateOverrideSession(userId: string, adminId?: string) {
+    if (!userId) return { success: false };
+    await this.prisma.userSession.updateMany({
+      where: {
+        userId,
+        device: { contains: 'by ' },
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+    return { success: true };
+  }
 }
+

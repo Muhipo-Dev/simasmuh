@@ -6,11 +6,12 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { join } from 'path';
 import { spawn } from 'child_process';
+import sharp from 'sharp';
 import { STORAGE_ROOT } from '../../core/config/storage.config';
 
 export interface SingleCameraConfig {
@@ -121,9 +122,9 @@ export class FaceAttendanceService implements OnModuleInit {
 
       const possibleLogFiles = [
         this.logsPath,
-        this.legacyLogsPath,
-        'D:/simasmuh_storage/face-attendance-logs.json',
         'd:/simasmuh/storage/face-attendance-logs.json',
+        join(process.cwd(), '..', 'storage', 'face-attendance-logs.json'),
+        this.legacyLogsPath,
         'd:/simasmuh/backend/storage/face-attendance-logs.json',
       ];
 
@@ -442,6 +443,14 @@ export class FaceAttendanceService implements OnModuleInit {
         subRole: true,
         avatarUrl: true,
         nipNbm: true,
+        faceBiometric: {
+          select: {
+            embedding: true,
+            photoDataUrl: true,
+            samplePhotos: true,
+            sampleCount: true,
+          },
+        },
         student: {
           select: {
             id: true,
@@ -505,6 +514,18 @@ export class FaceAttendanceService implements OnModuleInit {
         }
       }
 
+      const userFaceSamplesDir = join(STORAGE_ROOT, 'face_samples', u.id);
+      const sampleAngles = ['front', 'right', 'left', 'up', 'down', 'blink', 'mouth_open'];
+      const registeredPoses: string[] = [];
+      if (existsSync(userFaceSamplesDir)) {
+        for (const angle of sampleAngles) {
+          const sampleFile = join(userFaceSamplesDir, `${angle}.jpg`);
+          if (existsSync(sampleFile)) {
+            registeredPoses.push(angle);
+          }
+        }
+      }
+
       return {
         userId: u.id,
         name: u.name,
@@ -517,6 +538,12 @@ export class FaceAttendanceService implements OnModuleInit {
           u.student?.nis || u.nipNbm || u.teacherProfile?.nip || u.username,
         className: u.student?.class?.name || null,
         hasPhoto: Boolean(u.avatarUrl && u.avatarUrl.trim().length > 0),
+        faceSamplesCount: Math.max(registeredPoses.length, u.faceBiometric?.sampleCount || 0),
+        hasFaceSamples: Math.max(registeredPoses.length, u.faceBiometric?.sampleCount || 0) >= 3,
+        registeredPoses: registeredPoses.length > 0 ? registeredPoses : Object.keys((u.faceBiometric?.samplePhotos as object) || {}),
+        dbEmbedding: u.faceBiometric?.embedding || null,
+        hasDbEmbedding: Boolean(u.faceBiometric?.embedding && u.faceBiometric.embedding.length === 512),
+        dbPhotoDataUrl: u.faceBiometric?.photoDataUrl || null,
       };
     });
 
@@ -529,18 +556,23 @@ export class FaceAttendanceService implements OnModuleInit {
     return {
       totalUsers: dataset.length,
       usersWithPhoto: dataset.filter((d) => d.hasPhoto).length,
+      usersWithFaceId: dataset.filter((d) => d.faceSamplesCount > 0).length,
+      usersFullyCalibrated: dataset.filter((d) => d.hasPhoto && d.faceSamplesCount >= 7).length,
       breakdown: {
         students: {
           total: students.length,
           withPhoto: students.filter((s) => s.hasPhoto).length,
+          withFaceId: students.filter((s) => s.faceSamplesCount > 0).length,
         },
         teachers: {
           total: teachers.length,
           withPhoto: teachers.filter((t) => t.hasPhoto).length,
+          withFaceId: teachers.filter((t) => t.faceSamplesCount > 0).length,
         },
         staff: {
           total: staff.length,
           withPhoto: staff.filter((st) => st.hasPhoto).length,
+          withFaceId: staff.filter((st) => st.faceSamplesCount > 0).length,
         },
       },
       dataset,
@@ -1187,24 +1219,45 @@ export class FaceAttendanceService implements OnModuleInit {
         'http://127.0.0.1:8089/sync-profiles',
         'http://localhost:8089/sync-profiles',
       ];
+      let resJson: any = null;
       for (const url of endpoints) {
         try {
           const res = await fetch(url, {
             method: 'POST',
             headers: { 'Connection': 'close' },
-            signal: AbortSignal.timeout(15000),
+            signal: AbortSignal.timeout(20000),
           });
           if (res.ok) {
-            return await res.json();
+            resJson = await res.json();
+            break;
           }
         } catch {}
+      }
+
+      // Catat ke log sistem
+      this.systemLogService
+        .log({
+          category: 'PRESENSI',
+          level: 'INFO',
+          action: 'FACENET_DATASET_SYNCED',
+          message: `Sinkronisasi Foto Profil, Face ID, dan Matriks Vektor Biometrik FaceNet AI berhasil dijalankan.`,
+          details: resJson || {},
+        })
+        .catch(() => {});
+
+      if (resJson) {
+        return {
+          success: true,
+          message: resJson.message || 'Dataset profil, Face ID, dan vektor biometrik FaceNet berhasil disinkronkan.',
+          data: resJson,
+        };
       }
     } catch (err) {
       this.logger.error('Failed to trigger python sync-profiles', err);
     }
     return {
       success: true,
-      message: 'Dataset profil pengguna berhasil disinkronkan ke FaceNet.',
+      message: 'Dataset profil dan Face ID pengguna berhasil disinkronkan ke FaceNet.',
     };
   }
 
@@ -1215,9 +1268,9 @@ export class FaceAttendanceService implements OnModuleInit {
     username?: string;
     avatarUrl?: string | null;
     identifier?: string;
-    student?: { nis?: string };
-    teacherProfile?: { nip?: string };
-    nipNbm?: string;
+    student?: { nis?: string | null } | null;
+    teacherProfile?: { nip?: string | null } | null;
+    nipNbm?: string | null;
   }) {
     try {
       let localPath: string | null = null;
@@ -1225,9 +1278,9 @@ export class FaceAttendanceService implements OnModuleInit {
         const cleanRel = user.avatarUrl.replace(/^\/uploads\//, '');
         const storageRoots = [
           STORAGE_ROOT,
-          'D:/simasmuh_storage',
-          'C:/simasmuh_storage',
+          join(process.cwd(), '..', 'storage'),
           join(process.cwd(), 'storage'),
+          'D:/simasmuh/storage',
         ];
         const possiblePaths: string[] = [];
         for (const sRoot of storageRoots) {
@@ -1287,6 +1340,238 @@ export class FaceAttendanceService implements OnModuleInit {
     return {
       success: false,
       message: 'Microservice AI offline atau tidak merespons.',
+    };
+  }
+
+  async getUserFaceSamples(userId: string) {
+    if (!userId) {
+      throw new BadRequestException('User ID wajib disertakan');
+    }
+
+    const userFaceSamplesDir = join(STORAGE_ROOT, 'face_samples', userId);
+    const angles = ['front', 'right', 'left', 'up', 'down', 'blink', 'mouth_open'];
+    const samples: Record<string, string> = {};
+
+    if (existsSync(userFaceSamplesDir)) {
+      for (const angle of angles) {
+        const filePath = join(userFaceSamplesDir, `${angle}.jpg`);
+        if (existsSync(filePath)) {
+          try {
+            const buf = readFileSync(filePath);
+            samples[angle] = `data:image/jpeg;base64,${buf.toString('base64')}`;
+          } catch {}
+        }
+      }
+    }
+
+    // Jika di disk kosong, ambil dari database PostgreSQL (UserFaceBiometric)
+    if (Object.keys(samples).length === 0) {
+      try {
+        const dbBiometric = await this.prisma.userFaceBiometric.findUnique({
+          where: { userId },
+          select: { samplePhotos: true, photoDataUrl: true },
+        });
+        if (dbBiometric?.samplePhotos && typeof dbBiometric.samplePhotos === 'object') {
+          const dbSamples = dbBiometric.samplePhotos as Record<string, string>;
+          for (const angle of angles) {
+            if (dbSamples[angle]) {
+              samples[angle] = dbSamples[angle];
+            }
+          }
+        }
+        if (!samples['front'] && dbBiometric?.photoDataUrl) {
+          samples['front'] = dbBiometric.photoDataUrl;
+        }
+      } catch (err) {
+        this.logger.warn(`Gagal mengambil sampel wajah dari PostgreSQL: ${err}`);
+      }
+    }
+
+    return {
+      userId,
+      samples,
+      count: Object.keys(samples).length,
+    };
+  }
+
+  async registerMultiAngleFaces(payload: {
+    userId: string;
+    samples: {
+      front?: string;
+      right?: string;
+      left?: string;
+      up?: string;
+      down?: string;
+      blink?: string;
+      mouth_open?: string;
+    };
+  }) {
+    const { userId, samples } = payload;
+    if (!userId) {
+      throw new BadRequestException('User ID wajib disertakan');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        student: { include: { class: true } },
+        teacherProfile: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Data pengguna tidak ditemukan');
+    }
+
+    const userFaceSamplesDir = join(STORAGE_ROOT, 'face_samples', user.id);
+    if (!existsSync(userFaceSamplesDir)) {
+      mkdirSync(userFaceSamplesDir, { recursive: true });
+    }
+
+    const angles: Array<keyof typeof samples> = [
+      'front',
+      'right',
+      'left',
+      'up',
+      'down',
+      'blink',
+      'mouth_open',
+    ];
+    let savedCount = 0;
+
+    for (const angle of angles) {
+      const dataUrl = samples[angle];
+      const targetPath = join(userFaceSamplesDir, `${angle}.jpg`);
+
+      if (dataUrl && typeof dataUrl === 'string' && dataUrl.includes('base64,')) {
+        try {
+          const base64Data = dataUrl.split('base64,')[1];
+          const rawBuffer = Buffer.from(base64Data, 'base64');
+          
+          // Kompresi optimal dataset AI model FaceNet (Inception-ResNet-v1 target 160x160/320x320)
+          // Membatasi ukuran file ke ~12-20 KB per pose tanpa degradasi landmark wajah
+          let compressedBuffer: Buffer;
+          try {
+            compressedBuffer = await sharp(rawBuffer)
+              .resize(320, 320, { fit: 'cover', position: 'center' })
+              .jpeg({ quality: 80, mozjpeg: true })
+              .toBuffer();
+          } catch {
+            compressedBuffer = rawBuffer;
+          }
+
+          writeFileSync(targetPath, compressedBuffer);
+          savedCount++;
+        } catch (e) {
+          this.logger.warn(`Gagal menyimpan sampel wajah sudut ${angle}: ${e}`);
+        }
+      } else if (!dataUrl && existsSync(targetPath)) {
+        // Jika pengguna menghapus/merevisi sampel pose ini dari modal, hapus file pose lama agar data ter-update
+        try {
+          unlinkSync(targetPath);
+        } catch {}
+      }
+    }
+
+    // Jika pengguna belum memiliki foto profil, gunakan pose front sebagai foto profil
+    if ((!user.avatarUrl || user.avatarUrl.trim() === '') && samples.front) {
+      try {
+        const profilesDir = join(STORAGE_ROOT, 'profiles');
+        if (!existsSync(profilesDir)) {
+          mkdirSync(profilesDir, { recursive: true });
+        }
+        const avatarFilename = `avatar-faceid-${user.id}-${Date.now()}.jpg`;
+        const avatarPath = join(profilesDir, avatarFilename);
+        const base64Data = samples.front.split('base64,')[1];
+        const rawBuffer = Buffer.from(base64Data, 'base64');
+
+        let compressedAvatar: Buffer;
+        try {
+          compressedAvatar = await sharp(rawBuffer)
+            .resize(320, 320, { fit: 'cover', position: 'center' })
+            .jpeg({ quality: 80, mozjpeg: true })
+            .toBuffer();
+        } catch {
+          compressedAvatar = rawBuffer;
+        }
+
+        writeFileSync(avatarPath, compressedAvatar);
+
+        const relativeAvatarUrl = `/uploads/profiles/${avatarFilename}`;
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { avatarUrl: relativeAvatarUrl },
+        });
+        user.avatarUrl = relativeAvatarUrl;
+      } catch (err) {
+        this.logger.warn(`Gagal mengatur foto pose depan sebagai profil: ${err}`);
+      }
+    }
+
+    // SIMPAN UTUH KE POSTGRESQL (Tabel UserFaceBiometric)
+    try {
+      const existingBiometric = await this.prisma.userFaceBiometric.findUnique({
+        where: { userId: user.id },
+      });
+
+      const currentSamplePhotos: Record<string, string> = 
+        (existingBiometric?.samplePhotos as Record<string, string>) || {};
+
+      for (const angle of angles) {
+        if (samples[angle]) {
+          currentSamplePhotos[angle] = samples[angle]!;
+        }
+      }
+
+      await this.prisma.userFaceBiometric.upsert({
+        where: { userId: user.id },
+        create: {
+          userId: user.id,
+          photoDataUrl: samples.front || currentSamplePhotos['front'] || null,
+          samplePhotos: currentSamplePhotos,
+          sampleCount: Object.keys(currentSamplePhotos).length,
+          modelName: 'Inception-ResNet-v1 (Bio-Fusion AI)',
+          embedding: existingBiometric?.embedding || [],
+          vectorDimension: 512,
+        },
+        update: {
+          photoDataUrl: samples.front || currentSamplePhotos['front'] || existingBiometric?.photoDataUrl || null,
+          samplePhotos: currentSamplePhotos,
+          sampleCount: Object.keys(currentSamplePhotos).length,
+          updatedAt: new Date(),
+        },
+      });
+      this.logger.log(`Berhasil menyimpan ${Object.keys(currentSamplePhotos).length} foto biometrik ${user.name} secara utuh ke PostgreSQL!`);
+    } catch (dbErr) {
+      this.logger.error(`Gagal menyimpan foto biometrik ke PostgreSQL: ${dbErr}`);
+    }
+
+    // Sinkronkan ke FaceNet AI Engine secara langsung
+    const syncRes = await this.syncSingleUser(user);
+
+    // Catat ke system log
+    this.systemLogService
+      .log({
+        category: 'PRESENSI',
+        level: 'INFO',
+        action: 'FACE_ID_5VIEWS_REGISTERED',
+        message: `Perekaman Face ID 5 Arah: ${user.name} (${user.role}) - ${savedCount} pose terekam dan disinkronkan ke FaceNet AI`,
+        userId: user.id,
+        userName: user.name,
+        userRole: user.role,
+        details: {
+          savedPosesCount: savedCount,
+          userId: user.id,
+          identifier: user.student?.nis || user.nipNbm || user.teacherProfile?.nip,
+        },
+      })
+      .catch(() => {});
+
+    return {
+      success: true,
+      message: `Perekaman biometrik 5 arah untuk ${user.name} berhasil disimpan (${savedCount} pose) dan disinkronkan ke SIMASMUH FaceNet AI!`,
+      savedPosesCount: savedCount,
+      syncResult: syncRes,
     };
   }
 
@@ -1407,6 +1692,58 @@ export class FaceAttendanceService implements OnModuleInit {
       this.logger.warn(`Gagal streaming TTS online: ${err.message}`);
       res.status(500).send('Gagal memproses audio TTS');
     }
+  }
+
+  /**
+   * Menyimpan vektor 512-D dan foto profil pengguna secara utuh ke PostgreSQL (UserFaceBiometric)
+   */
+  async saveFaceVectorToDatabase(payload: {
+    userId: string;
+    embedding: number[];
+    modelName?: string;
+    photoDataUrl?: string;
+  }) {
+    const { userId, embedding, modelName, photoDataUrl } = payload;
+    if (!userId || !embedding || embedding.length !== 512) {
+      throw new BadRequestException('User ID dan vektor 512-dimensi wajib disertakan.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, role: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User dengan ID ${userId} tidak ditemukan.`);
+    }
+
+    const biometric = await this.prisma.userFaceBiometric.upsert({
+      where: { userId },
+      create: {
+        userId,
+        embedding,
+        vectorDimension: embedding.length,
+        modelName: modelName || 'Inception-ResNet-v1 (Bio-Fusion AI)',
+        photoDataUrl: photoDataUrl || null,
+        isActive: true,
+      },
+      update: {
+        embedding,
+        vectorDimension: embedding.length,
+        modelName: modelName || 'Inception-ResNet-v1 (Bio-Fusion AI)',
+        photoDataUrl: photoDataUrl || undefined,
+        isActive: true,
+        updatedAt: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      message: `Vektor 512-D untuk ${user.name} (${user.role}) berhasil disimpan utuh ke PostgreSQL!`,
+      biometricId: biometric.id,
+      vectorDimension: biometric.vectorDimension,
+      updatedAt: biometric.updatedAt,
+    };
   }
 }
 

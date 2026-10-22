@@ -5,14 +5,84 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const isDraggingRef = React.useRef<boolean>(false)
+  const startXRef = React.useRef<number>(0)
+  const startYRef = React.useRef<number>(0)
+  const scrollLeftRef = React.useRef<number>(0)
+  const scrollTopRef = React.useRef<number>(0)
+  const windowScrollYRef = React.useRef<number>(0)
+  const [isDragging, setIsDragging] = React.useState<boolean>(false)
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Hanya tangani klik kiri utama
+    if (e.button !== 0) return
+    const target = e.target as HTMLElement
+    const targetTag = target.tagName.toLowerCase()
+    // Jangan drag jika berinteraksi dengan kontrol form atau teks yang bisa diedit
+    if (['input', 'button', 'select', 'textarea', 'a'].includes(targetTag) || target.isContentEditable) return
+
+    if (!containerRef.current) return
+    isDraggingRef.current = true
+    setIsDragging(true)
+    startXRef.current = e.clientX
+    startYRef.current = e.clientY
+    scrollLeftRef.current = containerRef.current.scrollLeft
+    scrollTopRef.current = containerRef.current.scrollTop
+    windowScrollYRef.current = window.scrollY
+  }
+
+  React.useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!isDraggingRef.current || !containerRef.current) return
+      e.preventDefault()
+      const deltaX = e.clientX - startXRef.current
+      const deltaY = e.clientY - startYRef.current
+
+      // Geser tabel secara horizontal
+      containerRef.current.scrollLeft = scrollLeftRef.current - deltaX
+
+      // Geser secara vertikal (tabel internal atau window)
+      if (containerRef.current.scrollHeight > containerRef.current.clientHeight) {
+        containerRef.current.scrollTop = scrollTopRef.current - deltaY
+      }
+      window.scrollTo({
+        top: windowScrollYRef.current - deltaY,
+        behavior: 'instant' as ScrollBehavior,
+      })
+    }
+
+    const handlePointerUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false
+        setIsDragging(false)
+      }
+    }
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: false })
+    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerUp)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerUp)
+    }
+  }, [])
+
   return (
     <div
+      ref={containerRef}
+      onPointerDown={handlePointerDown}
       data-slot="table-container"
-      className="relative w-full overflow-x-auto touch-pan-x touch-pan-y overscroll-x-contain [-webkit-overflow-scrolling:touch] rounded-xl border border-slate-200/70 dark:border-slate-800/80 shadow-2xs transition-all duration-200 in-[[data-slot=card-content]]:border-0 in-[[data-slot=card-content]]:rounded-none in-[[data-slot=card-content]]:shadow-none"
+      className={cn(
+        "relative w-full overflow-x-auto touch-pan-x touch-pan-y overscroll-x-contain [-webkit-overflow-scrolling:touch] rounded-xl border border-slate-200/70 dark:border-slate-800/80 shadow-2xs transition-all duration-200 in-[[data-slot=card-content]]:border-0 in-[[data-slot=card-content]]:rounded-none in-[[data-slot=card-content]]:shadow-none",
+        isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+      )}
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-xs sm:text-sm text-slate-800 dark:text-slate-200 border-collapse", className)}
+        className={cn("w-full caption-bottom text-xs sm:text-sm text-slate-800 dark:text-slate-200 border-collapse select-none", className)}
         {...props}
       />
     </div>

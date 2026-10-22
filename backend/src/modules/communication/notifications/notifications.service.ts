@@ -130,7 +130,7 @@ export class NotificationsService {
         await this.processAdditionalChannels(notification, data.channel);
       }
 
-      this.logger.log(
+      this.logger.debug(
         `Notification created for user ${data.userId}: ${data.type}`,
       );
       return notification;
@@ -458,7 +458,7 @@ export class NotificationsService {
       return;
     }
 
-    this.logger.log(`Dispatching email notification to ${notification.user.email}`);
+    this.logger.debug(`Dispatching email notification to ${notification.user.email}`);
 
     let category: any = 'SISTEM';
     let actionUrl = '/dashboard';

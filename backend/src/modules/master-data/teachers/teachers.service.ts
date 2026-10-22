@@ -6,32 +6,38 @@ import * as bcrypt from 'bcryptjs';
 export class TeachersService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
-    return (this.prisma.teacherProfile as any).findMany({
-      where: {
-        user: {
-          OR: [
-            { role: 'GURU' },
-            { role: 'HONORER' },
-            { subRole: 'GURU' },
-            { subRole: 'HONORER' },
-            { subRole2: 'GURU' },
-            { subRole2: 'HONORER' },
-            { subRole3: 'GURU' },
-            { subRole3: 'HONORER' },
-            { subRole4: 'GURU' },
-            { subRole4: 'HONORER' },
-            { subRole5: 'GURU' },
-            { subRole5: 'HONORER' },
-            { role: 'WALI_KELAS' },
-            { subRole: 'WALI_KELAS' },
-            { subRole2: 'WALI_KELAS' },
-            { subRole3: 'WALI_KELAS' },
-            { subRole4: 'WALI_KELAS' },
-            { subRole5: 'WALI_KELAS' },
-          ],
-        },
+  async findAll(userId?: string) {
+    const where: any = {
+      user: {
+        OR: [
+          { role: 'GURU' },
+          { role: 'HONORER' },
+          { subRole: 'GURU' },
+          { subRole: 'HONORER' },
+          { subRole2: 'GURU' },
+          { subRole2: 'HONORER' },
+          { subRole3: 'GURU' },
+          { subRole3: 'HONORER' },
+          { subRole4: 'GURU' },
+          { subRole4: 'HONORER' },
+          { subRole5: 'GURU' },
+          { subRole5: 'HONORER' },
+          { role: 'WALI_KELAS' },
+          { subRole: 'WALI_KELAS' },
+          { subRole2: 'WALI_KELAS' },
+          { subRole3: 'WALI_KELAS' },
+          { subRole4: 'WALI_KELAS' },
+          { subRole5: 'WALI_KELAS' },
+        ],
       },
+    };
+
+    if (userId) {
+      where.userId = userId;
+    }
+
+    return (this.prisma.teacherProfile as any).findMany({
+      where,
       include: {
         user: true,
         teacherSubjects: {

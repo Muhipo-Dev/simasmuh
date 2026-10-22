@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
-import { Plus, Loader2, Trash2, Megaphone, Clock, ImageIcon, CalendarDays, Pencil } from 'lucide-react'
+import { Plus, Loader2, Trash2, Megaphone, Clock, ImageIcon, CalendarDays, Pencil, ShieldCheck, Award } from 'lucide-react'
 import { compressImageFile } from '@/utils/imageCompressor'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import Link from 'next/link'
 
 interface Announcement {
   id: string
@@ -243,14 +244,22 @@ export default function AnnouncementsPage() {
         </div>
         
         {!isKepalaSekolah && (
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all rounded-xl text-xs sm:text-sm" onClick={() => {
-            setEditingId(null);
-            setFormData({ title: '', content: '', target: 'SEMUA', type: 'BERITA', eventDate: '', image: '' });
-            setOpen(true);
-          }}>
-            <Plus className="w-4 h-4 mr-2" />
-            Tulis Berita / Agenda
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link href="/informasi/keunggulan">
+              <Button variant="outline" className="border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 hover:bg-amber-100 rounded-xl text-xs sm:text-sm gap-1.5 shadow-2xs">
+                <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                Logo Keunggulan &amp; Kemitraan
+              </Button>
+            </Link>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all rounded-xl text-xs sm:text-sm" onClick={() => {
+              setEditingId(null);
+              setFormData({ title: '', content: '', target: 'SEMUA', type: 'BERITA', eventDate: '', image: '' });
+              setOpen(true);
+            }}>
+              <Plus className="w-4 h-4 mr-2" />
+              Tulis Berita / Agenda
+            </Button>
+          </div>
         )}
         <Dialog open={open} onOpenChange={(val) => {
           setOpen(val);

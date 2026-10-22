@@ -760,8 +760,9 @@ export class SchedulesService {
           // Update data beban jam kerja & slot jadwal guru
           const assignedTeacher = teacherList.find((t) => t.id === resolvedTeacherId);
           if (assignedTeacher) {
-            assignedTeacher.assignedHours += (endMin - startMin) / 45;
-            recordTeacherSlot(resolvedTeacherId, item.dayOfWeek, startMin, endMin);
+            if (resolvedTeacherId) {
+              recordTeacherSlot(resolvedTeacherId, item.dayOfWeek, startMin, endMin);
+            }
 
             // Auto-Sync ke tabel relasi TeacherSubject agar database selalu mutakhir
             if (subjectObj && !assignedTeacher.subjectIds.includes(subjectObj.id)) {

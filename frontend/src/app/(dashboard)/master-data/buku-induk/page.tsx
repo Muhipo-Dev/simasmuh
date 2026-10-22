@@ -1,13 +1,11 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { 
-  Printer, Search, Filter, BookOpen, BookMarked, UserCheck, 
-  CheckCircle2, AlertCircle, Image as ImageIcon, Users, 
-  Sparkles, FileText, CheckSquare, Square, RefreshCw, Eye,
-  Pencil, Upload, Loader2, Edit3
+  Printer, Search, Filter, BookOpen, BookMarked, UserCheck, CheckCircle2, AlertCircle, Image as ImageIcon, Users, FileText, CheckSquare, Square, RefreshCw, Eye, Pencil, Upload, Loader2, Edit3, FileCheck
 } from 'lucide-react'
 import { TablePagination } from '@/components/TablePagination'
 import { Button } from '@/components/ui/button'
@@ -763,7 +761,7 @@ export default function BukuIndukPage() {
                   </button>
                 </th>
                 <th className="p-3 w-12 text-center">No</th>
-                <th className="p-3">NIS & NISN</th>
+                <th className="p-3 w-28">NIS</th>
                 <th className="p-3">Nama Lengkap Siswa</th>
                 <th className="p-3">Kelas</th>
                 <th className="p-3">Status Biodata</th>
@@ -819,9 +817,11 @@ export default function BukuIndukPage() {
                       <td className="p-3 text-center text-slate-500 font-medium">{(currentPage - 1) * pageSize + idx + 1}</td>
                       <td className="p-3 font-mono font-bold text-slate-900 dark:text-white">
                         <div>{st.nis}</div>
-                        <div className="text-[10px] text-slate-400 font-normal font-sans">
-                          NISN: {st.nisn || '-'}
-                        </div>
+                        {st.nisn && (
+                          <div className="text-[10px] text-slate-400 font-normal font-sans">
+                            NISN: {st.nisn}
+                          </div>
+                        )}
                       </td>
                       <td className="p-3">
                         <div className="font-bold text-slate-900 dark:text-white">

@@ -19,7 +19,7 @@ export class SettingsService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private waitingRoomService: WaitingRoomService,
     private maintenanceService: MaintenanceService,
-  ) {}
+  ) { }
 
   async getServerTime(): Promise<any> {
     const settings = await this.prisma.setting.findFirst({
@@ -108,8 +108,29 @@ export class SettingsService {
         studentCardTemplateUrl: true,
         publicDomainUrl: true,
         googleClientId: true,
+        partnerLogos: true,
+        youtubeChannelUrl: true,
+        youtubeVideoEmbedUrl: true,
+        instagramUrl: true,
+        instagramFeedUrl: true,
+        instagramPostsJson: true,
+        whySchoolTitle: true,
+        whySchoolSubtitle: true,
+        whySchoolFeaturesJson: true,
+        heroBadgeText: true,
+        heroBadgeLocation: true,
+        heroSubheading: true,
+        heroTitlePrefix: true,
+        heroTitleGradient: true,
+        heroDescription: true,
+        heroCtaText: true,
+        heroCtaLink: true,
+        heroVideoText: true,
+        heroVideoLink: true,
+        homeSectionOrderJson: true,
       } as any,
     });
+
     if (!settings) {
       const defaultPublic = {
         schoolName: 'SMA Muhammadiyah 1 Ponorogo',
@@ -121,6 +142,26 @@ export class SettingsService {
         logoUrl: null,
         backgroundUrl: null,
         studentCardTemplateUrl: null,
+        partnerLogos: null,
+        youtubeChannelUrl: 'https://www.youtube.com/@SmaMuhipo',
+        youtubeVideoEmbedUrl: 'https://www.youtube.com/watch?v=McKO7tTyIHQ',
+        instagramUrl: 'https://www.instagram.com/smamuhipo.official/',
+        instagramFeedUrl: 'https://www.instagram.com/smamuhipo.official/',
+        instagramPostsJson: null,
+        whySchoolTitle: 'Kenapa Harus Bersekolah di SMA Muhipo?',
+        whySchoolSubtitle: 'SMA Muhammadiyah 1 Ponorogo berkomitmen memberikan lingkungan belajar holistik yang memadukan keunggulan akademik, adab Islam, teknologi masa depan, dan prestasi global.',
+        whySchoolFeaturesJson: null,
+        heroBadgeText: 'Terakreditasi A • Sekolah Unggul Muhammadiyah',
+        heroBadgeLocation: 'Ponorogo, Jawa Timur',
+        heroSubheading: 'SMA MUHAMMADIYAH 1 PONOROGO (MUHIPO)',
+        heroTitlePrefix: 'EXCELLENT ISLAMIC',
+        heroTitleGradient: 'WITH CHARACTER',
+        heroDescription: 'Membentuk generasi unggul yang berakhlak mulia, berwawasan global, mandiri, serta berdaya saing internasional berlandaskan nilai-nilai luhur kepesantrenan dan pendidikan berkemajuan.',
+        heroCtaText: 'Kenapa SMA Muhipo?',
+        heroCtaLink: '#keunggulan',
+        heroVideoText: 'Tonton Video Profil',
+        heroVideoLink: 'https://www.youtube.com/@SmaMuhipo',
+        homeSectionOrderJson: JSON.stringify(['partner_logos', 'stats', 'news_agenda', 'why_school', 'programs', 'media_social']),
         timezone: 'Asia/Jakarta',
         serverLocation: 'Ponorogo, Jawa Timur',
         defaultDpp: 1500000,
@@ -153,16 +194,26 @@ export class SettingsService {
   }
 
   async getStats() {
-    const [teacherCount, studentCount, classCount] = await Promise.all([
+    const [teacherCount, activeStudentCount, classCount, extracurricularCount] = await Promise.all([
       this.prisma.teacherProfile.count(),
-      this.prisma.student.count(),
+      this.prisma.student.count({
+        where: {
+          isActive: true,
+        },
+      }),
       this.prisma.class.count(),
+      (this.prisma as any).extracurricular.count({
+        where: {
+          isActive: true,
+        },
+      }),
     ]);
 
     return {
       teachers: teacherCount,
-      students: studentCount,
+      students: activeStudentCount,
       classes: classCount,
+      extracurriculars: extracurricularCount,
     };
   }
 
@@ -1025,14 +1076,14 @@ export class SettingsService {
         lastActiveSessions: uniqueUserSessions,
         lastUserConnected: lastUser
           ? {
-              name:
-                lastUser.user?.name || lastUser.user?.username || 'Pengguna',
-              role: lastUser.user?.role,
-              subRole: lastUser.user?.subRole,
-              device: lastUser.device || 'Browser Client',
-              ipAddress: lastUser.ipAddress || '127.0.0.1',
-              connectedAt: lastUser.lastActiveAt,
-            }
+            name:
+              lastUser.user?.name || lastUser.user?.username || 'Pengguna',
+            role: lastUser.user?.role,
+            subRole: lastUser.user?.subRole,
+            device: lastUser.device || 'Browser Client',
+            ipAddress: lastUser.ipAddress || '127.0.0.1',
+            connectedAt: lastUser.lastActiveAt,
+          }
           : null,
         recentActivityLogs: lastSystemLogs,
       },
@@ -1101,12 +1152,53 @@ export class SettingsService {
       }
     }
 
+    // 3. Ambil log real-time dari Face Attendance AI Service (Python Port 8089)
+    try {
+      const faceAiRes = await fetch('http://127.0.0.1:8089/system-logs?limit=100', {
+        headers: { 'x-api-key': 'nailar-muhipo55' },
+        signal: AbortSignal.timeout(1200),
+      });
+      if (faceAiRes.ok) {
+        const faceData = await faceAiRes.json();
+        const faceLogs: any[] = faceData.logs || [];
+        if (faceLogs.length > 0) {
+          // Filter jika ada level atau search
+          let validFaceLogs = faceLogs;
+          if (level && level !== 'ALL') {
+            const targetLevel = level.toUpperCase();
+            validFaceLogs = validFaceLogs.filter(
+              (l) => l.level === targetLevel || (targetLevel === 'LOG' && l.level === 'INFO'),
+            );
+          }
+          if (search && search.trim() !== '') {
+            const q = search.toLowerCase();
+            validFaceLogs = validFaceLogs.filter(
+              (l) =>
+                l.message?.toLowerCase().includes(q) ||
+                l.context?.toLowerCase().includes(q) ||
+                l.raw?.toLowerCase().includes(q),
+            );
+          }
+          // Gabungkan log sistem backend dan FaceNet AI
+          memoryLogs = [...memoryLogs, ...validFaceLogs];
+          // Urutkan berdasarkan waktu/id
+          memoryLogs.sort((a, b) => {
+            const tA = new Date(a.timestamp).getTime() || 0;
+            const tB = new Date(b.timestamp).getTime() || 0;
+            return tA - tB;
+          });
+        }
+      }
+    } catch (e) {
+      // Abaikan jika service Face AI offline/standby
+    }
+
     return {
       status: 'SUCCESS',
       total: memoryLogs.length,
       limit,
       serverTime: new Date().toISOString(),
-      logs: memoryLogs,
+      logs: memoryLogs.slice(-limit),
     };
   }
 

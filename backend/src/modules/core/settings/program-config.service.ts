@@ -7,6 +7,16 @@ export interface CreateProgramConfigDto {
   defaultSpp?: number;
   defaultBeasiswa?: number;
   description?: string;
+  subtitle?: string;
+  fullContent?: string;
+  features?: string;
+  fasilitasList?: string;
+  keunggulanList?: string;
+  iconName?: string;
+  logoUrl?: string;
+  badgeColor?: string;
+  order?: number;
+  isVisible?: boolean;
 }
 
 export interface UpdateProgramConfigDto {
@@ -15,6 +25,16 @@ export interface UpdateProgramConfigDto {
   defaultSpp?: number;
   defaultBeasiswa?: number;
   description?: string;
+  subtitle?: string;
+  fullContent?: string;
+  features?: string;
+  fasilitasList?: string;
+  keunggulanList?: string;
+  iconName?: string;
+  logoUrl?: string;
+  badgeColor?: string;
+  order?: number;
+  isVisible?: boolean;
 }
 
 const DEFAULT_PROGRAMS = [
@@ -85,19 +105,46 @@ export class ProgramConfigService implements OnModuleInit {
   }
 
   async seedDefaultProgramsIfNeeded() {
-    const count = await this.prisma.programConfig.count();
-    if (count === 0) {
-      for (const prog of DEFAULT_PROGRAMS) {
-        await this.prisma.programConfig.create({
-          data: prog,
-        });
+    try {
+      const count = await this.prisma.programConfig.count();
+      if (count === 0) {
+        for (const prog of DEFAULT_PROGRAMS) {
+          await this.prisma.programConfig.create({
+            data: prog,
+          });
+        }
       }
+    } catch (err: any) {
+      console.warn('Gagal memuat ProgramConfig default:', err?.message || err);
     }
   }
 
   async getAllPrograms() {
     return this.prisma.programConfig.findMany({
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async getPublicPrograms() {
+    return this.prisma.programConfig.findMany({
+      where: { isVisible: true },
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        subtitle: true,
+        description: true,
+        fullContent: true,
+        features: true,
+        fasilitasList: true,
+        keunggulanList: true,
+        iconName: true,
+        logoUrl: true,
+        badgeColor: true,
+        order: true,
+        isVisible: true,
+      },
     });
   }
 
@@ -123,6 +170,16 @@ export class ProgramConfigService implements OnModuleInit {
         defaultSpp: Number(dto.defaultSpp || 0),
         defaultBeasiswa: Number(dto.defaultBeasiswa || 0),
         description: dto.description || '',
+        subtitle: dto.subtitle ?? null,
+        fullContent: dto.fullContent ?? null,
+        features: dto.features ?? null,
+        fasilitasList: dto.fasilitasList ?? null,
+        keunggulanList: dto.keunggulanList ?? null,
+        iconName: dto.iconName ?? 'BookOpen',
+        logoUrl: dto.logoUrl ?? null,
+        badgeColor: dto.badgeColor ?? 'blue',
+        order: dto.order !== undefined ? Number(dto.order) : 0,
+        isVisible: dto.isVisible !== undefined ? Boolean(dto.isVisible) : true,
       },
     });
   }
@@ -147,8 +204,30 @@ export class ProgramConfigService implements OnModuleInit {
           defaultBeasiswa: Number(dto.defaultBeasiswa),
         }),
         ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.subtitle !== undefined && { subtitle: dto.subtitle }),
+        ...(dto.fullContent !== undefined && { fullContent: dto.fullContent }),
+        ...(dto.features !== undefined && { features: dto.features }),
+        ...(dto.fasilitasList !== undefined && { fasilitasList: dto.fasilitasList }),
+        ...(dto.keunggulanList !== undefined && { keunggulanList: dto.keunggulanList }),
+        ...(dto.iconName !== undefined && { iconName: dto.iconName }),
+        ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
+        ...(dto.badgeColor !== undefined && { badgeColor: dto.badgeColor }),
+        ...(dto.order !== undefined && { order: Number(dto.order) }),
+        ...(dto.isVisible !== undefined && { isVisible: Boolean(dto.isVisible) }),
       },
     });
+  }
+
+  async reorderPrograms(items: { id: string; order: number }[]) {
+    await this.prisma.$transaction(
+      items.map((item) =>
+        this.prisma.programConfig.update({
+          where: { id: item.id },
+          data: { order: item.order },
+        }),
+      ),
+    );
+    return { success: true, count: items.length };
   }
 
   async deleteProgram(id: string) {

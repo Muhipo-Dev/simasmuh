@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,12 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { 
-  Loader2, Calendar, BookOpen, Clock, CheckCircle2, 
-  Sparkles, UserCheck, Eye, User, BookCheck, Award, 
-  FileText, Plus, Printer, Trash2, Camera, AlertCircle,
-  FileCheck, CalendarDays, Check, RefreshCw, BarChart3,
-  Search, ShieldCheck, Download, Pencil, Sliders, Settings2, RotateCcw,
-  UploadCloud, Image as ImageIcon, X
+  Loader2, Calendar, BookOpen, Clock, CheckCircle2, UserCheck, Eye, User, BookCheck, Award, FileText, Plus, Printer, Trash2, Camera, AlertCircle, FileCheck, CalendarDays, Check, RefreshCw, BarChart3, Search, ShieldCheck, Download, Pencil, Sliders, Settings2, RotateCcw, UploadCloud, Image as ImageIcon, X, LayoutGrid
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -827,7 +823,7 @@ export default function SupervisiAkademikPage() {
       {/* Navigasi Tab Fitur Resmi ASA (Menu Supervisi GTK) */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-1 overflow-x-auto pb-1 no-scrollbar print:hidden">
         {[
-          { id: 'mulai', label: 'Mulai Supervisi', icon: Sparkles, count: null },
+          { id: 'mulai', label: 'Mulai Supervisi', icon: LayoutGrid, count: null },
           { id: 'riwayat', label: 'Riwayat Supervisi', icon: Clock, count: supervisiRecords.length },
           { id: 'perangkat', label: 'Perangkat Guru', icon: BookOpen, count: null },
           { id: 'rekap-perangkat', label: 'Rekap Perangkat', icon: FileCheck, count: teachersList.length },
@@ -891,7 +887,7 @@ export default function SupervisiAkademikPage() {
                       onClick={() => setOpenJenisModal(true)}
                       className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5"
                     >
-                      <Sparkles className="w-3.5 h-3.5" />
+                      <LayoutGrid className="w-3.5 h-3.5" />
                       Jenis: {JENIS_SUPERVISI.find(j => j.id === formJenisSupervisi)?.label || 'Kurikulum Merdeka'}
                     </Button>
                     <Badge className={`${calculatedResult.badgeColor} text-white font-black text-xs px-3 py-1.5`}>
@@ -1136,7 +1132,7 @@ export default function SupervisiAkademikPage() {
             <Card className="border-slate-200 dark:border-slate-800 shadow-xs">
               <CardHeader className="bg-slate-50/60 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 pb-3">
                 <CardTitle className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <LayoutGrid className="w-4 h-4 text-amber-500" />
                   Catatan Kualitatif, Umpan Balik & Rekomendasi Supervisi
                 </CardTitle>
               </CardHeader>
@@ -1985,7 +1981,7 @@ export default function SupervisiAkademikPage() {
                   <span className="text-[10px] text-slate-500">Skor &ge; 91</span>
                 </div>
                 <div className="p-3 bg-indigo-50 dark:bg-indigo-950/50 rounded-2xl text-indigo-600">
-                  <Sparkles className="w-6 h-6" />
+                  <LayoutGrid className="w-6 h-6" />
                 </div>
               </CardContent>
             </Card>
@@ -2300,7 +2296,7 @@ export default function SupervisiAkademikPage() {
         <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0">
           <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
             <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-300" />
+              <LayoutGrid className="w-5 h-5 text-amber-300" />
               Pilih Jenis Supervisi
             </DialogTitle>
           </div>

@@ -1,27 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  useState, useEffect } from 'react'
 import Link from 'next/link'
 import Swal from 'sweetalert2'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
-  Building2, 
-  CreditCard, 
-  Save, 
-  Upload, 
-  Loader2, 
-  Sparkles,
-  Phone,
-  CalendarDays,
-  Globe,
-  ShieldCheck,
-  Copy,
-  Check,
-  ExternalLink,
-  KeyRound,
-  Wrench,
-  AlertTriangle,
-  ShieldAlert
+  Building2, CreditCard, Save, Upload, Loader2, Phone, CalendarDays, Globe, ShieldCheck, Copy, Check, ExternalLink, KeyRound, Wrench, AlertTriangle, ShieldAlert, Settings
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
@@ -53,6 +38,7 @@ type Setting = {
   defaultUks?: number | null
   timezone?: string | null
   serverLocation?: string | null
+  partnerLogos?: string | null
 }
 
 type BankAccount = {
@@ -83,6 +69,7 @@ export default function SettingsPage() {
     defaultUks: 0,
     timezone: 'Asia/Jakarta',
     serverLocation: 'Ponorogo, Jawa Timur',
+    partnerLogos: '',
   })
 
   const [bankData, setBankData] = useState({
@@ -126,6 +113,7 @@ export default function SettingsPage() {
         defaultUks: settings.defaultUks || 0,
         timezone: settings.timezone || 'Asia/Jakarta',
         serverLocation: settings.serverLocation || 'Ponorogo, Jawa Timur',
+        partnerLogos: settings.partnerLogos || '',
       })
       if (settings.publicDomainUrl) {
         setCachedSystemPublicDomain(settings.publicDomainUrl)
@@ -403,7 +391,7 @@ export default function SettingsPage() {
                 <div className="space-y-2 p-3.5 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="cardTemplate" className="font-bold text-indigo-900 dark:text-indigo-200 text-xs flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <Settings className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                       Template Desain Kartu Pelajar (Master Template)
                     </Label>
                     <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">Cetak Mandiri Siswa</span>
@@ -433,6 +421,26 @@ export default function SettingsPage() {
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
                     Template desain ini akan otomatis dipakai siswa di Profil Siswa untuk menggabungkan foto & mencetak kartu pelajar secara mandiri.
                   </p>
+                </div>
+
+                {/* Logo Akreditasi, Sekolah Unggul, Sekolah Penggerak & Kemitraan */}
+                <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <Label className="font-bold text-amber-900 dark:text-amber-200 text-xs">
+                        Logo Keunggulan &amp; Kemitraan Beranda (Kerja Sama)
+                      </Label>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Kelola daftar logo icon kerja sama (Sekolah Penggerak, ICAS, Cambridge, ISO 9001) pada modul publikasi resmi portal.
+                    </p>
+                  </div>
+                  <Link href="/informasi/keunggulan">
+                    <Button type="button" size="sm" variant="outline" className="text-xs font-bold border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/50 rounded-xl cursor-pointer shrink-0">
+                      Buka Modul Logo Keunggulan &rarr;
+                    </Button>
+                  </Link>
                 </div>
                 
                 <div className="space-y-2">
@@ -498,7 +506,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <span className="px-3 py-1 bg-blue-600 text-white font-bold text-xs rounded-full shadow-xs flex items-center gap-1 shrink-0">
-                    <Sparkles className="w-3 h-3" />
+                    <Settings className="w-3 h-3" />
                     Aktif: {formData.academicYear} ({formData.semester})
                   </span>
                 </div>

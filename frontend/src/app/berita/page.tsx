@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import {
+  useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Calendar, User, Newspaper, ArrowLeft, LogIn, Menu, Eye, Tag, ChevronRight, X, Sparkles } from 'lucide-react'
+import { Search, Calendar, User, Newspaper, ArrowLeft, LogIn, Menu, Eye, Tag, ChevronRight, X, LayoutGrid
+} from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'

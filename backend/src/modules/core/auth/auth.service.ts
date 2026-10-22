@@ -77,20 +77,19 @@ export class AuthService {
       isValid = user.password === password;
     }
 
-    // Provide robust fallback for students who might type their NIS, NISN, or username directly
+    // Provide robust fallback for students who might type their NIS or username directly
     if (!isValid && user.role === 'SISWA' && user.student) {
       if (
         password === user.student.nis ||
-        password === user.student.nisn ||
         password === user.username ||
         password === `siswa${user.student.nis}` ||
-        password === `siswa${user.student.nisn}`
+        (user.student.nisn && password === user.student.nisn)
       ) {
         isValid = true;
       }
     }
 
-    // Provide robust fallback for WALI_MURID who might type NIS/NISN of connected students
+    // Provide robust fallback for WALI_MURID who might type NIS of connected students
     if (
       !isValid &&
       user.role === 'WALI_MURID' &&
@@ -100,7 +99,7 @@ export class AuthService {
         (ps) =>
           ps.student &&
           (password === ps.student.nis ||
-            password === ps.student.nisn ||
+            (ps.student.nisn && password === ps.student.nisn) ||
             password === user.phone ||
             password === user.username),
       );

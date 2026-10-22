@@ -1,15 +1,12 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { useSession } from 'next-auth/react'
+import {
+  useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { 
-  FileText, CornerDownRight, CheckCircle2, Clock, Search, 
-  ExternalLink, Eye, AlertCircle, ShieldCheck, Download,
-  UserCheck, User, Calendar, Building2, Tag, RefreshCw,
-  FolderArchive, Inbox, ArrowUpRight, Printer, Undo2, Send,
-  Sparkles, Check, Filter
+  FileText, CornerDownRight, CheckCircle2, Clock, Search, ExternalLink, Eye, AlertCircle, ShieldCheck, Download, UserCheck, User, Calendar, Building2, Tag, RefreshCw, FolderArchive, Inbox, ArrowUpRight, Printer, Undo2, Send, Check, Filter, LayoutGrid
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -282,14 +279,14 @@ export function DisposisiUserManagement() {
         </head>
         <body>
           <div class="header-kop">
-            <div class="logo-box"><img src="/muhammadiyah-logo-40493.png" alt="Logo Dikdasmen" /></div>
+            <div class="logo-box"><img src="/logos/muhammadiyah-logo-40493.png" alt="Logo Dikdasmen" /></div>
             <div class="kop-text">
               <p class="org">MAJELIS PENDIDIKAN DASAR DAN MENENGAH<br/>PIMPINAN DAERAH MUHAMMADIYAH PONOROGO</p>
               <p class="school">SMA MUHAMMADIYAH 1 PONOROGO</p>
               <p class="status">Status : Terakreditasi A &nbsp;&nbsp;&nbsp;&nbsp; NPSN : 20510139</p>
               <p class="addr">Jl. Batoro Katong No. 6B Telp/Fax (0352) 481521 Ponorogo 63411</p>
             </div>
-            <div class="logo-box"><img src="/pic_logo.png" alt="Logo Sekolah" /></div>
+            <div class="logo-box"><img src="/logos/pic_logo.png" alt="Logo Sekolah" /></div>
           </div>
 
           <div class="agenda-box">NOMOR AGENDA : ${surat.nomorAgenda || disp.nomorAgenda || '-'}</div>

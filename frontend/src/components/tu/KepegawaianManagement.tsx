@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { useSession } from 'next-auth/react'
+import {
+  useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,49 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  Users,
-  UserPlus,
-  FileCheck,
-  Award,
-  CalendarDays,
-  Search,
-  Plus,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Briefcase,
-  FileText,
-  Building,
-  UserCheck,
-  GraduationCap,
-  ShieldCheck,
-  Edit,
-  Trash2,
-  Eye,
-  Download,
-  Filter,
-  TrendingUp,
-  AlertCircle,
-  Loader2,
-  RefreshCw,
-  Phone,
-  Mail,
-  UserCog,
-  Upload,
-  Camera,
-  FileUp,
-  ExternalLink,
-  MapPin,
-  Landmark,
-  FileBadge,
-  Sparkles,
-  Layers,
-  ArrowUpRight,
-  DoorOpen,
-  Power,
-  UserX,
-  ToggleLeft,
-  ToggleRight
+  Users, UserPlus, FileCheck, Award, CalendarDays, Search, Plus, CheckCircle2, XCircle, Clock, Briefcase, FileText, Building, UserCheck, GraduationCap, ShieldCheck, Edit, Trash2, Eye, Download, Filter, TrendingUp, AlertCircle, Loader2, RefreshCw, Phone, Mail, UserCog, Upload, Camera, FileUp, ExternalLink, MapPin, Landmark, FileBadge, Layers, ArrowUpRight, DoorOpen, Power, UserX, ToggleLeft, ToggleRight, LayoutGrid
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import Link from 'next/link'
@@ -1395,7 +1354,7 @@ export function KepegawaianManagement() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Badge className="bg-cyan-500/20 text-cyan-200 border-cyan-400/40 text-[11px] font-extrabold gap-1">
-                      <Sparkles className="w-3 h-3 text-cyan-300" />
+                      <LayoutGrid className="w-3 h-3 text-cyan-300" />
                       Sistem Terpisah: KINERJA MUHIPO
                     </Badge>
                     <Badge variant="outline" className="text-[10px] text-amber-300 border-amber-400/40 font-bold bg-amber-400/10">

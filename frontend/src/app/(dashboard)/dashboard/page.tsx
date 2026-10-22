@@ -12,11 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Users, UserSquare2, CalendarDays, ClipboardCheck, Loader2,
   Briefcase, BookOpen, UserCheck, Receipt, CreditCard, AlertTriangle,
-  GraduationCap, Award, BellRing, Sparkles, ChevronDown, TrendingUp,
+  GraduationCap, Award, BellRing, LayoutGrid, ChevronDown, TrendingUp,
   TrendingDown, Wallet, Landmark, DollarSign, Activity, CheckCircle2,
   ArrowUpRight, FileText, FileCheck, PieChart, ShieldAlert, BarChart3, Clock,
   ArrowRight, ShieldCheck, Mail, Contact, Package, Settings, DoorOpen, HeartHandshake, Megaphone, Camera, CornerDownRight,
-  Server, Cpu, HardDrive, Zap, Network, RefreshCw, Radio, Terminal, Laptop, Globe, Check, Key, Send, LogOut, Lock, Eye, Monitor, Smartphone, X, Search, Trash2, Banknote, PenTool, UserCog
+  Server, Cpu, HardDrive, Zap, Network, RefreshCw, Radio, Terminal, Laptop, Globe, Check, Key, Send, LogOut, Lock, Eye, Monitor, Smartphone, X, Search, Trash2, Banknote, PenTool, UserCog, BookCheck
 } from 'lucide-react'
 import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import Link from 'next/link'
@@ -1132,7 +1132,7 @@ export default function DashboardPage() {
           <div className="space-y-3 sm:space-y-3.5">
             <div className="flex items-center justify-between gap-1.5 px-1">
               <div className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <LayoutGrid className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                   Menu Akses Cepat Wali Murid
                 </h3>
@@ -1250,7 +1250,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center justify-between gap-2 mb-2 sm:mb-2.5 px-1">
                 <div className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <LayoutGrid className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                     Menu Akses Cepat Wali Murid
                   </h3>
@@ -1467,7 +1467,7 @@ export default function DashboardPage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-1">
                 <div>
                   <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-amber-500" />
+                    <BookCheck className="w-5 h-5 text-amber-500" />
                     Pusat Pengawasan & Akses Layanan Data Sekolah
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -1480,7 +1480,7 @@ export default function DashboardPage() {
                   onClick={() => setShowAllKsMenus(!showAllKsMenus)}
                   className="rounded-xl border-amber-300 dark:border-amber-800/60 bg-amber-50/80 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-xs font-bold gap-1.5 shadow-2xs self-start sm:self-auto transition-all"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <LayoutGrid className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                   <span>{showAllKsMenus ? 'Tutup Menu Lainnya' : 'Tampilkan Menu Lainnya'}</span>
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showAllKsMenus ? 'rotate-180' : ''}`} />
                 </Button>
@@ -3408,7 +3408,7 @@ export default function DashboardPage() {
         <div className="space-y-2.5">
           <div className="flex items-center justify-between gap-2 px-1">
             <div className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <LayoutGrid className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
                 Pusat Akses Layanan & Modul Operasional
               </h3>
@@ -3531,7 +3531,7 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center justify-between gap-2 mb-2.5 px-1">
               <div className="flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <LayoutGrid className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
                   Pusat Akses Layanan & Modul Operasional
                 </h3>

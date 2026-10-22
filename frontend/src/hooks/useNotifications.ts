@@ -39,7 +39,7 @@ export function useNotifications(options: NotificationHookOptions = {}) {
     enableRealtime = true,
     enableToast = true,
     autoMarkAsRead = false,
-    pollInterval = 30000, // Fallback polling interval
+    pollInterval = 60000, // 60s fallback polling agar tidak membebani server/browser
   } = options;
 
   const queryClient = useQueryClient();
@@ -57,7 +57,8 @@ export function useNotifications(options: NotificationHookOptions = {}) {
     },
     // Only use polling if WebSocket is not connected
     refetchInterval: socket.state.connected ? false : pollInterval,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // Hindari lonjakan beban saat user berganti tab/aplikasi
+    staleTime: 1000 * 30, // Data valid selama 30 detik
   });
 
   // Notification statistics query

@@ -60,6 +60,20 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
+    // Dukungan sesi Override & Spectator:
+    // Jika akun target sedang diakses oleh Superadmin atau Admin IT/TU, beri izin akses
+    if (user.isOverrideSession === true && user.overrideByAdminId) {
+      const adminRole = user.overrideByAdminRole;
+      if (
+        adminRole === 'SUPERADMIN' ||
+        adminRole === 'ADMIN_IT' ||
+        adminRole === 'GOD' ||
+        adminRole === 'GOD_USER'
+      ) {
+        return true;
+      }
+    }
+
     // Check roles
     if (requiredRoles && !this.hasRequiredRoles(user, requiredRoles)) {
       throw new ForbiddenException(

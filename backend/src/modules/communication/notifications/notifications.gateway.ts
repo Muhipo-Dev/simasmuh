@@ -155,8 +155,8 @@ export class NotificationsGateway
       sender: notification.sender,
     });
 
-    // Log notification sent
-    this.logger.log(
+    // Log notification sent (debug level agar tidak membanjiri terminal & live web viewer)
+    this.logger.debug(
       `Real-time notification sent to user ${notification.userId}: ${notification.type}`,
     );
   }

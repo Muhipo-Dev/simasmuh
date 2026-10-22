@@ -1,14 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
-  Mail, Bell, CheckCircle2, XCircle, AlertCircle, RefreshCw, 
-  Send, Server, ShieldCheck, Settings, Users, MessageSquare, History, 
-  Search, RotateCcw, Trash2, ArrowUpRight, Check, Sparkles, PhoneCall, ExternalLink,
-  Laptop, Smartphone, Globe, Lock, Key, HelpCircle, Eye, EyeOff, CheckCheck, BarChart3,
-  Layers, Megaphone, Receipt, ShieldAlert, Clock, FileCheck, Award, GraduationCap, FileText, SendHorizontal, Save,
-  Banknote, CalendarDays, BookOpen
+  Mail, Bell, CheckCircle2, XCircle, AlertCircle, RefreshCw, Send, Server, ShieldCheck, Settings, Users, MessageSquare, History, Search, RotateCcw, Trash2, ArrowUpRight, Check, PhoneCall, ExternalLink, Laptop, Smartphone, Globe, Lock, Key, HelpCircle, Eye, EyeOff, CheckCheck, BarChart3, Layers, Megaphone, Receipt, ShieldAlert, Clock, FileCheck, Award, GraduationCap, FileText, SendHorizontal, Save, Banknote, CalendarDays, BookOpen, BellRing
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Swal from 'sweetalert2'
@@ -644,7 +640,7 @@ export default function KelolaNotifikasiPage() {
               <Card className="border-emerald-200 dark:border-emerald-950/60 bg-gradient-to-br from-emerald-50/50 via-white to-white dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900 shadow-xs">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-bold flex items-center gap-2 text-emerald-900 dark:text-emerald-300">
-                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <BellRing className="w-4 h-4 text-emerald-600" />
                     Panduan Brevo (300 Email/Hari Gratis)
                   </CardTitle>
                   <CardDescription className="text-xs">
@@ -679,7 +675,7 @@ export default function KelolaNotifikasiPage() {
               <Card className="border-purple-200 dark:border-purple-950/60 bg-gradient-to-br from-purple-50/50 via-white to-white dark:from-purple-950/20 dark:via-slate-900 dark:to-slate-900 shadow-xs">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-bold flex items-center gap-2 text-purple-900 dark:text-purple-300">
-                    <Sparkles className="w-4 h-4 text-purple-600" />
+                    <BellRing className="w-4 h-4 text-purple-600" />
                     Panduan Resend (3.000 Email/Bulan Gratis)
                   </CardTitle>
                   <CardDescription className="text-xs">

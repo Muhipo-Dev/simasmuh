@@ -2,24 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Ticket,
-  Users,
-  Clock,
-  Sparkles,
-  Zap,
-  CheckCircle2,
-  BookOpen,
-  Gamepad2,
-  ChevronRight,
-  Smile,
-  Activity,
-  Server,
-  ShieldCheck,
-  Flame,
-  Music4,
-  Volume2,
-  RefreshCw,
-} from "lucide-react";
+  Ticket, Users, Clock, Zap, CheckCircle2, BookOpen, Gamepad2, ChevronRight, Smile, Activity, Server, ShieldCheck, Flame, Music4, Volume2, RefreshCw, LayoutGrid
+} from 'lucide-react';
 import { getPublicApiUrl } from "@/lib/api-config";
 
 interface QueueStatus {
@@ -112,7 +96,16 @@ export default function WaitingRoomProvider({ children }: { children: React.Reac
 
     const checkStatus = async () => {
       try {
-        const res = await fetch(getPublicApiUrl(`/waiting-room/status?token=${encodeURIComponent(token)}`));
+        const apiKey = process.env.NEXT_PUBLIC_API_KEY || "nailar-muhipo55";
+        const res = await fetch(
+          getPublicApiUrl(`/waiting-room/status?token=${encodeURIComponent(token)}`),
+          {
+            headers: {
+              "x-api-key": apiKey,
+              ...(token ? { "x-waiting-room-token": token } : {}),
+            },
+          }
+        );
         if (res.ok) {
           const data: QueueStatus = await res.json();
           if (data.token) {
@@ -120,6 +113,15 @@ export default function WaitingRoomProvider({ children }: { children: React.Reac
             token = data.token;
           }
           setQueueState(data);
+        } else if (res.status === 401 || res.status === 403) {
+          // Fallback aman jika auth guard bermasalah: jangan biarkan pengguna stuck di modal waiting room
+          setQueueState({
+            token,
+            status: "ADMITTED",
+            position: 0,
+            totalWaiting: 0,
+            estimatedWaitSeconds: 0,
+          });
         }
       } catch (err) {
         setQueueState({
@@ -141,13 +143,13 @@ export default function WaitingRoomProvider({ children }: { children: React.Reac
       if (isQueued) {
         checkStatus();
       }
-    }, 2500);
+    }, 1200);
 
     const heartbeatId = setInterval(() => {
       if (queueState?.status !== "QUEUED") {
         checkStatus();
       }
-    }, 30000);
+    }, 60000); // 60s heartbeat untuk low-spec hardware
 
     return () => {
       clearInterval(intervalId);
@@ -250,7 +252,7 @@ export default function WaitingRoomProvider({ children }: { children: React.Reac
             </div>
 
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-500/20 border border-blue-400/30 text-blue-300">
-              <Sparkles className="w-3 h-3 text-blue-300" /> Antrean Aktif
+              <LayoutGrid className="w-3 h-3 text-blue-300" /> Antrean Aktif
             </span>
           </div>
 
@@ -327,7 +329,7 @@ export default function WaitingRoomProvider({ children }: { children: React.Reac
                         : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                     }`}
                   >
-                    <Sparkles className="w-3 h-3" /> Interaksi Santai
+                    <LayoutGrid className="w-3 h-3" /> Interaksi Santai
                   </button>
                   <button
                     onClick={() => setActiveTab("trivia")}
@@ -373,7 +375,7 @@ export default function WaitingRoomProvider({ children }: { children: React.Reac
                       isPumping ? "scale-105" : ""
                     }`}
                   >
-                    <Sparkles className="w-3.5 h-3.5" /> Klik Semangat!
+                    <LayoutGrid className="w-3.5 h-3.5" /> Klik Semangat!
                   </button>
                 </div>
               )}

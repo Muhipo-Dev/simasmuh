@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import {
+  useState, useMemo, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import Swal from 'sweetalert2'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -12,52 +13,10 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Camera, 
-  Video, 
-  Cpu, 
-  RefreshCw, 
-  Save, 
-  CheckCircle2, 
-  Users, 
-  Activity, 
-  Sliders, 
-  ShieldCheck,
-  Zap,
-  Trash2,
-  HelpCircle,
-  Sparkles,
-  Server,
-  Search,
-  GraduationCap,
-  Briefcase,
-  UserCheck,
-  Maximize2,
-  Minimize2,
-  Sun,
-  SunMedium,
-  Play,
-  Square,
-  Volume2,
-  VolumeX,
-  Clock,
-  Radio,
-  Eye,
-  Power,
-  Tv,
-  Film,
-  Globe,
-  UserX,
-  QrCode,
-  Scan,
-  Aperture,
-  Loader2,
-  AlertTriangle,
-  AlertCircle,
-  CheckCircle,
-  Lock,
-  Unlock
+  Camera, Video, Cpu, RefreshCw, Save, CheckCircle2, Users, Activity, Sliders, ShieldCheck, Zap, Trash2, HelpCircle, Server, Search, GraduationCap, Briefcase, UserCheck, Maximize2, Minimize2, Sun, SunMedium, Play, Square, Volume2, VolumeX, Clock, Radio, Eye, Power, Tv, Film, Globe, UserX, QrCode, Scan, Aperture, Loader2, AlertTriangle, AlertCircle, CheckCircle, Lock, Unlock, ClipboardCheck
 } from 'lucide-react'
 import { QrScanner } from '@/components/QrScanner'
+import { FaceRegistrationModal, FaceRegistrationTargetUser } from '@/components/face/FaceRegistrationModal'
 import Link from 'next/link'
 
 import { toast } from 'sonner'
@@ -108,10 +67,12 @@ interface FaceDetectionLog {
 interface UsersDatasetResponse {
   totalUsers: number
   usersWithPhoto: number
+  usersWithFaceId?: number
+  usersFullyCalibrated?: number
   breakdown?: {
-    students: { total: number; withPhoto: number }
-    teachers: { total: number; withPhoto: number }
-    staff: { total: number; withPhoto: number }
+    students: { total: number; withPhoto: number; withFaceId?: number }
+    teachers: { total: number; withPhoto: number; withFaceId?: number }
+    staff: { total: number; withPhoto: number; withFaceId?: number }
   }
   dataset: Array<{
     userId: string
@@ -123,6 +84,9 @@ interface UsersDatasetResponse {
     identifier: string
     className?: string | null
     hasPhoto: boolean
+    faceSamplesCount?: number
+    hasFaceSamples?: boolean
+    registeredPoses?: string[]
   }>
 }
 
@@ -191,6 +155,7 @@ export default function FaceAttendanceCameraPage() {
   const [activeCamId, setActiveCamId] = useState<string>('cam-1')
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null)
+  const [isSyncingDataset, setIsSyncingDataset] = useState(false)
   const [streamError, setStreamError] = useState(false)
   const [isStreamLoading, setIsStreamLoading] = useState(true)
   const [streamKey, setStreamKey] = useState(Date.now())
@@ -317,6 +282,10 @@ export default function FaceAttendanceCameraPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'SISWA' | 'GURU' | 'PEGAWAI'>('ALL')
   const [photoFilter, setPhotoFilter] = useState<'ALL' | 'WITH_PHOTO' | 'NO_PHOTO'>('ALL')
+
+  // State Modal Perekaman Wajah Face ID 5 Arah
+  const [isFaceRegModalOpen, setIsFaceRegModalOpen] = useState(false)
+  const [selectedFaceUser, setSelectedFaceUser] = useState<FaceRegistrationTargetUser | null>(null)
 
   // Log filter states (default: hari ini saja)
   const [logFilterMode, setLogFilterMode] = useState<'TODAY' | 'ALL'>('TODAY')
@@ -1640,16 +1609,26 @@ export default function FaceAttendanceCameraPage() {
   }
 
   const handleSyncDatabase = async () => {
+    setIsSyncingDataset(true)
     try {
-      await authenticatedFetch('/api-backend/face-attendance/sync-dataset', { method: 'POST' })
-    } catch {}
-    const updated = await refetchDataset()
-    const usersCount = updated.data?.totalUsers || datasetData?.totalUsers || 0
-    const photosCount = updated.data?.usersWithPhoto || datasetData?.usersWithPhoto || 0
-    setSyncSuccessMsg(
-      `Sinkronisasi FaceNet Sukses! ${photosCount} dari ${usersCount} profil pengguna siap dicocokkan untuk absensi wajah AI.`
-    )
-    setTimeout(() => setSyncSuccessMsg(null), 6000)
+      const res = await authenticatedFetch('/api-backend/face-attendance/sync-dataset', { method: 'POST' })
+      const resData = await res.json().catch(() => ({}))
+      const updated = await refetchDataset()
+      const usersCount = updated.data?.totalUsers || datasetData?.totalUsers || 0
+      const photosCount = updated.data?.usersWithPhoto || datasetData?.usersWithPhoto || 0
+      const faceIdCount = updated.data?.usersWithFaceId || datasetData?.usersWithFaceId || 0
+      const calibratedCount = updated.data?.usersFullyCalibrated || datasetData?.usersFullyCalibrated || 0
+
+      setSyncSuccessMsg(
+        `Sinkronisasi Berhasil: ${photosCount} Foto Profil & ${faceIdCount} Face ID (${calibratedCount} terkalibrasi penuh) siap dicocokkan model FaceNet AI.`
+      )
+      toast.success('Dataset biometrik FaceNet AI berhasil disinkronkan!')
+    } catch (err: any) {
+      toast.error('Gagal menyinkronkan dataset FaceNet AI')
+    } finally {
+      setIsSyncingDataset(false)
+      setTimeout(() => setSyncSuccessMsg(null), 8000)
+    }
   }
 
   const toggleFullscreen = () => {
@@ -2637,7 +2616,7 @@ export default function FaceAttendanceCameraPage() {
                         <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5">
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium flex items-center gap-1">
-                              <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                              <ClipboardCheck className="w-3.5 h-3.5 text-indigo-500" />
                               Akurasi Kemiripan AI:
                             </span>
                             <span className="font-extrabold text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">
@@ -3390,15 +3369,19 @@ export default function FaceAttendanceCameraPage() {
               <div>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Users className="w-5 h-5 text-indigo-600" />
-                  Basis Data Deteksi Wajah (Foto Profil Pengguna)
+                  Dataset Biometrik & Face ID Pengguna
                 </CardTitle>
                 <CardDescription>
-                  Sistem AI mencocokkan wajah dari kamera secara langsung dengan foto profil siswa, guru, dan karyawan yang tersimpan di basis data SIMASMUH.
+                  Sistem FaceNet mempelajari dan menggabungkan data foto profil dan Face ID (5 sudut arah + anti-robot) menjadi satu data latih terpusat agar pengenalan wajah saat presensi lebih cepat, adaptif, dan akurat.
                 </CardDescription>
               </div>
-              <Button onClick={handleSyncDatabase} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 self-start shrink-0">
-                <RefreshCw className="w-4 h-4" />
-                Perbarui & Sinkronkan Vektor Wajah
+              <Button
+                onClick={handleSyncDatabase}
+                disabled={isSyncingDataset}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 self-start shrink-0"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSyncingDataset ? 'animate-spin' : ''}`} />
+                {isSyncingDataset ? 'Menyinkronkan...' : 'Sinkronkan Foto, Face ID & AI'}
               </Button>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -3410,16 +3393,21 @@ export default function FaceAttendanceCameraPage() {
               )}
 
               {/* Stats Summary Breakdown by Role */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-slate-500 font-medium">Semua Pengguna</p>
                     <Users className="w-4 h-4 text-slate-400" />
                   </div>
                   <p className="text-2xl font-bold text-slate-900 mt-1">{datasetData?.totalUsers || 0}</p>
-                  <p className="text-xs text-emerald-600 font-medium mt-1">
-                    {datasetData?.usersWithPhoto || 0} memiliki foto ({datasetData?.totalUsers ? Math.round(((datasetData.usersWithPhoto || 0) / datasetData.totalUsers) * 100) : 0}%)
-                  </p>
+                  <div className="mt-1 flex flex-col gap-0.5 text-xs">
+                    <span className="text-emerald-600 font-medium">
+                      {datasetData?.usersWithPhoto || 0} Foto Profil ({datasetData?.totalUsers ? Math.round(((datasetData.usersWithPhoto || 0) / datasetData.totalUsers) * 100) : 0}%)
+                    </span>
+                    <span className="text-indigo-600 font-medium">
+                      {datasetData?.usersWithFaceId || 0} Face ID Terdaftar
+                    </span>
+                  </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200">
@@ -3428,9 +3416,14 @@ export default function FaceAttendanceCameraPage() {
                     <GraduationCap className="w-4 h-4 text-blue-500" />
                   </div>
                   <p className="text-2xl font-bold text-blue-950 mt-1">{datasetData?.breakdown?.students.total || 0}</p>
-                  <p className="text-xs text-blue-700 font-medium mt-1">
-                    {datasetData?.breakdown?.students.withPhoto || 0} foto terdaftar
-                  </p>
+                  <div className="mt-1 flex flex-col gap-0.5 text-xs">
+                    <span className="text-blue-700 font-medium">
+                      {datasetData?.breakdown?.students.withPhoto || 0} Foto Profil
+                    </span>
+                    <span className="text-blue-600 font-medium">
+                      {datasetData?.breakdown?.students.withFaceId || 0} Face ID
+                    </span>
+                  </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200">
@@ -3439,9 +3432,14 @@ export default function FaceAttendanceCameraPage() {
                     <UserCheck className="w-4 h-4 text-purple-500" />
                   </div>
                   <p className="text-2xl font-bold text-purple-950 mt-1">{datasetData?.breakdown?.teachers.total || 0}</p>
-                  <p className="text-xs text-purple-700 font-medium mt-1">
-                    {datasetData?.breakdown?.teachers.withPhoto || 0} foto terdaftar
-                  </p>
+                  <div className="mt-1 flex flex-col gap-0.5 text-xs">
+                    <span className="text-purple-700 font-medium">
+                      {datasetData?.breakdown?.teachers.withPhoto || 0} Foto Profil
+                    </span>
+                    <span className="text-purple-600 font-medium">
+                      {datasetData?.breakdown?.teachers.withFaceId || 0} Face ID
+                    </span>
+                  </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200">
@@ -3450,9 +3448,14 @@ export default function FaceAttendanceCameraPage() {
                     <Briefcase className="w-4 h-4 text-amber-500" />
                   </div>
                   <p className="text-2xl font-bold text-amber-950 mt-1">{datasetData?.breakdown?.staff.total || 0}</p>
-                  <p className="text-xs text-amber-700 font-medium mt-1">
-                    {datasetData?.breakdown?.staff.withPhoto || 0} foto terdaftar
-                  </p>
+                  <div className="mt-1 flex flex-col gap-0.5 text-xs">
+                    <span className="text-amber-700 font-medium">
+                      {datasetData?.breakdown?.staff.withPhoto || 0} Foto Profil
+                    </span>
+                    <span className="text-amber-600 font-medium">
+                      {datasetData?.breakdown?.staff.withFaceId || 0} Face ID
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -3550,25 +3553,27 @@ export default function FaceAttendanceCameraPage() {
                         <th className="py-3 px-4">Nama Pengguna</th>
                         <th className="py-3 px-4">Role / Jabatan</th>
                         <th className="py-3 px-4">ID / NIS / NIP</th>
+                        <th className="py-3 px-4 text-center">Face ID (5 Arah)</th>
                         <th className="py-3 px-4 text-center">Status Vektor Wajah</th>
+                        <th className="py-3 px-4 text-center">Aksi Perekaman</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {isDatasetLoading ? (
                         <tr>
-                          <td colSpan={5} className="text-center py-10 text-slate-500">
+                          <td colSpan={7} className="text-center py-10 text-slate-500">
                             <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
                             Memuat basis data profil wajah...
                           </td>
                         </tr>
                       ) : filteredUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="text-center py-10 text-slate-500">
+                          <td colSpan={7} className="text-center py-10 text-slate-500">
                             Tidak ada data pengguna yang sesuai dengan filter pencarian.
                           </td>
                         </tr>
                       ) : (
-                        filteredUsers.map((user) => (
+                        filteredUsers.map((user: any) => (
                           <tr key={user.userId} className="hover:bg-slate-50/80 transition-colors">
                             <td className="py-2.5 px-4">
                               <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
@@ -3595,15 +3600,50 @@ export default function FaceAttendanceCameraPage() {
                               {user.identifier}
                             </td>
                             <td className="py-2.5 px-4 text-center">
-                              {user.hasPhoto ? (
-                                <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-none font-medium text-xs">
-                                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Vektor Aktif
+                              {user.faceSamplesCount > 0 ? (
+                                <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md ${
+                                  user.faceSamplesCount >= 7 
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
+                                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                                }`}>
+                                  <Camera className="w-3 h-3" />
+                                  {user.faceSamplesCount >= 7 ? 'Lengkap (7/7)' : `${user.faceSamplesCount}/7`}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-slate-400">Belum Ada</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-4 text-center">
+                              {user.hasPhoto || (user.faceSamplesCount && user.faceSamplesCount > 0) ? (
+                                <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border border-emerald-200 font-medium text-xs shadow-none">
+                                  <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-600" /> Aktif
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="text-slate-400 border-slate-200 font-normal text-xs">
+                                <Badge variant="outline" className="text-slate-400 border-slate-200 font-normal text-xs shadow-none">
                                   Belum Ada Foto
                                 </Badge>
                               )}
+                            </td>
+                            <td className="py-2.5 px-4 text-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedFaceUser({
+                                    userId: user.userId,
+                                    name: user.name,
+                                    role: user.role,
+                                    identifier: user.identifier,
+                                    avatarUrl: user.avatarUrl,
+                                    className: user.className,
+                                  })
+                                  setIsFaceRegModalOpen(true)
+                                }}
+                                className="h-7 px-2.5 text-xs text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border-slate-300 dark:border-slate-700 rounded-lg gap-1 font-medium"
+                              >
+                                <Camera className="w-3 h-3" />
+                                <span>Rekam Face ID</span>
+                              </Button>
                             </td>
                           </tr>
                         ))
@@ -3807,7 +3847,7 @@ export default function FaceAttendanceCameraPage() {
 
             <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 space-y-2 text-indigo-950">
               <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-800 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <ClipboardCheck className="w-4 h-4 text-indigo-600" />
                 Ketentuan Mutlak & Jadwal Presensi Wajah SIMASMUH:
               </h4>
               <ul className="list-disc list-inside text-xs space-y-1.5 text-indigo-900/90 leading-relaxed">
@@ -3857,6 +3897,20 @@ export default function FaceAttendanceCameraPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Perekaman Wajah 5 Arah (Face ID) */}
+      <FaceRegistrationModal
+        isOpen={isFaceRegModalOpen}
+        onClose={() => {
+          setIsFaceRegModalOpen(false)
+          setSelectedFaceUser(null)
+        }}
+        user={selectedFaceUser}
+        onSuccess={() => {
+          refetchDataset()
+          refetchServiceStatus()
+        }}
+      />
     </div>
   )
 }

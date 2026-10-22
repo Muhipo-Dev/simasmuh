@@ -1,29 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
+  useState, useMemo } from 'react'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  Clock,
-  Calendar as CalendarIcon,
-  Moon,
-  Sun,
-  Sunrise,
-  Sunset,
-  MapPin,
-  Printer,
-  Sparkles,
-  Info,
-  ChevronRight,
-  Download
+  Clock, Calendar as CalendarIcon, Moon, Sun, Sunrise, Sunset, MapPin, Printer, Info, ChevronRight, Download, CalendarDays
 } from 'lucide-react'
 import {
   calculateKHGTPrayerTimes,

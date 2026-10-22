@@ -1,14 +1,13 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { useSession } from 'next-auth/react'
+import {
+  useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import Link from 'next/link'
 import {
-  FileText, CornerDownRight, CheckCircle2, Clock, AlertTriangle,
-  ArrowRight, ShieldCheck, ExternalLink, Sparkles, Building2, Tag,
-  ChevronRight, Check, RefreshCw, PenTool, X, MessageSquare, Send, Mail
+  FileText, CornerDownRight, CheckCircle2, Clock, AlertTriangle, ArrowRight, ShieldCheck, ExternalLink, Building2, Tag, ChevronRight, Check, RefreshCw, PenTool, X, MessageSquare, Send, Mail, LayoutGrid
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

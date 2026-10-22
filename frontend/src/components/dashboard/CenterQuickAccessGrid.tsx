@@ -3,12 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import {
-  BookOpen, Users, UserCheck, CalendarDays, Wallet, Award,
-  ShieldCheck, GraduationCap, Package, Megaphone, Settings,
-  Contact, Mail, UserCog, Camera, DoorOpen, ClipboardCheck,
-  Receipt, BarChart3, HardDrive, BellRing, LucideIcon,
-  Sparkles, Briefcase, Layers, UserCircle, QrCode, FileCheck, Database, HeartPulse, BookCheck,
-  Search, Filter, X, Check, RotateCcw
+  BookOpen, Users, UserCheck, CalendarDays, Wallet, Award, ShieldCheck, GraduationCap, Package, Megaphone, Settings, Contact, Mail, UserCog, Camera, DoorOpen, ClipboardCheck, LayoutGrid, Briefcase, Layers, UserCircle, QrCode, FileCheck, Database, HeartPulse, BookCheck, FileText, TrendingUp, LucideIcon, Search, Filter, X, Check, RotateCcw, Receipt
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -78,14 +73,14 @@ const groupIcons: Record<string, LucideIcon> = {
   'Data & Tata Kelola': Database,
   'Tata Kelola Operasional': Briefcase,
   'Layanan Akademik': GraduationCap,
-  'Layanan Administrasi': Sparkles,
+  'Layanan Administrasi': FileText,
   'Monitoring Perkembangan': Users,
   'Layanan & Tagihan': Wallet,
   'Layanan Perpustakaan': BookOpen,
   'Program Tahfidz': BookOpen,
-  'Pengembangan Siswa': Sparkles,
+  'Pengembangan Siswa': TrendingUp,
   'Publikasi Portal': Megaphone,
-  'Layanan Fasilitas': Sparkles,
+  'Layanan Fasilitas': Package,
   'Layanan Keamanan': ShieldCheck,
   'Layanan Kesehatan': HeartPulse,
 }
@@ -243,7 +238,7 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
                   {selectedGroup === 'ALL' && <Check className="w-3.5 h-3.5 text-blue-600" />}
                 </button>
                 {allGroups.map((group) => {
-                  const GroupIcon = groupIcons[group] || (group === 'Akses Utama' ? Sparkles : Briefcase)
+                  const GroupIcon = groupIcons[group] || (group === 'Akses Utama' ? LayoutGrid : Briefcase)
                   const count = links.filter(l => (l.group || 'Akses Utama') === group).length
                   const isSelected = selectedGroup === group
                   return (
@@ -322,7 +317,7 @@ export function CenterQuickAccessGrid({ links = [], role }: CenterQuickAccessGri
             const items = groupedLinks[groupName]
             if (!items || items.length === 0) return null
 
-            const GroupIcon = groupIcons[groupName] || (groupName === 'Akses Utama' ? Sparkles : Briefcase)
+            const GroupIcon = groupIcons[groupName] || (groupName === 'Akses Utama' ? LayoutGrid : Briefcase)
             const isSupervisi = groupName.startsWith('Supervisi')
             const isPersonal = groupName === 'Layanan Mandiri' || groupName === 'Layanan Administrasi' || groupName === 'Layanan & Tagihan'
             const isAdvance = groupName === 'Konfigurasi Lanjutan' || groupName === 'Operasional Sistem'

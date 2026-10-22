@@ -1,13 +1,10 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import {
+  useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
-  Package, Boxes, Plus, Search, Filter, Printer, Download, 
-  Eye, CheckCircle2, AlertTriangle, XCircle, Building2, User, 
-  Calendar, Tag, QrCode, FileSpreadsheet, Sparkles, RefreshCw, 
-  Trash2, Edit3, ShieldCheck, MapPin, Layers, Wrench, BarChart3,
-  Check, X, DollarSign, Archive
+  Package, Boxes, Plus, Search, Filter, Printer, Download, Eye, CheckCircle2, AlertTriangle, XCircle, Building2, User, Calendar, Tag, QrCode, FileSpreadsheet, RefreshCw, Trash2, Edit3, ShieldCheck, MapPin, Layers, Wrench, BarChart3, Check, X, DollarSign, Archive, LayoutGrid
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

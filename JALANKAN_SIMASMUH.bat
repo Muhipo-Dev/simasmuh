@@ -74,7 +74,7 @@ echo  Status Layanan Port:
 call :CHECK_PORT_STATUS 3000 "Frontend Web     "
 call :CHECK_PORT_STATUS 3001 "Backend API      "
 call :CHECK_PORT_STATUS 51212 "Prisma Studio    "
-call :CHECK_PORT_STATUS 54323 "Supabase Studio  "
+call :CHECK_PORT_STATUS 54322 "PostgreSQL (DB)  "
 echo.
 echo  +=========================================+
 echo  |               MENU UTAMA                |
@@ -128,6 +128,11 @@ set "LABEL=%~2"
 netstat -ano 2>nul | findstr /R /C:":%PORT_NUM% .*LISTENING" >nul
 if not errorlevel 1 (
     echo   - %LABEL% : AKTIF (Port %PORT_NUM%)
+    exit /b 0
+)
+powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort %PORT_NUM% -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" >nul 2>&1
+if not errorlevel 1 (
+    echo   - %LABEL% : AKTIF (Port %PORT_NUM%)
 ) else (
     echo   - %LABEL% : NONAKTIF (Port %PORT_NUM%)
 )
@@ -149,97 +154,235 @@ exit /b 0
 :: MENU 1: START DEVELOPMENT MODE
 :: ------------------------------------------------------------
 :CMD_START_DEV
-echo.
-echo  >> Memeriksa port sistem & kesiapan Supabase...
-call :CHECK_PORT_EXCLUSIONS
-echo  >> Menjalankan SIMASMUH dalam Mode Development...
-call :CMD_STOP_PORTS
-
-echo  >> Menjalankan Backend API (Port 3001)...
-start "SIMASMUH-Backend" /D "%BACKEND_DIR%" cmd /c "npm run start:dev"
-
-echo  >> Menjalankan Frontend Web (Port 3000)...
-start "SIMASMUH-Frontend" /D "%FRONTEND_DIR%" cmd /c "npm run dev"
-
-echo  >> Menjalankan Prisma Studio (Port 51212)...
-start "SIMASMUH-PrismaStudio" /D "%BACKEND_DIR%" cmd /c "npm run studio"
-
-echo.
-echo  [OK] Seluruh layanan SIMASMUH Mode Development telah diluncurkan!
-echo  - Frontend Web: http://localhost:3000
-echo  - Backend API : http://localhost:3001
-echo  - Prisma Studio: http://localhost:51212
-echo.
-pause
-goto CMD_MAIN_MENU
+set "TARGET_MODE=DEV"
+goto CMD_START_STACK
 
 :: ------------------------------------------------------------
 :: MENU 2: START PRODUCTION MODE
 :: ------------------------------------------------------------
 :CMD_START_PROD
-echo.
-echo  >> Menjalankan SIMASMUH dalam Mode Production...
-call :CMD_STOP_PORTS
-
-echo  >> Menjalankan Backend API (Port 3001)...
-start "SIMASMUH-Backend" /D "%BACKEND_DIR%" cmd /c "npm run start:prod"
-
-echo  >> Menjalankan Frontend Web (Port 3000)...
-start "SIMASMUH-Frontend" /D "%FRONTEND_DIR%" cmd /c "npm run start"
-
-echo  >> Menjalankan Prisma Studio (Port 51212)...
-start "SIMASMUH-PrismaStudio" /D "%BACKEND_DIR%" cmd /c "npm run studio"
-
-echo.
-echo  [OK] Seluruh layanan SIMASMUH Mode Production telah diluncurkan!
-echo  - Frontend Web: http://localhost:3000
-echo  - Backend API : http://localhost:3001
-echo  - Prisma Studio: http://localhost:51212
-echo.
-pause
-goto CMD_MAIN_MENU
+set "TARGET_MODE=PROD"
+goto CMD_START_STACK
 
 :: ------------------------------------------------------------
 :: MENU 3: START DEBUG MODE
 :: ------------------------------------------------------------
 :CMD_START_DEBUG
+set "TARGET_MODE=DEBUG"
+goto CMD_START_STACK
+
+:: ------------------------------------------------------------
+:: MENU 7: RESTART APLIKASI
+:: ------------------------------------------------------------
+:CMD_RESTART
 echo.
-echo  >> Menjalankan SIMASMUH dalam Mode Testing/Debugging...
+echo  ======================================================
+echo  >> RESTART APLIKASI: Menonaktifkan semua layanan...
+echo  ======================================================
 call :CMD_STOP_PORTS
-start "SIMASMUH-Backend" /D "%BACKEND_DIR%" cmd /c "npm run start:debug"
-start "SIMASMUH-Frontend" /D "%FRONTEND_DIR%" cmd /c "npm run dev"
-start "SIMASMUH-PrismaStudio" /D "%BACKEND_DIR%" cmd /c "npm run studio"
-echo  [OK] Mode Debugging aktif.
+timeout /t 1 /nobreak >nul 2>&1
+echo  >> Memulai ulang seluruh layanan sistem...
+set "TARGET_MODE=DEV"
+goto CMD_START_STACK
+
+:: ------------------------------------------------------------
+:: MENU 8: REBUILD & RESTART (FULL)
+:: ------------------------------------------------------------
+:CMD_REBUILD_RESTART
+echo.
+echo  ======================================================
+echo  >> REBUILD ^& RESTART: Menghentikan semua layanan...
+echo  ======================================================
+call :CMD_STOP_PORTS
+timeout /t 1 /nobreak >nul 2>&1
+
+:: Pastikan Database PostgreSQL Lokal (Port 54322) dimulai dan aktif
+call :CMD_START_DATABASE
+
+echo.
+echo  >> Mem-Build ulang Backend (NestJS)...
+cd /d "%BACKEND_DIR%"
+call npm run build
+if errorlevel 1 (
+    echo  [ERR] Build Backend gagal! Membatalkan restart.
+    pause
+    goto CMD_MAIN_MENU
+)
+echo.
+echo  >> Mem-Build ulang Frontend (Next.js)...
+cd /d "%FRONTEND_DIR%"
+call npm run build
+if errorlevel 1 (
+    echo  [ERR] Build Frontend gagal! Membatalkan restart.
+    pause
+    goto CMD_MAIN_MENU
+)
+cd /d "%ROOT_DIR%"
+echo.
+echo  [OK] Build ulang selesai. Meluncurkan seluruh layanan...
+set "TARGET_MODE=PROD"
+goto CMD_START_STACK
+
+:: ------------------------------------------------------------
+:: ORKESTRATOR SEQUENCE MEMULAI SISTEM:
+:: 1. Verifikasi Runtime Node.js
+:: 2. Menyalakan PostgreSQL (Port 54322) & Tunggu Ready
+:: 3. Memulai Backend API (Port 3001)
+:: 4. Memulai Frontend Web (Port 3000)
+:: 5. Menyalakan Prisma Studio (Port 51212)
+:: 6. Menyalakan Face AI (Port 8089)
+:: ------------------------------------------------------------
+:CMD_START_STACK
+echo.
+echo  +======================================================+
+echo  |    ORKESTRASI MEMULAI LAYANAN SISTEM SIMASMUH        |
+echo  +======================================================+
+echo.
+
+:: Tahap 1: Cek & Pastikan Node.js siap
+echo  [1/5] Memeriksa runtime Node.js...
+where node >nul 2>&1
+if errorlevel 1 (
+    echo  [ERR] Node.js belum terpasang atau belum ada di PATH!
+    pause
+    goto CMD_MAIN_MENU
+)
+for /f "tokens=*" %%v in ('node -v 2^>nul') do echo  [OK] Node.js terdeteksi: %%v
+
+:: Membersihkan port 3000, 3001, 51212, 8089 dari proses lama agar tidak terjadi EADDRINUSE
+call :CMD_STOP_PORTS
+
+:: Tahap 2: Menyalakan PostgreSQL Native Lokal dan pastikan port 54322 siap
+echo.
+echo  [2/5] Menyiapkan & menyalakan PostgreSQL Database (Port 54322)...
+call :CHECK_PORT_EXCLUSIONS
+call :CHECK_START_LOCAL_DB
+
+:: Tahap 3: Memulai Backend API (Port 3001)
+echo.
+echo  [3/5] Memulai Backend API (Port 3001)...
+if not exist "%ROOT_DIR%logs" mkdir "%ROOT_DIR%logs" >nul 2>&1
+if "%TARGET_MODE%"=="DEV" (
+    start "SIMASMUH-Backend" /B /D "%BACKEND_DIR%" cmd /c "npm run start:dev >> "%ROOT_DIR%logs\simasmuh-backend.log" 2>&1"
+) else if "%TARGET_MODE%"=="DEBUG" (
+    start "SIMASMUH-Backend" /B /D "%BACKEND_DIR%" cmd /c "npm run start:debug >> "%ROOT_DIR%logs\simasmuh-backend.log" 2>&1"
+) else (
+    start "SIMASMUH-Backend" /B /D "%BACKEND_DIR%" cmd /c "node dist/main.js >> "%ROOT_DIR%logs\simasmuh-backend.log" 2>&1"
+)
+echo  [OK] Backend API diluncurkan di port 3001.
+
+:: Jeda singkat agar Backend sempat inisialisasi awal
+timeout /t 2 /nobreak >nul 2>&1
+
+:: Tahap 4: Memulai Frontend Web (Port 3000)
+echo.
+echo  [4/5] Memulai Frontend Web (Port 3000)...
+if "%TARGET_MODE%"=="PROD" (
+    start "SIMASMUH-Frontend" /B /D "%FRONTEND_DIR%" cmd /c "npm run start >nul 2>&1"
+) else (
+    start "SIMASMUH-Frontend" /B /D "%FRONTEND_DIR%" cmd /c "npm run dev >nul 2>&1"
+)
+echo  [OK] Frontend Web diluncurkan di port 3000.
+
+:: Tahap 5: Menyalakan Prisma Studio (Port 51212)
+echo.
+echo  [5/5] Menyalakan Prisma Studio (Port 51212)...
+start "SIMASMUH-PrismaStudio" /B /D "%BACKEND_DIR%" cmd /c "npx prisma studio --port 51212 --browser none >nul 2>&1"
+echo  [OK] Prisma Studio diluncurkan di port 51212.
+
+:: Layanan Tambahan: Face AI Service jika venv tersedia
+if exist "%FACE_AI_DIR%\.venv\Scripts\python.exe" (
+    echo.
+    echo  [+] Menyalakan Face AI Attendance Service (Port 8089)...
+    start "SIMASMUH-FaceAI" /B /D "%FACE_AI_DIR%" cmd /c ".venv\Scripts\python.exe main.py >nul 2>&1"
+    echo  [OK] Face AI Service diluncurkan di port 8089.
+)
+
+echo.
+echo  +======================================================+
+echo  |    SEMUA LAYANAN SIMASMUH BERHASIL DILUNCURKAN!      |
+echo  +======================================================+
+echo  - Frontend Web    : http://localhost:3000
+echo  - Backend API     : http://localhost:3001
+echo  - Prisma Studio   : http://localhost:51212
+echo  - PostgreSQL (DB) : Port 54322 (Mandiri Native)
+if exist "%FACE_AI_DIR%\.venv\Scripts\python.exe" (
+    echo  - Face AI Service : http://localhost:8089
+)
+echo.
 pause
 goto CMD_MAIN_MENU
 
 :: ------------------------------------------------------------
-:: MENU 7 & 8: RESTART & REBUILD
+:: SUBROUTINE: CHECK & START LOCAL POSTGRESQL (NATIVE PATH)
 :: ------------------------------------------------------------
-:CMD_RESTART
-echo.
-echo  >> Menghentikan dan memulai ulang semua layanan...
-call :CMD_STOP_PORTS
-goto CMD_START_DEV
+:CHECK_START_LOCAL_DB
+set "DB_ONLINE=0"
+netstat -ano 2>nul | findstr /R /C:":54322 .*LISTENING" >nul
+if not errorlevel 1 set "DB_ONLINE=1"
+if "!DB_ONLINE!"=="0" (
+    powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 54322 -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" >nul 2>&1
+    if not errorlevel 1 set "DB_ONLINE=1"
+)
 
-:CMD_REBUILD_RESTART
-echo.
-echo  >> Mem-Build ulang Backend dan Frontend...
-call :CMD_STOP_PORTS
-cd /d "%BACKEND_DIR%"
-call npm run build
-cd /d "%FRONTEND_DIR%"
-call npm run build
-cd /d "%ROOT_DIR%"
-goto CMD_START_PROD
+if "!DB_ONLINE!"=="1" (
+    echo  [OK] Database PostgreSQL Lokal (Port 54322) AKTIF.
+    exit /b 0
+)
+
+:: Cek apakah folder database/data proyek tersedia
+set "LOCAL_DATA_DIR=%ROOT_DIR%database\data"
+set "PG_CTL_BIN="
+if exist "C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe" set "PG_CTL_BIN=C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe"
+if not defined PG_CTL_BIN (
+    for /f "delims=" %%I in ('where pg_ctl.exe 2^>nul') do set "PG_CTL_BIN=%%I"
+)
+
+if defined PG_CTL_BIN (
+    if exist "%LOCAL_DATA_DIR%" (
+        "%PG_CTL_BIN%" status -D "%LOCAL_DATA_DIR%" >nul 2>&1
+        if not errorlevel 1 (
+            echo  [OK] Database PostgreSQL Lokal (Port 54322) AKTIF.
+            exit /b 0
+        )
+        echo  >> Memulai Database PostgreSQL Native Lokal di port 54322...
+        if exist "%LOCAL_DATA_DIR%\postmaster.pid" (
+            "%PG_CTL_BIN%" status -D "%LOCAL_DATA_DIR%" >nul 2>&1
+            if errorlevel 1 (
+                del /F /Q "%LOCAL_DATA_DIR%\postmaster.pid" >nul 2>&1
+            )
+        )
+        start /B "" "%PG_CTL_BIN%" -D "%LOCAL_DATA_DIR%" -o "-p 54322" -l "%ROOT_DIR%database\postgres.log" start >nul 2>&1
+        for /L %%i in (1,1,10) do (
+            timeout /t 1 /nobreak >nul 2>&1
+            powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 54322 -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" >nul 2>&1
+            if not errorlevel 1 (
+                echo  [OK] Database PostgreSQL Native Lokal berhasil dinyalakan (Port 54322).
+                exit /b 0
+            )
+        )
+    )
+)
+
+:: Jika docker aktif dan container tersedia, fallback ke docker
+where docker >nul 2>&1
+if not errorlevel 1 (
+    docker ps -a --format "{{.Names}}" 2>nul | findstr /C:"supabase_db_siakad-coba" >nul
+    if not errorlevel 1 (
+        echo  >> Memulai database fallback via Docker container...
+        docker start supabase_db_siakad-coba >nul 2>&1
+        timeout /t 2 >nul
+    )
+)
+exit /b 0
 
 :: ------------------------------------------------------------
 :: MENU 9: STOP APPS
 :: ------------------------------------------------------------
 :CMD_STOP_APPS
 echo.
-echo  >> Menghentikan seluruh proses SIMASMUH (Port 3000, 3001, 51212, 8089)...
-call :CMD_STOP_PORTS
+echo  >> Menghentikan seluruh proses SIMASMUH (Port 3000, 3001, 51212, 8089, 54322)...
+call :CMD_STOP_ALL_PORTS
 echo.
 echo  [OK] Seluruh layanan SIMASMUH berhasil dihentikan.
 pause
@@ -247,10 +390,29 @@ goto CMD_MAIN_MENU
 
 :CMD_STOP_PORTS
 for %%P in (3000 3001 51212 8089) do (
-    for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr /R /C:":%%P .*LISTENING"') do (
-        taskkill /F /PID %%a >nul 2>&1
+    for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr /C:":%%P "') do (
+        if "%%a" neq "0" (
+            taskkill /F /T /PID %%a >nul 2>&1
+        )
     )
 )
+timeout /t 1 /nobreak >nul 2>&1
+exit /b 0
+
+:CMD_STOP_ALL_PORTS
+for %%P in (3000 3001 51212 8089 54322) do (
+    for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr /C:":%%P "') do (
+        if "%%a" neq "0" (
+            taskkill /F /T /PID %%a >nul 2>&1
+        )
+    )
+)
+if defined PG_CTL_BIN (
+    if exist "%LOCAL_DATA_DIR%" (
+        "%PG_CTL_BIN%" stop -D "%LOCAL_DATA_DIR%" -m fast >nul 2>&1
+    )
+)
+timeout /t 1 /nobreak >nul 2>&1
 exit /b 0
 
 :: ------------------------------------------------------------
@@ -351,9 +513,9 @@ if exist "%BACKEND_DIR%\node_modules\.prisma\client" (
 )
 
 echo.
-echo  4. Memeriksa Direktori External Storage...
-set "STORAGE_FOUND=C:\simasmuh_storage"
-if exist "D:\simasmuh_storage" set "STORAGE_FOUND=D:\simasmuh_storage"
+echo  4. Memeriksa Direktori Storage Aplikasi...
+set "STORAGE_FOUND=%ROOT_DIR%\storage"
+if not exist "%STORAGE_FOUND%" set "STORAGE_FOUND=D:\simasmuh\storage"
 if exist "%STORAGE_FOUND%" (
     echo  [OK] Folder storage aktif: %STORAGE_FOUND%
 ) else (
@@ -542,8 +704,8 @@ echo  +==================================================+
 echo  Otomatis menyiapkan seluruh kebutuhan SIMASMUH pada perangkat baru.
 echo.
 
-:: 1. Runtime Detection & Winget Auto-Installer
-echo  1/8. Memeriksa runtime dasar sistem (Node.js, npm, Python, Git, Docker)...
+:: 1. Runtime Detection & Multi-Engine Auto-Installer (Winget / Native Curl MSI)
+echo  1/8. Memeriksa runtime dasar sistem (Node.js, npm, Python, Git, PostgreSQL/Docker)...
 where node >nul 2>&1
 if errorlevel 1 (
     echo  [ERR] Node.js belum terpasang!
@@ -551,6 +713,9 @@ if errorlevel 1 (
     if not errorlevel 1 (
         echo  >> Memasang Node.js LTS via winget...
         winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
+    ) else (
+        echo  >> Winget tidak tersedia, mengunduh dan memasang Node.js LTS otomatis via PowerShell...
+        powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi' -OutFile '%TEMP%\nodejs.msi'; Start-Process msiexec.exe -ArgumentList '/i', '%TEMP%\nodejs.msi', '/quiet', '/qn', '/norestart' -Wait"
     )
 ) else (
     for /f "tokens=*" %%v in ('node -v 2^>nul') do echo  [OK] Node.js terdeteksi (%%v)
@@ -563,16 +728,37 @@ if errorlevel 1 (
     if not errorlevel 1 (
         echo  >> Memasang Python 3.11 via winget...
         winget install Python.Python.3.11 --accept-package-agreements --accept-source-agreements
+    ) else (
+        echo  >> Winget tidak tersedia, mengunduh dan memasang Python 3.11 otomatis via PowerShell...
+        powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe' -OutFile '%TEMP%\python-installer.exe'; Start-Process '%TEMP%\python-installer.exe' -ArgumentList '/quiet', 'InstallAllUsers=1', 'PrependPath=1' -Wait"
     )
 ) else (
     for /f "tokens=*" %%v in ('python --version 2^>nul') do echo  [OK] Python terdeteksi (%%v)
 )
 
-where docker >nul 2>&1
-if not errorlevel 1 (
-    echo  [OK] Docker CLI terdeteksi (siap untuk Supabase Studio port 54323 ^& DB 54322).
+where git >nul 2>&1
+if errorlevel 1 (
+    echo  [i]  Git belum terpasang.
+    where winget >nul 2>&1
+    if not errorlevel 1 (
+        winget install Git.Git --accept-package-agreements --accept-source-agreements >nul 2>&1
+    )
 ) else (
-    echo  [i]  Docker Desktop belum aktif (opsional jika menggunakan DB lokal/cloud).
+    echo  [OK] Git terdeteksi.
+)
+
+:: Pengecekan Database Engine (PostgreSQL Native atau Docker)
+powershell -NoProfile -Command "Get-Service -Name '*postgres*' -ErrorAction SilentlyContinue" | findstr /I "postgres" >nul 2>&1
+if not errorlevel 1 (
+    echo  [OK] PostgreSQL Server Native terdeteksi aktif di Windows Service.
+) else (
+    where docker >nul 2>&1
+    if not errorlevel 1 (
+        echo  [OK] Docker CLI terdeteksi (siap untuk container database/Supabase).
+    ) else (
+        echo  [i]  PostgreSQL Native / Docker belum terdeteksi.
+        echo  [i]  Di lingkungan Windows Proxmox, Anda dapat menggunakan PostgreSQL Native Service atau Remote DB.
+    )
 )
 
 :: 2. Setup Berkas .env
@@ -582,26 +768,39 @@ call :CMD_SETUP_ENV_SILENT
 
 :: 3. Install Dependencies
 echo.
-echo  3/8. Menginstall dependencies Backend ^& Frontend...
+echo  3/8. Menginstall dependencies Backend & Frontend...
 cd /d "%BACKEND_DIR%"
-call npm install --legacy-peer-deps >nul 2>&1
+echo  >> Menginstall NPM dependencies Backend...
+call npm install --legacy-peer-deps
+if errorlevel 1 (
+    echo  [!] NPM install backend mengalami peringatan, melanjutkan proses...
+)
+
 cd /d "%FRONTEND_DIR%"
-call npm install --legacy-peer-deps >nul 2>&1
+echo  >> Menginstall NPM dependencies Frontend...
+call npm install --legacy-peer-deps
+if errorlevel 1 (
+    echo  [!] NPM install frontend mengalami peringatan, melanjutkan proses...
+)
 
 :: 4. Python Virtualenv & AI Dependencies (venv, opencv, vgg, mtcnn, resnet, yolo)
 echo.
-echo  4/8. Menyiapkan Python Virtualenv ^& AI Packages (OpenCV, VGG, MTCNN, ResNet, YOLO)...
+echo  4/8. Menyiapkan Python Virtualenv & AI Packages (OpenCV, VGG, MTCNN, ResNet, YOLO)...
 cd /d "%FACE_AI_DIR%"
 where python >nul 2>&1
 if not errorlevel 1 (
     if not exist ".venv\Scripts\python.exe" (
-        python -m venv .venv >nul 2>&1
+        echo  >> Membuat Python Virtualenv (.venv)...
+        python -m venv .venv
     )
     if exist ".venv\Scripts\python.exe" (
-        .venv\Scripts\python.exe -m pip install --upgrade pip >nul 2>&1
+        echo  >> Memperbarui pip & memasang AI requirements...
+        .venv\Scripts\python.exe -m pip install --upgrade pip
         .venv\Scripts\pip.exe install -r requirements.txt
         echo  [OK] AI Packages (OpenCV, VGG, MTCNN, ResNet, YOLO, PyTorch) siap!
     )
+) else (
+    echo  [i] Python belum terpasang di sistem. Pasang Python 3.10+ untuk fitur Face AI.
 )
 
 :: 5. Generate Prisma Client Engine
@@ -610,12 +809,12 @@ echo  5/8. Menyesuaikan Prisma Client engine untuk arsitektur OS lokal...
 cd /d "%BACKEND_DIR%"
 call npx prisma generate
 
-:: 6. Buat Struktur Folder External Storage
+:: 6. Buat Struktur Folder Storage Aplikasi
 echo.
-echo  6/8. Menyiapkan struktur folder external storage terisolasi (simasmuh_storage)...
-set "TARGET_STORAGE=D:\simasmuh_storage"
-if not exist "D:\" set "TARGET_STORAGE=C:\simasmuh_storage"
-for %%S in (profiles avatars surat qr face-snapshots cbt-attachments temp) do (
+echo  6/8. Menyiapkan struktur folder storage aplikasi (storage)...
+set "TARGET_STORAGE=%ROOT_DIR%\storage"
+if not exist "%TARGET_STORAGE%" set "TARGET_STORAGE=D:\simasmuh\storage"
+for %%S in (profiles avatars surat qr face-snapshots cbt-attachments temp backups face_samples) do (
     if not exist "%TARGET_STORAGE%\%%S" mkdir "%TARGET_STORAGE%\%%S" >nul 2>&1
 )
 echo  [OK] Struktur direktori storage siap di: %TARGET_STORAGE%
@@ -707,26 +906,40 @@ goto CMD_BACKUP_RESTORE
 
 :CMD_EXEC_BACKUP
 echo.
-echo  >> Memeriksa Docker Desktop & Database Container...
-docker ps --format "{{.Names}}" 2>nul | findstr /C:"supabase_db_siakad-coba" >nul
-if errorlevel 1 (
-    echo  [ERR] Container supabase_db_siakad-coba tidak terdeteksi aktif!
-    echo  Pastikan Docker Desktop aktif terlebih dahulu.
-    pause
-    goto CMD_BACKUP_RESTORE
-)
-
-set "BDIR=D:\simasmuh_storage\backups"
-if not exist "D:\" set "BDIR=C:\simasmuh_storage\backups"
+set "BDIR=%ROOT_DIR%\storage\backups"
+if not exist "%BDIR%" set "BDIR=D:\simasmuh\storage\backups"
 if not exist "%BDIR%" mkdir "%BDIR%" >nul 2>&1
 
 set "BTIMESTAMP=%date:~10,4%-%date:~4,2%-%date:~7,2%_%time:~0,2%-%time:~3,2%-%time:~6,2%"
 set "BTIMESTAMP=%BTIMESTAMP: =0%"
 set "BFILE=%BDIR%\simasmuh_db_backup_%BTIMESTAMP%.sql"
 
+echo  >> Memeriksa koneksi database aktif (Port 54322)...
+netstat -ano 2>nul | findstr /R /C:":54322 .*LISTENING" >nul
+if errorlevel 1 (
+    echo  [ERR] Database di port 54322 belum menyala!
+    pause
+    goto CMD_BACKUP_RESTORE
+)
+
+set "PG_DUMP_BIN="
+if exist "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe" set "PG_DUMP_BIN=C:\Program Files\PostgreSQL\18\bin\pg_dump.exe"
+if not defined PG_DUMP_BIN (
+    for /f "delims=" %%I in ('where pg_dump.exe 2^>nul') do set "PG_DUMP_BIN=%%I"
+)
+
 echo  >> Melakukan dump skema & isi tabel ke:
 echo     %BFILE%
-docker exec supabase_db_siakad-coba pg_dump -U postgres -d postgres --clean --if-exists > "%BFILE%" 2>nul
+
+if defined PG_DUMP_BIN (
+    set "PGPASSWORD=postgres"
+    "%PG_DUMP_BIN%" -h localhost -p 54322 -U postgres -d postgres --clean --if-exists > "%BFILE%" 2>nul
+) else (
+    where docker >nul 2>&1
+    if not errorlevel 1 (
+        docker exec supabase_db_siakad-coba pg_dump -U postgres -d postgres --clean --if-exists > "%BFILE%" 2>nul
+    )
+)
 
 if exist "%BFILE%" (
     echo.
@@ -734,7 +947,7 @@ if exist "%BFILE%" (
     echo  Berkas backup tersimpan rapi di: %BFILE%
 ) else (
     echo.
-    echo  [ERR] Gagal mencadangkan database. Periksa log Docker.
+    echo  [ERR] Gagal mencadangkan database.
 )
 echo.
 pause
@@ -742,16 +955,16 @@ goto CMD_BACKUP_RESTORE
 
 :CMD_EXEC_RESTORE
 echo.
-echo  >> Memeriksa Docker Desktop & Database Container...
-docker ps --format "{{.Names}}" 2>nul | findstr /C:"supabase_db_siakad-coba" >nul
+echo  >> Memeriksa koneksi database aktif (Port 54322)...
+netstat -ano 2>nul | findstr /R /C:":54322 .*LISTENING" >nul
 if errorlevel 1 (
-    echo  [ERR] Container supabase_db_siakad-coba tidak terdeteksi aktif!
+    echo  [ERR] Database di port 54322 belum menyala!
     pause
     goto CMD_BACKUP_RESTORE
 )
 
-set "BDIR=D:\simasmuh_storage\backups"
-if not exist "D:\" set "BDIR=C:\simasmuh_storage\backups"
+set "BDIR=%ROOT_DIR%\storage\backups"
+if not exist "%BDIR%" set "BDIR=D:\simasmuh\storage\backups"
 
 echo.
 echo  Daftar Berkas Backup Tersedia:
@@ -761,22 +974,15 @@ dir /B /O:-D "%ROOT_DIR%\*.sql" 2>nul
 echo  --------------------------------------------------
 echo.
 echo  Masukkan nama/path lengkap berkas .sql yang ingin di-restore:
-echo  (Contoh: simasmuh_siakad_coba_full_backup.sql atau path lengkap)
-set /p "TARGET_RESTORE=  Path Berkas: "
+set /p "RESTORE_FILE=  Nama/Path file: "
 
-if "%TARGET_RESTORE%"=="" (
-    echo  [INFO] Pemulihan dibatalkan.
-    timeout /t 1 >nul
-    goto CMD_BACKUP_RESTORE
-)
-
-if not exist "%TARGET_RESTORE%" (
-    if exist "%BDIR%\%TARGET_RESTORE%" (
-        set "TARGET_RESTORE=%BDIR%\%TARGET_RESTORE%"
-    ) else if exist "%ROOT_DIR%%TARGET_RESTORE%" (
-        set "TARGET_RESTORE=%ROOT_DIR%%TARGET_RESTORE%"
+if not exist "%RESTORE_FILE%" (
+    if exist "%BDIR%\%RESTORE_FILE%" (
+        set "RESTORE_FILE=%BDIR%\%RESTORE_FILE%"
+    ) else if exist "%ROOT_DIR%\%RESTORE_FILE%" (
+        set "RESTORE_FILE=%ROOT_DIR%\%RESTORE_FILE%"
     ) else (
-        echo  [ERR] Berkas tidak ditemukan: %TARGET_RESTORE%
+        echo  [ERR] Berkas tidak ditemukan: %RESTORE_FILE%
         pause
         goto CMD_BACKUP_RESTORE
     )
@@ -784,30 +990,43 @@ if not exist "%TARGET_RESTORE%" (
 
 echo.
 echo  [PERINGATAN] Anda akan memulihkan data dari berkas:
-echo  %TARGET_RESTORE%
-set /p "CONFIRM_RESTORE=  Ketik 'ya' untuk konfirmasi restore: "
-if /i not "%CONFIRM_RESTORE%"=="ya" (
-    echo  [INFO] Proses pemulihan dibatalkan oleh pengguna.
+echo  %RESTORE_FILE%
+echo.
+set /p "CONFIRM_RESTORE=  Ketik Y untuk melanjutkan pemulihan: "
+if /I not "%CONFIRM_RESTORE%"=="Y" (
+    echo  [i]  Pemulihan dibatalkan oleh pengguna.
     pause
     goto CMD_BACKUP_RESTORE
 )
 
-echo.
-echo  >> Menyalin file backup ke database container...
-docker cp "%TARGET_RESTORE%" supabase_db_siakad-coba:/tmp/restore_temp.sql
-echo  >> Mengeksekusi pemulihan data psql...
-docker exec supabase_db_siakad-coba psql -U postgres -d postgres -f /tmp/restore_temp.sql >nul 2>&1
-docker exec supabase_db_siakad-coba rm -f /tmp/restore_temp.sql >nul 2>&1
+set "PSQL_BIN="
+if exist "C:\Program Files\PostgreSQL\18\bin\psql.exe" set "PSQL_BIN=C:\Program Files\PostgreSQL\18\bin\psql.exe"
+if not defined PSQL_BIN (
+    for /f "delims=" %%I in ('where psql.exe 2^>nul') do set "PSQL_BIN=%%I"
+)
 
-echo.
-echo  [OK] PEMULIHAN BASIS DATA SELESAI DILAKUKAN!
+if defined PSQL_BIN (
+    echo  >> Memulihkan database via Native PostgreSQL Client (Port 54322)...
+    set "PGPASSWORD=postgres"
+    "%PSQL_BIN%" -h localhost -p 54322 -U postgres -d postgres -f "%RESTORE_FILE%" >nul 2>&1
+    echo  [OK] PEMULIHAN BASIS DATA SELESAI!
+) else (
+    where docker >nul 2>&1
+    if not errorlevel 1 (
+        docker cp "%RESTORE_FILE%" supabase_db_siakad-coba:/tmp/restore.sql >nul 2>&1
+        docker exec supabase_db_siakad-coba psql -U postgres -d postgres -f /tmp/restore.sql >nul 2>&1
+        docker exec supabase_db_siakad-coba rm -f /tmp/restore.sql >nul 2>&1
+        echo  [OK] PEMULIHAN BASIS DATA VIA DOCKER SELESAI!
+    )
+)
 echo.
 pause
 goto CMD_BACKUP_RESTORE
 
+
 :CMD_OPEN_BACKUP_DIR
-set "BDIR=D:\simasmuh_storage\backups"
-if not exist "D:\" set "BDIR=C:\simasmuh_storage\backups"
+set "BDIR=%ROOT_DIR%\storage\backups"
+if not exist "%BDIR%" set "BDIR=D:\simasmuh\storage\backups"
 if not exist "%BDIR%" mkdir "%BDIR%" >nul 2>&1
 explorer "%BDIR%"
 goto CMD_BACKUP_RESTORE
@@ -885,6 +1104,7 @@ goto CMD_LOG_MANAGER
 :: ------------------------------------------------------------
 :CMD_EXIT
 echo.
+call :CMD_STOP_ALL_PORTS
 echo  Sampai jumpa! - Muhipo Dev 2026
 echo.
 timeout /t 1 >nul

@@ -13,6 +13,7 @@ import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { AppNavbar, AppFooter, AppSidebar } from '@/components/layout'
 import { isPathAllowedForRoles, getRoleLinks } from '@/lib/nav-links'
 import { EmailRecommendationBanner } from '@/components/dashboard/EmailRecommendationBanner'
+import { OverrideSessionBanner } from '@/components/dashboard/OverrideSessionBanner'
 import { NavbarPrayerWidget } from '@/components/dashboard/NavbarPrayerWidget'
 import Swal from 'sweetalert2'
 
@@ -74,6 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         '/keuangan/laporan',
         '/presensi/kehadiran-siswa',
         '/siswa/buku-induk',
+        '/akademik/penilaian',
         '/akademik/e-rapor',
         '/informasi/prestasi',
         '/akademik/etika-tatib',
@@ -93,8 +95,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         return
       }
 
+      // Sesi Override / Spectator oleh Admin:
+      // Admin yang sedang mengoperasikan atau meninjau akun memiliki hak akses navigasi penuh
+      const isOverrideByAdmin = u?.isOverrideSession === true && Boolean(u?.overrideByAdminId)
+
       // Cek ketat otorisasi rute
-      const allowed = isPathAllowedForRoles(pathname, roles)
+      const allowed = isOverrideByAdmin || isPathAllowedForRoles(pathname, roles)
       if (!allowed && !isSiswaArchiveAllowed) {
         Swal.fire({
           icon: 'error',
@@ -261,7 +267,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className={`flex-1 w-full px-3.5 sm:px-5 md:px-6 lg:px-8 xl:px-10 2xl:px-12 pt-3 sm:pt-4 md:pt-5 pb-20 sm:pb-24 lg:pb-12 transition-all duration-200 pl-safe pr-safe print:p-0 print:m-0 print:max-w-none print:w-full print:pb-0`}>
           <div className="w-full max-w-7xl 2xl:max-w-[1480px] mx-auto space-y-3.5 sm:space-y-4">
-            <div className="w-full print:hidden">
+            <div className="w-full print:hidden space-y-2">
+              <OverrideSessionBanner />
               <EmailRecommendationBanner />
             </div>
             <div className="w-full">

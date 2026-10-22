@@ -71,7 +71,7 @@ export function AppNavbar({
     staleTime: 5 * 60 * 1000,
   })
 
-  const activeLogo = explicitLogoUrl || publicSettings?.logoUrl || '/pic_logo.png'
+  const activeLogo = explicitLogoUrl || publicSettings?.logoUrl || '/logos/pic_logo.png'
 
   // Dynamically synchronize browser tab favicon with the latest uploaded school logo
   React.useEffect(() => {

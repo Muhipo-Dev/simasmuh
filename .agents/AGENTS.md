@@ -102,5 +102,11 @@
 21. **Standar Mutlak Backup Otomatis Terjadwal & Tombol Backup-Restore Cepat (STRICT)**:
     - **Backup Otomatis Terjadwal**: Sistem wajib menjalankan pencadangan data (*automated backup dump*) secara berkala dan otomatis (tersimpan ke folder arsip backup penyimpanan lokal/eksternal) guna mencegah kehilangan data tak terduga.
     - **Penyediaan Tombol Backup & Restore di Launcher**: Script launcher [JALANKAN_SIMASMUH.bat](file:///d:/simasmuh/JALANKAN_SIMASMUH.bat) dan [simasmuh.ps1](file:///d:/simasmuh/simasmuh.ps1) **MUTLAK MENYEDIAKAN MENU RESMI BACKUP & RESTORE DATABASE** yang memungkinkan pengguna/admin melakukan pencadangan instan serta pemulihan data (*one-click backup & restore*) secara aman, terverifikasi, dan bebas risiko data loss.
+22. **Standar Mutlak Kerahasiaan & Peniadaan Kode UUID/ID Internal Basis Data pada Seluruh Antarmuka (STRICT)**:
+    - **Kerahasiaan ID Internal**: Seluruh string ID acak, hash, atau kode UUID basis data (contoh: `437c1591-b0fc...`, `bc6c9178-b62f...`) adalah data rahasia internal komunikasi backend-frontend yang **MUTLAK DILARANG KERAS DITAMPILKAN KE PENGGUNA/PUBLIK**.
+    - **Kewajiban Label Nama Riil & Representatif**:
+      - Seluruh elemen dropdown (`<SelectTrigger>`, `<SelectValue>`, `<SelectItem>`), combobox, modal selector, chip/badge, judul, teks tabel, breadcrumbs, dan notifikasi wajib **100% MENYAJIKAN NAMA ASLI RIIL YANG MANUSIAWI** (seperti Nama Siswa, Nama Guru, Nama Kelas `X 1`, Nama Mata Pelajaran `Informatika`, Judul Dokumen, atau No. Induk Resmi `NIS/NIP/NIK`).
+      - Dilarang menjadikan ID unik sebagai placeholder, fallback tampilan visual, atau teks label tombol trigger jika objek relasi sedang dalam proses pemuatan (*loading state* wajib menampilkan nama atau placeholder baku seperti `"Pilih Kelas"` / `"Pilih Mapel"`).
+
 
 

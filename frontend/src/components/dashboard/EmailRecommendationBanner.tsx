@@ -1,13 +1,13 @@
 'use client'
 
 import React, { useState, useId } from 'react'
-import { useSession } from 'next-auth/react'
+import {
+  useSession } from 'next-auth/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import Link from 'next/link'
 import { 
-  Mail, AlertTriangle, ArrowRight, CheckCircle2, X, 
-  ShieldCheck, Loader2, Sparkles, User, Key, BellRing
+  Mail, AlertTriangle, ArrowRight, CheckCircle2, X, ShieldCheck, Loader2, User, Key, BellRing, LayoutGrid
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

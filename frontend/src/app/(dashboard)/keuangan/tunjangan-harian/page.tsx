@@ -1,15 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import {
+  useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Loader2, Banknote, Clock, CalendarDays, CheckCircle2, 
-  AlertTriangle, DollarSign, Utensils, Bus, Sparkles, UserCheck,
-  Info, ChevronRight
+  Loader2, Banknote, Clock, CalendarDays, CheckCircle2, AlertTriangle, DollarSign, Utensils, Bus, UserCheck, Info, ChevronRight, Wallet
 } from 'lucide-react'
 import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 
@@ -214,7 +213,7 @@ export default function TunjanganHarianPage() {
         <Card className="sm:col-span-2 lg:col-span-1 border-emerald-200 dark:border-emerald-900/60 bg-gradient-to-br from-emerald-50/60 via-white to-teal-50/40 dark:from-slate-900 dark:to-emerald-950/20 shadow-xs rounded-xl">
           <CardHeader className="p-3 sm:p-3.5 pb-1 sm:pb-1.5">
             <CardTitle className="text-[11px] font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> Total Tunjangan
+              <Wallet className="w-3.5 h-3.5 text-emerald-600" /> Total Tunjangan
             </CardTitle>
           </CardHeader>
           <CardContent className="p-3 sm:p-3.5 pt-0 space-y-1">

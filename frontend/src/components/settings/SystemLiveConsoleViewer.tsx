@@ -104,12 +104,51 @@ export function SystemLiveConsoleViewer() {
     },
   })
 
+  // Format timestamp agar selalu presisi mengikuti UTC+7 (Asia/Jakarta / WIB)
+  const formatLogTimestampUtc7 = (ts: string) => {
+    if (!ts) return ''
+    try {
+      // Jika format sudah 'YYYY-MM-DD HH:mm:ss'
+      const match = ts.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})$/)
+      if (match) {
+        return `${match[1]} ${match[2]} WIB`
+      }
+
+      // Parse format tanggal ISO / timestamp lainnya
+      const date = new Date(ts)
+      if (isNaN(date.getTime())) {
+        return ts
+      }
+
+      const datePart = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Jakarta',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(date)
+
+      const timePart = new Intl.DateTimeFormat('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      })
+        .format(date)
+        .replace(/\./g, ':')
+
+      return `${datePart} ${timePart} WIB`
+    } catch {
+      return ts
+    }
+  }
+
   const handleCopyLogs = () => {
     if (!logs.length) return
     const textToCopy = logs
       .map(
         (l) =>
-          `[${l.timestamp}] [${l.level}] [${l.context}] ${l.message}${l.trace ? `\n  Trace: ${l.trace}` : ''}`
+          `[${formatLogTimestampUtc7(l.timestamp)}] [${l.level}] [${l.context}] ${l.message}${l.trace ? `\n  Trace: ${l.trace}` : ''}`
       )
       .join('\n')
     navigator.clipboard.writeText(textToCopy)
@@ -122,7 +161,7 @@ export function SystemLiveConsoleViewer() {
     const textContent = logs
       .map(
         (l) =>
-          `[${l.timestamp}] [${l.level}] [${l.context}] ${l.message}${l.trace ? `\n  Trace: ${l.trace}` : ''}`
+          `[${formatLogTimestampUtc7(l.timestamp)}] [${l.level}] [${l.context}] ${l.message}${l.trace ? `\n  Trace: ${l.trace}` : ''}`
       )
       .join('\n')
     const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' })
@@ -174,7 +213,7 @@ export function SystemLiveConsoleViewer() {
               </Badge>
             </div>
             <p className="text-[11px] text-slate-400">
-              Output proses runtime NestJS, incoming routes, dan aktivitas sistem
+              Output proses runtime NestJS, FaceNet Bio-Fusion AI, incoming routes, dan aktivitas sistem
             </p>
           </div>
         </div>
@@ -356,9 +395,9 @@ export function SystemLiveConsoleViewer() {
               key={log.id || idx} 
               className="flex items-start gap-2 py-0.5 px-1.5 rounded-sm hover:bg-slate-900/80 transition-colors border-l-2 border-transparent hover:border-emerald-500"
             >
-              {/* Timestamp */}
-              <span className="text-slate-500 shrink-0 text-[10px] sm:text-[11px] select-none">
-                {log.timestamp}
+              {/* Timestamp UTC+7 Jakarta */}
+              <span className="text-slate-500 shrink-0 text-[10px] sm:text-[11px] select-none font-mono">
+                {formatLogTimestampUtc7(log.timestamp)}
               </span>
 
               {/* Level Badge */}
@@ -367,7 +406,9 @@ export function SystemLiveConsoleViewer() {
               </span>
 
               {/* Context Tag */}
-              <span className="text-cyan-400 shrink-0 font-semibold">
+              <span className={`shrink-0 font-semibold ${
+                log.context === 'FaceNet-AI' ? 'text-amber-400 font-bold' : 'text-cyan-400'
+              }`}>
                 [{log.context || 'System'}]
               </span>
 
@@ -377,6 +418,8 @@ export function SystemLiveConsoleViewer() {
                   ? 'text-rose-300 font-medium' 
                   : log.level === 'WARN' 
                   ? 'text-amber-200' 
+                  : log.context === 'FaceNet-AI'
+                  ? 'text-amber-100 font-mono'
                   : log.context === 'RouterExplorer' || log.context === 'RoutesResolver' 
                   ? 'text-emerald-300' 
                   : 'text-slate-200'

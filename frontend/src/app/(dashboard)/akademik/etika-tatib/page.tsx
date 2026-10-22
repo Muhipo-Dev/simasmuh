@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import {
+  useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { 
-  ShieldCheck, Award, HeartHandshake, Sparkles, CheckCircle2, 
-  AlertTriangle, BookOpen, Clock, Users, FileText, Info, ShieldAlert,
-  Calendar, Check, UserCheck
+  ShieldCheck, Award, HeartHandshake, CheckCircle2, AlertTriangle, BookOpen, Clock, Users, FileText, Info, ShieldAlert, Calendar, Check, UserCheck, LayoutGrid
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -158,7 +157,7 @@ export default function EtikaTatibPage() {
       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
-            <Sparkles className="w-6 h-6 text-yellow-300" />
+            <LayoutGrid className="w-6 h-6 text-yellow-300" />
           </div>
           <div>
             <div className="flex items-center gap-2">

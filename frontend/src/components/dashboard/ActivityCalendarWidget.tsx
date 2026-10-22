@@ -1,19 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import {
+  useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-  Clock,
-  Sparkles,
-  Layers,
-  Plus,
-  BookOpen,
-  Maximize2,
-  ExternalLink,
-  X
+  ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Layers, Plus, BookOpen, Maximize2, ExternalLink, X, LayoutGrid
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

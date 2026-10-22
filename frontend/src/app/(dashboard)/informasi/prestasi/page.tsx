@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,10 +17,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { 
-  Trophy, Award, Medal, Sparkles, Plus, Pencil, Trash2, Eye, 
-  Search, Filter, Calendar, MapPin, Building, User, Users,
-  CheckCircle2, AlertCircle, FileText, Upload, Image as ImageIcon,
-  ChevronRight, ArrowUpRight, BarChart3, PieChart, Layers
+  Trophy, Award, Medal, Plus, Pencil, Trash2, Eye, Search, Filter, Calendar, MapPin, Building, User, Users, CheckCircle2, AlertCircle, FileText, Upload, Image as ImageIcon, ChevronRight, ArrowUpRight, BarChart3, PieChart, Layers
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useMemo, useEffect } from 'react'
+import {
+  useState, useRef, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -11,33 +12,7 @@ import { Input, PasswordInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
-  Loader2, 
-  Calendar, 
-  BookOpen, 
-  Users, 
-  Clock, 
-  User, 
-  Plus, 
-  Pencil, 
-  Trash2, 
-  Upload, 
-  FileCode, 
-  Sparkles, 
-  ShieldCheck, 
-  Table as TableIcon, 
-  LayoutGrid, 
-  Printer, 
-  GraduationCap,
-  Sparkle,
-  Bot,
-  CheckCircle2,
-  Layers,
-  Zap,
-  AlertTriangle,
-  ShieldAlert,
-  AlertCircle,
-  XCircle,
-  Filter
+  Loader2, Calendar, BookOpen, Users, Clock, User, Plus, Pencil, Trash2, Upload, FileCode, ShieldCheck, Table as TableIcon, LayoutGrid, Printer, GraduationCap, Bot, CheckCircle2, Layers, Zap, AlertTriangle, ShieldAlert, AlertCircle, XCircle, Filter, CalendarDays
 } from 'lucide-react'
 import { parseAscTimetableXml, detectScheduleConflicts, type ScheduleConflict } from '@/utils/ascParser'
 import { sortClasses } from '@/lib/class-helper'

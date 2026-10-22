@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import {
+  useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
@@ -10,21 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { TablePagination } from '@/components/TablePagination'
 import { 
-  Loader2, 
-  CalendarDays, 
-  Download, 
-  Briefcase, 
-  Video, 
-  Radio, 
-  Activity, 
-  CheckCircle2, 
-  Clock, 
-  RefreshCw, 
-  Maximize2, 
-  Power,
-  Sparkles,
-  Camera,
-  Zap
+  Loader2, CalendarDays, Download, Briefcase, Video, Radio, Activity, CheckCircle2, Clock, RefreshCw, Maximize2, Power, Camera, Zap, ClipboardCheck
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { SortableTableHead, useSorting } from "@/components/SortableTableHead"
@@ -454,7 +441,7 @@ export default function LogKehadiranPegawaiPage() {
                     <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800/80 space-y-1">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-500 dark:text-slate-400 text-[10.5px] font-medium flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-indigo-500" />
+                          <ClipboardCheck className="w-3 h-3 text-indigo-500" />
                           Kemiripan AI:
                         </span>
                         <span className="font-extrabold text-indigo-600 dark:text-indigo-400 font-mono text-[10.5px]">

@@ -1,8 +1,11 @@
 'use client'
 
 import * as React from 'react'
-import { useTheme } from 'next-themes'
-import { Sun, Moon, Sparkles, Cloud } from 'lucide-react'
+import {
+  useTheme } from 'next-themes'
+import {
+  Sun, Moon, Cloud
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ThemeToggleProps {
@@ -104,16 +107,6 @@ export function ThemeToggle({ className, size = 'default' }: ThemeToggleProps) {
           )}
         >
           <Cloud className="w-3.5 h-3.5 text-white fill-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)] pointer-events-none" />
-        </span>
-
-        {/* Indikator Bintang Mode Malam */}
-        <span
-          className={cn(
-            'flex items-center transition-opacity duration-300 transform ml-auto pointer-events-none',
-            isDark ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
-          )}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse drop-shadow-[0_0_6px_rgba(252,211,77,0.8)] pointer-events-none" />
         </span>
       </span>
 

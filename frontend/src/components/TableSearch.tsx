@@ -18,6 +18,7 @@ export interface TableSearchProps {
   sortOrder?: 'asc' | 'desc' | 'none';
   onSortChange?: (order: 'asc' | 'desc' | 'none') => void;
   customFilterButton?: React.ReactNode;
+  showFilterButton?: boolean;
 }
 
 export function TableSearch({
@@ -33,7 +34,11 @@ export function TableSearch({
   sortOrder,
   onSortChange,
   customFilterButton,
+  showFilterButton = true,
 }: TableSearchProps) {
+  const hasFilterContent = Boolean(filters || onSortChange || activeFiltersCount > 0);
+  const shouldRenderFilter = showFilterButton && (customFilterButton || hasFilterContent || filters !== undefined);
+
   return (
     <div className={cn("flex items-center gap-2 w-full sm:w-auto", className)}>
       <div className="relative flex-1 min-w-[140px] max-w-sm w-full">
@@ -59,7 +64,7 @@ export function TableSearch({
 
       {customFilterButton ? (
         customFilterButton
-      ) : (
+      ) : shouldRenderFilter ? (
         <Popover>
           <PopoverTrigger
             render={
@@ -149,7 +154,7 @@ export function TableSearch({
             </div>
           </PopoverContent>
         </Popover>
-      )}
+      ) : null}
 
       {onResetFilters && (activeFiltersCount > 0 || value) && (
         <Button

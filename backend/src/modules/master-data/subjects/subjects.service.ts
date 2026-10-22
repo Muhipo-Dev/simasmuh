@@ -53,7 +53,13 @@ export class SubjectsService {
     });
   }
 
-  async create(data: { name: string; code: string; teacherIds?: string[] }) {
+  async create(data: {
+    name: string;
+    code: string;
+    category?: string;
+    program?: string;
+    teacherIds?: string[];
+  }) {
     const { teacherIds, ...subjectData } = data;
     const subject = await this.prisma.subject.create({
       data: {
@@ -82,7 +88,13 @@ export class SubjectsService {
   }
 
   async createBulk(
-    dataArray: { name: string; code: string; teacherIds?: string[] }[],
+    dataArray: {
+      name: string;
+      code: string;
+      category?: string;
+      program?: string;
+      teacherIds?: string[];
+    }[],
   ): Promise<{ created: number; skipped: number }> {
     let created = 0;
     let skipped = 0;
@@ -107,6 +119,15 @@ export class SubjectsService {
               skipDuplicates: true,
             });
           }
+          if (item.category || item.program) {
+            await this.prisma.subject.update({
+              where: { id: existing.id },
+              data: {
+                ...(item.category && { category: item.category }),
+                ...(item.program && { program: item.program }),
+              },
+            });
+          }
           skipped++;
         } else {
           await this.create(item);
@@ -122,7 +143,13 @@ export class SubjectsService {
 
   async update(
     id: string,
-    data: { name?: string; code?: string; teacherIds?: string[] },
+    data: {
+      name?: string;
+      code?: string;
+      category?: string;
+      program?: string;
+      teacherIds?: string[];
+    },
   ) {
     const { teacherIds, ...updateData } = data;
 

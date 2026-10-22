@@ -1,14 +1,12 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { useSession } from 'next-auth/react'
+import {
+  useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
-  FileText, Plus, Search, Calendar, Clock, MapPin, Users, 
-  CheckCircle2, Download, Printer, FileSpreadsheet, Sparkles, 
-  Trash2, Edit, Eye, Filter, UserCheck, CheckSquare, AlertCircle, 
-  Share2, BookOpen, Send, Loader2, RefreshCw, UploadCloud, Image as ImageIcon, X
+  FileText, Plus, Search, Calendar, Clock, MapPin, Users, CheckCircle2, Download, Printer, FileSpreadsheet, Trash2, Edit, Eye, Filter, UserCheck, CheckSquare, AlertCircle, Share2, BookOpen, Send, Loader2, RefreshCw, UploadCloud, Image as ImageIcon, X, LayoutGrid
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

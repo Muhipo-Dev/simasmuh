@@ -1,14 +1,12 @@
 'use client'
 
 import React, { useState, useMemo, useRef } from 'react'
-import { useSession } from 'next-auth/react'
+import {
+  useSession } from 'next-auth/react'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { 
-  Sparkles, Plus, Search, Calendar, Clock, MapPin, Users, 
-  CheckCircle2, Download, Printer, FileSpreadsheet, 
-  Trash2, Edit, Eye, Filter, UserCheck, AlertCircle, 
-  QrCode, RefreshCw, Loader2, UserPlus, X, Info, Share2
+import {
+  LayoutGrid, Plus, Search, Calendar, Clock, MapPin, Users, CheckCircle2, Download, Printer, FileSpreadsheet, Trash2, Edit, Eye, Filter, UserCheck, AlertCircle, QrCode, RefreshCw, Loader2, UserPlus, X, Info, Share2
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -846,7 +844,7 @@ export function KegiatanSekolahManagement() {
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1 max-w-2xl">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 border border-white/20 text-[11px] font-semibold text-emerald-200">
-              <Sparkles className="w-3 h-3 text-emerald-300" />
+              <LayoutGrid className="w-3 h-3 text-emerald-300" />
               <span>{isIsmubaUser ? 'Waka ISMUBA & Tim Keagamaan' : 'Manajemen Tata Usaha & Humas'}</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black tracking-tight">
@@ -885,7 +883,7 @@ export function KegiatanSekolahManagement() {
         <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <LayoutGrid className="w-3.5 h-3.5 text-emerald-600" />
               Template Cepat Kegiatan (1-Klik):
             </span>
             <span className="text-[10px] text-slate-400">Pilih untuk isi form otomatis</span>
@@ -1053,7 +1051,7 @@ export function KegiatanSekolahManagement() {
                   {/* Top Bar Header */}
                   <div className={`p-3 bg-gradient-to-r ${katConfig.color} text-white flex items-center justify-between`}>
                     <div className="flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
+                      <LayoutGrid className="w-3.5 h-3.5" />
                       <span className="text-[11px] font-bold tracking-wide uppercase truncate max-w-[200px]">{katConfig.label}</span>
                     </div>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-black/20 backdrop-blur-xs font-semibold shrink-0">
@@ -1199,7 +1197,7 @@ export function KegiatanSekolahManagement() {
         <DialogContent className="sm:max-w-[620px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-              <Sparkles className="w-5 h-5" /> Buat Agenda Kegiatan Baru
+              <LayoutGrid className="w-5 h-5" /> Buat Agenda Kegiatan Baru
             </DialogTitle>
             <DialogDescription>
               Isi data kegiatan sekolah. Sistem akan otomatis membuat Kode QR khusus untuk absensi guru &amp; karyawan.

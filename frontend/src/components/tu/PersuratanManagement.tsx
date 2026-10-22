@@ -1,18 +1,13 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import {
+  useState, useMemo, useRef, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { 
-  Mail, Inbox, Send, FileText, Archive, Plus, Search, Filter, 
-  Printer, Download, Eye, CheckCircle2, Clock, AlertCircle, 
-  ChevronRight, Calendar, User, Building2, Tag, ArrowUpRight, 
-  FileCheck, Shield, ShieldCheck, Sparkles, RefreshCw, FileSpreadsheet, Share2, 
-  CornerDownRight, Check, X, QrCode, FileDown, Layers, BookOpen,
-  HelpCircle, MoreHorizontal, ExternalLink, Trash2, Edit3, Lock, UploadCloud, Upload, Sliders,
-  BellRing
+  Mail, Inbox, Send, FileText, Archive, Plus, Search, Filter, Printer, Download, Eye, CheckCircle2, Clock, AlertCircle, ChevronRight, Calendar, User, Building2, Tag, ArrowUpRight, FileCheck, Shield, ShieldCheck, RefreshCw, FileSpreadsheet, Share2, CornerDownRight, Check, X, QrCode, FileDown, Layers, BookOpen, HelpCircle, MoreHorizontal, ExternalLink, Trash2, Edit3, Lock, UploadCloud, Upload, Sliders, BellRing
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -703,8 +698,8 @@ export function PersuratanManagement({
 
   // Form State: Generator Template Surat Resmi (Sesuai Format Persis Standar SMA Muhammadiyah 1 Ponorogo)
   const [customKopImage, setCustomKopImage] = useState<string | null>(null)
-  const [customLogoKiri, setCustomLogoKiri] = useState<string | null>('/muhammadiyah-logo-40493.png') // Logo Dikdasmen / Muhammadiyah
-  const [customLogoKanan, setCustomLogoKanan] = useState<string | null>('/pic_logo.png') // Logo Sekolah
+  const [customLogoKiri, setCustomLogoKiri] = useState<string | null>('/logos/muhammadiyah-logo-40493.png') // Logo Dikdasmen / Muhammadiyah
+  const [customLogoKanan, setCustomLogoKanan] = useState<string | null>('/logos/pic_logo.png') // Logo Sekolah
   const [customSignatureImage, setCustomSignatureImage] = useState<string | null>(null)
   const [kopType, setKopType] = useState<'BUILTIN' | 'IMAGE_UPLOAD'>('BUILTIN')
 
@@ -2411,7 +2406,7 @@ export function PersuratanManagement({
         <body>
           <div class="header-kop">
             <div class="logo-box">
-              <img src="${customLogoKiri || '/muhammadiyah-logo-40493.png'}" alt="Logo Dikdasmen" />
+              <img src="${customLogoKiri || '/logos/muhammadiyah-logo-40493.png'}" alt="Logo Dikdasmen" />
             </div>
             <div class="kop-text">
               <p class="org">${templateForm.kopInstansiAtas.replace(/\n/g, '<br/>') || 'MAJELIS PENDIDIKAN DASAR DAN MENENGAH<br/>PIMPINAN WILAYAH MUHAMMADIYAH JAWA TIMUR'}</p>
@@ -2421,7 +2416,7 @@ export function PersuratanManagement({
               <p class="email-web">${templateForm.kopEmailWebsite || 'E-mail : smamuh1po@gmail.com | Website: www.smamuhipo.sch.id'}</p>
             </div>
             <div class="logo-box">
-              <img src="${customLogoKanan || '/pic_logo.png'}" alt="Logo Sekolah" />
+              <img src="${customLogoKanan || '/logos/pic_logo.png'}" alt="Logo Sekolah" />
             </div>
           </div>
 
@@ -3838,7 +3833,7 @@ export function PersuratanManagement({
                       onClick={() => setIsModalAiSuratMasukOpen(true)}
                       className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl text-xs gap-1.5 font-bold shadow-md"
                     >
-                      <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" /> Upload & Analisis AI
+                      <FileCheck className="w-4 h-4 text-amber-300 animate-pulse" /> Upload & Analisis AI
                     </Button>
                     <Button 
                       size="sm" 
@@ -3892,7 +3887,7 @@ export function PersuratanManagement({
                       onClick={() => setIsModalAiSuratMasukOpen(true)}
                       className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl text-xs gap-1.5 font-bold shadow-md"
                     >
-                      <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" /> Upload & Analisis AI Surat
+                      <FileCheck className="w-4 h-4 text-amber-300 animate-pulse" /> Upload & Analisis AI Surat
                     </Button>
                     <Button 
                       size="sm" 
@@ -4428,8 +4423,8 @@ export function PersuratanManagement({
                       <button
                         type="button"
                         onClick={() => {
-                          setCustomLogoKiri('/muhammadiyah-logo-40493.png')
-                          setCustomLogoKanan('/pic_logo.png')
+                          setCustomLogoKiri('/logos/muhammadiyah-logo-40493.png')
+                          setCustomLogoKanan('/logos/pic_logo.png')
                           setCustomKopImage(null)
                           setKopType('BUILTIN')
                           Swal.fire({
@@ -5706,7 +5701,7 @@ export function PersuratanManagement({
                       onClick={() => handleOpenDisposisiTtdCanvas(selectedSuratMasuk)}
                       className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md gap-1.5"
                     >
-                      <Sparkles className="w-3.5 h-3.5" /> Setujui & E-Sign Kepsek (Canvas TTD)
+                      <FileCheck className="w-3.5 h-3.5" /> Setujui & E-Sign Kepsek (Canvas TTD)
                     </Button>
                   )}
                 </div>
@@ -5933,7 +5928,7 @@ export function PersuratanManagement({
                 <div className="pt-2 border-t space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Label className="text-[11px] font-bold text-indigo-800 dark:text-indigo-300 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-indigo-600" /> Pola Rekomendasi Naskah Terpelajari:
+                      <FileCheck className="w-3 h-3 text-indigo-600" /> Pola Rekomendasi Naskah Terpelajari:
                     </Label>
                     <span className="text-[9px] text-slate-400">Klik untuk isi otomatis</span>
                   </div>
@@ -7240,7 +7235,7 @@ export function PersuratanManagement({
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-600 animate-pulse" />
+                <FileCheck className="w-5 h-5 text-indigo-600 animate-pulse" />
                 Unggah & Analisis Otomatis Surat Masuk
               </span>
               <span className="simas-kpi-badge bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/60">
@@ -7414,7 +7409,7 @@ export function PersuratanManagement({
                 <div className="p-3 bg-purple-50/80 dark:bg-purple-950/40 rounded-xl border border-purple-200 dark:border-purple-800 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-black text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                      <FileCheck className="w-3.5 h-3.5 text-purple-600" />
                       Rekomendasi AI untuk Lembar Disposisi
                     </span>
                     <Badge className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-[9px] border border-purple-300 font-semibold">
@@ -7479,7 +7474,7 @@ export function PersuratanManagement({
                 onClick={handleSimpanDanBukaDisposisiAi}
                 className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-xs gap-1.5 text-xs"
               >
-                <Sparkles className="w-4 h-4" /> Simpan & Langsung Buat Disposisi
+                <FileCheck className="w-4 h-4" /> Simpan & Langsung Buat Disposisi
               </Button>
             </div>
           </DialogFooter>
@@ -7721,7 +7716,7 @@ export function PersuratanManagement({
                 onClick={() => handleApproveArchiveESign(selectedArchiveForESign)}
                 className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md gap-1.5"
               >
-                <Sparkles className="w-4 h-4" /> Sahkan & Enkripsi E-Sign (Terbitkan QR Sah)
+                <FileCheck className="w-4 h-4" /> Sahkan & Enkripsi E-Sign (Terbitkan QR Sah)
               </Button>
             )}
           </DialogFooter>
@@ -7887,7 +7882,7 @@ export function PersuratanManagement({
               onClick={handleSimpanSuratKeputusanSK}
               className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md gap-1.5"
             >
-              <Sparkles className="w-4 h-4" /> Terbitkan SK & Ajukan E-Sign Kepsek
+              <FileCheck className="w-4 h-4" /> Terbitkan SK & Ajukan E-Sign Kepsek
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,16 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import {
+  useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Users, UserSquare2, CalendarDays, ClipboardCheck,
-  Briefcase, BookOpen, UserCheck, GraduationCap, Award,
-  Sparkles, ChevronDown, TrendingUp, Landmark, Activity,
-  CheckCircle2, FileText, ShieldAlert, BarChart3, Clock,
-  ArrowRight, ShieldCheck, Mail, HeartHandshake,
-  PieChart, DollarSign, Wallet, RefreshCw, X
+  Users, UserSquare2, CalendarDays, ClipboardCheck, Briefcase, BookOpen, UserCheck, GraduationCap, Award, ChevronDown, TrendingUp, Landmark, Activity, CheckCircle2, FileText, ShieldAlert, BarChart3, Clock, ArrowRight, ShieldCheck, Mail, HeartHandshake, PieChart, DollarSign, Wallet, RefreshCw, X, LayoutGrid
 } from 'lucide-react'
 
 interface ExecutiveStatsPanelProps {

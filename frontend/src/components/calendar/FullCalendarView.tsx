@@ -1,26 +1,11 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import {
+  useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Flag,
-  Moon,
-  Landmark,
-  GraduationCap,
-  Award,
-  Sparkles,
-  Search,
-  Filter,
-  Layers,
-  MapPin,
-  ExternalLink,
-  Plus,
-  Info
+  Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, Flag, Moon, Landmark, GraduationCap, Award, Search, Filter, Layers, MapPin, ExternalLink, Plus, Info, CalendarDays
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -609,7 +594,7 @@ export function FullCalendarView({ initialAnnouncements = [], initialKegiatan = 
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <div className="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white dark:bg-slate-800 rounded-xl border border-amber-200/90 dark:border-slate-700 shadow-2xs shrink-0 flex items-center justify-center">
             <Image
-              src="/logo-khgt.png"
+              src="/logos/logo-khgt.png"
               alt="Logo KHGT Muhammadiyah"
               width={140}
               height={40}

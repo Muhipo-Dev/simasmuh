@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   description: "Sistem Informasi Manajemen SMA Muhammadiyah 1 Ponorogo",
   icons: {
     icon: [
-      { url: "/pic_logo.png", type: "image/png" },
+      { url: "/logos/pic_logo.png", type: "image/png" },
       { url: "/favicon.ico" }
     ],
-    shortcut: "/pic_logo.png",
-    apple: "/pic_logo.png",
+    shortcut: "/logos/pic_logo.png",
+    apple: "/logos/pic_logo.png",
   },
 };
 

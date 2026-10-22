@@ -541,9 +541,9 @@ start_environment_setup() {
     (cd "$BACKEND_DIR" && npx prisma generate)
     write_ok "Prisma Client siap digunakan!"
 
-    write_status "5/6. Menyiapkan folder penyimpanan foto terisolasi (simasmuh_storage)..."
+    write_status "5/6. Menyiapkan folder penyimpanan aplikasi (storage)..."
     (cd "$BACKEND_DIR" && npx ts-node -e "import { initStorageDirectories, STORAGE_ROOT } from './src/modules/core/config/storage.config'; initStorageDirectories(); console.log('Storage initialized at:', STORAGE_ROOT);") || true
-    write_ok "Direktori external storage siap!"
+    write_ok "Direktori storage aplikasi siap!"
 
     write_status "6/6. Memeriksa koneksi database..."
     if test_database_connection; then

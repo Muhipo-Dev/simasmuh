@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  useState, useEffect } from 'react'
 import Swal from 'sweetalert2'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
-  Loader2, Save, CreditCard, Sparkles, Pencil, Trash2, Percent, 
-  Calculator, Info, ShieldCheck, Plus, Building2, 
-  GraduationCap, Users
+  Loader2, Save, CreditCard, Pencil, Trash2, Percent, Calculator, Info, ShieldCheck, Plus, Building2, GraduationCap, Users, Wallet
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
@@ -343,7 +342,7 @@ export default function FinanceSettingsPage() {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 bg-amber-100 dark:bg-amber-950 rounded-lg text-amber-600 dark:text-amber-300">
-                        <Sparkles className="w-4 h-4" />
+                        <Wallet className="w-4 h-4" />
                       </div>
                       <Label htmlFor="defaultSeragam" className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">
                         Default Biaya Seragam
@@ -502,7 +501,7 @@ export default function FinanceSettingsPage() {
           <CardHeader className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-blue-50 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900">
-                <Sparkles className="w-5 h-5" />
+                <Wallet className="w-5 h-5" />
               </div>
               <div>
                 <CardTitle className="text-slate-900 dark:text-white font-extrabold text-base sm:text-lg">
@@ -615,7 +614,7 @@ export default function FinanceSettingsPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-xl text-blue-600">
-                  <Sparkles className="w-4 h-4" />
+                  <Wallet className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="font-extrabold text-base text-slate-900 dark:text-white">

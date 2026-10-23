@@ -2,6 +2,41 @@
 
 Semua catatan perubahan dan pembaruan sistem SIMASMUH didokumentasikan di berkas ini.
 
+## [1.1.0](https://github.com/Muhipo-Dev/simasmuh/compare/v1.0.0...v1.1.0) (2026-10-23)
+
+### 🚀 Fitur Baru
+
+* **auth:** berikan akses universal GOD USER melampaui superadmin dan keuangan lengkap (FaceNet AI, Penggajian & seluruh modul finansial) ([ecfe5ee](https://github.com/Muhipo-Dev/simasmuh/commit/ecfe5eed75ed1b4e8604a9e143fff2461f6de6fd))
+* **dashboard:** tambahkan tombol dan panel infografis status server cepat di dashboard ([19ea38b](https://github.com/Muhipo-Dev/simasmuh/commit/19ea38b5f8343600781911e658287556c4b70b54))
+* **dashboard:** ubah 4 kartu dashboard GOD user menjadi server stat, server status, maintenance switch, dan waiting room switch ([7457795](https://github.com/Muhipo-Dev/simasmuh/commit/74577953b129b48c2ffd0c615fadbfc0e3fed5c4))
+* **face-attendance:** optimasi alur disambiguasi kemiripan profil wajah FaceNet dengan countdown 15s dan pencegahan interupsi auto-scan ([9ccdcec](https://github.com/Muhipo-Dev/simasmuh/commit/9ccdcec362df6a380ac8e40ca280672e877a17fa))
+* implementasi terpisah lockdown maintenance mode, jadwal sholat KHGT, notifikasi slip gaji email smtp, optimasi backup & update v1.9.6 ([c206575](https://github.com/Muhipo-Dev/simasmuh/commit/c206575318a36c0fe31a1f1c9d6103c36b2d5095))
+* integrasi terpadu google oauth, konfigurasi domain publik terpusat, adaptive dynamic redirect routing v1.9.5 ([7d005d2](https://github.com/Muhipo-Dev/simasmuh/commit/7d005d27a19fc59becea3a134600afd12b92f492))
+* release v1.9.8 template beasiswa master sync, reset beasiswa & live console ([7dcc024](https://github.com/Muhipo-Dev/simasmuh/commit/7dcc02432dc731a134317445415bd8ec9410cfca))
+* release v1.9.9 modul override sesi, banner multi-sesi, manajemen arsip e-rapor & optimasi portal publik ([3f8a608](https://github.com/Muhipo-Dev/simasmuh/commit/3f8a60898d0943ad22330651a727d9b9417cdb49))
+* **ui:** release v1.9.7 multi-viewport ionic mobile touch engine, optical glassmorphism wallpaper, single-row searchbar & dashboard ergonomics ([38b122f](https://github.com/Muhipo-Dev/simasmuh/commit/38b122f0254eb814308ccdf94293a7974eee6e28))
+
+### 🐛 Perbaikan Bug
+
+* **frontend:** scope turbopack root to frontend and add global-error boundary ([f8057da](https://github.com/Muhipo-Dev/simasmuh/commit/f8057da1961ce03116a5e198bcd55e6b09ec5e11))
+* **tooling:** update next to 16.4.2 react to 19.3.1 and resolve package compatibility errors ([2e3f6fc](https://github.com/Muhipo-Dev/simasmuh/commit/2e3f6fcda669d06f6bd9b0b976c4d7f8eafc7b9a))
+* **ui:** perbaiki dimensi switch toggle dan cegah layout collision header pengaturan sistem ([6721134](https://github.com/Muhipo-Dev/simasmuh/commit/67211342cac9b83eb80d5856bf0aebdb62b10c04))
+* **workspace:** unify npm workspaces and configure turbopack root ([8082d80](https://github.com/Muhipo-Dev/simasmuh/commit/8082d80e043f6ab154e90d28917d5105bb9fb719))
+
+### ♻️ Refaktorisasi Kode
+
+* **login:** standarisasi tata bahasa popup dan kotak pemberitahuan pemeliharaan sistem ([808ce4f](https://github.com/Muhipo-Dev/simasmuh/commit/808ce4f17094f45fedd6e33ba49ca3c41e1b1a79))
+* **maintenance:** standarisasi bahasa korporasi institusional dan penyederhanaan informasi dialog pemeliharaan sistem ([c64bb5c](https://github.com/Muhipo-Dev/simasmuh/commit/c64bb5ce2c812f1d94ad041f60aca307942514fd))
+
+### 📚 Dokumentasi
+
+* bersihkan referensi usang whatsapp gateway dan sesuaikan standar notifikasi in-app & email smtp v1.9.5 ([e986618](https://github.com/Muhipo-Dev/simasmuh/commit/e986618c57297bdc6e8d6b8c5ea8d09b9952c605))
+* update sistem deskripsi dan tech stack arsitektur google oauth & central domain v1.9.5 ([d5ee640](https://github.com/Muhipo-Dev/simasmuh/commit/d5ee64044ab5a979455ae45096e36ab8d324844c))
+
+### 🔧 Pemeliharaan Sistem
+
+* update npm dependencies and script authorizations ([a4f83a7](https://github.com/Muhipo-Dev/simasmuh/commit/a4f83a70721a8b3cf760e0065d695ab304ab73b8))
+
 ## 1.0.0 (2026-10-07)
 
 ### 🚀 Fitur Baru

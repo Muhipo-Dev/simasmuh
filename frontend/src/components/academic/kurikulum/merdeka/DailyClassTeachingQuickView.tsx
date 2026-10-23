@@ -178,7 +178,7 @@ export function DailyClassTeachingQuickView({
         }
       })
 
-      const res = await authenticatedFetch('/api/kurikulum-merdeka/batch-nilai-tp', {
+      const res = await authenticatedFetch('/api-backend/kurikulum-merdeka/batch-nilai-tp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -188,7 +188,10 @@ export function DailyClassTeachingQuickView({
         }),
       })
 
-      if (!res.ok) throw new Error('Gagal menyimpan nilai TP')
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal menyimpan nilai TP')
+      }
 
       Swal.fire({
         icon: 'success',

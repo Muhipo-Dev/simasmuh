@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useMemo, useRef } from 'react'
-import {
-  useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -136,8 +136,8 @@ export const KATEGORI_KEGIATAN_MAP: Record<string, { label: string; color: strin
 export function KegiatanSekolahManagement() {
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
-  const { data: session } = useSession()
-  const currentUser = session?.user as any
+  const { user: activeUser } = useActiveUser()
+  const currentUser = activeUser as any
 
   const userRoles = useMemo(() => {
     return [

@@ -22,6 +22,7 @@ import PaymentBillingPopup from '@/components/student/PaymentBillingPopup'
 import Link from 'next/link'
 import Swal from 'sweetalert2'
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { getAppFeatureUrl } from '@/lib/api-config'
 import { getRoleLinks, godLinks } from '@/lib/nav-links'
 import { UserAccountCard } from '@/components/dashboard/UserAccountCard'
@@ -36,6 +37,7 @@ import { ExecutiveStatsPanel } from '@/components/dashboard/ExecutiveStatsPanel'
 import { QuickServerStatusPanel } from '@/components/dashboard/QuickServerStatusPanel'
 import { MaintenanceModeHeaderSwitch, WaitingRoomHeaderSwitch } from '@/components/dashboard/MaintenanceWaitingRoomSwitches'
 import { DisposisiAlertBanner } from '@/components/dashboard/DisposisiAlertBanner'
+import { TeacherWorkflowBanner } from '@/components/dashboard/TeacherWorkflowBanner'
 
 import { getGreetingByTime } from '@/lib/time-sync'
 
@@ -62,6 +64,7 @@ const parseTimeToMinutes = (t: string | undefined | null): number => {
 
 export default function DashboardPage() {
   const { data: session } = useSession()
+  const { user: activeUser, isOverride } = useActiveUser()
   const clock = useMemo(() => {
     const now = new Date()
     return {
@@ -71,11 +74,14 @@ export default function DashboardPage() {
     }
   }, [])
   const [showPaymentPopup, setShowPaymentPopup] = useState(false)
-  const role = (session?.user as any)?.role || 'GURU'
-  const subRole = (session?.user as any)?.subRole
-  const subRole2 = (session?.user as any)?.subRole2
-  const subRole3 = (session?.user as any)?.subRole3
-  const userId = (session?.user as any)?.id
+
+  // Gunakan data target user jika sedang dalam mode override, atau fallback ke sesi admin asli
+  const effectiveUser = (activeUser || session?.user) as any
+  const role = effectiveUser?.role || 'GURU'
+  const subRole = effectiveUser?.subRole
+  const subRole2 = effectiveUser?.subRole2
+  const subRole3 = effectiveUser?.subRole3
+  const userId = effectiveUser?.id
   const authenticatedQuery = useAuthenticatedQuery()
   const authenticatedFetch = useAuthenticatedFetch()
 
@@ -188,9 +194,9 @@ export default function DashboardPage() {
   })
 
   // Query Khusus Dashboard Eksekutif & Statistika Lengkap Kepala Sekolah / Keuangan Penuh / GOD User
-  const isGod = role === 'GOD' || role === 'GOD_USER' || (session?.user as any)?.username === 'supermuhipo'
+  const isGod = role === 'GOD' || role === 'GOD_USER' || effectiveUser?.username === 'supermuhipo'
   const isKepalaSekolah = role === 'KEPALA_SEKOLAH' || subRole === 'KEPALA_SEKOLAH' || subRole2 === 'KEPALA_SEKOLAH' || subRole3 === 'KEPALA_SEKOLAH'
-  const isKeuanganAll = [role, subRole, subRole2, subRole3, (session?.user as any)?.subRole4, (session?.user as any)?.subRole5].includes('KEUANGAN_ALL') || role === 'SUPERVISOR_KEUANGAN'
+  const isKeuanganAll = [role, subRole, subRole2, subRole3, effectiveUser?.subRole4, effectiveUser?.subRole5].includes('KEUANGAN_ALL') || role === 'SUPERVISOR_KEUANGAN'
   const isKeuanganMasuk = [role, subRole, subRole2, subRole3].includes('KEUANGAN_MASUK')
   const isKeuanganKeluar = [role, subRole, subRole2, subRole3].includes('KEUANGAN_KELUAR')
   const isExecOrFinAll = isGod || isKepalaSekolah || isKeuanganAll || isKeuanganMasuk || isKeuanganKeluar
@@ -224,7 +230,7 @@ export default function DashboardPage() {
 
   const pendingUserDisposisi = useMemo(() => {
     if (!Array.isArray(myDisposisiData) || !userId) return []
-    const myNameLower = ((session?.user as any)?.name || '').toLowerCase()
+    const myNameLower = (effectiveUser?.name || '').toLowerCase()
     const myRoles = [role, subRole, subRole2, subRole3].filter(Boolean).map((r: string) => r.toLowerCase())
 
     return myDisposisiData.filter((item: any) => {
@@ -746,7 +752,7 @@ export default function DashboardPage() {
       if (s.dayOfWeek !== todayDayOfWeek) return false;
       if (role === 'SUPERADMIN') return true;
       if (role === 'GURU' || role === 'HONORER' || subRole === 'GURU' || subRole === 'HONORER' || subRole2 === 'GURU' || subRole2 === 'HONORER' || subRole3 === 'GURU' || subRole3 === 'HONORER') {
-        return s?.teacher?.userId === userId || s?.teacher?.user?.email === session?.user?.email || (s?.teacher?.user?.username && s?.teacher?.user?.username === (session?.user as any)?.username);
+        return s?.teacher?.userId === userId || s?.teacher?.user?.email === effectiveUser?.email || (s?.teacher?.user?.username && s?.teacher?.user?.username === effectiveUser?.username);
       }
       return true;
     })
@@ -964,11 +970,11 @@ export default function DashboardPage() {
   if (role === 'SISWA') {
     const activeStudent = myStudentProfile || (Array.isArray(students) ? students : []).find((s: any) =>
       s.userId === userId ||
-      (s.user && (s.user.id === userId || s.user.username === (session?.user as any)?.username || s.user.email === session?.user?.email)) ||
-      s.nisn === (session?.user as any)?.username ||
-      s.nis === (session?.user as any)?.username ||
-      s.nisn === session?.user?.email ||
-      s.nis === session?.user?.email
+      (s.user && (s.user.id === userId || s.user.username === effectiveUser?.username || s.user.email === effectiveUser?.email)) ||
+      s.nisn === effectiveUser?.username ||
+      s.nis === effectiveUser?.username ||
+      s.nisn === effectiveUser?.email ||
+      s.nis === effectiveUser?.email
     )
     const studentClass = activeStudent?.class || (Array.isArray(classes) ? classes : []).find((c: any) => c.id === activeStudent?.classId) || null
     
@@ -1042,7 +1048,7 @@ export default function DashboardPage() {
             </div>
             <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white flex items-center gap-1.5 sm:gap-2">
               <span>{clock.greeting},</span>
-              <span className="font-extrabold text-blue-200">{(session?.user as any)?.name || 'Bapak/Ibu Wali Murid'}</span>
+              <span className="font-extrabold text-blue-200">{effectiveUser?.name || 'Bapak/Ibu Wali Murid'}</span>
             </h1>
             <p className="text-slate-400 text-xs font-medium mt-0.5">
               Pemantauan akademik, presensi, dan administrasi keuangan peserta didik.
@@ -1405,7 +1411,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-                {clock.greeting}, <span className="font-extrabold text-amber-200">{(session?.user as any)?.name || 'Bapak/Ibu Kepala Sekolah'}</span>
+                {clock.greeting}, <span className="font-extrabold text-amber-200">{effectiveUser?.name || 'Bapak/Ibu Kepala Sekolah'}</span>
               </h1>
               <p className="text-slate-400 text-xs sm:text-sm font-medium max-w-2xl leading-relaxed">
                 Ikhtisar analitik komprehensif, rekapitulasi operasional, serta monitoring berkala seluruh sektor kegiatan sekolah.
@@ -3128,9 +3134,9 @@ export default function DashboardPage() {
         subRole,
         subRole2,
         subRole3,
-        (session?.user as any)?.subRole4,
-        (session?.user as any)?.subRole5,
-        (session?.user as any)?.username
+        effectiveUser?.subRole4,
+        effectiveUser?.subRole5,
+        effectiveUser?.username
       )
   ).filter(link => link.href !== '/dashboard')
 
@@ -3146,8 +3152,8 @@ export default function DashboardPage() {
     <div className="space-y-3.5 sm:space-y-4 pb-6">
       <div className="simas-dash-header p-3.5 sm:p-4 md:p-5 text-white flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">
         <div className="space-y-0.5 min-w-0 flex-1">
-          <h1 className="text-base sm:text-lg md:text-xl font-black tracking-tight text-white truncate" title={`${clock.greeting}, ${(session?.user as any)?.name || 'Pengguna'}`}>
-            {clock.greeting}, <span className={`${isGod ? 'text-amber-300' : 'text-blue-200'}`}>{(session?.user as any)?.name || 'Pengguna'}</span>
+          <h1 className="text-base sm:text-lg md:text-xl font-black tracking-tight text-white truncate" title={`${clock.greeting}, ${effectiveUser?.name || 'Pengguna'}`}>
+            {clock.greeting}, <span className={`${isGod ? 'text-amber-300' : 'text-blue-200'}`}>{effectiveUser?.name || 'Pengguna'}</span>
           </h1>
           <p className="text-slate-300 dark:text-slate-400 text-xs font-medium truncate">
             Sistem Informasi Manajemen SMA Muhipo
@@ -3257,6 +3263,11 @@ export default function DashboardPage() {
 
       {/* BANNER ALERT NOTIFIKASI DISPOSISI REALTIME GURU / PEGAWAI / PIMPINAN */}
       <DisposisiAlertBanner />
+
+      {/* BANNER ALUR ADMINISTRASI GURU TERPADU & WIZARD ATP KHUSUS GURU */}
+      {(role === 'GURU' || role === 'HONORER' || subRole === 'GURU' || subRole === 'HONORER' || subRole2 === 'GURU' || subRole3 === 'GURU' || isSuperadminRole || isKepalaSekolah) && (
+        <TeacherWorkflowBanner teacherName={effectiveUser?.name} />
+      )}
 
       {/* Panel Infografis Status Server & Layanan Singkat (Bisa dibuka/tutup dari tombol Status Server) */}
       {(isGod || isSuperadminRole) && showServerStatus && (
@@ -3586,7 +3597,7 @@ export default function DashboardPage() {
       <SignaturePadDialog
         open={showSignaturePad}
         onClose={() => setShowSignaturePad(false)}
-        userName={(session?.user as any)?.name || 'Kepala Sekolah'}
+        userName={effectiveUser?.name || 'Kepala Sekolah'}
         userRole={role}
         pendingCounts={{
           dispensasi: execStats?.persuratan?.pendingDispensasi || 0,

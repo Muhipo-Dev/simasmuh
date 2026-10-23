@@ -108,12 +108,12 @@ export const guruLinks = [
   { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Disposisi', href: '/fitur/disposisi', icon: FileCheck },
 
-  // Portal Guru (Satu Kategori Terintegrasi Penuh)
-  { name: 'Perangkat Ajar & Prota Promes', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Portal Guru' },
+  // Portal Guru (Administrasi Guru Terpadu Sesuai Referensi Portal Pendidik)
+  { name: 'Administrasi Guru', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Portal Guru' },
+  { name: 'Kalender Akademik', href: '/agenda', icon: CalendarDays, group: 'Portal Guru' },
+  { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-mengajar', icon: Calendar, group: 'Portal Guru' },
   { name: 'Jurnal & Presensi KBM', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Portal Guru' },
   { name: 'Penilaian & E-Rapor', href: '/akademik/penilaian', icon: Award, group: 'Portal Guru' },
-  { name: 'Jadwal Mengajar', href: '/akademik/jadwal-mengajar', icon: CalendarDays, group: 'Portal Guru' },
-  { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: Calendar, group: 'Portal Guru' },
   { name: 'Supervisi Akademik', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'Portal Guru' },
   { name: 'Rekam Disiplin Siswa', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Portal Guru' },
 
@@ -131,11 +131,11 @@ export const honorerLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
 
   // Portal Guru Khusus Guru Panggilan
-  { name: 'Perangkat Ajar & Prota Promes', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Portal Guru' },
+  { name: 'Administrasi Guru', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Portal Guru' },
+  { name: 'Kalender Akademik', href: '/agenda', icon: CalendarDays, group: 'Portal Guru' },
+  { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-mengajar', icon: Calendar, group: 'Portal Guru' },
   { name: 'Jurnal & Presensi KBM', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Portal Guru' },
   { name: 'Penilaian & E-Rapor', href: '/akademik/penilaian', icon: Award, group: 'Portal Guru' },
-  { name: 'Jadwal Mengajar', href: '/akademik/jadwal-mengajar', icon: CalendarDays, group: 'Portal Guru' },
-  { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: Calendar, group: 'Portal Guru' },
   { name: 'Presensi Kelas Binaan', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck, group: 'Portal Guru' },
 
   // Layanan Mandiri
@@ -654,7 +654,7 @@ export function isPathAllowedForRoles(pathname: string, roles: string[]): boolea
     if (slug === 'keamanan') return roles.includes('KEAMANAN') || isBau || isWaka
     if (slug === 'ekstrakulikuler' || slug === 'ekstrakurikuler') return roles.includes('PEMBINA_EKSTRA') || roles.includes('PEMBINA_EXTRA') || isBau || isKesiswaan || isWaka
     if (slug === 'kesehatan-sekolah' || slug === 'uks') return roles.includes('KESEHATAN_SEKOLAH') || roles.includes('UKS') || isBau || isKepalaSekolah || isWaka
-    if (slug === 'kurikulum') return isKurikulum || isBau || isKepalaSekolah || isWaka
+    if (slug === 'kurikulum' || slug === 'waka-kurikulum') return isKurikulum || isBau || isKepalaSekolah || isWaka
     if (slug === 'guru-piket') return isGuruPiket || isBau || isKepalaSekolah || isWaka
     return isBau || isWaka || isKepalaSekolah
   }
@@ -878,11 +878,10 @@ export function getRoleLinks(
       ])
     } else if (roleName === 'GURU' || roleName === 'HONORER') {
       addLinks([
-        { name: 'Perangkat Ajar & Prota Promes', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Portal Guru' },
+        { name: 'Administrasi Guru', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Portal Guru' },
+        { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-mengajar', icon: Calendar, group: 'Portal Guru' },
         { name: 'Jurnal & Presensi KBM', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Portal Guru' },
         { name: 'Penilaian & E-Rapor', href: '/akademik/penilaian', icon: Award, group: 'Portal Guru' },
-        { name: 'Jadwal Mengajar', href: '/akademik/jadwal-mengajar', icon: CalendarDays, group: 'Portal Guru' },
-        { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: Calendar, group: 'Portal Guru' },
         { name: 'Supervisi Akademik', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'Portal Guru' },
         { name: 'Rekam Disiplin Siswa', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Portal Guru' },
       ])

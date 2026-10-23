@@ -56,9 +56,13 @@ interface FaceCameraConfig {
   isActive: boolean
 }
 
+import { useActiveUser } from '@/hooks/useActiveUser'
+
 export default function LogKehadiranPegawaiPage() {
   const { data: session } = useSession()
-  const userId = (session?.user as any)?.id
+  const { user: activeUser } = useActiveUser()
+  const user = (activeUser || session?.user) as any
+  const userId = user?.id
   const authenticatedFetch = useAuthenticatedFetch()
 
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())

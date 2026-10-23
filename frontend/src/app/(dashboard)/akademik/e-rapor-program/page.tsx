@@ -27,20 +27,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { TablePagination } from '@/components/TablePagination'
 import { TableSearch } from '@/components/TableSearch'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import Swal from 'sweetalert2'
 
 export default function ERaporProgramPage() {
   const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser, isOverride } = useActiveUser()
+  const user = (activeUser || session?.user) as any
   const userId = user?.id
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
 
   // Role detection
   const userRolesList = [user?.role, user?.subRole, user?.subRole2, user?.subRole3, user?.subRole4, user?.subRole5].filter(Boolean)
-  const isSuperAdmin = userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'GOD', 'GOD_USER'].includes(r))
-  const isKepalaSekolah = userRolesList.includes('KEPALA_SEKOLAH')
-  const isKurikulum = userRolesList.includes('KURIKULUM')
+  const isSuperAdmin = !isOverride && userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'GOD', 'GOD_USER'].includes(r))
+  const isKepalaSekolah = !isOverride && userRolesList.includes('KEPALA_SEKOLAH')
+  const isKurikulum = !isOverride && userRolesList.includes('KURIKULUM')
   const isWaliKelas = userRolesList.includes('WALI_KELAS')
   const isGuru = userRolesList.some(r => ['GURU', 'HONORER'].includes(r))
   const isSiswa = user?.role === 'SISWA' && !isGuru && !isWaliKelas && !isSuperAdmin

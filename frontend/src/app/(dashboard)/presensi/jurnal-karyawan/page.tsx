@@ -24,10 +24,14 @@ type StaffJournal = {
   evidence?: string
 }
 
+import { useActiveUser } from '@/hooks/useActiveUser'
+
 export default function JurnalKaryawanPage() {
   const authenticatedFetch = useAuthenticatedFetch()
   const { data: session } = useSession()
-  const userId = (session?.user as any)?.id
+  const { user: activeUser } = useActiveUser()
+  const user = (activeUser || session?.user) as any
+  const userId = user?.id
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
 

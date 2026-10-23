@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useQuery } from '@tanstack/react-query'
 import {
   Archive,
@@ -31,8 +32,8 @@ import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import * as XLSX from 'xlsx'
 
 export default function ArsipERaporPage() {
-  const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser } = useActiveUser()
+  const user = activeUser as any
   const userId = user?.id
   const authenticatedFetch = useAuthenticatedFetch()
 

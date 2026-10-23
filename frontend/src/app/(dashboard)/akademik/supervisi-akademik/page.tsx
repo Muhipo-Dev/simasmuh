@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import {
   useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -202,9 +203,9 @@ function getRubrikByJenis(jenisId: string) {
 }
 
 export default function SupervisiAkademikPage() {
-  const { data: session, status } = useSession()
-  const userId = (session?.user as any)?.id
-  const userName = (session?.user as any)?.name || 'Kepala Sekolah'
+  const { user: activeUser } = useActiveUser()
+  const userId = (activeUser as any)?.id
+  const userName = (activeUser as any)?.name || 'Kepala Sekolah'
   const authenticatedFetch = useAuthenticatedFetch()
   const authenticatedQuery = useAuthenticatedQuery()
 

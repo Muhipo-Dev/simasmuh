@@ -215,3 +215,39 @@ export function getServerTimeInfo(
     serverUptime: Math.floor(process.uptime()),
   };
 }
+
+/**
+ * Kalkulasi Tahun Pelajaran & Semester Otomatis Berdasarkan Waktu Realtime WIB (GMT+7 Ponorogo / Jawa Timur)
+ * Aturan Kalender Pendidikan Resmi:
+ * - Bulan Juli s.d. Desember (7-12): Semester Ganjil, Tahun Pelajaran ${Tahun}/${Tahun + 1}
+ * - Bulan Januari s.d. Juni (1-6): Semester Genap, Tahun Pelajaran ${Tahun - 1}/${Tahun}
+ */
+export function getAutoAcademicPeriodUtc7(date: Date = new Date()): {
+  academicYear: string;
+  semester: 'Ganjil' | 'Genap';
+  semesterUpper: 'GANJIL' | 'GENAP';
+  currentMonth: number;
+  currentYear: number;
+} {
+  // Pastikan zona waktu Asia/Jakarta (WIB GMT+7)
+  const dStr = date.toLocaleString('en-US', { timeZone: DEFAULT_TIMEZONE });
+  const localDate = new Date(dStr);
+  const currentMonth = localDate.getMonth() + 1; // 1 s.d. 12
+  const currentYear = localDate.getFullYear();
+
+  const isGanjil = currentMonth >= 7 && currentMonth <= 12;
+  const academicYear = isGanjil
+    ? `${currentYear}/${currentYear + 1}`
+    : `${currentYear - 1}/${currentYear}`;
+
+  const semester = isGanjil ? 'Ganjil' : 'Genap';
+  const semesterUpper = isGanjil ? 'GANJIL' : 'GENAP';
+
+  return {
+    academicYear,
+    semester,
+    semesterUpper,
+    currentMonth,
+    currentYear,
+  };
+}

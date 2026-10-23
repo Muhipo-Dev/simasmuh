@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import {
-  useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -151,8 +151,8 @@ const normalizeEducation = (edu?: string | null): string => {
 export function KepegawaianManagement() {
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
-  const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser } = useActiveUser()
+  const user = activeUser as any
 
   // Tab Active State
   const [activeTab, setActiveTab] = useState<'database' | 'rekrutmen' | 'cuti' | 'izin-keluar' | 'evaluasi'>('database')

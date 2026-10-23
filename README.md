@@ -43,6 +43,23 @@ Sistem dirancang dengan arsitektur modular enterprise, perlindungan *Row Level S
 
 ## 📝 Catatan Perubahan & Rilis (Change Log)
 
+* **2026-10-23 (v2.0.0 - Ekosistem Baru Roadmap Administrasi Guru Terpadu, Quick Setup Otomatis Jenjang Kelas, Modul Panduan Interaktif, Konsolidasi Portal Guru & Optimasi UI Bersih):**
+  * **Roadmap Administrasi Guru 5 Tahap & Dokumen Hidup (`TeacherRoadmapStepper.tsx`, `kurikulum-tahap*.ts`):**
+    * Rekonseptualisasi total administrasi pembelajaran dari formulir statis birokratis menjadi Peta Jalan Dokumen Hidup terpadu: Tahap 1 (Pemetaan Target CP), Tahap 2 (Breakdown TP & ATP Berurutan), Tahap 3 (Rancang Skenario Promes Matriks & Prota), Tahap 4 (Bank Modul Ajar, Silabus & Paket Soal), dan Tahap 5 (Eksekusi Harian KBM, Presensi & Jurnal Kelas).
+    * Sinkronisasi data menyeluruh dari hulu ke hilir dengan basis data kurikulum dan jadwal penugasan resmi sekolah.
+  * **Quick Setup CP & ATP Jenjang Kelas Terpadu (`KurikulumMerdekaWorkspace.tsx`, `TeacherWorkflowBanner.tsx`):**
+    * Transformasi fitur pembuatan CP & ATP menjadi *Quick Setup* otomatis per jenjang kelas (Kelas X, XI, XII): input capaian sekali dan otomatis terdistribusi ke seluruh rombel kelas paralel dalam satu kali klik.
+    * Eliminasi modal setup kelas lama yang redundan untuk menyederhanakan alur kerja pendidik.
+  * **Penyatuan & Perapian Area Informasi Ramah Guru Awam:**
+    * Penyatuan header Rincian Pekan Efektif (RPE), tombol unduh `.docx`, dan 4 metrik pekan ke dalam satu kartu terpadu (*Unified Card*) dengan divider halus anti-clutter.
+    * Kondensasi selektor kurikulum otomatis: banner kurikulum disembunyikan jika sekolah mengaktifkan 1 kurikulum dominan (Kurikulum Merdeka).
+    * Penyederhanaan tombol aksi kelas dengan pengelompokan menu sekunder (*Paket Supervisi .zip, Sync Kelas Paralel, Arsip*) ke dalam dropdown *Alat Lainnya*.
+  * **Modul Panduan Lengkap Alur Kerja Administrasi Guru (`PanduanAdministrasiGuruModal.tsx`):**
+    * Integrasi modal tutorial komprehensif alur kerja administrasi guru yang dapat diakses langsung dari modul maupun banner dashboard guru.
+  * **Konsolidasi Navigasi Sidebar Portal Guru & Mode Pengawasan Sesi Adaptif:**
+    * Pembersihan modul duplikat di navigasi Portal Guru (Prota, RPE, ATP Silabus, dan Kisi-kisi diintegrasikan terpusat ke dalam Administrasi Guru).
+    * Penyelarasan menu Jadwal Pelajaran agar otomatis mengarah ke Jadwal Mengajar guru bersangkutan serta adaptif terhadap sesi override/spectator admin.
+
 * **2026-10-22 (v1.9.9 - Modul Override & Spectator Sesi Pengguna, Banner Notifikasi Multi-Sesi Interaktif, Manajemen Arsip E-Rapor & Kurikulum Terpadu, Tata Kelola Wajah Depan Web & Otomasi Vektor Biometrik AI):**
   * **Modul Override & Spectator Sesi Pengguna Terproteksi (`users.service.ts` & `/master-data/override-pengguna`):**
     * Implementasi fitur kendali sesi resmi *Override* (Kendali Penuh) dan *Spectator* (Lihat/Read-Only) yang diperuntukkan bagi Superadmin, Admin IT, dan Admin TU/BAU untuk membantu investigasi kendala teknis pengguna secara langsung tanpa meminta password akun.

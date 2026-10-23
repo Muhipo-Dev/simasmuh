@@ -14,13 +14,16 @@ import { Textarea } from '@/components/ui/textarea'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { useActiveUser } from '@/hooks/useActiveUser'
 
 export default function TambahJurnalKaryawanPage() {
   const authenticatedFetch = useAuthenticatedFetch()
   const router = useRouter()
   const queryClient = useQueryClient()
   const { data: session } = useSession()
-  const userId = (session?.user as any)?.id
+  const { user: activeUser } = useActiveUser()
+  const user = (activeUser || session?.user) as any
+  const userId = user?.id
 
   const webcamRef = useRef<Webcam>(null)
   

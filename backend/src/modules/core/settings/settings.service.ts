@@ -7,7 +7,7 @@ import * as net from 'net';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
-import { getServerTimeInfo } from '../utils/timezone.util';
+import { getServerTimeInfo, getAutoAcademicPeriodUtc7 } from '../utils/timezone.util';
 import { WaitingRoomService } from '../waiting-room/waiting-room.service';
 import { MaintenanceService } from '../maintenance/maintenance.service';
 import { FileLoggerService } from '../utils/system-logger.util';
@@ -54,6 +54,7 @@ export class SettingsService {
   async getSettings(): Promise<any> {
     const settings = await this.prisma.setting.findFirst();
     const maintenanceInfo = this.maintenanceService.getStatus();
+    const autoPeriod = getAutoAcademicPeriodUtc7();
 
     if (!settings) {
       const created = await this.prisma.setting.create({
@@ -63,8 +64,8 @@ export class SettingsService {
           phone: '(0352) 481428',
           email: 'raza@muhipo.sch.id',
           principalName: 'Drs. H. Sugeng, M.Pd.',
-          academicYear: '2026/2027',
-          semester: 'Ganjil',
+          academicYear: autoPeriod.academicYear,
+          semester: autoPeriod.semester,
           bankName: 'Bank Syariah Indonesia (BSI)',
           bankNumber: '7123456789',
           bankOwner: 'SMA MUHAMMADIYAH 1 PONOROGO',
@@ -81,11 +82,24 @@ export class SettingsService {
       });
       return { ...created, ...maintenanceInfo };
     }
-    return { ...settings, ...maintenanceInfo };
+
+    // Jika setting academicYear atau semester belum diatur manual secara valid, otomatis gunakan realtime WIB Ponorogo
+    const effectiveAcademicYear = settings.academicYear || autoPeriod.academicYear;
+    const effectiveSemester = settings.semester || autoPeriod.semester;
+
+    return {
+      ...settings,
+      academicYear: effectiveAcademicYear,
+      semester: effectiveSemester,
+      autoAcademicYear: autoPeriod.academicYear,
+      autoSemester: autoPeriod.semester,
+      ...maintenanceInfo,
+    };
   }
 
   async getPublicSettings(): Promise<any> {
     const maintenanceInfo = this.maintenanceService.getStatus();
+    const autoPeriod = getAutoAcademicPeriodUtc7();
 
     const settings = await this.prisma.setting.findFirst({
       select: {
@@ -128,6 +142,8 @@ export class SettingsService {
         heroVideoText: true,
         heroVideoLink: true,
         homeSectionOrderJson: true,
+        activeCurriculaJson: true,
+        allCurriculaJson: true,
       } as any,
     });
 
@@ -137,8 +153,8 @@ export class SettingsService {
         address: 'Jl. Sultan Agung No. 83, Ponorogo, Jawa Timur',
         phone: '(0352) 481428',
         email: 'raza@muhipo.sch.id',
-        academicYear: '2026/2027',
-        semester: 'Ganjil',
+        academicYear: autoPeriod.academicYear,
+        semester: autoPeriod.semester,
         logoUrl: null,
         backgroundUrl: null,
         studentCardTemplateUrl: null,
@@ -175,7 +191,18 @@ export class SettingsService {
       };
       return { ...defaultPublic, ...maintenanceInfo };
     }
-    return { ...settings, ...maintenanceInfo };
+
+    const effectiveAcademicYear = settings.academicYear || autoPeriod.academicYear;
+    const effectiveSemester = settings.semester || autoPeriod.semester;
+
+    return {
+      ...settings,
+      academicYear: effectiveAcademicYear,
+      semester: effectiveSemester,
+      autoAcademicYear: autoPeriod.academicYear,
+      autoSemester: autoPeriod.semester,
+      ...maintenanceInfo,
+    };
   }
 
   async upsertSettings(data: any) {

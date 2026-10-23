@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import {
   useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { 
   Printer, BookMarked, Lock, User, RefreshCw, Eye, Upload, Loader2, Save, ShieldAlert, Activity, MapPin, GraduationCap, Users, Image as ImageIcon, AlertCircle, FileCheck
 } from 'lucide-react'
@@ -177,7 +178,7 @@ const normalizePendidikanOrangTua = (edu?: string | null): string => {
 }
 
 export default function SiswaBukuIndukPage() {
-  const { data: session } = useSession()
+  const { user: activeUser } = useActiveUser()
   const authenticatedFetch = useAuthenticatedFetch()
   const authenticatedQuery = useAuthenticatedQuery()
   const queryClient = useQueryClient()
@@ -187,7 +188,7 @@ export default function SiswaBukuIndukPage() {
   const [isPrintOpen, setIsPrintOpen] = useState(false)
   const [isUploading, setIsUploading] = useState<string | null>(null)
 
-  const userId = (session?.user as any)?.id
+  const userId = (activeUser as any)?.id
 
   // 1. Fetch data profil siswa
   const { data: student, isLoading, refetch } = useQuery<StudentProfile | null>({

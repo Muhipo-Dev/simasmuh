@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { DocxGeneratorService } from '../common/docx-generator.service';
+import { getAutoAcademicPeriodUtc7 } from '../../../core/utils/timezone.util';
 import {
   CreatePerangkatKurikulumDto,
   CloneParallelDto,
@@ -29,29 +30,23 @@ export class KurikulumMerdekaService {
 
   /**
    * Ambil setting tahun ajaran & semester aktif sekolah
-   * Tersinkronisasi otomatis dengan waktu riil saat tahun pelajaran berganti
+   * Tersinkronisasi otomatis dengan waktu riil WIB Ponorogo (GMT+7) saat tahun pelajaran/semester berganti
    */
   async getActiveSchoolSetting() {
     const setting = await this.prisma.setting.findFirst();
+    const autoPeriod = getAutoAcademicPeriodUtc7();
 
-    // Kalkulasi tahun ajaran otomatis berdasar waktu sistem (Bulan Juli = awal tahun ajaran baru)
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1; // 1-12
-    const autoAcademicYear = currentMonth >= 7
-      ? `${currentYear}/${currentYear + 1}`
-      : `${currentYear - 1}/${currentYear}`;
-    const autoSemester = currentMonth >= 7 && currentMonth <= 12 ? 'GANJIL' : 'GENAP';
-
-    // Prioritaskan setting jika ada dan valid, jika tidak otomatis ikut waktu riil kalender akademik
-    const academicYear = setting?.academicYear || autoAcademicYear;
+    // Prioritaskan setting manual jika ada dan valid, jika tidak otomatis ikut waktu riil kalender akademik WIB Ponorogo
+    const academicYear = setting?.academicYear || autoPeriod.academicYear;
     const semester: 'GANJIL' | 'GENAP' = setting?.semester
       ? (setting.semester.toUpperCase().includes('GENAP') ? 'GENAP' : 'GANJIL')
-      : autoSemester;
+      : autoPeriod.semesterUpper;
 
     return {
       academicYear,
       semester,
+      autoAcademicYear: autoPeriod.academicYear,
+      autoSemester: autoPeriod.semesterUpper,
       schoolName: setting?.schoolName || 'SMA MUHAMMADIYAH 1 PONOROGO',
       address: setting?.address || 'Jl. Budi Utomo No. 10, Ponorogo, Jawa Timur',
       phone: setting?.phone || '(0352) 481521',
@@ -62,7 +57,7 @@ export class KurikulumMerdekaService {
   }
 
   /**
-   * Helper: Dapatkan profil guru dari user login
+   * Helper: Dapatkan profil guru dari user login (khusus role/subrole Guru)
    */
   async getTeacherProfile(userId: string) {
     const profile = await this.prisma.teacherProfile.findUnique({
@@ -76,6 +71,30 @@ export class KurikulumMerdekaService {
     if (!profile) {
       throw new ForbiddenException('Akses hanya untuk guru terdaftar di sistem');
     }
+
+    // Pastikan user bukan murni karyawan/tendik tanpa penugasan mengajar
+    const u = profile.user as any;
+    const userRoles = [
+      u.role,
+      u.subRole,
+      u.subRole2,
+      u.subRole3,
+      u.subRole4,
+      u.subRole5,
+    ].filter(Boolean);
+
+    const isGuru = userRoles.some((r: string) =>
+      ['GURU', 'HONORER', 'GURU_HONORER', 'GURU_PIKET', 'WALI_KELAS', 'KURIKULUM', 'WAKA_KURIKULUM'].includes(r)
+    );
+
+    const isPimpinan = userRoles.some((r: string) =>
+      ['SUPERADMIN', 'ADMIN_IT', 'KEPALA_SEKOLAH'].includes(r)
+    );
+
+    if (!isGuru && !isPimpinan) {
+      throw new ForbiddenException('Akses Administrasi Guru hanya diperuntukkan bagi Bapak/Ibu Guru dan Pimpinan.');
+    }
+
     return profile;
   }
 
@@ -209,27 +228,33 @@ export class KurikulumMerdekaService {
       orderBy: [{ academicYear: 'desc' }, { createdAt: 'desc' }],
     });
 
-    // Pisahkan perangkat tahun ajaran aktif dengan arsip tahun ajaran lampau
-    // Masa berlaku administrasi CP, ATP, dan TP adalah 1 tahun pelajaran penuh (academicYear aktif).
-    // Ketika sekolah berganti tahun pelajaran baru, seluruh perangkat tahun ajaran lampau otomatis diarsipkan.
+    // Pisahkan perangkat aktif (sesuai tahun ajaran dan semester aktif sekolah) dengan arsip
+    // Ketika terjadi perubahan tahun pelajaran ATAU perubahan semester di sistem,
+    // seluruh kurikulum guru di periode sebelumnya otomatis diarsipkan dan dapat digunakan kembali (restore/reuse)
     const currentAcademicYear = setting.academicYear;
     const currentSemester = setting.semester;
 
     const perangkatList = allPerangkatList.filter(
-      (p) => p.academicYear === currentAcademicYear,
+      (p) => p.academicYear === currentAcademicYear && p.semester === currentSemester,
     );
 
     const archivePerangkatList = allPerangkatList.filter(
-      (p) => p.academicYear !== currentAcademicYear,
+      (p) => !(p.academicYear === currentAcademicYear && p.semester === currentSemester),
     );
 
     const schedulePairings = Array.from(schedulePairingsMap.values()).map((p) => {
-      const isConfigured = perangkatList.some(
+      const targetPerangkat = perangkatList.find(
         (perangkat) => perangkat.classId === p.classId && perangkat.subjectId === p.subjectId,
       );
+      const isConfigured = !!targetPerangkat;
+      const tpCount = targetPerangkat?.tujuanPembelajarans?.length || targetPerangkat?._count?.tujuanPembelajarans || 0;
+      const isReady = isConfigured && tpCount > 0;
       return {
         ...p,
         isConfigured,
+        tpCount,
+        isReady,
+        perangkatId: targetPerangkat?.id || null,
       };
     });
 
@@ -783,9 +808,48 @@ export class KurikulumMerdekaService {
   }
 
   async deleteTujuanPembelajaran(id: string) {
+    // Hapus juga alokasi promes dan dokumen terikat jika ada
+    await this.prisma.promesAllocation.deleteMany({ where: { tpId: id } });
+    await this.prisma.perangkatAjarItem.deleteMany({ where: { tpId: id } });
     return this.prisma.tujuanPembelajaran.delete({
       where: { id },
     });
+  }
+
+  async deleteDokumenAjarItem(id: string) {
+    return this.prisma.perangkatAjarItem.delete({
+      where: { id },
+    });
+  }
+
+  async createDokumenAjarItemManual(dto: {
+    perangkatKurikulumId: string;
+    tpId?: string;
+    kategori: string;
+    judul: string;
+    kontenJson?: any;
+    fileDocxUrl?: string;
+    filePdfUrl?: string;
+  }) {
+    return this.prisma.perangkatAjarItem.create({
+      data: {
+        perangkatKurikulumId: dto.perangkatKurikulumId,
+        tpId: dto.tpId || null,
+        kategori: dto.kategori,
+        judul: dto.judul,
+        kontenJson: dto.kontenJson || {},
+        fileDocxUrl: dto.fileDocxUrl || null,
+        filePdfUrl: dto.filePdfUrl || null,
+        statusDraft: 'SIAP',
+      },
+    });
+  }
+
+  async resetPromesMatrix(perangkatKurikulumId: string) {
+    await this.prisma.promesAllocation.deleteMany({
+      where: { perangkatKurikulumId },
+    });
+    return { message: 'Alokasi matriks Promes berhasil dikosongkan' };
   }
 
   /**
@@ -1043,6 +1107,83 @@ export class KurikulumMerdekaService {
 
       sections.push({
         heading: 'I. DISTRIBUSI MATERI DAN ALOKASI WAKTU TAHUNAN',
+        table: { headers, rows },
+      });
+    } else if (kategori === 'RPE') {
+      title = 'RINCIAN PEKAN EFEKTIF (RPE)';
+      subtitle = `Semester ${perangkat.semester} - Tahun Pelajaran ${perangkat.academicYear}`;
+
+      const totalMingguKalender = 26;
+      const mingguEfektif = perangkat.mingguEfektifCount || 18;
+      const mingguTidakEfektif = totalMingguKalender - mingguEfektif;
+      const totalJp = perangkat.totalJpSemester || (mingguEfektif * perangkat.jpPerMinggu);
+
+      sections.push({
+        heading: 'I. PERHITUNGAN JUMLAH MINGGU SATU SEMESTER',
+        bulletPoints: [
+          `Jumlah Pekan dalam Semester (Kalender Pendidikan): ${totalMingguKalender} Pekan`,
+          `Jumlah Pekan Efektif KBM: ${mingguEfektif} Pekan`,
+          `Jumlah Pekan Tidak Efektif (Libur Semester, STS/SAS, MPLS, dll): ${mingguTidakEfektif} Pekan`,
+        ],
+      });
+
+      sections.push({
+        heading: 'II. DISTRIBUSI ALOKASI WAKTU JAM PELAJARAN (JP)',
+        bulletPoints: [
+          `Beban Tatap Muka per Pekan: ${perangkat.jpPerMinggu} JP / Pekan`,
+          `Jumlah Jam Pelajaran Efektif: ${mingguEfektif} Pekan x ${perangkat.jpPerMinggu} JP = ${totalJp} JP`,
+          `Distribusi Materi Pembelajaran: ${perangkat.tujuanPembelajarans.length} Tujuan Pembelajaran (TP)`,
+        ],
+      });
+
+      const headers = ['No', 'Kode TP', 'Lingkup Materi Pokok', 'Alokasi JP', 'Persentase'];
+      const rows = perangkat.tujuanPembelajarans.map((tp, idx) => [
+        (idx + 1).toString(),
+        tp.kodeTp,
+        tp.lingkupMateri,
+        `${tp.alokasiJp} JP`,
+        totalJp > 0 ? `${Math.round((tp.alokasiJp / totalJp) * 100)}%` : '0%',
+      ]);
+
+      sections.push({
+        heading: 'III. PEMETAAN ALOKASI JP PER LINGKUP MATERI',
+        table: { headers, rows },
+      });
+    } else if (kategori === 'KISI_KISI') {
+      title = 'KISI-KISI PENULISAN SOAL ASESMEN';
+      subtitle = `Mata Pelajaran ${perangkat.subject.name} - Kelas ${perangkat.class.name} (${perangkat.academicYear})`;
+
+      const headers = ['No', 'Tujuan Pembelajaran (TP)', 'Materi / Topik', 'Indikator Soal', 'Bentuk Soal', 'Level'];
+      const rows = perangkat.tujuanPembelajarans.map((tp, idx) => [
+        (idx + 1).toString(),
+        tp.kodeTp,
+        tp.lingkupMateri,
+        `Peserta didik dapat memahami dan menerapkan konsep ${tp.materiPokok || tp.lingkupMateri}`,
+        'Pilihan Ganda & Uraian',
+        'C2 - C4',
+      ]);
+
+      sections.push({
+        heading: 'I. IDENTITAS ASESMEN & DISTRIBUSI KISI-KISI',
+        table: { headers, rows },
+      });
+    } else if (kategori === 'SILABUS') {
+      title = 'SILABUS PEMBELAJARAN';
+      subtitle = `Fase ${perangkat.fase} - Tahun Pelajaran ${perangkat.academicYear}`;
+
+      const headers = ['No', 'Tujuan Pembelajaran', 'Materi Pokok', 'Kegiatan Pembelajaran', 'Penilaian', 'Alokasi JP', 'Sumber Belajar'];
+      const rows = perangkat.tujuanPembelajarans.map((tp, idx) => [
+        (idx + 1).toString(),
+        tp.deskripsiTp,
+        tp.materiPokok || tp.lingkupMateri,
+        'Problem Based Learning terintegrasi LMS SIMASMUH',
+        'Formatif & Sumatif',
+        `${tp.alokasiJp} JP`,
+        'Buku Paket, Modul Ajar Digital SIMASMUH',
+      ]);
+
+      sections.push({
+        heading: 'I. MATRIKS SILABUS DAN PERANGKAT AJAR',
         table: { headers, rows },
       });
     } else {

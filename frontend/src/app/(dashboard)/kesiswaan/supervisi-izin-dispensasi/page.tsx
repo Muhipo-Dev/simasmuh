@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -56,7 +57,7 @@ interface SupervisiIzinItem {
 }
 
 export default function SupervisiIzinKesiswaanPage() {
-  const { data: session } = useSession()
+  const { user: activeUser } = useActiveUser()
   const authenticatedFetch = useAuthenticatedFetch()
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -74,7 +75,7 @@ export default function SupervisiIzinKesiswaanPage() {
       const json = await res.json()
       return Array.isArray(json) ? json : []
     },
-    enabled: !!session,
+    enabled: !!activeUser,
     staleTime: 1000 * 10,
   })
 

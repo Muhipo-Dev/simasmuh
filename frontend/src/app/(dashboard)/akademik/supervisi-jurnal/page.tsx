@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import {
   useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -26,10 +27,10 @@ import {
 import { SortableTableHead, useSorting } from '@/components/SortableTableHead'
 
 export default function SupervisiJurnalPage() {
-  const { data: session, status } = useSession()
-  const userId = (session?.user as any)?.id
-  const userRole = (session?.user as any)?.role || ''
-  const subRoles: string[] = (session?.user as any)?.subRoles || []
+  const { user: activeUser } = useActiveUser()
+  const userId = (activeUser as any)?.id
+  const userRole = (activeUser as any)?.role || ''
+  const subRoles: string[] = (activeUser as any)?.subRoles || ((activeUser as any)?.subRole ? [(activeUser as any)?.subRole] : [])
   const authenticatedFetch = useAuthenticatedFetch()
 
   // Hak Akses Penuh: Superadmin, Kepala Sekolah, dan WAKA Kurikulum
@@ -242,12 +243,12 @@ export default function SupervisiJurnalPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {session?.user && (
+          {activeUser && (
             <div className="bg-white/10 dark:bg-slate-900/30 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 flex items-center gap-3">
               <UserCheck className="w-5 h-5 text-emerald-300 shrink-0" />
               <div className="text-xs sm:text-sm">
                 <div className="text-blue-200 font-medium">Supervisor:</div>
-                <div className="font-bold text-white tracking-wide">{session?.user?.name}</div>
+                <div className="font-bold text-white tracking-wide">{(activeUser as any)?.name}</div>
               </div>
             </div>
           )}

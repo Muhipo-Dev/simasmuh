@@ -14,15 +14,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { useActiveUser } from '@/hooks/useActiveUser'
 
 export default function HomeroomJournalsPage() {
   const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser, isOverride } = useActiveUser()
+  const user = (activeUser || session?.user) as any
   const userId = user?.id
   const userRolesList = [user?.role, user?.subRole, user?.subRole2, user?.subRole3, user?.subRole4, user?.subRole5].filter(Boolean)
-  const isSuperAdmin = userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN'].includes(r))
-  const isKepalaSekolah = userRolesList.includes('KEPALA_SEKOLAH')
-  const isExecutiveSupervisor = isSuperAdmin || isKepalaSekolah || userRolesList.includes('KURIKULUM')
+  const isSuperAdmin = !isOverride && userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN'].includes(r))
+  const isKepalaSekolah = !isOverride && userRolesList.includes('KEPALA_SEKOLAH')
+  const isExecutiveSupervisor = isSuperAdmin || isKepalaSekolah || (!isOverride && userRolesList.includes('KURIKULUM'))
   const isWaliKelas = userRolesList.includes('WALI_KELAS')
 
   const authenticatedFetch = useAuthenticatedFetch()

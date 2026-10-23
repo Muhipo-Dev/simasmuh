@@ -20,9 +20,12 @@ import { QRCodeSVG } from 'qrcode.react'
 import Swal from 'sweetalert2'
 import { getAppFeatureUrl } from '@/lib/api-config'
 
+import { useActiveUser } from '@/hooks/useActiveUser'
+
 export function DisposisiUserManagement() {
   const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser, isOverride } = useActiveUser()
+  const user = (activeUser || session?.user) as any
   const userName = user?.name || ''
   const userRole = user?.role || ''
   const userSubRole = user?.subRole || ''
@@ -40,11 +43,12 @@ export function DisposisiUserManagement() {
   const [catatanTindakLanjut, setCatatanTindakLanjut] = useState('')
 
   const isSuperOrAdmin = useMemo(() => {
+    if (isOverride) return false
     return (
       ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEPALA_SEKOLAH'].includes(userRole) ||
       ['SUPERADMIN', 'ADMIN_TU', 'BAU', 'KEPALA_SEKOLAH'].includes(userSubRole)
     )
-  }, [userRole, userSubRole])
+  }, [userRole, userSubRole, isOverride])
 
   // Fetch surat masuk yang memiliki disposisi
   const { data: dbSuratMasuk = [], isLoading, refetch } = useQuery<any[]>({

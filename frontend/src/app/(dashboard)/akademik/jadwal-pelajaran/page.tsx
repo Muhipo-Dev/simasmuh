@@ -4,6 +4,7 @@ import {
   useState, useRef, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,14 +38,14 @@ type ScheduleForm = {
 }
 
 export default function JadwalPelajaranPage() {
-  const { data: session, status } = useSession()
-  const userId = (session?.user as any)?.id
-  const username = (session?.user as any)?.username
-  const userEmail = session?.user?.email
-  const role = (session?.user as any)?.role || 'GURU'
-  const subRole = (session?.user as any)?.subRole
-  const subRole2 = (session?.user as any)?.subRole2
-  const subRole3 = (session?.user as any)?.subRole3
+  const { user: activeUser } = useActiveUser()
+  const userId = (activeUser as any)?.id
+  const username = (activeUser as any)?.username
+  const userEmail = (activeUser as any)?.email
+  const role = (activeUser as any)?.role || 'GURU'
+  const subRole = (activeUser as any)?.subRole
+  const subRole2 = (activeUser as any)?.subRole2
+  const subRole3 = (activeUser as any)?.subRole3
 
   const isSuperAdmin = ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(role) || 
     ['ADMIN_TU', 'BAU', 'TATA_USAHA', 'SUPERADMIN'].includes(subRole || '') || 
@@ -1789,7 +1790,7 @@ export default function JadwalPelajaranPage() {
                   <span>Verifikasi Keamanan Otoritas</span>
                 </div>
                 <p className="text-[11px] leading-normal">
-                  Masukkan kata sandi akun Anda (<strong>{session?.user?.name || username}</strong>) untuk memproses penghapusan jadwal secara permanen.
+                  Masukkan kata sandi akun Anda (<strong>{(activeUser as any)?.name || username}</strong>) untuk memproses penghapusan jadwal secara permanen.
                 </p>
               </div>
 

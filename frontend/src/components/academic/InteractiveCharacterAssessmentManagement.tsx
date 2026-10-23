@@ -69,16 +69,19 @@ const DEFAULT_PARAMETERS: TatibParameter[] = [
   { id: 'param-pel-8', category: 'PELANGGARAN', title: 'Merokok / Vape di Lingkungan Sekolah', points: -50, type: 'NEGATIF', description: 'Membawa/menghisap rokok atau rokok elektrik', defaultAction: 'Surat Peringatan (SP 1) & pemanggilan orang tua' },
 ]
 
+import { useActiveUser } from '@/hooks/useActiveUser'
+
 export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'ALL', mode = 'ALL' }: { defaultCategory?: string; mode?: 'ALL' | 'BK' | 'KETERTIBAN' | 'GURU' | 'UKS' }) {
   const authenticatedFetch = useAuthenticatedFetch()
   const authenticatedQuery = useAuthenticatedQuery()
   const queryClient = useQueryClient()
   const { data: session } = useSession()
+  const { user: activeUser, isOverride } = useActiveUser()
 
   // Ambil data profile user untuk menentukan hak akses verifikasi pembinaan & fitur BK
   const { data: userProfile } = useQuery<any>({
-    queryKey: ['my-user-profile-assessment'],
-    queryFn: () => authenticatedQuery('/api-backend/users/me'),
+    queryKey: ['my-user-profile-assessment', activeUser?.id || (session?.user as any)?.id],
+    queryFn: () => authenticatedQuery(activeUser?.id ? `/api-backend/users/${activeUser.id}/profile` : '/api-backend/users/me'),
   })
 
   // Ambil data master seluruh akun pengguna untuk mencari Kepala Sekolah aktif
@@ -101,7 +104,7 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
     )
   }, [masterUsersList])
 
-  const user = userProfile || {}
+  const user = activeUser || userProfile || session?.user || {}
   const userRoles = [
     user.role,
     user.subRole,
@@ -109,19 +112,13 @@ export function InteractiveCharacterAssessmentManagement({ defaultCategory = 'AL
     user.subRole3,
     user.subRole4,
     user.subRole5,
-    (session?.user as any)?.role,
-    (session?.user as any)?.subRole,
-    (session?.user as any)?.subRole2,
-    (session?.user as any)?.subRole3,
-    (session?.user as any)?.subRole4,
-    (session?.user as any)?.subRole5,
   ].filter(Boolean)
 
-  const loggedInBkName = session?.user?.name || (userProfile as any)?.name || (userProfile as any)?.user?.name || (user as any)?.name || 'Guru BK SIMASMUH'
+  const loggedInBkName = user?.name || session?.user?.name || 'Guru BK SIMASMUH'
 
   const loggedInBkNip = useMemo(() => {
     // 1. Direct NIP/NBM dari user profile & session
-    let rawNip = (session?.user as any)?.nip || (session?.user as any)?.nipNbm || (userProfile as any)?.nipNbm || (userProfile as any)?.nip || (user as any)?.nipNbm || (user as any)?.nip
+    let rawNip = user?.nip || user?.nipNbm || (userProfile as any)?.nipNbm || (userProfile as any)?.nip
 
     // 2. Jika belum ketemu / masih '-', cari di masterUsersList berdasarkan ID atau Nama
     if ((!rawNip || rawNip === '-') && masterUsersList && Array.isArray(masterUsersList)) {

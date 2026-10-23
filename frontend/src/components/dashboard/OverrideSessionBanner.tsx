@@ -1,66 +1,61 @@
 'use client'
 
 import React from 'react'
-import { useSession, signIn } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import { Eye, ShieldAlert, LogOut, Loader2, ArrowLeftRight, UserCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useQuery } from '@tanstack/react-query'
+import { getOverrideSession, setOverrideSession, clearOverrideSession, OverrideSessionData } from '@/lib/override-session'
 import Swal from 'sweetalert2'
 
 export function OverrideSessionBanner() {
   const { data: session } = useSession()
   const authenticatedFetch = useAuthenticatedFetch()
   const [isProcessing, setIsProcessing] = React.useState(false)
-
-  const user = session?.user as any
-  const userId = user?.id
-  // Hanya mode override jika target user BUKAN admin yang sama
-  const isOverride =
-    user?.isOverrideSession === true &&
-    Boolean(user?.overrideByAdminId) &&
-    user?.id !== user?.overrideByAdminId
-  const mode = user?.overrideMode || (user?.isReadOnly ? 'spectator' : 'override')
-  const isReadOnly = user?.isReadOnly === true || mode === 'spectator'
-  const adminName = user?.overrideByAdminName || 'Administrator'
-  const targetName = user?.name || 'Pengguna'
-
-  // Periksa sesi admin asli di sessionStorage
-  const [hasOriginalAdmin, setHasOriginalAdmin] = React.useState(false)
+  const [overrideData, setOverrideData] = React.useState<OverrideSessionData | null>(null)
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const orig = sessionStorage.getItem('simasmuh_original_admin_session')
-      setHasOriginalAdmin(!!orig)
+    setOverrideData(getOverrideSession())
+    const handleOverrideChanged = () => {
+      setOverrideData(getOverrideSession())
     }
-  }, [session])
+    window.addEventListener('simasmuh-override-changed', handleOverrideChanged)
+    return () => {
+      window.removeEventListener('simasmuh-override-changed', handleOverrideChanged)
+    }
+  }, [])
 
-  // Polling data profil akun untuk mendeteksi jika admin lain sedang mengakses akun ini
+  const adminUser = session?.user as any
+  const isOverride = Boolean(overrideData?.user && overrideData?.access_token)
+  const targetUser = overrideData?.user
+  const targetUserId = targetUser?.id
+  const mode = overrideData?.mode || (overrideData?.isReadOnly ? 'spectator' : 'override')
+  const isReadOnly = overrideData?.isReadOnly === true || mode === 'spectator'
+  const targetName = targetUser?.name || 'Pengguna'
+
+  // Polling data profil akun untuk mendeteksi jika admin lain sedang mengakses akun ini (jika user reguler)
+  const userId = adminUser?.id
   const { data: profileData } = useQuery<any>({
     queryKey: ['profile-override-check', userId],
     queryFn: async () => {
-      if (!userId) return null
+      if (!userId || isOverride) return null
       const res = await authenticatedFetch(`/api-backend/users/${userId}/profile`)
       if (!res.ok) return null
       return res.json()
     },
-    enabled: !!userId,
+    enabled: !!userId && !isOverride,
     refetchInterval: 5000,
   })
 
   // Skenario 1: Admin sedang meng-override atau menjadi spectator akun
-  if (isOverride) {
+  if (isOverride && targetUserId) {
     const handleSwitchMode = async (newMode: 'override' | 'spectator') => {
       if (newMode === mode) return
       setIsProcessing(true)
       try {
-        // Ambil token admin asli dari sessionStorage jika ada
-        const originalAdminDataStr = sessionStorage.getItem('simasmuh_original_admin_session')
-        const adminToken = originalAdminDataStr ? JSON.parse(originalAdminDataStr)?.access_token : null
-
-        const res = await authenticatedFetch(`/api-backend/users/${userId}/override-token`, {
+        const res = await authenticatedFetch(`/api-backend/users/${targetUserId}/override-token`, {
           method: 'POST',
-          headers: adminToken ? { Authorization: `Bearer ${adminToken}` } : {},
           body: JSON.stringify({ mode: newMode }),
         })
 
@@ -69,19 +64,9 @@ export function OverrideSessionBanner() {
           throw new Error(err?.message || 'Gagal mengubah mode akses.')
         }
 
-        const overrideData = await res.json()
-
-        const signInRes = await signIn('credentials', {
-          action: 'override_login',
-          overrideData: JSON.stringify(overrideData),
-          redirect: false,
-        })
-
-        if (signInRes?.ok) {
-          window.location.reload()
-        } else {
-          throw new Error('Gagal memperbarui sesi browser.')
-        }
+        const newOverrideData = await res.json()
+        setOverrideSession(newOverrideData)
+        window.location.reload()
       } catch (err: any) {
         Swal.fire({
           icon: 'error',
@@ -96,36 +81,19 @@ export function OverrideSessionBanner() {
     const handleExitOverride = async () => {
       setIsProcessing(true)
       try {
-        // Beri tahu backend agar menonaktifkan status override pengguna target seketika
-        await authenticatedFetch(`/api-backend/users/${userId}/override-exit`, {
+        // Beri tahu backend agar menonaktifkan status override pengguna target di basis data
+        await authenticatedFetch(`/api-backend/users/${targetUserId}/override-exit`, {
           method: 'POST',
         }).catch(() => {})
 
-        const originalAdminDataStr = sessionStorage.getItem('simasmuh_original_admin_session')
-        if (originalAdminDataStr) {
-          const adminAuthData = JSON.parse(originalAdminDataStr)
-          const res = await signIn('credentials', {
-            action: 'restore_admin_login',
-            overrideData: JSON.stringify(adminAuthData),
-            redirect: false,
-          })
+        // Hapus cookie sesi override. Sesi admin utama di NextAuth tidak pernah berubah!
+        clearOverrideSession()
 
-          if (res?.ok) {
-            sessionStorage.removeItem('simasmuh_original_admin_session')
-            window.location.href = '/master-data/override-pengguna'
-            return
-          }
-        }
-
-        sessionStorage.removeItem('simasmuh_original_admin_session')
-        window.location.href = '/login'
+        // Kembalikan ke halaman master data override pengguna
+        window.location.href = '/master-data/override-pengguna'
       } catch (e: any) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Gagal Keluar Mode',
-          text: e.message || 'Gagal mengembalikan sesi admin.',
-        })
-        setIsProcessing(false)
+        clearOverrideSession()
+        window.location.href = '/master-data/override-pengguna'
       }
     }
 
@@ -163,7 +131,7 @@ export function OverrideSessionBanner() {
               </span>
             </div>
             <p className="text-[11px] opacity-80 mt-0.5">
-              {isReadOnly ? 'Hanya lihat (Read Only).' : 'Akses penuh (Full Access).'}
+              Admin sedang mengakses akun pengguna {isReadOnly ? '(Hanya Lihat).' : '(Akses Penuh).'}
             </p>
           </div>
         </div>
@@ -186,16 +154,17 @@ export function OverrideSessionBanner() {
             <span>{isReadOnly ? 'Ke Override' : 'Ke Spectator'}</span>
           </Button>
 
-          {/* Tombol Keluar Mode */}
+          {/* Tombol Keluar Mode Override / Spectator */}
           <Button
             size="sm"
             variant={isReadOnly ? 'outline' : 'destructive'}
             onClick={handleExitOverride}
             disabled={isProcessing}
             className="h-7 px-2.5 text-xs font-semibold rounded-lg shadow-2xs gap-1"
+            title={isReadOnly ? 'Keluar dari Mode Spectator' : 'Keluar dari Mode Override'}
           >
             <LogOut className="w-3 h-3" />
-            <span>{hasOriginalAdmin ? 'Kembali' : 'Keluar'}</span>
+            <span>Keluar Mode</span>
           </Button>
         </div>
       </div>
@@ -204,16 +173,16 @@ export function OverrideSessionBanner() {
 
   // Skenario 2: Pengguna reguler sedang login dan akunnya sedang diakses oleh admin
   const userRoles = [
-    user?.role,
-    user?.subRole,
-    user?.subRole2,
-    user?.subRole3,
-    user?.subRole4,
-    user?.subRole5,
+    adminUser?.role,
+    adminUser?.subRole,
+    adminUser?.subRole2,
+    adminUser?.subRole3,
+    adminUser?.subRole4,
+    adminUser?.subRole5,
   ].filter(Boolean)
 
   const isAdminRole =
-    user?.username === 'supermuhipo' ||
+    adminUser?.username === 'supermuhipo' ||
     userRoles.includes('SUPERADMIN') ||
     userRoles.includes('ADMIN_IT') ||
     userRoles.includes('ADMIN_TU') ||

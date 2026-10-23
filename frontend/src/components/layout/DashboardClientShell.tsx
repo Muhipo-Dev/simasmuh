@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { useQuery } from '@tanstack/react-query'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { AppNavbar, AppFooter, AppSidebar } from '@/components/layout'
 import { isPathAllowedForRoles, getRoleLinks } from '@/lib/nav-links'
 import { EmailRecommendationBanner } from '@/components/dashboard/EmailRecommendationBanner'
@@ -19,16 +20,20 @@ import Swal from 'sweetalert2'
 
 export function DashboardClientShell({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
+  const { user: activeUser, isOverride } = useActiveUser()
   const router = useRouter()
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const authenticatedQuery = useAuthenticatedQuery()
 
-  const userId = (session?.user as { id?: string })?.id
+  // Prioritaskan ID aktif (target user saat override, atau admin saat normal)
+  const activeUserId = activeUser?.id || (session?.user as { id?: string })?.id
+  const adminUserId = (session?.user as { id?: string })?.id
+
   const { data: profileData } = useQuery<{ name?: string; avatarUrl?: string }>({
-    queryKey: ['profile', userId],
-    queryFn: () => userId ? authenticatedQuery(`/api-backend/users/${userId}/profile`) : Promise.resolve(null),
-    enabled: !!userId,
+    queryKey: ['profile', activeUserId],
+    queryFn: () => activeUserId ? authenticatedQuery(`/api-backend/users/${activeUserId}/profile`) : Promise.resolve(null),
+    enabled: !!activeUserId,
     staleTime: 1000 * 5,
     refetchOnWindowFocus: true,
     retry: false,
@@ -43,9 +48,9 @@ export function DashboardClientShell({ children }: { children: React.ReactNode }
 
   // Heartbeat otomatis setiap 30 detik untuk memastikan status sesi pengguna sinkron realtime online
   useQuery({
-    queryKey: ['user-session-heartbeat', userId],
-    queryFn: () => userId ? authenticatedQuery(`/api-backend/users/${userId}/profile`) : Promise.resolve(null),
-    enabled: !!userId && status === 'authenticated',
+    queryKey: ['user-session-heartbeat', adminUserId],
+    queryFn: () => adminUserId ? authenticatedQuery(`/api-backend/users/${adminUserId}/profile`) : Promise.resolve(null),
+    enabled: !!adminUserId && status === 'authenticated',
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
     retry: false,
@@ -62,8 +67,8 @@ export function DashboardClientShell({ children }: { children: React.ReactNode }
   }, [status, session, pathname, router])
 
   useEffect(() => {
-    if (session && pathname) {
-      const u = session.user as any
+    if ((activeUser || session) && pathname) {
+      const u = (activeUser || session?.user) as any
       const isAccountActive = u?.isActive !== false
       const roles = [u?.role, u?.subRole, u?.subRole2, u?.subRole3, u?.subRole4, u?.subRole5, u?.username, u?.name].filter(Boolean) as string[]
 
@@ -96,10 +101,10 @@ export function DashboardClientShell({ children }: { children: React.ReactNode }
       }
 
       // Sesi Override / Spectator oleh Admin:
-      // Admin yang sedang mengoperasikan atau meninjau akun memiliki hak akses navigasi penuh
-      const isOverrideByAdmin = u?.isOverrideSession === true && Boolean(u?.overrideByAdminId)
+      // Admin yang sedang mengoperasikan akun target memiliki akses navigasi penuh
+      const isOverrideByAdmin = isOverride || (u?.isOverrideSession === true && Boolean(u?.overrideByAdminId))
 
-      // Cek ketat otorisasi rute
+      // Cek otorisasi rute: izinkan jika override aktif, atau jika role pengguna berwenang
       const allowed = isOverrideByAdmin || isPathAllowedForRoles(pathname, roles)
       if (!allowed && !isSiswaArchiveAllowed) {
         Swal.fire({
@@ -112,7 +117,7 @@ export function DashboardClientShell({ children }: { children: React.ReactNode }
         router.replace('/dashboard')
       }
     }
-  }, [session, pathname, router])
+  }, [session, activeUser, isOverride, pathname, router])
 
   if (status === 'loading') {
     return (
@@ -127,7 +132,8 @@ export function DashboardClientShell({ children }: { children: React.ReactNode }
 
   if (!session) return null
 
-  const userObj = session.user as any
+  // Identitas tampilan: ikuti target akun saat override, atau admin saat normal
+  const userObj = (activeUser || session.user) as any
   const role = userObj?.role || 'GURU'
   const subRole = userObj?.subRole
   const subRole2 = userObj?.subRole2
@@ -227,16 +233,20 @@ export function DashboardClientShell({ children }: { children: React.ReactNode }
                     size="icon"
                     className="h-7.5 w-7.5 sm:h-8 sm:w-8 text-slate-600 dark:text-slate-300 hover:text-white hover:bg-red-600 rounded-lg transition-colors shadow-xs bg-slate-100 dark:bg-slate-800/60 border border-slate-200/80 dark:border-white/10 backdrop-blur-md shrink-0"
                     onClick={async () => {
-                      if (userId) {
+                      if (adminUserId) {
                         try {
                           await fetch('/api-backend/auth/logout', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ userId }),
+                            body: JSON.stringify({ userId: adminUserId }),
                           })
                         } catch {}
                       }
                       if (typeof window !== 'undefined') {
+                        try {
+                          const { clearOverrideSession } = await import('@/lib/override-session')
+                          clearOverrideSession()
+                        } catch {}
                         try {
                           sessionStorage.clear()
                         } catch {}

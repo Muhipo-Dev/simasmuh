@@ -100,17 +100,20 @@ function formatIpLocation(ip?: string | null): { label: string; isLocal: boolean
   }
 }
 
+import { useActiveUser } from '@/hooks/useActiveUser'
+
 export default function ProfilePage() {
   const { data: session } = useSession()
-  const userId = (session?.user as any)?.id
-  const role = (session?.user as any)?.role
+  const { user: activeUser, isOverride } = useActiveUser()
+  const userObj = (activeUser || session?.user) as any
+  const userId = userObj?.id
+  const role = userObj?.role
   const isGuru = role === 'GURU' || role === 'PEGAWAI'
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const authenticatedFetch = useAuthenticatedFetch()
 
-  const userObj = session?.user as any
-  const isSpectator = userObj?.isReadOnly === true || userObj?.overrideMode === 'spectator'
+  const isSpectator = isOverride && (activeUser?.isReadOnly === true || activeUser?.overrideMode === 'spectator')
 
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({

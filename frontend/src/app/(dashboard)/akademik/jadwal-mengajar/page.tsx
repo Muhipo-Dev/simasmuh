@@ -43,15 +43,18 @@ const DAYS_MAP: Record<number, string> = {
   5: 'Jumat',
 }
 
+import { useActiveUser } from '@/hooks/useActiveUser'
+
 const ACTIVE_DAYS = [1, 2, 3, 4, 5]
 
 export default function JadwalMengajarPage() {
   const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser, isOverride } = useActiveUser()
+  const user = (activeUser || session?.user) as any
   const userId = user?.id
   const userRole = user?.role || 'GURU'
-  const userRolesList = [userRole, user?.subRole, user?.subRole2, user?.subRole3].filter(Boolean)
-  const isSuperAdmin = userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'KURIKULUM', 'KEPALA_SEKOLAH'].includes(r))
+  const userRolesList = [userRole, user?.subRole, user?.subRole2, user?.subRole3, user?.subRole4, user?.subRole5].filter(Boolean)
+  const isSuperAdmin = !isOverride && userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'KURIKULUM', 'KEPALA_SEKOLAH'].includes(r))
 
   const authenticatedFetch = useAuthenticatedFetch()
 
@@ -87,16 +90,24 @@ export default function JadwalMengajarPage() {
     staleTime: 60000,
   })
 
-  // 2. Fetch Profil Guru Pengampu yang sedang login
+  // 2. Fetch Profil Guru Pengampu yang sedang aktif (mendukung Override & Spectator)
   const { data: myTeacherProfile } = useQuery<any>({
-    queryKey: ['my-teacher-profile', userId],
+    queryKey: ['my-teacher-profile', userId, user?.username, user?.email],
     queryFn: async () => {
       if (!userId) return null
       const res = await authenticatedFetch(`/api-backend/teachers?userId=${userId}`)
       if (!res.ok) return null
       const data = await res.json()
       if (Array.isArray(data)) {
-        return data.find((t: any) => t.userId === userId || t.user?.id === userId) || data[0] || null
+        return (
+          data.find(
+            (t: any) =>
+              t.userId === userId ||
+              t.user?.id === userId ||
+              t.user?.username === user?.username ||
+              t.user?.email === user?.email
+          ) || null
+        )
       }
       return data
     },
@@ -104,15 +115,18 @@ export default function JadwalMengajarPage() {
     staleTime: 60000,
   })
 
-  // Target Teacher ID yang ditampilkan (Default: profil guru yang sedang login, atau pilihan Superadmin)
+  // Target Teacher ID yang ditampilkan (Default: profil guru yang sedang login / dioverride, atau pilihan Superadmin jika bukan sesi override)
   const activeTeacherId = useMemo(() => {
+    if (isOverride) {
+      return myTeacherProfile?.id || ''
+    }
     if (selectedTeacherId) return selectedTeacherId
     return myTeacherProfile?.id || ''
-  }, [selectedTeacherId, myTeacherProfile])
+  }, [isOverride, selectedTeacherId, myTeacherProfile])
 
   // 3. Fetch Jadwal Mengajar Guru
   const { data: rawSchedules = [], isLoading: loadingSchedules } = useQuery<any[]>({
-    queryKey: ['teacher-schedules-hub', userId, activeTeacherId, isSuperAdmin],
+    queryKey: ['teacher-schedules-hub', userId, activeTeacherId, isSuperAdmin, isOverride],
     queryFn: async () => {
       let url = '/api-backend/schedules'
       if (activeTeacherId) {
@@ -136,6 +150,7 @@ export default function JadwalMengajarPage() {
     return rawSchedules.filter((s: any) => {
       return (
         s?.teacher?.userId === userId ||
+        s?.teacher?.user?.id === userId ||
         s?.teacher?.user?.email === user?.email ||
         (s?.teacher?.user?.username && s?.teacher?.user?.username === user?.username)
       )
@@ -382,7 +397,7 @@ export default function JadwalMengajarPage() {
             JADWAL MENGAJAR GURU
           </h3>
           <p className="text-xs font-bold text-gray-800 mt-0.5">
-            Nama Guru: {viewingTeacher?.user?.name || viewingTeacher?.nip || session?.user?.name} | NIP/NBM: {viewingTeacher?.nip || viewingTeacher?.nipNbm || '-'}
+            Nama Guru: {viewingTeacher?.user?.name || viewingTeacher?.nip || user?.name || session?.user?.name} | NIP/NBM: {viewingTeacher?.nip || viewingTeacher?.nipNbm || user?.nipNbm || '-'}
           </p>
         </div>
 
@@ -456,7 +471,7 @@ export default function JadwalMengajarPage() {
                   <span>
                     Guru Pengampu:{' '}
                     <strong className="font-bold text-white">
-                      {viewingTeacher?.user?.name || session?.user?.name || 'Guru'}
+                      {viewingTeacher?.user?.name || user?.name || session?.user?.name || 'Guru'}
                     </strong>
                   </span>
                 </div>

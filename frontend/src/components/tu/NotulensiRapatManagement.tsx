@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import {
-  useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
@@ -46,8 +46,8 @@ export interface NotulensiItem {
 export function NotulensiRapatManagement() {
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
-  const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser } = useActiveUser()
+  const user = activeUser as any
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedKategori, setSelectedKategori] = useState<string>('ALL')

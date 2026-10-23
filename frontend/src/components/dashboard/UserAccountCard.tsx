@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
+import { useActiveUser } from '@/hooks/useActiveUser'
 
 interface UserAccountCardProps {
   role?: string
@@ -19,8 +20,8 @@ interface UserAccountCardProps {
 }
 
 export function UserAccountCard({
-  role = 'PENGGUNA',
-  subRole,
+  role: explicitRole,
+  subRole: explicitSubRole,
   studentClass,
   activeStudent,
   profileAvatarUrl,
@@ -28,8 +29,11 @@ export function UserAccountCard({
   statusColor = 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300'
 }: UserAccountCardProps) {
   const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser } = useActiveUser()
+  const user = (activeUser || session?.user) as any
   const userId = user?.id
+  const role = explicitRole || user?.role || 'PENGGUNA'
+  const subRole = explicitSubRole !== undefined ? explicitSubRole : user?.subRole
   const authenticatedQuery = useAuthenticatedQuery()
 
   // Real-time fetch live profile avatar bila avatarUrl berubah di halaman profile

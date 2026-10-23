@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -27,12 +28,13 @@ type LogEntry = {
 
 export default function LogPresensiSiswaPage() {
   const { data: session } = useSession()
-  const userId = (session?.user as any)?.id
+  const { user: activeUser, isOverride } = useActiveUser()
   const authenticatedFetch = useAuthenticatedFetch()
-  const user = session?.user as any
+  const user = (activeUser || session?.user) as any
+  const userId = user?.id
   const userRolesList = [user?.role, user?.subRole, user?.subRole2, user?.subRole3, user?.subRole4, user?.subRole5].filter(Boolean)
   const isWaliKelas = userRolesList.includes('WALI_KELAS')
-  const isSuperOrAdmin = userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(r))
+  const isSuperOrAdmin = !isOverride && userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(r))
   const isStaffOrGuru = isSuperOrAdmin || isWaliKelas || userRolesList.includes('GURU')
 
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())

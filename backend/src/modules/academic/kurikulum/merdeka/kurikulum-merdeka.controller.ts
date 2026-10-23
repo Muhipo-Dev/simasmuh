@@ -102,6 +102,32 @@ export class KurikulumMerdekaController {
     return this.kmService.deleteTujuanPembelajaran(id);
   }
 
+  @Delete('dokumen-item/:id')
+  deleteDokumenAjarItem(@Param('id') id: string) {
+    return this.kmService.deleteDokumenAjarItem(id);
+  }
+
+  @Post('dokumen-item')
+  createDokumenAjarItemManual(
+    @Body()
+    dto: {
+      perangkatKurikulumId: string;
+      tpId?: string;
+      kategori: string;
+      judul: string;
+      kontenJson?: any;
+      fileDocxUrl?: string;
+      filePdfUrl?: string;
+    },
+  ) {
+    return this.kmService.createDokumenAjarItemManual(dto);
+  }
+
+  @Delete('promes-matrix/:perangkatId')
+  resetPromesMatrix(@Param('perangkatId') perangkatId: string) {
+    return this.kmService.resetPromesMatrix(perangkatId);
+  }
+
   @Post('promes-matrix')
   savePromesMatrix(@Body() dto: SavePromesMatrixDto) {
     return this.kmService.savePromesMatrix(dto);

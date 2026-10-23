@@ -2,6 +2,7 @@
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,8 +45,8 @@ interface IzinKeluarPegawai {
 
 export function IzinKeluarPegawaiManagement() {
   const authenticatedFetch = useAuthenticatedFetch()
-  const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser } = useActiveUser()
+  const user = activeUser as any
 
   const isSuperAdmin = user?.role === 'SUPERADMIN' || user?.role === 'ADMIN_IT' || user?.subRole === 'SUPERADMIN'
   const isBau = user?.role === 'ADMIN_TU' || user?.role === 'BAU' || user?.role === 'TATA_USAHA' || user?.subRole === 'BAU' || user?.subRole === 'ADMIN_TU'
@@ -95,9 +96,9 @@ export function IzinKeluarPegawaiManagement() {
   }
 
   useEffect(() => {
-    if (session) fetchData()
+    if (user) fetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, filterDate, activeTab])
+  }, [user, filterDate, activeTab])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Save, RefreshCw, Calendar, Check, AlertCircle, Info } from 'lucide-react'
+import { Save, RefreshCw, Calendar, Check, AlertCircle, Info, Trash2 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 
@@ -119,7 +119,7 @@ export function PromesMatrixView({ perangkat, onSaveSuccess }: PromesMatrixViewP
         }
       }
 
-      const res = await authenticatedFetch('/api/kurikulum-merdeka/promes-matrix', {
+      const res = await authenticatedFetch('/api-backend/kurikulum-merdeka/promes-matrix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -128,7 +128,10 @@ export function PromesMatrixView({ perangkat, onSaveSuccess }: PromesMatrixViewP
         }),
       })
 
-      if (!res.ok) throw new Error('Gagal menyimpan matriks promes')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.message || 'Gagal menyimpan matriks promes')
+      }
 
       Swal.fire({
         icon: 'success',
@@ -144,6 +147,50 @@ export function PromesMatrixView({ perangkat, onSaveSuccess }: PromesMatrixViewP
         icon: 'error',
         title: 'Gagal Menyimpan',
         text: err.message || 'Terjadi kesalahan sistem saat menyimpan data',
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleResetMatrix = async () => {
+    const confirm = await Swal.fire({
+      title: 'Kosongkan Matriks Promes?',
+      text: 'Semua alokasi minggu efektif yang telah diplot untuk mata pelajaran ini akan dihapus/dikosongkan.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Kosongkan',
+      cancelButtonText: 'Batal',
+    })
+
+    if (!confirm.isConfirmed) return
+
+    setIsSaving(true)
+    try {
+      const res = await authenticatedFetch(`/api-backend/kurikulum-merdeka/promes-matrix/${perangkat.id}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.message || 'Gagal mengosongkan matriks promes')
+      }
+
+      setMatrixState({})
+      Swal.fire({
+        icon: 'success',
+        title: 'Matriks Dikosongkan',
+        text: 'Distribusi minggu efektif Promes berhasil direset.',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+      if (onSaveSuccess) onSaveSuccess()
+    } catch (err: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengosongkan',
+        text: err.message || 'Terjadi kendala saat mengosongkan matriks',
       })
     } finally {
       setIsSaving(false)
@@ -167,6 +214,16 @@ export function PromesMatrixView({ perangkat, onSaveSuccess }: PromesMatrixViewP
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleResetMatrix}
+            disabled={isSaving}
+            className="h-8 gap-1.5 px-3 font-medium text-xs text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/50 dark:hover:bg-rose-950/30"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Reset Plot
+          </Button>
           <Button
             size="sm"
             onClick={handleSaveMatrix}

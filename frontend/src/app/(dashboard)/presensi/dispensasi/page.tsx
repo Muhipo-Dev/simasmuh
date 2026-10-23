@@ -59,10 +59,13 @@ interface DispensasiItem {
   }
 }
 
+import { useActiveUser } from '@/hooks/useActiveUser'
+
 export default function DispensasiPage() {
   const authenticatedFetch = useAuthenticatedFetch()
   const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser, isOverride } = useActiveUser()
+  const user = (activeUser || session?.user) as any
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const userRolesList = [
@@ -74,8 +77,8 @@ export default function DispensasiPage() {
     user?.subRole5,
   ].filter(Boolean)
 
-  const isSuperAdmin = userRolesList.some((r: string) => ['SUPERADMIN', 'ADMIN_IT'].includes(r))
-  const isBau = userRolesList.some((r: string) => ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(r))
+  const isSuperAdmin = !isOverride && userRolesList.some((r: string) => ['SUPERADMIN', 'ADMIN_IT'].includes(r))
+  const isBau = !isOverride && userRolesList.some((r: string) => ['ADMIN_TU', 'BAU', 'TATA_USAHA'].includes(r))
   const isTatib = userRolesList.some((r: string) => r.includes('KETERTIBAN') || r.includes('TATIB'))
   const isKesiswaan = userRolesList.some((r: string) =>
     r === 'KESISWAAN' ||

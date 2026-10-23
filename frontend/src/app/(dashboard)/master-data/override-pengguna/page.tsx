@@ -215,7 +215,7 @@ export default function OverridePenggunaPage() {
       title: titleText,
       html: `
         <div class="text-left text-xs text-slate-600 dark:text-slate-300 space-y-2">
-          <p>Anda akan masuk ke dalam akun: <strong>${targetName}</strong> ${relationTitle ? `(${relationTitle})` : ''}.</p>
+          <p>Admin akan mengakses akun pengguna: <strong>${targetName}</strong> ${relationTitle ? `(${relationTitle})` : ''}.</p>
           <div class="p-2.5 rounded-lg border ${
             isSpectator
               ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200'
@@ -225,12 +225,12 @@ export default function OverridePenggunaPage() {
             <p class="text-[11px] mt-0.5">
               ${
                 isSpectator
-                  ? 'Anda dapat meninjau dashboard, tampilan fitur, serta laporan pengguna tanpa izin mengubah, menambah, atau menghapus data.'
-                  : 'Anda dapat mengoperasikan akun pengguna secara langsung layaknya pengguna bersangkutan. Seluruh aksi diaudit secara aman.'
+                  ? 'Admin dapat meninjau dashboard, tampilan fitur, serta laporan pengguna tanpa izin mengubah atau menghapus data.'
+                  : 'Admin dapat mengoperasikan akun pengguna secara langsung dengan hak akses penuh di bawah sesi admin. Seluruh aksi diaudit secara aman.'
               }
             </p>
           </div>
-          <p class="text-[11px] text-slate-500">Sesi admin Anda akan dicadangkan sehingga Anda dapat kembali ke akun admin kapan saja melalui banner di atas.</p>
+          <p class="text-[11px] text-slate-500">Akun Anda tetap login sebagai admin. Mode ini dapat diakhiri kapan saja dengan menekan tombol Keluar Mode pada banner.</p>
         </div>
       `,
       icon: isSpectator ? 'info' : 'warning',
@@ -253,46 +253,7 @@ export default function OverridePenggunaPage() {
 
     setActionLoadingId(`${targetUserId}_${mode}`)
     try {
-      // 1. Simpan sesi admin aktif saat ini ke sessionStorage jika belum tersimpan
-      if (typeof window !== 'undefined' && session?.user) {
-        const existingAdminSession = sessionStorage.getItem('simasmuh_original_admin_session')
-        // Pastikan hanya menyimpan jika sesi saat ini BUKAN sesi override
-        const isCurrentOverride = Boolean((session.user as any)?.isOverrideSession)
-        if (!existingAdminSession && !isCurrentOverride) {
-          const rawUser = session.user as any
-          const cleanUser = {
-            id: rawUser.id,
-            name: rawUser.name,
-            email: rawUser.email,
-            username: rawUser.username,
-            nipNbm: rawUser.nipNbm,
-            role: rawUser.role,
-            isActive: rawUser.isActive !== false,
-            subRole: rawUser.subRole,
-            subRole2: rawUser.subRole2,
-            subRole3: rawUser.subRole3,
-            subRole4: rawUser.subRole4,
-            subRole5: rawUser.subRole5,
-            token: (session as any).accessToken,
-            isOverrideSession: false,
-            overrideMode: null,
-            isReadOnly: false,
-            overrideByAdminId: null,
-            overrideByAdminName: null,
-            overrideByAdminRole: null,
-          }
-          const adminAuthPayload = {
-            user: cleanUser,
-            access_token: (session as any).accessToken,
-          }
-          sessionStorage.setItem(
-            'simasmuh_original_admin_session',
-            JSON.stringify(adminAuthPayload)
-          )
-        }
-      }
-
-      // 2. Minta token override dari backend
+      // 1. Minta token override dari backend menggunakan autentikasi admin aktif
       const res = await authenticatedFetch(
         `/api-backend/users/${targetUserId}/override-token`,
         {
@@ -308,27 +269,20 @@ export default function OverridePenggunaPage() {
 
       const overrideData = await res.json()
 
-      // 3. Login ulang NextAuth menggunakan overrideData
-      const signInResult = await signIn('credentials', {
-        action: 'override_login',
-        overrideData: JSON.stringify(overrideData),
-        redirect: false,
-      })
+      // 2. Simpan sesi override ke cookie terpisah (TIDAK menyentuh cookie login NextAuth admin)
+      const { setOverrideSession } = await import('@/lib/override-session')
+      setOverrideSession(overrideData)
 
-      if (signInResult?.ok) {
-        Swal.fire({
-          icon: 'success',
-          title: `Berhasil Masuk Mode ${isSpectator ? 'Spectator' : 'Override'}`,
-          text: `Mengalihkan ke dashboard akun ${targetName}...`,
-          timer: 1500,
-          showConfirmButton: false,
-        })
-        setTimeout(() => {
-          window.location.href = '/dashboard'
-        }, 1200)
-      } else {
-        throw new Error('Gagal menginisialisasi sesi baru di browser.')
-      }
+      Swal.fire({
+        icon: 'success',
+        title: `Berhasil Masuk Mode ${isSpectator ? 'Spectator' : 'Override'}`,
+        text: `Mengalihkan ke dashboard akun ${targetName}...`,
+        timer: 1200,
+        showConfirmButton: false,
+      })
+      setTimeout(() => {
+        window.location.href = '/dashboard'
+      }, 1000)
     } catch (err: any) {
       Swal.fire({
         icon: 'error',

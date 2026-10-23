@@ -28,10 +28,14 @@ import {
 } from '@/lib/schedule-utils'
 import { SortableTableHead, useSorting } from '@/components/SortableTableHead'
 
+import { useActiveUser } from '@/hooks/useActiveUser'
+
 export default function JurnalMengajarPage() {
   const { data: session, status } = useSession()
-  const userId = (session?.user as any)?.id
-  const userRole = (session?.user as any)?.role
+  const { user: activeUser } = useActiveUser()
+  const user = (activeUser || session?.user) as any
+  const userId = user?.id
+  const userRole = user?.role
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
 

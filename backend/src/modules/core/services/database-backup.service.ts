@@ -89,6 +89,25 @@ export class DatabaseBackupService {
         this.logger.warn(`Docker pg_dump gagal: ${dockerErr}`);
       }
 
+      // Fallback 1b: Coba pg_dump binary lokal port 54322 jika docker exec gagal
+      if (!isSuccess) {
+        try {
+          const pgDumpBin = fs.existsSync('C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe')
+            ? '"C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe"'
+            : 'pg_dump';
+          const localDumpCmd = `${pgDumpBin} -h localhost -p 54322 -U postgres -d postgres --clean --if-exists -f "${targetFilePath}"`;
+          await execAsync(localDumpCmd, {
+            env: { ...process.env, PGPASSWORD: 'postgres' },
+            maxBuffer: 1024 * 1024 * 200,
+          });
+          if (fs.existsSync(targetFilePath) && fs.statSync(targetFilePath).size > 1024) {
+            isSuccess = true;
+          }
+        } catch (localErr) {
+          this.logger.warn(`Local pg_dump fallback gagal: ${localErr}`);
+        }
+      }
+
       // 2. Jika dump berhasil
       if (isSuccess) {
         const stats = fs.statSync(targetFilePath);

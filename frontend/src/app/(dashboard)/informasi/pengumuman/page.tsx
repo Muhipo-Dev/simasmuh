@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Plus, Loader2, Trash2, Megaphone, Clock, ImageIcon, CalendarDays, Pencil, ShieldCheck, Award } from 'lucide-react'
 import { compressImageFile } from '@/utils/imageCompressor'
@@ -33,9 +34,9 @@ interface Announcement {
 }
 
 export default function AnnouncementsPage() {
-  const { data: session } = useSession()
-  const userRole = (session?.user as any)?.role || ''
-  const userSubRole = (session?.user as any)?.subRole || ''
+  const { user: activeUser } = useActiveUser()
+  const userRole = (activeUser as any)?.role || ''
+  const userSubRole = (activeUser as any)?.subRole || ''
   const isSuperadminOrIT = ['SUPERADMIN', 'ADMIN_IT'].includes(userRole) || ['SUPERADMIN', 'ADMIN_IT'].includes(userSubRole)
   const isAdminWeb = ['ADMIN_WEB', 'WAKA_HUMAS_SDM', 'HUMAS_SDM'].includes(userRole) || ['ADMIN_WEB', 'WAKA_HUMAS_SDM', 'HUMAS_SDM'].includes(userSubRole)
   const isKepalaSekolah = userRole === 'KEPALA_SEKOLAH' || userSubRole === 'KEPALA_SEKOLAH'
@@ -82,7 +83,7 @@ export default function AnnouncementsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const authorId = (session?.user as any)?.id
+      const authorId = (activeUser as any)?.id
       if (!authorId) throw new Error('Unauthorized')
       
       let imageUrl = data.image;

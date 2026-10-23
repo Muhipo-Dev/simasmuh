@@ -1,5 +1,6 @@
 import { getSession, signOut } from 'next-auth/react'
 import { useCallback } from 'react'
+import { getOverrideSession } from '@/lib/override-session'
 
 interface AuthenticatedFetchOptions extends RequestInit {
   skipAuth?: boolean
@@ -28,19 +29,34 @@ export function useAuthenticatedFetch() {
 
       const mergedHeaders = new Headers(headers as HeadersInit)
       
-      // Add authorization header if we have a session and not skipping auth
+      // Add authorization header if not skipping auth
       if (!skipAuth) {
-        const session = await getCachedSession()
-        if (session && (session as any).accessToken) {
-          mergedHeaders.set('Authorization', `Bearer ${(session as any).accessToken}`)
+        // Cek apakah ada sesi override aktif di cookie
+        const overrideSession = typeof window !== 'undefined' ? getOverrideSession() : null
+
+        if (overrideSession?.access_token) {
+          // Gunakan token akun target yang dioverride untuk mengakses data backend
+          mergedHeaders.set('Authorization', `Bearer ${overrideSession.access_token}`)
+        } else {
+          const session = await getCachedSession()
+          if (session && (session as any).accessToken) {
+            mergedHeaders.set('Authorization', `Bearer ${(session as any).accessToken}`)
+          }
         }
 
         // 🛡️ Proteksi Spectator Mode (Read Only): Cegah modifikasi data jika sedang dalam mode Spectator
-        const isReadOnlySession = (session?.user as any)?.isReadOnly === true || (session?.user as any)?.overrideMode === 'spectator'
+        const isReadOnlySession =
+          overrideSession?.isReadOnly === true ||
+          overrideSession?.mode === 'spectator'
+
         const method = (restOptions.method || 'GET').toUpperCase()
         if (isReadOnlySession && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-          // Kecualikan auth logout / override switch
-          const isAllowedSpectatorPath = url.includes('/auth/logout') || url.includes('/override-token')
+          // Kecualikan auth logout / override exit / override switch
+          const isAllowedSpectatorPath =
+            url.includes('/auth/logout') ||
+            url.includes('/override-token') ||
+            url.includes('/override-exit')
+
           if (!isAllowedSpectatorPath) {
             if (typeof window !== 'undefined') {
               try {

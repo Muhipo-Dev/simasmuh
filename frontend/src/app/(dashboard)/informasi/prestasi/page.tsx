@@ -4,6 +4,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react'
 import {
   useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -45,7 +46,7 @@ const TINGKAT_PRESTASI = [
 ]
 
 export default function PrestasiSiswaPage() {
-  const { data: session } = useSession()
+  const { user: activeUser } = useActiveUser()
   const authenticatedFetch = useAuthenticatedFetch()
   const authenticatedQuery = useAuthenticatedQuery()
   const queryClient = useQueryClient()
@@ -94,8 +95,8 @@ export default function PrestasiSiswaPage() {
     userProfile?.subRole3,
     userProfile?.subRole4,
     userProfile?.subRole5,
-    (session?.user as any)?.role,
-    (session?.user as any)?.subRole,
+    (activeUser as any)?.role,
+    (activeUser as any)?.subRole,
   ].filter(Boolean)
 
   const isSuperadmin = userRoles.includes('SUPERADMIN') || userRoles.includes('ADMIN_IT')

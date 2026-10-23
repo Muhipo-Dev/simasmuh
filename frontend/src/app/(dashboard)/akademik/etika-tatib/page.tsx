@@ -4,6 +4,7 @@ import {
   useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { 
   ShieldCheck, Award, HeartHandshake, CheckCircle2, AlertTriangle, BookOpen, Clock, Users, FileText, Info, ShieldAlert, Calendar, Check, UserCheck, LayoutGrid
 } from 'lucide-react'
@@ -16,7 +17,7 @@ import { useAuthenticatedFetch, useAuthenticatedQuery } from '@/hooks/useAuthent
 import { InteractiveCharacterAssessmentManagement } from '@/components/academic/InteractiveCharacterAssessmentManagement'
 
 export default function EtikaTatibPage() {
-  const { data: session } = useSession()
+  const { user: activeUser } = useActiveUser()
   const authenticatedFetch = useAuthenticatedFetch()
   const authenticatedQuery = useAuthenticatedQuery()
   const [selectedChildIndex, setSelectedChildIndex] = useState(0)
@@ -37,12 +38,12 @@ export default function EtikaTatibPage() {
     userProfile?.subRole3,
     userProfile?.subRole4,
     userProfile?.subRole5,
-    (session?.user as any)?.role,
-    (session?.user as any)?.subRole,
-    (session?.user as any)?.subRole2,
-    (session?.user as any)?.subRole3,
-    (session?.user as any)?.subRole4,
-    (session?.user as any)?.subRole5,
+    (activeUser as any)?.role,
+    (activeUser as any)?.subRole,
+    (activeUser as any)?.subRole2,
+    (activeUser as any)?.subRole3,
+    (activeUser as any)?.subRole4,
+    (activeUser as any)?.subRole5,
   ].filter(Boolean)
 
   const isStaffOrManagement = userRoles.some((r: string) => 

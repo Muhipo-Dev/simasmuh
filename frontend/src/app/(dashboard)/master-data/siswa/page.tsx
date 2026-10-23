@@ -219,20 +219,26 @@ type Class = {
   name: string
 }
 
+import { useActiveUser } from '@/hooks/useActiveUser'
+
 export default function StudentsPage() {
   const authenticatedFetch = useAuthenticatedFetch()
   const { data: session } = useSession()
+  const { user: activeUser, isOverride } = useActiveUser()
   const queryClient = useQueryClient()
 
-  const userRole = (session?.user as any)?.role || ''
-  const subRole = (session?.user as any)?.subRole || ''
-  const subRole2 = (session?.user as any)?.subRole2 || ''
-  const subRole3 = (session?.user as any)?.subRole3 || ''
-  const userRolesList = [userRole, subRole, subRole2, subRole3]
+  const user = (activeUser || session?.user) as any
+  const userRole = user?.role || ''
+  const subRole = user?.subRole || ''
+  const subRole2 = user?.subRole2 || ''
+  const subRole3 = user?.subRole3 || ''
+  const subRole4 = user?.subRole4 || ''
+  const subRole5 = user?.subRole5 || ''
+  const userRolesList = [userRole, subRole, subRole2, subRole3, subRole4, subRole5].filter(Boolean)
   const isWaliKelas = userRolesList.includes('WALI_KELAS')
   const isFinance = userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'KEUANGAN_ALL', 'KEUANGAN_MASUK'].includes(r))
-  const isSuperOrAdmin = userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN', 'KURIKULUM', 'ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEUANGAN_ALL', 'KEUANGAN_MASUK'].includes(r)) || isWaliKelas
-  const isSuperadmin = userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEUANGAN_ALL', 'KEUANGAN_MASUK'].includes(r))
+  const isSuperadmin = !isOverride && userRolesList.some(r => ['SUPERADMIN', 'ADMIN_IT', 'ADMIN_TU', 'BAU', 'TATA_USAHA', 'KEUANGAN_ALL', 'KEUANGAN_MASUK'].includes(r))
+  const isSuperOrAdmin = isSuperadmin || isWaliKelas || userRolesList.some(r => ['ADMIN', 'KURIKULUM'].includes(r))
   const isKepalaSekolah = userRolesList.includes('KEPALA_SEKOLAH')
 
   const [open, setOpen] = useState(false)
@@ -1765,12 +1771,12 @@ export default function StudentsPage() {
       {isWaliKelas && !isSuperadmin ? (
         <WaliKelasSiswaManagement
           homeroomClass={classes?.find((c: any) =>
-            c.homeroomTeacher?.userId === (session?.user as any)?.id ||
-            c.homeroomTeacher?.user?.id === (session?.user as any)?.id ||
-            c.homeroomTeacherId === (session?.user as any)?.teacherProfile?.id ||
-            c.homeroomTeacherId === (session?.user as any)?.teacherId ||
-            (c.homeroomTeacher?.user?.email && (session?.user as any)?.email && c.homeroomTeacher?.user?.email === (session?.user as any)?.email) ||
-            (c.homeroomTeacher?.user?.name && (session?.user as any)?.name && c.homeroomTeacher?.user?.name.trim().toLowerCase() === (session?.user as any)?.name.trim().toLowerCase())
+            c.homeroomTeacher?.userId === user?.id ||
+            c.homeroomTeacher?.user?.id === user?.id ||
+            c.homeroomTeacherId === user?.teacherProfile?.id ||
+            c.homeroomTeacherId === user?.teacherId ||
+            (c.homeroomTeacher?.user?.email && user?.email && c.homeroomTeacher?.user?.email === user?.email) ||
+            (c.homeroomTeacher?.user?.name && user?.name && c.homeroomTeacher?.user?.name.trim().toLowerCase() === user?.name.trim().toLowerCase())
           )}
         />
       ) : (

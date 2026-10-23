@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import {
   useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -35,11 +36,11 @@ const KATEGORI_EKSKUL = [
 ]
 
 export default function EkstrakurikulerPage() {
-  const { data: session } = useSession()
+  const { user: activeUser } = useActiveUser()
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
 
-  const u = session?.user as any
+  const u = activeUser as any
   const userRolesList = [
     u?.role,
     u?.subRole,
@@ -315,7 +316,7 @@ export default function EkstrakurikulerPage() {
 
       {/* VIEW 1: RUANG KERJA PEMBINA EKSTRA */}
       {viewMode === 'pembina' && (
-        <PembinaEkstrakurikulerManagement session={session} />
+        <PembinaEkstrakurikulerManagement session={{ user: activeUser }} />
       )}
 
       {/* VIEW 2: MASTER KESISWAAN & SUPERVISI */}

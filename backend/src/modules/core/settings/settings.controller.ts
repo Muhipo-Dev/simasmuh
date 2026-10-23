@@ -200,6 +200,7 @@ export class SettingsController {
     UserRole.ADMIN_TU,
     SubRole.ADMIN_TU,
     SubRole.KURIKULUM,
+    SubRole.WAKA_KURIKULUM,
     'KURIKULUM',
     'KESISWAAN',
     'ADMIN',

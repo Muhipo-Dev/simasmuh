@@ -111,6 +111,8 @@ model TeacherProfile {
   perangkatAjars      PerangkatAjar[]
   studentAssessments  StudentAssessment[]
   perangkatKurikulums PerangkatKurikulum[]
+  modulAjars          ModulAjar[]
+  alurTujuanPembelajarans AlurTujuanPembelajaran[]
 }
 
 model ParentProfile {
@@ -150,6 +152,8 @@ model Class {
   students          Student[]
   studentAssessments StudentAssessment[]
   perangkatKurikulums PerangkatKurikulum[]
+  modulAjars          ModulAjar[]
+  alurTujuanPembelajarans AlurTujuanPembelajaran[]
 
   @@unique([name, gradeLevel, academicYear])
 }
@@ -205,6 +209,8 @@ model Subject {
   teacherSubjects TeacherSubject[]
   studentAssessments StudentAssessment[]
   perangkatKurikulums PerangkatKurikulum[]
+  modulAjars          ModulAjar[]
+  alurTujuanPembelajarans AlurTujuanPembelajaran[]
 }
 
 model TeacherSubject {
@@ -235,6 +241,7 @@ model Schedule {
   subject          Subject           @relation(fields: [subjectId], references: [id])
   teacher          TeacherProfile    @relation(fields: [teacherId], references: [id])
   teachingJournals TeachingJournal[]
+  modulAjars       ModulAjar[]
 
   @@unique([classId, subjectId, dayOfWeek, startTime])
 }
@@ -283,19 +290,29 @@ model Grade {
 }
 
 model TeachingJournal {
-  id         String         @id @default(uuid())
-  date       DateTime
-  material   String
-  notes      String?
-  scheduleId String
-  teacherId  String
-  photoUrl   String?
-  tpId       String?
+  id               String         @id @default(uuid())
+  date             DateTime
+  material         String
+  notes            String?
+  scheduleId       String
+  teacherId        String
+  photoUrl         String?
+  tpId             String?
+  modulAjarId      String?
+  
   tujuanPembelajaran TujuanPembelajaran? @relation(fields: [tpId], references: [id], onDelete: SetNull)
-  schedule   Schedule       @relation(fields: [scheduleId], references: [id])
-  teacher    TeacherProfile @relation(fields: [teacherId], references: [id])
+  modulAjar          ModulAjar?          @relation(fields: [modulAjarId], references: [id], onDelete: SetNull)
+  schedule           Schedule            @relation(fields: [scheduleId], references: [id])
+  teacher            TeacherProfile      @relation(fields: [teacherId], references: [id])
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @default(now()) @updatedAt
 
   @@unique([scheduleId, teacherId, date])
+  @@index([scheduleId])
+  @@index([teacherId])
+  @@index([tpId])
+  @@index([modulAjarId])
 }
 
 model HomeroomJournal {
@@ -366,6 +383,8 @@ model Setting {
   heroVideoText          String? @default("Tonton Video Profil")
   heroVideoLink          String? @default("https://www.youtube.com/@SmaMuhipo")
   homeSectionOrderJson   String? // JSON stringified array of section keys: ['partner_logos', 'stats', 'news_agenda', 'why_school', 'programs', 'media_social']
+  activeCurriculaJson    String? @default("[\"KURIKULUM_MERDEKA\"]") // Array kurikulum yang aktif di sekolah (maksimal 2)
+  allCurriculaJson       String? // Custom kurikulum tambahan yang didaftarkan waka kurikulum (>10 kurikulum)
 }
 
 model Announcement {
@@ -1397,12 +1416,100 @@ model TujuanPembelajaran {
   dokumenItems         PerangkatAjarItem[]
   nilaiSiswaTps        NilaiSiswaTP[]
   teachingJournals     TeachingJournal[]
+  alurTujuanPembelajarans AlurTujuanPembelajaran[]
+  modulAjars           ModulAjar[]
+  kktps                Kktp[]
 
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
   @@index([perangkatKurikulumId])
   @@index([orderIndex])
+  @@index([cpId])
+}
+
+model AlurTujuanPembelajaran {
+  id           String             @id @default(uuid())
+  tpId         String
+  teacherId    String
+  classId      String
+  subjectId    String
+  fase         String             // FASE_E, FASE_F
+  academicYear String             @default("2025/2026")
+  semester     String             @default("GANJIL") // GANJIL, GENAP
+  
+  sequence     Int                @default(1) // Urutan kronologis pengajaran
+  alokasiJp    Int                @default(4) // Alokasi waktu JP
+  keterangan   String?            @db.Text
+
+  tujuanPembelajaran TujuanPembelajaran @relation(fields: [tpId], references: [id], onDelete: Cascade)
+  teacher            TeacherProfile     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class              Class              @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject            Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@unique([tpId, classId, semester, academicYear])
+  @@index([tpId])
+  @@index([teacherId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([sequence])
+}
+
+model ModulAjar {
+  id           String             @id @default(uuid())
+  tpId         String             // Relasi wajib / tag spesifik ke TP
+  teacherId    String
+  classId      String
+  subjectId    String
+  scheduleId   String?
+
+  judul        String             // Judul Modul Ajar (pengganti RPP)
+  deskripsi    String?            @db.Text
+  kontenJson   Json?              // Komponen inti: Apersepsi, Pemantik, Kegiatan Inti, Penutup, Media/LKPD
+  fileDocxUrl  String?
+  filePdfUrl   String?
+  status       String             @default("SIAP") // DRAFT, SIAP, SUPERVISI
+
+  tujuanPembelajaran TujuanPembelajaran @relation(fields: [tpId], references: [id], onDelete: Cascade)
+  teacher            TeacherProfile     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class              Class              @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject            Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  schedule           Schedule?          @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  kktps              Kktp[]
+  teachingJournals   TeachingJournal[]
+
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([tpId])
+  @@index([teacherId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([scheduleId])
+}
+
+model Kktp {
+  id                   String             @id @default(uuid())
+  tpId                 String             // Terhubung ke Tujuan Pembelajaran
+  modulAjarId          String?            // Terhubung ke Modul Ajar
+  
+  tipePendekatan       String             @default("DESKRIPSI_KRITERIA") // DESKRIPSI_KRITERIA, RUBRIK, INTERVAL_NILAI
+  deskripsiKualitatif  String             @db.Text // Deskripsi/bukti kinerja murid kualitatif (bukan Int angka kaku)
+  rubrikJson           Json?              // Struktur rubrik: { belumBerkembang, mulaiBerkembang, berkembangSesuaiHarapan, sangatBerkembang }
+  tindakLanjutRemedial String?            @db.Text // Rekomendasi intervensi perbaikan
+  tindakLanjutPengayaan String?           @db.Text // Rekomendasi pengayaan
+
+  tujuanPembelajaran   TujuanPembelajaran @relation(fields: [tpId], references: [id], onDelete: Cascade)
+  modulAjar            ModulAjar?         @relation(fields: [modulAjarId], references: [id], onDelete: Cascade)
+
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([tpId])
+  @@index([modulAjarId])
 }
 
 model PromesAllocation {

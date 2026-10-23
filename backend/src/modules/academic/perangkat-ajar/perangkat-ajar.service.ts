@@ -372,6 +372,19 @@ export class PerangkatAjarService {
 
     const year = academicYear || setting?.academicYear || autoAcademicYear;
     const teachers = (await (this.prisma.teacherProfile.findMany as any)({
+      where: {
+        user: {
+          isActive: true,
+          OR: [
+            { role: { in: ['GURU', 'HONORER'] } },
+            { subRole: { in: ['GURU', 'GURU_HONORER', 'GURU_PIKET', 'WALI_KELAS', 'KURIKULUM', 'WAKA_KURIKULUM'] } },
+            { subRole2: { in: ['GURU', 'GURU_HONORER', 'GURU_PIKET', 'WALI_KELAS', 'KURIKULUM', 'WAKA_KURIKULUM'] } },
+            { subRole3: { in: ['GURU', 'GURU_HONORER', 'GURU_PIKET', 'WALI_KELAS', 'KURIKULUM', 'WAKA_KURIKULUM'] } },
+            { subRole4: { in: ['GURU', 'GURU_HONORER', 'GURU_PIKET', 'WALI_KELAS', 'KURIKULUM', 'WAKA_KURIKULUM'] } },
+            { subRole5: { in: ['GURU', 'GURU_HONORER', 'GURU_PIKET', 'WALI_KELAS', 'KURIKULUM', 'WAKA_KURIKULUM'] } },
+          ],
+        },
+      },
       include: {
         user: {
           select: {

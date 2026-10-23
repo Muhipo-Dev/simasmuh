@@ -2,6 +2,7 @@
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,8 +49,8 @@ interface CutiPegawaiItem {
 
 export function CutiPegawaiManagement() {
   const authenticatedFetch = useAuthenticatedFetch()
-  const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser } = useActiveUser()
+  const user = activeUser as any
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isSuperAdmin = user?.role === 'SUPERADMIN' || user?.role === 'ADMIN_IT' || user?.subRole === 'SUPERADMIN'
@@ -124,9 +125,9 @@ export function CutiPegawaiManagement() {
   }
 
   useEffect(() => {
-    if (session) fetchData()
+    if (user) fetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, filterDate, activeTab])
+  }, [user, filterDate, activeTab])
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

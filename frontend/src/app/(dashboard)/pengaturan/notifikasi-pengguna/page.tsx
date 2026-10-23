@@ -15,11 +15,13 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 
 export default function NotifikasiPenggunaPage() {
   const authenticatedFetch = useAuthenticatedFetch()
   const { data: session } = useSession()
-  const sessionRole = (session?.user as any)?.role || ''
+  const { user: activeUser } = useActiveUser()
+  const sessionRole = ((activeUser || session?.user) as any)?.role || ''
 
   // State settings with role-adaptive defaults
   const [settings, setSettings] = useState({

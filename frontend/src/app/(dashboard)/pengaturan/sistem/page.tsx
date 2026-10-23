@@ -17,6 +17,8 @@ import { compressImageFile } from '@/utils/imageCompressor'
 import { SystemRuntimeSupervisor } from '@/components/settings/SystemRuntimeSupervisor'
 import { SystemLiveConsoleViewer } from '@/components/settings/SystemLiveConsoleViewer'
 import { setCachedSystemPublicDomain } from '@/lib/api-config'
+import { PengaturanKurikulumManager } from '@/components/settings/PengaturanKurikulumManager'
+import { CurriculumOption } from '@/components/academic/kurikulum/common/KurikulumSelector'
 
 type Setting = {
   id: string
@@ -39,6 +41,8 @@ type Setting = {
   timezone?: string | null
   serverLocation?: string | null
   partnerLogos?: string | null
+  activeCurriculaJson?: string | null
+  allCurriculaJson?: string | null
 }
 
 type BankAccount = {
@@ -546,6 +550,52 @@ export default function SettingsPage() {
             </CardFooter>
           </form>
         </Card>
+
+        {/* Pengaturan Standar Kurikulum Sekolah (Waka Kurikulum & Pimpinan) */}
+        <PengaturanKurikulumManager
+          activeCurricula={(() => {
+            try {
+              return settings?.activeCurriculaJson ? JSON.parse(settings.activeCurriculaJson) : ['KURIKULUM_MERDEKA']
+            } catch {
+              return ['KURIKULUM_MERDEKA']
+            }
+          })()}
+          customCurricula={(() => {
+            try {
+              return settings?.allCurriculaJson ? JSON.parse(settings.allCurriculaJson) : []
+            } catch {
+              return []
+            }
+          })()}
+          isSaving={mutation.isPending}
+          onSave={async (activeCurricula, customCurricula) => {
+            try {
+              const res = await authenticatedFetch('/api-backend/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  activeCurriculaJson: JSON.stringify(activeCurricula),
+                  allCurriculaJson: JSON.stringify(customCurricula),
+                }),
+              })
+              if (!res.ok) throw new Error('Gagal menyimpan pengaturan kurikulum')
+              await queryClient.invalidateQueries({ queryKey: ['settings'] })
+              Swal.fire({
+                icon: 'success',
+                title: 'Pengaturan Kurikulum Disimpan',
+                text: 'Kurikulum aktif dan modul kurikulum sekolah berhasil disinkronkan.',
+                timer: 1800,
+                showConfirmButton: false,
+              })
+            } catch (err: any) {
+              Swal.fire({
+                icon: 'error',
+                title: 'Gagal Menyimpan',
+                text: err.message || 'Terjadi kesalahan sistem',
+              })
+            }
+          }}
+        />
 
         {/* Pengaturan Bank */}
         <Card className="shadow-xs border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl rounded-2xl overflow-hidden">

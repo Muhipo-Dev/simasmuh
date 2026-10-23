@@ -20,7 +20,7 @@ import {
   ShieldCheck, RefreshCw, FileCheck, Award, 
   XCircle, Filter, Search, Check, ChevronRight, UserCheck, Sparkles,
   GraduationCap, CalendarDays, ArrowRight, Layers, Zap,
-  Download, FileSpreadsheet, ChevronDown, Archive, RotateCcw
+  Download, FileSpreadsheet, ChevronDown, Archive, RotateCcw, HelpCircle
 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -35,6 +35,7 @@ import { useSorting, SortableTableHead } from '@/components/SortableTableHead'
 import { KurikulumMerdekaWorkspace } from '@/components/academic/kurikulum/merdeka/KurikulumMerdekaWorkspace'
 import { KurikulumSelector, AVAILABLE_CURRICULA } from '@/components/academic/kurikulum/common/KurikulumSelector'
 import { KurikulumPlaceholderWorkspace } from '@/components/academic/kurikulum/common/KurikulumPlaceholderWorkspace'
+import { PanduanAdministrasiGuruModal } from '@/components/academic/kurikulum/common/PanduanAdministrasiGuruModal'
 
 // Jenis Perangkat Pembelajaran Kurikulum Merdeka & Nasional
 const JENIS_PERANGKAT_OPTIONS = [
@@ -55,12 +56,15 @@ const FASE_OPTIONS = [
   'Umum / Seluruh Kelas',
 ]
 
+import { useActiveUser } from '@/hooks/useActiveUser'
+
 export default function PerangkatAjarPage() {
   const { data: session } = useSession()
+  const { user: activeUser, isOverride } = useActiveUser()
   const authenticatedFetch = useAuthenticatedFetch()
   const queryClient = useQueryClient()
 
-  const user = session?.user as any
+  const user = (activeUser || session?.user) as any
   const userRoles = [
     user?.role,
     user?.subRole,
@@ -74,7 +78,7 @@ export default function PerangkatAjarPage() {
     ['GURU', 'HONORER', 'GURU_HONORER', 'GURU_PIKET', 'WALI_KELAS'].includes(r)
   )
 
-  const isKurikulumOrPimpinan = userRoles.some((r: string) =>
+  const isKurikulumOrPimpinan = !isOverride && userRoles.some((r: string) =>
     [
       'SUPERADMIN',
       'ADMIN_IT',
@@ -98,7 +102,7 @@ export default function PerangkatAjarPage() {
   // Pegawai / Karyawan biasa TIDAK BOLEH mengakses modul ini
   const isAuthorized = isGuru || isKurikulumOrPimpinan
 
-  const [activeTab, setActiveTab] = useState<'alur' | 'merdeka' | 'saya' | 'arsip' | 'verifikasi' | 'rekap'>('merdeka')
+  const [activeTab, setActiveTab] = useState<'merdeka' | 'saya' | 'arsip' | 'verifikasi' | 'rekap'>('merdeka')
   const [selectedCurriculum, setSelectedCurriculum] = useState<string>('KURIKULUM_MERDEKA')
   const [searchQuery, setSearchQuery] = useState('')
   const [filterJenis, setFilterJenis] = useState('ALL')
@@ -130,14 +134,58 @@ export default function PerangkatAjarPage() {
   const [verifyStatus, setVerifyStatus] = useState<'TERVERIFIKASI' | 'PERLU_REVISI' | 'DITOLAK'>('TERVERIFIKASI')
   const [verifyNotes, setVerifyNotes] = useState('')
 
-  // Modal State Quick Setup Administrasi Guru
-  const [openModalQuickSetup, setOpenModalQuickSetup] = useState(false)
-  const [formQuickClassId, setFormQuickClassId] = useState('')
-  const [formQuickSubjectId, setFormQuickSubjectId] = useState('')
-  const [formQuickFase, setFormQuickFase] = useState('FASE_E')
-  const [formQuickJpPerMinggu, setFormQuickJpPerMinggu] = useState(2)
-  const [formQuickApplySameGrade, setFormQuickApplySameGrade] = useState(true) // Otomatis aktifkan untuk semua rombel jenjang sama
-  const [quickSetupSubmitting, setQuickSetupSubmitting] = useState(false)
+  // Modal State Panduan Lengkap Administrasi Guru
+  const [openModalPanduan, setOpenModalPanduan] = useState(false)
+
+
+
+  // 0. Ambil Pengaturan Kurikulum Sekolah (Waka Kurikulum / Pimpinan)
+  const { data: publicSettings } = useQuery({
+    queryKey: ['public-settings'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/settings/public')
+      if (!res.ok) return null
+      return res.json()
+    },
+  })
+
+  const activeCurriculaIds: string[] = useMemo(() => {
+    try {
+      if (publicSettings?.activeCurriculaJson) {
+        return JSON.parse(publicSettings.activeCurriculaJson)
+      }
+    } catch {}
+    return ['KURIKULUM_MERDEKA']
+  }, [publicSettings?.activeCurriculaJson])
+
+  const customCurriculaList: any[] = useMemo(() => {
+    try {
+      if (publicSettings?.allCurriculaJson) {
+        return JSON.parse(publicSettings.allCurriculaJson)
+      }
+    } catch {}
+    return []
+  }, [publicSettings?.allCurriculaJson])
+
+  // Sinkronkan selectedCurriculum agar selalu mengacu ke kurikulum aktif
+  useEffect(() => {
+    if (activeCurriculaIds.length > 0 && !activeCurriculaIds.includes(selectedCurriculum)) {
+      setSelectedCurriculum(activeCurriculaIds[0])
+    }
+  }, [activeCurriculaIds, selectedCurriculum])
+
+  // Sinkronkan filter tahun pelajaran dan semester dengan setting aktif sekolah
+  useEffect(() => {
+    if (publicSettings?.academicYear) {
+      setFilterTahun(publicSettings.academicYear)
+      setFormAcademicYear(publicSettings.academicYear)
+    }
+    if (publicSettings?.semester) {
+      const semFormatted = publicSettings.semester.toUpperCase().includes('GENAP') ? 'GENAP' : 'GANJIL'
+      setFilterSemester(semFormatted)
+      setFormSemester(semFormatted)
+    }
+  }, [publicSettings?.academicYear, publicSettings?.semester])
 
   // 1. Fetch Konteks Guru (Kelas yang diampu & mapel riil)
   const { data: guruContext, refetch: refetchGuruContext } = useQuery({
@@ -268,47 +316,7 @@ export default function PerangkatAjarPage() {
     }
   }
 
-  // Auto pre-fill quick setup modal saat dibuka jika ada jadwal
-  useEffect(() => {
-    if (openModalQuickSetup && !formQuickClassId && schedulePairings.length > 0) {
-      const unconfig = schedulePairings.find((p) => !p.isConfigured) || schedulePairings[0]
-      if (unconfig) {
-        setFormQuickClassId(unconfig.classId)
-        setFormQuickSubjectId(unconfig.subjectId)
-        setFormQuickFase(unconfig.fase || (unconfig.gradeLevel === 10 ? 'FASE_E' : 'FASE_F'))
-        setFormQuickJpPerMinggu(unconfig.totalJpPerMinggu || 2)
-      }
-    }
-  }, [openModalQuickSetup, schedulePairings, formQuickClassId])
 
-  // Handler auto-matching ketika memilih kelas di Quick Setup
-  const handleSelectQuickClass = (classId: string) => {
-    setFormQuickClassId(classId)
-    if (!classId) return
-    const match = schedulePairings.find((p) => p.classId === classId)
-    if (match) {
-      setFormQuickSubjectId(match.subjectId)
-      setFormQuickFase(match.fase || (match.gradeLevel === 10 ? 'FASE_E' : 'FASE_F'))
-      setFormQuickJpPerMinggu(match.totalJpPerMinggu || 2)
-    } else {
-      const cls = assignedClasses.find((c: any) => c.id === classId)
-      if (cls) {
-        setFormQuickFase(cls.gradeLevel === 10 ? 'FASE_E' : 'FASE_F')
-      }
-    }
-  }
-
-  // Handler auto-matching ketika memilih mapel di Quick Setup
-  const handleSelectQuickSubject = (subjectId: string) => {
-    setFormQuickSubjectId(subjectId)
-    if (formQuickClassId && subjectId) {
-      const match = schedulePairings.find((p) => p.classId === formQuickClassId && p.subjectId === subjectId)
-      if (match) {
-        setFormQuickFase(match.fase || (match.gradeLevel === 10 ? 'FASE_E' : 'FASE_F'))
-        setFormQuickJpPerMinggu(match.totalJpPerMinggu || 2)
-      }
-    }
-  }
 
   // 1b. Fetch Daftar Guru
   const { data: teachersData } = useQuery({
@@ -453,109 +461,7 @@ export default function PerangkatAjarPage() {
     },
   })
 
-  // Handle Quick Setup Administrasi Guru
-  const handleQuickSetupSubmit = async () => {
-    if (!formQuickClassId || !formQuickSubjectId) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Lengkapi Data Setup',
-        text: 'Silakan pilih kelas dan mata pelajaran yang diampu terlebih dahulu.',
-        confirmButtonColor: '#2563eb',
-      })
-      return
-    }
 
-    setQuickSetupSubmitting(true)
-    try {
-      // Dapatkan rombel-rombel satu jenjang yang diampu untuk mapel terpilih
-      const selectedClassObj = assignedClasses.find((c: any) => c.id === formQuickClassId)
-      const grade = selectedClassObj?.gradeLevel || (selectedClassObj?.name?.startsWith('X ') ? 10 : selectedClassObj?.name?.startsWith('XI ') ? 11 : 12)
-      
-      const sameGradeClassIds = assignedClasses
-        .filter((c: any) => {
-          const cGrade = c.gradeLevel || (c.name?.startsWith('X ') ? 10 : c.name?.startsWith('XI ') ? 11 : 12)
-          return cGrade === grade
-        })
-        .map((c: any) => c.id)
-
-      const res = await authenticatedFetch('/api-backend/kurikulum-merdeka/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          classId: formQuickClassId,
-          subjectId: formQuickSubjectId,
-          fase: formQuickFase,
-          totalJpSemester: Number(formQuickJpPerMinggu) * 18,
-          jpPerMinggu: Number(formQuickJpPerMinggu),
-          applyToGradeLevel: formQuickApplySameGrade,
-          targetClassIds: formQuickApplySameGrade ? sameGradeClassIds : [formQuickClassId],
-        }),
-      })
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.message || 'Gagal menyimpan Quick Setup Administrasi Guru')
-      }
-
-      await queryClient.invalidateQueries({ queryKey: ['kurikulum-merdeka-guru-context'] })
-      await queryClient.invalidateQueries({ queryKey: ['perangkat-ajar-list'] })
-      await queryClient.invalidateQueries({ queryKey: ['perangkat-ajar-stats-rekap'] })
-
-      setOpenModalQuickSetup(false)
-      setActiveTab('merdeka')
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Quick Setup Berhasil!',
-        text: 'Administrasi kelas & mapel aktif berhasil disiapkan. Anda dapat langsung mengelola TP, Promes, RPP, dan Soal.',
-        confirmButtonColor: '#2563eb',
-        timer: 2000,
-        showConfirmButton: false,
-      })
-    } catch (e: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Gagal Quick Setup',
-        text: e.message || 'Terjadi kesalahan sistem saat konfigurasi administrasi.',
-        confirmButtonColor: '#2563eb',
-      })
-    } finally {
-      setQuickSetupSubmitting(false)
-    }
-  }
-
-  // Handle Sinkronisasi Langsung dari Jadwal KBM pada Quick Setup
-  const [quickSyncing, setQuickSyncing] = useState(false)
-  const handleQuickSyncAllSchedules = async () => {
-    setQuickSyncing(true)
-    try {
-      const res = await authenticatedFetch('/api-backend/kurikulum-merdeka/auto-sync-schedules', {
-        method: 'POST',
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.message || 'Gagal sinkronisasi dari jadwal.')
-      }
-      const data = await res.json()
-      await queryClient.invalidateQueries({ queryKey: ['kurikulum-merdeka-guru-context'] })
-      setOpenModalQuickSetup(false)
-      setActiveTab('merdeka')
-      Swal.fire({
-        icon: 'success',
-        title: 'Sinkronisasi Jadwal Berhasil!',
-        text: data.message || 'Semua rombel & mapel penugasan berhasil disiapkan secara otomatis.',
-        confirmButtonColor: '#2563eb',
-      })
-    } catch (e: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Gagal Sinkronisasi',
-        text: e.message || 'Terjadi kesalahan sistem.',
-      })
-    } finally {
-      setQuickSyncing(false)
-    }
-  }
 
   const resetForm = () => {
     setEditDocId(null)
@@ -780,10 +686,10 @@ export default function PerangkatAjarPage() {
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
             <BookOpen className="w-6 h-6 text-primary shrink-0" />
-            Administrasi &amp; Perangkat Pembelajaran
+            Administrasi Guru
           </h1>
           <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
-            Penyusunan Prota, Promes, CP &amp; ATP, Modul Ajar, presensi harian, hingga integrasi nilai e-rapor terpadu.
+            Kelola alur administrasi pembelajaran: jadwal mengajar, ATP, Promes, modul ajar, dan presensi KBM.
           </p>
         </div>
 
@@ -891,33 +797,23 @@ export default function PerangkatAjarPage() {
 
           <Button
             size="sm"
-            variant="outline"
-            onClick={() => {
-              if (schedulePairings.length > 0) {
-                const targetPair = schedulePairings.find((p) => !p.isConfigured) || schedulePairings[0]
-                setFormQuickClassId(targetPair.classId)
-                setFormQuickSubjectId(targetPair.subjectId)
-                setFormQuickFase(targetPair.fase || (targetPair.gradeLevel === 10 ? 'FASE_E' : 'FASE_F'))
-                setFormQuickJpPerMinggu(targetPair.totalJpPerMinggu || 2)
-              } else {
-                if (assignedClasses.length > 0) setFormQuickClassId(assignedClasses[0].id)
-                if (assignedSubjects.length > 0) setFormQuickSubjectId(assignedSubjects[0].id)
-              }
-              setOpenModalQuickSetup(true)
-            }}
-            className="h-9 px-3 text-xs font-semibold gap-1.5 border-border"
+            onClick={() => setOpenModalPanduan(true)}
+            className="h-9 px-3.5 text-xs font-bold gap-1.5 bg-blue-600 hover:bg-blue-700 text-white shadow-2xs border-0"
+            title="Buka panduan resmi alur tata cara administrasi guru"
           >
-            <Zap className="w-3.5 h-3.5 text-amber-500" />
-            <span>Quick Setup</span>
+            <HelpCircle className="w-3.5 h-3.5 text-white" />
+            <span>Panduan</span>
           </Button>
 
           <Button
             size="sm"
+            variant="outline"
             onClick={() => {
               resetForm()
               setOpenModalUpload(true)
             }}
-            className="h-9 px-3.5 text-xs font-semibold gap-1.5 shadow-2xs"
+            className="h-9 px-3 text-xs font-semibold gap-1.5 border-border shadow-2xs"
+            title="Unggah berkas Word/PDF perangkat pembelajaran mandiri"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Unggah Berkas</span>
@@ -926,64 +822,46 @@ export default function PerangkatAjarPage() {
       </div>
 
       {/* Navigasi Tab Modul */}
-      <div className="flex border-b border-border gap-1 overflow-x-auto pb-0.5 no-scrollbar">
+      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-1.5 overflow-x-auto pb-1 no-scrollbar">
         <button
           onClick={() => setActiveTab('merdeka')}
-          className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+          className={`py-2 px-3.5 font-bold text-xs flex items-center gap-2 rounded-t-lg border-b-2 transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'merdeka'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'border-sky-600 bg-sky-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>Perangkat Ajar (Prota/Promes &amp; ATP)</span>
-          <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-muted text-foreground font-mono">
-            Kurikulum
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('alur')}
-          className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
-            activeTab === 'alur'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
+          <BookOpen className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
           <span>Alur Administrasi</span>
-          <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-muted text-muted-foreground font-mono">
-            6 Tahap
-          </span>
         </button>
 
         <button
           onClick={() => setActiveTab('saya')}
-          className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+          className={`py-2 px-3.5 font-bold text-xs flex items-center gap-2 rounded-t-lg border-b-2 transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'saya'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'border-sky-600 bg-sky-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
-          <FileText className="w-3.5 h-3.5" />
-          <span>Berkas Manual</span>
-          <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-muted text-muted-foreground font-mono">
+          <FileText className="w-3.5 h-3.5 text-slate-500" />
+          <span>Dokumen Tambahan</span>
+          <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-slate-200/80 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-mono">
             {perangkatList.length}
           </span>
         </button>
 
         <button
           onClick={() => setActiveTab('arsip')}
-          className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+          className={`py-2 px-3.5 font-bold text-xs flex items-center gap-2 rounded-t-lg border-b-2 transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'arsip'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'border-sky-600 bg-sky-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
-          <Archive className="w-3.5 h-3.5" />
-          <span>Arsip Riwayat</span>
+          <Archive className="w-3.5 h-3.5 text-amber-600" />
+          <span>Arsip Tahun Lalu</span>
           {archivePerangkatList.length > 0 && (
-            <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-muted text-foreground font-mono font-bold">
+            <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 font-mono font-bold">
               {archivePerangkatList.length}
             </span>
           )}
@@ -992,15 +870,15 @@ export default function PerangkatAjarPage() {
         {isKurikulumOrPimpinan && (
           <button
             onClick={() => setActiveTab('verifikasi')}
-            className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+            className={`py-2 px-3.5 font-bold text-xs flex items-center gap-2 rounded-t-lg border-b-2 transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'verifikasi'
-                ? 'border-primary text-primary font-bold'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
+                ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             <span>Verifikasi Kurikulum</span>
-            <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-emerald-500/10 text-emerald-600 font-mono font-bold">
+            <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 font-mono font-bold">
               {perangkatList.filter((p) => p.status === 'DIAJUKAN').length}
             </span>
           </button>
@@ -1008,240 +886,31 @@ export default function PerangkatAjarPage() {
 
         <button
           onClick={() => setActiveTab('rekap')}
-          className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+          className={`py-2 px-3.5 font-bold text-xs flex items-center gap-2 rounded-t-lg border-b-2 transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'rekap'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'border-sky-600 bg-sky-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
-          <FileCheck className="w-3.5 h-3.5" />
-          <span>Rekapitulasi</span>
-          <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-muted text-muted-foreground font-mono">
+          <FileCheck className="w-3.5 h-3.5 text-slate-500" />
+          <span>Rekap Ketuntasan</span>
+          <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-slate-200/80 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-mono">
             {summary.persentaseKelengkapanSekolah || 0}%
           </span>
         </button>
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 0: ALUR KERJA LENGKAP ADMINISTRASI GURU (INTEGRASI 1 PINTU) */}
-      {/* ========================================================================= */}
-      {activeTab === 'alur' && (
-        <div className="space-y-6">
-          <Card className="border-slate-200 dark:border-slate-800 shadow-xs">
-            <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-4 px-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div>
-                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Layers className="w-5 h-5 text-indigo-600" />
-                    Peta Alur Kerja Administrasi Guru Terpadu
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Dari perencanaan perangkat ajar awal tahun hingga pelaporan e-rapor dan supervisi akademik.
-                  </CardDescription>
-                </div>
-                <Badge className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 text-xs font-bold w-fit">
-                  Terintegrasi Basis Data Riil
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Tahap 1: Perangkat Ajar & Prota/Promes */}
-                <div className="p-5 rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/30 dark:bg-blue-950/20 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-                        Tahap 1 • Awal Semester
-                      </span>
-                      <BookOpen className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                      Prota, Promes, CP & ATP
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Penyusunan Program Tahunan, Program Semester, Capaian Pembelajaran (CP), dan pembagian Alur Tujuan Pembelajaran (ATP) per fase.
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => setActiveTab('merdeka')}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5"
-                  >
-                    <span>Buka Matriks Prota & Promes</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-
-                {/* Tahap 2: RPP / Silabus & Bank Soal */}
-                <div className="p-5 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/30 dark:bg-amber-950/20 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">
-                        Tahap 2 • Persiapan KBM
-                      </span>
-                      <FileText className="w-4 h-4 text-amber-600" />
-                    </div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                      Modul Ajar, Silabus & Soal
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Pembuatan modul ajar diferensiasi, LKPD siswa, penyusunan kisi-kisi soal, paket soal asesmen harian, STS, dan SAS sekolah.
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => setActiveTab('merdeka')}
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5"
-                  >
-                    <span>Generator Modul & Paket Soal</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-
-                {/* Tahap 3: Jadwal KBM & Jadwal Pelajaran */}
-                <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                        Tahap 3 • Sinkronisasi Sesi
-                      </span>
-                      <CalendarDays className="w-4 h-4 text-slate-600" />
-                    </div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                      Jadwal Mengajar & Jadwal Kelas
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Verifikasi alokasi JP per minggu, jam tatap muka ruang kelas, dan jadwal pelajaran resmi sekolah secara sinkron.
-                    </p>
-                  </div>
-                  <Link href="/akademik/jadwal-mengajar" className="w-full">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5 border-slate-300 dark:border-slate-700"
-                    >
-                      <span>Lihat Jadwal Mengajar</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Button>
-                  </Link>
-                </div>
-
-                {/* Tahap 4: Presensi & Jurnal Mengajar Harian */}
-                <div className="p-5 rounded-2xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/30 dark:bg-emerald-950/20 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300">
-                        Tahap 4 • Pelaksanaan KBM
-                      </span>
-                      <Clock className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                      Presensi Siswa & Jurnal Mengajar
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Pengisian materi KBM per sesi jam pelajaran, rekam kehadiran siswa di kelas (H/I/S/A), dan dokumentasi foto kegiatan belajar.
-                    </p>
-                  </div>
-                  <Link href="/akademik/jurnal-mengajar" className="w-full">
-                    <Button
-                      size="sm"
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5"
-                    >
-                      <span>Isi & Rekap Jurnal KBM</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Button>
-                  </Link>
-                </div>
-
-                {/* Tahap 5: Penilaian Akademik & E-Rapor (Internal & Program) */}
-                <div className="p-5 rounded-2xl border border-purple-200 dark:border-purple-900/60 bg-purple-50/30 dark:bg-purple-950/20 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
-                        Tahap 5 • Asesmen &amp; Rapor
-                      </span>
-                      <Award className="w-4 h-4 text-purple-600" />
-                    </div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                      Penilaian, E-Rapor Internal &amp; Program
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Pengolahan nilai formatif/TP, STS, SAS, integrasi ledger nilai e-rapor wali kelas, dan evaluasi capaian program unggulan.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                    <Link href="/akademik/penilaian">
-                      <Button
-                        size="sm"
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs h-8 rounded-xl shadow-xs gap-1"
-                      >
-                        <span>Input Penilaian</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </Button>
-                    </Link>
-                    <Link href="/akademik/e-rapor">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800 font-bold text-xs h-8 rounded-xl shadow-xs gap-1"
-                      >
-                        <span>E-Rapor Internal</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </Button>
-                    </Link>
-                    <Link href="/akademik/e-rapor-program" className="sm:col-span-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="w-full text-slate-700 dark:text-slate-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/40 text-[11px] font-semibold h-7 rounded-lg"
-                      >
-                        <span>Buka E-Rapor Program Pilihan</span>
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Tahap 6: Supervisi Akademik & Kinerja */}
-                <div className="p-5 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/30 dark:bg-rose-950/20 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900 text-rose-800 dark:text-rose-300">
-                        Tahap 6 • Penjaminan Mutu
-                      </span>
-                      <ShieldCheck className="w-4 h-4 text-rose-600" />
-                    </div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                      Supervisi Akademik & Kinerja GTK
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Observasi KBM kelas, telaah dokumen perangkat ajar oleh kepala sekolah & tim kurikulum, evaluasi rubrik, dan pembinaan berkala.
-                    </p>
-                  </div>
-                  <Link href="/akademik/supervisi-akademik" className="w-full">
-                    <Button
-                      size="sm"
-                      className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5"
-                    >
-                      <span>Buka Supervisi Akademik</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
       {/* TAB 0: MODUL PERANGKAT AJAR TERPADU MULTI-KURIKULUM */}
       {/* ========================================================================= */}
       {activeTab === 'merdeka' && (
         <div className="space-y-4">
-          {/* Pilihan Kurikulum Indonesia Dinamis (Merdeka, K13, Kurikulum Baru) */}
+          {/* Pilihan Kurikulum Indonesia Dinamis (Merdeka, K13, Kurikulum Baru & Custom) */}
           <KurikulumSelector
             selectedCurriculumId={selectedCurriculum}
             onSelect={setSelectedCurriculum}
+            activeCurriculaIds={activeCurriculaIds}
+            customCurricula={customCurriculaList}
           />
 
           {selectedCurriculum === 'KURIKULUM_MERDEKA' && (
@@ -1263,6 +932,20 @@ export default function PerangkatAjarPage() {
               description="Slot arsitektur modular terstandar untuk integrasi kebijakan kurikulum baru kementerian pendidikan di masa depan."
             />
           )}
+
+          {/* Fallback Workspace Dinamis untuk Kurikulum Custom / Lainnya */}
+          {selectedCurriculum !== 'KURIKULUM_MERDEKA' &&
+            selectedCurriculum !== 'KURIKULUM_2013' &&
+            selectedCurriculum !== 'KURIKULUM_NASIONAL_BARU' && (() => {
+              const curMeta = [...AVAILABLE_CURRICULA, ...customCurriculaList].find((c) => c.id === selectedCurriculum)
+              return (
+                <KurikulumPlaceholderWorkspace
+                  name={curMeta?.name || selectedCurriculum}
+                  code={curMeta?.code || 'CUSTOM'}
+                  description={curMeta?.description || curMeta?.tagline || 'Modul administrasi pembelajaran kurikulum sekolah terpadu.'}
+                />
+              )
+            })()}
         </div>
       )}
 
@@ -2216,223 +1899,15 @@ export default function PerangkatAjarPage() {
         </DialogContent>
       </Dialog>
 
+
+
       {/* ========================================================================= */}
-      {/* DIALOG MODAL: QUICK SETUP ADMINISTRASI GURU BERSANGKUTAN */}
+      {/* DIALOG MODAL: PANDUAN LENGKAP ALUR ADMINISTRASI GURU TERPADU */}
       {/* ========================================================================= */}
-      <Dialog open={openModalQuickSetup} onOpenChange={setOpenModalQuickSetup}>
-        <DialogContent className="sm:max-w-md p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
-          <DialogHeader className="space-y-1.5 pb-2 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-              </div>
-              <DialogTitle className="text-base font-bold text-slate-900 dark:text-white">
-                Quick Setup Portal Guru
-              </DialogTitle>
-            </div>
-            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
-              Konfigurasi kilat rombel kelas & mata pelajaran untuk mengaktifkan administrasi Prota, Promes, ATP, RPP, dan Soal secara terpadu.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2 text-xs">
-            {/* Info Guru Login */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Pendidik Pengampu:</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">{session?.user?.name || 'Guru Pengampu'}</span>
-              </div>
-              <Badge variant="outline" className="text-[10px] font-bold border-blue-200 text-blue-700 dark:text-blue-300">
-                T.P. {filterTahun}
-              </Badge>
-            </div>
-
-            {/* Pilihan Rombel Kelas & Pengelompokan Jenjang */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Pilih Rombongan Belajar / Kelas <span className="text-rose-500">*</span>
-                </Label>
-                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
-                  Format Baku: Romawi Spasi Angka
-                </span>
-              </div>
-              <select
-                value={formQuickClassId}
-                onChange={(e) => handleSelectQuickClass(e.target.value)}
-                className="w-full text-xs h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- Pilih Rombel Kelas --</option>
-                {assignedClasses.length > 0 ? (
-                  ['X', 'XI', 'XII'].map((roman) => {
-                    const gradeNum = roman === 'X' ? 10 : roman === 'XI' ? 11 : 12
-                    const classesInGrade = assignedClasses.filter((c: any) => {
-                      const cGrade = c.gradeLevel || (c.name?.startsWith('X ') ? 10 : c.name?.startsWith('XI ') ? 11 : 12)
-                      return cGrade === gradeNum
-                    })
-
-                    if (classesInGrade.length === 0) return null
-
-                    return (
-                      <optgroup key={roman} label={`Jenjang Kelas ${roman} (${classesInGrade.length} Rombel)`}>
-                        {classesInGrade.map((c: any) => {
-                          const hasSched = schedulePairings.some((p) => p.classId === c.id)
-                          return (
-                            <option key={c.id} value={c.id}>
-                              Kelas {c.name} {hasSched ? '• Ada Jadwal KBM' : ''}
-                            </option>
-                          )
-                        })}
-                      </optgroup>
-                    )
-                  })
-                ) : (
-                  <option value="" disabled>Belum ada jadwal penugasan kelas di sistem</option>
-                )}
-              </select>
-            </div>
-
-            {/* Checkbox Efisiensi Waktu Guru: Aktifkan untuk seluruh rombel jenjang sama */}
-            {formQuickClassId && (
-              <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 flex items-start gap-2.5">
-                <input
-                  type="checkbox"
-                  id="apply-same-grade-toggle"
-                  checked={formQuickApplySameGrade}
-                  onChange={(e) => setFormQuickApplySameGrade(e.target.checked)}
-                  className="mt-0.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                />
-                <label htmlFor="apply-same-grade-toggle" className="cursor-pointer text-xs space-y-0.5 select-none">
-                  <span className="font-bold text-blue-900 dark:text-blue-200 block">
-                    Otomatis Berlaku untuk Seluruh Rombel Jenjang Sama
-                  </span>
-                  <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-tight">
-                    {(() => {
-                      const sel = assignedClasses.find((c: any) => c.id === formQuickClassId)
-                      const gradeNum = sel?.gradeLevel || (sel?.name?.startsWith('X ') ? 10 : sel?.name?.startsWith('XI ') ? 11 : 12)
-                      const roman = gradeNum === 10 ? 'X' : gradeNum === 11 ? 'XI' : 'XII'
-                      const count = assignedClasses.filter((c: any) => {
-                        const cGrade = c.gradeLevel || (c.name?.startsWith('X ') ? 10 : c.name?.startsWith('XI ') ? 11 : 12)
-                        return cGrade === gradeNum
-                      }).length
-                      return `Contoh: Cukup 1 kali setup untuk seluruh rombel Kelas ${roman} (${count} rombel kelas). Guru tidak perlu mengulang setup satu per satu.`
-                    })()}
-                  </p>
-                </label>
-              </div>
-            )}
-
-            {/* Pilihan Mata Pelajaran */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Pilih Mata Pelajaran <span className="text-rose-500">*</span>
-              </Label>
-              <select
-                value={formQuickSubjectId}
-                onChange={(e) => handleSelectQuickSubject(e.target.value)}
-                className="w-full text-xs h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- Pilih Mata Pelajaran --</option>
-                {assignedSubjects.length > 0 ? (
-                  assignedSubjects.map((s: any) => {
-                    const matchPair = schedulePairings.find((p) => p.classId === formQuickClassId && p.subjectId === s.id)
-                    return (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.code}) {matchPair ? `• ${matchPair.totalJpPerMinggu} JP/minggu (Jadwal)` : ''}
-                      </option>
-                    )
-                  })
-                ) : (
-                  subjectsList.map((s: any) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code})
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
-
-            {/* Grid Fase & JP */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Fase Kurikulum
-                </Label>
-                <select
-                  value={formQuickFase}
-                  onChange={(e) => setFormQuickFase(e.target.value)}
-                  className="w-full text-xs h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="FASE_E">Fase E (Kelas X)</option>
-                  <option value="FASE_F">Fase F (Kelas XI - XII)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Beban JP per Minggu
-                </Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={formQuickJpPerMinggu}
-                  onChange={(e) => setFormQuickJpPerMinggu(Number(e.target.value))}
-                  className="h-10 text-xs rounded-xl font-bold font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="p-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900/40 text-[11px] text-blue-700 dark:text-blue-300">
-              💡 <strong>Integrasi Otomatis:</strong> Setelah disimpan, sistem otomatis mengalokasikan total <strong>{Number(formQuickJpPerMinggu) * 18} JP Semester</strong> pada matriks Promes, menyiapkan ruang input TP, modul ajar, dan paket soal.
-            </div>
-
-            {/* Tombol Opsi 1-Klik Sinkron Semua Jadwal jika ada jadwal KBM belum disetup */}
-            {schedulePairings.some((p) => !p.isConfigured) && (
-              <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/50 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <span className="font-bold text-emerald-900 dark:text-emerald-200 block text-xs">
-                    Ada {schedulePairings.filter((p) => !p.isConfigured).length} Rombel di Jadwal Resmi
-                  </span>
-                  <span className="text-[10px] text-emerald-700 dark:text-emerald-300">
-                    Aktifkan semua kelas & mapel jadwal KBM Anda dalam satu kali klik.
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={quickSyncing}
-                  onClick={handleQuickSyncAllSchedules}
-                  className="h-8 shrink-0 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
-                >
-                  <RefreshCw className={`w-3 h-3 ${quickSyncing ? 'animate-spin' : ''}`} />
-                  Sinkron Semua
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpenModalQuickSetup(false)}
-              className="h-9 rounded-xl text-xs font-bold"
-            >
-              Batal
-            </Button>
-            <Button
-              type="button"
-              disabled={quickSetupSubmitting || !formQuickClassId || !formQuickSubjectId}
-              onClick={handleQuickSetupSubmit}
-              className="h-9 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs gap-1.5"
-            >
-              <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-              {quickSetupSubmitting ? 'Menyiapkan...' : 'Simpan & Aktifkan'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PanduanAdministrasiGuruModal
+        open={openModalPanduan}
+        onOpenChange={setOpenModalPanduan}
+      />
     </div>
   )
 }

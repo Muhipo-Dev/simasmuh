@@ -4,6 +4,7 @@ import {
   useState, useMemo, useRef, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import { 
@@ -240,8 +241,8 @@ export function PersuratanManagement({
   forcedMode?: 'surat-masuk' | 'surat-keluar' | 'e-archive' | 'all'
   initialTab?: string 
 } = {}) {
-  const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser } = useActiveUser()
+  const user = activeUser as any
 
   const queryClient = useQueryClient()
   const authenticatedFetch = useAuthenticatedFetch()

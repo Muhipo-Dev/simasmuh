@@ -66,6 +66,8 @@ interface ClassSummaryItem {
   }[]
 }
 
+import { useActiveUser } from '@/hooks/useActiveUser'
+
 export function WaliKelasSiswaManagement({ 
   homeroomClass, 
   initialTab = 'siswa',
@@ -79,7 +81,8 @@ export function WaliKelasSiswaManagement({
 }) {
   const authenticatedFetch = useAuthenticatedFetch()
   const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser } = useActiveUser()
+  const user = (activeUser || session?.user) as any
   const userId = user?.id
 
   // State Tabs

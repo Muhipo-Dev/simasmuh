@@ -3,6 +3,7 @@
 import {
   useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { 
   Package, Boxes, Plus, Search, Filter, Printer, Download, Eye, CheckCircle2, AlertTriangle, XCircle, Building2, User, Calendar, Tag, QrCode, FileSpreadsheet, RefreshCw, Trash2, Edit3, ShieldCheck, MapPin, Layers, Wrench, BarChart3, Check, X, DollarSign, Archive, LayoutGrid
 } from 'lucide-react'
@@ -58,8 +59,8 @@ const INITIAL_RUANGAN: LokasiRuangan[] = []
 
 
 export function InventarisManagement() {
-  const { data: session } = useSession()
-  const user = session?.user as any
+  const { user: activeUser } = useActiveUser()
+  const user = activeUser as any
 
   // State Management
   const [activeTab, setActiveTab] = useState<'daftar-aset' | 'audit-kondisi' | 'lokasi-ruangan' | 'laporan-rekap'>('daftar-aset')

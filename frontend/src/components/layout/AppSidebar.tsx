@@ -3,7 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import NextImage from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { X, LucideIcon, Clock } from 'lucide-react'
 import { useRealtimeServerClock } from '@/lib/time-sync'
 
@@ -28,6 +28,7 @@ export function AppSidebar({
   title = 'SIMASMUH',
 }: AppSidebarProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const clock = useRealtimeServerClock(60000)
 
   return (
@@ -75,9 +76,11 @@ export function AppSidebar({
         <div className="flex-1 overflow-y-auto py-2.5 px-2 space-y-0.5 custom-scrollbar">
           {links.map((link, idx) => {
             const Icon = link.icon
-            const isActive =
-              pathname === link.href ||
-              (link.href !== '/dashboard' && pathname.startsWith(`${link.href}/`))
+            const currentSubTab = searchParams?.get('subTab')
+            const currentFullPath = currentSubTab ? `${pathname}?subTab=${currentSubTab}` : pathname
+            const isActive = link.href.includes('?')
+              ? currentFullPath === link.href
+              : pathname === link.href && (!currentSubTab || !links.some((l) => l.href.startsWith(`${pathname}?subTab=`)))
             
             const prevLink = idx > 0 ? links[idx - 1] : null
             const isNewGroup = link.group && link.group !== prevLink?.group

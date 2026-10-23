@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
 import { useSession } from 'next-auth/react'
+import { useActiveUser } from '@/hooks/useActiveUser'
 import { InteractiveCharacterAssessmentManagement } from '@/components/academic/InteractiveCharacterAssessmentManagement'
 import { CutiPegawaiManagement } from '@/components/tu/CutiPegawaiManagement'
 import { IzinSiswaManagement } from '@/components/tu/IzinSiswaManagement'
@@ -31,6 +32,7 @@ import { KegiatanSekolahManagement } from '@/components/tu/KegiatanSekolahManage
 import { DisposisiUserManagement } from '@/components/tu/DisposisiUserManagement'
 import { FileExplorerManagement } from '@/components/explorer/FileExplorerManagement'
 import { PembinaEkstrakurikulerManagement } from '@/components/academic/PembinaEkstrakurikulerManagement'
+import { KurikulumManagement } from '@/components/academic/KurikulumManagement'
 
 type GuestEntry = {
   id: string
@@ -848,7 +850,7 @@ function InteractiveGuestBook() {
 export default function FiturSubRolePage() {
   const params = useParams()
   const router = useRouter()
-  const { data: session } = useSession()
+  const { user: activeUser } = useActiveUser()
   const slug = (params?.slug as string) || ''
   
   const config = FEATURE_MAP[slug] || {
@@ -902,7 +904,9 @@ export default function FiturSubRolePage() {
       ) : slug === 'catatan-kedisiplinan' || slug === 'ketertiban' || slug === 'bk-bp' || slug === 'kesehatan-sekolah' || slug === 'uks' ? (
         <InteractiveCharacterAssessmentManagement mode={slug === 'bk-bp' ? 'BK' : slug === 'catatan-kedisiplinan' ? 'GURU' : (slug === 'kesehatan-sekolah' || slug === 'uks') ? 'UKS' : 'KETERTIBAN'} />
       ) : slug === 'ekstrakulikuler' || slug === 'ekstrakurikuler' ? (
-        <PembinaEkstrakurikulerManagement session={session} />
+        <PembinaEkstrakurikulerManagement session={{ user: activeUser }} />
+      ) : slug === 'kurikulum' || slug === 'waka-kurikulum' ? (
+        <KurikulumManagement userRole={activeUser?.role} subRoles={[activeUser?.subRole, activeUser?.subRole2, activeUser?.subRole3].filter(Boolean) as string[]} />
       ) : slug === 'file-explorer' ? (
         <FileExplorerManagement />
       ) : (

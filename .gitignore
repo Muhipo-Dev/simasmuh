@@ -68,3 +68,4 @@ simasmuh_siakad_coba_full_backup.sql
 database/data/
 database/*.log
 database/*.pid
+nodesource-discovery.json

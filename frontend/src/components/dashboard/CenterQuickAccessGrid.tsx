@@ -54,6 +54,8 @@ const groupIcons: Record<string, LucideIcon> = {
   'Supervisi Bimbingan Konseling': Users,
 
   // Operasional & Divisi
+  'Portal Guru': BookOpen,
+  'Administrasi Guru': BookOpen,
   'Operasional Akademik': BookOpen,
   'Kinerja Operasional': BookOpen,
   'Tugas Perwalian': UserCheck,

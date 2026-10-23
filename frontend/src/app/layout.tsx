@@ -4,6 +4,8 @@ import { Providers } from "@/components/providers";
 import NotificationProvider from "@/components/notifications/NotificationProvider";
 import WaitingRoomProvider from "@/components/waiting-room/WaitingRoomProvider";
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: {
     default: "SIMASMUH by. Muhipo Dev",

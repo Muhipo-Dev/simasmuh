@@ -108,13 +108,14 @@ export const guruLinks = [
   { name: 'Presensi QR', href: '/presensi/scan-qr', icon: QrCode },
   { name: 'Disposisi', href: '/fitur/disposisi', icon: FileCheck },
 
-  // Operasional Akademik Guru
-  { name: 'Jurnal Pembelajaran', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Operasional Akademik' },
-  { name: 'E-Rapor Internal', href: '/akademik/penilaian', icon: Award, group: 'Operasional Akademik' },
-  { name: 'Perangkat Ajar', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Operasional Akademik' },
-  { name: 'Jadwal Mengajar', href: '/akademik/jadwal-mengajar', icon: CalendarDays, group: 'Operasional Akademik' },
-  { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: Calendar, group: 'Operasional Akademik' },
-  { name: 'Rekam Disiplin Siswa', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Operasional Akademik' },
+  // Portal Guru (Satu Kategori Terintegrasi Penuh)
+  { name: 'Perangkat Ajar & Prota Promes', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Portal Guru' },
+  { name: 'Jurnal & Presensi KBM', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Portal Guru' },
+  { name: 'Penilaian & E-Rapor', href: '/akademik/penilaian', icon: Award, group: 'Portal Guru' },
+  { name: 'Jadwal Mengajar', href: '/akademik/jadwal-mengajar', icon: CalendarDays, group: 'Portal Guru' },
+  { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: Calendar, group: 'Portal Guru' },
+  { name: 'Supervisi Akademik', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'Portal Guru' },
+  { name: 'Rekam Disiplin Siswa', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Portal Guru' },
 
   // Layanan Pribadi (Paling Bawah)
   { name: 'Slip Gaji', href: '/keuangan/slip-gaji', icon: Banknote, group: 'Layanan Mandiri' },
@@ -129,12 +130,13 @@ export const honorerLinks = [
   // Utama & Akses Cepat
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
 
-  // Operasional Akademik Khusus Guru Panggilan
-  { name: 'Jurnal Pembelajaran', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Operasional Akademik' },
-  { name: 'E-Rapor Internal', href: '/akademik/penilaian', icon: Award, group: 'Operasional Akademik' },
-  { name: 'Jadwal Mengajar', href: '/akademik/jadwal-mengajar', icon: CalendarDays, group: 'Operasional Akademik' },
-  { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: Calendar, group: 'Operasional Akademik' },
-  { name: 'Presensi Kelas Binaan', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck, group: 'Operasional Akademik' },
+  // Portal Guru Khusus Guru Panggilan
+  { name: 'Perangkat Ajar & Prota Promes', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Portal Guru' },
+  { name: 'Jurnal & Presensi KBM', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Portal Guru' },
+  { name: 'Penilaian & E-Rapor', href: '/akademik/penilaian', icon: Award, group: 'Portal Guru' },
+  { name: 'Jadwal Mengajar', href: '/akademik/jadwal-mengajar', icon: CalendarDays, group: 'Portal Guru' },
+  { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: Calendar, group: 'Portal Guru' },
+  { name: 'Presensi Kelas Binaan', href: '/presensi/kehadiran-siswa', icon: ClipboardCheck, group: 'Portal Guru' },
 
   // Layanan Mandiri
   { name: 'Notifikasi Akun', href: '/pengaturan/notifikasi-pengguna', icon: Mail, group: 'Layanan Mandiri' },
@@ -876,12 +878,13 @@ export function getRoleLinks(
       ])
     } else if (roleName === 'GURU' || roleName === 'HONORER') {
       addLinks([
-        { name: 'Jurnal Pembelajaran', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Operasional Akademik' },
-        { name: 'E-Rapor Internal', href: '/akademik/penilaian', icon: Award, group: 'Operasional Akademik' },
-        { name: 'Perangkat Ajar', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Operasional Akademik' },
-        { name: 'Jadwal Mengajar', href: '/akademik/jadwal-mengajar', icon: CalendarDays, group: 'Operasional Akademik' },
-        { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: Calendar, group: 'Operasional Akademik' },
-        { name: 'Rekam Disiplin Siswa', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Operasional Akademik' },
+        { name: 'Perangkat Ajar & Prota Promes', href: '/akademik/perangkat-ajar', icon: FileText, group: 'Portal Guru' },
+        { name: 'Jurnal & Presensi KBM', href: '/akademik/jurnal-mengajar', icon: BookOpen, group: 'Portal Guru' },
+        { name: 'Penilaian & E-Rapor', href: '/akademik/penilaian', icon: Award, group: 'Portal Guru' },
+        { name: 'Jadwal Mengajar', href: '/akademik/jadwal-mengajar', icon: CalendarDays, group: 'Portal Guru' },
+        { name: 'Jadwal Pelajaran', href: '/akademik/jadwal-pelajaran', icon: Calendar, group: 'Portal Guru' },
+        { name: 'Supervisi Akademik', href: '/akademik/supervisi-akademik', icon: BookCheck, group: 'Portal Guru' },
+        { name: 'Rekam Disiplin Siswa', href: '/fitur/catatan-kedisiplinan', icon: ShieldAlert, group: 'Portal Guru' },
       ])
     }
   }

@@ -18,8 +18,16 @@ import {
   FileText, Upload, CheckCircle2, Clock, AlertCircle, 
   Trash2, Eye, ExternalLink, Plus, BookOpen, 
   ShieldCheck, RefreshCw, FileCheck, Award, 
-  XCircle, Filter, Search, Check, ChevronRight, UserCheck, Sparkles
+  XCircle, Filter, Search, Check, ChevronRight, UserCheck, Sparkles,
+  GraduationCap, CalendarDays, ArrowRight, Layers, Zap,
+  Download, FileSpreadsheet, ChevronDown, Archive, RotateCcw
 } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  generateTeacherMultiClassAssessmentExcel,
+  AssessmentExcelType,
+} from '@/lib/assessment-excel-helper'
+import Link from 'next/link'
 import { format } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
 import Swal from 'sweetalert2'
@@ -90,7 +98,7 @@ export default function PerangkatAjarPage() {
   // Pegawai / Karyawan biasa TIDAK BOLEH mengakses modul ini
   const isAuthorized = isGuru || isKurikulumOrPimpinan
 
-  const [activeTab, setActiveTab] = useState<'merdeka' | 'saya' | 'verifikasi' | 'rekap'>('merdeka')
+  const [activeTab, setActiveTab] = useState<'alur' | 'merdeka' | 'saya' | 'arsip' | 'verifikasi' | 'rekap'>('merdeka')
   const [selectedCurriculum, setSelectedCurriculum] = useState<string>('KURIKULUM_MERDEKA')
   const [searchQuery, setSearchQuery] = useState('')
   const [filterJenis, setFilterJenis] = useState('ALL')
@@ -122,7 +130,187 @@ export default function PerangkatAjarPage() {
   const [verifyStatus, setVerifyStatus] = useState<'TERVERIFIKASI' | 'PERLU_REVISI' | 'DITOLAK'>('TERVERIFIKASI')
   const [verifyNotes, setVerifyNotes] = useState('')
 
-  // 1. Fetch Daftar Guru
+  // Modal State Quick Setup Administrasi Guru
+  const [openModalQuickSetup, setOpenModalQuickSetup] = useState(false)
+  const [formQuickClassId, setFormQuickClassId] = useState('')
+  const [formQuickSubjectId, setFormQuickSubjectId] = useState('')
+  const [formQuickFase, setFormQuickFase] = useState('FASE_E')
+  const [formQuickJpPerMinggu, setFormQuickJpPerMinggu] = useState(2)
+  const [formQuickApplySameGrade, setFormQuickApplySameGrade] = useState(true) // Otomatis aktifkan untuk semua rombel jenjang sama
+  const [quickSetupSubmitting, setQuickSetupSubmitting] = useState(false)
+
+  // 1. Fetch Konteks Guru (Kelas yang diampu & mapel riil)
+  const { data: guruContext, refetch: refetchGuruContext } = useQuery({
+    queryKey: ['kurikulum-merdeka-guru-context'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/kurikulum-merdeka/guru-context')
+      if (!res.ok) return { assignedClasses: [], assignedSubjects: [], perangkatList: [], schedulePairings: [] }
+      return res.json()
+    },
+  })
+  const assignedClasses = guruContext?.assignedClasses || []
+  const assignedSubjects = guruContext?.assignedSubjects || []
+  const schedulePairings: any[] = guruContext?.schedulePairings || []
+  const archivePerangkatList: any[] = guruContext?.archivePerangkatList || []
+  const allCurriculumPerangkatList: any[] = guruContext?.allPerangkatList || []
+
+  // State & Handler Export Format Nilai Excel Multi-Sheet (1 File per Mapel, Multi-Sheet Kelas)
+  const [exportingMultiSheet, setExportingMultiSheet] = useState(false)
+  const handleExportTeacherMultiClassExcel = async (exportType: AssessmentExcelType, targetSubjectId?: string) => {
+    // Tentukan mapel: jika diberikan secara eksplisit, gunakan target; jika tidak, gunakan mapel pertama yang diampu
+    const subjId = targetSubjectId || (assignedSubjects.length > 0 ? assignedSubjects[0].id : '')
+    const subjectObj = assignedSubjects.find((s: any) => s.id === subjId)
+    const subjectName = subjectObj?.name || 'Mata Pelajaran'
+
+    // Temukan kelas-kelas yang diampu guru untuk mapel ini
+    let targetClasses: any[] = []
+    if (schedulePairings.length > 0) {
+      const matched = schedulePairings.filter((p: any) => p.subjectId === subjId)
+      const cIds = new Set(matched.map((p: any) => p.classId))
+      targetClasses = assignedClasses.filter((c: any) => cIds.has(c.id))
+    }
+
+    if (targetClasses.length === 0) {
+      targetClasses = assignedClasses
+    }
+
+    if (targetClasses.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Tidak Ada Kelas',
+        text: 'Tidak ditemukan rombel kelas yang diampu untuk mata pelajaran ini.',
+      })
+      return
+    }
+
+    setExportingMultiSheet(true)
+    Swal.fire({
+      title: 'Menyiapkan Format Excel Multi-Sheet...',
+      html: `Sedang memuat data siswa & nilai untuk <strong>${targetClasses.length} rombel kelas</strong> (${subjectName})...`,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading()
+      },
+    })
+
+    try {
+      const classSheetList = await Promise.all(
+        targetClasses.map(async (cls: any) => {
+          const sRes = await authenticatedFetch(`/api-backend/students?classId=${cls.id}`)
+          const students: any[] = sRes.ok ? await sRes.json() : []
+
+          const aRes = await authenticatedFetch(
+            `/api-backend/grades/assessments?classId=${cls.id}&subjectId=${subjId}&academicYear=2025/2026&semester=1`
+          )
+          const assessList: any[] = aRes.ok ? await aRes.json() : []
+          const aMap = new Map<string, any>()
+          assessList.forEach((item: any) => {
+            if (item.studentId) aMap.set(item.studentId, item)
+          })
+
+          const studentRows = students.map((s) => ({
+            id: s.id,
+            nis: s.nis || '',
+            name: s.name || '',
+            gender: s.gender || 'L',
+            assessment: aMap.get(s.id) || null,
+          }))
+
+          const homeroom = cls.homeroomTeacher?.user?.name || cls.homeroomTeacher?.name || '-'
+
+          return {
+            className: cls.name,
+            homeroomTeacherName: homeroom,
+            students: studentRows,
+          }
+        })
+      )
+
+      const typeLabel = exportType === 'sts' ? 'STS' : exportType === 'sas' ? 'SAS' : 'KD_Formatif'
+      const teacherName = user?.name || 'Guru'
+      const blob = await generateTeacherMultiClassAssessmentExcel({
+        type: exportType,
+        subjectName,
+        subjectCode: subjectObj?.code,
+        teacherName,
+        academicYear: '2025/2026',
+        semester: '1',
+        classes: classSheetList,
+      })
+
+      const safeTeacher = teacherName.replace(/[^a-zA-Z0-9]/g, '_')
+      const safeSubject = subjectName.replace(/[^a-zA-Z0-9]/g, '_')
+      const fileName = `Format_Nilai_${typeLabel}_${safeSubject}_${safeTeacher}.xlsx`
+
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Ekspor Multi-Sheet Berhasil!',
+        html: `File Excel <strong>${fileName}</strong> telah terunduh dengan <strong>${classSheetList.length} sheet kelas</strong> (${classSheetList.map(c => c.className).join(', ')}).`,
+        confirmButtonColor: '#2563eb',
+      })
+    } catch (err: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Ekspor Multi-Sheet',
+        text: err?.message || 'Terjadi kesalahan sistem saat memproses berkas Excel.',
+      })
+    } finally {
+      setExportingMultiSheet(false)
+    }
+  }
+
+  // Auto pre-fill quick setup modal saat dibuka jika ada jadwal
+  useEffect(() => {
+    if (openModalQuickSetup && !formQuickClassId && schedulePairings.length > 0) {
+      const unconfig = schedulePairings.find((p) => !p.isConfigured) || schedulePairings[0]
+      if (unconfig) {
+        setFormQuickClassId(unconfig.classId)
+        setFormQuickSubjectId(unconfig.subjectId)
+        setFormQuickFase(unconfig.fase || (unconfig.gradeLevel === 10 ? 'FASE_E' : 'FASE_F'))
+        setFormQuickJpPerMinggu(unconfig.totalJpPerMinggu || 2)
+      }
+    }
+  }, [openModalQuickSetup, schedulePairings, formQuickClassId])
+
+  // Handler auto-matching ketika memilih kelas di Quick Setup
+  const handleSelectQuickClass = (classId: string) => {
+    setFormQuickClassId(classId)
+    if (!classId) return
+    const match = schedulePairings.find((p) => p.classId === classId)
+    if (match) {
+      setFormQuickSubjectId(match.subjectId)
+      setFormQuickFase(match.fase || (match.gradeLevel === 10 ? 'FASE_E' : 'FASE_F'))
+      setFormQuickJpPerMinggu(match.totalJpPerMinggu || 2)
+    } else {
+      const cls = assignedClasses.find((c: any) => c.id === classId)
+      if (cls) {
+        setFormQuickFase(cls.gradeLevel === 10 ? 'FASE_E' : 'FASE_F')
+      }
+    }
+  }
+
+  // Handler auto-matching ketika memilih mapel di Quick Setup
+  const handleSelectQuickSubject = (subjectId: string) => {
+    setFormQuickSubjectId(subjectId)
+    if (formQuickClassId && subjectId) {
+      const match = schedulePairings.find((p) => p.classId === formQuickClassId && p.subjectId === subjectId)
+      if (match) {
+        setFormQuickFase(match.fase || (match.gradeLevel === 10 ? 'FASE_E' : 'FASE_F'))
+        setFormQuickJpPerMinggu(match.totalJpPerMinggu || 2)
+      }
+    }
+  }
+
+  // 1b. Fetch Daftar Guru
   const { data: teachersData } = useQuery({
     queryKey: ['teachers-perangkat-list'],
     queryFn: async () => {
@@ -264,6 +452,110 @@ export default function PerangkatAjarPage() {
       Swal.fire('Error', err.message || 'Gagal menghapus.', 'error')
     },
   })
+
+  // Handle Quick Setup Administrasi Guru
+  const handleQuickSetupSubmit = async () => {
+    if (!formQuickClassId || !formQuickSubjectId) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Lengkapi Data Setup',
+        text: 'Silakan pilih kelas dan mata pelajaran yang diampu terlebih dahulu.',
+        confirmButtonColor: '#2563eb',
+      })
+      return
+    }
+
+    setQuickSetupSubmitting(true)
+    try {
+      // Dapatkan rombel-rombel satu jenjang yang diampu untuk mapel terpilih
+      const selectedClassObj = assignedClasses.find((c: any) => c.id === formQuickClassId)
+      const grade = selectedClassObj?.gradeLevel || (selectedClassObj?.name?.startsWith('X ') ? 10 : selectedClassObj?.name?.startsWith('XI ') ? 11 : 12)
+      
+      const sameGradeClassIds = assignedClasses
+        .filter((c: any) => {
+          const cGrade = c.gradeLevel || (c.name?.startsWith('X ') ? 10 : c.name?.startsWith('XI ') ? 11 : 12)
+          return cGrade === grade
+        })
+        .map((c: any) => c.id)
+
+      const res = await authenticatedFetch('/api-backend/kurikulum-merdeka/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classId: formQuickClassId,
+          subjectId: formQuickSubjectId,
+          fase: formQuickFase,
+          totalJpSemester: Number(formQuickJpPerMinggu) * 18,
+          jpPerMinggu: Number(formQuickJpPerMinggu),
+          applyToGradeLevel: formQuickApplySameGrade,
+          targetClassIds: formQuickApplySameGrade ? sameGradeClassIds : [formQuickClassId],
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal menyimpan Quick Setup Administrasi Guru')
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['kurikulum-merdeka-guru-context'] })
+      await queryClient.invalidateQueries({ queryKey: ['perangkat-ajar-list'] })
+      await queryClient.invalidateQueries({ queryKey: ['perangkat-ajar-stats-rekap'] })
+
+      setOpenModalQuickSetup(false)
+      setActiveTab('merdeka')
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Quick Setup Berhasil!',
+        text: 'Administrasi kelas & mapel aktif berhasil disiapkan. Anda dapat langsung mengelola TP, Promes, RPP, dan Soal.',
+        confirmButtonColor: '#2563eb',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+    } catch (e: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Quick Setup',
+        text: e.message || 'Terjadi kesalahan sistem saat konfigurasi administrasi.',
+        confirmButtonColor: '#2563eb',
+      })
+    } finally {
+      setQuickSetupSubmitting(false)
+    }
+  }
+
+  // Handle Sinkronisasi Langsung dari Jadwal KBM pada Quick Setup
+  const [quickSyncing, setQuickSyncing] = useState(false)
+  const handleQuickSyncAllSchedules = async () => {
+    setQuickSyncing(true)
+    try {
+      const res = await authenticatedFetch('/api-backend/kurikulum-merdeka/auto-sync-schedules', {
+        method: 'POST',
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Gagal sinkronisasi dari jadwal.')
+      }
+      const data = await res.json()
+      await queryClient.invalidateQueries({ queryKey: ['kurikulum-merdeka-guru-context'] })
+      setOpenModalQuickSetup(false)
+      setActiveTab('merdeka')
+      Swal.fire({
+        icon: 'success',
+        title: 'Sinkronisasi Jadwal Berhasil!',
+        text: data.message || 'Semua rombel & mapel penugasan berhasil disiapkan secara otomatis.',
+        confirmButtonColor: '#2563eb',
+      })
+    } catch (e: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Sinkronisasi',
+        text: e.message || 'Terjadi kesalahan sistem.',
+      })
+    } finally {
+      setQuickSyncing(false)
+    }
+  }
 
   const resetForm = () => {
     setEditDocId(null)
@@ -473,106 +765,473 @@ export default function PerangkatAjarPage() {
   }
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header Utama Modul Perangkat Pembelajaran */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 p-6 rounded-3xl text-white shadow-xl border border-white/10">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="bg-amber-400/20 text-amber-300 text-xs px-3 py-1 rounded-full font-extrabold backdrop-blur-md border border-amber-400/30 uppercase tracking-wider flex items-center gap-1.5">
-              <Award className="w-3.5 h-3.5 text-amber-300" />
-              Kurikulum Merdeka & Standar Proses
+    <div className="space-y-5 pb-12">
+      {/* Header Halaman: Bersih, Berwibawa & Fungsional */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-5 rounded-2xl bg-card border border-border shadow-2xs">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold tracking-wider uppercase text-primary">
+              Portal Guru
             </span>
-            <span className="text-xs text-blue-200 font-semibold">
+            <span className="text-muted-foreground/40">•</span>
+            <span className="text-xs text-muted-foreground">
               SMA Muhammadiyah 1 Ponorogo
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
-            <BookOpen className="w-8 h-8 text-amber-300 shrink-0" />
-            Perangkat Pembelajaran Guru
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
+            <BookOpen className="w-6 h-6 text-primary shrink-0" />
+            Administrasi &amp; Perangkat Pembelajaran
           </h1>
-          <p className="text-blue-100 mt-1 text-xs sm:text-sm max-w-2xl">
-            Pusat unggah dan telaah administrasi guru: Modul Ajar, Alur Tujuan Pembelajaran (ATP), Capaian Pembelajaran (CP), Program Tahunan (Prota), dan Program Semester (Promes).
+          <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
+            Penyusunan Prota, Promes, CP &amp; ATP, Modul Ajar, presensi harian, hingga integrasi nilai e-rapor terpadu.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Tombol Ekspor Format Nilai Multi-Sheet */}
+          <Popover>
+            <PopoverTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={exportingMultiSheet}
+                  className="h-9 px-3 text-xs font-semibold gap-1.5 border-border"
+                >
+                  <Download className={`w-3.5 h-3.5 text-emerald-600 ${exportingMultiSheet ? 'animate-bounce' : ''}`} />
+                  <span>{exportingMultiSheet ? 'Mengunduh...' : 'Ekspor Nilai'}</span>
+                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                </Button>
+              }
+            />
+            <PopoverContent align="end" className="w-80 p-3 rounded-xl shadow-lg border border-border bg-card">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-border">
+                <div>
+                  <span className="text-[11px] font-bold text-foreground block">
+                    Format Penilaian Excel
+                  </span>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    Multi-sheet untuk seluruh rombel kelas yang diampu.
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[9px] font-semibold">
+                  Multi-Sheet
+                </Badge>
+              </div>
+
+              {assignedSubjects.length > 1 && (
+                <div className="mb-2 p-2 rounded-lg bg-muted/40 border border-border text-xs">
+                  <span className="text-[10px] font-semibold text-muted-foreground block mb-1">
+                    Pilih Mata Pelajaran:
+                  </span>
+                  <div className="space-y-1">
+                    {assignedSubjects.map((s: any) => (
+                      <div key={s.id} className="text-xs font-medium flex items-center justify-between py-0.5">
+                        <span className="truncate max-w-[140px]">{s.name}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleExportTeacherMultiClassExcel('sts', s.id)}
+                            className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-primary/10 text-primary hover:bg-primary/20"
+                          >
+                            STS
+                          </button>
+                          <button
+                            onClick={() => handleExportTeacherMultiClassExcel('sas', s.id)}
+                            className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                          >
+                            SAS
+                          </button>
+                          <button
+                            onClick={() => handleExportTeacherMultiClassExcel('kd', s.id)}
+                            className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-muted text-foreground hover:bg-muted/80"
+                          >
+                            Formatif
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={exportingMultiSheet}
+                  className="w-full justify-start text-xs font-medium h-8 rounded-md"
+                  onClick={() => handleExportTeacherMultiClassExcel('sts')}
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-primary mr-2 shrink-0" />
+                  <span>Nilai STS (Semua Sheet Kelas)</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={exportingMultiSheet}
+                  className="w-full justify-start text-xs font-medium h-8 rounded-md"
+                  onClick={() => handleExportTeacherMultiClassExcel('sas')}
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 mr-2 shrink-0" />
+                  <span>Nilai SAS (Semua Sheet Kelas)</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={exportingMultiSheet}
+                  className="w-full justify-start text-xs font-medium h-8 rounded-md"
+                  onClick={() => handleExportTeacherMultiClassExcel('kd')}
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-muted-foreground mr-2 shrink-0" />
+                  <span>Nilai Formatif &amp; TP</span>
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (schedulePairings.length > 0) {
+                const targetPair = schedulePairings.find((p) => !p.isConfigured) || schedulePairings[0]
+                setFormQuickClassId(targetPair.classId)
+                setFormQuickSubjectId(targetPair.subjectId)
+                setFormQuickFase(targetPair.fase || (targetPair.gradeLevel === 10 ? 'FASE_E' : 'FASE_F'))
+                setFormQuickJpPerMinggu(targetPair.totalJpPerMinggu || 2)
+              } else {
+                if (assignedClasses.length > 0) setFormQuickClassId(assignedClasses[0].id)
+                if (assignedSubjects.length > 0) setFormQuickSubjectId(assignedSubjects[0].id)
+              }
+              setOpenModalQuickSetup(true)
+            }}
+            className="h-9 px-3 text-xs font-semibold gap-1.5 border-border"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <span>Quick Setup</span>
+          </Button>
+
+          <Button
+            size="sm"
             onClick={() => {
               resetForm()
               setOpenModalUpload(true)
             }}
-            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs h-10 px-4 rounded-xl shadow-md gap-1.5"
+            className="h-9 px-3.5 text-xs font-semibold gap-1.5 shadow-2xs"
           >
-            <Plus className="w-4 h-4" />
-            Unggah Perangkat Ajar
+            <Plus className="w-3.5 h-3.5" />
+            <span>Unggah Berkas</span>
           </Button>
         </div>
       </div>
 
-      {/* Navigasi Tab */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-1 overflow-x-auto pb-1 no-scrollbar">
+      {/* Navigasi Tab Modul */}
+      <div className="flex border-b border-border gap-1 overflow-x-auto pb-0.5 no-scrollbar">
         <button
           onClick={() => setActiveTab('merdeka')}
-          className={`pb-3 px-4 font-bold text-xs flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
+          className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'merdeka'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 rounded-t-xl'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Sparkles className="w-4 h-4 text-amber-500" />
-          <span>Perangkat Ajar Terpadu</span>
-          <span className="px-2 py-0.5 text-[10px] rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold">
-            Kurikulum Merdeka
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Perangkat Ajar (Prota/Promes &amp; ATP)</span>
+          <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-muted text-foreground font-mono">
+            Kurikulum
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('alur')}
+          className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'alur'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Alur Administrasi</span>
+          <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-muted text-muted-foreground font-mono">
+            6 Tahap
           </span>
         </button>
 
         <button
           onClick={() => setActiveTab('saya')}
-          className={`pb-3 px-4 font-bold text-xs flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
+          className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'saya'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 rounded-t-xl'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <FileText className="w-4 h-4" />
-          <span>Arsip Berkas Manual</span>
-          <span className="px-2 py-0.5 text-[10px] rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-bold">
+          <FileText className="w-3.5 h-3.5" />
+          <span>Berkas Manual</span>
+          <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-muted text-muted-foreground font-mono">
             {perangkatList.length}
           </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('arsip')}
+          className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'arsip'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Archive className="w-3.5 h-3.5" />
+          <span>Arsip Riwayat</span>
+          {archivePerangkatList.length > 0 && (
+            <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-muted text-foreground font-mono font-bold">
+              {archivePerangkatList.length}
+            </span>
+          )}
         </button>
 
         {isKurikulumOrPimpinan && (
           <button
             onClick={() => setActiveTab('verifikasi')}
-            className={`pb-3 px-4 font-bold text-xs flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
+            className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === 'verifikasi'
-                ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 rounded-t-xl'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                ? 'border-primary text-primary font-bold'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             <span>Verifikasi Kurikulum</span>
-            <span className="px-2 py-0.5 text-[10px] rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold">
-              {perangkatList.filter((p) => p.status === 'DIAJUKAN').length} Antrian
+            <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-emerald-500/10 text-emerald-600 font-mono font-bold">
+              {perangkatList.filter((p) => p.status === 'DIAJUKAN').length}
             </span>
           </button>
         )}
 
         <button
           onClick={() => setActiveTab('rekap')}
-          className={`pb-3 px-4 font-bold text-xs flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
+          className={`pb-2.5 px-3.5 font-semibold text-xs flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'rekap'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 rounded-t-xl'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <FileCheck className="w-4 h-4 text-indigo-600" />
-          <span>Rekapitulasi Sekolah</span>
-          <span className="px-2 py-0.5 text-[10px] rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold">
-            {summary.persentaseKelengkapanSekolah || 0}% Lengkap
+          <FileCheck className="w-3.5 h-3.5" />
+          <span>Rekapitulasi</span>
+          <span className="px-1.5 py-0.2 text-[10px] rounded-md bg-muted text-muted-foreground font-mono">
+            {summary.persentaseKelengkapanSekolah || 0}%
           </span>
         </button>
       </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 0: ALUR KERJA LENGKAP ADMINISTRASI GURU (INTEGRASI 1 PINTU) */}
+      {/* ========================================================================= */}
+      {activeTab === 'alur' && (
+        <div className="space-y-6">
+          <Card className="border-slate-200 dark:border-slate-800 shadow-xs">
+            <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-4 px-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-indigo-600" />
+                    Peta Alur Kerja Administrasi Guru Terpadu
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Dari perencanaan perangkat ajar awal tahun hingga pelaporan e-rapor dan supervisi akademik.
+                  </CardDescription>
+                </div>
+                <Badge className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 text-xs font-bold w-fit">
+                  Terintegrasi Basis Data Riil
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Tahap 1: Perangkat Ajar & Prota/Promes */}
+                <div className="p-5 rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/30 dark:bg-blue-950/20 flex flex-col justify-between space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                        Tahap 1 • Awal Semester
+                      </span>
+                      <BookOpen className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      Prota, Promes, CP & ATP
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Penyusunan Program Tahunan, Program Semester, Capaian Pembelajaran (CP), dan pembagian Alur Tujuan Pembelajaran (ATP) per fase.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setActiveTab('merdeka')}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5"
+                  >
+                    <span>Buka Matriks Prota & Promes</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+
+                {/* Tahap 2: RPP / Silabus & Bank Soal */}
+                <div className="p-5 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/30 dark:bg-amber-950/20 flex flex-col justify-between space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">
+                        Tahap 2 • Persiapan KBM
+                      </span>
+                      <FileText className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      Modul Ajar, Silabus & Soal
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Pembuatan modul ajar diferensiasi, LKPD siswa, penyusunan kisi-kisi soal, paket soal asesmen harian, STS, dan SAS sekolah.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setActiveTab('merdeka')}
+                    className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5"
+                  >
+                    <span>Generator Modul & Paket Soal</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+
+                {/* Tahap 3: Jadwal KBM & Jadwal Pelajaran */}
+                <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col justify-between space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        Tahap 3 • Sinkronisasi Sesi
+                      </span>
+                      <CalendarDays className="w-4 h-4 text-slate-600" />
+                    </div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      Jadwal Mengajar & Jadwal Kelas
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Verifikasi alokasi JP per minggu, jam tatap muka ruang kelas, dan jadwal pelajaran resmi sekolah secara sinkron.
+                    </p>
+                  </div>
+                  <Link href="/akademik/jadwal-mengajar" className="w-full">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5 border-slate-300 dark:border-slate-700"
+                    >
+                      <span>Lihat Jadwal Mengajar</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                </div>
+
+                {/* Tahap 4: Presensi & Jurnal Mengajar Harian */}
+                <div className="p-5 rounded-2xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/30 dark:bg-emerald-950/20 flex flex-col justify-between space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300">
+                        Tahap 4 • Pelaksanaan KBM
+                      </span>
+                      <Clock className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      Presensi Siswa & Jurnal Mengajar
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Pengisian materi KBM per sesi jam pelajaran, rekam kehadiran siswa di kelas (H/I/S/A), dan dokumentasi foto kegiatan belajar.
+                    </p>
+                  </div>
+                  <Link href="/akademik/jurnal-mengajar" className="w-full">
+                    <Button
+                      size="sm"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5"
+                    >
+                      <span>Isi & Rekap Jurnal KBM</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                </div>
+
+                {/* Tahap 5: Penilaian Akademik & E-Rapor (Internal & Program) */}
+                <div className="p-5 rounded-2xl border border-purple-200 dark:border-purple-900/60 bg-purple-50/30 dark:bg-purple-950/20 flex flex-col justify-between space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
+                        Tahap 5 • Asesmen &amp; Rapor
+                      </span>
+                      <Award className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      Penilaian, E-Rapor Internal &amp; Program
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Pengolahan nilai formatif/TP, STS, SAS, integrasi ledger nilai e-rapor wali kelas, dan evaluasi capaian program unggulan.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <Link href="/akademik/penilaian">
+                      <Button
+                        size="sm"
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs h-8 rounded-xl shadow-xs gap-1"
+                      >
+                        <span>Input Penilaian</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </Button>
+                    </Link>
+                    <Link href="/akademik/e-rapor">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800 font-bold text-xs h-8 rounded-xl shadow-xs gap-1"
+                      >
+                        <span>E-Rapor Internal</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </Button>
+                    </Link>
+                    <Link href="/akademik/e-rapor-program" className="sm:col-span-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-full text-slate-700 dark:text-slate-300 hover:bg-purple-100/50 dark:hover:bg-purple-950/40 text-[11px] font-semibold h-7 rounded-lg"
+                      >
+                        <span>Buka E-Rapor Program Pilihan</span>
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Tahap 6: Supervisi Akademik & Kinerja */}
+                <div className="p-5 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/30 dark:bg-rose-950/20 flex flex-col justify-between space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900 text-rose-800 dark:text-rose-300">
+                        Tahap 6 • Penjaminan Mutu
+                      </span>
+                      <ShieldCheck className="w-4 h-4 text-rose-600" />
+                    </div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      Supervisi Akademik & Kinerja GTK
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Observasi KBM kelas, telaah dokumen perangkat ajar oleh kepala sekolah & tim kurikulum, evaluasi rubrik, dan pembinaan berkala.
+                    </p>
+                  </div>
+                  <Link href="/akademik/supervisi-akademik" className="w-full">
+                    <Button
+                      size="sm"
+                      className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5"
+                    >
+                      <span>Buka Supervisi Akademik</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* TAB 0: MODUL PERANGKAT AJAR TERPADU MULTI-KURIKULUM */}
@@ -862,6 +1521,101 @@ export default function PerangkatAjarPage() {
                 itemLabel="dokumen perangkat"
               />
             )}
+          </Card>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: ARSIP KHUSUS ADMINISTRASI GURU (SEMUA KURIKULUM & TAHUN AJARAN) */}
+      {/* ========================================================================= */}
+      {activeTab === 'arsip' && (
+        <div className="space-y-6">
+          <Card className="border-slate-200 dark:border-slate-800 shadow-xs">
+            <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-4 px-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Archive className="w-5 h-5 text-amber-500" />
+                    Arsip Administrasi Guru &amp; Perangkat Ajar Lintas Tahun Ajaran
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Setiap pergantian tahun ajaran baru, seluruh administrasi guru (Prota, Promes, ATP/CP, RPP, dan dokumen ajar) otomatis diarsipkan secara tersinkronisasi waktu dan dapat digunakan kembali kapan saja.
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="text-xs font-bold px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 shrink-0">
+                  {archivePerangkatList.length} Berkas Diarsipkan
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6">
+              {archivePerangkatList.length === 0 ? (
+                <div className="text-center py-12 border border-dashed rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/30">
+                  <Archive className="w-12 h-12 mx-auto text-slate-400 mb-3" />
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">
+                    Belum Ada Data Arsip Tahun Ajaran Lampau
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    Saat tahun pelajaran atau semester sekolah berganti, sistem SIMASMUH secara otomatis memindahkan perangkat periode sebelumnya ke halaman arsip ini secara aman tanpa menghapus data historis.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {archivePerangkatList.map((item: any) => (
+                    <div
+                      key={item.id}
+                      className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300/40">
+                            {item.academicYear} • {item.semester}
+                          </span>
+                          <Badge variant="secondary" className="text-[10px] font-bold">
+                            Fase {item.fase || 'E/F'}
+                          </Badge>
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          {item.class?.name} • {item.subject?.name}
+                        </h4>
+                        <div className="text-xs text-slate-500 space-y-1">
+                          <p>
+                            • <strong>{item._count?.tujuanPembelajarans || 0}</strong> Butir Tujuan Pembelajaran
+                          </p>
+                          <p>
+                            • <strong>{item._count?.promesAllocations || 0}</strong> Plot Alokasi Promes
+                          </p>
+                          <p>
+                            • <strong>{item._count?.dokumenItems || 0}</strong> Dokumen Ajar (Modul/RPP/LKPD)
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <span className="text-[11px] text-slate-400">
+                          {item.jpPerMinggu ? `${item.jpPerMinggu} JP/Minggu` : '2 JP/Minggu'}
+                        </span>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setActiveTab('merdeka')
+                            Swal.fire({
+                              icon: 'info',
+                              title: 'Arsip Perangkat Terpilih',
+                              text: `Untuk menggunakan kembali perangkat ${item.class?.name} - ${item.subject?.name}, buka tombol "Arsip Guru" pada tab Kurikulum dan klik "Gunakan Kembali".`,
+                              confirmButtonColor: '#2563eb',
+                            })
+                          }}
+                          className="h-7 text-xs font-bold gap-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span>Gunakan Kembali</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
           </Card>
         </div>
       )}
@@ -1459,6 +2213,224 @@ export default function PerangkatAjarPage() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* DIALOG MODAL: QUICK SETUP ADMINISTRASI GURU BERSANGKUTAN */}
+      {/* ========================================================================= */}
+      <Dialog open={openModalQuickSetup} onOpenChange={setOpenModalQuickSetup}>
+        <DialogContent className="sm:max-w-md p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
+          <DialogHeader className="space-y-1.5 pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+              </div>
+              <DialogTitle className="text-base font-bold text-slate-900 dark:text-white">
+                Quick Setup Portal Guru
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
+              Konfigurasi kilat rombel kelas & mata pelajaran untuk mengaktifkan administrasi Prota, Promes, ATP, RPP, dan Soal secara terpadu.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-xs">
+            {/* Info Guru Login */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Pendidik Pengampu:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">{session?.user?.name || 'Guru Pengampu'}</span>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-bold border-blue-200 text-blue-700 dark:text-blue-300">
+                T.P. {filterTahun}
+              </Badge>
+            </div>
+
+            {/* Pilihan Rombel Kelas & Pengelompokan Jenjang */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Pilih Rombongan Belajar / Kelas <span className="text-rose-500">*</span>
+                </Label>
+                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
+                  Format Baku: Romawi Spasi Angka
+                </span>
+              </div>
+              <select
+                value={formQuickClassId}
+                onChange={(e) => handleSelectQuickClass(e.target.value)}
+                className="w-full text-xs h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Pilih Rombel Kelas --</option>
+                {assignedClasses.length > 0 ? (
+                  ['X', 'XI', 'XII'].map((roman) => {
+                    const gradeNum = roman === 'X' ? 10 : roman === 'XI' ? 11 : 12
+                    const classesInGrade = assignedClasses.filter((c: any) => {
+                      const cGrade = c.gradeLevel || (c.name?.startsWith('X ') ? 10 : c.name?.startsWith('XI ') ? 11 : 12)
+                      return cGrade === gradeNum
+                    })
+
+                    if (classesInGrade.length === 0) return null
+
+                    return (
+                      <optgroup key={roman} label={`Jenjang Kelas ${roman} (${classesInGrade.length} Rombel)`}>
+                        {classesInGrade.map((c: any) => {
+                          const hasSched = schedulePairings.some((p) => p.classId === c.id)
+                          return (
+                            <option key={c.id} value={c.id}>
+                              Kelas {c.name} {hasSched ? '• Ada Jadwal KBM' : ''}
+                            </option>
+                          )
+                        })}
+                      </optgroup>
+                    )
+                  })
+                ) : (
+                  <option value="" disabled>Belum ada jadwal penugasan kelas di sistem</option>
+                )}
+              </select>
+            </div>
+
+            {/* Checkbox Efisiensi Waktu Guru: Aktifkan untuk seluruh rombel jenjang sama */}
+            {formQuickClassId && (
+              <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 flex items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  id="apply-same-grade-toggle"
+                  checked={formQuickApplySameGrade}
+                  onChange={(e) => setFormQuickApplySameGrade(e.target.checked)}
+                  className="mt-0.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                />
+                <label htmlFor="apply-same-grade-toggle" className="cursor-pointer text-xs space-y-0.5 select-none">
+                  <span className="font-bold text-blue-900 dark:text-blue-200 block">
+                    Otomatis Berlaku untuk Seluruh Rombel Jenjang Sama
+                  </span>
+                  <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-tight">
+                    {(() => {
+                      const sel = assignedClasses.find((c: any) => c.id === formQuickClassId)
+                      const gradeNum = sel?.gradeLevel || (sel?.name?.startsWith('X ') ? 10 : sel?.name?.startsWith('XI ') ? 11 : 12)
+                      const roman = gradeNum === 10 ? 'X' : gradeNum === 11 ? 'XI' : 'XII'
+                      const count = assignedClasses.filter((c: any) => {
+                        const cGrade = c.gradeLevel || (c.name?.startsWith('X ') ? 10 : c.name?.startsWith('XI ') ? 11 : 12)
+                        return cGrade === gradeNum
+                      }).length
+                      return `Contoh: Cukup 1 kali setup untuk seluruh rombel Kelas ${roman} (${count} rombel kelas). Guru tidak perlu mengulang setup satu per satu.`
+                    })()}
+                  </p>
+                </label>
+              </div>
+            )}
+
+            {/* Pilihan Mata Pelajaran */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Pilih Mata Pelajaran <span className="text-rose-500">*</span>
+              </Label>
+              <select
+                value={formQuickSubjectId}
+                onChange={(e) => handleSelectQuickSubject(e.target.value)}
+                className="w-full text-xs h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Pilih Mata Pelajaran --</option>
+                {assignedSubjects.length > 0 ? (
+                  assignedSubjects.map((s: any) => {
+                    const matchPair = schedulePairings.find((p) => p.classId === formQuickClassId && p.subjectId === s.id)
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.code}) {matchPair ? `• ${matchPair.totalJpPerMinggu} JP/minggu (Jadwal)` : ''}
+                      </option>
+                    )
+                  })
+                ) : (
+                  subjectsList.map((s: any) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.code})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            {/* Grid Fase & JP */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Fase Kurikulum
+                </Label>
+                <select
+                  value={formQuickFase}
+                  onChange={(e) => setFormQuickFase(e.target.value)}
+                  className="w-full text-xs h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="FASE_E">Fase E (Kelas X)</option>
+                  <option value="FASE_F">Fase F (Kelas XI - XII)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Beban JP per Minggu
+                </Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={formQuickJpPerMinggu}
+                  onChange={(e) => setFormQuickJpPerMinggu(Number(e.target.value))}
+                  className="h-10 text-xs rounded-xl font-bold font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="p-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900/40 text-[11px] text-blue-700 dark:text-blue-300">
+              💡 <strong>Integrasi Otomatis:</strong> Setelah disimpan, sistem otomatis mengalokasikan total <strong>{Number(formQuickJpPerMinggu) * 18} JP Semester</strong> pada matriks Promes, menyiapkan ruang input TP, modul ajar, dan paket soal.
+            </div>
+
+            {/* Tombol Opsi 1-Klik Sinkron Semua Jadwal jika ada jadwal KBM belum disetup */}
+            {schedulePairings.some((p) => !p.isConfigured) && (
+              <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/50 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="font-bold text-emerald-900 dark:text-emerald-200 block text-xs">
+                    Ada {schedulePairings.filter((p) => !p.isConfigured).length} Rombel di Jadwal Resmi
+                  </span>
+                  <span className="text-[10px] text-emerald-700 dark:text-emerald-300">
+                    Aktifkan semua kelas & mapel jadwal KBM Anda dalam satu kali klik.
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={quickSyncing}
+                  onClick={handleQuickSyncAllSchedules}
+                  className="h-8 shrink-0 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                >
+                  <RefreshCw className={`w-3 h-3 ${quickSyncing ? 'animate-spin' : ''}`} />
+                  Sinkron Semua
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpenModalQuickSetup(false)}
+              className="h-9 rounded-xl text-xs font-bold"
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              disabled={quickSetupSubmitting || !formQuickClassId || !formQuickSubjectId}
+              onClick={handleQuickSetupSubmit}
+              className="h-9 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs gap-1.5"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+              {quickSetupSubmitting ? 'Menyiapkan...' : 'Simpan & Aktifkan'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

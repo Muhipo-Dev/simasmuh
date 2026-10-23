@@ -39,7 +39,7 @@ import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthent
 import Swal from 'sweetalert2'
 import { compressImageFile } from '@/utils/imageCompressor'
 
-export interface PartnerLogoItem {
+interface PartnerLogoItem {
   id: string
   title: string
   subtitle?: string
@@ -86,7 +86,7 @@ const DEFAULT_PARTNER_LOGOS: PartnerLogoItem[] = [
 ]
 
 // Tipe data Pilar Keunggulan Sekolah ("Kenapa Harus Bersekolah di SMA Muhipo")
-export interface WhySchoolFeatureItem {
+interface WhySchoolFeatureItem {
   id: string
   number: string
   title: string

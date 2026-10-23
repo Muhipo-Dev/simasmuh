@@ -47,6 +47,7 @@ import { TableSearch } from '@/components/TableSearch'
 import { useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import {
   generateAssessmentExcel,
+  generateTeacherMultiClassAssessmentExcel,
   parseAssessmentExcel,
   AssessmentExcelType,
 } from '@/lib/assessment-excel-helper'
@@ -523,7 +524,7 @@ export default function PenilaianAkademikPage() {
     })
   }
 
-  // Export Excel Handler
+  // Export Excel Handler (Satuan Kelas yang Sedang Dipilih)
   const handleExportExcel = async (exportType: AssessmentExcelType) => {
     try {
       const blob = await generateAssessmentExcel({
@@ -565,7 +566,128 @@ export default function PenilaianAkademikPage() {
     }
   }
 
+  // Export Excel Multi-Sheet: 1 File Excel berisi Semua Kelas yang Diampu Guru untuk Mapel Ini
+  const [exportingMultiSheet, setExportingMultiSheet] = useState(false)
+  const handleExportTeacherMultiClassExcel = async (exportType: AssessmentExcelType, targetSubjectId?: string) => {
+    const subjId = targetSubjectId || selectedSubjectId
+    const subjectObj = (availableSubjects.length > 0 ? availableSubjects : allSubjects).find(s => s.id === subjId)
+    const subjectName = subjectObj?.name || currentSelectedSubject?.name || 'Mata Pelajaran'
+
+    // Cari seluruh kelas yang diampu guru ini untuk mapel tersebut
+    let targetClasses: any[] = []
+    if (hasTeacherSchedule) {
+      const schedulesForSubject = teacherSchedules.filter((s: any) => s.subjectId === subjId || s.subject?.id === subjId)
+      const classMap = new Map<string, any>()
+      schedulesForSubject.forEach((s: any) => {
+        if (s.class) classMap.set(s.class.id, s.class)
+      })
+      targetClasses = Array.from(classMap.values())
+    }
+
+    // Jika targetClasses kosong (misal superadmin atau belum ada relasi jadwal spesifik), gunakan kelas terpilih
+    if (targetClasses.length === 0) {
+      if (currentSelectedClass) targetClasses = [currentSelectedClass]
+      else if (availableClasses.length > 0) targetClasses = availableClasses
+    }
+
+    if (targetClasses.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Tidak Ada Kelas',
+        text: 'Tidak ditemukan rombel kelas yang diampu untuk mata pelajaran ini.',
+      })
+      return
+    }
+
+    setExportingMultiSheet(true)
+    Swal.fire({
+      title: 'Menyiapkan Format Excel Multi-Sheet...',
+      html: `Sedang memuat data siswa & nilai untuk <strong>${targetClasses.length} rombel kelas</strong> (${subjectName})...`,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading()
+      },
+    })
+
+    try {
+      // Ambil data siswa & nilai untuk setiap kelas secara paralel
+      const classSheetList = await Promise.all(
+        targetClasses.map(async (cls: any) => {
+          // Ambil daftar siswa kelas
+          const sRes = await authenticatedFetch(`/api-backend/students?classId=${cls.id}`)
+          const students: any[] = sRes.ok ? await sRes.json() : []
+
+          // Ambil assessment yang sudah ada di database untuk kelas & mapel ini
+          const aRes = await authenticatedFetch(
+            `/api-backend/grades/assessments?classId=${cls.id}&subjectId=${subjId}&academicYear=${selectedAcademicYear}&semester=${selectedSemester}`
+          )
+          const assessList: any[] = aRes.ok ? await aRes.json() : []
+          const aMap = new Map<string, any>()
+          assessList.forEach((item: any) => {
+            if (item.studentId) aMap.set(item.studentId, item)
+          })
+
+          const studentRows = students.map((s) => ({
+            id: s.id,
+            nis: s.nis || '',
+            name: s.name || '',
+            gender: s.gender || 'L',
+            assessment: aMap.get(s.id) || null,
+          }))
+
+          const homeroom = cls.homeroomTeacher?.user?.name || cls.homeroomTeacher?.name || '-'
+
+          return {
+            className: cls.name,
+            homeroomTeacherName: homeroom,
+            students: studentRows,
+          }
+        })
+      )
+
+      const typeLabel = exportType === 'sts' ? 'STS' : exportType === 'sas' ? 'SAS' : 'KD_Formatif'
+      const blob = await generateTeacherMultiClassAssessmentExcel({
+        type: exportType,
+        subjectName,
+        subjectCode: subjectObj?.code,
+        teacherName: currentTeacherName,
+        academicYear: selectedAcademicYear,
+        semester: selectedSemester,
+        classes: classSheetList,
+      })
+
+      const safeTeacher = (currentTeacherName || 'Guru').replace(/[^a-zA-Z0-9]/g, '_')
+      const safeSubject = subjectName.replace(/[^a-zA-Z0-9]/g, '_')
+      const fileName = `Format_Nilai_${typeLabel}_${safeSubject}_${safeTeacher}_Sem${selectedSemester}.xlsx`
+
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Ekspor Multi-Sheet Berhasil!',
+        html: `File Excel <strong>${fileName}</strong> telah terunduh dengan <strong>${classSheetList.length} sheet kelas</strong> (${classSheetList.map(c => c.className).join(', ')}).`,
+        confirmButtonColor: '#2563eb',
+      })
+    } catch (err: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Ekspor Multi-Sheet',
+        text: err?.message || 'Terjadi kesalahan sistem saat memproses berkas Excel.',
+      })
+    } finally {
+      setExportingMultiSheet(false)
+    }
+  }
+
   // Import Excel Handler
+  // Import Excel Handler (Mendukung Satuan Kelas Maupun Multi-Sheet Rombel Guru)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -574,8 +696,103 @@ export default function PenilaianAkademikPage() {
     try {
       const result = await parseAssessmentExcel(file, importingType)
       const parsed = result.parsedRows
+      const isMultiSheet = (result.sheetCount || 1) > 1
 
-      // Cocokkan No. Induk (NIS) dari file Excel ke data siswa kelas ini
+      // 1. Jika Multi-Sheet: Tawarkan apakah ingin langsung sinkronisasi seluruh sheet kelas ke E-Rapor database
+      if (isMultiSheet) {
+        setImportModalOpen(false)
+        const totalRows = parsed.length
+        const sheetNames = (result.sheetSummaries || []).map(s => `${s.className || s.sheetName} (${s.studentCount} siswa)`).join(', ')
+
+        const confirm = await Swal.fire({
+          title: 'Terdeteksi File Multi-Sheet Rombel!',
+          html: `File Excel ini memuat <strong>${result.sheetCount} rombel kelas</strong>:<br/><span class="text-xs text-slate-500 font-medium">${sheetNames}</span><br/><br/>Apakah Anda ingin langsung <strong>menyimpan & menyinkronisasikan nilai seluruh ${totalRows} siswa</strong> dari seluruh rombel ke database E-Rapor?`,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#2563eb',
+          cancelButtonColor: '#64748b',
+          confirmButtonText: 'Ya, Sinkronkan Semua Rombel',
+          cancelButtonText: 'Hanya Rombel Aktif Saat Ini',
+        })
+
+        if (confirm.isConfirmed) {
+          Swal.fire({
+            title: 'Menyinkronkan Nilai ke E-Rapor...',
+            html: `Sedang memetakan dan menyimpan ${totalRows} data nilai siswa...`,
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading()
+            },
+          })
+
+          // Kumpulkan mapping kelas dan siswa
+          // Ambil mapping kelas dari availableClasses / allClasses
+          const classLookup = new Map<string, string>()
+          allClasses.forEach((c: any) => {
+            const cleanName = c.name.trim().toLowerCase()
+            classLookup.set(cleanName, c.id)
+            classLookup.set(cleanName.replace(/\s+/g, ''), c.id)
+          })
+
+          // Dapatkan daftar siswa untuk kelas-kelas ini
+          const itemsToSave: any[] = []
+
+          // Ambil semua siswa dari seluruh kelas yang bersangkutan
+          for (const sSummary of (result.sheetSummaries || [])) {
+            const cName = (sSummary.className || sSummary.sheetName || '').trim()
+            const clean = cName.toLowerCase()
+            const targetClassId = classLookup.get(clean) || classLookup.get(clean.replace(/\s+/g, '')) || selectedClassId
+
+            // Ambil siswa untuk kelas ini
+            const sRes = await authenticatedFetch(`/api-backend/students?classId=${targetClassId}`)
+            const classStudents: any[] = sRes.ok ? await sRes.json() : []
+
+            const rowsInSheet = parsed.filter(p => (p.className || p.sheetName) === (sSummary.className || sSummary.sheetName))
+
+            classStudents.forEach(st => {
+              const found = rowsInSheet.find(
+                p => (p.nis && String(p.nis).trim() === String(st.nis).trim()) ||
+                     (p.name && p.name.trim().toLowerCase() === st.name.trim().toLowerCase())
+              )
+              if (found) {
+                itemsToSave.push({
+                  studentId: st.id,
+                  classId: targetClassId,
+                  subjectId: selectedSubjectId,
+                  teacherId: teacherContext?.id || null,
+                  academicYear: selectedAcademicYear,
+                  semester: parseInt(selectedSemester, 10),
+                  ...found,
+                })
+              }
+            })
+          }
+
+          if (itemsToSave.length > 0) {
+            const res = await authenticatedFetch('/api-backend/grades/assessments/batch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ items: itemsToSave }),
+            })
+            if (!res.ok) throw new Error('Gagal menyimpan nilai multi-sheet ke database')
+
+            queryClient.invalidateQueries({ queryKey: ['student-assessments'] })
+            queryClient.invalidateQueries({ queryKey: ['homeroom-rapor-assessments'] })
+            queryClient.invalidateQueries({ queryKey: ['program-assessments'] })
+            queryClient.invalidateQueries({ queryKey: ['student-my-grades'] })
+
+            Swal.fire({
+              icon: 'success',
+              title: 'Sinkronisasi E-Rapor Berhasil!',
+              html: `Berhasil menyinkronkan <strong>${itemsToSave.length} nilai siswa</strong> dari <strong>${result.sheetCount} rombel</strong> ke sistem E-Rapor secara otomatis.`,
+              confirmButtonColor: '#2563eb',
+            })
+            return
+          }
+        }
+      }
+
+      // 2. Jika single-sheet atau memilih hanya kelas aktif: Cocokkan ke siswa di kelas aktif
       const newGridEdits: Record<string, any> = { ...editGrid }
       let matchedCount = 0
 
@@ -599,7 +816,7 @@ export default function PenilaianAkademikPage() {
       Swal.fire({
         icon: 'success',
         title: 'Import Excel Berhasil',
-        text: `Berhasil mencocokkan ${matchedCount} siswa dari file Excel. Klik "Simpan Perubahan" untuk menyimpan ke database.`,
+        text: `Berhasil mencocokkan ${matchedCount} siswa dari file Excel untuk kelas ${currentSelectedClass?.name || 'aktif'}. Klik "Simpan Perubahan" untuk memvalidasi ke database.`,
       })
     } catch (err: any) {
       Swal.fire({
@@ -1103,53 +1320,104 @@ export default function PenilaianAkademikPage() {
 
         {/* Tombol Aksi Utama: Export, Import, dan Simpan */}
         <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
-          {/* Popover Ekspor Excel 3 Format */}
+          {/* Popover Ekspor Excel Multi-Sheet & Satuan Kelas */}
           <Popover>
             <PopoverTrigger
               render={
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={exportingMultiSheet}
                   className="h-9 gap-1.5 text-xs font-semibold rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                 >
-                  <Download className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Ekspor Excel</span>
+                  <Download className={`w-3.5 h-3.5 text-blue-600 ${exportingMultiSheet ? 'animate-bounce' : ''}`} />
+                  <span>{exportingMultiSheet ? 'Mengunduh...' : 'Ekspor Excel'}</span>
                   <ChevronDown className="w-3 h-3 text-slate-400" />
                 </Button>
               }
             />
-            <PopoverContent align="end" className="w-64 p-2 rounded-xl shadow-lg">
-              <div className="text-[11px] font-bold text-slate-500 uppercase px-2 py-1 mb-1">
-                Pilih Format Ekspor
+            <PopoverContent align="end" className="w-72 p-2.5 rounded-2xl shadow-xl border-slate-200 dark:border-slate-800">
+              {/* Opsi Multi-Sheet: 1 File Excel berisi seluruh rombel kelas yang diampu guru */}
+              <div className="pb-2 mb-2 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between px-2 py-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                    1 File Semua Rombel (Multi-Sheet)
+                  </span>
+                  <Badge variant="outline" className="text-[9px] font-bold px-1 py-0 border-blue-300 text-blue-700 dark:text-blue-300">
+                    Rekomendasi
+                  </Badge>
+                </div>
+                <p className="text-[10px] text-slate-400 px-2 mb-1.5 leading-tight">
+                  Tiap kelas otomatis tersusun dalam sheet terpisah untuk guru mapel ini.
+                </p>
+                <div className="space-y-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={exportingMultiSheet}
+                    className="w-full justify-start text-xs font-semibold h-8 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-200"
+                    onClick={() => handleExportTeacherMultiClassExcel('sts')}
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600 mr-2 shrink-0" />
+                    <span>Format Nilai STS (Semua Rombel)</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={exportingMultiSheet}
+                    className="w-full justify-start text-xs font-semibold h-8 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-200"
+                    onClick={() => handleExportTeacherMultiClassExcel('sas')}
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 mr-2 shrink-0" />
+                    <span>Format Nilai SAS (Semua Rombel)</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={exportingMultiSheet}
+                    className="w-full justify-start text-xs font-semibold h-8 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/40 text-slate-700 dark:text-slate-200"
+                    onClick={() => handleExportTeacherMultiClassExcel('kd')}
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-amber-600 mr-2 shrink-0" />
+                    <span>Format Formatif & TP (Semua Rombel)</span>
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-xs font-medium h-8"
-                  onClick={() => handleExportExcel('sts')}
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600 mr-2" />
-                  Format Nilai STS
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-xs font-medium h-8"
-                  onClick={() => handleExportExcel('sas')}
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 mr-2" />
-                  Format Nilai SAS
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-xs font-medium h-8"
-                  onClick={() => handleExportExcel('kd')}
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-amber-600 mr-2" />
-                  Format Formatif (LM1-5 & TP)
-                </Button>
+
+              {/* Opsi Satuan: Hanya Kelas Aktif */}
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase px-2 py-0.5 mb-1">
+                  Hanya Kelas Aktif ({currentSelectedClass?.name || 'Pilihan'})
+                </div>
+                <div className="space-y-0.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-xs font-normal h-7 rounded-lg text-slate-600 dark:text-slate-400"
+                    onClick={() => handleExportExcel('sts')}
+                  >
+                    <FileSpreadsheet className="w-3 h-3 text-blue-500 mr-2 shrink-0" />
+                    <span>STS ({currentSelectedClass?.name || 'Kelas'})</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-xs font-normal h-7 rounded-lg text-slate-600 dark:text-slate-400"
+                    onClick={() => handleExportExcel('sas')}
+                  >
+                    <FileSpreadsheet className="w-3 h-3 text-emerald-500 mr-2 shrink-0" />
+                    <span>SAS ({currentSelectedClass?.name || 'Kelas'})</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-xs font-normal h-7 rounded-lg text-slate-600 dark:text-slate-400"
+                    onClick={() => handleExportExcel('kd')}
+                  >
+                    <FileSpreadsheet className="w-3 h-3 text-amber-500 mr-2 shrink-0" />
+                    <span>Formatif & TP ({currentSelectedClass?.name || 'Kelas'})</span>
+                  </Button>
+                </div>
               </div>
             </PopoverContent>
           </Popover>

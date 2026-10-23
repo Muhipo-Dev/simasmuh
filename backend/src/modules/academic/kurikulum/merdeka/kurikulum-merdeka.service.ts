@@ -15,6 +15,7 @@ import {
   SavePromesMatrixDto,
   GeneratePerangkatDocDto,
   BatchInputNilaiTPDto,
+  WizardAutoFillJenjangDto,
 } from './dto/kurikulum-merdeka.dto';
 
 @Injectable()
@@ -28,12 +29,29 @@ export class KurikulumMerdekaService {
 
   /**
    * Ambil setting tahun ajaran & semester aktif sekolah
+   * Tersinkronisasi otomatis dengan waktu riil saat tahun pelajaran berganti
    */
   async getActiveSchoolSetting() {
     const setting = await this.prisma.setting.findFirst();
+
+    // Kalkulasi tahun ajaran otomatis berdasar waktu sistem (Bulan Juli = awal tahun ajaran baru)
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
+    const autoAcademicYear = currentMonth >= 7
+      ? `${currentYear}/${currentYear + 1}`
+      : `${currentYear - 1}/${currentYear}`;
+    const autoSemester = currentMonth >= 7 && currentMonth <= 12 ? 'GANJIL' : 'GENAP';
+
+    // Prioritaskan setting jika ada dan valid, jika tidak otomatis ikut waktu riil kalender akademik
+    const academicYear = setting?.academicYear || autoAcademicYear;
+    const semester: 'GANJIL' | 'GENAP' = setting?.semester
+      ? (setting.semester.toUpperCase().includes('GENAP') ? 'GENAP' : 'GANJIL')
+      : autoSemester;
+
     return {
-      academicYear: setting?.academicYear || '2025/2026',
-      semester: (setting?.semester || 'Ganjil').toUpperCase().includes('GENAP') ? 'GENAP' : 'GANJIL',
+      academicYear,
+      semester,
       schoolName: setting?.schoolName || 'SMA MUHAMMADIYAH 1 PONOROGO',
       address: setting?.address || 'Jl. Budi Utomo No. 10, Ponorogo, Jawa Timur',
       phone: setting?.phone || '(0352) 481521',
@@ -72,18 +90,107 @@ export class KurikulumMerdekaService {
     const classMap = new Map<string, any>();
     const subjectMap = new Map<string, any>();
 
+    // Pairing unik kelas + mapel dari jadwal resmi Kurikulum/TU
+    const schedulePairingsMap = new Map<string, any>();
+
     for (const s of teacher.schedules) {
       if (s.class) classMap.set(s.class.id, s.class);
       if (s.subject) subjectMap.set(s.subject.id, s.subject);
+
+      if (s.class && s.subject) {
+        const pairKey = `${s.class.id}_${s.subject.id}`;
+        
+        // Hitung perkiraan durasi JP dari startTime & endTime (misal 07:15 - 08:45 = 90 mnt = 2 JP)
+        let sessionJp = 2; // default 2 JP per sesi
+        try {
+          if (s.startTime && s.endTime && s.startTime.includes(':') && s.endTime.includes(':')) {
+            const [sh, sm] = s.startTime.split(':').map(Number);
+            const [eh, em] = s.endTime.split(':').map(Number);
+            const diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
+            if (diffMinutes > 0) {
+              sessionJp = Math.max(1, Math.round(diffMinutes / 45));
+            }
+          }
+        } catch {
+          sessionJp = 2;
+        }
+
+        const grade = s.class.gradeLevel || 10;
+        const autoFase = grade === 10 ? 'FASE_E' : 'FASE_F';
+
+        if (!schedulePairingsMap.has(pairKey)) {
+          schedulePairingsMap.set(pairKey, {
+            classId: s.class.id,
+            className: s.class.name,
+            gradeLevel: grade,
+            academicYear: s.class.academicYear || setting.academicYear,
+            subjectId: s.subject.id,
+            subjectName: s.subject.name,
+            subjectCode: s.subject.code,
+            fase: autoFase,
+            totalJpPerMinggu: sessionJp,
+            schedulesCount: 1,
+            days: [s.dayOfWeek],
+          });
+        } else {
+          const existing = schedulePairingsMap.get(pairKey);
+          existing.totalJpPerMinggu += sessionJp;
+          existing.schedulesCount += 1;
+          if (!existing.days.includes(s.dayOfWeek)) {
+            existing.days.push(s.dayOfWeek);
+          }
+        }
+      }
     }
 
-    // Tambahkan subject dari TeacherSubject
+    // Tambahkan subject dari TeacherSubject jika belum terdaftar
     for (const ts of teacher.teacherSubjects) {
       if (ts.subject) subjectMap.set(ts.subject.id, ts.subject);
     }
 
-    // Ambil daftar perangkat kurikulum yang sudah dibuat guru ini
-    const perangkatList = await this.prisma.perangkatKurikulum.findMany({
+    // Sinkronisasi otomatis rombel dari jadwal resmi kurikulum/TU jika belum ada setup kelas
+    for (const pair of schedulePairingsMap.values()) {
+      const academicYear = pair.academicYear || setting.academicYear;
+      const semester = setting.semester;
+      const jpPerMinggu = pair.totalJpPerMinggu > 0 ? pair.totalJpPerMinggu : 2;
+      const totalJpSemester = jpPerMinggu * 18;
+
+      const exists = await this.prisma.perangkatKurikulum.findUnique({
+        where: {
+          teacherId_classId_subjectId_academicYear_semester: {
+            teacherId: teacher.id,
+            classId: pair.classId,
+            subjectId: pair.subjectId,
+            academicYear,
+            semester,
+          },
+        },
+      });
+
+      if (!exists) {
+        try {
+          await this.prisma.perangkatKurikulum.create({
+            data: {
+              teacherId: teacher.id,
+              classId: pair.classId,
+              subjectId: pair.subjectId,
+              academicYear,
+              semester,
+              fase: pair.fase,
+              totalJpSemester,
+              jpPerMinggu,
+              mingguEfektifCount: 18,
+              statusSupervisi: 'DRAFT',
+            },
+          });
+        } catch {
+          // ignore duplicate race condition
+        }
+      }
+    }
+
+    // Ambil ulang daftar perangkat kurikulum yang sudah dibuat guru ini
+    const allPerangkatList = await this.prisma.perangkatKurikulum.findMany({
       where: { teacherId: teacher.id },
       include: {
         class: true,
@@ -99,7 +206,31 @@ export class KurikulumMerdekaService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ academicYear: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    // Pisahkan perangkat tahun ajaran aktif dengan arsip tahun ajaran lampau
+    // Masa berlaku administrasi CP, ATP, dan TP adalah 1 tahun pelajaran penuh (academicYear aktif).
+    // Ketika sekolah berganti tahun pelajaran baru, seluruh perangkat tahun ajaran lampau otomatis diarsipkan.
+    const currentAcademicYear = setting.academicYear;
+    const currentSemester = setting.semester;
+
+    const perangkatList = allPerangkatList.filter(
+      (p) => p.academicYear === currentAcademicYear,
+    );
+
+    const archivePerangkatList = allPerangkatList.filter(
+      (p) => p.academicYear !== currentAcademicYear,
+    );
+
+    const schedulePairings = Array.from(schedulePairingsMap.values()).map((p) => {
+      const isConfigured = perangkatList.some(
+        (perangkat) => perangkat.classId === p.classId && perangkat.subjectId === p.subjectId,
+      );
+      return {
+        ...p,
+        isConfigured,
+      };
     });
 
     return {
@@ -111,7 +242,99 @@ export class KurikulumMerdekaService {
       setting,
       assignedClasses: Array.from(classMap.values()),
       assignedSubjects: Array.from(subjectMap.values()),
+      schedulePairings,
       perangkatList,
+      archivePerangkatList,
+      allPerangkatList,
+    };
+  }
+
+  /**
+   * 1b. Sinkronisasi Otomatis Seluruh Rombel & Mapel dari Jadwal Mengajar Kurikulum/TU
+   */
+  async autoSyncFromSchedules(user: any) {
+    const teacher = await this.getTeacherProfile(user.id);
+    const setting = await this.getActiveSchoolSetting();
+
+    const createdList: any[] = [];
+    const skippedList: any[] = [];
+
+    // Kelompokkan schedule berdasar classId dan subjectId
+    const pairMap = new Map<string, { classId: string; subjectId: string; gradeLevel: number; totalJp: number }>();
+
+    for (const s of teacher.schedules) {
+      if (!s.class || !s.subject) continue;
+      const key = `${s.classId}_${s.subjectId}`;
+      let sessionJp = 2;
+      try {
+        if (s.startTime && s.endTime && s.startTime.includes(':') && s.endTime.includes(':')) {
+          const [sh, sm] = s.startTime.split(':').map(Number);
+          const [eh, em] = s.endTime.split(':').map(Number);
+          const diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
+          if (diffMinutes > 0) sessionJp = Math.max(1, Math.round(diffMinutes / 45));
+        }
+      } catch {
+        sessionJp = 2;
+      }
+
+      if (!pairMap.has(key)) {
+        pairMap.set(key, {
+          classId: s.classId,
+          subjectId: s.subjectId,
+          gradeLevel: s.class.gradeLevel || 10,
+          totalJp: sessionJp,
+        });
+      } else {
+        const item = pairMap.get(key)!;
+        item.totalJp += sessionJp;
+      }
+    }
+
+    for (const pair of pairMap.values()) {
+      const academicYear = setting.academicYear;
+      const semester = setting.semester;
+      const fase = pair.gradeLevel === 10 ? 'FASE_E' : 'FASE_F';
+      const jpPerMinggu = pair.totalJp > 0 ? pair.totalJp : 2;
+      const totalJpSemester = jpPerMinggu * 18;
+
+      const existing = await this.prisma.perangkatKurikulum.findUnique({
+        where: {
+          teacherId_classId_subjectId_academicYear_semester: {
+            teacherId: teacher.id,
+            classId: pair.classId,
+            subjectId: pair.subjectId,
+            academicYear,
+            semester,
+          },
+        },
+      });
+
+      if (existing) {
+        skippedList.push(existing);
+      } else {
+        const created = await this.prisma.perangkatKurikulum.create({
+          data: {
+            teacherId: teacher.id,
+            classId: pair.classId,
+            subjectId: pair.subjectId,
+            academicYear,
+            semester,
+            fase,
+            totalJpSemester,
+            jpPerMinggu,
+            mingguEfektifCount: 18,
+          },
+          include: { class: true, subject: true },
+        });
+        createdList.push(created);
+      }
+    }
+
+    return {
+      message: `Sinkronisasi jadwal berhasil. ${createdList.length} rombel & mapel baru diaktifkan, ${skippedList.length} sudah terkonfigurasi.`,
+      createdCount: createdList.length,
+      skippedCount: skippedList.length,
+      createdList,
     };
   }
 
@@ -126,7 +349,7 @@ export class KurikulumMerdekaService {
     const semester = dto.semester || setting.semester;
 
     // Cek apakah sudah ada untuk kombinasi ini
-    const existing = await this.prisma.perangkatKurikulum.findUnique({
+    let primaryPerangkat = await this.prisma.perangkatKurikulum.findUnique({
       where: {
         teacherId_classId_subjectId_academicYear_semester: {
           teacherId: teacher.id,
@@ -136,26 +359,81 @@ export class KurikulumMerdekaService {
           semester,
         },
       },
-    });
-
-    if (existing) {
-      return existing;
-    }
-
-    return this.prisma.perangkatKurikulum.create({
-      data: {
-        teacherId: teacher.id,
-        classId: dto.classId,
-        subjectId: dto.subjectId,
-        academicYear,
-        semester,
-        fase: dto.fase || 'FASE_E',
-        totalJpSemester: dto.totalJpSemester || 36,
-        jpPerMinggu: dto.jpPerMinggu || 2,
-        mingguEfektifCount: dto.mingguEfektifCount || 18,
-      },
       include: { class: true, subject: true },
     });
+
+    if (!primaryPerangkat) {
+      primaryPerangkat = await this.prisma.perangkatKurikulum.create({
+        data: {
+          teacherId: teacher.id,
+          classId: dto.classId,
+          subjectId: dto.subjectId,
+          academicYear,
+          semester,
+          fase: dto.fase || 'FASE_E',
+          totalJpSemester: dto.totalJpSemester || 36,
+          jpPerMinggu: dto.jpPerMinggu || 2,
+          mingguEfektifCount: dto.mingguEfektifCount || 18,
+        },
+        include: { class: true, subject: true },
+      });
+    }
+
+    // Jika opsi applyToGradeLevel aktif, sinkronkan ke semua rombel pada jenjang kelas yang sama
+    if (dto.applyToGradeLevel) {
+      let targetClassIds: string[] = dto.targetClassIds || [];
+
+      if (targetClassIds.length === 0) {
+        // Cari kelas sumber untuk mengetahui gradeLevel-nya
+        const sourceClass = await this.prisma.class.findUnique({
+          where: { id: dto.classId },
+          select: { gradeLevel: true, name: true },
+        });
+
+        const targetGrade = sourceClass?.gradeLevel;
+
+        // Cari seluruh kelas guru di schedules yang memiliki gradeLevel yang sama untuk mapel ini
+        const sameGradeClasses = teacher.schedules
+          .filter((s) => s.subjectId === dto.subjectId && s.class && s.class.gradeLevel === targetGrade && s.class.id !== dto.classId)
+          .map((s) => s.class.id);
+
+        targetClassIds = Array.from(new Set(sameGradeClasses));
+      }
+
+      for (const tClassId of targetClassIds) {
+        if (tClassId === dto.classId) continue;
+
+        const existTarget = await this.prisma.perangkatKurikulum.findUnique({
+          where: {
+            teacherId_classId_subjectId_academicYear_semester: {
+              teacherId: teacher.id,
+              classId: tClassId,
+              subjectId: dto.subjectId,
+              academicYear,
+              semester,
+            },
+          },
+        });
+
+        if (!existTarget) {
+          await this.prisma.perangkatKurikulum.create({
+            data: {
+              teacherId: teacher.id,
+              classId: tClassId,
+              subjectId: dto.subjectId,
+              academicYear,
+              semester,
+              fase: dto.fase || 'FASE_E',
+              totalJpSemester: dto.totalJpSemester || 36,
+              jpPerMinggu: dto.jpPerMinggu || 2,
+              mingguEfektifCount: dto.mingguEfektifCount || 18,
+            },
+          });
+        }
+      }
+    }
+
+    return primaryPerangkat;
   }
 
   /**
@@ -347,6 +625,17 @@ export class KurikulumMerdekaService {
    * 6. CRUD Tujuan Pembelajaran (TP & ATP)
    */
   async createTujuanPembelajaran(dto: CreateTujuanPembelajaranDto) {
+    // Sinkronisasi alokasi JP dengan jadwal pelajaran jika tidak diisi atau 0
+    let alokasiJp = dto.alokasiJp;
+    if (!alokasiJp || alokasiJp <= 0) {
+      const perangkat = await this.prisma.perangkatKurikulum.findUnique({
+        where: { id: dto.perangkatKurikulumId },
+        select: { jpPerMinggu: true },
+      });
+      // Default alokasi per butir TP mengikuti blok sesi mingguan dari jadwal pelajaran (misal 2 atau 4 JP)
+      alokasiJp = (perangkat?.jpPerMinggu && perangkat.jpPerMinggu > 0) ? perangkat.jpPerMinggu : 2;
+    }
+
     return this.prisma.tujuanPembelajaran.create({
       data: {
         perangkatKurikulumId: dto.perangkatKurikulumId,
@@ -356,10 +645,134 @@ export class KurikulumMerdekaService {
         lingkupMateri: dto.lingkupMateri,
         materiPokok: dto.materiPokok,
         deskripsiTp: dto.deskripsiTp,
-        alokasiJp: dto.alokasiJp || 4,
+        alokasiJp,
         dimensiProfilPancasila: dto.dimensiProfilPancasila || null,
       },
     });
+  }
+
+  /**
+   * 6b. Gunakan Kembali (Reuse/Restore) Perangkat Kurikulum dari Arsip ke Tahun Ajaran Baru
+   */
+  async reuseArchivePerangkat(dto: { archivePerangkatId: string; targetClassId: string; targetAcademicYear?: string; targetSemester?: string }, user: any) {
+    const teacher = await this.getTeacherProfile(user.id);
+    const setting = await this.getActiveSchoolSetting();
+    const targetAcademicYear = dto.targetAcademicYear || setting.academicYear;
+    const targetSemester = dto.targetSemester || setting.semester;
+
+    const source = await this.prisma.perangkatKurikulum.findUnique({
+      where: { id: dto.archivePerangkatId },
+      include: {
+        tujuanPembelajarans: true,
+        promesAllocations: true,
+        dokumenItems: true,
+      },
+    });
+
+    if (!source) {
+      throw new NotFoundException('Data arsip perangkat kurikulum tidak ditemukan');
+    }
+
+    // Upsert perangkat target di tahun ajaran & semester aktif
+    const targetPerangkat = await this.prisma.perangkatKurikulum.upsert({
+      where: {
+        teacherId_classId_subjectId_academicYear_semester: {
+          teacherId: teacher.id,
+          classId: dto.targetClassId,
+          subjectId: source.subjectId,
+          academicYear: targetAcademicYear,
+          semester: targetSemester,
+        },
+      },
+      create: {
+        teacherId: teacher.id,
+        classId: dto.targetClassId,
+        subjectId: source.subjectId,
+        academicYear: targetAcademicYear,
+        semester: targetSemester,
+        fase: source.fase,
+        totalJpSemester: source.totalJpSemester,
+        jpPerMinggu: source.jpPerMinggu,
+        mingguEfektifCount: source.mingguEfektifCount,
+        statusSupervisi: 'DRAFT',
+      },
+      update: {
+        fase: source.fase,
+        totalJpSemester: source.totalJpSemester,
+        jpPerMinggu: source.jpPerMinggu,
+        mingguEfektifCount: source.mingguEfektifCount,
+      },
+    });
+
+    // Bersihkan data lama di target perangkat jika ada
+    await this.prisma.promesAllocation.deleteMany({
+      where: { perangkatKurikulumId: targetPerangkat.id },
+    });
+    await this.prisma.perangkatAjarItem.deleteMany({
+      where: { perangkatKurikulumId: targetPerangkat.id },
+    });
+    await this.prisma.tujuanPembelajaran.deleteMany({
+      where: { perangkatKurikulumId: targetPerangkat.id },
+    });
+
+    // Salin TP dan map ID
+    const tpMap = new Map<string, string>();
+    for (const tp of source.tujuanPembelajarans) {
+      const newTp = await this.prisma.tujuanPembelajaran.create({
+        data: {
+          perangkatKurikulumId: targetPerangkat.id,
+          cpId: tp.cpId,
+          kodeTp: tp.kodeTp,
+          orderIndex: tp.orderIndex,
+          lingkupMateri: tp.lingkupMateri,
+          materiPokok: tp.materiPokok,
+          deskripsiTp: tp.deskripsiTp,
+          alokasiJp: tp.alokasiJp,
+          dimensiProfilPancasila: tp.dimensiProfilPancasila,
+        },
+      });
+      tpMap.set(tp.id, newTp.id);
+    }
+
+    // Salin Promes Allocation
+    for (const pa of source.promesAllocations) {
+      const newTpId = tpMap.get(pa.tpId);
+      if (newTpId) {
+        await this.prisma.promesAllocation.create({
+          data: {
+            perangkatKurikulumId: targetPerangkat.id,
+            tpId: newTpId,
+            bulanIndex: pa.bulanIndex,
+            namaBulan: pa.namaBulan,
+            mingguKe: pa.mingguKe,
+            mingguAbsolut: pa.mingguAbsolut,
+            alokasiJp: pa.alokasiJp,
+            keterangan: pa.keterangan,
+          },
+        });
+      }
+    }
+
+    // Salin Dokumen Generator
+    for (const doc of source.dokumenItems) {
+      const newTpId = doc.tpId ? tpMap.get(doc.tpId) || null : null;
+      await this.prisma.perangkatAjarItem.create({
+        data: {
+          perangkatKurikulumId: targetPerangkat.id,
+          tpId: newTpId,
+          kategori: doc.kategori,
+          judul: doc.judul,
+          kontenJson: (doc.kontenJson as any) || undefined,
+          fileDocxUrl: doc.fileDocxUrl,
+          statusDraft: doc.statusDraft,
+        },
+      });
+    }
+
+    return {
+      message: `Perangkat ajar berhasil dipulihkan dan diterapkan untuk Tahun Pelajaran ${targetAcademicYear} Semester ${targetSemester}`,
+      perangkat: targetPerangkat,
+    };
   }
 
   async updateTujuanPembelajaran(id: string, dto: UpdateTujuanPembelajaranDto) {
@@ -889,6 +1302,130 @@ export class KurikulumMerdekaService {
       journal,
       attendances,
       students: schedule.class.students,
+    };
+  }
+
+  /**
+   * 11. Wizard Auto-Isi Manajemen CP & ATP per Jenjang Kelas
+   * Karena setiap guru mengajar banyak kelas pada jenjang yang sama (contoh X 1, X 2, dst.),
+   * wizard ini memungkinkan pengisian CP dan butir TP sekali di awal per jenjang kelas,
+   * lalu otomatis mendistribusikan / mengintegrasikannya ke seluruh rombel jenjang bersangkutan.
+   */
+  async wizardAutoFillJenjang(dto: WizardAutoFillJenjangDto, user: any) {
+    const teacher = await this.getTeacherProfile(user.id);
+    const setting = await this.getActiveSchoolSetting();
+    const academicYear = setting.academicYear;
+    const semester = setting.semester;
+
+    const fase = dto.fase || (dto.gradeLevel === 10 ? 'FASE_E' : 'FASE_F');
+
+    // 1. Tentukan target kelas pada jenjang ini
+    let targetClasses: any[] = [];
+    if (dto.targetClassIds && dto.targetClassIds.length > 0) {
+      targetClasses = await this.prisma.class.findMany({
+        where: { id: { in: dto.targetClassIds } },
+      });
+    } else {
+      // Ambil seluruh kelas di jenjang ini yang diajar oleh guru bersangkutan (berdasarkan jadwal atau penugasan)
+      const assignedClassIds = new Set<string>();
+      for (const s of teacher.schedules) {
+        if (s.subjectId === dto.subjectId && s.class?.gradeLevel === dto.gradeLevel) {
+          assignedClassIds.add(s.class.id);
+        }
+      }
+
+      if (assignedClassIds.size > 0) {
+        targetClasses = await this.prisma.class.findMany({
+          where: { id: { in: Array.from(assignedClassIds) } },
+        });
+      } else {
+        // Fallback: seluruh kelas pada gradeLevel tersebut
+        targetClasses = await this.prisma.class.findMany({
+          where: { gradeLevel: dto.gradeLevel },
+        });
+      }
+    }
+
+    if (targetClasses.length === 0) {
+      throw new BadRequestException(`Tidak ditemukan rombel kelas untuk jenjang ${dto.gradeLevel}`);
+    }
+
+    // 2. Dapatkan atau buat Perangkat Kurikulum untuk setiap rombel target
+    const results: any[] = [];
+    let totalTpCreated = 0;
+
+    for (const cls of targetClasses) {
+      // Cari pairing JP dari jadwal jika ada
+      const sched = teacher.schedules.find(
+        (s) => s.classId === cls.id && s.subjectId === dto.subjectId
+      );
+      const jpPerMinggu = sched ? 2 : 2; // default 2 JP per minggu
+      const totalJpSemester = jpPerMinggu * 18;
+
+      const perangkat = await this.prisma.perangkatKurikulum.upsert({
+        where: {
+          teacherId_classId_subjectId_academicYear_semester: {
+            teacherId: teacher.id,
+            classId: cls.id,
+            subjectId: dto.subjectId,
+            academicYear,
+            semester,
+          },
+        },
+        create: {
+          teacherId: teacher.id,
+          classId: cls.id,
+          subjectId: dto.subjectId,
+          academicYear,
+          semester,
+          fase,
+          totalJpSemester,
+          jpPerMinggu,
+          mingguEfektifCount: 18,
+          statusSupervisi: 'DRAFT',
+        },
+        update: {
+          fase,
+        },
+      });
+
+      // Bersihkan TP lama di perangkat ini jika ingin replace bersih
+      await this.prisma.tujuanPembelajaran.deleteMany({
+        where: { perangkatKurikulumId: perangkat.id },
+      });
+
+      // Masukkan butir TP yang dirumuskan di wizard
+      let orderIndex = 1;
+      for (const tp of dto.tujuanPembelajarans) {
+        await this.prisma.tujuanPembelajaran.create({
+          data: {
+            perangkatKurikulumId: perangkat.id,
+            cpId: tp.cpId || null,
+            kodeTp: tp.kodeTp || `TP ${orderIndex}`,
+            orderIndex,
+            lingkupMateri: tp.lingkupMateri,
+            materiPokok: tp.materiPokok || tp.lingkupMateri,
+            deskripsiTp: tp.deskripsiTp,
+            alokasiJp: tp.alokasiJp || jpPerMinggu,
+            dimensiProfilPancasila: tp.dimensiProfilPancasila || null,
+          },
+        });
+        totalTpCreated++;
+        orderIndex++;
+      }
+
+      results.push({
+        classId: cls.id,
+        className: cls.name,
+        perangkatId: perangkat.id,
+      });
+    }
+
+    return {
+      message: `Berhasil mengisi CP & ATP untuk ${results.length} kelas di jenjang ${dto.gradeLevel} secara otomatis.`,
+      targetClasses: results,
+      totalClasses: results.length,
+      totalTpCreated,
     };
   }
 }

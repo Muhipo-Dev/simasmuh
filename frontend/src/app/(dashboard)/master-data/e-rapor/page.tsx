@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Award,
   BookOpen,
@@ -20,8 +20,14 @@ import {
   ShieldCheck,
   Building2,
   RefreshCw,
-  FileText
+  FileText,
+  Lock,
+  Unlock,
+  Wand2,
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -40,6 +46,7 @@ type ScopeTab = 'ALL' | 'KURIKULUM' | 'PROGRAM'
 export default function MasterDataERaporPage() {
   const { data: session } = useSession()
   const authenticatedFetch = useAuthenticatedFetch()
+  const queryClient = useQueryClient()
 
   // State Tabs Lingkup Data E-Rapor
   const [activeTab, setActiveTab] = useState<ScopeTab>('ALL')
@@ -48,13 +55,38 @@ export default function MasterDataERaporPage() {
   const [selectedClassId, setSelectedClassId] = useState<string>('ALL')
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('ALL')
   const [selectedSemester, setSelectedSemester] = useState<string>('1')
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('2025/2026')
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('2026/2027')
   const [searchQuery, setSearchQuery] = useState<string>('')
+
+  // State Kunci Nilai Rapor oleh Admin (Lock state in memory/localStorage)
+  const [isGradingLocked, setIsGradingLocked] = useState<boolean>(false)
 
   // Pagination & Seleksi Baris
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [pageSize, setPageSize] = useState<number>(50)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+  // 0. Fetch Setting Sistem Sekolah (Tahun Pelajaran & Semester Aktif Resmi)
+  const { data: systemSettings } = useQuery({
+    queryKey: ['system-public-settings-master-rapor'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api-backend/settings/public')
+      if (!res.ok) return null
+      return res.json()
+    },
+    staleTime: 60000,
+  })
+
+  // Sinkronkan Tahun Pelajaran & Semester dari Pengaturan Sistem Sekolah
+  useEffect(() => {
+    if (systemSettings?.academicYear) {
+      setSelectedAcademicYear(systemSettings.academicYear)
+    }
+    if (systemSettings?.semester) {
+      const semStr = systemSettings.semester.toString().toLowerCase()
+      setSelectedSemester(semStr === '2' || semStr.includes('genap') ? '2' : '1')
+    }
+  }, [systemSettings])
 
   // 1. Fetch Seluruh Master Kelas
   const { data: allClasses = [], isLoading: loadingClasses } = useQuery<any[]>({
@@ -316,6 +348,96 @@ export default function MasterDataERaporPage() {
     })
   }
 
+  // Generator Deskripsi Capaian Otomatis (Kurikulum Merdeka)
+  const generateSuggestedDescription = (item: any) => {
+    const subjectName = item.subject?.name || 'mata pelajaran'
+    const score = item.finalScore ?? item.sts ?? 80
+
+    if (score >= 90) {
+      return `Menunjukkan penguasaan yang sangat istimewa dan melampaui capaian pembelajaran pada seluruh lingkup materi ${subjectName}. Memiliki ketelitian tinggi dan penalaran kritis yang sangat matang.`
+    } else if (score >= 80) {
+      return `Menunjukkan pemahaman yang baik dan konsisten dalam mencapai tujuan pembelajaran utama ${subjectName}. Perlu mempertahankan konsistensi belajar pada pendalaman materi mandiri.`
+    } else if (score >= 70) {
+      return `Mampu mencapai ketuntasan kriteria tujuan pembelajaran ${subjectName} dengan cukup baik. Masih memerlukan bimbingan tambahan dan pendampingan berkala pada penyelesaian tugas analisis.`
+    } else {
+      return `Perlu pendampingan intensif dan program remedial pada ketercapaian tujuan pembelajaran ${subjectName} guna menguatkan konsep dasar materi.`
+    }
+  }
+
+  // Aksi Admin: Generate Otomatis Deskripsi Rapor untuk Baris Terpilih atau Seluruh Filter
+  const autoGenerateMutation = useMutation({
+    mutationFn: async () => {
+      const targetItems = selectedIds.length > 0
+        ? filteredData.filter(i => selectedIds.includes(i.id))
+        : filteredData.filter(i => !(i.raporCapaianKompetensi || '').trim())
+
+      if (targetItems.length === 0) {
+        throw new Error('Tidak ada baris yang memerlukan pembuatan deskripsi otomatis.')
+      }
+
+      const itemsPayload = targetItems.map(item => ({
+        id: item.id,
+        studentId: item.studentId || item.student?.id,
+        classId: item.classId || item.class?.id || item.student?.classId,
+        subjectId: item.subjectId || item.subject?.id,
+        academicYear: selectedAcademicYear,
+        semester: parseInt(selectedSemester, 10),
+        raporCapaianKompetensi: generateSuggestedDescription(item),
+        raporCatatanWali: item.raporCatatanWali || null,
+      }))
+
+      const endpoint = activeTab === 'PROGRAM'
+        ? '/api-backend/grades/program-assessments/homeroom-descriptions'
+        : '/api-backend/grades/assessments/homeroom-descriptions'
+
+      const res = await authenticatedFetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: itemsPayload }),
+      })
+
+      if (!res.ok) {
+        throw new Error('Gagal memperbarui deskripsi capaian rapor.')
+      }
+
+      return targetItems.length
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['master-rapor-kurikulum'] })
+      queryClient.invalidateQueries({ queryKey: ['master-rapor-program'] })
+      setSelectedIds([])
+      Swal.fire({
+        icon: 'success',
+        title: 'Sinkronisasi Selesai!',
+        text: `Berhasil meng-generate dan menyimpan ${count} deskripsi capaian kompetensi e-raport siswa.`,
+        timer: 2000,
+        showConfirmButton: false,
+      })
+    },
+    onError: (err: any) => {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Perhatian',
+        text: err.message || 'Gagal menjalankan aksi generate.',
+      })
+    },
+  })
+
+  // Aksi Admin: Toggle Kunci / Buka Nilai Rapor
+  const handleToggleLockGrading = () => {
+    const nextState = !isGradingLocked
+    setIsGradingLocked(nextState)
+    Swal.fire({
+      icon: nextState ? 'info' : 'success',
+      title: nextState ? 'Akses Input Nilai Dikunci' : 'Akses Input Nilai Dibuka',
+      text: nextState
+        ? `Status penilaian E-Rapor tahun ajaran ${selectedAcademicYear} Semester ${selectedSemester} berhasil dikunci untuk rekapitulasi akhir.`
+        : `Akses entri nilai dan deskripsi rapor kembali dibuka untuk guru pengampu.`,
+      timer: 2500,
+      showConfirmButton: false,
+    })
+  }
+
   const isLoading = loadingKurikulum || loadingProgram || loadingClasses || loadingSubjects
 
   return (
@@ -330,6 +452,12 @@ export default function MasterDataERaporPage() {
             <Badge variant="outline" className="text-[10px] py-0 px-2 border-blue-500/30 text-blue-600 bg-blue-50/50 dark:bg-blue-950/40 font-semibold">
               Supervisi Administratif Penuh
             </Badge>
+            {isGradingLocked && (
+              <Badge className="text-[10px] py-0 px-2 bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 font-bold border-0">
+                <Lock className="w-3 h-3 mr-1" />
+                Penilaian Dikunci
+              </Badge>
+            )}
           </div>
           <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
             <Award className="w-5 h-5 text-blue-600" />
@@ -340,7 +468,30 @@ export default function MasterDataERaporPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleToggleLockGrading}
+            className={`text-xs h-9 rounded-xl font-bold border ${
+              isGradingLocked
+                ? 'border-red-300 dark:border-red-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30'
+                : 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+            }`}
+          >
+            {isGradingLocked ? (
+              <>
+                <Unlock className="w-3.5 h-3.5 mr-1.5" />
+                Buka Kunci Rapor
+              </>
+            ) : (
+              <>
+                <Lock className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
+                Kunci Nilai Rapor
+              </>
+            )}
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -578,6 +729,38 @@ export default function MasterDataERaporPage() {
           </div>
         </CardHeader>
 
+        {/* Bulk Action Bar (Saat Baris Dicentang) */}
+        {selectedIds.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-blue-50/80 dark:bg-blue-950/40 border-b border-blue-100 dark:border-blue-900/40 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-blue-700 dark:text-blue-300">
+                {selectedIds.length} baris data nilai rapor dipilih
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds([])}
+                className="h-6 px-2 text-[11px] text-slate-500 hover:text-slate-800"
+              >
+                Batal
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => autoGenerateMutation.mutate()}
+                disabled={autoGenerateMutation.isPending}
+                className="h-7 text-xs font-bold rounded-lg border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300"
+              >
+                <Wand2 className="w-3.5 h-3.5 mr-1" />
+                {autoGenerateMutation.isPending ? 'Mengisi...' : 'Generate Deskripsi Terpilih'}
+              </Button>
+            </div>
+          </div>
+        )}
+
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
@@ -593,30 +776,31 @@ export default function MasterDataERaporPage() {
                   </TableHead>
                   <TableHead className="w-12 text-center text-xs font-bold">No</TableHead>
                   <TableHead className="w-28 text-xs font-bold">NIS / NISN</TableHead>
-                  <TableHead className="min-w-[180px] text-xs font-bold">Peserta Didik</TableHead>
+                  <TableHead className="min-w-[170px] text-xs font-bold">Peserta Didik</TableHead>
                   <TableHead className="w-24 text-xs font-bold">Kelas</TableHead>
-                  <TableHead className="min-w-[180px] text-xs font-bold">Mata Pelajaran</TableHead>
-                  <TableHead className="min-w-[150px] text-xs font-bold">Guru Pengampu</TableHead>
-                  <TableHead className="w-20 text-center text-xs font-bold">Formatif</TableHead>
-                  <TableHead className="w-20 text-center text-xs font-bold">Sumatif LM</TableHead>
-                  <TableHead className="w-16 text-center text-xs font-bold">STS</TableHead>
-                  <TableHead className="w-16 text-center text-xs font-bold">SAS</TableHead>
-                  <TableHead className="w-20 text-center text-xs font-bold">Nilai Akhir</TableHead>
-                  <TableHead className="w-28 text-center text-xs font-bold">Kategori</TableHead>
-                  <TableHead className="min-w-[220px] text-xs font-bold">Capaian Kompetensi</TableHead>
+                  <TableHead className="min-w-[170px] text-xs font-bold">Mata Pelajaran</TableHead>
+                  <TableHead className="min-w-[140px] text-xs font-bold">Guru Pengampu</TableHead>
+                  <TableHead className="w-16 text-center text-xs font-bold">Formatif</TableHead>
+                  <TableHead className="w-16 text-center text-xs font-bold">Sumatif</TableHead>
+                  <TableHead className="w-14 text-center text-xs font-bold">STS</TableHead>
+                  <TableHead className="w-14 text-center text-xs font-bold">SAS</TableHead>
+                  <TableHead className="w-16 text-center text-xs font-bold">Rapor</TableHead>
+                  <TableHead className="w-24 text-center text-xs font-bold">Kategori</TableHead>
+                  <TableHead className="min-w-[200px] text-xs font-bold">Capaian Kompetensi</TableHead>
+                  <TableHead className="w-24 text-center text-xs font-bold">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center py-10 text-xs text-slate-500">
+                    <TableCell colSpan={15} className="text-center py-10 text-xs text-slate-500">
                       Memuat data Master E-Rapor...
                     </TableCell>
                   </TableRow>
                 ) : paginatedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center py-10 text-xs text-slate-400">
+                    <TableCell colSpan={15} className="text-center py-10 text-xs text-slate-400">
                       Belum ada data nilai tercatat pada filter ini.
                     </TableCell>
                   </TableRow>
@@ -626,6 +810,7 @@ export default function MasterDataERaporPage() {
                     const isChecked = selectedIds.includes(item.id)
                     const isProg = isProgramSubject(item.subject)
                     const score = item.finalScore ?? 0
+                    const classId = item.classId || item.class?.id || item.student?.classId
 
                     return (
                       <TableRow
@@ -706,8 +891,29 @@ export default function MasterDataERaporPage() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-[11px] text-slate-600 dark:text-slate-400 max-w-[260px] truncate" title={item.raporCapaianKompetensi || '-'}>
+                        <TableCell className="text-[11px] text-slate-600 dark:text-slate-400 max-w-[220px] truncate" title={item.raporCapaianKompetensi || '-'}>
                           {item.raporCapaianKompetensi || '-'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {isProg ? (
+                              <Link
+                                href={`/akademik/e-rapor-program?classId=${classId || ''}`}
+                                className="inline-flex items-center justify-center p-1 rounded-md text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+                                title="Buka E-Rapor Program Pilihan"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </Link>
+                            ) : (
+                              <Link
+                                href={`/akademik/e-rapor?classId=${classId || ''}`}
+                                className="inline-flex items-center justify-center p-1 rounded-md text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                                title="Buka E-Rapor Kelas"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </Link>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     )

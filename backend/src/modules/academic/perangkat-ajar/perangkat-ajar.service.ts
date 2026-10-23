@@ -201,13 +201,26 @@ export class PerangkatAjarService {
       nip = profile.nip || '';
     }
 
+    // Tentukan tahun ajaran dan semester aktif secara otomatis tersinkronisasi waktu
+    const setting = await this.prisma.setting.findFirst();
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const autoAcademicYear = currentMonth >= 7
+      ? `${currentYear}/${currentYear + 1}`
+      : `${currentYear - 1}/${currentYear}`;
+    const autoSemester = currentMonth >= 7 && currentMonth <= 12 ? 'GANJIL' : 'GENAP';
+
+    const activeYear = dto.academicYear || setting?.academicYear || autoAcademicYear;
+    const activeSemester = dto.semester || (setting?.semester?.toUpperCase().includes('GENAP') ? 'GENAP' : 'GANJIL') || autoSemester;
+
     const created = await this.prisma.perangkatAjar.create({
       data: {
         teacherId: teacherProfileId,
         teacherName,
         nip,
-        academicYear: dto.academicYear || '2025/2026',
-        semester: dto.semester || 'GANJIL',
+        academicYear: activeYear,
+        semester: activeSemester,
         subjectName: dto.subjectName,
         className: dto.className || null,
         fase: dto.fase || null,
@@ -349,7 +362,15 @@ export class PerangkatAjarService {
    * Digunakan oleh halaman Supervisi Akademik & Tab Rekapitulasi
    */
   async getStatsRekap(academicYear?: string, semester?: string) {
-    const year = academicYear || '2025/2026';
+    const setting = await this.prisma.setting.findFirst();
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const autoAcademicYear = currentMonth >= 7
+      ? `${currentYear}/${currentYear + 1}`
+      : `${currentYear - 1}/${currentYear}`;
+
+    const year = academicYear || setting?.academicYear || autoAcademicYear;
     const teachers = (await (this.prisma.teacherProfile.findMany as any)({
       include: {
         user: {

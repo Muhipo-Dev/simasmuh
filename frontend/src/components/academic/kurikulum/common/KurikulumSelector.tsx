@@ -53,48 +53,37 @@ interface KurikulumSelectorProps {
 
 export function KurikulumSelector({ selectedCurriculumId, onSelect }: KurikulumSelectorProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-      {AVAILABLE_CURRICULA.map((cur) => {
-        const isSelected = selectedCurriculumId === cur.id
-        return (
-          <div
-            key={cur.id}
-            onClick={() => onSelect(cur.id)}
-            className={`cursor-pointer rounded-xl border p-4 transition-all duration-150 ${
-              isSelected
-                ? 'border-primary ring-2 ring-primary/20 bg-primary/5 shadow-sm'
-                : 'border-border/60 hover:border-border hover:bg-muted/30'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg border ${cur.colorClass}`}>
-                  <BookOpen className="h-4 w-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground tracking-tight flex items-center gap-1.5">
-                    {cur.name}
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
-                      {cur.code}
-                    </Badge>
-                  </h4>
-                  <p className="text-xs text-muted-foreground">{cur.tagline}</p>
-                </div>
-              </div>
-              {isSelected ? (
-                <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5">
-                  Aktif
-                </Badge>
-              ) : (
-                <span className="text-xs text-muted-foreground">Pilih</span>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-              {cur.description}
-            </p>
-          </div>
-        )
-      })}
+    <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-card rounded-xl border border-border">
+      <div className="flex items-center gap-1.5 overflow-x-auto">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-2 shrink-0">
+          Standar Kurikulum:
+        </span>
+        {AVAILABLE_CURRICULA.map((cur) => {
+          const isSelected = selectedCurriculumId === cur.id
+          return (
+            <button
+              key={cur.id}
+              onClick={() => onSelect(cur.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+                isSelected
+                  ? 'bg-primary text-primary-foreground shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>{cur.name}</span>
+              <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
+                isSelected ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
+              }`}>
+                {cur.code}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      <div className="text-[11px] text-muted-foreground hidden lg:block px-2">
+        {AVAILABLE_CURRICULA.find((c) => c.id === selectedCurriculumId)?.tagline}
+      </div>
     </div>
   )
 }

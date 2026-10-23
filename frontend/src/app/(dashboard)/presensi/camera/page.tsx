@@ -21,7 +21,7 @@ import Link from 'next/link'
 
 import { toast } from 'sonner'
 
-export interface SingleCameraConfig {
+interface SingleCameraConfig {
   id: string
   name: string
   streamSourceType: 'BROWSER_WEBCAM' | 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO'

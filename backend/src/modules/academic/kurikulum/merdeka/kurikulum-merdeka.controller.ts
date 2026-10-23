@@ -21,6 +21,7 @@ import {
   SavePromesMatrixDto,
   GeneratePerangkatDocDto,
   BatchInputNilaiTPDto,
+  WizardAutoFillJenjangDto,
 } from './dto/kurikulum-merdeka.dto';
 import { JwtAuthGuard } from '../../../core/auth/jwt-auth.guard';
 import { RolesGuard } from '../../../core/auth/roles.guard';
@@ -55,6 +56,11 @@ export class KurikulumMerdekaController {
     return this.kmService.createPerangkat(dto, req.user);
   }
 
+  @Post('auto-sync-schedules')
+  autoSyncSchedules(@Request() req: any) {
+    return this.kmService.autoSyncFromSchedules(req.user);
+  }
+
   @Get('perangkat/:id')
   getPerangkatDetail(@Param('id') id: string) {
     return this.kmService.getPerangkatDetail(id);
@@ -63,6 +69,11 @@ export class KurikulumMerdekaController {
   @Post('clone-parallel')
   cloneParallel(@Body() dto: CloneParallelDto, @Request() req: any) {
     return this.kmService.cloneParallel(dto, req.user);
+  }
+
+  @Post('reuse-archive')
+  reuseArchive(@Body() dto: { archivePerangkatId: string; targetClassId: string; targetAcademicYear?: string; targetSemester?: string }, @Request() req: any) {
+    return this.kmService.reuseArchivePerangkat(dto, req.user);
   }
 
   @Get('capaian-pembelajaran')
@@ -149,5 +160,10 @@ export class KurikulumMerdekaController {
     @Query('date') date?: string,
   ) {
     return this.kmService.getDailyClassView(scheduleId, date);
+  }
+
+  @Post('wizard-jenjang')
+  wizardAutoFillJenjang(@Body() dto: WizardAutoFillJenjangDto, @Request() req: any) {
+    return this.kmService.wizardAutoFillJenjang(dto, req.user);
   }
 }

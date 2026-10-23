@@ -24,7 +24,7 @@ import {
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import Swal from 'sweetalert2'
 
-export interface HomeSectionItem {
+interface HomeSectionItem {
   id: string
   name: string
   description: string
@@ -32,7 +32,7 @@ export interface HomeSectionItem {
   defaultOrder: number
 }
 
-export const ALL_HOME_SECTIONS: HomeSectionItem[] = [
+const ALL_HOME_SECTIONS: HomeSectionItem[] = [
   {
     id: 'partner_logos',
     name: 'Logo Keunggulan & Kemitraan',

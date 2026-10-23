@@ -18,8 +18,8 @@ import {
 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import Link from 'next/link'
-import { CutiPegawaiManagement } from '@/app/(dashboard)/presensi/cuti/page'
-import { IzinKeluarPegawaiManagement } from '@/app/(dashboard)/presensi/izin-keluar/page'
+import { CutiPegawaiManagement } from '@/components/tu/CutiPegawaiManagement'
+import { IzinKeluarPegawaiManagement } from '@/components/tu/IzinKeluarPegawaiManagement'
 import { compressImageFile } from '@/utils/imageCompressor'
 
 // Interfaces

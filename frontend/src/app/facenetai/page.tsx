@@ -21,7 +21,7 @@ import NextImage from 'next/image'
 import { toast } from 'sonner'
 import { PublicNavbar, AppFooter } from '@/components/layout'
 
-export interface SingleCameraConfig {
+interface SingleCameraConfig {
   id: string
   name: string
   streamSourceType: 'BROWSER_WEBCAM' | 'RTSP' | 'RTMP' | 'WEBCAM' | 'HTTP_STREAM' | 'LOCAL_VIDEO'

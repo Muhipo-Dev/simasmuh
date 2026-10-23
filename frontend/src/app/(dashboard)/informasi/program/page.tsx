@@ -71,7 +71,7 @@ const COLOR_OPTIONS: { key: string; label: string; bgClass: string; textClass: s
   { key: 'amber', label: 'Kuning Amber', bgClass: 'bg-amber-100 dark:bg-amber-950', textClass: 'text-amber-700 dark:text-amber-300' },
 ]
 
-export interface ProgramConfigItem {
+interface ProgramConfigItem {
   id: string
   code: string
   name: string

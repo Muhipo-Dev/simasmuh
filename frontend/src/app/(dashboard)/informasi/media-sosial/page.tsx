@@ -23,7 +23,7 @@ import {
 import { useAuthenticatedQuery, useAuthenticatedFetch } from '@/hooks/useAuthenticatedFetch'
 import Swal from 'sweetalert2'
 
-export interface InstagramPostItem {
+interface InstagramPostItem {
   id: string
   url: string
   caption: string

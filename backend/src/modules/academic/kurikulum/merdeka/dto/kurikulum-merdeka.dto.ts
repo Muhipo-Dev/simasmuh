@@ -33,6 +33,13 @@ export class CreatePerangkatKurikulumDto {
   @IsInt()
   @IsOptional()
   mingguEfektifCount?: number;
+
+  @IsOptional()
+  applyToGradeLevel?: boolean;
+
+  @IsArray()
+  @IsOptional()
+  targetClassIds?: string[];
 }
 
 export class CloneParallelDto {
@@ -43,6 +50,24 @@ export class CloneParallelDto {
   @IsArray()
   @IsNotEmpty()
   targetClassIds: string[];
+}
+
+export class ReuseArchivePerangkatDto {
+  @IsString()
+  @IsNotEmpty()
+  archivePerangkatId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  targetClassId: string;
+
+  @IsString()
+  @IsOptional()
+  targetAcademicYear?: string;
+
+  @IsString()
+  @IsOptional()
+  targetSemester?: string;
 }
 
 export class CreateTujuanPembelajaranDto {
@@ -187,3 +212,56 @@ export class BatchInputNilaiTPDto {
     catatanProgres?: string;
   }[];
 }
+
+export class WizardTpItemDto {
+  @IsString()
+  @IsNotEmpty()
+  kodeTp: string;
+
+  @IsString()
+  @IsNotEmpty()
+  lingkupMateri: string;
+
+  @IsString()
+  @IsOptional()
+  materiPokok?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  deskripsiTp: string;
+
+  @IsInt()
+  @IsOptional()
+  alokasiJp?: number;
+
+  @IsString()
+  @IsOptional()
+  cpId?: string;
+
+  @IsString()
+  @IsOptional()
+  dimensiProfilPancasila?: string;
+}
+
+export class WizardAutoFillJenjangDto {
+  @IsInt()
+  gradeLevel: number; // 10, 11, atau 12
+
+  @IsString()
+  @IsNotEmpty()
+  subjectId: string;
+
+  @IsString()
+  @IsOptional()
+  fase?: string; // FASE_E atau FASE_F
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => WizardTpItemDto)
+  tujuanPembelajarans: WizardTpItemDto[];
+
+  @IsArray()
+  @IsOptional()
+  targetClassIds?: string[]; // Jika diisi, terapkan hanya pada kelas tertentu, jika kosong terapkan ke seluruh kelas di jenjang tersebut
+}
+

@@ -2,6 +2,12 @@
 
 Semua catatan perubahan dan pembaruan sistem SIMASMUH didokumentasikan di berkas ini.
 
+## [1.2.0](https://github.com/Muhipo-Dev/simasmuh/compare/v1.1.0...v1.2.0) (2026-10-23)
+
+### 🚀 Fitur Baru
+
+* **v2.0.0:** ekosistem baru roadmap administrasi guru terpadu, quick setup jenjang kelas, modul panduan & perapian ui ([bbfdbe4](https://github.com/Muhipo-Dev/simasmuh/commit/bbfdbe466062f5fbe62efc780f7469d8a1bf161f))
+
 ## [1.1.0](https://github.com/Muhipo-Dev/simasmuh/compare/v1.0.0...v1.1.0) (2026-10-23)
 
 ### 🚀 Fitur Baru
